@@ -1,3 +1,10 @@
+/**
+ * \author artart78
+ * \version 6.60
+ *
+ * The init.prx module RE'ing.
+ */
+
 #include "../global.h"
 
 #define IS_JUMP(op) ((op & 0xFC000000) == 0x0C000000)
