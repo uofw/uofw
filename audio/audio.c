@@ -94,19 +94,25 @@ typedef struct
     int unk5;
 } SceAudioInputParams;
 
-int sub_0530(int unused, int arg1);
-int sub_137C(SceAudioChannel *channel, short leftVol, short rightVol, void *buf);
-int sub_1970();
-int sub_1C00(int ev_id, char* ev_name, void* param, int* result);
-int sub_1D48(int arg0, int arg1);
-int sub_2454();
-int sub_2D64(int arg0, int arg1);
+int audioOutputDmaCb(int unused, int arg1);
+int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *buf);
+int audioIntrHandler();
+int audioEventHandler(int ev_id, char* ev_name, void* param, int* result);
+int audioSRCOutputDmaCb(int arg0, int arg1);
+int audioInputThread();
+int audioInputDmaCb(int arg0, int arg1);
 
 SceAudio g_audio;
 char g_audioEventName[] = "SceAudio";
-SceSysEventHandler g_audioEvent = {0x40, g_audioEventName, 0x00FFFF00, sub_1C00, 0, 0, NULL, {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+SceSysEventHandler g_audioEvent = {0x40, g_audioEventName, 0x00FFFF00, audioEventHandler, 0, 0, NULL, {0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
-void sub_0000(int arg)
+// 0000
+/**
+ * Update / synchronize the audio buffers to play them.
+ * 
+ * @param arg Set to 1 if called from SRCOutput
+ */
+void updateAudioBuf(int arg)
 {
     int v = arg + 1;
     if (g_audio.flags == 0)
@@ -138,7 +144,7 @@ void sub_0000(int arg)
     if (sceKernelDmaOpAssign(g_audio.dmaPtr[arg], 0xFF, 0xFF, (arg * 64 + 320) | 0x0100C801, 0) == 0)
     {
         // 0110
-        if (sceKernelDmaOpSetCallback(g_audio.dmaPtr[0], (arg == 0) ? sub_0530 : sub_1D48, 0) == 0)
+        if (sceKernelDmaOpSetCallback(g_audio.dmaPtr[0], (arg == 0) ? audioOutputDmaCb : audioSRCOutputDmaCb, 0) == 0)
         {
             char shift;
             if (g_audio.hwBuf[arg * 16 + 1] != 0)
@@ -160,7 +166,12 @@ void sub_0000(int arg)
     SYNC();
 }
 
-int sub_01EC(int arg)
+// 01EC
+/** Update DMA.
+ *
+ * @param arg Memory type: 0 for output, 1 for SRCOutput, 2 for input
+ */
+int dmaUpdate(int arg)
 {
     char v = g_audio.flags & ~(1 << (arg & 0x1F));
     *(int*)(0xBE000004) = v;
@@ -185,7 +196,9 @@ int sub_01EC(int arg)
     return 0;
 }
 
-int sub_02B8()
+// 02B8
+/** The audio mixer thread. */
+int audioMixerThread()
 {
     int sp0[128];
     SceAudio *userAudio = UCACHED(&g_audio);
@@ -264,7 +277,7 @@ int sub_02B8()
                 // 0498
                 *(int*)(uncachedAudio + 1048) = 0;
                 int oldIntr = sceKernelCpuSuspendIntr();
-                sub_0000(0);
+                updateAudioBuf(0);
                 sceKernelCpuResumeIntr(oldIntr);
             }
             // 0488
@@ -273,52 +286,77 @@ int sub_02B8()
     }
 }
 
-int sub_0530(int unused, int arg1)
+// 0530
+/**
+ * The DMA callback for normal output.
+ *
+ * @param unused ?
+ * @param arg1 ?
+ */
+int audioOutputDmaCb(int unused, int arg1)
 {
     sceKernelSetEventFlag(g_audio.evFlagId, 0x20000000);
     if (arg1 != 0) {
         // 056C
-        sub_01EC(0);
+        dmaUpdate(0);
     }
     return 0;
 }
 
+/**
+ * Outputs audio (raw PCM) to channel.
+ *
+ * @param chanId The channel ID, returned by sceAudioChReserve().
+ * @param vol The volume (0 - 0xFFFF).
+ * @param buf The PCM buffer to output.
+ *
+ * @return The sample count in case of success, otherwise less than zero.
+ */
 int sceAudioOutput(u32 chanId, int vol, void *buf)
 {
     if (vol > 0xFFFF)
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     K1_BACKUP();
     if (!K1_USER_BUF_STA_SZ(buf, g_audio.chans[chanId].sampleCount * 4)) {
         // 0654
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    int ret = sub_137C(&g_audio.chans[chanId], vol, vol, buf);
+    int ret = audioOutput(&g_audio.chans[chanId], vol, vol, buf);
     sceKernelCpuResumeIntr(oldIntr);
     K1_RESET();
     return ret;
 }
 
+/**
+ * Outputs audio (raw PCM) to channel and doesn't return until everything has been played.
+ *
+ * @param chanId The channel ID, returned by sceAudioChReserve().
+ * @param vol The volume (0 - 0xFFFF).
+ * @param buf The PCM buffer to output.
+ *
+ * @return The sample count in case of success, otherwise less than zero.
+ */
 int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
 {
     if (vol >= 0xFFFF)
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     K1_BACKUP();
     if (!K1_USER_BUF_STA_SZ(buf, chan->sampleCount * 4))
     {
         // 07D8
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    int ret = sub_137C(chan, vol, vol, buf);
-    if ((u32)ret == 0x80260002)
+    int ret = audioOutput(chan, vol, vol, buf);
+    if ((u32)ret == ERROR_AUDIO_CHANNEL_BUSY)
     {
         // 0758
         if (chan->unk10 == 0)
@@ -334,8 +372,8 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
                     return ret;
                 }
                 oldIntr = sceKernelCpuSuspendIntr();
-                ret = sub_137C(chan, vol, vol, buf);
-            } while ((u32)ret == 0x80260002);
+                ret = audioOutput(chan, vol, vol, buf);
+            } while ((u32)ret == ERROR_AUDIO_CHANNEL_BUSY);
             chan->unk10 = 0;
         }
     }
@@ -344,44 +382,64 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
     return ret;
 }
 
+/**
+ * Outputs audio (raw PCM) to channel with different left and right volumes.
+ *
+ * @param chanId The channel ID, returned by sceAudioChReserve().
+ * @param leftVol The left volume (0 - 0xFFFF).
+ * @param rightVol The right volume (0 - 0xFFFF).
+ * @param buf The PCM buffer to output.
+ *
+ * @return The sample count in case of success, otherwise less than zero.
+ */
 int sceAudioOutputPanned(u32 chanId, int leftVol, int rightVol, void *buf)
 {
     if (rightVol > 0xFFFF || leftVol > 0xFFFF)
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     K1_BACKUP();
     if (!K1_USER_BUF_STA_SZ(buf, chan->sampleCount * 4))
     {
         // 08D4
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    int ret = sub_137C(chan, leftVol, rightVol, buf);
+    int ret = audioOutput(chan, leftVol, rightVol, buf);
     sceKernelCpuResumeIntr(oldIntr);
     K1_RESET();
     return ret;
 }
 
+/**
+ * Outputs audio (raw PCM) to channel with different left and right volumes. The function doesn't return until the entire buffer has been played.
+ *
+ * @param chanId The channel ID, returned by sceAudioChReserve().
+ * @param leftVol The left volume (0 - 0xFFFF).
+ * @param rightVol The right volume (0 - 0xFFFF).
+ * @param buf The PCM buffer to output.
+ *
+ * @return The sample count in case of success, otherwise less than zero.
+ */
 int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *buf)
 {
     if ((leftVol | rightVol) > 0xFFFF)
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     K1_BACKUP();
     if (!K1_USER_BUF_STA_SZ(buf, chan->sampleCount * 4))
     {
         // 0A9C
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    int ret = sub_137C(chan, leftVol, rightVol, buf);
-    if ((u32)ret == 0x80260002)
+    int ret = audioOutput(chan, leftVol, rightVol, buf);
+    if ((u32)ret == ERROR_AUDIO_CHANNEL_BUSY)
     {
         // 0A08
         if (chan->unk10 == 0)
@@ -397,8 +455,8 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
                     return ret;
                 }
                 oldIntr = sceKernelCpuSuspendIntr();
-                ret = sub_137C(chan, leftVol, rightVol, buf);
-            } while ((u32)ret == 0x80260002);
+                ret = audioOutput(chan, leftVol, rightVol, buf);
+            } while ((u32)ret == ERROR_AUDIO_CHANNEL_BUSY);
             chan->unk10 = 0;
         }
     }
@@ -411,6 +469,15 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
     return ret;
 }
 
+/**
+ * Reserves a channel.
+ *
+ * @param channel The channel ID you want to reserve, or -1 if you want the first free one to be selected.
+ * @param sampleCount The number of samples.
+ * @param format The audio format (0x10 for MONO, 0 for STEREO)
+ *
+ * @return The channel ID in case of success, otherwise less than zero.
+ */
 int sceAudioChReserve(int channel, int sampleCount, int format)
 {
     K1_BACKUP();
@@ -430,7 +497,7 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
         {
             sceKernelCpuResumeIntr(oldIntr);
             K1_RESET();
-            return 0x80260005;
+            return ERROR_AUDIO_NO_CHANNELS_AVAILABLE;
         }
     }
     else if (channel >= 8 || g_audio.chans[channel].sampleCount != 0)
@@ -438,7 +505,7 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
         // 0B08
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     }
     // 0B38
     if (sampleCount <= 0 || (sampleCount & 0x3F) != 0 || (u32)sampleCount > 0xFFC00000)
@@ -446,19 +513,19 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
         // 0B58
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260006;
+        return ERROR_AUDIO_INVALID_SAMPLECOUNT;
     }
     // 0B6C
     char bytesPerSample = 4;
     if (format != 0)
     {
         bytesPerSample = 2;
-        if (format != 16)
+        if (format != 0x10)
         {
             // 0BAC
             sceKernelCpuResumeIntr(oldIntr);
             K1_RESET();
-            return 0x80260007;
+            return ERROR_AUDIO_INVALID_FORMAT;
         }
     }
     // 0B8C
@@ -471,6 +538,18 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
     return channel;
 }
 
+/**
+ * Reserves the channel & outputs in "one shot"
+ *
+ * @param chanId The channel ID, or -1 if you want the first free channel to be chose.
+ * @param sampleCount The number of samples to play.
+ * @param fmt The audio format (0x10 for MONO, 0 for STEREO)
+ * @param leftVol The left ear volume (0 - 0xFFFF).
+ * @param rightVol The right ear volume (0 - 0xFFFF).
+ * @param buf The PCM audio buffer.
+ *
+ * @return The channel ID in case of success, otherwise less than zero.
+ */
 int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int rightVol, void *buf)
 {
     K1_BACKUP();
@@ -480,7 +559,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         // 0E30
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     }
     if (chanId < 0)
     {
@@ -494,7 +573,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         {
             sceKernelCpuResumeIntr(oldIntr);
             K1_RESET();
-            return 0x80260005;
+            return ERROR_AUDIO_NO_CHANNELS_AVAILABLE;
         }
     }
     else if (chanId >= 8 || g_audio.chans[chanId].sampleCount != 0)
@@ -502,7 +581,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         // 0CA4
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     }
     SceAudioChannel *chan = &g_audio.chans[chanId];
     // 0CE4
@@ -511,25 +590,25 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         // 0DC8
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260006;
+        return ERROR_AUDIO_INVALID_SAMPLECOUNT;
     }
     if (!K1_USER_BUF_STA_SZ(buf, chan->sampleCount * 4))
     {
         // 0DB0
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     char bytesPerSample = 4;
     if (fmt != 0)
     {
         bytesPerSample = 2;
-        if (fmt != 16)
+        if (fmt != 0x10)
         {
             // 0D98
             sceKernelCpuResumeIntr(oldIntr);
             K1_RESET();
-            return 0x80260007;
+            return ERROR_AUDIO_INVALID_FORMAT;
         }
     }
     // 0D28
@@ -544,7 +623,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         int i;
         for (i = 0; i < 128; i++)
             ((int*)KUNCACHED(g_audio.buf0))[i] = 0;
-        sub_0000(0);
+        updateAudioBuf(0);
     }
     // 0D84
     sceKernelCpuResumeIntr(oldIntr);
@@ -552,10 +631,17 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
     return chanId;
 }
 
+/**
+ * Releases a channel.
+ *
+ * @param channel The channel ID to release.
+ *
+ * @return 0 in case of succes, otherwise less than zero.
+ */
 int sceAudioChRelease(u32 channel)
 {
     if (channel >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     K1_BACKUP();
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[channel];
@@ -564,14 +650,14 @@ int sceAudioChRelease(u32 channel)
         // 0EE4
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260008;
+        return ERROR_AUDIO_CHANNEL_NOT_RESERVED;
     }
     if (chan->unk10 != 0)
     {
         // 0ECC
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260002;
+        return ERROR_AUDIO_CHANNEL_BUSY;
     }
     chan->sampleCount = 0;
     sceKernelCpuResumeIntr(oldIntr);
@@ -579,21 +665,36 @@ int sceAudioChRelease(u32 channel)
     return 0;
 }
 
+/**
+ * Get the number of remaining unplayed samples of a channel.
+ *
+ * @param chanId The channel ID to check.
+ *
+ * @return The number of remaining samples.
+ */
 int sceAudioGetChannelRestLength(u32 chanId)
 {
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     // 0F30
     return ((chan->buf != NULL) ? chan->curSampleCnt : 0) + ((chan->unk10 != 0) ? 0 : chan->sampleCount);
 }
 
+/**
+ * Set the sample count of a channel.
+ *
+ * @param chanId The channel ID.
+ * @param sampleCount The number of samples.
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
 {
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     if (sampleCount <= 0 || (sampleCount & 0x3F) != 0 || sampleCount > 0xFFC0)
-        return 0x80260006;
+        return ERROR_AUDIO_INVALID_SAMPLECOUNT;
     // 0FB8
     K1_BACKUP();
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -603,26 +704,35 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
         // 1018
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260002;
+        return ERROR_AUDIO_CHANNEL_BUSY;
     }
     if (chan->sampleCount == 0)
     {
         // 1000
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260001;
+        return ERROR_AUDIO_CHANNEL_NOT_INIT;
     }
     chan->sampleCount = sampleCount & 0xFFFF;
     K1_RESET();
     return 0;
 }
 
+/**
+ * Change the volume of a channel.
+ *
+ * @param chanId The channel ID.
+ * @param leftVol The left ear volume.
+ * @param rightVol The right ear volume.
+ *
+ * @return 0 on success, otherwise less than 0
+ */
 int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
 {
     if ((rightVol > 0xFFFF) || (leftVol > 0xFFFF))
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     K1_BACKUP();
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[chanId];
@@ -637,10 +747,18 @@ int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
     return 0;
 }
 
+/**
+ * Change the format (mono/stereo) of a channel.
+ *
+ * @param chanId The channel ID.
+ * @param format The audio format (0 for STEREO, 0x10 for MONO).
+ *
+ * @return 0 on success, otherwise less than 0
+ */
 int sceAudioChangeChannelConfig(u32 chanId, int format)
 {
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     K1_BACKUP();
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[chanId];
@@ -649,7 +767,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260002;
+        return ERROR_AUDIO_CHANNEL_BUSY;
     }
     // 1164
     if ((SysMemForKernel_F0E0AB7A() > 0x01FFFFFF && (chan->curSampleCnt == 0 || chan->buf == NULL)) || chan->curSampleCnt == 0) // 1214
@@ -657,7 +775,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260002;
+        return ERROR_AUDIO_CHANNEL_BUSY;
     }
     // 11A4
     if (chan->sampleCount == 0)
@@ -665,7 +783,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         // 11FC
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260008;
+        return ERROR_AUDIO_CHANNEL_NOT_RESERVED;
     }
     char bytesPerSample = 4;
     if (format != 0)
@@ -676,7 +794,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
             // 11E4
             sceKernelCpuResumeIntr(oldIntr);
             K1_RESET();
-            return 0x80260007;
+            return ERROR_AUDIO_INVALID_FORMAT;
         }
     }
     // 11CC
@@ -686,63 +804,113 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
     return 0;
 }
 
+/**
+ * Change SRC output sample count.
+ *
+ * @param sampleCount The sample count.
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioOutput2ChangeLength(int sampleCount)
 {
     if (sampleCount < 17 || sampleCount > 4111)
-        return 0x80260006;
+        return ERROR_AUDIO_INVALID_SAMPLECOUNT;
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.srcChFreq == 0)
     {
         // 1280
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80260008;
+        return ERROR_AUDIO_CHANNEL_NOT_RESERVED;
     }
     g_audio.srcChSampleCnt = sampleCount;
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
+/**
+ * Get the number of SRC unplayed samples.
+ *
+ * @return The number of unplayed samples.
+ */
 int sceAudioOutput2GetRestSample(void)
 {
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
     if (g_audio.srcChFreq == 0)
-        return 0x80260008;
+        return ERROR_AUDIO_CHANNEL_NOT_RESERVED;
     // 12C8
     return (ptr[ 2] != 0 ? g_audio.srcChSampleCnt : 0)
         + (ptr[10] != 0 ? g_audio.srcChSampleCnt : 0);
 }
 
+/**
+ * Get the number of unplayed samples of a channel.
+ *
+ * @param chanId The channel ID.
+ *
+ * @return The number of samples in case of success, otherwise less than zero.
+ */
 int sceAudioGetChannelRestLen(u32 chanId)
 {
     if (chanId >= 8)
-        return 0x80260003;
+        return ERROR_AUDIO_INVALID_CHANNEL;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     if (chan->unk10 == 0)
         return chan->curSampleCnt;
     return chan->curSampleCnt + chan->sampleCount;
 }
 
+/**
+ * Reserve a SRC output.
+ *
+ * @param sampleCount The number of samples of the output.
+ *
+ * @return 0 in case of success, otherwise less than zero.
+ */
 int sceAudioOutput2Reserve(int sampleCount)
 {
     return sceAudioSRCChReserve(sampleCount, 44100, 2);
 }
 
+/**
+ * Output to SRC. This function only returns when all the samples have been played.
+ *
+ * @param vol The output volume.
+ * @param buf The PCM audio buffer.
+ *
+ * @return The sample count on success, otherwise less than zero.
+ */
 int sceAudioOutput2OutputBlocking(int vol, void *buf)
 {
     return sceAudioSRCOutputBlocking(vol, buf);
 }
 
+/**
+ * Release SRC output.
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioOutput2Release(void)
 {
     return sceAudioSRCChRelease();
 }
 
-int sub_137C(SceAudioChannel *channel, short leftVol, short rightVol, void *buf)
+// 137C
+/**
+ * Outputs audio to channel.
+ *
+ * @param channel The pointer to the channel.
+ * @param leftVol The left ear volume.
+ * @param rightVol The right ear volume.
+ * @param buf The audio PCM buffer.
+ *
+ * @return The number of samples on success, otherwise less than zero.
+ */
+int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *buf)
 {
     if (channel->sampleCount == 0)
-        return 0x80260001;
+        return ERROR_AUDIO_CHANNEL_NOT_INIT;
     if (channel->buf != NULL)
-        return 0x80260002;
+        return ERROR_AUDIO_CHANNEL_BUSY;
     channel->curSampleCnt = channel->sampleCount;
     if (leftVol >= 0)
         channel->leftVol = leftVol;
@@ -757,10 +925,17 @@ int sub_137C(SceAudioChannel *channel, short leftVol, short rightVol, void *buf)
     int i;
     for (i = 0; i < 128; i++)
         ((int*)KUNCACHED(g_audio.buf0))[i] = 0;
-    sub_0000(0);
+    updateAudioBuf(0);
     return channel->sampleCount;
 }
 
+/**
+ * Sets the audio output frequency.
+ *
+ * @param freq The frequency (44100 or 48000).
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioSetFrequency(int freq)
 {
     if (g_audio.freq == freq)
@@ -774,7 +949,7 @@ int sceAudioSetFrequency(int freq)
         hwFreq = 256;
     else {
         // 1504
-        return 0x8026000A;
+        return ERROR_AUDIO_INVALID_FREQUENCY;
     }
     // 1470
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -797,6 +972,9 @@ int sceAudioSetFrequency(int freq)
     return 0;
 }
 
+/**
+ * Inits audio.
+ */
 int sceAudioInit()
 {
     memset(&g_audio, 0, sizeof(g_audio));
@@ -839,17 +1017,17 @@ int sceAudioInit()
         i += 2;
     } while (i < 4);
     sceClockgenAudioClkSetFreq(g_audio.freq);
-    sub_1AAC();
+    audioHwInit();
     sceCodec_driver_431C0C8E(g_audio.freq);
-    SceUID id = sceKernelCreateThread("SceAudioMixer" /* 0x34F0 */, sub_02B8, 5, 0x600, 0x100000, 0);
+    SceUID id = sceKernelCreateThread("SceAudioMixer" /* 0x34F0 */, audioMixerThread, 5, 0x600, 0x100000, 0);
     if (id < 0 || sceKernelStartThread(id, 0, 0) != 0)
         return 1;
     // 1724
-    SceUID id2 = sceKernelCreateThread("SceAudioInput", sub_2454, 6, 0x400, 0x100000, 0);
+    SceUID id2 = sceKernelCreateThread("SceAudioInput", audioInputThread, 6, 0x400, 0x100000, 0);
     if (id2 < 0 || sceKernelStartThread(id2, 0, 0) != 0)
         return 1;
     sceKernelRegisterSysEventHandler(g_audioEvent);
-    sceKernelRegisterIntrHandler(10, 2, sub_1970, 0, 0);
+    sceKernelRegisterIntrHandler(10, 2, audioIntrHandler, 0, 0);
     sceKernelEnableIntr(10);
     sceKernelDcacheWritebackInvalidateRange(g_audio, 1400);
     *(int*)(g_audio.dmaPtr[0] + 8) = UCACHED(&g_audio);
@@ -859,13 +1037,16 @@ int sceAudioInit()
     return 0;
 }
 
+/**
+ * \todo ?
+ */
 int sceAudioLoopbackTest(int arg0)
 {
     if (arg0 == 0)
     {
         // 1854
         g_audio.flags = 0;
-        sub_1AAC();
+        audioHwInit();
         sceCodec_driver_B2EF6B19(0);
     }
     else
@@ -885,6 +1066,9 @@ int sceAudioLoopbackTest(int arg0)
     return 0;
 }
 
+/**
+ * Frees the audio system.
+ */
 int sceAudioEnd()
 {
     sceCodecOutputEnable(0, 0);
@@ -903,12 +1087,27 @@ int sceAudioEnd()
     return 0;
 }
 
+/**
+ * Selects the delaying mode.
+ *
+ * @param arg If set to 1, channels 0 - 6 will be delayed after sceAudioOutputPannedBlocking, otherwise only channels 0 - 4 will be.
+ *
+ * @return 0.
+ */
+
 int sceAudio_driver_306D18F1(int arg)
 {
     g_audio.delayShift = (arg != 0) ? 2 : 0;
     return 0;
 }
 
+/**
+ * Sets the volume offset/shifting.
+ *
+ * @param arg The output buffer will be shifted by (arg + 8); default is 8, so arg = 0 is the default value.
+ *
+ * @return 0.
+ */
 int sceAudioSetVolumeOffset(int arg)
 {
     // 1948
@@ -919,7 +1118,13 @@ int sceAudioSetVolumeOffset(int arg)
     return 0;
 }
 
-int sub_1970()
+// 1970
+/**
+ * The audio interrupt handler.
+ *
+ * @return -1.
+ */
+int audioIntrHandler()
 {
     int oldIntr = sceKernelCpuSuspendIntr();
     char attr = g_audio.flags;
@@ -969,7 +1174,11 @@ int sub_1970()
     return -1;
 }
 
-void sub_1AAC()
+// 1AAC
+/**
+ * (Re)inits the audio hardware & sysreg.
+ */
+void audioHwInit()
 {
     sceSysreg_driver_3A98CABB(0, 1);
     sceSysreg_driver_789597AB(0);
@@ -1023,13 +1232,19 @@ void sub_1AAC()
     AUDIO_SET_BUSY(0);
 }
 
-int sub_1C00(int ev_id, char* ev_name, void* param, int* result)
+// 1C00
+/**
+ * The audio event handler.
+ *
+ * @return 0.
+ */
+int audioEventHandler(int ev_id, char* ev_name, void* param, int* result)
 {
     switch (ev_id)
     {
     case 0x1000F:
         // 1D38
-        sub_1AAC();
+        audioHwInit();
         break;
     case 0x100000:
         // 1CE8
@@ -1040,7 +1255,7 @@ int sub_1C00(int ev_id, char* ev_name, void* param, int* result)
             sceCodec_driver_B0141A1B(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
         }
         break;
-    case 4096:
+    case 0x1000:
         {
         // 1C4C
         // 1C58
@@ -1067,12 +1282,16 @@ int sub_1C00(int ev_id, char* ev_name, void* param, int* result)
     return 0;
 }
 
-int sub_1D48(int arg0, int arg1)
+// 1D48
+/**
+ * The DMA callback for SRC output.
+ */
+int audioSRCOutputDmaCb(int arg0, int arg1)
 {
     if (arg1 != 0)
     {
         // 1DD0
-        sub_01EC(1);
+        dmaUpdate(1);
         return -1;
     }
     int shift = (*(int*)(arg0 + 40) + 0x7FFFFBB0 - (u32)&g_audio < 32) ? 8 : 0; // ?
@@ -1086,16 +1305,25 @@ int sub_1D48(int arg0, int arg1)
     return 0;
 }
 
+/**
+ * Reserves a SRC output.
+ *
+ * @param sampleCount The number of samples.
+ * @param freq The output frequency.
+ * @param numChans The number of output "channels" (only 2 is accepted, for stereo)
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
 {
     if (numChans != 4 && numChans != 2)
-        return 0x80000104;
+        return ERROR_SIZE;
     if (numChans == 4)
         return 0x80000003;
     int totalSamples = sampleCount * numChans;
     int wut = (int)(totalSamples + ((u32)totalSamples >> 31)) >> 1;
     if (wut < 17 || wut > 4111)
-        return 0x80000104;
+        return ERROR_SIZE;
     int hwFreq;
     if (freq == 0 || g_audio.freq == freq)
     {
@@ -1141,7 +1369,7 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
             break;
         default:
             // 1EB4
-            return 0x8026000A;
+            return ERROR_AUDIO_INVALID_FREQUENCY;
         }
     }
     // 1EDC
@@ -1191,13 +1419,18 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
     return 0;
 }
 
+/**
+ * Releases a SRC output.
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioSRCChRelease(void)
 {
     int oldIntr = sceKernelCpuSuspendIntr();
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
     if (g_audio.srcChFreq == 0) {
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80260008;
+        return ERROR_AUDIO_CHANNEL_NOT_RESERVED;
     }
     // 20C0
     if ((ptr[2] | ptr[10]) != 0) {
@@ -1211,19 +1444,27 @@ int sceAudioSRCChRelease(void)
     return 0;
 }
 
+/**
+ * Outputs to SRC. The functions returns only when all the buffer has been played.
+ *
+ * @param vol The output volume (0 - 0xFFFF).
+ * @param buf The audio PCM buffer.
+ *
+ * @return The sample count on success, otherwise less than zero.
+ */
 int sceAudioSRCOutputBlocking(int vol, void *buf)
 {
     if (vol > 0xFFFFF)
-        return 0x8026000B;
+        return ERROR_AUDIO_INVALID_VOLUME;
     K1_BACKUP();
     if (!K1_USER_BUF_STA_SZ(buf, g_audio.srcChSampleCnt * g_audio.numChans))
     {
         // 224C
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    int ret = sub_225C(vol, buf);
+    int ret = audioSRCOutput(vol, buf);
     sceKernelCpuResumeIntr(oldIntr);
     if (ret > 0 || (ret == 0 && (g_audio.flags & 2) != 0)) // 222C
     {
@@ -1251,15 +1492,23 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
     return ret;
 }
 
-int sub_225C(int vol, void *buf)
+/**
+ * Outputs audio to SRC output.
+ *
+ * @param vol The volume (0 - 0xFFFF)
+ * @param buf The audio PCM buffer.
+ *
+ * @return The sample count on success, otherwise less than zero.
+ */
+int audioSRCOutput(int vol, void *buf)
 {
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
     if (g_audio.srcChFreq == 0)
-        return 0x80260008;
+        return ERROR_AUDIO_CHANNEL_NOT_RESERVED;
     if (ptr[2] != 0)
     {
         if (ptr[10] != 0)
-            return 0x80260002;
+            return ERROR_AUDIO_CHANNEL_BUSY;
         ptr += 8;
     }
     // 22C4
@@ -1287,7 +1536,7 @@ int sub_225C(int vol, void *buf)
     if ((g_audio.flags & 2) == 0)
     {
         // 2430
-        sub_0000(1);
+        updateAudioBuf(1);
         wait = 1;
     }
     else
@@ -1321,7 +1570,13 @@ int sub_225C(int vol, void *buf)
     return g_audio.srcChSampleCnt;
 }
 
-int sub_2454()
+// 2454
+/**
+ * The audio input thread.
+ *
+ * @return 0.
+ */
+int audioInputThread()
 {
     // 2478
     for (;;)
@@ -1408,7 +1663,7 @@ int sub_2454()
                         ;
                     sceKernelDmaOpQuit(g_audio.dmaPtr[2]);
                     ptr1[2] = g_audio.flags;
-                    sub_2948();
+                    audioInputSetup();
                 }
             }
             else
@@ -1419,17 +1674,22 @@ int sub_2454()
     }
 }
 
+/**
+ * Waits for the input to end.
+ *
+ * @return 0 on success, otherwise less than 0.
+ */
 int sceAudioWaitInputEnd()
 {
     int ret = 0;
     if (g_audio.inputOrigSampleCnt == 0)
-        return 0x80260001;
+        return ERROR_AUDIO_CHANNEL_NOT_INIT;
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.inputIsWaiting != 0)
     {
         // 27AC
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80260010;
+        return ERROR_AUDIO_INPUT_BUSY;
     }
     g_audio.inputIsWaiting = 1;
     sceKernelCpuResumeIntr(oldIntr);
@@ -1443,45 +1703,89 @@ int sceAudioWaitInputEnd()
     return ret;
 }
 
+/**
+ * Inits audio input.
+ *
+ * @param param The structure containing the input parameters.
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioInputInitEx(SceAudioInputParams *param)
 {
     K1_BACKUP();
     if (!K1_USER_BUF_STA_SZ(param, 24)) {
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
-    int ret = sub_2C98(param->unk0, param->gain, param->unk2, param->unk3, param->unk4, param->unk5);
+    int ret = audioInputInit(param->unk0, param->gain, param->unk2, param->unk3, param->unk4, param->unk5);
     K1_RESET();
     return ret;
 }
 
+/**
+ * Inits audio input (probably deprecated, has less parameters than sceAudioInputInitEx()).
+ *
+ * @param arg0 \todo ?
+ * @param gain The input gain.
+ * @param arg2 \todo ?
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
 int sceAudioInputInit(int arg0, int gain, int arg2)
 {
     K1_BACKUP();
-    int ret = sub_2C98(arg0, gain, arg2, 0, 3, 2);
+    int ret = audioInputInit(arg0, gain, arg2, 0, 3, 2);
     K1_RESET();
     return ret;
 }
 
+/**
+ * Waits for the input to end, and store input.
+ *
+ * @param sampleCount The number of samples to read.
+ * @param freq The input frequency.
+ * @param buf The audio PCM input buffer.
+ *
+ * @return The number of played samples on success, otherwise less than zero.
+ */
 int sceAudioInputBlocking(int sampleCount, int freq, void *buf)
 {
     sceAudioWaitInputEnd();
-    return sub_2A80(sampleCount, freq, buf);
+    return audioInput(sampleCount, freq, buf);
 }
 
+/**
+ * Store input.
+ *
+ * @param unk1 \todo ?
+ * @param gain The input gain.
+ * @param unk2 \todo ?
+ *
+ * @return The number of played samples on success, otherwise less than zero.
+ */
 int sceAudioInput(int unk1, int gain, int unk2)
 {
-    return sub_2A80(unk1, gain, unk2);
+    return audioInput(unk1, gain, unk2);
 }
 
+/**
+ * Get the number of samples read from input.
+ *
+ * @return The sample count.
+ */
 int sceAudioGetInputLength()
 {
     int origSampleCount = g_audio.inputOrigSampleCnt;
     if (origSampleCount == 0)
-        return 0x80260001;
+        return ERROR_AUDIO_CHANNEL_NOT_INIT;
     return origSampleCount - g_audio.inputCurSampleCnt;
 }
 
+/**
+ * Checks if the input has ended.
+ *
+ * @return 1 if the input is still running, otherwise 0.
+ */
 int sceAudioPollInputEnd()
 {
     if (g_audio.inputInited == 0)
@@ -1491,6 +1795,9 @@ int sceAudioPollInputEnd()
     return (g_audio.inputCurSampleCnt > 0);
 }
 
+/**
+ * \todo ?
+ */
 int sceAudio_driver_37660887(int arg)
 {
     if (g_audio.unkCodecArg != arg) {
@@ -1500,14 +1807,20 @@ int sceAudio_driver_37660887(int arg)
     return 0;
 }
 
-int sub_2948()
+// 2948
+/**
+ * Setups audio input hardware.
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
+int audioInputSetup()
 {
     sceKernelDmaOpQuit(g_audio.dmaPtr[2]);
     int ret = sceKernelDmaOpAssign(g_audio.dmaPtr[2], 0xFF, 0xFF, 0xD00F, 0);
     if (ret != 0)
         return ret;
     // 299C
-    ret = sceKernelDmaOpSetCallback(g_audio.dmaPtr[2], sub_2D64, 0);
+    ret = sceKernelDmaOpSetCallback(g_audio.dmaPtr[2], audioInputDmaCb, 0);
     if (ret != 0)
         return ret;
     int *ptr = KUNCACHED(&g_audio.hwBuf[32]);
@@ -1540,14 +1853,24 @@ int sub_2948()
     return ret;
 }
 
-int sub_2A80(int sampleCount, int freq, void *buf)
+// 2A80
+/**
+ * Stores input.
+ *
+ * @param sampleCount The number of samples to store.
+ * @param freq The audio input frequency.
+ * @param buf The audio PCM buffer.
+ *
+ * @return The number of played samples in case of success, otherwise less than zero.
+ */
+int audioInput(int sampleCount, int freq, void *buf)
 {
     int ret = 0;
     if (g_audio.inputInited == 0)
         return 0x80000001;
     if (sampleCount <= 0 || (sampleCount & 0x3F) != 0) {
         // 2AD8
-        return 0x80260006;
+        return ERROR_AUDIO_INVALID_SAMPLECOUNT;
     }
     int hwFreq;
     // 2B08
@@ -1566,7 +1889,7 @@ int sub_2A80(int sampleCount, int freq, void *buf)
         break;
     default:
         // 2B24
-        return 0x8026000A;
+        return ERROR_AUDIO_INVALID_FREQUENCY;
     }
     // 2B30
     if (buf == NULL)
@@ -1581,7 +1904,7 @@ int sub_2A80(int sampleCount, int freq, void *buf)
     {
         // 2C5C
         K1_RESET();
-        return 0x80260004;
+        return ERROR_AUDIO_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.inputCurSampleCnt != 0)
@@ -1589,7 +1912,7 @@ int sub_2A80(int sampleCount, int freq, void *buf)
         // 2C44
         sceKernelCpuResumeIntr(oldIntr);
         K1_RESET();
-        return 0x80260010;
+        return ERROR_AUDIO_INPUT_BUSY;
     }
     g_audio.inputBuf = buf;
     g_audio.inputHwFreq = hwFreq;
@@ -1605,7 +1928,7 @@ int sub_2A80(int sampleCount, int freq, void *buf)
             return ret;
         }
         int oldIntr = sceKernelCpuSuspendIntr();
-        ret = sub_2948();
+        ret = audioInputSetup();
         sceKernelCpuResumeIntr(oldIntr);
         if (ret < 0) {
             K1_RESET();
@@ -1634,7 +1957,20 @@ int sub_2A80(int sampleCount, int freq, void *buf)
     return ret;
 }
 
-int sub_2C98(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
+// 2C98
+/**
+ * Inits audio input.
+ *
+ * @param arg0 \todo ?
+ * @param gain The audio input gain.
+ * @param arg2 ?
+ * @param arg3 ?
+ * @param arg4 ?
+ * @param arg5 ?
+ *
+ * @return 0 on success, otherwise less than zero.
+ */
+int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
 {
     g_audio.unkInput0 = MIN(MAX(arg0, -29),  0);
     g_audio.inputGain = MIN(MAX(gain, -18), 30);
@@ -1653,12 +1989,15 @@ int sub_2C98(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
     return 0;
 }
 
-int sub_2D64(int arg0, int arg1)
+/**
+ * The DMA callback for input.
+ */
+int audioInputDmaCb(int arg0, int arg1)
 {
     if (arg1 != 0)
     {
         // 2DD0
-        sub_01EC(2);
+        dmaUpdate(2);
         return -1;
     }
     int *ptr = KUNCACHED(&g_audio.hwBuf[34] + ((*(int*)(arg0 + 40) + 0x80000000 - (u32)(&g_audio.hwBuf[36]) < 32) << 5));
