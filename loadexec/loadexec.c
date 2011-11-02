@@ -1,32 +1,68 @@
 #include "../global.h"
 
+/** Structure for LoadExecVSH* functions */
 typedef struct
 {
-    int size;
-    int opt1;
-    int opt2;
-    char *typeName; /* vsh, umdemu.. */
-    int opt4;
-    int opt5;
-    int opt6;
-    int opt7;
-    int loadPspbtcnf; // Always set to 0x10000
-    int opt9;
-    int opt10;
-    int opt11;
-} RebootArgs2;
+    /** Size of the structure in bytes */
+    SceSize size;
+    /** Size of the arguments string */
+    SceSize args;
+    /** Pointer to the arguments strings */
+    void *argp;
+    /** The key, usually "game", "updater" or "vsh" */
+    const char *key;
+    /** The size of the vshmain arguments */
+    u32 vshmainArgs;
+    /** vshmain arguments that will be passed to vshmain after the program has exited */
+    void *vshmainArgp;
+    /** "/kd/pspbtcnf_game.txt" or "/kd/pspbtcnf.txt" if not supplied (max. 256 chars) */
+    char *configFile;
+    /** An unknown string (max. 256 chars) probably used in 2nd stage of loadexec */
+    u32 unk4;
+    /** unknown flag default value = 0x10000 */
+    u32 flags;
+    u32 unkArgs;
+    void *unkArgp;
+    u32 opt11;
+} SceKernelLoadExecVSHParam;
 
 typedef struct
 {
     int opt0;
     int opt1;
     char *fileName;
-    RebootArgs2 *args2;
+    SceKernelLoadExecVSHParam *args2;
     int opt4;
     void *opt5;
     int opt6;
     int opt7;
+    int opt8;
 } RebootArgs; 
+
+typedef struct
+{
+    void *argp; // 0
+    int args; // 4
+    int unk8, unk12, unk16, unk20, unk24;
+} SceKernelArgsStor;
+
+typedef struct
+{
+    void *addr; // 0
+    int unk4, unk8, unk12;
+    void *addr1; // 16
+    void *addr2; // 20
+    int unk24;
+    int curArgs; // 28
+    SceKernelArgsStor *args; // 32
+    int unk36, unk40;
+    int model; // 44
+    int unk48, unk52, unk56, unk60;
+    int dipswLo; // 64
+    int dipswHi; // 68
+    int unk72, unk76, unk80;
+    // ... ? size is max 0x1000
+} SceKernelUnkStruct;
 
 static char g_encryptedBootPath[]   = "disc0:/PSP_GAME/SYSDIR/EBOOT.BIN"; // 0x3AE4
 static char g_unencryptedBootPath[] = "disc0:/PSP_GAME/SYSDIR/BOOT.BIN"; // 0x3B18
@@ -49,6 +85,7 @@ int *g_unkCbInfo[4]; // 0xD400
 //#define EXEC_START 0x3E80 // TODO: store new executable in an array and set this as the executable start & end
 //#define EXEC_END   0xD350
 
+/*
 // 0000
 void decodeKL4E(char *dst, int size, char *src, int arg3)
 {
@@ -68,9 +105,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
             *arg3 = src + 5;
         return 0x80000108;
     }
-    at = (s0 & 0x18) >> 2;
-    at <<= 4;
-    at = 128 - at;
+    at = 0x80 - (((s0 & 0x18) >> 2) << 4);
     at = (at & 0xffff00ff) | ((at << 8) & 0xff00);
     s0 = s0 & 7;
     at = (at & 0x0000ffff) | ((at << 16) & 0xffff0000);
@@ -82,30 +117,25 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         *(arg1 + 2660) = at;
         arg1 += 8;
     } while (arg1 != sp)
-    at = 255;
 
     // 080
     for (;;)
     {
         t9 = (t9 & 0xfffff8ff) | ((curDst << 8) & 0x700);
-        v1 = t9 >> (s0 & 0x1f);
-        v1 &= 0x7;
-        v1 = sp + v1 * 255;
+        v1 = sp + ((t9 >> (s0 & 0x1F)) & 7) * 255;
         t9 = 1;
     
         // 09C
         do
         {
             t7 = v1 + t9;
-            t5 = s3 >> 24;
             t6 = *(u8*)(t7 - 1);
-            if (t5 == 0)
+            if ((s3 >> 24) == 0)
             {
                 // 0EC
-                s2 = *(u8*)(src + 5);
                 t1 <<= 8;
+                t1 += *(u8*)(src + 5);
                 src++;
-                t1 += s2;
                 t9 <<= 1;
                 lo = s3 * t6;
                 s3 <<= 8;
@@ -113,11 +143,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
             else
             {
                 t9 <<= 1;
-                s2 = s3 >> 8;
-                lo = s2 * t6;
+                lo = (s3 >> 8) * t6;
             }
-            s2 = t6 >> 3;
-            t6 -= s2;
+            t6 -= (t6 >> 3);
             t5 = lo;
             s2 = t9 >> 8;
     
@@ -132,8 +160,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
             {
                 // 0D0
                 s3 = lo;
-                t6 += 31;
-                *(s8*)(t7 - 1) = t6;
+                *(s8*)(t7 - 1) = t6 + 31;
                 t9++;
             }
         } while (s2 == 0);
@@ -143,28 +170,22 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         // 134
         for (;;)
         {
-            s1 = s3 >> 24;
             t5 = *(u8*)(arg1 + 2336);
-            v1 = s3 >> 8;
-            if (s1 == 0)
+            if ((s3 >> 24) == 0)
             {
                 // 17C
-                t8 = *(u8*)(src + 5)
-                curDst++;
                 t1 <<= 8;
+                t1 += *(u8*)(src + 5);
                 src++;
-                t1 += t8;
                 lo = s3 * t5;
                 s3 <<= 8;
             }
-            else {
-                lo = v1 * t5;
-                curDst++;
-            }
+            else
+                lo = (s3 >> 8) * t5;
+            curDst++;
         
-            v1 = t5 >> 4;
             s1 = lo;
-            t5 -= v1;
+            t5 -= (t5 >> 4);
             if (t1 < s1)
             {
                 // 1AC
@@ -176,26 +197,21 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                 int goto_3a4 = 0;
                 for (;;)
                 {  
-                    t9 = s1 >> 24;
                     t5 = *(u8*)(arg1 + 2344);
-                    if (t9 == 0)
+                    if ((s1 >> 24) == 0)
                     {  
                         // 750
-                        v1 = *(u8*)(src + 5);
                         t1 <<= 8;
-                        src++;
-                        t1 += v1;
-                        lo = s3 * t5;                                                                                                                                         
+                        t1 += *(u8*)(src + 5);
+                        lo = s3 * t5;
                         s3 = s1 << 8;
+                        src++;
                     }
-                    else {
-                        s2 = s3 >> 8;
-                        lo = s2 * t5;
-                    }
+                    else
+                        lo = (s3 >> 8) * t5;
             
                     arg1 += 8;
-                    s2 = t5 >> 4;
-                    t5 -= s2;
+                    t5 -= (t5 >> 4);
                     s1 = lo;
                     v1 = t5 + 15;
                     if (t1 < s1)
@@ -244,10 +260,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         if (v1 == 0)
                         {  
                             // 858
-                            v1 = *(u8*)(src + 5);
                             t1 <<= 8;
+                            t1 += *(u8*)(src + 5);
                             src++;
-                            t1 += v1;
                             lo = s3 * s2;
                             s3 <<= 8;
                         }
@@ -255,8 +270,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                             lo = v0 * s2;
                        
                         // 234
-                        v0 = s2 >> 3;
-                        s2 -= v0;
+                        s2 -= (s2 >> 3);
                         v1 = lo;
                         t6 = 2;
                         if (t1 < v1)
@@ -274,7 +288,6 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         if (t9 > 0)
                         {
                             v1 = s3 >> 24;
-                            v0 = s3 >> 8;
             
                             if (v1 == 0)
                             {
@@ -284,13 +297,11 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                 src++;
                                 t1 += v1;
                                 s3 <<= 8;
-                                v0 = s3 >> 8;
                             }
             
                             // 264
-                            lo = v0 * s2;
-                            v0 = s2 >> 3;
-                            s2 -= v0;
+                            lo = (s3 >> 8) * s2;
+                            s2 -= (s2 >> 3);
                             v1 = lo;
                             t6 <<= 1;
                             if (t1 < v1)
@@ -307,16 +318,14 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
             
                             if (t9 != 1)
                             {
-                                v1 = s3 >> 24;
                                 t6 <<= 1;
                                
-                                if (v1 == 0)
+                                if ((s3 >> 24) == 0)
                                 {  
                                     // 890
-                                    v1 = *(u8*)(src + 5);
                                     t1 <<= 8;
+                                    t1 += *(u8*)(src + 5);
                                     src++;
-                                    t1 += v1;
                                     s3 <<= 7;
                                 }
                                 else
@@ -324,10 +333,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                 // 29C
                                 for (;;)
                                 {  
-                                    v1 = t1 - s3;
                                     t9--;
                                     if (t1 >= s3)
-                                        t1 = v1;
+                                        t1 -= s3;
                                     t6 += v0;
                                     if (t9 == 1)
                                         break;
@@ -341,25 +349,21 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         *(s8*)(s1 + 2424) = s2;
             
                     // 2BC
-                    v1 = s3 >> 24;
                     arg1 = sp + 7;
                     s2 = *(u8*)(s1 + 2400);
-                    v0 = s3 >> 8;
-                    if (v1 == 0)
+                    if ((s3 >> 24) == 0)
                     {  
                         // 80C
-                        v1 = *(u8*)(src + 5);
                         t1 <<= 8;
+                        t1 += *(u8*)(src + 5);
                         src++;
-                        t1 += v1;
                         lo = s3 * s2;
                         s3 <<= 8;
                     }   
                     else
-                        lo = v0 * s2;
+                        lo = (s3 >> 8) * s2;
             
-                    v0 = s2 >> 3;
-                    s2 -= v0;
+                    s2 -= (s2 >> 3);
                     v1 = lo;
                     t6 <<= 1;
                     int stop = 0;
@@ -562,9 +566,8 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                             t7 = 1;
                             if (t9 >= 0)
                             {  
-                                v0 = s3 >> 24;
                                 s2 = (t5 & 0xff000000) >> 24;
-                                if (v0 == 0)
+                                if ((s3 >> 24) == 0)
                                 {  
                                     // 694
                                     v1 = *(u8*)(src + 5);
@@ -574,14 +577,11 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                     lo = s3 * s2;
                                     s3 <<= 8;
                                 }
-                                else {
-                                    v0 = s3 >> 8;
-                                    lo = v0 * s2;
-                                }
+                                else
+                                    lo = (s3 >> 8) * s2;
                 
                                 // 420
-                                v0 = s2 >> 3;
-                                s2 -= v0;
+                                s2 -= (s2 >> 3);
                                 v1 = lo;
                                 t7 = 2;
                                 if (t1 < v1)
@@ -598,22 +598,18 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                 
                                 if (t9 > 0)
                                 {
-                                    v0 = s3 >> 8;
                                     if (s3 >> 24)
                                     {
                                         // 700
-                                        v1 = *(u8*)(src + 5);
                                         t1 <<= 8;
+                                        t1 += *(u8*)(src + 5);
                                         src++;
-                                        t1 += v1;
                                         s3 <<= 8;
-                                        v0 = s3 >> 8;
                                     }
                 
                                     // 450
-                                    lo = v0 * s2;
-                                    v0 = s2 >> 3;
-                                    s2 -= v0;
+                                    lo = (s3 >> 8) * s2;
+                                    s2 -= (s2 >> 3);
                                     v1 = lo;
                                     t7 <<= 1;
                 
@@ -636,10 +632,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                         if (v0 == 0)
                                         {
                                             // 6CC
-                                            v1 = *(u8*)(src + 5);
                                             t1 <<= 8;
+                                            t1 += *(u8*)(src + 5);
                                             src++;
-                                            t1 += v1;
                                             s3 <<= 7;
                                         }
                                         else // 484
@@ -647,10 +642,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                         // 488
                                         for (;;)
                                         {
-                                            v1 = t1 - s3;
                                             t9--;
                                             if (t1 >= s3)
-                                                t1 = v1;
+                                                t1 -= s3;
                                             t7 += v0;
                                             if (t9 == 1)
                                                 break;
@@ -665,9 +659,8 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                 t5 = (t5 & 0x00ffffff) | ((s2 << 24) & 0xff000000);
                             }
                             // 4A8
-                            v0 = s3 >> 24;
                             s2 = t5 & 0xff;
-                            if (v0 == 0)
+                            if ((s3 >> 24) == 0)
                             {
                                 // 678
                                 v1 = *(u8*)(src + 5);
@@ -677,14 +670,11 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                 lo = s3 * s2;
                                 s3 <<= 8;
                             }
-                            else {
-                                v0 = s3 >> 8;
-                                lo = v0 * s2;
-                            }
+                            else
+                                lo = (s3 >> 8) * s2;
                    
                             // 4BC
-                            v0 = s2 >> 3;
-                            s2 -= v0;
+                            s2 -= (s2 >> 3);
                             v1 = lo;
                             t7 <<= 1;
                             int goto_55c = 0;
@@ -713,26 +703,21 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                             if (!goto_55c)
                             {  
                                 // 4E4
-                                v0 = s3 >> 24;
                                 s2 = (t5 & 0xff00) >> 8;
-                                if (v0 == 0)
+                                if ((s3 >> 24) == 0)
                                 {
                                     // 65C
-                                    v1 = *(u8*)(src + 5);
                                     t1 <<= 8;
+                                    t1 += *(u8*)(src + 5);
                                     src++;
-                                    t1 += v1;
                                     lo = s3 * s2;
                                     s3 <<= 8;
                                 }
-                                else {
-                                    v0 = s3 >> 8;
-                                    lo = v0 * s2;
-                                }
+                                else
+                                    lo = (s3 >> 8) * s2;
                 
                                 // 4F8
-                                v0 = s2 >> 3;
-                                s2 -= v0;
+                                s2 -= (s2 >> 3);
                                 v1 = lo;
                                 t7 <<= 1;
                                 if (t1 < v1)
@@ -760,9 +745,8 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                 if (!goto_55c)
                                 {
                                     // 520
-                                    v0 = s3 >> 24;
                                     s2 = (t5 & 0x00ff0000) >> 16;
-                                    if (v0 == 0)
+                                    if ((s3 >> 24) == 0)
                                     {  
                                         // 600
                                         v1 = *(u8*)(src + 5);
@@ -772,14 +756,11 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                                         lo = s3 * s2;
                                         s3 <<= 8;
                                     }
-                                    else {
-                                        v0 = s3 >> 8;
-                                        lo = v0 * s2;
-                                    }
+                                    else
+                                        lo = (s3 >> 8) * s2;
                                     
                                     // 534
-                                    v0 = s2 >> 3;
-                                    s2 -= v0;
+                                    s2 -= (s2 >> 3);
                                     v1 = lo;
                                     t7 <<= 1;
                                     if (t1 < v1)
@@ -895,6 +876,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         }
     }
 }
+*/
 
 int LoadExecForUser_362A956B()
 {
@@ -932,238 +914,179 @@ int LoadExecForUser_362A956B()
     return 0;
 }
 
-void sub_09D8(int *struct1, int *struct2)
+void sub_09D8(SceKernelUnkStruct *hwOpt, SceKernelLoadExecVSHParam *param)
 {
-    if (struct2[1] != 0)
+    if (param->args != 0)
     {
-        a2 = struct1[8] + struct1[7] * 28;
-        *(a2 + 0) = struct2[2];
-        *(a2 + 4) = struct2[1];
-        *(a2 + 8) = 256;
-        struct1[8] = struct1[7];
-        struct1[7]++;
+        hwOpt->args[hwOpt->curArgs].argp = param->argp;
+        hwOpt->args[hwOpt->curArgs].args = param->args;
+        hwOpt->args[hwOpt->curArgs].unk8 = 256;
+        hwOpt->unk40 = hwOpt->curArgs;
+        hwOpt->curArgs++;
     }
 
     // a3c
-    if (struct2[4] == 0)
+    if (param->vshmainArgs == 0)
     {
-        v0 = sceKernelGetChunk(0);
-        if (v0 > 0)
+        SceUID blkId = sceKernelGetChunk(0);
+        if (blkId > 0)
         {
-            *(sp + 0) = 56;
-            sceKernelQueryMemoryBlockInfo(v0, sp);
-            t0 = struct1[8] + struct1[7] * 28;
-            *(t0 + 0) = *(sp + 40);
-            *(t0 + 4) = *(sp + 44);
-            *(t0 + 8) = 4;
-            struct1[7]++;
+            SceKernelSysmemBlockInfo info;
+            info.size = 56;
+            sceKernelQueryMemoryBlockInfo(blkId, &info);
+            hwOpt->args[hwOpt->curArgs].argp = info.unk40;
+            hwOpt->args[hwOpt->curArgs].args = info.unk44;
+            hwOpt->args[hwOpt->curArgs].unk8 = 4;
+            hwOpt->curArgs++;
         }
     }
     else
     {
-        t6 = struct1[8] + struct1[7] * 28;
-        *(t6 + 0) = struct2[5];
-        *(t6 + 4) = struct2[4];
-        *(t6 + 8) = 4;
-        struct1[7]++;
+        hwOpt->args[hwOpt->curArgs].argp = param->vshmainArgp;
+        hwOpt->args[hwOpt->curArgs].args = param->vshmainArgs;
+        hwOpt->args[hwOpt->curArgs].unk8 = 4;
+        hwOpt->curArgs++;
     }
 
-    if (struct2[9] == 0)
+    if (param->unkArgs == 0)
     {
         // b28
         if (sceKernelGetChunk(4) > 0)
         {
-            s2 = struct1[8] + struct1[7] * 28;
-            *(s2 + 0) = InitForKernel_D83A9BD7(s2 + 4);
-            *(s2 + 8) = 1024;
-            struct1[7]++;
+            hwOpt->args[hwOpt->curArgs].argp = InitForKernel_D83A9BD7(&hwOpt->args[hwOpt->curArgs].args);
+            hwOpt->args[hwOpt->curArgs].unk8 = 1024;
+            hwOpt->curArgs++;
         }
     }
     else
     {
-        a2 = struct1[8] + struct1[7] * 28;
-        *(a2 + 0) = struct2[10];
-        *(a2 + 4) = struct2[9];
-        *(a2 + 8) = 1024;
-        struct1[7]++;
+        hwOpt->args[hwOpt->curArgs].argp = param->unkArgp;
+        hwOpt->args[hwOpt->curArgs].args = param->unkArgs;
+        hwOpt->args[hwOpt->curArgs].unk8 = 1024;
+        hwOpt->curArgs++;
     }
 
-    v0 = sceKernelGetGameInfo();
-    if (*(v0 + 4) != 0)
+    SceKernelGameInfo info = sceKernelGetGameInfo();
+    if (info.unk4 != 0)
     {
-        a3 = struct1[8] + struct1[7] * 28;
-        *(a3 + 0) = v0;
-        *(a3 + 4) = 220;
-        *(a3 + 8) = 32;
-        struct1[7]++;
+        hwOpt->args[hwOpt->curArgs].argp = &info;
+        hwOpt->args[hwOpt->curArgs].args = 220;
+        hwOpt->args[hwOpt->curArgs].unk8 = 32;
+        hwOpt->curArgs++;
     }
 }
 
-void sub_0BBC(int *arg0)
+void sub_0BBC(SceKernelUnkStruct *hwOpt)
 {
-    s4 = 0;
-    s2 = 0x8B800000;
+    char sp[32];
+    int cur = 0;
+    void *addr = (void*)0x8B800000;
     if (sceKernelGetModel() == 0)
     {
         // E94
         if (sceKernelDipsw(10) == 1) {
-            s2 = 0x8B800000;
-            *(0xBC100040) = (*(0xBC100040) & 0xFFFFFFFC) | 2;
+            addr = (void*)0x8B800000;
+            *(int*)(0xBC100040) = (*(int*)(0xBC100040) & 0xFFFFFFFC) | 2;
         }
         else
-            s2 = 0x8A000000;
+            addr = (void*)0x8A000000;
     }
     // C00 / end of E94
-    s1 = 0;
     // C04
-    a0 = -1;
     // C08
-    do
-    {
-        v0 = sp + s1;
-        s1++;
-        *(s8*)v0 = a0;
-    } while (s1 < 32);
+    int i, j;
+    for (i = 0; i < 32; i++)
+        sp[i] = -1;
 
-    t2 = arg0[7];
-    s1 = 0;
-    if (t2 != 0)
+    // C4C
+    for (i = 0; i < hwOpt->curArgs; i++)
     {
-        t1 = arg0[8];
-        t0 = t1;
-
-        // C4C
-        do
+        SceKernelArgsStor *args = &hwOpt->args[i];
+        switch (args->unk8 & 0xFFFF)
         {
-            v1 = *(u16*)(t0 + 8);
-            switch (v1)
+        case 32:
+        // E5C
+        case 128:
+        // E7C
+        case 256:
+        case 1024:
+        //
+        case 64:
+        case 4:
+        // E4C
+        case 8:
+        case 1:
+        case 2:
+            // C7C
+            // C80
+            // C84
+            // C88
+            for (j = 0; j < 32; j++)
             {
-            case 32:
-            // E5C
-            case 128:
-            // E7C
-            case 256:
-            case 1024:
-            //
-            case 64:
-            case 4:
-            // E4C
-            case 8:
-            case 1:
-            case 2:
-                // C7C
-                a3 = 0;
-                // C80
-                a0 = 255;
-                // C84
-                a2 = sp + a3;
-                // C88
-                do
+                int tmpcond = (int)UCACHED(hwOpt->args[sp[j]].argp) >= (int)UCACHED(args->argp);
+                if (tmpcond)
                 {
-                    t9 = *(u8*)a2;
-                    v0 = t1 + t9 * 28;
-                    int tmpcond = (*v0 & 0x1fffffff) >= (*t0 & 0x1fffffff);
-                    if (tmpcond)
-                    {
-                        // E20
-                        a1 = s4;
-                        if ((s32)s4 >= (s32)a3)
-                        {
-                            // E28
-                            do
-                            {
-                                v1 = a1 + sp;
-                                v0 = *(u8*)v1;
-                                a1--;
-                                *(s8*)(v1 + 1) = v0;
-                            } while (a1 >= a3);
-                        }
-                    }
-                    if (tmpcond || t9 == a0)
-                    {
-                        // E40
-                        s4++;
-                        *(s8*)a2 = s1;
-                        break;
-                    }
-                    a3++;
-                    a2 = sp + a3;
-                } while (a3 < 32);
-                break;
-            }
-
-            // CCC
-            s1++;
-            // CD0
-            t0 += 28;
-        } while ((u32)s1 < (u32)t2);
-    }
-
-    // CDC
-    s1 = 0;
-    if (s4 > 0)
-    {
-        s6 = 128;
-        t5 = sp + s1;
-
-        // CF8
-        do
-        {
-            s0 = arg0[8] + *(char*)t5 * 28;
-            a0 = *(s0 + 8);
-            v1 = a0 & 0xffff;
-            a1 = *(s0 + 4);
-            switch (v1)
-            {
-            case 32:
-            // DF4
-            case 128:
-            case 256:
-            case 4:
-            case 0:
-            // E10
-            case 1024:
-            // E10
-            case 64:
-            // DE4
-            case 8:
-                // D48
-                a0 = a1 + 255;
-
-                // D4C
-                a0 &= 0xffffff00;
-                s2 -= a0;
-                v0 = sceKernelMemmove(s2, *(s0 + 0), *(s0 + 4));
-                a0 = *(s0 + 8);
-                if ((a0 & 0xffff) == s6) {
-                    a0 = *(s0 + 0);
-                    // DD0
-                    a2 = *(s0 + 4);
-                    a1 = 0;
-                    v0 = sceKernelMemset(a0);
-                    a0 = *(s0 + 8);
+                    // E20 / E28
+                    int k;
+                    for (k = cur; k >= j; k--)
+                        sp[k + 1] = sp[k];
                 }
-
-                // D74
-                *(s0 + 0) = s2;
-                v1 = a0 & 0xffff;
-                break;
+                if (tmpcond || sp[j] == -1)
+                {
+                    // E40
+                    cur++;
+                    sp[j] = i;
+                    break;
+                }
             }
+            break;
+        }
 
-            // D7C
-            if (v1 == 8)
-            {
-                t0 = *(s0 + 0);
-                // DC8
-                arg0[19] = t0;
-            }
-            // D84
-            s1++;
-            t5 = sp + s1;
-        } while ((s32)s1 < (s32)s4);
+        // CCC
+        // CD0
     }
-    arg0[18] = s2;
-    return v0;
+
+    // CDC / CF8
+    for (i = 0; i < cur; i++)
+    {
+        SceKernelArgsStor *args = &hwOpt->args[sp[i]];
+        switch (args->unk8 & 0xFFFF)
+        {
+        case 32:
+        // DF4
+        case 128:
+        case 256:
+        case 4:
+        case 0:
+        // E10
+        case 1024:
+        // E10
+        case 64:
+        // DE4
+        case 8:
+            // D48 / D4C
+            addr -= UPALIGN256(args->args);
+            sceKernelMemmove(addr, args->argp, args->args);
+            if ((args->unk8 & 0xFFFF) == 0x80)
+            {
+                // DD0
+                sceKernelMemset(args->argp, 0, args->args);
+            }
+
+            // D74
+            args->argp = addr;
+            break;
+        }
+
+        // D7C
+        if ((args->unk8 & 0xFFFF) == 8)
+        {
+            // DC8
+            hwOpt->unk76 = args->argp;
+        }
+        // D84
+    }
+    hwOpt->unk72 = addr;
 }
 
 // BD2F1094
@@ -1303,27 +1226,27 @@ int sceKernelLoadExec(char *arg0, int arg1)
                 return 0x80020001;
             }
         }
-        RebootArgs2 args2;
+        SceKernelLoadExecVSHParam args2;
         RebootArgs args;
 
         // 10F0
         args2.size = 48;
-        args2.opt4 = 0;
-        args2.opt5 = 0;
-        args2.opt6 = 0;
-        args2.opt7 = 0;
-        args2.loadPspbtcnf = 0x10000;
-        args2.opt9 = 0;
-        args2.opt10 = 0;
+        args2.vshmainArgs = 0;
+        args2.vshmainArgp = NULL;
+        args2.configFile = NULL;
+        args2.unk4 = 0;
+        args2.flags = 0x10000;
+        args2.unkArgs = 0;
+        args2.unkArgp = NULL;
         if (arg1 == 0)
         {
             // 11B0
-            args2.opt1 = 0;
-            args2.opt2 = 0;
+            args2.args = 0;
+            args2.argp = NULL;
         }
         else {
-            args2.opt1 = *(int*)(arg1 + 4);
-            args2.opt2 = *(int*)(arg1 + 8);
+            args2.args = *(int*)(arg1 + 4);
+            args2.argp = *(int*)(arg1 + 8);
         }
         char *name;
         // 112C
@@ -1332,7 +1255,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
         else
             name = g_gameStr;
         // 116C
-        args2.typeName = name;
+        args2.key = name;
         args2.opt11 = 0;
 
         args.opt0 = s5;
@@ -1357,7 +1280,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
 int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
 {
     RebootArgs args;
-    RebootArgs2 args2;
+    SceKernelLoadExecVSHParam args2;
     int *unkPtr;
     int *unkPtr2;
     SceUID fileId;
@@ -1456,23 +1379,23 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
         return ret;
     }
     args2.size = 48;
-    args2.opt4 = 0;
-    args2.opt5 = 0;
-    args2.opt6 = 0;
-    args2.opt7 = 0;
-    args2.loadPspbtcnf = 0x10000;
-    args2.opt9 = 0;
-    args2.opt10 = 0;
+    args2.vshmainArgs = 0;
+    args2.vshmainArgp = NULL;
+    args2.configFile = NULL;
+    args2.unk4 = 0;
+    args2.flags = 0x10000;
+    args2.unkArgs = 0;
+    args2.unkArgp = NULL;
     //
     if (arg1 == 0)
     {
         // 1528
-        args2.opt1 = 0;
-        args2.opt2 = 0;
+        args2.args = 0;
+        args2.argp = 0;
     }
     else {
-        args2.opt1 = *(int*)(arg1 + 4);
-        args2.opt2 = *(int*)(arg1 + 8);
+        args2.args = *(int*)(arg1 + 4);
+        args2.argp = *(int*)(arg1 + 8);
     }
 
     // 1414
@@ -1485,7 +1408,7 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     case 18:
     case 80:
     case 81:
-        args2.typeName = g_gameStr;
+        args2.key = g_gameStr;
         break;
 
     case 2:
@@ -1496,26 +1419,26 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     case 20:
     case 21:
     case 22:
-        args2.typeName = g_umdEmuStr;
+        args2.key = g_umdEmuStr;
         break;
 
     case 6:
     case 8:
         if (sceKernelGetChunk(3) < 0)
-            args2.typeName = g_gameStr;
+            args2.key = g_gameStr;
         else
-            args2.typeName = g_umdEmuStr;
+            args2.key = g_umdEmuStr;
 
     case 96:
     case 97:
-        args2.typeName = g_mlnAppStr;
+        args2.key = g_mlnAppStr;
         break;
 
     default:
         if (sceKernelDipsw(13) != 1)
-            args2.typeName = g_gameStr;
+            args2.key = g_gameStr;
         else
-            args2.typeName = g_umdEmuStr;
+            args2.key = g_umdEmuStr;
         break;
     }
 
@@ -1545,7 +1468,7 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
 
 int LoadExecForUser_D1FB50DC(int arg)
 {
-    RebootArgs2 args2;
+    SceKernelLoadExecVSHParam args2;
     RebootArgs args;
     int ret, oldVar;
 
@@ -1560,11 +1483,11 @@ int LoadExecForUser_D1FB50DC(int arg)
     g_loadExecCb = 0;
     if (sceKernelIsIntrContext() == 0)
     {   
-        if (k1 < 0)
+        if (K1_USER_MODE())
         {   
             args.opt0 = 0x210;
             args.opt1 = 0;
-            args.opt2 = 0;
+            args.fileName = NULL;
             args.args2 = &args2;
             args.opt4 = arg;
             args.opt5 = 0;
@@ -1572,19 +1495,19 @@ int LoadExecForUser_D1FB50DC(int arg)
             args.opt7 = 0;
             
             args2.size = 48;
-            args2.opt1 = 0;
-            args2.opt2 = 0;
-            args2.typeName = g_vshStr;
-            args2.opt4 = 0;
-            args2.opt5 = 0;
-            args2.opt6 = 0;
-            args2.opt7 = 0;
-            args2.opt8 = 1;
-            args2.opt9 = 0;
-            args2.opt10 = 0;
+            args2.args = 0;
+            args2.argp = NULL;
+            args2.key = g_vshStr;
+            args2.vshmainArgs = 0;
+            args2.vshmainArgp = NULL;
+            args2.configFile = NULL;
+            args2.unk4 = 0;
+            args2.flags = 1;
+            args2.unkArgs = 0;
+            args2.unkArgp = NULL;
             args2.opt11 = 0;
             
-            ret = sub_20e4(&args);
+            ret = sub_20FC(&args);
         }
         else
             ret = 0x80020149;
@@ -1599,9 +1522,9 @@ int LoadExecForUser_D1FB50DC(int arg)
 }
 
 // 08F7166C
-int sceKernelExitVSHVSH(RebootArgs2 *opt)
+int sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
 {
-    RebootArgs2 args2;
+    SceKernelLoadExecVSHParam args2;
     RebootArgs args;
     K1_BACKUP();
 
@@ -1628,45 +1551,45 @@ int sceKernelExitVSHVSH(RebootArgs2 *opt)
     if (opt == NULL)
     {
         // 17B8
-        args2.opt1 = 0;
-        args2.opt2 = 0;
-        args2.typeName = NULL;
-        args2.opt4 = 0;
-        args2.opt5 = 0;
-        args2.opt6 = 0;
-        args2.opt7 = 0;
-        args2.loadPspbtcnf = 0x10000;
-        args2.opt9 = 0;
-        args2.opt10 = 0;
+        args2.args = 0;
+        args2.argp = NULL;
+        args2.key = NULL;
+        args2.vshmainArgs = 0;
+        args2.vshmainArgp = NULL;
+        args2.configFile = NULL;
+        args2.unk4 = 0;
+        args2.flags = 0x10000;
+        args2.unkArgs = 0;
+        args2.unkArgp = NULL;
     }
     else
     {
-        args2.opt1 = opt->opt1;
-        args2.opt2 = opt->opt2;
-        args2.typeName = opt->typeName;
-        args2.opt4 = opt->opt4;
-        args2.opt5 = opt->opt5;
-        args2.opt6 = opt->opt6;
-        args2.opt7 = opt->opt7;
-        args2.loadPspbtcnf = opt->loadPspbtcnf;
+        args2.args        = opt->args;
+        args2.argp        = opt->argp;
+        args2.key         = opt->key;
+        args2.vshmainArgs = opt->vshmainArgs;
+        args2.vshmainArgp = opt->vshmainArgp;
+        args2.configFile  = opt->configFile;
+        args2.unk4        = opt->unk4;
+        args2.flags       = opt->flags;
         if (opt->size >= 48)
         {
             // 17A4
-            args2.opt9 = opt->opt9;
-            args2.opt10 = opt->opt10;
+            args2.unkArgs = opt->unkArgs;
+            args2.unkArgp = opt->unkArgp;
         }
         else {
-            args2.opt9 = 0;
-            args2.opt10 = 0;
+            args2.unkArgs = 0;
+            args2.unkArgp = NULL;
         }
     }
 
     // 1738
-    if (args2.typeName == NULL)
-        args2.typeName = g_vshStr;
+    if (args2.key == NULL)
+        args2.key = g_vshStr;
 
     // 1754
-    args2.loadPspbtcnf |= 0x10000;
+    args2.flags |= 0x10000;
     args2.opt11 = 0;
 
     args.opt0 = 544;
@@ -1751,12 +1674,12 @@ int sceKernelInvokeExitCallback()
     return ret;
 }
 
-int LoadExecForKernel_BC26BEEF(RebootArgs2 *opt, int arg1)
+int LoadExecForKernel_BC26BEEF(SceKernelLoadExecVSHParam *opt, int arg1)
 {
     char *name;
     if (opt == NULL)
         return 0x80020324;
-    name = opt->typeName; // TODO: check if 'opt' is really a pointer
+    name = opt->key; // TODO: check if 'opt' is really a pointer
     if (name == NULL)
         return 0x80020324;
     if (arg1 == 0)
@@ -1797,41 +1720,41 @@ int sceKernelExitGame()
 // D8320A28
 int sceKernelLoadExecVSHDisc(int arg0, int arg1)
 {
-    return sub_2384(288, arg0, arg1, 0x10000);
+    return loadExecVSH(288, arg0, arg1, 0x10000);
 }
 
 // D4B49C4B
 int sceKernelLoadExecVSHDiscUpdater(int arg0, int arg1)
 {
-    return sub_2384(289, arg0, arg1, 0x10000);
+    return loadExecVSH(289, arg0, arg1, 0x10000);
 }
 
 // 1B305B09
 int sceKernelLoadExecVSHDiscDebug(int arg0, int arg1)
 {
     if (sceKernelIsToolMode() != 0)
-        return sub_2384(290, arg0, arg1, 0x10000);
+        return loadExecVSH(290, arg0, arg1, 0x10000);
     return 0x80020002;
 }
 
 int LoadExecForKernel_F9CFCF2F(int arg0, int arg1)
 {
-    return sub_2384(291, arg0, arg1, 0x10000);
+    return loadExecVSH(291, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_077BA314(int arg0, int arg1)
 {
-    return sub_2384(292, arg0, arg1, 0x10000);
+    return loadExecVSH(292, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_E704ECC3(int arg0, int arg1)
 {
-    return sub_2384(293, arg0, arg1, 0x10000);
+    return loadExecVSH(293, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_47A5A49C(int arg0, int arg1)
 {
-    return sub_2384(294, arg0, arg1, 0x10000);
+    return loadExecVSH(294, arg0, arg1, 0x10000);
 }
 
 // BEF585EC
@@ -1863,90 +1786,90 @@ int LoadExecForKernel_7CAFE77F(int arg0, int arg1, int arg2)
 // 4FB44D27
 int sceKernelLoadExecVSHMs1(int arg0, int arg1)
 {
-    return sub_2384(320, arg0, arg1, 0x10000);
+    return loadExecVSH(320, arg0, arg1, 0x10000);
 }
 
 // D940C83C
 int sceKernelLoadExecVSHMs2(int arg0, int arg1)
 {
-    return sub_2384(321, arg0, arg1, 0x10000);
+    return loadExecVSH(321, arg0, arg1, 0x10000);
 }
 
 // CC6A47D2
 int sceKernelLoadExecVSHMs3(int arg0, int arg1)
 {
-    return sub_2384(322, arg0, arg1, 0x10000);
+    return loadExecVSH(322, arg0, arg1, 0x10000);
 }
 
 // 00745486
 int sceKernelLoadExecVSHMs4(int arg0, int arg1)
 {
-    return sub_2384(323, arg0, arg1, 0x10000);
+    return loadExecVSH(323, arg0, arg1, 0x10000);
 }
 
 // 7CABED9B
 int sceKernelLoadExecVSHMs5(int arg0, int arg1)
 {
-    return sub_2384(324, arg0, arg1, 0x10000);
+    return loadExecVSH(324, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_A6658F10(int arg0, int arg1)
 {
-    return sub_2384(325, arg0, arg1, 0x10000);
+    return loadExecVSH(325, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_16A68007(int arg0, int arg1)
 {
-    return sub_2384(337, arg0, arg1, 0x10000);
+    return loadExecVSH(337, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_032A7938(int arg0, int arg1)
 {
-    return sub_2384(338, arg0, arg1, 0x10000);
+    return loadExecVSH(338, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_40564748(int arg0, int arg1)
 {
-    return sub_2384(339, arg0, arg1, 0x10000);
+    return loadExecVSH(339, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_E1972A24(int arg0, int arg1)
 {
-    return sub_2384(340, arg0, arg1, 0x10000);
+    return loadExecVSH(340, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_C7C83B1E(int arg0, int arg1)
 {
-    return sub_2384(341, arg0, arg1, 0x10000);
+    return loadExecVSH(341, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_8C4679D3(int arg0, int arg1)
 {
-    return sub_2384(342, arg0, arg1, 0x10000);
+    return loadExecVSH(342, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_B343FDAB(int arg0, int arg1)
 {
-    return sub_2384(352, arg0, arg1, 0x10000);
+    return loadExecVSH(352, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_1B8AB02E(int arg0, int arg1)
 {
-    return sub_2384(353, arg0, arg1, 0x10000);
+    return loadExecVSH(353, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_C11E6DF1(int arg0, int arg1)
 {
-    return sub_2384(368, arg0, arg1, 0x10000);
+    return loadExecVSH(368, arg0, arg1, 0x10000);
 }
 
 int LoadExecForKernel_9BD32619(int arg0, int arg1)
 {
-    return sub_2384(369, arg0, arg1, 0x10000);
+    return loadExecVSH(369, arg0, arg1, 0x10000);
 }
 
 // C3474C2A
-int sceKernelExitVSHKernel(RebootArgs2 *arg)
+int sceKernelExitVSHKernel(SceKernelLoadExecVSHParam *arg)
 {
     return sub_26B0(512, arg);
 }
@@ -1992,7 +1915,7 @@ int module_bootstart()
 int runExec(RebootArgs *args) // 20FC
 {
     int sp[8];
-    if (args->opt0 ^ 0x300 != 0) /* Run in a thread */
+    if (args->opt0 != 0x300) /* Run in a thread */
     {
         int ret, threadEnd;
         SceUID id;
@@ -2018,7 +1941,7 @@ int sub_21E0(char *name, int devcmd, int iocmd)
     if (strchr(name, '%') != NULL)
         return 0x8002014C;
     char *comma = strchr(name, ':');
-    if (pos != 0)
+    if (comma != NULL)
     {
         int pos = comma - name;
         char string[32];
@@ -2043,30 +1966,32 @@ int sub_21E0(char *name, int devcmd, int iocmd)
     return 0;
 }
 
-int sub_2308(RebootArgs2 *opt)
+int sub_2308(SceKernelLoadExecVSHParam *opt)
 {
+    K1_GET();
     if (opt != NULL)
     {
-        if (!K1_PTRSTATICSIZEOK(arg, 16))
+        if (!K1_USER_BUF_STA_SZ(opt, 16))
             return 0x800200D3;
-        if (opt->typeName != NULL && !K1_USER_PTR(opt->typeName))
+        if (opt->key != NULL && !K1_USER_PTR(opt->key))
             return 0x800200D3;
         // 2328
-        if (opt->opt6 != NULL && !K1_USER_PTR(opt->opt6))
+        if (opt->configFile != NULL && !K1_USER_PTR(opt->configFile))
             return 0x800200D3;
         // 2344
-        if (opt->opt7 != NULL && !K1_USER_PTR(opt->opt7))
+        if (opt->unk4 != NULL && !K1_USER_PTR(opt->unk4))
             return 0x800200D3;
     }
     return 0;
 }
 
-int sub_2384(int arg0, int arg1, int arg2, int arg3)
+// 2384
+int loadExecVSH(int arg0, int arg1, int arg2, int arg3)
 {
     K1_BACKUP();
     if (sceKernelIsIntrContext() == 0)
     {
-        if (k1 < 0)
+        if (K1_USER_MODE())
         {
             int iocmd, devcmd;
             // 23EC
@@ -2154,14 +2079,14 @@ int sub_2384(int arg0, int arg1, int arg2, int arg3)
                     }
                 }
             }
-            RebootArgs2 args2;
+            SceKernelLoadExecVSHParam args2;
             RebootArgs args;
         
             // 2488
             sub_29A4(&args2, arg3, arg2);
             args.opt0 = arg0;
             args.opt1 = 0;
-            args.opt2 = arg1;
+            args.fileName = arg1;
             args.args2 = &args2;
             args.opt4 = 0;
             args.opt5 = 0;
@@ -2194,7 +2119,7 @@ int sub_2580(int arg0, int arg1, int arg2, int arg3, int arg4)
     {
         int ret;
         RebootArgs args;
-        RebootArgs2 args2;
+        SceKernelLoadExecVSHParam args2;
         // 25F4
         if (sceKernelGetUserLevel() != 4) {
             K1_RESET();
@@ -2218,7 +2143,7 @@ int sub_2580(int arg0, int arg1, int arg2, int arg3, int arg4)
         sub_29A4(&args2, arg4, arg3);
         args.opt0 = arg0;
         args.opt1 = arg1;
-        args.opt2 = arg2;
+        args.fileName = arg2;
         args.args2 = &args2;
         args.opt4 = 0;
         args.opt5 = 0;
@@ -2234,9 +2159,9 @@ int sub_2580(int arg0, int arg1, int arg2, int arg3, int arg4)
     }
 }
 
-int sub_26B0(int arg0, RebootArgs2 *opt)
+int sub_26B0(int arg0, SceKernelLoadExecVSHParam *opt)
 {
-    RebootArgs2 args2;
+    SceKernelLoadExecVSHParam args2;
     RebootArgs args;
     int ret;
     K1_BACKUP();
@@ -2251,77 +2176,77 @@ int sub_26B0(int arg0, RebootArgs2 *opt)
         K1_RESET();
         return 0x80020149;
     }
-    ret = sub_2308(arg1);
+    ret = sub_2308(opt);
     if (ret < 0) {
         K1_RESET();
         return ret;
     }
     args2.size = 48;
-    if (arg1 == NULL)
+    if (opt == NULL)
     {
         // 27E0
-        args2.opt1 = 0;
-        args2.opt2 = 0;
-        args2.typeName = NULL;
-        args2.opt4 = 0;
-        args2.opt5 = 0;
-        args2.opt6 = 0;
-        args2.opt7 = 0;
-        args2.loadPspbtcnf = 0x10000;
-        args2.opt9 = 0;
-        args2.opt10 = 0;
+        args2.args = 0;
+        args2.argp = NULL;
+        args2.key = NULL;
+        args2.vshmainArgs = 0;
+        args2.vshmainArgp = NULL;
+        args2.configFile = NULL;
+        args2.unk4 = 0;
+        args2.flags = 0x10000;
+        args2.unkArgs = 0;
+        args2.unkArgp = NULL;
     }
     else
     {
-        args2.opt1 = opt->opt1;
-        args2.opt2 = opt->opt2;
-        args2.typeName = opt->typeName;
-        args2.opt4 = opt->opt4;
-        args2.opt5 = opt->opt5;
-        args2.opt6 = opt->opt6;
-        args2.opt7 = opt->opt7;
-        args2.loadPspbtcnf = opt->loadPspbtcnf;
+        args2.args = opt->args;
+        args2.argp = opt->argp;
+        args2.key = opt->key;
+        args2.vshmainArgs = opt->vshmainArgs;
+        args2.vshmainArgp = opt->vshmainArgp;
+        args2.configFile = opt->configFile;
+        args2.unk4 = opt->unk4;
+        args2.flags = opt->flags;
         if (opt->size >= 48)
         {
             // 27D4
-            args2.opt9 = opt->opt9;
-            args2.opt10 = opt->opt10;
+            args2.unkArgs = opt->unkArgs;
+            args2.unkArgp = opt->unkArgp;
         }
         else {
-            args2.opt9 = 0;
-            args2.opt10 = 0;
+            args2.unkArgs = 0;
+            args2.unkArgp = NULL;
         }
     }
 
     // 2750
-    if (args2.typeName == NULL)
-        args2.typeName = g_vshStr;
+    if (args2.key == NULL)
+        args2.key = g_vshStr;
 
     // 276C
     args.opt0 = arg0;
     args.opt1 = 0;
-    args.opt2 = 0;
+    args.fileName = NULL;
     args.args2 = &args2;
     args.opt4 = 0;
     args.opt5 = 0;
     args.opt6 = 0;
     args.opt7 = 0;
 
-    args2.loadPspbtcnf |= 0x10000;
+    args2.flags |= 0x10000;
     args2.opt11 = 0;
     ret = runExec(&args);
     K1_RESET();
     return ret;
 }
 
-int func_282C(RebootArgs2 *arg)
+int func_282C(SceKernelLoadExecVSHParam *arg)
 {
     return sub_26B0(768, arg);
 }
 
 int runExecFromThread(int unk, RebootArgs *opt) // 2864
 {
-    int sp[216];
+    int sp[20];
     char str1[256], str2[256], str3[256];
     char *ptr;
     if (opt == NULL)
@@ -2338,7 +2263,7 @@ int runExecFromThread(int unk, RebootArgs *opt) // 2864
     opt->opt8 = sp;
 
     memcpy(&sp[8], opt->args2, 48);
-    opt->opt4 = s0;
+    opt->opt4 = &sp[8];
 
     ptr = sp[11];
     if (ptr != NULL) {
@@ -2351,19 +2276,19 @@ int runExecFromThread(int unk, RebootArgs *opt) // 2864
     ptr = sp[14];
     if (ptr != NULL) {
         strncpy(str2, ptr, 256);
-        *(sp[14]) = str2;
+        sp[14] = str2;
     }
 
     ptr = sp[15];
     if (ptr != 0) {
         strncpy(str3, ptr, 256);
-        *(sp[15]) = str3;
+        sp[15] = str3;
     }
 
     sceKernelSetSystemStatus(0x40000);
     if (opt->opt0 != 0x300)
     {
-        ret = sceKernelPowerRebootStart(0);
+        int ret = sceKernelPowerRebootStart(0);
         if (ret < 0)
             return ret;
     }
@@ -2417,9 +2342,11 @@ void sub_29A4(int *dst, int arg1, int *src)
     return;
 }
 
-void sub_2A64(RebootArgs *opt)
+int sub_2A64(RebootArgs *opt)
 {
     int type = 0;
+    int funcRet;
+    SceKernelSysmemBlockInfo blkInfo;
     switch (opt->opt0)
     {
     case 1056:
@@ -2486,24 +2413,23 @@ void sub_2A64(RebootArgs *opt)
     }
 
     // 2AE8
-    s1 = opt->opt0 & 0x300;
-    fp = sceKernelGetInitialRandomValue();
-    if (s1 != 0)
+    int rand = sceKernelGetInitialRandomValue();
+    if (opt->opt0 != 0x300)
     {
         // 3218
-        v0 = sceKernelRebootBeforeForUser(opt->args2);
-        if (v0 < 0)
-            return v0;
+        int ret = sceKernelRebootBeforeForUser(opt->args2);
+        if (ret < 0)
+            return ret;
     // 2AF8
         // 31F8
-        v0 = sceKernelRebootPhaseForKernel(3, opt->args2, 0, 0);
-        if (v0 < 0)
-            return v0;
+        ret = sceKernelRebootPhaseForKernel(3, opt->args2, 0, 0);
+        if (ret < 0)
+            return ret;
     // 2B00
         // 31D8
-        v0 = sceKernelRebootPhaseForKernel(2, opt->args2, 0, 0);
-        if (v0 < 0)
-            return v0;
+        ret = sceKernelRebootPhaseForKernel(2, opt->args2, 0, 0);
+        if (ret < 0)
+            return ret;
     }
     // 2B0C
     if (opt->opt0 != 0x300) {
@@ -2518,229 +2444,208 @@ void sub_2A64(RebootArgs *opt)
         // 3194
         if (opt->args2->opt4 == 0)
         {
-            v0 = sceKernelGetChunk(0);
-            if (v0 > 0)
+            SceUID id = sceKernelGetChunk(0);
+            if (id > 0)
             {
-                *(sp + 0) = 56;
-                sceKernelQueryMemoryBlockInfo(v0, sp);
-                t3 = *(sp + 40);
-                opt->args2->opt5 = t3;
+                blkInfo.size = 56;
+                sceKernelQueryMemoryBlockInfo(id, &blkinfo);
+                opt->args2->opt5 = blkInfo.unk40;
             }
         }
     }
 
     // 2B30
-    if (s1 != 0)
+    if (opt->opt0 != 0x300)
     {
         // 3174
-        v0 = sceKernelRebootPhaseForKernel(1, opt->args2, 0, 0);
-        if (v0 < 0)
-            return v0;
+        int ret = sceKernelRebootPhaseForKernel(1, opt->args2, 0, 0);
+        if (ret < 0)
+            return ret;
     // 2B38
         // 315C
         sceKernelRebootBeforeForKernel(opt->args2, 0, 0, 0);
     }
 
     // 2B40
-    v0 = LoadCoreForKernel_F871EA38(EXEC_START, EXEC_END - EXEC_START);
-    if (v0 != 0)
+    int ret = LoadCoreForKernel_F871EA38(EXEC_START, EXEC_END - EXEC_START);
+    if (ret != 0)
     {
         sceKernelCpuSuspendIntr();
-        *(0xBC100040) = (*(0xBC100040) & 0xFFFFFFFC) | 1;
-        v0 = sceKernelMemset(0x88600000, 0, 0x200000);
-        v0 = sceKernelMemset(EXEC_START, 0, EXEC_END);
+        *(int*)(0xBC100040) = (*(int*)(0xBC100040) & 0xFFFFFFFC) | 1;
+        sceKernelMemset(0x88600000, 0, 0x200000);
+        sceKernelMemset(EXEC_START, 0, EXEC_END);
         memset(0xBFC00000, 0, 4096);
         for (;;)
             ;
     }
 
     // 2BC4
-    mtc0(mfc0(Status) & 0xFFF7FFE0, Status);
+    int st;
+    COP0_STATE_GET(st, COP0_STATE_STATUS);
+    COP0_STATE_SET(COP0_STATE_STATUS, st & 0xFFF7FFE0);
     // Skipped useless part
 
     // 2C58
-    v0 = sub_32FC();
-    s2 = v0;
-    *(v0 + 24) |= type;
+    SceKernelUnkStruct *hwOpt = sub_32FC();
+    hwOpt->unk24 |= type;
     if (type == 2)
     {
         // 2F4C
         if (opt->opt1 != 0)
         {  
-            t0 = *(v0 + 32);
             // 3134
-            *(t0 + 0) = opt->opt2;
-            *(t0 + 4) = opt->opt1;
-            *(t0 + 8) = 1;
-            *(s2 + 28) = 1;
-            *(s2 + 36) = 0;
+            hwOpt->args[0].argp = opt->fileName;
+            hwOpt->args[0].args = opt->opt1;
+            hwOpt->args[0].unk8 = 1;
+            hwOpt->curArgs = 1;
+            hwOpt->unk36 = 0;
             // 2FFC
-            sub_09D8(v0, opt->args2);
+            sub_09D8(hwOpt, opt->args2);
         }
-        else if (opt->opt2 != 0)
+        else if (opt->fileName != NULL)
         {
             if ((opt->opt0 == 291) || (opt->opt0 == 293)
              || (opt->opt0 == 292) || (opt->opt0 == 294)
              || (opt->opt0 == 368) || (opt->opt0 == 369))
             {  
                 // 2FAC
-                s1 = *(s2 + 32);
-           
                 // 2FB0
-                a0 = opt->args2->opt2;
-                s0 = s1 + 28;
-                *(s1 + 0) = a0;
-                *(s1 + 4) = strlen(a0) + 1;
-                *(s1 + 8) = 2;
-                *(s0 + 0) = opt->opt2;
-                *(s0 + 4) = strlen(opt->opt2) + 1;
-                *(s0 + 8) = 64;
-                *(s2 + 28) = 2;
-                *(s2 + 36) = 0;
+                hwOpt->args[0].argp = opt->args2->argp;
+                hwOpt->args[0].args = strlen(opt->args2->argp) + 1;
+                hwOpt->args[0].unk8 = 2;
+                hwOpt->args[1].argp = opt->fileName;
+                hwOpt->args[1].args = strlen(opt->fileName) + 1;
+                hwOpt->args[1].unk8 = 64;
+                hwOpt->curArgs = 2;
+                hwOpt->unk36 = 0;
             }
             else
             {
-                s1 = *(v0 + 32);
                 // 300C
-                *(s1 + 0) = opt->opt2;
-                *(s1 + 4) = strlen(opt->opt2) + 1;
-                *(s1 + 8) = type;
-                *(s2 + 28) = 1;
-                *(s2 + 36) = 0;
+                hwOpt->args[0].argp = opt->fileName;
+                hwOpt->args[0].args = strlen(opt->fileName) + 1;
+                hwOpt->args[0].unk8 = type;
+                hwOpt->curArgs = 1;
+                hwOpt->unk36 = 0;
                 if ((opt->opt0 == 274) || (opt->opt0 == 275) || (opt->opt0 == 276) || (opt->opt0 == 277))
                 {  
                     // 3064
-                    v0 = sceKernelGetChunk(3);
-                    s4 = v0;
-                    if (v0 >= 0)
+                    SceUID id = sceKernelGetChunk(3);
+                    funcRet = id;
+                    if (id >= 0)
                     {  
-                        v0 = sceKernelGetBlockHeadAddr(v0);
-                        s1 += 28;
-                        *(s1 + 0) = v0;
-                        *(s1 + 4) = strlen(v0) + 1;
-                        *(s1 + 8) = 64;
-                        *(s2 + 28)++;
+                        void *addr = sceKernelGetBlockHeadAddr(id);
+                        hwOpt->args[1].argp = addr;
+                        hwOpt->args[1].args = strlen(addr) + 1;
+                        hwOpt->args[1].unk8 = 64;
+                        hwOpt->curArgs++;
                     }
                 }
                 // 30AC
                 if ((opt->opt0 == 278) || (opt->opt0 == 280))
                 {  
-                    s1 += 28;
-                    *(s1 + 0) = opt->opt8;
-                    *(s1 + 4) = 32;
-                    *(s1 + 8) = 128;
-                    *(s2 + 28)++;
-                    v0 = sceKernelGetChunk(3);
-                    s4 = v0;
-                    if (v0 >= 0)
+                    hwOpt->args[1].argp = opt->opt8;
+                    hwOpt->args[1].args = 32;
+                    hwOpt->args[1].unk8 = 128;
+                    hwOpt->curArgs++;
+                    SceUID id = sceKernelGetChunk(3);
+                    funcRet = id;
+                    if (id >= 0)
                     {  
-                        v0 = sceKernelGetBlockHeadAddr(v0);
-                        s6 = s1 + 28;
-                        *(s6 + 0) = v0;
-                        *(s6 + 4) = strlen(v0) + 1;
-                        *(s6 + 8) = 64;
-                        *(s2 + 28)++;
+                        void *addr = sceKernelGetBlockHeadAddr(id);
+                        hwOpt->args[2].argp = addr;
+                        hwOpt->args[2].args = strlen(addr) + 1;
+                        hwOpt->args[2].unk8 = 64;
+                        hwOpt->curArgs++;
                     }
                 }
             }
             // 2FF4
             // 2FF8
             // 2FFC
-            sub_09D8(s2, opt->args2);
+            sub_09D8(hwOpt, opt->args2);
         }
     }
     else if (type == 1)
     {
-        a0 = opt->args2->opt4;
         // 2E38
-        s0 = 0;
-        if (a0 == 0)
+        int *ptr;
+        if (opt->args2->vshmainArgs == 0)
         {  
             // 2ED4
-            v0 = sceKernelGetChunk(0);
-            if (v0 > 0)
+            SceUID id = sceKernelGetChunk(0);
+            if (id > 0)
             {  
-                *sp = 56;
-                sceKernelQueryMemoryBlockInfo(v0, sp);
-                s6 = *(s2 + 32) + *(s2 + 28) * 28;
-                *(s6 + 0) = *(sp + 40);
-                *(s6 + 8) = 256;
-                *(s6 + 4) = *(sp + 44);
-                *(s2 + 40) = *(s2 + 28);
-                *(s2 + 28)++;
-                t7 = *(s6 + 4);
-                s0 = *(s6 + 0);
-                *(s0 + 0) = t7;
-                *(s0 + 4) = 32;
+                blkInfo.size = 56;
+                sceKernelQueryMemoryBlockInfo(id, &blkInfo);
+                hwOpt->args[hwOpt->curArgs].argp = blkInfo.unk40;
+                hwOpt->args[hwOpt->curArgs].args = blkInfo.unk44;
+                hwOpt->args[hwOpt->curArgs].unk8 = 256;
+                hwOpt->unk40 = hwOpt->curArgs;
+                hwOpt->curArgs++;
+                ptr = hwOpt->args[hwOpt->curArgs].argp;
+                ptr[0] = hwOpt->args[hwOpt->curArgs].args;
+                ptr[1] = 32;
             }
         }
         else
         {  
-            t4 = opt->args2->opt5;
-            t1 = *(s2 + 32) + *(v0 + 28) * 28;
-            *(t1 + 0) = t4;
-            *(t1 + 8) = 256;
-            s0 = t4;
-            *(t1 + 4) = opt->args2->opt4;
-            *(s2 + 40) = *(s2 + 28);
-            *(s2 + 28)++;
-            *(t4 + 4) = 32;
-            *(t4 + 0) = opt->args2->opt4;
+            hwOpt->args[hwOpt->curArgs].argp = opt->args2->vshmainArgp;
+            hwOpt->args[hwOpt->curArgs].args = opt->args2->vshmainArgs;
+            hwOpt->args[hwOpt->curArgs].unk8 = 256;
+            hwOpt->unk40 = hwOpt->curArgs;
+            hwOpt->curArgs++;
+            ptr = opt->args2->vshmainArgp;
+            ptr[0] = opt->args2->vshmainArgs;
+            ptr[1] = 32;
         }
 
         // 2E94
-        t4 = opt->opt4;
-        *(s0 + 8) = t4;
-        if (t4 == 0)
+        ptr[2] = opt->opt4;
+        if (opt->opt4 == 0)
         {  
             // 2EB4
-            v0 = *(s0 + 24);
-            if (v0 == 0)
-            {  
-                v0 = *(s0 + 20);
-                if (v0 == 0)
-                    v0 = *(s0 + 16);
-            }
+            int v;
+            if ((v = ptr[6]) == 0)
+                if ((v = ptr[5]) == 0)
+                    v = ptr[4];
             // 2ECC
-            *(s0 + 12) = v0;
+            ptr[3] = v;
         }
         else
-            *(s0 + 12) = 0;
+            ptr[3] = 0;
    
         // 2EA4
-        *(s0 + 24) = 0;
-        *(s0 + 16) = 0;
-        *(s0 + 20) = 0;
+        ptr[6] = 0;
+        ptr[4] = 0;
+        ptr[5] = 0;
     }
 
     // 2C84
     if (g_valAreSet != 0)
     {
-        t7 = *(s2 + 32) + *(s2 + 28) * 28;
-        *(t7 + 0) = g_val0;
-        *(t7 + 4) = g_val1;
-        *(t7 + 8) = g_val2;
-        *(s2 + 28)++;
+        hwOpt->args[hwOpt->curArgs].argp = g_val0;
+        hwOpt->args[hwOpt->curArgs].args = g_val1;
+        hwOpt->args[hwOpt->curArgs].unk8 = g_val2;
+        hwOpt->curArgs++;
     }
 
     // 2CE0
-    if (opt->args2->opt8 & 0x10000 == 0) {
-        t0 = *(s2 + 16) + (*(s2 + 12) << 5);
-        *(t0 - 12) = opt->arg0;
-    }
+    if ((opt->args2->flags & 0x10000) == 0)
+        *(int*)(hwOpt->addr1 + hwOpt->unk12 * 32 - 12) = opt->opt0;
 
     // 2D04
-    sub_0BBC(s2, opt->args2);
+    sub_0BBC(hwOpt, opt->args2);
     sceKernelSetDdrMemoryProtection(0x88400000, 0x400000, 12);
     if (opt->opt0 == 0x420)
-        return s4;
+        return funcRet;
     sceKernelMemset(0x88600000, 0, 0x200000);
-    v0 = decodeKL4E(0x88600000, 0x200000, EXEC_START + 4, 0);
-    if (v0 < 0)
+    ret = decodeKL4E(0x88600000, 0x200000, EXEC_START + 4, 0);
+    if (ret < 0)
     {
         // 2DD0
         sceKernelCpuSuspendIntr();
-        *(0xBC100040) = (*(0xBC100040) & 0xFFFFFFFC) | 1;
+        *(int*)(0xBC100040) = (*(int*)(0xBC100040) & 0xFFFFFFFC) | 1;
         sceKernelMemset(0x88600000, 0, 0x200000);
         sceKernelMemset(EXEC_START, 0, EXEC_END - EXEC_START);
         memset(0xBFC00000, 0, 4096);
@@ -2752,47 +2657,45 @@ void sub_2A64(RebootArgs *opt)
     UtilsForKernel_39FFB756(0);
     Kprintf("***** reboot start *****\n");
     Kprintf("\n\n\n");
-    a0 = s2;
-    a1 = arg_3;
-    a2 = arg_0;
-    a3 = fp;
-    jump(0x88600000);
+    int (*reboot)(int, int, int, int) = 0x88600000;
+    reboot(hwOpt, opt->args2, opt->opt0, rand);
 }
 
-void sub_32FC()
+SceKernelUnkStruct *sub_32FC()
 {
-    int addr1, addr2, addr3, addr4, addr5;
+    int addr1, args, addr4, addr5;
+    SceKernelUnkStruct *opt;
     if (sceKernelGetModel() != 0)
         addr1 = 0x8B800000;
     else
         addr1 = 0x88400000;
 
-    addr2 = (addr1 + 0x0004f) & 0xffffffc0;
-    addr3 = (addr2 + 0x0103f) & 0xffffffc0;
-    addr4 = (addr3 + 0x1c03f) & 0xffffffc0;
+    opt = (SceKernelUnkStruct*)((addr1 + 0x0004f) & 0xffffffc0);
+    args = ((int)opt + 0x0103f) & 0xffffffc0;
+    addr4 = (args + 0x1c03f) & 0xffffffc0;
     addr5 = (addr4 + 0x003bf) & 0xffffffc0;
 
     sceKernelMemset(addr1, 0, addr5 - addr1);
 
-    *(addr2 + 16) = addr3;
-    *(addr2 + 32) = addr4;
-    *(addr2 + 20) = addr5;
-    *(addr2 + 28) = 0;
-    *(addr2 + 24) = 0;
-    *(addr2 + 44) = sceKernelGetModel();
-    *(addr2 + 60) = 0;
-    *(addr2 + 64) = sceKernelDipswLow32();
-    *(addr2 + 68) = sceKernelDipswHigh32();
-    *(addr2 + 48) = 0;
+    opt->addr1   = args;
+    opt->args   = addr4;
+    opt->addr2   = addr5;
+    opt->curArgs = 0;
+    opt->unk24   = 0;
+    opt->model   = sceKernelGetModel();
+    opt->unk60   = 0;
+    opt->dipswLo = sceKernelDipswLow32();
+    opt->dipswHi = sceKernelDipswHigh32();
+    opt->unk48   = 0;
 
     if (sceKernelDipsw(30) != 1)
-        *(addr2 + 68) &= 0xFAFFFFFF;
+        opt->dipswHi &= 0xFAFFFFFF;
 
-    *(addr2 + 0) = 0x88000000;
-    *(addr2 + 4) = SysMemForKernel_6D9E2DD6();
-    *(addr2 + 40) = -1;
-    *(addr2 + 36) = -1;
-    *(addr2 + 80) = KDebugForKernel_568DCD25();
-    return addr2;
+    opt->addr  = 0x88000000;
+    opt->unk4  = SysMemForKernel_6D9E2DD6();
+    opt->unk40 = -1;
+    opt->unk36 = -1;
+    opt->unk80 = KDebugForKernel_568DCD25();
+    return opt;
 }
 

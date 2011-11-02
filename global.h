@@ -129,6 +129,9 @@ GET_REG(_oldK1, K1); \
 int _k1 = _oldK1 << 11; \
 SET_REG(K1, _k1)
 #define K1_RESET() SET_REG(K1, _oldK1)
+#define K1_GET() \
+int _k1; \
+GET_REG(_k1, K1);
 #define K1_USER_PTR(ptr) (((u32)(void*)(ptr) & _k1) >= 0)
 #define K1_USER_BUF_DYN_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr) | size) & _k1) >= 0)
 #define K1_USER_BUF_STA_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr)       ) & _k1) >= 0)
@@ -175,7 +178,7 @@ SET_REG(K1, _k1)
 #define UUNCACHED(ptr) (void*)(0x40000000 | ((u32)(void*)(ptr) & 0x1FFFFFFF))
 
 #define RESET_VECTOR(info, outAddr, func) \
-{
+{ \
     if (*(int*)(info + 4) > 0x2000000) \
         AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 2, 0xBC100040); \
     else \
@@ -186,6 +189,8 @@ SET_REG(K1, _k1)
     int (*_resetVector)(int, int) = 0xBFC00000; \
     _resetVector(*(int*)(info + 0), *(int*)(info + 4)); \
 }
+
+#define UPALIGN256(v) ((v + 0xFF) & 0xFFFFFF00)
 
 #endif
 
