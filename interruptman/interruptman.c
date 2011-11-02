@@ -1,3 +1,8 @@
+#include "../global.h"
+#include "interruptman.h"
+
+#include <pspmoduleinfo.h>
+
 extern int sub_0038();
 extern int sub_091C();
 extern int sub_0A74();
@@ -10,11 +15,6 @@ extern int sub_3160();
 // real name is memset but gcc always puts a warning about that
 void *my_memset(void *dst, char c, int n);
 void sub_2A40(int intrNum);
-
-#include "../global.h"
-#include "interruptman.h"
-
-#include <pspmoduleinfo.h>
 
 extern int sub_0CC0();
 extern int sub_0864();

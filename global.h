@@ -175,15 +175,17 @@ SET_REG(K1, _k1)
 #define UUNCACHED(ptr) (void*)(0x40000000 | ((u32)(void*)(ptr) & 0x1FFFFFFF))
 
 #define RESET_VECTOR(info, outAddr, func) \
-if (*(int*)(info + 4) > 0x2000000) \
-    AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 2, 0xBC100040); \
-else \
-    AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 1, 0xBC100040); \
-memset(0xBFC00000, 0, 0x1000); \
-memcpy(0xBFC00000, &func, &func + sizeof(func)); \
-*(int*)outAddr = 0xBFC00000; \
-int (*_resetVector)(int, int) = 0xBFC00000; \
-_resetVector(*(int*)(info + 0), *(int*)(info + 4));
+{
+    if (*(int*)(info + 4) > 0x2000000) \
+        AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 2, 0xBC100040); \
+    else \
+        AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 1, 0xBC100040); \
+    memset(0xBFC00000, 0, 0x1000); \
+    memcpy(0xBFC00000, &func, &func + sizeof(func)); \
+    *(int*)outAddr = 0xBFC00000; \
+    int (*_resetVector)(int, int) = 0xBFC00000; \
+    _resetVector(*(int*)(info + 0), *(int*)(info + 4)); \
+}
 
 #endif
 
