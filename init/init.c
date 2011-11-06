@@ -135,7 +135,13 @@ SceInit g_init; // 28A0
 
 // -------------------------------
 
-int sub_0000(int *buf, int size)
+// 0000
+/* 'bzero' two times. Used for "reset vector", sets a buffer to 0.
+ *
+ * buf: The buffer to empty.
+ * param: size The size of the buffer.
+ */
+void bzero2(int *buf, int size)
 {
     int *curBuf = buf;
     // 000C
@@ -152,7 +158,8 @@ int sub_0000(int *buf, int size)
     BREAK(0);
 }
 
-void sub_0028(char *dst, char *src)
+// 0028
+void strcpy256(char *dst, char *src)
 {
     int i;
     for (i = 255; i >= 0; i--)
@@ -166,7 +173,8 @@ void sub_0028(char *dst, char *src)
     }
 }
 
-void sub_0054(short *dst, short *src)
+// 0054
+void wcscpy256(short *dst, short *src)
 {
     int i;
     for (i = 255; i >= 0; i--)
@@ -211,7 +219,7 @@ void sub_0080()
                 int *ptr = jumpFixups[j].wcscpy256[i];
                 if (IS_JUMP(*ptr)) {
                     lastWcscpyOp = JUMP((int)ptr, *ptr);
-                    *ptr = JUMP(0, 0x08800000 + ((int)&sub_0054 - (int)&sub_0028));
+                    *ptr = JUMP(0, 0x08800000 + wcscpy256 - strcpy256);
                 }
                 // 0194
             }
@@ -221,7 +229,7 @@ void sub_0080()
     }
     if (lastWcscpyOp != 0 || lastStrcpyOp != 0) {
         // 01D0
-        memcpy(0x08800000, &sub_0028, (int)&sub_0080 - (int)&sub_0028);
+        memcpy(0x08800000, strcpy256, (int)&sub_0080 - strcpy256);
     }
     // 01EC
     UtilsForKernel_79D1C3FA();
@@ -788,13 +796,14 @@ int sub_1038(void *buf, int opt)
 void sub_1198(char *s, int line) // probably some masked debug thing
 {
     int oldIntr = sceKernelCpuSuspendIntr();
-    RESET_VECTOR(&g_init.resetVectorInfo, &g_init.addr, sub_0000);
+    RESET_VECTOR(&g_init.resetVectorInfo, &g_init.addr, bzero2);
     sceKernelCpuResumeIntr(oldIntr);
     for (;;)
         ;
 }
 
-int sub_1240(int argSize, int args[2])
+// 1240
+int InitThreadEntry(int argSize, int args[2])
 {
     char foundMod = 0;
     if (argSize < 8)
@@ -1119,6 +1128,12 @@ int sub_1240(int argSize, int args[2])
     sceKernelStopUnloadSelfModuleWithStatusKernel(1, 0, 0, 0, 0);
 }
 
+/** The module start function.
+ *
+ * @param unused (Unused.)
+ * @param bootInfo The boot info structure.
+ */
+
 int module_bootstart(int unused, SceLoadCoreBootInfo *bootInfo)
 {
     AT_SW(bootInfo->membase, &g_init.resetVectorInfo.addr);
@@ -1155,7 +1170,7 @@ int module_bootstart(int unused, SceLoadCoreBootInfo *bootInfo)
         sceKernelMemset32(0x88600000, 0, 0x200000);
     }
     // 1B40
-    SceUID id = sceKernelCreateThread("SceKernelInitThread", sub_1240, 32, 0x4000, 0, 0);
+    SceUID id = sceKernelCreateThread("SceKernelInitThread", InitThreadEntry, 32, 0x4000, 0, 0);
     int sp[2];
     sp[0] = threadId;
     sp[1] = bootInfo;

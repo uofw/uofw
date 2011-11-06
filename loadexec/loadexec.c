@@ -85,13 +85,13 @@ int *g_unkCbInfo[4]; // 0xD400
 //#define EXEC_START 0x3E80 // TODO: store new executable in an array and set this as the executable start & end
 //#define EXEC_END   0xD350
 
-/*
 // 0000
 void decodeKL4E(char *dst, int size, char *src, int arg3)
 {
     char *end = dst + size;
     char *curDst = dst;
-    arg1 = sp - 2656;
+    char buf[2656];
+    char *curBuf = buf;
     t9 = 0;
     s3 = -1;
     s4 = (end - 64) & 0xFFFFFFC0;
@@ -110,19 +110,18 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
     s0 = s0 & 7;
     at = (at & 0x0000ffff) | ((at << 16) & 0xffff0000);
 
-    // 06C: copy 'at' from sp to sp + 2652 included
-    do
-    {
-        *(arg1 + 2656) = at;
-        *(arg1 + 2660) = at;
-        arg1 += 8;
-    } while (arg1 != sp)
+    // 06C
+    int i;
+    for (i = 0; i < 664; i += 2) {
+        *((int*)curBuf)[i + 0] = at;
+        *((int*)curBuf)[i + 1] = at;
+    }
 
     // 080
     for (;;)
     {
         t9 = (t9 & 0xfffff8ff) | ((curDst << 8) & 0x700);
-        v1 = sp + ((t9 >> (s0 & 0x1F)) & 7) * 255;
+        v1 = buf + ((t9 >> (s0 & 0x1F)) & 7) * 255;
         t9 = 1;
     
         // 09C
@@ -170,7 +169,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         // 134
         for (;;)
         {
-            t5 = *(u8*)(arg1 + 2336);
+            t5 = curBuf[2336];
             if ((s3 >> 24) == 0)
             {
                 // 17C
@@ -190,14 +189,14 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
             {
                 // 1AC
                 s3 = t5 + 15;
-                *(s8*)(arg1 + 2336) = s3;
+                curBuf[2336] = s3;
                 t8 = -1;
                 s3 = lo;
                 // 1BC
                 int goto_3a4 = 0;
                 for (;;)
                 {  
-                    t5 = *(u8*)(arg1 + 2344);
+                    t5 = curBuf[2344];
                     if ((s1 >> 24) == 0)
                     {  
                         // 750
@@ -210,7 +209,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                     else
                         lo = (s3 >> 8) * t5;
             
-                    arg1 += 8;
+                    curBuf += 8;
                     t5 -= (t5 >> 4);
                     s1 = lo;
                     v1 = t5 + 15;
@@ -219,9 +218,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         // 784
                         t8++;
                         s3 = lo;
-                        *(s8*)(arg1 + 2336) = v1;
+                        curBuf[2336] = v1;
                         if (t8 == 6) {
-                            t5 = sp + t8;
+                            t5 = buf + t8;
                             break;
                         }
                         // CONTINUE
@@ -231,11 +230,11 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         // 1EC
                         s3 -= s1;
                         t1 -= s1;
-                        *(s8*)(arg1 + 2336) = t5;
-                        t5 = sp + t8;
+                        curBuf[2336] = t5;
+                        t5 = buf + t8;
                         if (t8 < 0) {
                             // 3A0
-                            arg1 = sp + 7;
+                            curBuf = buf + 7;
                             goto_3a4 = 1;
                         }
                         break;
@@ -249,8 +248,8 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                     t6 = curDst << (t8 & 0x1f);
                     s1 = t8 << 5;
                     s1 = (s1 & 0xffffffe7) | ((t6 << 3) & 0x18);
-                    s1 = (s1 & 0xfffffff8) | (arg1 & 3);
-                    s1 += sp;
+                    s1 = (s1 & 0xfffffff8) | ((int)curBuf & 3);
+                    s1 += buf;
                     t6 = 1;
                     if (t9 >= 0)
                     {
@@ -349,7 +348,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         *(s8*)(s1 + 2424) = s2;
             
                     // 2BC
-                    arg1 = sp + 7;
+                    curBuf = buf + 7;
                     s2 = *(u8*)(s1 + 2400);
                     if ((s3 >> 24) == 0)
                     {  
@@ -435,10 +434,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                             if (v1 == 0)
                             {
                                 // 79C
-                                v1 = *(u8*)(src + 5);
                                 t1 <<= 8;
+                                t1 += *(u8*)(src + 5);
                                 src++;
-                                t1 += v1;
                                 lo = s3 * s2;
                                 s3 <<= 8;
                             }
@@ -509,11 +507,9 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                 
                         // 3B8
                         t8 = *(u8*)(t9 + 2033);
-                        v0 = s3 >> 8;
                         s1 <<= 1;
-                        lo = v0 * t8;
-                        v0 = t8 >> 3;
-                        t7 = t8 - v0;
+                        lo = (s3 >> 8) * t8;
+                        t7 = t8 - (t8 >> 3);
                         v1 = lo;
                         t8 = s1 - s2;
                         int goto_3f4 = 0;
@@ -559,7 +555,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                         if (goto_3f4)
                         {
                             // 3F4
-                            s1 = sp + t8;
+                            s1 = buf + t8;
                             t8 = (s32)t8 >> 3;
                             t5 = *(s1 + 2216);
                             t9 = t8 - 3;
@@ -806,7 +802,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
                             *arg3 = src + 5;
                         return 0x80000104;
                     }
-                    arg1 = (arg1 & 0xfffffffe) | (t6 & 1);
+                    curBuf = (char*)(int)((int)curBuf & 0xfffffffe) | (t6 & 1);
                     if (end < s4)
                     {  
                         cache(0x18, curDst + 64);
@@ -859,11 +855,11 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         }
         
         // 160
-        *(s8*)(arg1 + 2336) = t5;
+        curBuf[2336] = t5;
         if (t3 != end)
         {
-            arg1--;
-            arg1 = max(arg1, sp);
+            curBuf--;
+            curBuf = MAX((int)curBuf, (int)buf);
             t1 -= s1;
             s3 -= s1;
             continue; // 080
@@ -876,7 +872,6 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         }
     }
 }
-*/
 
 int LoadExecForUser_362A956B()
 {

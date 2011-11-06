@@ -13,56 +13,56 @@ asm(".set noat"); // needed for AUDIO_SET_BUSY()
 
 /*@{*/
 
-/** Sets the audio controller busy state.
- * \param busy 0 or 1
+/* Sets the audio controller busy state.
+ * busy: 0 or 1
  */
 #define AUDIO_SET_BUSY(busy) asm("lui $at, 0xBE00; sw %0, 0($at)" : : "r" (busy))
 
-/** The audio channel structure. */
+/* The audio channel structure. */
 typedef struct
 {
-    /** The channel buffer. */
+    /* The channel buffer. */
     void *buf;
-    /** The currently unplayed samples count. */
+    /* The currently unplayed samples count. */
     int curSampleCnt;
-    /** The original sample count. */
+    /* The original sample count. */
     u16 sampleCount; // 8
-    /** \todo */
+    /* \todo */
     char unk10;
-    /** The number of bytes per sample (2 in mono, 4 in stereo). */
+    /* The number of bytes per sample (2 in mono, 4 in stereo). */
     char bytesPerSample; // 11
-    /** The left volume. */
+    /* The left volume. */
     short leftVol;
-    /** The right volume. */
+    /* The right volume. */
     short rightVol;
 } SceAudioChannel;
 
-/** The audio controller structure. */
+/* The audio controller structure. */
 typedef struct
 {
-    /** \todo */
+    /* TODO */
     u8 buf0[240]; // 0
-    /** \todo */
+    /* TODO */
     u8 buf240[272]; // 240
-    /** \todo */
+    /* TODO */
     u8 buf512[240]; // 512
-    /** \todo */
+    /* TODO */
     u8 buf752[272]; // 752
-    /** \todo */
+    /* TODO */
     u32 hwBuf[48]; // 1024
-    /** \todo */
+    /* TODO */
     u32 *dmaPtr[3]; // 1216
-    /** The audio event flag ID. */
+    /* The audio event flag ID. */
     SceUID evFlagId; // 1228
-    /** The audio channels structures. */
+    /* The audio channels structures. */
     SceAudioChannel chans[8]; // 1232
-    /** The channel sample rate. */
+    /* The channel sample rate. */
     u16 freq; // 1360
-    /** The sample rate, converted to be sent to the hardware. */
+    /* The sample rate, converted to be sent to the hardware. */
     u16 hwFreq; // 1362
-    /** The audio flags. */
+    /* The audio flags. */
     u8 flags; // 1364
-    /** The volume offset. */
+    /* The volume offset. */
     u8 volumeOffset; // 1365
     u8 delayShift; // 1366
     u8 padding1; // 1367
@@ -107,10 +107,10 @@ char g_audioEventName[] = "SceAudio";
 SceSysEventHandler g_audioEvent = {0x40, g_audioEventName, 0x00FFFF00, audioEventHandler, 0, 0, NULL, {0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
 // 0000
-/**
+/*
  * Update / synchronize the audio buffers to play them.
  * 
- * @param arg Set to 1 if called from SRCOutput
+ * arg: Set to 1 if called from SRCOutput
  */
 void updateAudioBuf(int arg)
 {
@@ -167,9 +167,9 @@ void updateAudioBuf(int arg)
 }
 
 // 01EC
-/** Update DMA.
+/* Update DMA.
  *
- * @param arg Memory type: 0 for output, 1 for SRCOutput, 2 for input
+ * arg: Memory type: 0 for output, 1 for SRCOutput, 2 for input
  */
 int dmaUpdate(int arg)
 {
@@ -197,7 +197,7 @@ int dmaUpdate(int arg)
 }
 
 // 02B8
-/** The audio mixer thread. */
+/* The audio mixer thread. */
 int audioMixerThread()
 {
     int sp0[128];
@@ -287,11 +287,11 @@ int audioMixerThread()
 }
 
 // 0530
-/**
+/*
  * The DMA callback for normal output.
  *
- * @param unused ?
- * @param arg1 ?
+ * unused: ?
+ * arg1: ?
  */
 int audioOutputDmaCb(int unused, int arg1)
 {
@@ -895,15 +895,15 @@ int sceAudioOutput2Release(void)
 }
 
 // 137C
-/**
+/*
  * Outputs audio to channel.
  *
- * @param channel The pointer to the channel.
- * @param leftVol The left ear volume.
- * @param rightVol The right ear volume.
- * @param buf The audio PCM buffer.
+ * channel: The pointer to the channel.
+ * leftVol: The left ear volume.
+ * rightVol: The right ear volume.
+ * buf: The audio PCM buffer.
  *
- * @return The number of samples on success, otherwise less than zero.
+ * Returns the number of samples on success, otherwise less than zero.
  */
 int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *buf)
 {
@@ -1119,10 +1119,10 @@ int sceAudioSetVolumeOffset(int arg)
 }
 
 // 1970
-/**
+/*
  * The audio interrupt handler.
  *
- * @return -1.
+ * Returns -1.
  */
 int audioIntrHandler()
 {
@@ -1175,7 +1175,7 @@ int audioIntrHandler()
 }
 
 // 1AAC
-/**
+/*
  * (Re)inits the audio hardware & sysreg.
  */
 void audioHwInit()
@@ -1233,10 +1233,10 @@ void audioHwInit()
 }
 
 // 1C00
-/**
+/*
  * The audio event handler.
  *
- * @return 0.
+ * Returns 0.
  */
 int audioEventHandler(int ev_id, char* ev_name, void* param, int* result)
 {
@@ -1283,7 +1283,7 @@ int audioEventHandler(int ev_id, char* ev_name, void* param, int* result)
 }
 
 // 1D48
-/**
+/*
  * The DMA callback for SRC output.
  */
 int audioSRCOutputDmaCb(int arg0, int arg1)
@@ -1492,13 +1492,13 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
     return ret;
 }
 
-/**
+/*
  * Outputs audio to SRC output.
  *
- * @param vol The volume (0 - 0xFFFF)
- * @param buf The audio PCM buffer.
+ * vol: The volume (0 - 0xFFFF)
+ * buf: The audio PCM buffer.
  *
- * @return The sample count on success, otherwise less than zero.
+ * Returns the sample count on success, otherwise less than zero.
  */
 int audioSRCOutput(int vol, void *buf)
 {
@@ -1571,10 +1571,10 @@ int audioSRCOutput(int vol, void *buf)
 }
 
 // 2454
-/**
+/*
  * The audio input thread.
  *
- * @return 0.
+ * Returns 0.
  */
 int audioInputThread()
 {
@@ -1808,10 +1808,10 @@ int sceAudio_driver_37660887(int arg)
 }
 
 // 2948
-/**
+/*
  * Setups audio input hardware.
  *
- * @return 0 on success, otherwise less than zero.
+ * Returns 0 on success, otherwise less than zero.
  */
 int audioInputSetup()
 {
@@ -1854,14 +1854,14 @@ int audioInputSetup()
 }
 
 // 2A80
-/**
+/*
  * Stores input.
  *
- * @param sampleCount The number of samples to store.
- * @param freq The audio input frequency.
- * @param buf The audio PCM buffer.
+ * sampleCount: The number of samples to store.
+ * freq: The audio input frequency.
+ * buf: The audio PCM buffer.
  *
- * @return The number of played samples in case of success, otherwise less than zero.
+ * Returns the number of played samples in case of success, otherwise less than zero.
  */
 int audioInput(int sampleCount, int freq, void *buf)
 {
@@ -1958,17 +1958,17 @@ int audioInput(int sampleCount, int freq, void *buf)
 }
 
 // 2C98
-/**
+/*
  * Inits audio input.
  *
- * @param arg0 \todo ?
- * @param gain The audio input gain.
- * @param arg2 ?
- * @param arg3 ?
- * @param arg4 ?
- * @param arg5 ?
+ * arg0: TODO ?
+ * gain: The audio input gain.
+ * arg2: ?
+ * arg3: ?
+ * arg4: ?
+ * arg5: ?
  *
- * @return 0 on success, otherwise less than zero.
+ * Returns 0 on success, otherwise less than zero.
  */
 int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
 {
@@ -1989,7 +1989,7 @@ int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
     return 0;
 }
 
-/**
+/*
  * The DMA callback for input.
  */
 int audioInputDmaCb(int arg0, int arg1)
