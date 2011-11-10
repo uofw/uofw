@@ -364,7 +364,7 @@ HIDE_UNDOC_MEMBERS     = YES
 # If set to NO (the default) these classes will be included in the various
 # overviews. This option has no effect if EXTRACT_ALL is enabled.
 
-HIDE_UNDOC_CLASSES     = NO
+HIDE_UNDOC_CLASSES     = YES
 
 # If the HIDE_FRIEND_COMPOUNDS tag is set to YES, Doxygen will hide all
 # friend (class|struct|union) declarations.
@@ -423,7 +423,7 @@ INLINE_INFO            = YES
 # alphabetically by member name. If set to NO the members will appear in
 # declaration order.
 
-SORT_MEMBER_DOCS       = YES
+SORT_MEMBER_DOCS       = NO
 
 # If the SORT_BRIEF_DOCS tag is set to YES then doxygen will sort the
 # brief documentation of file, namespace and class members alphabetically
@@ -569,7 +569,7 @@ WARNINGS               = YES
 # for undocumented members. If EXTRACT_ALL is set to YES then this flag will
 # automatically be disabled.
 
-WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_UNDOCUMENTED   = NO
 
 # If WARN_IF_DOC_ERROR is set to YES, doxygen will generate warnings for
 # potential errors in the documentation, such as not documenting some

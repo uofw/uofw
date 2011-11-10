@@ -9,9 +9,10 @@
 
 #include "../global.h"
 
-/** @defgroup Stdio StdioForUser/Kernel libraries */
-
-/** @{ */
+/** @defgroup Stdio StdioForUser/Kernel libraries
+ *
+ * @{
+ */
 
 #define STDIN  0
 #define STDOUT 1

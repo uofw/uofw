@@ -9,9 +9,10 @@
 
 asm(".set noat"); // needed for AUDIO_SET_BUSY()
 
-/** @defgroup Audio Audio Module */
-
-/** @{ */
+/** @defgroup Audio Audio Module
+ *
+ * @{
+ */
 
 /* Sets the audio controller busy state.
  * busy: 0 or 1
