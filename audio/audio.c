@@ -1,6 +1,6 @@
 /**
- * \author artart78
- * \version 6.39 (but only the NIDs changed in 6.60)
+ * @author artart78
+ * @version 6.39 (but only the NIDs changed in 6.60)
  *
  * The audio.prx module RE'ing.
  */
@@ -9,9 +9,9 @@
 
 asm(".set noat"); // needed for AUDIO_SET_BUSY()
 
-/** \defgroup Audio Audio Module */
+/** @defgroup Audio Audio Module */
 
-/*@{*/
+/** @{ */
 
 /* Sets the audio controller busy state.
  * busy: 0 or 1

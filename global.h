@@ -78,6 +78,39 @@ typedef struct
     u32 attr;
 } SceSysmemPartitionInfo;
 
+typedef struct
+{
+    int id;
+    int (*func)(void *, int, int funcid, void *args);
+} SceSysmemUIDLookupFunction;
+
+struct SceSysmemUIDControlBlock
+{
+    struct SceSysmemUIDControlBlock *parent;
+    struct SceSysmemUIDControlBlock *nextChild;
+    struct SceSysmemUIDControlBlock *type;   //(0x8)
+    SceUID id;
+    char *name;
+    unsigned char unk;
+    unsigned char size; // size in words
+    short attribute;
+    struct SceSysmemUIDControlBlock *nextEntry;
+    struct SceSysmemUIDControlBlock *inherited;
+    SceSysmemUIDLookupFunction *func_table;
+} __attribute__((packed));
+typedef struct SceSysmemUIDControlBlock SceSysmemUIDControlBlock;
+
+typedef struct
+{
+    SceSize size;
+    char    name[32];
+    u32     attr;
+    int     bufSize;
+    int     freeSize;
+    int     numSendWaitThreads;
+    int     numReceiveWaitThreads;
+} SceKernelMppInfo;
+
 int sceKernelRegisterExceptionHandler(int exno, void *func); // ExceptionManagerForKernel_06372550
 int sceKernelRegisterPriorityExceptionHandler(int exno, int priority, void *func); // ExceptionManagerForKernel_7D995AE8
 int sceKernelRegisterSuspendHandler(int no, void *func, int num); // sceSuspendForKernel_91A77137
