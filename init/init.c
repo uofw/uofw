@@ -1,10 +1,3 @@
-/**
- * \author artart78
- * \version 6.60
- *
- * The init.prx module RE'ing.
- */
-
 #include "../global.h"
 
 #define IS_JUMP(op) ((op & 0xFC000000) == 0x0C000000)
@@ -1128,12 +1121,7 @@ int InitThreadEntry(int argSize, int args[2])
     sceKernelStopUnloadSelfModuleWithStatusKernel(1, 0, 0, 0, 0);
 }
 
-/** The module start function.
- *
- * @param unused (Unused.)
- * @param bootInfo The boot info structure.
- */
-
+/* The module start function. */
 int module_bootstart(int unused, SceLoadCoreBootInfo *bootInfo)
 {
     AT_SW(bootInfo->membase, &g_init.resetVectorInfo.addr);

@@ -1,18 +1,6 @@
-/**
- * @author artart78
- * @version 6.60
- *
- * The StdioForUser/Kernel libraries
- */
-
 #include <stdarg.h>
 
 #include "../global.h"
-
-/** @defgroup Stdio StdioForUser/Kernel libraries
- *
- * @{
- */
 
 #define STDIN  0
 #define STDOUT 1
@@ -36,41 +24,21 @@ int *g_pipeList; // 6AF4
 
 int g_linePos; // 6C34
 
-/** Get the stdin file descriptor.
- *
- * @return The stdin file descriptor.
- */
 int sceKernelStdin()
 {
     return g_stdin;
 }
 
-/** Get the stdout file descriptor.
- *
- * @return The stdout file descriptor.
- */
 int sceKernelStdout()
 {
     return g_stdout;
 }
 
-/** Get the stderr file descriptor.
- *
- * @return The stderr file descriptor.
- */
 int sceKernelStderr()
 {
     return g_stderr;
 }
 
-/** Reopen stdout as a different file.
- *
- * @param file The file name.
- * @param flags The flags passed to sceIoReopen.
- * @param mode The mode passed to sceIoReopen.
- *
- * @return 0 on success, less than 0 otherwise.
- */
 int sceKernelStdoutReopen(const char *file, int flags, SceMode mode)
 {
     if (g_stdout < 0)
@@ -78,14 +46,6 @@ int sceKernelStdoutReopen(const char *file, int flags, SceMode mode)
     return sceIoReopen(file, flags, mode, g_stdout);
 }
 
-/** Reopen stderr as a different file.
- *
- * @param file The file name.
- * @param flags The flags passed to sceIoReopen.
- * @param mode The mode passed to sceIoReopen.
- *
- * @return 0 on success, less than 0 otherwise.
- */
 int sceKernelStderrReopen(const char *file, int flags, SceMode mode)
 {
     if (g_stderr < 0)
@@ -93,10 +53,6 @@ int sceKernelStderrReopen(const char *file, int flags, SceMode mode)
     return sceIoReopen(file, flags, mode, g_stderr);
 }
 
-/** Reset the stdout fd.
- *
- * @return 0 on success, less than 0 otherwise.
- */
 int sceKernelStdoutReset()
 {
     int ret = openSpecialFd(3, 0x1FF);
@@ -107,10 +63,6 @@ int sceKernelStdoutReset()
 }
 
 
-/** Reset the stderr fd.
- *
- * @return 0 on success, less than 0 otherwise.
- */
 int sceKernelStderrReset()
 {
     int ret = openSpecialFd(3, 0x1FF);
@@ -199,13 +151,6 @@ void ioPrintCb(void *ctx, int ch)
     }
 }
 
-/** Print a formatted string into an opened file.
- *
- * @param fd The file descriptor.
- * @param fmt The string format.
- *
- * @return The number of characters printed on success, less than 0 otherwise.
- */
 int fdprintf(int fd, const char *fmt, ...)
 {
     va_list ap;
@@ -218,12 +163,6 @@ int fdprintf(int fd, const char *fmt, ...)
     va_end(ap);
 }
 
-/** Print a formatted string to stdout.
- *
- * @param fmt The string format.
- *
- * @return The number of characters printed on success, less than 0 otherwise.
- */
 int printf(const char *fmt, ...)
 {
     va_list ap;
@@ -236,13 +175,6 @@ int printf(const char *fmt, ...)
     va_end(ap);
 }
 
-/** Output a character to an opened file.
- *
- * @param c The character to output.
- * @param fd The file descriptor.
- *
- * @return The printed character.
- */
 int fdputc(int c, int fd)
 {
     char str[1] = {c};
@@ -308,12 +240,6 @@ int fdputc(int c, int fd)
     return c;
 }
 
-/** Get the next character (after the file position indicator) from an opened file.
- *
- * @param fd The file descriptor.
- *
- * @return The read character on success, -1 otherwise.
- */
 int fdgetc(int fd)
 {
     char buf[1];
@@ -330,13 +256,6 @@ int fdgetc(int fd)
     return (ret == 1 ? buf[0] : -1);
 }
 
-/** Get the next line from an opened file.
- *
- * @param s The string buffer.
- * @param fd The file descriptor.
- *
- * @return The string on success, NULL otherwise.
- */
 char *fdgets(char *s, int fd)
 {
     char *end = s + 125;
@@ -403,24 +322,11 @@ char *fdgets(char *s, int fd)
     }
 }
 
-/** Output a character to stdout.
- *
- * @param c The character to output.
- *
- * @return The printed character.
- */
 int putchar(int c)
 {
     return fdputc(c, STDOUT);
 }
 
-/** Output a string to an opened file.
- *
- * @param s The string to output.
- * @param fd The file descriptor.
- *
- * @return 0.
- */
 int fdputs(const char *s, int fd)
 {
     char c;
@@ -432,12 +338,6 @@ int fdputs(const char *s, int fd)
     return 0;
 }
 
-/** Output a string to stdout.
- *
- * @param s The string to output.
- *
- * @return 0.
- */
 int puts(const char *s)
 {
     char c;
@@ -449,82 +349,45 @@ int puts(const char *s)
     return 0;
 }
 
-/** Get the next character from stdin.
- *
- * @return The read character on success, -1 otherwise.
- */
 int getchar(void)
 {
     return fdgetc(STDIN);
 }
 
-/** Get the next line from stdin.
- *
- * @param s The string buffer.
- *
- * @return The string on success, NULL otherwise.
- */
 char *gets(char *s)
 {
     return fdgets(s, STDIN);
 }
 
-/** Useless. Do not use.
- *
- * @return Less than zero.
- */
 int sceKernelStdioRead()
 {
     return 0x80020001;
 }
 
-/** Useless. Do not use.
- *
- * @return Less than zero.
- */
 int sceKernelStdioLseek()
 {
     return 0x80020001;
 }
 
-/** Useless. Do not use. */
 void sceKernelStdioSendChar()
 {
 }
 
-/** Useless. Do not use.
- *
- * @return Less than zero.
- */
 int sceKernelStdioWrite()
 {
     return 0x80020001;
 }
 
-/** Useless. Do not use.
- *
- * @return Less than zero.
- */
 int sceKernelStdioClose()
 {
     return 0x80020001;
 }
 
-/** Useless. Do not use.
- *
- * @return Less than zero.
- */
 int sceKernelStdioOpen()
 {
     return 0x80020001;
 }
 
-/** Register a stdout pipe.
- *
- * @param id The message pipe id.
- *
- * @return 0 on success, less than 0 otherwise.
- */
 int sceKernelRegisterStdoutPipe(SceUID id)
 {
     K1_BACKUP();
@@ -533,12 +396,6 @@ int sceKernelRegisterStdoutPipe(SceUID id)
     return ret;
 }
 
-/** Register a stderr pipe.
- *
- * @param id The message pipe id.
- *
- * @return 0 on success, less than 0 otherwise.
- */
 int sceKernelRegisterStderrPipe(SceUID id)
 {
     K1_BACKUP();
@@ -593,6 +450,4 @@ int registerPipe(int fd, SceUID id)
     addr[0] = id;
     return 0;
 }
-
-/** @} */
 

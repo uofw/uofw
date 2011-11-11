@@ -1,22 +1,8 @@
-/**
- * @author artart78
- * @version 6.39 (but only the NIDs changed in 6.60)
- *
- * The audio.prx module RE'ing.
- */
-
 #include "../global.h"
 
 asm(".set noat"); // needed for AUDIO_SET_BUSY()
 
-/** @defgroup Audio Audio Module
- *
- * @{
- */
-
-/* Sets the audio controller busy state.
- * busy: 0 or 1
- */
+/* Sets the audio controller busy state. */
 #define AUDIO_SET_BUSY(busy) asm("lui $at, 0xBE00; sw %0, 0($at)" : : "r" (busy))
 
 /* The audio channel structure. */
@@ -84,16 +70,6 @@ typedef struct
     u8 unkCodecArgSet; // 1399
     // end: 1400
 } SceAudio;
-
-typedef struct
-{
-    int unk0;
-    int gain;
-    int unk2;
-    int unk3;
-    int unk4;
-    int unk5;
-} SceAudioInputParams;
 
 int audioOutputDmaCb(int unused, int arg1);
 int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *buf);
@@ -304,15 +280,6 @@ int audioOutputDmaCb(int unused, int arg1)
     return 0;
 }
 
-/**
- * Outputs audio (raw PCM) to channel.
- *
- * @param chanId The channel ID, returned by sceAudioChReserve().
- * @param vol The volume (0 - 0xFFFF).
- * @param buf The PCM buffer to output.
- *
- * @return The sample count in case of success, otherwise less than zero.
- */
 int sceAudioOutput(u32 chanId, int vol, void *buf)
 {
     if (vol > 0xFFFF)
@@ -332,15 +299,6 @@ int sceAudioOutput(u32 chanId, int vol, void *buf)
     return ret;
 }
 
-/**
- * Outputs audio (raw PCM) to channel and doesn't return until everything has been played.
- *
- * @param chanId The channel ID, returned by sceAudioChReserve().
- * @param vol The volume (0 - 0xFFFF).
- * @param buf The PCM buffer to output.
- *
- * @return The sample count in case of success, otherwise less than zero.
- */
 int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
 {
     if (vol >= 0xFFFF)
@@ -383,16 +341,6 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
     return ret;
 }
 
-/**
- * Outputs audio (raw PCM) to channel with different left and right volumes.
- *
- * @param chanId The channel ID, returned by sceAudioChReserve().
- * @param leftVol The left volume (0 - 0xFFFF).
- * @param rightVol The right volume (0 - 0xFFFF).
- * @param buf The PCM buffer to output.
- *
- * @return The sample count in case of success, otherwise less than zero.
- */
 int sceAudioOutputPanned(u32 chanId, int leftVol, int rightVol, void *buf)
 {
     if (rightVol > 0xFFFF || leftVol > 0xFFFF)
@@ -414,16 +362,6 @@ int sceAudioOutputPanned(u32 chanId, int leftVol, int rightVol, void *buf)
     return ret;
 }
 
-/**
- * Outputs audio (raw PCM) to channel with different left and right volumes. The function doesn't return until the entire buffer has been played.
- *
- * @param chanId The channel ID, returned by sceAudioChReserve().
- * @param leftVol The left volume (0 - 0xFFFF).
- * @param rightVol The right volume (0 - 0xFFFF).
- * @param buf The PCM buffer to output.
- *
- * @return The sample count in case of success, otherwise less than zero.
- */
 int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *buf)
 {
     if ((leftVol | rightVol) > 0xFFFF)
@@ -470,15 +408,6 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
     return ret;
 }
 
-/**
- * Reserves a channel.
- *
- * @param channel The channel ID you want to reserve, or -1 if you want the first free one to be selected.
- * @param sampleCount The number of samples.
- * @param format The audio format (0x10 for MONO, 0 for STEREO)
- *
- * @return The channel ID in case of success, otherwise less than zero.
- */
 int sceAudioChReserve(int channel, int sampleCount, int format)
 {
     K1_BACKUP();
@@ -539,18 +468,6 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
     return channel;
 }
 
-/**
- * Reserves the channel & outputs in "one shot"
- *
- * @param chanId The channel ID, or -1 if you want the first free channel to be chose.
- * @param sampleCount The number of samples to play.
- * @param fmt The audio format (0x10 for MONO, 0 for STEREO)
- * @param leftVol The left ear volume (0 - 0xFFFF).
- * @param rightVol The right ear volume (0 - 0xFFFF).
- * @param buf The PCM audio buffer.
- *
- * @return The channel ID in case of success, otherwise less than zero.
- */
 int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int rightVol, void *buf)
 {
     K1_BACKUP();
@@ -632,13 +549,6 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
     return chanId;
 }
 
-/**
- * Releases a channel.
- *
- * @param channel The channel ID to release.
- *
- * @return 0 in case of succes, otherwise less than zero.
- */
 int sceAudioChRelease(u32 channel)
 {
     if (channel >= 8)
@@ -666,13 +576,6 @@ int sceAudioChRelease(u32 channel)
     return 0;
 }
 
-/**
- * Get the number of remaining unplayed samples of a channel.
- *
- * @param chanId The channel ID to check.
- *
- * @return The number of remaining samples.
- */
 int sceAudioGetChannelRestLength(u32 chanId)
 {
     if (chanId >= 8)
@@ -682,14 +585,6 @@ int sceAudioGetChannelRestLength(u32 chanId)
     return ((chan->buf != NULL) ? chan->curSampleCnt : 0) + ((chan->unk10 != 0) ? 0 : chan->sampleCount);
 }
 
-/**
- * Set the sample count of a channel.
- *
- * @param chanId The channel ID.
- * @param sampleCount The number of samples.
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
 {
     if (chanId >= 8)
@@ -719,15 +614,6 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
     return 0;
 }
 
-/**
- * Change the volume of a channel.
- *
- * @param chanId The channel ID.
- * @param leftVol The left ear volume.
- * @param rightVol The right ear volume.
- *
- * @return 0 on success, otherwise less than 0
- */
 int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
 {
     if ((rightVol > 0xFFFF) || (leftVol > 0xFFFF))
@@ -748,14 +634,6 @@ int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
     return 0;
 }
 
-/**
- * Change the format (mono/stereo) of a channel.
- *
- * @param chanId The channel ID.
- * @param format The audio format (0 for STEREO, 0x10 for MONO).
- *
- * @return 0 on success, otherwise less than 0
- */
 int sceAudioChangeChannelConfig(u32 chanId, int format)
 {
     if (chanId >= 8)
@@ -805,13 +683,6 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
     return 0;
 }
 
-/**
- * Change SRC output sample count.
- *
- * @param sampleCount The sample count.
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioOutput2ChangeLength(int sampleCount)
 {
     if (sampleCount < 17 || sampleCount > 4111)
@@ -828,11 +699,6 @@ int sceAudioOutput2ChangeLength(int sampleCount)
     return 0;
 }
 
-/**
- * Get the number of SRC unplayed samples.
- *
- * @return The number of unplayed samples.
- */
 int sceAudioOutput2GetRestSample(void)
 {
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
@@ -843,13 +709,6 @@ int sceAudioOutput2GetRestSample(void)
         + (ptr[10] != 0 ? g_audio.srcChSampleCnt : 0);
 }
 
-/**
- * Get the number of unplayed samples of a channel.
- *
- * @param chanId The channel ID.
- *
- * @return The number of samples in case of success, otherwise less than zero.
- */
 int sceAudioGetChannelRestLen(u32 chanId)
 {
     if (chanId >= 8)
@@ -860,36 +719,16 @@ int sceAudioGetChannelRestLen(u32 chanId)
     return chan->curSampleCnt + chan->sampleCount;
 }
 
-/**
- * Reserve a SRC output.
- *
- * @param sampleCount The number of samples of the output.
- *
- * @return 0 in case of success, otherwise less than zero.
- */
 int sceAudioOutput2Reserve(int sampleCount)
 {
     return sceAudioSRCChReserve(sampleCount, 44100, 2);
 }
 
-/**
- * Output to SRC. This function only returns when all the samples have been played.
- *
- * @param vol The output volume.
- * @param buf The PCM audio buffer.
- *
- * @return The sample count on success, otherwise less than zero.
- */
 int sceAudioOutput2OutputBlocking(int vol, void *buf)
 {
     return sceAudioSRCOutputBlocking(vol, buf);
 }
 
-/**
- * Release SRC output.
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioOutput2Release(void)
 {
     return sceAudioSRCChRelease();
@@ -930,13 +769,6 @@ int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *b
     return channel->sampleCount;
 }
 
-/**
- * Sets the audio output frequency.
- *
- * @param freq The frequency (44100 or 48000).
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioSetFrequency(int freq)
 {
     if (g_audio.freq == freq)
@@ -973,9 +805,6 @@ int sceAudioSetFrequency(int freq)
     return 0;
 }
 
-/**
- * Inits audio.
- */
 int sceAudioInit()
 {
     memset(&g_audio, 0, sizeof(g_audio));
@@ -1038,9 +867,6 @@ int sceAudioInit()
     return 0;
 }
 
-/**
- * \todo ?
- */
 int sceAudioLoopbackTest(int arg0)
 {
     if (arg0 == 0)
@@ -1067,9 +893,6 @@ int sceAudioLoopbackTest(int arg0)
     return 0;
 }
 
-/**
- * Frees the audio system.
- */
 int sceAudioEnd()
 {
     sceCodecOutputEnable(0, 0);
@@ -1088,27 +911,12 @@ int sceAudioEnd()
     return 0;
 }
 
-/**
- * Selects the delaying mode.
- *
- * @param arg If set to 1, channels 0 - 6 will be delayed after sceAudioOutputPannedBlocking, otherwise only channels 0 - 4 will be.
- *
- * @return 0.
- */
-
 int sceAudio_driver_306D18F1(int arg)
 {
     g_audio.delayShift = (arg != 0) ? 2 : 0;
     return 0;
 }
 
-/**
- * Sets the volume offset/shifting.
- *
- * @param arg The output buffer will be shifted by (arg + 8); default is 8, so arg = 0 is the default value.
- *
- * @return 0.
- */
 int sceAudioSetVolumeOffset(int arg)
 {
     // 1948
@@ -1306,15 +1114,6 @@ int audioSRCOutputDmaCb(int arg0, int arg1)
     return 0;
 }
 
-/**
- * Reserves a SRC output.
- *
- * @param sampleCount The number of samples.
- * @param freq The output frequency.
- * @param numChans The number of output "channels" (only 2 is accepted, for stereo)
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
 {
     if (numChans != 4 && numChans != 2)
@@ -1420,11 +1219,6 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
     return 0;
 }
 
-/**
- * Releases a SRC output.
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioSRCChRelease(void)
 {
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -1445,14 +1239,6 @@ int sceAudioSRCChRelease(void)
     return 0;
 }
 
-/**
- * Outputs to SRC. The functions returns only when all the buffer has been played.
- *
- * @param vol The output volume (0 - 0xFFFF).
- * @param buf The audio PCM buffer.
- *
- * @return The sample count on success, otherwise less than zero.
- */
 int sceAudioSRCOutputBlocking(int vol, void *buf)
 {
     if (vol > 0xFFFFF)
@@ -1675,11 +1461,6 @@ int audioInputThread()
     }
 }
 
-/**
- * Waits for the input to end.
- *
- * @return 0 on success, otherwise less than 0.
- */
 int sceAudioWaitInputEnd()
 {
     int ret = 0;
@@ -1704,13 +1485,6 @@ int sceAudioWaitInputEnd()
     return ret;
 }
 
-/**
- * Inits audio input.
- *
- * @param param The structure containing the input parameters.
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioInputInitEx(SceAudioInputParams *param)
 {
     K1_BACKUP();
@@ -1723,15 +1497,6 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
     return ret;
 }
 
-/**
- * Inits audio input (probably deprecated, has less parameters than sceAudioInputInitEx()).
- *
- * @param arg0 \todo ?
- * @param gain The input gain.
- * @param arg2 \todo ?
- *
- * @return 0 on success, otherwise less than zero.
- */
 int sceAudioInputInit(int arg0, int gain, int arg2)
 {
     K1_BACKUP();
@@ -1740,40 +1505,17 @@ int sceAudioInputInit(int arg0, int gain, int arg2)
     return ret;
 }
 
-/**
- * Waits for the input to end, and store input.
- *
- * @param sampleCount The number of samples to read.
- * @param freq The input frequency.
- * @param buf The audio PCM input buffer.
- *
- * @return The number of played samples on success, otherwise less than zero.
- */
 int sceAudioInputBlocking(int sampleCount, int freq, void *buf)
 {
     sceAudioWaitInputEnd();
     return audioInput(sampleCount, freq, buf);
 }
 
-/**
- * Store input.
- *
- * @param unk1 \todo ?
- * @param gain The input gain.
- * @param unk2 \todo ?
- *
- * @return The number of played samples on success, otherwise less than zero.
- */
 int sceAudioInput(int unk1, int gain, int unk2)
 {
     return audioInput(unk1, gain, unk2);
 }
 
-/**
- * Get the number of samples read from input.
- *
- * @return The sample count.
- */
 int sceAudioGetInputLength()
 {
     int origSampleCount = g_audio.inputOrigSampleCnt;
@@ -1782,11 +1524,6 @@ int sceAudioGetInputLength()
     return origSampleCount - g_audio.inputCurSampleCnt;
 }
 
-/**
- * Checks if the input has ended.
- *
- * @return 1 if the input is still running, otherwise 0.
- */
 int sceAudioPollInputEnd()
 {
     if (g_audio.inputInited == 0)
@@ -1796,10 +1533,7 @@ int sceAudioPollInputEnd()
     return (g_audio.inputCurSampleCnt > 0);
 }
 
-/**
- * \todo ?
- */
-int sceAudio_driver_37660887(int arg)
+int sceAudio_driver_5182B550(int arg)
 {
     if (g_audio.unkCodecArg != arg) {
         g_audio.unkCodecArgSet = 1;
@@ -2006,6 +1740,4 @@ int audioInputDmaCb(int arg0, int arg1)
     sceKernelSetEventFlag(g_audio.evFlagId, 0x80000000);
     return 0;
 }
-
-/** @} */
 
