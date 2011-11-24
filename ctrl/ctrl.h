@@ -277,3 +277,5 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch);
 int sceCtrlReadLatch(SceCtrlLatch *latch);
 
 #endif	/* CTRL_H */
+
+/** @} */
