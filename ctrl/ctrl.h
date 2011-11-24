@@ -10,7 +10,6 @@
  * @{	
  */
 
-
 #ifndef CTRL_H
 #define	CTRL_H
 
@@ -146,11 +145,11 @@ enum PspCtrlMaskMode {
 /**
  * Register a button callback.
  * 
- * @param slot - The slot used to register the callback (0-3). Although Sony uses atleast slot 0 and slot 1 of the possible 
+ * @param slot The slot used to register the callback (0-3). Although Sony uses atleast slot 0 and slot 1 of the possible 
  *               4 callback slots in game mode, we can use them all freely as we wish.
- * @param btnMask - Or'ed button values which will be checked for being pressed.
- * @param cb - Pointer to the callback function (int curr, int last, void *arg), which handles button input effects.
- * @param arg - Optional user argument. Passed to the callback function.
+ * @param btnMask Or'ed button values which will be checked for being pressed.
+ * @param cb Pointer to the callback function (int curr, int last, void *arg), which handles button input effects.
+ * @param arg Optional user argument. Passed to the callback function.
  * 
  * @return 0 on success or < 0, if slot is another value than one of 0-3.
  */
@@ -159,7 +158,7 @@ int sceCtrlRegisterButtonCallback(int slot, u32 btnMask, void (*cb)(int, int, vo
 /**
  * Get the set button mask mode of a button value.
  * 
- * @param btnMask - The button bit value to check for (one or more buttons of ::PspCtrlButtons).
+ * @param btnMask The button bit value to check for (one or more buttons of ::PspCtrlButtons).
  * 
  * @return 0 for nothing has been set for this button bit value. Returns 1, if the button bit value is included
  *         in a button bit value which is masked. Returns 2 in the case of the button bit value being set as "button set".
@@ -167,12 +166,12 @@ int sceCtrlRegisterButtonCallback(int slot, u32 btnMask, void (*cb)(int, int, vo
 int sceCtrlGetButtonMask(u32 btnMask);
 
 /**
- * Set a button mask mode for one or more buttons. You can only mask user-mode buttons in user applications.
- * Masking of kernel-mode buttons is ignored as well as buttons usedin kernel-mode applications.
+ * Set a button mask mode for one or more buttons. You can only mask user mode buttons in user applications.
+ * Masking of kernel mode buttons is ignored as well as buttons used in kernel mode applications.
  * 
- * @param btnMask - The button bit value for which the button mask mode will be applied. 
+ * @param btnMask The button bit value for which the button mask mode will be applied. 
  *                  One or more buttons of ::PspCtrlButtons.
- * @param btnMaskMode - The mask mode. 0 for no masking, 1 for masking, 2 for button setting.
+ * @param btnMaskMode The mask mode. 0 for no masking, 1 for masking, 2 for button setting.
  *                      Note: Set to 2 will only mask button(s), this seems to be an implementation error.  
  * 
  * @return 0, 1 for setting a complete new button bit mask (which is not included in a previously set button bit mask).               
@@ -180,7 +179,7 @@ int sceCtrlGetButtonMask(u32 btnMask);
 int sceCtrlSetButtonMask(u32 btnMask, u8 btnMaskMode);
 
 /**
- * Get the current controller-input mode.
+ * Get the current controller input mode.
  * 
  * @param mode Pointer to int receiving the current controller mode.
  * 
@@ -189,9 +188,9 @@ int sceCtrlSetButtonMask(u32 btnMask, u8 btnMaskMode);
 int sceCtrlGetSamplingMode(int *mode);
 
 /**
- * Set the controller-input mode.
+ * Set the controller input mode.
  * 
- * @param mode - The new controller-input mode. One of ::PspCtrlInputMode.
+ * @param mode The new controller input mode. One of ::PspCtrlInputMode.
  * 
  * @return The previous input mode on success, or < 0, if mode is not a value of ::PspCtrlInputMode.
  */
@@ -200,7 +199,7 @@ int sceCtrlSetSamplingMode(u8 mode);
 /**
  * Get the current cycle specifying the update frequency of the internal ctrl buffer.
  * 
- * @param cycle - The current cycle.
+ * @param cycle Pointer to in receiving the current cycle.
  * 
  * @return 0.
  */
@@ -209,7 +208,7 @@ int sceCtrlGetSamplingCycle(int *cycle);
 /**
  * Set the update frequency of the internal ctrl pad buffer (i.e. SceCtrlData (internal), SceCtrlLatch (internal)).
  * 
- * @param cycle - The new time period between two samplings of controller attributes in microseconds.
+ * @param cycle The new time period between two samplings of controller attributes in microseconds.
  *                Setting to 0 triggers sampling at every VSYNC-event (60 updates/second). If you want to set an own
  *                time period for updating the internal ctrl pad buffer, cycle has to be > 5554 and < 20001.
  * 
@@ -220,8 +219,8 @@ int sceCtrlSetSamplingCycle(int cycle);
 /**
  * Get the idle threshold values.
  *
- * @param idlerest - Movement needed by the analog to reset the idle timer.
- * @param idleback - Movement needed by the analog to bring the PSP back from an idle state.
+ * @param idlerest Movement needed by the analog to reset the idle timer.
+ * @param idleback Movement needed by the analog to bring the PSP back from an idle state.
  *
  * @return < 0 on error.
  */
@@ -230,8 +229,8 @@ int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack);
 /**
  * Set analog threshold relating to the idle timer.
  *
- * @param idlereset - Movement needed by the analog to reset the idle timer.
- * @param idleback - Movement needed by the analog to bring the PSP back from an idle state.
+ * @param idlereset Movement needed by the analog to reset the idle timer.
+ * @param idleback Movement needed by the analog to bring the PSP back from an idle state.
  *
  * Set to -1 for analog to not cancel idle timer.
  * Set to 0 for idle timer to be cancelled even if the analog is not moved.
@@ -244,7 +243,7 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback);
 /**
  * Enable/disable controller input. Set to PSP_CTRL_POLL_MODE_POLLING by Sony when initiating the controller.
  * 
- * @param pollMode - One of ::PspCtrlPollMode. If set to 0, no button/analog input is recognized.
+ * @param pollMode One of ::PspCtrlPollMode. If set to 0, no button/analog input is recognized.
  *                   Set to 1 to enable button/analog input.
  * 
  * @return 0.
@@ -258,7 +257,7 @@ int sceCtrlSetPollingMode(u8 pollMode);
  * Once a button has been i.e. pressed, its value is stored in the specific internal latch buffer member (uiMake in this case)
  * until you manually reset the specific latch buffer field.
  * 
- * @param latch - Pointer to a SceCtrlLatch struct retrieving the current latch_data.
+ * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch.
  * 
  * @return > 0 on success, < 0 on error.
  */
@@ -268,9 +267,9 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch);
  * Read the current internal SceCtrlLatch buffer and reset the buffer afterwards. The following button states are delivered:
  *                                                Button is pressed, button is not pressed, button has been newly pressed
  *                                                and button has been newly released. 
- * After the internal latch buffer has been read, it will be cleaned (all members will be reset to zero)
+ * After the internal latch buffer has been read, it will be cleaned (all members will be reset to zero).
  * 
- * @param latch - Pointer to a SceCtrlLatch struct retrieving the current latch_data.
+ * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch.
  * 
  * @return > 0 on success, < 0 on error.
  */
