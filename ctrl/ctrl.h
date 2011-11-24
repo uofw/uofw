@@ -5,6 +5,12 @@
  * Version: 6.39
  */
 
+/** @defgroup Ctrl Ctrl Module
+ *
+ * @{	
+ */
+
+
 #ifndef CTRL_H
 #define	CTRL_H
 
