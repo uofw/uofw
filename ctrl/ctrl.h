@@ -29,15 +29,15 @@ typedef struct _SceCtrlData {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
      *  You can use this to get the time how long a button has been pressed. 
     */ 
-    u32 activeTime; 
+    u32 activeTime; //0
     /** The currently pressed D-Pad button values. One or more values of :PspCtrlButtons or'ed together. */
-    u32 buttons; 
+    u32 buttons; //4
     /** The current position of the X-axis of the analog controller. Between 0 - 255. */
-    u8 aX; 
+    u8 aX; //8
     /** The current position of the Y-axis of the analog controller. Between 0 - 255. */
-    u8 aY; 
+    u8 aY; //9
     /** Reserved. */
-    u8 rsrv[6]; 
+    u8 rsrv[6]; //10
 } SceCtrlData;
 
 /** Extended SceCtrlData struct. */
