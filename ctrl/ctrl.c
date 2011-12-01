@@ -923,32 +923,32 @@ static int _sceCtrlReadBuf(void *pad, int count, int arg3, int mode) {
         }
     
     while (count-- > 0) {
-        ((SceCtrlData *)pad)->TimeStamp = ctrlBuf.TimeStamp; //0x00001FE4 && 0x00001FF0
+        ((SceCtrlData *)pad)->activeTime = ctrlBuf.activeTime; //0x00001FE4 && 0x00001FF0
         if (pspSdkGetK1() >> 31) { //0x00001FEC
-            ctrlBuf.Buttons &= ctrl.unk_3; //0x00001FF8
+            ctrlBuf.buttons &= ctrl.unk_3; //0x00001FF8
         }
         //here, the current active button value(s) will be turned negative, if this function is called through read/peekBufferNegative
-        ((SceCtrlData *)pad)->Buttons = (mode & 1) ? ~ctrlBuf.Buttons : ctrlBuf.Buttons; //0x00002004 && 0x00002004 && 0x0000200C
-        ((SceCtrlData *)pad)->Lx = ctrlBuf.Lx; //0x00002010
-        ((SceCtrlData *)pad)->Ly = ctrlBuf.Ly; //0x00002018
+        ((SceCtrlData *)pad)->buttons = (mode & 1) ? ~ctrlBuf.buttons : ctrlBuf.buttons; //0x00002004 && 0x00002004 && 0x0000200C
+        ((SceCtrlData *)pad)->aX = ctrlBuf.aX; //0x00002010
+        ((SceCtrlData *)pad)->aY = ctrlBuf.aY; //0x00002018
         
         if ((mode & 4) == 0) { //if (mode < 4) -- 0x00001FC8 && 0x00002014
-            ((SceCtrlData *)pad)->Rsrv[0] = 0; //0x00002130
-            ((SceCtrlData *)pad)->Rsrv[1] = 0; 
-            ((SceCtrlData *)pad)->Rsrv[2] = 0;
-            ((SceCtrlData *)pad)->Rsrv[3] = 0;
-            ((SceCtrlData *)pad)->Rsrv[4] = 0;
-            ((SceCtrlData *)pad)->Rsrv[5] = 0; //0x00002138
+            ((SceCtrlData *)pad)->rsrv[0] = 0; //0x00002130
+            ((SceCtrlData *)pad)->rsrv[1] = 0; 
+            ((SceCtrlData *)pad)->rsrv[2] = 0;
+            ((SceCtrlData *)pad)->rsrv[3] = 0;
+            ((SceCtrlData *)pad)->rsrv[4] = 0;
+            ((SceCtrlData *)pad)->rsrv[5] = 0; //0x00002138
             pad = pad + 16; //0x00002140 -- size of sceCtrlData
         }
         else { //if (mode >= 4)
-            ((SceCtrlDataExt *)pad)->Rsrv[2] = 0; //0x0000201C
-            ((SceCtrlDataExt *)pad)->Rsrv[3] = 0; //0x00002024
+            ((SceCtrlDataExt *)pad)->rsrv[2] = 0; //0x0000201C
+            ((SceCtrlDataExt *)pad)->rsrv[3] = 0; //0x00002024
             if (arg3 == 0) { //0x00002020
-                ((SceCtrlDataExt *)pad)->Rsrv[0] = -128; //0x00002100
-                ((SceCtrlDataExt *)pad)->Rsrv[1] = -128; //0x00002104
-                ((SceCtrlDataExt *)pad)->Rsrv[4] = 0; //0x00002108
-                ((SceCtrlDataExt *)pad)->Rsrv[5] = 0; //0x00002108
+                ((SceCtrlDataExt *)pad)->rsrv[0] = -128; //0x00002100
+                ((SceCtrlDataExt *)pad)->rsrv[1] = -128; //0x00002104
+                ((SceCtrlDataExt *)pad)->rsrv[4] = 0; //0x00002108
+                ((SceCtrlDataExt *)pad)->rsrv[5] = 0; //0x00002108
                 ((SceCtrlDataExt *)pad)->unk1 = 0; //0x0000210C
                 ((SceCtrlDataExt *)pad)->unk2 = 0; //0x00002110
                 ((SceCtrlDataExt *)pad)->unk3 = 0; //0x00002114
@@ -959,10 +959,10 @@ static int _sceCtrlReadBuf(void *pad, int count, int arg3, int mode) {
                 ((SceCtrlDataExt *)pad)->unk8 = 0; //0x0000212C
             }
             else {
-                ((SceCtrlDataExt *)pad)->Rsrv[0] = ctrlBuf.Rsrv[0]; //0x00002034
-                ((SceCtrlDataExt *)pad)->Rsrv[1] = ctrlBuf.Rsrv[1]; //0x00002038
-                ((SceCtrlDataExt *)pad)->Rsrv[4] = ctrlBuf.Rsrv[4]; //0x0000203C
-                ((SceCtrlDataExt *)pad)->Rsrv[5] = ctrlBuf.Rsrv[5]; //""
+                ((SceCtrlDataExt *)pad)->rsrv[0] = ctrlBuf.rsrv[0]; //0x00002034
+                ((SceCtrlDataExt *)pad)->rsrv[1] = ctrlBuf.rsrv[1]; //0x00002038
+                ((SceCtrlDataExt *)pad)->rsrv[4] = ctrlBuf.rsrv[4]; //0x0000203C
+                ((SceCtrlDataExt *)pad)->rsrv[5] = ctrlBuf.rsrv[5]; //""
                 ((SceCtrlDataExt *)pad)->unk1 = ctrlBuf.unk1; //0x00002044
                 ((SceCtrlDataExt *)pad)->unk2 = ctrlBuf.unk2; //...
                 ((SceCtrlDataExt *)pad)->unk3 = ctrlBuf.unk3;

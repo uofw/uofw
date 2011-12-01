@@ -22,7 +22,7 @@
 #include <psppower.h>
 #include "../errors.h"
 
-/** General information about the PSP controller. Including current pressed button, current position 
+/** General information about the internal PSP controller buffer. Including current pressed button and current position 
  *  of the analog controller. 
  */
 typedef struct _SceCtrlData {
@@ -299,35 +299,35 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback);
 int sceCtrlSetPollingMode(u8 pollMode);
 
 /**
- * Read the current internal SceCtrlLatch buffer. The following button states are delivered:
+ * Read the current internal latch buffer. The following button states are delivered:
  *                                                Button is pressed, button is not pressed, button has been newly pressed
  *                                                and button has been newly released. 
  * Once a button has been i.e. pressed, its value is stored in the specific internal latch buffer member (uiMake in this case)
  * until you manually reset the specific latch buffer field.
  * 
- * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch.
+ * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
  * 
  * @return > 0 on success, < 0 on error.
  */
 int sceCtrlPeekLatch(SceCtrlLatch *latch);
 
 /**
- * Read the current internal SceCtrlLatch buffer and reset the buffer afterwards. The following button states are delivered:
+ * Read the current internal latch buffer and reset the buffer afterwards. The following button states are delivered:
  *                                                Button is pressed, button is not pressed, button has been newly pressed
  *                                                and button has been newly released. 
  * After the internal latch buffer has been read, it will be cleaned (all members will be reset to zero).
  * 
- * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch.
+ * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
  * 
  * @return > 0 on success, < 0 on error.
  */
 int sceCtrlReadLatch(SceCtrlLatch *latch);
 
 /**
- * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
+ * Read the current internal ctrl buffer. Does not wait for the next VBlank.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer.
- * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
+ * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
  *              Has to be set to a value between 0 and 64 (including the bounds).
  * 
  * @return < on error, otherwise the amount of read internal ctrl buffers.
@@ -337,23 +337,23 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 count);
 /**
  * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. Here, the button values are turned off,
- *            this means the button value for i.e. PSP_CTRL_CROSS is 0xBFFF instead of 0x4000 for bufferPositive. 
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer. Here, the button values are turned off,
+ *            this means the button value for PSP_CTRL_CROSS is 0xBFFF instead of 0x4000. 
  *            Check ::PspCtrlButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
- * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
  *              Has to be set to a value between 0 and 64 (including the bounds).
  * 
- * @return < on error, otherwise otherwise the amount of read internal ctrl buffers.
+ * @return < on error, otherwise the amount of read internal ctrl buffers.
  */
 int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 count);
 
 /**
- * Read the current internal SceCtrlData buffer. By default, the internal buffer will be read after every VSYNC period (60 times/sec).
+ * Read the current internal SceCtrlData buffer. By default, the internal ctrl buffer will be read after every VSYNC period (60 times/sec).
  * You can set your own update timer by using sceCtrlSetSamplingCycle.
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. 
- * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
  *              Has to be set to a value between 0 and 64 (including the bounds).
  * 
  * @return < on error, otherwise 1.
@@ -361,14 +361,14 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 count);
 int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 count);
 
 /**
- * Read the current internal SceCtrlData buffer. By default, the internal buffer will be read after every VSYNC period (60 times/sec).
+ * Read the current internal SceCtrlData buffer. By default, the internal ctrl buffer will be read after every VSYNC period (60 times/sec).
  * You can set your own update time by using sceCtrlSetSamplingCycle.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. Here, the button values are turned off,
- *            this means the button value for i.e. PSP_CTRL_CROSS is 0xBFFF instead of 0x4000 for bufferPositive. 
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer. Here, the button values are turned off,
+ *            this means the button value for  PSP_CTRL_CROSS is 0xBFFF instead of 0x4000. 
  *            Check ::PspCtrlButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
- * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
  *              Has to be set to a value between 0 and 64 (including the bounds).
  * 
  * @return < on error, otherwise 1.
