@@ -10,10 +10,6 @@
 #define PSP_BUTTON_AMOUNT                       16  
 #define PSP_INIT_KEYCONFIG_UPDATER              0x110 //might be incorrect
 
-#define sceCtrlRegisterButtonCallback           sceCtrl_driver_5D8CE0B2
-#define sceCtrlGetButtonMask                    sceCtrl_driver_33AB5BDB
-#define sceCtrlSetButtonMask                    sceCtrl_driver_5B15473C 
-
 //0x00002890  -- address and structure is likely to change in other firmware revisions
 typedef struct _SceCtrl {
     SceSysTimerId timerID; //0
@@ -61,19 +57,6 @@ typedef struct _SceCtrl {
     int unk_array3[2]; //776 -- 2 size element array
 } SceCtrl; //sizeof ButtonCtrl: 788 (0x314)
 
-typedef struct _SceCtrlData {
-    /** time stamp (usec) */
-    unsigned int  TimeStamp; 
-    /** pressed digital button */
-    unsigned int  Buttons; 
-    /** analog controller (X-axis) */
-    unsigned char Lx; 
-    /** analog controller (Y-axis) */
-    unsigned char Ly; 
-    /** reserved */
-    unsigned char Rsrv[6]; 
-} SceCtrlData;
-
 typedef struct _SceCtrlRapidFire {
     /** The button number representing the button for the rapid fire */
     int button; //0
@@ -107,7 +90,7 @@ SceUInt SceKernelAlarmHandler(void *); //0x00001DD8
 void CmdFunc(); //0x00000610;
 
 /* sub_00000528 */
-int tick_handler() {
+static int tick_handler() {
     char unk_1 = 7;
     int suspendFlag;
     int retVal;
@@ -141,7 +124,7 @@ int tick_handler() {
 /* Subroutine sceCtrl_driver_5D8CE0B2 - Address 0x00001D04
  * Exported in sceCtrl_driver 
  */
-int sceCtrlRegisterButtonCallback(int slot, unsigned int btnMask, void (*cb)(int, int, void *), void *arg) {
+int sceCtrlSetSpecialButtonCallback(int slot, unsigned int btnMask, void (*cb)(int, int, void *), void *arg) {
     
     SceModule *module = NULL;
     int suspendFlag;
@@ -169,7 +152,7 @@ int sceCtrlRegisterButtonCallback(int slot, unsigned int btnMask, void (*cb)(int
 /* Subroutine sceCtrl_driver_33AB5BDB - Address 0x00001878
  * Exported in sceCtrl_driver 
  */
-int sceCtrlGetButtonMask(u32 mask) {
+int sceCtrlGetButtonIntercept(u32 mask) {
     
     int suspendFlag;
     int curMask;
@@ -194,7 +177,7 @@ int sceCtrlGetButtonMask(u32 mask) {
 /* Subroutine sceCtrl_driver_5B15473C - Address 0x000017C4
  * Exported in sceCtrl_driver 
  */
-int sceCtrlSetButtonMask(u32 mask, u8 ButtonMaskMode) {
+int sceCtrlSetButtonIntercept(u32 mask, u8 ButtonMaskMode) {
     
     int curMask = ctrl.mask;
     int curType = ctrl.type;
@@ -340,7 +323,10 @@ int sceCtrlSetSamplingCycle(int cycle) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlPeekBufferPositive(SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, 0, 0); //0x00001AEC
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, 0, 0); //0x00001AEC
+    return retVal;
 }
 
 /*
@@ -349,7 +335,10 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, int count) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlPeekBufferNegative(SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, 0, 1); //0x00001B0C
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, 0, 1); //0x00001B0C
+    return retVal;
 }
 
 /*
@@ -358,7 +347,10 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, int count) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlReadBufferPositive(SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, 0, 2); //0x00001B2C
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, 0, 2); //0x00001B2C
+    return retVal;
 }
 
 /*
@@ -367,7 +359,10 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, int count) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlReadBufferNegative(SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, 0, 3); //0x00001B4C
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, 0, 3); //0x00001B4C
+    return retVal;
 }
 
 /*
@@ -375,8 +370,11 @@ int sceCtrlReadBufferNegative(SceCtrlData *pad, int count) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrl_5A36B1C2(int arg1, SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, arg1, 4); //0x00001B78
+int sceCtrl_5A36B1C2(int arg1, SceCtrlDataExt *pad, int count) {
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, arg1, 4); //0x00001B78
+    return retVal;
 }
 
 /*
@@ -384,8 +382,11 @@ int sceCtrl_5A36B1C2(int arg1, SceCtrlData *pad, int count) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrl_239A6BA7(int arg1, SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, arg1, 5); //0x00001BA4
+int sceCtrl_239A6BA7(int arg1, SceCtrlDataExt *pad, int count) {
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, arg1, 5); //0x00001BA4
+    return retVal;
 }
 
 /*
@@ -393,8 +394,11 @@ int sceCtrl_239A6BA7(int arg1, SceCtrlData *pad, int count) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrl_1098030B(int arg1, SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, arg1, 6); //0x00001BD0
+int sceCtrl_1098030B(int arg1, SceCtrlDataExt *pad, int count) {
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, arg1, 6); //0x00001BD0
+    return retVal;
 }
 
 /*
@@ -402,8 +406,11 @@ int sceCtrl_1098030B(int arg1, SceCtrlData *pad, int count) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrl_7C3675AB(int arg1, SceCtrlData *pad, int count) {
-    sub_00001E70(pad, count, arg1, 7); //0x00001BFC
+int sceCtrl_7C3675AB(int arg1, SceCtrlDataExt *pad, int count) {
+    int retVal;
+    
+    retVal = _sceCtrlReadBuf(pad, count, arg1, 7); //0x00001BFC
+    return retVal;
 }
 
 /*
@@ -756,7 +763,7 @@ int sceCtrl_driver_BEF3B4C9(char arg1) {
  * Exported in sceCtrl_driver
  * checked
  */
-int sceCtrl_348D99D4(u16 arg1) {
+int sceCtrlSetSuspendingExtraSamples(u16 arg1) {
     u16 unk_1;
     
     if (arg1 >= 301) { //0x00001C44
@@ -772,7 +779,7 @@ int sceCtrl_348D99D4(u16 arg1) {
  * Exported in sceCtrl_driver
  * checked
  */
-u16 sceCtrl_AF5960F3() {
+u16 sceCtrlGetSuspendingExtraSamples() {
     u16 retVal;
     
     retVal = ctrl.unk_0;  //0x00001C74
@@ -818,7 +825,7 @@ int sceCtrl_driver_A759DB6A(int index, int arg1, int arg2, int arg3) {
  * sceCtrl_driver_5F20A0F0 - Address 0x00001D94 
  * Exported in sceCtrl_driver
  */
-int sceCtrl_driver_5F20A0F0(char arg1) {
+int sceCtrlUpdateCableTypeReq(char arg1) {
     ctrl.unk_Byte_0 = arg1; //0x00001D9C
     return 0;
 }
@@ -826,15 +833,17 @@ int sceCtrl_driver_5F20A0F0(char arg1) {
 /*
  * Subroutine sub_00001E70 - Address 0x00001E70
  */
-int sub_00001E70(SceCtrlData *pad, int count, int arg3, int mode) {
+static int _sceCtrlReadBuf(void *pad, int count, int arg3, int mode) {
     SceCtrlLatch *latchPtr;
     int k1;
     int privMode;
     int offset;
+    int index = arg3;
     int unk1;
     int res;
-    int res2;
+    SceCtrlDataExt ctrlBuf;
     int suspendFlag;
+    
     
     if ((count -1) >= 64) { //0x00001E74 && 0x00001E84 && 0x00001EB4
         return SCE_ERROR_INVALID_SIZE;
@@ -865,8 +874,9 @@ int sub_00001E70(SceCtrlData *pad, int count, int arg3, int mode) {
             return SCE_ERROR_NOT_SUPPORTED;
         }
     }
+    //waiting for the VSNYCH callback or your custom timer when using "read"
     if (mode & 2) { //0x00001F10 && 0x00001F28
-        res = sceKernelWaitEventFlag(ctrl.timerID, 1, 1, NULL, NULL); //0x00001F44
+        res = sceKernelWaitEventFlag(ctrl.timerID, 1, PSP_EVENT_WAITOR, NULL, NULL); //0x00001F44
         if (res < 0) { //0x00001F4C
             pspSdkSetK1(k1); //0x00001F50
             return res;
@@ -897,86 +907,90 @@ int sub_00001E70(SceCtrlData *pad, int count, int arg3, int mode) {
             res = count; //0x00001FA0
         }   
     }
+    index = unk1;
         if (arg3 != 0) { //0x00001FA4          
             //res2 = ctrl.latch_kernel.unk4[arg3] + ((unk1 + (unk1 << 1)) << 4); //0x00002160 -- shift value == 48
-            res2 = ctrl.latch_kernel.unk4[arg3][unk1]; //0x00002160 -- shift value == 48
+            ctrlBuf = ctrl.latch_kernel.ctrlDataBuf[index]; //0x00002160 -- shift value == 48 (array element size == 48)
         }
         else {
-            //res2 = ctrl.latch_kernel.unk4[0] + (unk1 << 4); //0x00001FB4 -- == 16
-            res2 = ctrl.latch_kernel.unk4[0][unk1]; //0x00001FB4 -- == 16
+            //res2 = ctrl.latch_kernel.unk4[0] + (unk1 << 4); //0x00001FB4 -- shift value == 16
+            ctrlBuf = ctrl.latch_kernel.ctrlDataBuf[index]; //0x00001FB4 -- shift value == 16 (array element size == 16)
         }
         if (res < 0) { //0x00001FB8
             sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
             pspSdkSetK1(k1); //0x000020B0
             return res;
         }
+    
+    while (count-- > 0) {
+        ((SceCtrlData *)pad)->TimeStamp = ctrlBuf.TimeStamp; //0x00001FE4 && 0x00001FF0
         if (pspSdkGetK1() >> 31) { //0x00001FEC
-            
+            ctrlBuf.Buttons &= ctrl.unk_3; //0x00001FF8
         }
-}
-
-
-/*
- * Subroutine SysTimerForKernel_847D785B - Address 0x000001B4 
- * Exported in SysTimerForKernel
- * @param arg4 - unknown, pass 0.
- */
-/* int SysTimerForKernel_847D785B(int timerID, int cycleTime, void (*func)(void), int arg4) {
-    
-    int index;
-    int suspendFlag;
-    int unk_1;
-    int unk_2;
-    int unk_3;
-    int unk_4;
-    
-    index = (timerID & 3) << 5; //0x000001BC && 0x000001C8
-    
-    //0x00000B20 + unk_1; //0x000001CC && 0x000001E0
-    if (unkSysTime[index].unk_2 != timerID) { //0x000001F8
-        return SCE_KERNEL_ERROR_ILLEGAL_TIMERID; //0x000001D4 && 0x000001FC
+        //here, the current active button value(s) will be turned negative, if this function is called through read/peekBufferNegative
+        ((SceCtrlData *)pad)->Buttons = (mode & 1) ? ~ctrlBuf.Buttons : ctrlBuf.Buttons; //0x00002004 && 0x00002004 && 0x0000200C
+        ((SceCtrlData *)pad)->Lx = ctrlBuf.Lx; //0x00002010
+        ((SceCtrlData *)pad)->Ly = ctrlBuf.Ly; //0x00002018
+        
+        if ((mode & 4) == 0) { //if (mode < 4) -- 0x00001FC8 && 0x00002014
+            ((SceCtrlData *)pad)->Rsrv[0] = 0; //0x00002130
+            ((SceCtrlData *)pad)->Rsrv[1] = 0; 
+            ((SceCtrlData *)pad)->Rsrv[2] = 0;
+            ((SceCtrlData *)pad)->Rsrv[3] = 0;
+            ((SceCtrlData *)pad)->Rsrv[4] = 0;
+            ((SceCtrlData *)pad)->Rsrv[5] = 0; //0x00002138
+            pad = pad + 16; //0x00002140 -- size of sceCtrlData
+        }
+        else { //if (mode >= 4)
+            ((SceCtrlDataExt *)pad)->Rsrv[2] = 0; //0x0000201C
+            ((SceCtrlDataExt *)pad)->Rsrv[3] = 0; //0x00002024
+            if (arg3 == 0) { //0x00002020
+                ((SceCtrlDataExt *)pad)->Rsrv[0] = -128; //0x00002100
+                ((SceCtrlDataExt *)pad)->Rsrv[1] = -128; //0x00002104
+                ((SceCtrlDataExt *)pad)->Rsrv[4] = 0; //0x00002108
+                ((SceCtrlDataExt *)pad)->Rsrv[5] = 0; //0x00002108
+                ((SceCtrlDataExt *)pad)->unk1 = 0; //0x0000210C
+                ((SceCtrlDataExt *)pad)->unk2 = 0; //0x00002110
+                ((SceCtrlDataExt *)pad)->unk3 = 0; //0x00002114
+                ((SceCtrlDataExt *)pad)->unk4 = 0; //0x00002118
+                ((SceCtrlDataExt *)pad)->unk5 = 0; //0x0000211C
+                ((SceCtrlDataExt *)pad)->unk6 = 0; //0x00002120
+                ((SceCtrlDataExt *)pad)->unk7 = 0; //0x00002124
+                ((SceCtrlDataExt *)pad)->unk8 = 0; //0x0000212C
+            }
+            else {
+                ((SceCtrlDataExt *)pad)->Rsrv[0] = ctrlBuf.Rsrv[0]; //0x00002034
+                ((SceCtrlDataExt *)pad)->Rsrv[1] = ctrlBuf.Rsrv[1]; //0x00002038
+                ((SceCtrlDataExt *)pad)->Rsrv[4] = ctrlBuf.Rsrv[4]; //0x0000203C
+                ((SceCtrlDataExt *)pad)->Rsrv[5] = ctrlBuf.Rsrv[5]; //""
+                ((SceCtrlDataExt *)pad)->unk1 = ctrlBuf.unk1; //0x00002044
+                ((SceCtrlDataExt *)pad)->unk2 = ctrlBuf.unk2; //...
+                ((SceCtrlDataExt *)pad)->unk3 = ctrlBuf.unk3;
+                ((SceCtrlDataExt *)pad)->unk4 = ctrlBuf.unk4;
+                ((SceCtrlDataExt *)pad)->unk5 = ctrlBuf.unk5;
+                ((SceCtrlDataExt *)pad)->unk6 = ctrlBuf.unk6;
+                ((SceCtrlDataExt *)pad)->unk7 = ctrlBuf.unk7; //...
+                ((SceCtrlDataExt *)pad)->unk8 = ctrlBuf.unk8; //0x0000207C              
+            }
+            pad = pad + 48; //0x00002080 -- size of SceCtrlDataExt
+        }
+        //index++; //0x00002084 && 0x00002088 && 0x00002090 && 0x00002098
+        unk1++; //0x0000208C
+        ctrlBuf = ctrl.latch_kernel[0].ctrlDataBuf[unk1];
+        if (unk1 == 64) { //0x00002094
+            unk1 = 0; //0x000020EC
+            if (arg3 != 0) {
+                ctrlBuf = ctrl.latch_kernel[0].ctrlDataBuf[unk1]; //0x000020F4
+            }
+            else {
+                ctrlBuf = ctrl.latch_kernel[arg3].ctrlDataBuf; //0x00001FC4 && 0x000020FC
+            }
+        }
     }
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00000200
-    unk_1 = (0x3FFFFF < cycleTime); //0x00000214
-    unk_2 = (unk_1 == 0) ? cycleTime : 0x3FFFFF; //0x00000224
-    if (func == NULL) { //0x00000220
-        unkSysTime[index].funcPtr = NULL; //0x00000290
-        unkSysTime[index].unk_4 = 0; //0x00000294
-        unkSysTime[index].unk_5 = 0; //0x00000298
-        sub_000002B0();
-        InterruptManagerForKernel_D774BA45(unkSysTime[index].unk_1); //0x000002A0
-        sceKernelCpuResumeIntr(suspendFlag); //0x00000264
-        return 0;       
-    }
-    unk_3 = unkSysTime[index].unk_0; //0x00000228:
-    unkSysTime[index].funcPtr = func; //0x00000230
-    unkSysTime[index].unk_5 = arg4; //0x00000238
-    unk_4 = *(int *)unk_3 + 0x100; //0x00000234
-    unk_4 = unk_4 & 0xFF400000; //0x0000023C
-    *unkSysTime[index].unk_0 = unk_4; //0x00000240:
-    
-    unk_4 = unk_4 | unk_2; //0x00000248
-    *unkSysTime[index].unk_0 = unk_4; //0x0000024C
-    
-    unk_4 = *(int *)unk_3 + 0x100; //0x00000250
-    unk_4 = unk_4 | 0x80400000; //0x00000254
-    unkSysTime[index].unk_0 = unk_4; //0x00000258
-    
-    InterruptManagerForKernel_4D6E7305(unkSysTime[index].unk_1); //0x00000260
-    sceKernelCpuResumeIntr(suspendFlag); //0x00000264
-    return 0; //0x0000026C
+    sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
+    pspSdkSetK1(k1); //0x000020B0
+    return res;
 }
-
-void sub_000002B0() {
-    
-    int unk_1;
-    int unk_2;
-    
-    unk_1 = unkSysTime[index].unk_0;
-    unk_2 = *(int *)unk_1 + 0x100;
-    unk_2 = unk_2 & 0x7F7FFFFF;
-    *unk_1 = unk_2;
-} */
 
 /*
  * Subroutine sceCtrl_driver_8543BB3B - Address 0x000002AC 

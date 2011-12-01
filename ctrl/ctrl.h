@@ -22,6 +22,48 @@
 #include <psppower.h>
 #include "../errors.h"
 
+/** General information about the PSP controller. Including current pressed button, current position 
+ *  of the analog controller. 
+ */
+typedef struct _SceCtrlData {
+    /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
+     *  You can use this to get the time how long a button has been pressed. 
+    */ 
+    u32 activeTime; 
+    /** The currently pressed D-Pad button values. One or more values of :PspCtrlButtons or'ed together. */
+    u32 buttons; 
+    /** The current position of the X-axis of the analog controller. Between 0 - 255. */
+    u8 aX; 
+    /** The current position of the Y-axis of the analog controller. Between 0 - 255. */
+    u8 aY; 
+    /** Reserved. */
+    u8 rsrv[6]; 
+} SceCtrlData;
+
+/** Extended SceCtrlData struct. */
+typedef struct _SceCtrlDataExt {
+    /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
+     *  You can use this to get the time how long a button has been pressed. 
+    */ 
+    u32 activeTime; 
+    /** The currently pressed D-Pad button values. One or more values of :PspCtrlButtons or'ed together. */
+    u32 buttons; 
+    /** The current position of the X-axis of the analog controller. Between 0 - 255. */
+    u8 aX; 
+    /** The current position of the Y-axis of the analog controller. Between 0 - 255. */
+    u8 aY; 
+    /** Reserved. */
+    u8 rsrv[6]; 
+    int unk1;
+    int unk2;
+    int unk3;
+    int unk4;
+    int unk5;
+    int unk6;
+    int unk7;
+    int unk8;
+} SceCtrlDataExt;
+
 /** Status attributes of a button. Each struct member represents an active button
  *  through its button value (one of ::PspCtrlButtons).
  */
@@ -60,59 +102,59 @@ typedef struct _SceCtrlLatchInternal {
     int unk1; //16
     int unk2; //20
     int unk3; //24
-    int *unk4[3]; //28
-} SceCtrlLatchInternal; //sizeof SceCtrlLatch: 16
+    SceCtrlData ctrlDataBuf[3]; //28 size of SceCtrlDataInt can be either 16 or 48
+} SceCtrlLatchInternal; //sizeof SceCtrlLatch: 
 
 /**
  * Enumeration for the digital controller buttons.
  *
- * @note PSP_CTRL_HOME, PSP_CTRL_WLAN_UP, PSP_CTRL_REMOTE, PSP_CTRL_SCREEN, PSP_CTRL_NOTE, PSP_CTRL_VOLUP, PSP_CTRL_VOLDOWN, PSP_CTRL_DISC, 
+ * @note PSP_CTRL_HOME, PSP_CTRL_WLAN_UP, PSP_CTRL_REMOTE, PSP_CTRL_VOLUP, PSP_CTRL_VOLDOWN, PSP_CTRL_SCREEN, PSP_CTRL_NOTE, PSP_CTRL_DISC, 
  *       PSP_CTRL_MS can only be read in kernel mode.
  */
 enum PspCtrlButtons {
-    /** Select button. */
+    /** Select button. Negative value = 0xFFFFFFFE. */
     PSP_CTRL_SELECT     = 0x1,
-    /** Start button. */
+    /** Start button. Negative value = 0xFFFFFFF7. */
     PSP_CTRL_START      = 0x8,
-    /** Up D-Pad button. */
+    /** Up D-Pad button. Negative value = 0xFFFFFFEF. */
     PSP_CTRL_UP         = 0x10,
-    /** Right D-Pad button. */
+    /** Right D-Pad button. Negative value = 0xFFFFFFDF. */
     PSP_CTRL_RIGHT      = 0x20,
-    /** Down D-Pad button. */
+    /** Down D-Pad button. Negative value = 0xFFFFFFBF. */
     PSP_CTRL_DOWN       = 0x40,
-    /** Left D-Pad button. */
+    /** Left D-Pad button. Negative value = 0xFFFFFF7F. */
     PSP_CTRL_LEFT       = 0x80,
-    /** Left trigger. */
+    /** Left trigger. Negative value = 0xFFFFFEFF. */
     PSP_CTRL_LTRIGGER   = 0x100,
-    /** Right trigger. */
+    /** Right trigger. Negative value = 0xFFFFFDFF. */
     PSP_CTRL_RTRIGGER   = 0x200,
-    /** Triangle button. */
+    /** Triangle button. Negative value = 0xFFFFEFFF. */
     PSP_CTRL_TRIANGLE   = 0x1000,
-    /** Circle button. */
+    /** Circle button. Negative value = 0xFFFFDFFF. */
     PSP_CTRL_CIRCLE     = 0x2000,
-    /** Cross button. */
+    /** Cross button. Negative value = 0xFFFFBFFF. */
     PSP_CTRL_CROSS      = 0x4000,
-    /** Square button. */
+    /** Square button. Negative value = 0xFFFF7FFF. */
     PSP_CTRL_SQUARE     = 0x8000,
-    /** Home button. In user mode this bit is set if the exit dialog is visible. */
+    /** Home button. In user mode this bit is set if the exit dialog is visible.  Negative value = 0xFFFEFFFF. */
     PSP_CTRL_HOME       = 0x10000,
-    /** Hold button. */
+    /** Hold button. Negative value = 0xFFFDFFFF. */
     PSP_CTRL_HOLD       = 0x20000,
-    /** Wlan switch up. */
+    /** Wlan switch up. Negative value = 0xFFFBFFFF. */
     PSP_CTRL_WLAN_UP    = 0x40000,
-    /** Remote hold position. */
+    /** Remote hold position. Negative value = 0xFFF7FFFF. */
     PSP_CTRL_REMOTE     = 0x80000,
-    /** Screen button. */
-    PSP_CTRL_SCREEN     = 0x400000,
-    /** Music Note button. */
-    PSP_CTRL_NOTE       = 0x800000,   
-    /** Volume up button. */
+    /** Volume up button. Negative value = 0xFFEFFFFF. */
     PSP_CTRL_VOLUP      = 0x100000,
-    /** Volume down button. */
-    PSP_CTRL_VOLDOWN    = 0x200000,	
-    /** Disc present. */
+    /** Volume down button. Negative value = 0xFFBFFFFF. */
+    PSP_CTRL_VOLDOWN    = 0x200000,
+    /** Screen button. Negative value = 0xFFBFFFFF. */
+    PSP_CTRL_SCREEN     = 0x400000,
+    /** Music Note button. Negative value = 0xFF7FFFFF. */
+    PSP_CTRL_NOTE       = 0x800000,   	
+    /** Disc present. Negative value = 0xFEFFFFFF. */
     PSP_CTRL_DISC       = 0x1000000,
-    /** Memory stick present. */
+    /** Memory stick present. Negative value = 0xFDFFFFFF. */
     PSP_CTRL_MS         = 0x2000000,
 };
 
@@ -145,29 +187,35 @@ enum PspCtrlMaskMode {
 /**
  * Register a button callback.
  * 
+ * @note In the PSPSDK, this function is defined as sceCtrlRegisterButtonCallback.
+ * 
  * @param slot The slot used to register the callback (0-3). Although Sony uses atleast slot 0 and slot 1 of the possible 
- *               4 callback slots in game mode, we can use them all freely as we wish.
+ *             4 callback slots in game mode, we can use them all freely as we wish.
  * @param btnMask Or'ed button values which will be checked for being pressed.
  * @param cb Pointer to the callback function (int curr, int last, void *arg), which handles button input effects.
  * @param arg Optional user argument. Passed to the callback function.
  * 
  * @return 0 on success or < 0, if slot is another value than one of 0-3.
  */
-int sceCtrlRegisterButtonCallback(int slot, u32 btnMask, void (*cb)(int, int, void *), void *arg);
+int sceCtrlSetSpecialButtonCallback(int slot, u32 btnMask, void (*cb)(int, int, void *), void *arg);
 
 /**
  * Get the set button mask mode of a button value.
+ * 
+ * @note In the PSPSDK, this function is defined as sceCtrlGetButtonMask.
  * 
  * @param btnMask The button bit value to check for (one or more buttons of ::PspCtrlButtons).
  * 
  * @return 0 for nothing has been set for this button bit value. Returns 1, if the button bit value is included
  *         in a button bit value which is masked. Returns 2 in the case of the button bit value being set as "button set".
  */
-int sceCtrlGetButtonMask(u32 btnMask);
+int sceCtrlGetButtonIntercept(u32 btnMask);
 
 /**
  * Set a button mask mode for one or more buttons. You can only mask user mode buttons in user applications.
  * Masking of kernel mode buttons is ignored as well as buttons used in kernel mode applications.
+ * 
+ * @note In the PSPSDK, this function is defined as sceCtrlSetButtonMask.
  * 
  * @param btnMask The button bit value for which the button mask mode will be applied. 
  *                  One or more buttons of ::PspCtrlButtons.
@@ -176,7 +224,7 @@ int sceCtrlGetButtonMask(u32 btnMask);
  * 
  * @return 0, 1 for setting a complete new button bit mask (which is not included in a previously set button bit mask).               
  */
-int sceCtrlSetButtonMask(u32 btnMask, u8 btnMaskMode);
+int sceCtrlSetButtonIntercept(u32 btnMask, u8 btnMaskMode);
 
 /**
  * Get the current controller input mode.
@@ -199,7 +247,7 @@ int sceCtrlSetSamplingMode(u8 mode);
 /**
  * Get the current cycle specifying the update frequency of the internal ctrl buffer.
  * 
- * @param cycle Pointer to in receiving the current cycle.
+ * @param cycle Pointer to int receiving the current cycle.
  * 
  * @return 0.
  */
@@ -274,6 +322,58 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch);
  * @return > 0 on success, < 0 on error.
  */
 int sceCtrlReadLatch(SceCtrlLatch *latch);
+
+/**
+ * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
+ * 
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer.
+ * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ *              Has to be set to a value between 0 and 64 (including the bounds).
+ * 
+ * @return < on error, otherwise the amount of read internal ctrl buffers.
+ */
+int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 count);
+
+/**
+ * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
+ * 
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. Here, the button values are turned off,
+ *            this means the button value for i.e. PSP_CTRL_CROSS is 0xBFFF instead of 0x4000 for bufferPositive. 
+ *            Check ::PspCtrlButtons for the negative active values of the buttons. If no button is active, the internal
+ *            button value is 0xFFFFFFFF.
+ * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ *              Has to be set to a value between 0 and 64 (including the bounds).
+ * 
+ * @return < on error, otherwise otherwise the amount of read internal ctrl buffers.
+ */
+int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 count);
+
+/**
+ * Read the current internal SceCtrlData buffer. By default, the internal buffer will be read after every VSYNC period (60 times/sec).
+ * You can set your own update timer by using sceCtrlSetSamplingCycle.
+ * 
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. 
+ * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ *              Has to be set to a value between 0 and 64 (including the bounds).
+ * 
+ * @return < on error, otherwise 1.
+ */
+int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 count);
+
+/**
+ * Read the current internal SceCtrlData buffer. By default, the internal buffer will be read after every VSYNC period (60 times/sec).
+ * You can set your own update time by using sceCtrlSetSamplingCycle.
+ * 
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. Here, the button values are turned off,
+ *            this means the button value for i.e. PSP_CTRL_CROSS is 0xBFFF instead of 0x4000 for bufferPositive. 
+ *            Check ::PspCtrlButtons for the negative active values of the buttons. If no button is active, the internal
+ *            button value is 0xFFFFFFFF.
+ * @param count The number of internal buffers to read. There are 64 internal SceCtrlData buffers which can be read.
+ *              Has to be set to a value between 0 and 64 (including the bounds).
+ * 
+ * @return < on error, otherwise 1.
+ */
+int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 count);
 
 #endif	/* CTRL_H */
 
