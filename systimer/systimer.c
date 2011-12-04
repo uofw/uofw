@@ -32,11 +32,11 @@ SceSysTimerSave timerSave[4];
 
 int initVar = 0x00352341; // 0x0BA0
 
-int sub_00E0(int arg0, SceSysTimer *arg1, int arg2);
-void sub_02B0(SceSysTimer *arg);
-int sub_02CC(SceSysTimer *arg);
-int sub_0864();
-int sub_08DC();
+int systimerhandler(int arg0, SceSysTimer *arg1, int arg2);
+void _sceSTimerStopCount(SceSysTimer *arg);
+int _sceSTimerStopCount(SceSysTimer *arg);
+int suspendSTimer();
+int resumeSTimer();
 
 int module_bootstart()
 {
@@ -55,10 +55,10 @@ int module_bootstart()
         timers[i].unk24 = 0;
         timers[i].unk28 = 0;
         timers[i].unk8 = -1;
-        sceKernelRegisterIntrHandler(timers[i].intNum, 2, sub_00E0, timers[i], 0);
+        sceKernelRegisterIntrHandler(timers[i].intNum, 2, systimerhandler, timers[i], 0);
     }
-    sceKernelRegisterSuspendHandler(10, sub_0864, 0);
-    sceKernelRegisterResumeHandler(10, sub_08DC, 0);
+    sceKernelRegisterSuspendHandler(10, suspendSTimer, 0);
+    sceKernelRegisterResumeHandler(10, resumeSTimer, 0);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
@@ -69,14 +69,15 @@ int module_reboot_before()
     // 03F8
     int i;
     for (i = 0; i < 4; i++) {
-        sub_02B0(&timers[i]);
+        _sceSTimerStopCount(&timers[i]);
         sceKernelReleaseIntrHandler(timers[i].intNum);
     }
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-int sub_00E0(int arg0, SceSysTimer *arg1, int arg2)
+// 00E0
+int systimerhandler(int arg0, SceSysTimer *arg1, int arg2)
 {
     if (arg1->cb == NULL)
         return -1;
@@ -91,26 +92,29 @@ int sub_00E0(int arg0, SceSysTimer *arg1, int arg2)
     arg1->unk24 += v2 * (v1 - arg1->unk16);
     arg1->unk12 = 0;
     arg1->unk16 = 0;
-    if (arg1->cb(arg1->unk8, arg1->unk24 + sub_02CC(arg1), arg1->unk28, arg2) != -1)
+    if (arg1->cb(arg1->unk8, arg1->unk24 + _sceSTimerStopCount(arg1), arg1->unk28, arg2) != -1)
     {
         // 01A4
-        sub_02B0(arg1);
+        _sceSTimerStopCount(arg1);
         return -2;
     }
     return -1;
 }
 
-void sub_02B0(SceSysTimer *arg)
+// 02B0
+void _sceSTimerStopCount(SceSysTimer *arg)
 {
     arg->hw->unk0 = arg->hw->unk256 & 0x7F7FFFFF;
 }
 
-int sub_02CC(SceSysTimer *arg)
+// 02CC
+int _sceSTimerGetCount(SceSysTimer *arg)
 {
     return (arg->hw->unk256 & 0x003FFFFF) - (arg->hw->unk4 & 0x003FFFFF);
 }
 
-int sub_0864()
+// 0864
+int suspendSTimer()
 {
     // 088C
     int i;
@@ -124,7 +128,8 @@ int sub_0864()
     return 0;
 }
 
-int sub_08DC()
+// 08DC
+int resumeSTimer()
 {
     // 0908
     int i;
@@ -139,7 +144,8 @@ int sub_08DC()
     return 0;
 }
 
-int SysTimerForKernel_4467BD60(int arg0, int arg1, int arg2)
+// B53534B4
+int sceSTimerSetPrscl(int arg0, int arg1, int arg2)
 {
     SceSysTimer *timer = &timers[arg0 & 3];
     if (timer->unk8 != arg0)
@@ -162,7 +168,7 @@ int SysTimerForKernel_4467BD60(int arg0, int arg1, int arg2)
     return 0;
 }
 
-int SysTimerForKernel_71059CBF()
+int sceSTimerAlloc()
 {
     if (sceKernelIsIntrContext() != 0)
         return 0x80020064;
@@ -196,7 +202,7 @@ int SysTimerForKernel_71059CBF()
     return 0x80020096;
 }
 
-int SysTimerForKernel_847D785B(int arg0, int arg1, SceSysTimerCb arg2, int arg3)
+int sceSTimerSetHandler(int arg0, int arg1, SceSysTimerCb arg2, int arg3)
 {
     SceSysTimer *timer = &timers[arg0 & 3];
     if (timer->unk8 != arg0)
@@ -213,7 +219,7 @@ int SysTimerForKernel_847D785B(int arg0, int arg1, SceSysTimerCb arg2, int arg3)
         timer->cb = NULL;
         timer->unk24 = 0;
         timer->unk28 = 0;
-        sub_02B0(timer);
+        _sceSTimerStopCount(timer);
         sceKernelDisableIntr(timer->intNum);
     }
     else
@@ -230,7 +236,7 @@ int SysTimerForKernel_847D785B(int arg0, int arg1, SceSysTimerCb arg2, int arg3)
     return 0;
 }
 
-int SysTimerForKernel_8FB264FB(int arg)
+int sceSTimerStartCount(int arg)
 {
     SceSysTimer *timer = &timers[arg & 3];
     if (timer->unk8 != arg)
@@ -247,18 +253,18 @@ int SysTimerForKernel_8FB264FB(int arg)
     return 0;
 }
 
-int SysTimerForKernel_94BA6594(int arg0, int *arg1)
+int sceSTimerGetCount(int arg0, int *arg1)
 {
     SceSysTimer *timer = &timers[arg0 & 3];
     if (timer->unk8 != arg0)
         return 0x80020097;
     int oldIntr = sceKernelCpuSupendIntr();
-    *arg1 = sub_02CC(timer);
+    *arg1 = _sceSTimerStopCount(timer);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-int SysTimerForKernel_964F73FD(int arg)
+int sceSTimerResetCount(int arg)
 {
     SceSysTimer *timer = &timers[arg & 3];
     if (timer->unk8 != arg)
@@ -270,7 +276,8 @@ int SysTimerForKernel_964F73FD(int arg)
     return 0;
 }
 
-int SysTimerForKernel_CE5A60D8(int arg0, int arg1)
+// 53231A15
+int sceSTimerSetTMCY(int arg0, int arg1)
 {
     SceSysTimer *timer = &timers[arg0 & 3];
     if (timer->unk8 != arg0)
@@ -287,18 +294,18 @@ int SysTimerForKernel_CE5A60D8(int arg0, int arg1)
     return 0;
 }
 
-int SysTimerForKernel_D01C6E08(int arg)
+int sceSTimerStopCount(int arg)
 {
     SceSysTimer *timer = &timers[arg & 3];
     if (timer->unk8 != arg)
         return 0x80020097;
     int oldIntr = sceKernelCpuSuspendIntr();
-    sub_02B0(timer);
+    _sceSTimerStopCount(timer);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-int SysTimerForKernel_F03AE143(int arg)
+int sceSTimerFree(int arg)
 {
     SceSysTimer *timer = &timers[arg & 3];
     if (sceKernelIsIntrContext() != 0)
@@ -306,7 +313,7 @@ int SysTimerForKernel_F03AE143(int arg)
     if (timer->unk8 != arg)
         return 0x80020097;
     int oldIntr = sceKernelCpuSuspendIntr();
-    sub_02B0(timer);
+    _sceSTimerStopCount(timer);
     sceKernelDisableIntr(timer->intNum);
     timer->hw->unk0 = 0x80000000;
     timer->hw->unk8 = -1;

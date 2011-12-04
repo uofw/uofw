@@ -166,7 +166,7 @@ int sceLcdcInit()
     g_lcdc.hwCtl = hwCtl;
     sceLcdc_driver_901B9073();
     g_lcdc.hwCtl->v2_0 |= 3;
-    sceSysEventForKernel_CD9E4BB5(&lcdcEvent);
+    sceKernelRegisterSysEventHandler(&lcdcEvent);
     return 0;
 }
 
@@ -236,7 +236,7 @@ int sceLcdcResume()
 }
 
 // 901B9073
-int sceLcdc_driver_901B9073(void) // load current display specs into g_lcdc, from the hardware
+int sceLcdcCheckMode(void) // load current display specs into g_lcdc, from the hardware
 {   
     g_lcdc.disp.syncDiff = g_lcdc.hwCtl->syncDiff & 0xFF;
     if (g_lcdc.mobo > 0x7FFFFF)
@@ -777,8 +777,8 @@ int sceLcdcReadVPC()
     return ret;
 }
 
-// init lcdc
-int sub_887C()
+// 887C
+int _sceLcdcModuleStart()
 {
     sceLcdcInit();
     return 0;
@@ -787,7 +787,7 @@ int sub_887C()
 // 889C
 int sceLcdcEnd()
 {
-    sceSysEventForKernel_D7D3FDCD(&lcdcEvent);
+    sceKernelUnregisterSysEventHandler(&lcdcEvent);
     return 0;
 }
 

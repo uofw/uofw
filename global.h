@@ -84,17 +84,17 @@ typedef struct
 
 struct SceSysmemUIDControlBlock
 {
-    struct SceSysmemUIDControlBlock *parent;
-    struct SceSysmemUIDControlBlock *nextChild;
-    struct SceSysmemUIDControlBlock *type;   //(0x8)
-    SceUID id;
-    char *name;
-    unsigned char unk;
+    struct SceSysmemUIDControlBlock *parent; // 0
+    struct SceSysmemUIDControlBlock *nextChild; // 4
+    struct SceSysmemUIDControlBlock *type; // 8
+    SceUID id; // 12
+    char *name; // 16
+    unsigned char unk; // 20
     unsigned char size; // size in words
-    short attribute;
-    struct SceSysmemUIDControlBlock *nextEntry;
-    struct SceSysmemUIDControlBlock *inherited;
-    SceSysmemUIDLookupFunction *func_table;
+    short attribute; // 22
+    struct SceSysmemUIDControlBlock *nextEntry; // 24
+    struct SceSysmemUIDControlBlock *inherited; // 28
+    SceSysmemUIDLookupFunction *func_table; // 32
 } __attribute__((packed));
 typedef struct SceSysmemUIDControlBlock SceSysmemUIDControlBlock;
 
@@ -163,6 +163,7 @@ SET_REG(K1, _k1)
 #define K1_GET() \
 int _k1; \
 GET_REG(_k1, K1);
+#define K1_GETOLD() _oldK1
 #define K1_USER_PTR(ptr) (((u32)(void*)(ptr) & _k1) >= 0)
 #define K1_USER_BUF_DYN_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr) | size) & _k1) >= 0)
 #define K1_USER_BUF_STA_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr)       ) & _k1) >= 0)

@@ -207,8 +207,8 @@ int audioMixerThread()
                 for (i = 0; i < playedSamples * 2; i += 2)
                 {
                     sp0[i + 0] += buf[0] * chan->leftVol  / 128;
-                    sp0[i + 1] += buf[1] * chan->rightVol / 128;
                     buf += chan->bytesPerSample / 2;
+                    sp0[i + 1] += buf[-1] * chan->rightVol / 128;
                 }
                 chan->curSampleCnt -= playedSamples;
                 if (chan->curSampleCnt == 0)
@@ -240,8 +240,8 @@ int audioMixerThread()
             int i;
             for (i = 0; i < 128; i += 2)
             {
-                dstBuf[i] = ((MAX(MIN(u32buf[0] >> (shift & 0x1F), 0x7FFF), 0x8000) <<  0) & 0x00FF)
-                    | ((MAX(MIN(u32buf[1] >> (shift & 0x1F), 0x7FFF), 0x8000) << 16) & 0xFF00);
+                dstBuf[i] = ((MAX(MIN(u32buf[0] >> (shift & 0x1F), 0x7FFF), 0x8000) <<  0) & 0x0000FFFF)
+                    | ((MAX(MIN(u32buf[1] >> (shift & 0x1F), 0x7FFF), 0x8000) << 16) & 0xFFFF0000);
                 u32buf[0] = 0;
                 u32buf[1] = 0;
             }

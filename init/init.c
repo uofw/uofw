@@ -643,7 +643,7 @@ int sub_0D4C()
 
 int sub_0DD0(SceLoadCoreBootInfo *bootInfo)
 {
-    if (KDebugForKernel_FFD2F2B9() == 0 || bootInfo->unk_24 != 0)
+    if (sceKernelIsDevelopmentToolMode() == 0 || bootInfo->unk_24 != 0)
         return 0;
     return (InitForKernel_7233B5BC() == 0x200);
 }
@@ -803,7 +803,7 @@ int InitThreadEntry(int argSize, int args[2])
         return;
     SceLoadCoreBootInfo *bootInfo = args[1];
     sceKernelWaitThreadEnd(args[0]);
-    if (KDebugForKernel_ACF427DC() != 0)
+    if (sceKernelIsDevelopmentToolMode() != 0)
         printf("devkit version 0x%08x\n", 0x06060000);
     // 12B4
     if (bootInfo->unk_48 != 0)
@@ -828,7 +828,7 @@ int InitThreadEntry(int argSize, int args[2])
         if ((mod->attr & 2) != 0)
             g_init.type = mod->unk_20;
         // 13AC
-        if (KDebugForKernel_ACF427DC() == 0)
+        if (sceKernelIsDevelopmentToolMode() == 0)
         {
             // 13EC
             *(int*)(g_28A0 + 92) = 256;
@@ -1111,7 +1111,7 @@ int InitThreadEntry(int argSize, int args[2])
     if (foundMod == 1)
         sub_048C(4);
     // 19E8
-    int *ptr = KDebugForKernel_B7251823();
+    int *ptr = sceKernelDeci2pReferOperations();
     if (ptr != NULL)
     {
         void (*func)(int) = *(int*)(ptr + 8);

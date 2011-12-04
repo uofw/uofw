@@ -11,9 +11,38 @@ const char g_tty[] = "tty0:"; // 6714
 const char g_return[] = "\r\n"; // 671C
 const char g_tab[] = "        "; // 6720
 const char g_null[] = "<NULL>"; // 672C
-
+const char g_ttyDevName[] = "ttyproxy"; // 6734
+const char g_ttyDevDesc[] = "TTY2MsgPipe PROXY"; // 6740
 const char g_tty1[] = "ttyproxy1:"; // 6754
 const char g_tty2[] = "ttyproxy2:"; // 6760
+
+SceIoDrvFuncs g_TtyOps = // 6948
+{
+    _sceTtyProxyDevInit, // 0BE4
+    _sceTtyProxyDevExit, // 0BEC
+    _sceTtyProxyDevOpen, // 0BF4
+    _sceTtyProxyDevClose, // 0C0C
+    _sceTtyProxyDevRead, // 0980
+    _sceTtyProxyDevWrite, // 0A74
+    _sceTtyProxyDevLseek, // 0C24
+    _sceTtyProxyDevIoctl, // 0C34
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
+
+SceIoDrv g_TtyDevTbl = {g_ttyDevName, 0x00000003, 0x00000001, g_ttyDevDesc, g_TtyOps}; // 69A0
 
 int g_stdin = -1; // 6AD0
 int g_stdout = -1; // 6AD4
@@ -23,6 +52,28 @@ int g_debugRead; // 6AF0
 int *g_pipeList; // 6AF4
 
 int g_linePos; // 6C34
+
+// 0000
+int StdioReInit()
+{
+    SceUID *fds[3];
+    fds[0] = &g_stdin;
+    fds[1] = &g_stdout;
+    fds[2] = &g_stderr;
+    // 0044
+    int i;
+    for (i = 0; i < 3; i++)
+        *fds[i] = sceIoOpen(g_dummy, 3, 0x1FF);
+    g_debugRead = 1;
+    sceTtyProxyInit();
+    return 0;
+}
+
+// 0094
+int StdioInit()
+{
+    return StdioReInit();
+}
 
 int sceKernelStdin()
 {
@@ -55,17 +106,16 @@ int sceKernelStderrReopen(const char *file, int flags, SceMode mode)
 
 int sceKernelStdoutReset()
 {
-    int ret = openSpecialFd(3, 0x1FF);
+    int ret = stdoutReset(3, 0x1FF);
     if (ret < 0)
         return ret;
     g_stdout = ret;
     return 0;
 }
 
-
 int sceKernelStderrReset()
 {
-    int ret = openSpecialFd(3, 0x1FF);
+    int ret = stdoutReset(3, 0x1FF);
     if (ret < 0)
         return ret;
     g_stderr = ret;
@@ -73,7 +123,7 @@ int sceKernelStderrReset()
 }
 
 // 019C
-int openSpecialFd(int flags, SceMode mode)
+int stdoutReset(int flags, SceMode mode)
 {
     char openDummy = 0;
     if (sceKernelDipsw(58) == 1 && !sceKernelDipsw(59))
@@ -93,7 +143,7 @@ int openSpecialFd(int flags, SceMode mode)
 }
 
 // 0244
-void ioPrintCb(void *ctx, int ch)
+void printf_char(void *ctx, int ch)
 {   
     if (ch == 0x200) {
         *(short*)(ctx + 2) = 0;
@@ -123,7 +173,7 @@ void ioPrintCb(void *ctx, int ch)
     }
     if (ch == '\n') {
         // 030C
-        ioPrintCb(ctx, '\r');
+        printf_char(ctx, '\r');
     }
     // 027C
     (*(short*)(ctx + 2))++;
@@ -159,7 +209,7 @@ int fdprintf(int fd, const char *fmt, ...)
     va_start(ap, fmt);
     *(short*)((int)sp + 0) = fd;
     *(short*)((int)sp + 2) = 0;
-    int n = prnt(ioPrintCb, sp, fmt, ap);
+    int n = prnt(printf_char, sp, fmt, ap);
     va_end(ap);
 }
 
@@ -171,7 +221,7 @@ int printf(const char *fmt, ...)
     va_start(ap, fmt);
     *(short*)((int)sp + 0) = STDOUT;
     *(short*)((int)sp + 2) = 0;
-    int n = prnt(ioPrintCb, sp, fmt, ap);
+    int n = prnt(printf_char, sp, fmt, ap);
     va_end(ap);
 }
 
@@ -388,10 +438,79 @@ int sceKernelStdioOpen()
     return 0x80020001;
 }
 
+int _sceTtyProxyDevRead(void *iob, void *buf, int size)
+{
+    int cnt;
+    K1_BACKUP();
+    int count = 0;
+    int k1 = 0;
+    if (sceIoGetIobUserLevel(iob) != 8)
+        k1 = 24;
+    // 09D0
+    SET_REG(K1, k1);
+    int unk1 = g_pipeList[*(int*)(iob + 4) + 3];
+    int unk2 = g_pipeList[*(int*)(iob + 4) + 0];
+    // 09F8
+    do
+    {
+        int min = unk1;
+        if (unk1 >= size)
+            min = size;
+        int ret = sceKernelReceiveMsgPipe(unk2, buf, min, 1, &cnt, 0);
+        if (ret < 0) {
+            K1_RESET();
+            return ret;
+        }
+        size -= cnt;
+        buf += cnt;
+        count += cnt;
+    } while (cnt >= min && size != 0);
+    K1_RESET();
+    return count;
+}
+
+int _sceTtyProxyDevWrite(void *iob, void *buf, int size)
+{
+    K1_BACKUP();
+    int count = 0;
+    int curCnt;
+    int k1 = 0;
+    if (sceIoGetIobUserLevel(iob) != 8)
+        k1 = 24;
+    // 0AC4
+    SET_REG(K1, k1);
+    int size2 = g_pipeList[*(int*)(iob + 4) + 3];
+    SceUID id = g_pipeList[*(int*)(iob + 4) + 0];
+    // 0AE8
+    do
+    {
+        int minSize = size2;
+        if (size2 >= size)
+            minSize = size;
+        int ret = sceKernelSendMsgPipe(id, buf, minSize, 0, &curCnt, 0);
+        if (ret < 0) {
+            K1_RESET();
+            return ret;
+        }
+        size -= curCnt;
+        count += curCnt;
+        buf += curCnt;
+    } while (size != 0);
+    K1_RESET();
+    return count;
+}
+
+// 0B58
+int sceTtyProxyInit()
+{
+    sceIoAddDrv(g_TtyOps);
+    return 0;
+}
+
 int sceKernelRegisterStdoutPipe(SceUID id)
 {
     K1_BACKUP();
-    int ret = registerPipe(STDOUT, id);
+    int ret = _sceKernelRegisterStdPipe(STDOUT, id);
     K1_RESET();
     return ret;
 }
@@ -399,13 +518,58 @@ int sceKernelRegisterStdoutPipe(SceUID id)
 int sceKernelRegisterStderrPipe(SceUID id)
 {
     K1_BACKUP();
-    int ret = registerPipe(STDERR, id);
+    int ret = _sceKernelRegisterStdPipe(STDERR, id);
     K1_RESET();
     return ret;
 }
 
+// 0BE4
+int _sceTtyProxyDevInit()
+{
+    return 0;
+}
+
+// 0BEC
+int _sceTtyProxyDevExit()
+{
+    return 0;
+}
+
+int _sceTtyProxyDevOpen(void *iob)
+{
+    if (*(int*)(iob + 4) < 3)
+        return 0;
+    return 0x80010006;
+}
+
+int _sceTtyProxyDevClose(void *iob)
+{
+    if (*(int*)(iob + 4) < 3)
+        return 0;
+    return 0x80010006;
+}
+
+long long _sceTtyProxyDevLseek()
+{
+    return 0x80020323;
+}
+
+int _sceTtyProxyDevIoctl(void *iob, int cmd)
+{
+    if (cmd != 0x00134002)
+        return 0x80020324;
+    K1_BACKUP();
+    int k1 = 24;
+    if (sceIoGetIobUserLevel(iob) == 8)
+        k1 = 0;
+    SET_REG(K1, k1);
+    sceKernelCancelMsgPipe(g_pipeList[*(int*)(iob + 4)], 0, 0);
+    K1_RESET();
+    return 0;
+}
+
 // 0CBC
-int registerPipe(int fd, SceUID id)
+int _sceKernelRegisterStdPipe(int fd, SceUID id)
 {
     if (id < 0)
     {  

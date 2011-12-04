@@ -2687,10 +2687,10 @@ SceKernelUnkStruct *sub_32FC()
         opt->dipswHi &= 0xFAFFFFFF;
 
     opt->addr  = 0x88000000;
-    opt->unk4  = SysMemForKernel_6D9E2DD6();
+    opt->unk4  = sceKernelSysMemRealMemorySize();
     opt->unk40 = -1;
     opt->unk36 = -1;
-    opt->unk80 = KDebugForKernel_568DCD25();
+    opt->unk80 = sceKernelDipswCpTime();
     return opt;
 }
 

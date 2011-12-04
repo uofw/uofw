@@ -54,6 +54,7 @@ function getdata
 
 if [ $# -ne 2 ]; then
     echo "Usage: ./diff.sh <old> <new>"
+    exit 1
 fi
 
 echo "diff $1 $2"
