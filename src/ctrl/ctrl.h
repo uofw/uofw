@@ -1,11 +1,13 @@
-/* 
+/** 
  * ctrl.h
- *    Controller settings of the SCE PSP system.
- * Author: _Felix_
- * Version: 6.39
+ *
+ * @author: _Felix_
+ * @version: 6.39
+ * 
+ * Controller library of the SCE PSP system.
  */
 
-/** @defgroup Ctrl Ctrl Module
+/** @defgroup Controller Controller library
  *
  * @{	
  */
@@ -22,46 +24,60 @@
 #include <psppower.h>
 #include "../errors.h"
 
-/** General information about the internal PSP controller buffer. Including current pressed button and current position 
+#define sceCtrlPeekBufferPositiveExt    sceCtrl_5A36B1C2
+#define sceCtrlPeekBufferNegativeExt    sceCtrl_239A6BA7
+#define sceCtrlReadBufferPositiveExt    sceCtrl_1098030B
+#define sceCtrlReadBufferNegativeExt    sceCtrl_7C3675AB
+#define sceCtrlExtendInternalCtrlBuf    sceCtrl_driver_65698764
+
+/** General information about an internal PSP controller buffer. Including current pressed button(s) and current position 
  *  of the analog controller. 
  */
 typedef struct _SceCtrlData {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
-     *  You can use this to get the time how long a button has been pressed. 
-    */ 
+     *  Can be used to get the time period if a button pressing. 
+     */ 
     u32 activeTime; //0
-    /** The currently pressed D-Pad button values. One or more values of :PspCtrlButtons or'ed together. */
+    /** The currently pressed D-Pad button(s). Bitwise OR'ed values of :PspCtrlButtons. */
     u32 buttons; //4
-    /** The current position of the X-axis of the analog controller. Between 0 - 255. */
+    /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
     u8 aX; //8
-    /** The current position of the Y-axis of the analog controller. Between 0 - 255. */
+    /** Analog Stick Y-axis offset (0 - 255). Up = 0, Down = 255. */
     u8 aY; //9
-    /** Reserved. */
+    /** Reserved. Values are normally set to 0. */
     u8 rsrv[6]; //10
-} SceCtrlData;
+} SceCtrlData; //Size of SceCtrlData: 16
 
 /** Extended SceCtrlData struct. */
 typedef struct _SceCtrlDataExt {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
-     *  You can use this to get the time how long a button has been pressed. 
-    */ 
-    u32 activeTime; 
-    /** The currently pressed D-Pad button values. One or more values of :PspCtrlButtons or'ed together. */
-    u32 buttons; 
-    /** The current position of the X-axis of the analog controller. Between 0 - 255. */
-    u8 aX; 
-    /** The current position of the Y-axis of the analog controller. Between 0 - 255. */
-    u8 aY; 
-    /** Reserved. */
-    u8 rsrv[6]; 
-    int unk1;
-    int unk2;
-    int unk3;
-    int unk4;
-    int unk5;
-    int unk6;
-    int unk7;
-    int unk8;
+     *  Can be used to get the time period if a button pressing. 
+     */ 
+    u32 activeTime; //0
+    /** The currently pressed D-Pad button(s). Bitwise OR'ed values of :PspCtrlButtons. */
+    u32 buttons; //4
+    /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
+    u8 aX; //8
+    /** Analog Stick Y-axis offset (0 - 255). Up = 0, Down = 255. */
+    u8 aY; //9
+    /** Reserved. Values are normally set to 0. */
+    u8 rsrv[6]; //10
+    /** Unknown. */
+    int unk1; //16
+    /** Unknown. */
+    int unk2; //20
+    /** Unknown. */
+    int unk3; //24
+    /** Unknown. */
+    int unk4; //28
+    /** Unknown. */
+    int unk5; //32
+    /** Unknown. */
+    int unk6; //36
+    /** Unknown. */
+    int unk7; //40
+    /** Unknown. */
+    int unk8; //44
 } SceCtrlDataExt;
 
 /** Status attributes of a button. Each struct member represents an active button
@@ -76,34 +92,35 @@ typedef struct _SceCtrlLatch {
     u32 btnPress; //8
     /** Button is not pressed. */
     u32 btnRelease; //12
-} SceCtrlLatch; //sizeof SceCtrlLatch: 16
+} SceCtrlLatch; //Size of SceCtrlLatch: 16
 
-/** Required information for a button callback. (Unique to each registered button callback.) */
+typedef struct _SceCtrlLatchInt {
+    /** Button is newly pressed (was not already been pressed). */
+    u32 btnMake; //0
+    /** Stop of button press. */
+    u32 btnBreak; //4
+    /** Button is pressed. */
+    u32 btnPress; //8
+    /** Button is not pressed. */
+    u32 btnRelease; //12
+    /** Count the internal latch buffer reads. Is set to 0, when the buffer is reseted. */
+    u32 readLatchCount; //16
+    int unk2; //20
+    int unk3; //24
+    void *sceCtrlBuf[3]; //28 size of SceCtrlDataInt can be either 16 or 48
+} SceCtrlLatchInt; //sizeof SceCtrlLatchInt: 
+
+/** Required information for a button callback. Unique to each registered button callback. */
 typedef struct _SceCtrlButtonCallback {
-    /** Or'ed button values (of ::PspCtrlButtons) which will be checked for being pressed. */
+    /** Bitwise OR'ed button values (of ::PspCtrlButtons) which will be checked for being pressed. */
     u32 btnMask; //0
     /** Pointer to a callback function handling the button input effects. */
     void (*callbackFunc)(int, int, void *); //4
     /** The global pointer ($gp) value of the controller module. */
     u32 gp; //8
-    /** An optional pointer, which is passed as the third argument to the callback function. */
+    /** An optional pointer being passed as the third argument to the callback function. */
     void *arg; //12    
-} SceCtrlButtonCallback; //sizeof ButtonCallback: 16
-
-typedef struct _SceCtrlLatchInternal {
-    /** Button is newly pressed (was not already been pressed). */
-    unsigned int uiMake; //0
-    /** Stop of button press. */
-    unsigned int uiBreak; //4
-    /** Button is pressed. */
-    unsigned int uiPress; //8
-    /** Button is not pressed. */
-    unsigned int uiRelease; //12
-    int unk1; //16
-    int unk2; //20
-    int unk3; //24
-    SceCtrlData ctrlDataBuf[3]; //28 size of SceCtrlDataInt can be either 16 or 48
-} SceCtrlLatchInternal; //sizeof SceCtrlLatch: 
+} SceCtrlButtonCallback; //Size of SceCtrlButtonCallback: 16
 
 /**
  * Enumeration for the digital controller buttons.
@@ -162,11 +179,11 @@ enum PspCtrlButtons {
 enum PspCtrlInputMode {
     /** Digitial input only. No recognizing of analog input. */
     PSP_CTRL_INPUT_NO_ANALOG = 0,         
-    /** Recognizing of both digital- and analog input. */
+    /** Recognizing of both digital and analog input. */
     PSP_CTRL_INPUT_ANALOG = 1,
 };
 
-/** Controller (input) poll modes. */
+/** Controller input poll-modes. */
 enum PspCtrlPollMode {
     /** No controller input is recognized. */
     PSP_CTRL_POLL_NO_POLLING = 0,
@@ -185,17 +202,45 @@ enum PspCtrlMaskMode {
 };
 
 /**
+ * Initialize the controller library.
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int sceCtrlInit();
+
+/**
+ * Terminate the controller library.
+ * 
+ * @return 0.
+ */
+int sceCtrlEnd();
+
+/**
+ * Suspend the controller library.
+ * 
+ * @return 0.
+ */
+int sceCtrlSuspend();
+
+/**
+ * Resume the controller library after it has been suspended.
+ * 
+ * @return 0.
+ */
+int sceCtrlResume();
+
+/**
  * Register a button callback.
  * 
  * @note In the PSPSDK, this function is defined as sceCtrlRegisterButtonCallback.
  * 
  * @param slot The slot used to register the callback (0-3). Although Sony uses atleast slot 0 and slot 1 of the possible 
  *             4 callback slots in game mode, we can use them all freely as we wish.
- * @param btnMask Or'ed button values which will be checked for being pressed.
+ * @param btnMask Bitwise OR'ed button values which will be checked for being pressed.
  * @param cb Pointer to the callback function (int curr, int last, void *arg), which handles button input effects.
- * @param arg Optional user argument. Passed to the callback function.
+ * @param arg Optional user argument. Passed to the callback function as its third argument.
  * 
- * @return 0 on success or < 0, if slot is another value than one of 0-3.
+ * @return 0 on success or < 0, if slot is different than 0-3.
  */
 int sceCtrlSetSpecialButtonCallback(int slot, u32 btnMask, void (*cb)(int, int, void *), void *arg);
 
@@ -229,7 +274,7 @@ int sceCtrlSetButtonIntercept(u32 btnMask, u8 btnMaskMode);
 /**
  * Get the current controller input mode.
  * 
- * @param mode Pointer to int receiving the current controller mode.
+ * @param mode Pointer to int receiving the current controller mode. One of ::PspCtrlInputMode.
  * 
  * @return 0.
  */
@@ -254,7 +299,7 @@ int sceCtrlSetSamplingMode(u8 mode);
 int sceCtrlGetSamplingCycle(int *cycle);
 
 /**
- * Set the update frequency of the internal ctrl pad buffer (i.e. SceCtrlData (internal), SceCtrlLatch (internal)).
+ * Set the update frequency of the internal ctrl pad buffer Default update frequency is 60 hz.
  * 
  * @param cycle The new time period between two samplings of controller attributes in microseconds.
  *                Setting to 0 triggers sampling at every VSYNC-event (60 updates/second). If you want to set an own
@@ -292,7 +337,7 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback);
  * Enable/disable controller input. Set to PSP_CTRL_POLL_MODE_POLLING by Sony when initiating the controller.
  * 
  * @param pollMode One of ::PspCtrlPollMode. If set to 0, no button/analog input is recognized.
- *                   Set to 1 to enable button/analog input.
+ *                 Set to 1 to enable button/analog input.
  * 
  * @return 0.
  */
@@ -300,14 +345,14 @@ int sceCtrlSetPollingMode(u8 pollMode);
 
 /**
  * Read the current internal latch buffer. The following button states are delivered:
- *                                                Button is pressed, button is not pressed, button has been newly pressed
- *                                                and button has been newly released. 
+ *                                         Button is pressed, button is not pressed, button has been newly pressed
+ *                                         and button has been newly released. 
  * Once a button has been i.e. pressed, its value is stored in the specific internal latch buffer member (uiMake in this case)
  * until you manually reset the specific latch buffer field.
  * 
  * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
  * 
- * @return > 0 on success, < 0 on error.
+ * @return The amount of reads of the internal latch buffer without being reseted, or < 0 on error.
  */
 int sceCtrlPeekLatch(SceCtrlLatch *latch);
 
@@ -319,7 +364,7 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch);
  * 
  * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
  * 
- * @return > 0 on success, < 0 on error.
+ * @return The amount of reads of the internal latch buffer without being reseted (typically 1), or < 0 on error.
  */
 int sceCtrlReadLatch(SceCtrlLatch *latch);
 
@@ -328,9 +373,9 @@ int sceCtrlReadLatch(SceCtrlLatch *latch);
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
  * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
- *              Has to be set to a value between 0 and 64 (including the bounds).
+ *              Has to be set to a value between 1 and 64 (including the bounds).
  * 
- * @return < on error, otherwise the amount of read internal ctrl buffers.
+ * @return The amount of read internal ctrl buffers, or < 0 on error.
  */
 int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 count);
 
@@ -342,9 +387,9 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 count);
  *            Check ::PspCtrlButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
- *              Has to be set to a value between 0 and 64 (including the bounds).
+ *              Has to be set to a value between 1 and 64 (including the bounds).
  * 
- * @return < on error, otherwise the amount of read internal ctrl buffers.
+ * @return The amount of read internal ctrl buffers, or < 0 on error.
  */
 int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 count);
 
@@ -354,9 +399,9 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 count);
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. 
  * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
- *              Has to be set to a value between 0 and 64 (including the bounds).
+ *              Has to be set to a value between 1 and 64 (including the bounds).
  * 
- * @return < on error, otherwise 1.
+ * @return < 0 on error, otherwise 1.
  */
 int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 count);
 
@@ -369,11 +414,88 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 count);
  *            Check ::PspCtrlButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
- *              Has to be set to a value between 0 and 64 (including the bounds).
+ *              Has to be set to a value between 1 and 64 (including the bounds).
  * 
- * @return < on error, otherwise 1.
+ * @return < 0 on error, otherwise 1.
  */
 int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 count);
+
+/**
+ * Extended sceCtrlPeekBufferPositive(see description for more info).
+ * You need to call sceCtrlExtendInternalCtrlBuf() before use.
+ * 
+ * @param arg1 Pass 1 or 2.
+ * @param padExt Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
+ * @param count Has to be set to a value between 1 and 64 (including the bounds).
+ * 
+ * @return The amount of read internal ctrl buffers, or < 0 on error.
+ */
+int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 count);
+
+/**
+ * Extended sceCtrlPeekBufferNegative (see description for more info). 
+ * You need to call sceCtrlExtendInternalCtrlBuf() before use.
+ * 
+ * @param arg1 Pass 1 or 2.
+ * @param padExt Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
+ * @param count Has to be set to a value between 1 and 64 (including the bounds).
+ * 
+ * @return The amount of read internal ctrl buffers, or < 0 on error.
+ */
+int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 count);
+
+/**
+ * Extended sceCtrlReadBufferPositive (see description for more info).
+ * You need to call sceCtrlExtendInternalCtrlBuf() before use.
+ * 
+ * @param arg1 Pass 1 or 2.
+ * @param padExt Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
+ * @param count Has to be set to a value between 1 and 64 (including the bounds).
+ * 
+ * @return < 0 on error, otherwise 1.
+ */
+int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 count);
+
+/**
+ * Extended sceCtrlReadBufferNegative (see description for more info).
+ * You need to call sceCtrlExtendInternalCtrlBuf() before use.
+ * 
+ * @param arg1 Pass 1 or 2.
+ * @param padExt Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
+ * @param count Has to be set to a value between 1 and 64 (including the bounds).
+ * 
+ * @return < 0 on error, otherwise 1.
+ */
+int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 count);
+
+/**
+ * Extend the 64 internal controller buffers. Every ctrl buffer now represents a SceCtrlDataExt struct.
+ * By default, an internal controller is equivalent to a SceCtrlData struct. This function has to be called before using
+ * the extended read/peekBuffer functions.
+ * 
+ * @param mode Seems to be an index. Pass either 1 or 2.
+ * @param arg2 Unknown, pass 1.
+ * @param arg3 Unknown, pass 1.
+ * 
+ * @return 0 on succss, otherwise < 0 on error.
+ */
+int sceCtrlExtendInternalCtrlBuf(u8 mode, int arg2, int arg3);
+
+/**
+ * Set a number of VBlanks for which will be waited when terminating the controller library.
+ * 
+ * @param suspendSamples The number of VBlanks. Between 0 - 300.
+ * 
+ * @return 0 on success, < 0 if suspendSamples is not between 0 - 300.
+ */
+int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples);
+
+/**
+ * Get the number of VBlanks for which will be waited when terminating the controller library.
+ * 
+ * @return The number of VBlanks.
+ */
+u16 sceCtrlGetSuspendingExtraSamples();
 
 #endif	/* CTRL_H */
 
