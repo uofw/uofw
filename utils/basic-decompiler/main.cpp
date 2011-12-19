@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
             else if (line.find("Subroutine ") != std::string::npos)
             {
                 if (!firstFunc)
-                    std:: cout << "}" << std::endl << std::endl;
+                    std::cout << "}" << std::endl << std::endl;
                 std::string func = line.substr(13);
                 func = func.substr(0, func.find_first_of(' '));
                 std::cout << func << "(...)" << std::endl;
@@ -404,14 +404,17 @@ int main(int argc, char *argv[])
                         }
                         else
                         {
-                            std::vector<std::string> args = getArgsWithType(line.substr(33), 'r');
                             bool regModified = false;
-                            if (args.empty())
+                            if (getFormat(getInstr(line)) == NULL)
                                 regModified = true;
                             else
+                            {
+                                std::vector<std::string> args = getArgsWithType(getInstr(line), 'r');
                                 for (unsigned int i = 0; i < args.size(); i++)
-                                    if (oldInstr.find(args[i]) != std::string::npos)
+                                    if (oldInstr.find(args[i].substr(1)) != std::string::npos)
                                         regModified = true;
+                                
+                            }
 
                             if (regModified)
                             {

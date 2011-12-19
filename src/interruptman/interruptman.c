@@ -973,20 +973,20 @@ int sceKernelIsSubInterruptOccured(int intrNum, int subIntrNum)
 }
 
 // 58DD8978
-int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, int arg4)
+int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, SceIntrHandler *handler)
 {
     if (sceKernelIsIntrContext() != 0)
         return 0x80020064;
     if (intrNum >= 68)
         return 0x80020065;
-    if (arg4 != 0 && *(int*)(arg4 + 0) != 12)
+    if (handler != NULL && handler->size != 12)
         return 0x8002006B;
     // 12B8
     int oldIc = sceKernelCpuSuspendIntr();
-    if (arg4 != 0 && *(int*)(arg4 + 4) > 0 && intInfo.subIntrMemoryPoolId == 0)
+    if (handler != NULL && handler->size > 0 && intInfo.subIntrMemoryPoolId == 0)
     {
         // 1468
-        int ret = sceKernelCreateHeap(1, 1, 0x800, heapName); // "SceInterruptManager"; probably allocate a memory pool
+        int ret = sceKernelCreateHeap(1, 1, 0x800, heapName); // "SceInterruptManager"
         if (ret > 0)
             intInfo.subIntrMemoryPoolId = ret;
         if (ret < 0) {
@@ -1009,7 +1009,7 @@ int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, in
     // 1368
     intr->cb = NULL;
     int size;
-    if (arg4 == 0 || (size = *(int*)(arg4 + 4)) <= 0)
+    if (handler == NULL || (size = handler->attr) <= 0)
     {
         // 144C
         if (intr->subIntrs != NULL) {
@@ -1030,7 +1030,7 @@ int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, in
             sceKernelCpuResumeIntr(oldIc);
             return 0x80020190;
         }
-        intr->cb = (void*)*(int*)(arg4 + 8);
+        intr->cb = handler->cb;
     }
     // 13B4
     sceKernelSuspendIntr(intrNum, 0);
@@ -1047,8 +1047,8 @@ int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, in
     intr->loadCoreRes = sceKernelGetModuleGPByAddressForKernel(func);
     intr->arg = arg3;
     *(char*)&intr->v48 = 0;
-    if (arg4 != 0)
-        *(char*)&intr->v48 = *(char*)(arg4 + 4);
+    if (handler != NULL)
+        *(char*)&intr->v48 = *(char*)&handler->attr;
     // 1420
     intr->v48 = ((intr->v48 & 0x7FFF7FFF) | ((intInfo.opt << 15) & 0x8000)) & 0x7FFFFFFF;
     *(char*)(&intr->v48 + 2) = intrNum;

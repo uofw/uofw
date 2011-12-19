@@ -25,7 +25,6 @@ typedef struct
 
 typedef struct
 {   
-    // Set to 44 in display_01g
     int size; // 0
     int u4;
     // Callback called before setting sub interrupt, when registering
@@ -41,7 +40,7 @@ typedef struct
     int (*cbSuspend)(int, int, int*); // 32
     int (*cbResume)(int, int, int); // 36
     int (*cbIsOccured)(int, int); // 40
-} UnkCallbacks; // Size: 44
+} SceIntrCb; // Size: 44
 
 // Arg4 in sceKernelRegisterIntrHandler()
 typedef struct
@@ -56,7 +55,7 @@ typedef struct
     // Pointer to sub interrupts
     SubInterrupt *subIntrs; // 40
     // Some value set by sceKernelRegisterIntrHandler, using arg4 SubIntrInfo.callbacks, contains some handlers ran by sceKernelRegisterSubIntrHandler
-    UnkCallbacks *cb; // 44
+    SceIntrCb *cb; // 44
     // InterruptManagerForKernel_D01EAA3F changes a bit depending on arg1, sceKernelRegisterIntrHandler changes some also; lower byte is the max number of sub interrupts
     int v48; // 48
     int u52, u56, u60;
@@ -66,9 +65,15 @@ typedef struct
 {
     int size; // must be 12
     int numSubIntrs; // 4
-    UnkCallbacks *callbacks; // 8
+    SceIntrCb *callbacks; // 8
 } SubIntrInfo; // Size: 12
 
+typedef struct
+{
+    int size;
+    int attr;
+    void *cb;
+} SceIntrHandler;
 
 // Memory map
 // 0x5900 -> 0x595C: options array?
