@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 void _start()
 {
     mtc0(mfc0("Status") & 0xFFBFFFF9, "Status");

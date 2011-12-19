@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #ifndef GLOBAL_H
 #define GLOBAL_H
 

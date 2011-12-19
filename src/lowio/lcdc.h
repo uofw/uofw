@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 int sceLcdcInit();
 int sceLcdcResume();
 int sceLcdc_driver_901B9073(void);

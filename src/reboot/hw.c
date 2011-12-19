@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 void sub_01D4()
 {
     if (mfc0($24) & 1 != 0) {

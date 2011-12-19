@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 typedef struct {
 	u8	user_ecc[3]; //0
 	u8	reserved; //3

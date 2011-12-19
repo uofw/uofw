@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #include "../global.h"
 
 #define IS_JUMP(op) ((op & 0xFC000000) == 0x0C000000)

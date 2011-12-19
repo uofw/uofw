@@ -1,3 +1,6 @@
+# Copyright (C) 2011 The uOFW team
+# See the file COPYING for copying permission.
+
 CPP=c++
 CFLAGS=-Wall -Wextra -std=c++0x
 LDFLAGS=

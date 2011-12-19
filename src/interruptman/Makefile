@@ -1,3 +1,6 @@
+# Copyright (C) 2011 The uOFW team
+# See the file COPYING for copying permission.
+
 TARGET = interruptman
 OBJS = start.o interruptman.o end.o imports.o
 

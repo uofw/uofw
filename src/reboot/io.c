@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 int unkVar = 0x89000000; // 0x886128E0
 
 int sub_11994()

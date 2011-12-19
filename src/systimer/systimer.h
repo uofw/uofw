@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 typedef int (*SceSysTimerCb)(int, int, int, int);
 
 int SysTimerForKernel_4467BD60(int arg0, int arg1, int arg2);

@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 int sub_11860()
 {
     return sub_11970(0x2000, 1); // enable EMCSM bus clock

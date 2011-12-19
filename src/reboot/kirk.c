@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 int hwAddr = 0xBFC00220; // 0x886128BC
 int hwAddr2 = 0xBFC00280; // 0x886128C0
 int hwAddr3 = 0xBFC00340; // 0x886128C4

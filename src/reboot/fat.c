@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #include "reboot.h"
 
 int unkVar = -1; // 0x886128F4
