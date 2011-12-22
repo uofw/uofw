@@ -113,6 +113,12 @@ typedef struct
     int     numReceiveWaitThreads;
 } SceKernelMppInfo;
 
+typedef struct
+{
+    int size;
+    void (*ops[14])();
+} SceKernelDeci2Ops;
+
 int sceKernelRegisterExceptionHandler(int exno, void *func); // ExceptionManagerForKernel_06372550
 int sceKernelRegisterPriorityExceptionHandler(int exno, int priority, void *func); // ExceptionManagerForKernel_7D995AE8
 int sceKernelRegisterSuspendHandler(int no, void *func, int num); // sceSuspendForKernel_91A77137
