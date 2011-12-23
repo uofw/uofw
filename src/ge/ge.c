@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #include "../global.h"
 #include "../interruptman/interruptman.h"
 
@@ -40,18 +44,19 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
 
 typedef struct
 {
-    SceGeDisplayList *unk0;
-    int unk4;
-    SceGeDisplayList *unk8, *unk12;
+    SceGeDisplayList *curRunning;
+    int isBreak;
+    SceGeDisplayList *cur, *next;
     SceGeDisplayList *first; // 16
     SceGeDisplayList *last; // 20
-    SceUID evFlagId1, evFlagId2, evFlagId3; // 24, 28, 32
+    SceUID drawingEvFlagId; // 24
+    SceUID loListEvFlagId, hiListEvFlagId; // 28, 32
     void *stack; // 36
     /* ... */
     int sdkVer; // 1060
     int patched; // 1064
-    int unk1068;
-    int *unk1072;
+    int syscallId;
+    int *lazySyncData;
 } SceGeQueue;
 
 typedef struct
@@ -228,7 +233,7 @@ int _sceGeReset()
     while ((*(int*)(0xBD400000) & 1) != 0)
         ;
     sceGeSaveContext(&g_context);
-    g_context.unk64 = *(int*)(0xBD400200);
+    g_context.ctx[16] = *(int*)(0xBD400200);
     sceSysregAwResetEnable();
     sceSysregAwResetDisable();
     *(int*)(0xBD500010) = 0;
@@ -245,7 +250,7 @@ int _sceGeReset()
     *(int*)(0xBD400310) = *(int*)(0xBD400304);
     *(int*)(0xBD40030C) = *(int*)(0xBD400308);
     *(int*)(0xBD400308) = 7;
-    *(int*)(0xBD400200) = g_context.unk64;
+    *(int*)(0xBD400200) = g_context.ctx[16];
     sceSysregSetMasterPriv(64, 1);
     sceGeRestoreContext(&g_context);
     sceSysregSetMasterPriv(64, 0);
@@ -265,7 +270,7 @@ int sceGeInit()
               ^ *(int*)(0xBD4008EC)) | 0x80000000;
     sceGeEdramInit();
     *(int*)(0xBD400100) = 0;
-    int *dlist = g_context.cmds;
+    int *dlist = &g_context.ctx[17];
     *(int*)(0xBD400108) = 0;
     *(int*)(0xBD40010C) = 0;
     int *curDl = dlist;
@@ -908,17 +913,17 @@ int sceGeSaveContext(SceGeContext *ctx)
         K1_RESET();
         return -1;
     }
-    int *curCmd = ctx->cmds;
-    ctx->unk0  = *(int*)(0xBD400100);
-    ctx->unk4  = *(int*)(0xBD400108);
-    ctx->unk8  = *(int*)(0xBD40010C);
-    ctx->unk12 = *(int*)(0xBD400110);
-    ctx->unk16 = *(int*)(0xBD400114);
-    ctx->unk20 = *(int*)(0xBD400118);
-    ctx->unk24 = *(int*)(0xBD40011C);
-    ctx->unk28 = *(int*)(0xBD400120);
-    ctx->unk32 = *(int*)(0xBD400124);
-    ctx->unk36 = *(int*)(0xBD400128);
+    int *curCmd = &ctx->ctx[17];
+    ctx->ctx[0] = *(int*)(0xBD400100);
+    ctx->ctx[1] = *(int*)(0xBD400108);
+    ctx->ctx[2] = *(int*)(0xBD40010C);
+    ctx->ctx[3] = *(int*)(0xBD400110);
+    ctx->ctx[4] = *(int*)(0xBD400114);
+    ctx->ctx[5] = *(int*)(0xBD400118);
+    ctx->ctx[6] = *(int*)(0xBD40011C);
+    ctx->ctx[7] = *(int*)(0xBD400120);
+    ctx->ctx[8] = *(int*)(0xBD400124);
+    ctx->ctx[9] = *(int*)(0xBD400128);
     
     int *cmds = (int*)0xBD400800;
     // 17C8
@@ -976,7 +981,7 @@ int sceGeSaveContext(SceGeContext *ctx)
     *(curCmd++) = *(int*)(0xBD4008F8);
     *(curCmd++) = *(int*)(0xBD400900);
     *(curCmd++) = 0x0C000000; // END
-    sceKernelDcacheWritebackInvalidateRange(ctx->cmds, 1980);
+    sceKernelDcacheWritebackInvalidateRange(&ctx->ctx[17], 1980);
     if (!aBusWasEnabled)
         sceSysregAwRegABusClockDisable(); // 1A3C
     // 1A0C
@@ -1009,9 +1014,9 @@ int sceGeRestoreContext(SceGeContext *ctx)
     int old304 = *(int*)(0xBD400304);
     int old308 = *(int*)(0xBD400308);
     *(int*)(0xBD40030C) = old308;
-    *(int*)(0xBD400108) = (int)UCACHED(&ctx->cmds);
+    *(int*)(0xBD400108) = (int)UCACHED(&ctx->ctx[17]);
     *(int*)(0xBD40010C) = 0;
-    *(int*)(0xBD400100) = ctx->unk0 | 1;
+    *(int*)(0xBD400100) = ctx->ctx[0] | 1;
     // 1B64
     while ((*(int*)(0xBD400100) & 1) != 0)
         ;
@@ -1020,14 +1025,14 @@ int sceGeRestoreContext(SceGeContext *ctx)
     *(int*)(0xBD400308) = old308;
     if ((n304 & 8) != 0)
         ret = -1;
-    *(int*)(0xBD400108) = ctx->unk4;
-    *(int*)(0xBD40010C) = ctx->unk8;
-    *(int*)(0xBD400118) = ctx->unk20;
-    *(int*)(0xBD40011C) = ctx->unk24;
-    *(int*)(0xBD400120) = ctx->unk28;
-    *(int*)(0xBD400124) = ctx->unk32;
-    *(int*)(0xBD400128) = ctx->unk36;
-    _sceGeSetInternalReg(6, 0, ctx->unk12, ctx->unk16);
+    *(int*)(0xBD400108) = ctx->ctx[1];
+    *(int*)(0xBD40010C) = ctx->ctx[2];
+    *(int*)(0xBD400118) = ctx->ctx[5];
+    *(int*)(0xBD40011C) = ctx->ctx[6];
+    *(int*)(0xBD400120) = ctx->ctx[7];
+    *(int*)(0xBD400124) = ctx->ctx[8];
+    *(int*)(0xBD400128) = ctx->ctx[9];
+    _sceGeSetInternalReg(6, 0, ctx->ctx[3], ctx->ctx[4]);
     SYNC();
     if (state == 0) {
         // 1C58
@@ -1251,13 +1256,13 @@ int _sceGeSysEventHandler(int ev_id, char* ev_name, void* param, int* result)
         sceSysregAwRegABusClockEnable();
         _sceGeQueueSuspend();
         sceGeSaveContext(&g_context);
-        g_context.unk40 = *(int*)(0xBD500070);
-        g_context.unk44 = *(int*)(0xBD500080);
-        g_context.unk48 = *(int*)(0xBD500000);
-        g_context.unk52 = *(int*)(0xBD500020);
-        g_context.unk56 = *(int*)(0xBD500030);
-        g_context.unk60 = *(int*)(0xBD500040);
-        g_context.unk64 = *(int*)(0xBD400200);
+        g_context.ctx[10] = *(int*)(0xBD500070);
+        g_context.ctx[11] = *(int*)(0xBD500080);
+        g_context.ctx[12] = *(int*)(0xBD500000);
+        g_context.ctx[13] = *(int*)(0xBD500020);
+        g_context.ctx[14] = *(int*)(0xBD500030);
+        g_context.ctx[15] = *(int*)(0xBD500040);
+        g_context.ctx[16] = *(int*)(0xBD400200);
         break;
 
     case 0x10005:
@@ -1281,13 +1286,13 @@ int _sceGeSysEventHandler(int ev_id, char* ev_name, void* param, int* result)
         *(int*)(0xBD400310) = *(int*)(0xBD400304);
         *(int*)(0xBD40030C) = *(int*)(0xBD400308);
         *(int*)(0xBD400308) = 7;
-        *(int*)(0xBD500070) = g_context.unk40;
-        *(int*)(0xBD500080) = g_context.unk44;
-        *(int*)(0xBD500000) = g_context.unk48;
-        *(int*)(0xBD500020) = g_context.unk52;
-        *(int*)(0xBD500030) = g_context.unk56;
-        *(int*)(0xBD500040) = g_context.unk60;
-        *(int*)(0xBD400200) = g_context.unk64;
+        *(int*)(0xBD500070) = g_context.ctx[10];
+        *(int*)(0xBD500080) = g_context.ctx[11];
+        *(int*)(0xBD500000) = g_context.ctx[12];
+        *(int*)(0xBD500020) = g_context.ctx[13];
+        *(int*)(0xBD500030) = g_context.ctx[14];
+        *(int*)(0xBD500040) = g_context.ctx[15];
+        *(int*)(0xBD400200) = g_context.ctx[16];
         sceSysregSetMasterPriv(64, 1);
         sceGeRestoreContext(&g_context);
         sceSysregSetMasterPriv(64, 0);
@@ -1551,21 +1556,21 @@ int _sceGeQueueInit()
         SceGeDisplayList *cur = &g_displayLists[i];
         cur->next = &g_displayLists[i + 1];
         cur->prev = &g_displayLists[i - 1];
-        cur->unk9 = 0;
-        cur->unk8 = 0;
-        cur->unk10 = 0;
+        cur->signal = SCE_GE_DL_SIGNAL_NONE;
+        cur->state = SCE_GE_DL_STATE_NONE;
+        cur->ctxUpToDate = 0;
     }
-    g_queue.unk0 = NULL;
+    g_queue.curRunning = NULL;
     g_queue.last = &g_displayLists[63];
     g_displayLists[0].prev = NULL;
     g_displayLists[63].next = NULL;
     g_queue.first = g_displayLists;
-    g_queue.unk8 = NULL;
-    g_queue.unk12 = NULL;
-    g_queue.evFlagId1 = sceKernelCreateEventFlag("SceGeQueueId", 0x201,  2, NULL);
-    g_queue.evFlagId2 = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
-    g_queue.evFlagId3 = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
-    g_queue.unk1068 = InterruptManagerForKernel_F153B371(sceGeListUpdateStallAddr);
+    g_queue.cur = NULL;
+    g_queue.next = NULL;
+    g_queue.drawingEvFlagId = sceKernelCreateEventFlag("SceGeQueueId", 0x201,  2, NULL);
+    g_queue.loListEvFlagId = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
+    g_queue.hiListEvFlagId = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
+    g_queue.syscallId = InterruptManagerForKernel_F153B371(sceGeListUpdateStallAddr);
     void *gameInfo = sceKernelGetGameInfo();
     g_queue.patched = 0;
     if (gameInfo != NULL && strcmp(gameInfo + 68, "ULJM05127") == 0)
@@ -1575,7 +1580,7 @@ int _sceGeQueueInit()
 
 int _sceGeQueueSuspend()
 {
-    if (g_queue.unk8 == NULL)
+    if (g_queue.cur == NULL)
         return 0;
 
     // 2C5C
@@ -1640,7 +1645,7 @@ int _sceGeQueueSuspend()
     }
 
     // 2C88
-    if ((*(int*)(0xBD400304) & 1) == 0 && g_queue.unk8->unk9 != 1 || g_queue.unk4 != 0) // 2DE8
+    if ((*(int*)(0xBD400304) & 1) == 0 && (g_queue.cur->signal != SCE_GE_DL_SIGNAL_BREAK || g_queue.isBreak != 0)) // 2DE8
     {
         // 2CB0
         while ((*(int*)(0xBD400304) & 4) == 0)
@@ -1679,7 +1684,7 @@ int _sceGeQueueSuspend()
 
 int _sceGeQueueResume()
 {
-    if (g_queue.unk8 == NULL)
+    if (g_queue.cur == NULL)
         return 0;
     // 2F88
     sceSysregSetMasterPriv(64, 1);
@@ -1710,25 +1715,25 @@ int _sceGeQueueResume()
 
 void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
 {
-    SceGeDisplayList *dl = g_queue.unk0;
-    g_queue.unk4 = 0;
-    g_queue.unk0 = 0;
+    SceGeDisplayList *dl = g_queue.curRunning;
+    g_queue.isBreak = 0;
+    g_queue.curRunning = NULL;
     if (dl != NULL)
     {
-        if (dl->unk9 == 3)
+        if (dl->signal == SCE_GE_DL_SIGNAL_SYNC)
         {
             // 351C
-            dl->unk9 = 0;
-            g_queue.unk0 = dl;
+            dl->signal = SCE_GE_DL_SIGNAL_NONE;
+            g_queue.curRunning = dl;
             *(int*)(0xBD400100) |= 1;
             SYNC();
             return;
         }
-        else if (dl->unk9 == 2)
+        else if (dl->signal == SCE_GE_DL_SIGNAL_PAUSE)
         {
             // 3468
             int state = *(int*)(0xBD400100);
-            dl->unk16 = state;
+            dl->flags = state;
             dl->list = (int*)*(int*)(0xBD400108);
             dl->unk28 = *(int*)(0xBD400110);
             dl->unk32 = *(int*)(0xBD400114);
@@ -1747,17 +1752,17 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
             }
     
             // 34E8
-            if (g_queue.unk8 == dl)
+            if (g_queue.cur == dl)
             {
                 // 3500
-                dl->unk9 = 1;
+                dl->signal = SCE_GE_DL_SIGNAL_BREAK;
                 if (dl->cbId >= 0)
                 {
                     void *list = dl->list;
                     // 3288 dup
                     if (g_queue.sdkVer <= 0x02000010)
                         list = 0;
-                    sceKernelCallSubIntrHandler(25, dl->cbId * 2, dl->unk54, list);
+                    sceKernelCallSubIntrHandler(25, dl->cbId * 2, dl->unk54, list); // call signal CB
                 }
                 // 32A4
                 _sceGeClearBp();
@@ -1768,7 +1773,7 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
         // 309C
         if (dl != NULL)
         {
-            if (dl->unk8 == 2)
+            if (dl->state == SCE_GE_DL_STATE_RUNNING)
             {
                 // 32DC
                 int *cmdList = (int*)*(int*)(0xBD400108);
@@ -1779,7 +1784,7 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
                     Kprintf("_sceGeFinishInterrupt(): illegal finish sequence (MADR=0x%08X)\n", cmdList); // 6398
                 }
                 // 3328
-                dl->unk8 = 3;
+                dl->state = SCE_GE_DL_STATE_COMPLETED;
                 if (dl->stackOff != 0) {
                     // 343C
                     Kprintf("_sceGeFinishInterrupt(): CALL/RET nesting corrupted\n"); // 63D8
@@ -1795,7 +1800,7 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
                 {
                     if (g_queue.sdkVer <= 0x02000010)
                         cmdList = NULL;
-                    sceKernelCallSubIntrHandler(25, dl->cbId * 2 + 1, lastCmd1 & 0xFFFF, cmdList);
+                    sceKernelCallSubIntrHandler(25, dl->cbId * 2 + 1, lastCmd1 & 0xFFFF, cmdList); // call finish CB
                 }
                 // 337C
                 if (dl->ctx != NULL) {
@@ -1810,13 +1815,13 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
                     dl->next->prev = dl->prev;
             
                 // 33A8
-                if (g_queue.unk8 == dl)
-                    g_queue.unk8 = dl->next;
+                if (g_queue.cur == dl)
+                    g_queue.cur = dl->next;
         
                 // 33B8
-                if (g_queue.unk12 == dl) {
+                if (g_queue.next == dl) {
                     // 3400
-                    g_queue.unk12 = dl->prev;
+                    g_queue.next = dl->prev;
                 }
         
                 // 33C4
@@ -1832,31 +1837,31 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
                 }
         
                 // 33E0
-                dl->unk8 = 3;
+                dl->state = SCE_GE_DL_STATE_COMPLETED;
                 dl->next = NULL;
                 g_queue.last = dl;
             }
         }
     }
     // 30B0
-    SceGeDisplayList *dl2 = g_queue.unk8;
+    SceGeDisplayList *dl2 = g_queue.cur;
     if (dl2 == NULL)
     {
         // 32B4
         *(int*)(0xBD400100) = 0;
         SYNC();
         sceSysregAwRegABusClockDisable();
-        sceKernelSetEventFlag(g_queue.evFlagId1, 2);
+        sceKernelSetEventFlag(g_queue.drawingEvFlagId, 2);
         // 3254
         _sceGeClearBp();
     }
     else
     {
-        if (dl2->unk9 == 2)
+        if (dl2->signal == SCE_GE_DL_SIGNAL_PAUSE)
         {
             // 3264
-            dl2->unk8 = 4;
-            dl2->unk9 = 1;
+            dl2->state = SCE_GE_DL_STATE_PAUSED;
+            dl2->signal = SCE_GE_DL_SIGNAL_BREAK;
             if (dl2->cbId >= 0)
             {
                 void *list = dl2->list;
@@ -1869,7 +1874,7 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
             _sceGeClearBp();
             return;
         }
-        if (dl2->unk8 == 4)
+        if (dl2->state == SCE_GE_DL_STATE_PAUSED)
         {
             // 324C
             sceSysregAwRegABusClockDisable();
@@ -1879,8 +1884,8 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
         else
         {
             int *ctx2 = (int*)dl2->ctx;
-            dl2->unk8 = 2;
-            if (ctx2 != NULL && dl2->unk10 == 0)
+            dl2->state = SCE_GE_DL_STATE_RUNNING;
+            if (ctx2 != NULL && dl2->ctxUpToDate == 0)
             {
                 int *ctx1 = (int*)dl->ctx;
                 if (dl == NULL || dl->ctx == NULL)
@@ -1906,7 +1911,7 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
 
             // (3138)
             // 313C
-            dl2->unk10 = 1;
+            dl2->ctxUpToDate = 1;
             *(int*)(0xBD400100) = 0;
             *(int*)(0xBD40010C) = (int)UCACHED(dl2->stall);
             *(int*)(0xBD400108) = (int)UCACHED(dl2->list);
@@ -1915,8 +1920,8 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
             *(int*)(0xBD400128) = dl2->unk44;
             _sceGeSetBaseRadr(dl2->unk48, dl2->unk28, dl2->unk32);
             SYNC();
-            g_queue.unk0 = dl2;
-            *(int*)(0xBD400100) = dl2->unk16 | 1;
+            g_queue.curRunning = dl2;
+            *(int*)(0xBD400100) = dl2->flags | 1;
             SYNC();
             if (g_logHandler != 0)
             {
@@ -1929,13 +1934,13 @@ void _sceGeFinishInterrupt(int arg0, int arg1, int arg2)
     // 31C8
     if (dl != NULL) {
         u32 off = dl - &g_displayLists[0];
-        sceKernelSetEventFlag(*(int*)(&g_queue.evFlagId2 + (off >> 11)), 1 << ((off >> 6) & 0x1F));
+        sceKernelSetEventFlag(*(int*)(&g_queue.loListEvFlagId + (off >> 11)), 1 << ((off >> 6) & 0x1F));
     }
 }
 
 void _sceGeListInterrupt(int arg0, int arg1, int arg2)
 {
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     if (dl == NULL)
     {
         // 3C0C
@@ -1962,7 +1967,7 @@ void _sceGeListInterrupt(int arg0, int arg1, int arg2)
     case 0x1: // HANDLER_SUSPEND
         // 3670
         if (g_queue.sdkVer <= 0x02000010) {
-            dl->unk8 = 4;
+            dl->state = SCE_GE_DL_STATE_PAUSED;
             cmdList = NULL;
         }
         // 3698
@@ -1972,7 +1977,7 @@ void _sceGeListInterrupt(int arg0, int arg1, int arg2)
         }
         // 36B4
         if (g_queue.sdkVer <= 0x02000010)
-            dl->unk8 = lastCmd2;
+            dl->state = lastCmd2 & 0xFF;
         *(int*)(0xBD400100) |= 1;
         break;
 
@@ -1989,15 +1994,15 @@ void _sceGeListInterrupt(int arg0, int arg1, int arg2)
         break;
 
     case 0x3: // HANDLER_PAUSE
-        dl->unk8 = 4;
-        dl->unk9 = lastCmd2;
+        dl->state = SCE_GE_DL_STATE_PAUSED;
+        dl->signal = lastCmd2 & 0xFF;
         dl->unk54 = lastCmd1;
         *(int*)(0xBD400100) |= 1;
         break;
 
     case 0x8: // SYNC
         // 3994
-        dl->unk9 = 3;
+        dl->signal = SCE_GE_DL_SIGNAL_SYNC;
         *(int*)(0xBD400100) |= 1;
         break;
 
@@ -2006,26 +2011,26 @@ void _sceGeListInterrupt(int arg0, int arg1, int arg2)
     case 0x16: // OCALL
     {
         // 3870
-        if (dl->stackOff >= dl->stackSize)
+        if (dl->stackOff >= dl->numStacks)
         {
             // 398C
             _sceGeListError(lastCmd1, 1);
             break;
         }
         SceGeStack *curStack = &dl->stack[dl->stackOff++];
-        curStack->unk0 = *(int*)(0xBD400100);
-        curStack->unk4 = *(int*)(0xBD400108);
-        curStack->unk8 = *(int*)(0xBD400120);
-        curStack->unk12 = *(int*)(0xBD400124);
-        curStack->unk16 = *(int*)(0xBD400128);
-        curStack->unk20 = *(int*)(0xBD400110);
-        curStack->unk24 = *(int*)(0xBD400114);
-        curStack->unk28 = *(int*)(0xBD400840);
-        if ((dl->unk16 & 0x200) == 0)
+        curStack->stack[0] = *(int*)(0xBD400100);
+        curStack->stack[1] = *(int*)(0xBD400108);
+        curStack->stack[2] = *(int*)(0xBD400120);
+        curStack->stack[3] = *(int*)(0xBD400124);
+        curStack->stack[4] = *(int*)(0xBD400128);
+        curStack->stack[5] = *(int*)(0xBD400110);
+        curStack->stack[6] = *(int*)(0xBD400114);
+        curStack->stack[7] = *(int*)(0xBD400840);
+        if ((dl->flags & 0x200) == 0)
         {
             dl->unk32 = 0;
             dl->unk44 = 0;
-            if ((dl->unk16 & 0x100) == 0) {
+            if ((dl->flags & 0x100) == 0) {
                 dl->unk40 = 0;
                 dl->unk28 = 0;
             }
@@ -2088,12 +2093,12 @@ void _sceGeListInterrupt(int arg0, int arg1, int arg2)
     
         // 3804
         SceGeStack *curStack = &dl->stack[dl->stackOff--];
-        *(int*)(0xBD400108) = (int)UCACHED(curStack->unk4);
-        *(int*)(0xBD400120) = curStack->unk8;
-        *(int*)(0xBD400124) = curStack->unk12;
-        *(int*)(0xBD400128) = curStack->unk16;
-        _sceGeSetBaseRadr(curStack->unk28, curStack->unk20, curStack->unk24);
-        *(int*)(0xBD400100) = curStack->unk0 | 1;
+        *(int*)(0xBD400108) = (int)UCACHED(curStack->stack[1]);
+        *(int*)(0xBD400120) = curStack->stack[2];
+        *(int*)(0xBD400124) = curStack->stack[3];
+        *(int*)(0xBD400128) = curStack->stack[4];
+        _sceGeSetBaseRadr(curStack->stack[7], curStack->stack[5], curStack->stack[6]);
+        *(int*)(0xBD400100) = curStack->stack[0] | 1;
         SYNC();
         break;
 
@@ -2223,9 +2228,9 @@ int sceGeListDeQueue(int dlId)
         return 0x80000100;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (dl->unk8 != 0)
+    if (dl->state != SCE_GE_DL_STATE_NONE)
     {
-        if (dl->unk10 == 0)
+        if (dl->ctxUpToDate == 0)
         {
             if (dl->prev != NULL)
                 dl->prev->next = dl->next;
@@ -2234,13 +2239,13 @@ int sceGeListDeQueue(int dlId)
                 dl->next->prev = dl->prev;
         
             // 3CB4
-            if (g_queue.unk8 == dl)
-                g_queue.unk8 = dl->next;
+            if (g_queue.cur == dl)
+                g_queue.cur = dl->next;
 
             // 3CC8
-            if (g_queue.unk12 == dl) {
+            if (g_queue.next == dl) {
                 // 3D88
-                g_queue.unk12 = dl->prev;
+                g_queue.next = dl->prev;
             }
             // 3CD4
             if (g_queue.first == NULL)
@@ -2255,10 +2260,10 @@ int sceGeListDeQueue(int dlId)
             }
 
             // 3CF0
-            dl->unk8 = 0;
+            dl->state = SCE_GE_DL_STATE_NONE;
             dl->next = NULL;
             g_queue.last = dl;
-            sceKernelSetEventFlag(1 << ((*(int*)(&g_queue.evFlagId2 + ((u32)(dl - g_displayLists) >> 5)) >> 6) & 0x1F));
+            sceKernelSetEventFlag(1 << ((*(int*)(&g_queue.loListEvFlagId + ((u32)(dl - g_displayLists) >> 5)) >> 6) & 0x1F));
             if (g_logHandler != NULL) {
                 // 3D70
                 g_logHandler(1, dlId);
@@ -2296,36 +2301,36 @@ int sceGeListSync(int dlId, int mode)
         int oldIntr = sceKernelCpuSuspendIntr();
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
-        ret = sceKernelWaitEventFlag(*(int*)(&g_queue.evFlagId2 + (off / 2048)), 1 << ((off / 64) & 0x1F), 0, 0, 0);
+        ret = sceKernelWaitEventFlag(*(int*)(&g_queue.loListEvFlagId + (off / 2048)), 1 << ((off / 64) & 0x1F), 0, 0, 0);
         if (ret >= 0)
-            ret = 0;
+            ret = SCE_GE_LIST_COMPLETED;
     }
     else if (mode == 1)
     {
         // 3E10
-        switch (dl->unk8)
+        switch (dl->state)
         {
-        case 1:
-            if (dl->unk10 != 0)
-                ret = 4;
+        case SCE_GE_DL_STATE_QUEUED:
+            if (dl->ctxUpToDate != 0)
+                ret = SCE_GE_LIST_PAUSED;
             else
-                ret = 1;
+                ret = SCE_GE_LIST_QUEUED;
             break;
 
-        case 2:
+        case SCE_GE_DL_STATE_RUNNING:
             // 3E68
             if ((int)dl->stall != *(int*)(0xBD400108))
-                ret = 2;
+                ret = SCE_GE_LIST_DRAWING;
             else
-                ret = 3;
+                ret = SCE_GE_LIST_STALLING;
             break;
 
-        case 3:
-            ret = 0;
+        case SCE_GE_DL_STATE_COMPLETED:
+            ret = SCE_GE_LIST_COMPLETED;
             break;
 
-        case 4:
-            ret = 4;
+        case SCE_GE_DL_STATE_PAUSED:
+            ret = SCE_GE_LIST_PAUSED;
             break;
 
         default:
@@ -2341,6 +2346,9 @@ int sceGeListSync(int dlId, int mode)
     return ret;
 }
 
+/**
+ * Wait for drawing to end
+ */
 int sceGeDrawSync(int syncType)
 {
     int ret;
@@ -2351,7 +2359,7 @@ int sceGeDrawSync(int syncType)
         int oldIntr = sceKernelCpuSuspendIntr();
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
-        ret = sceKernelWaitEventFlag(g_queue.evFlagId1, 2, 0, 0, 0);
+        ret = sceKernelWaitEventFlag(g_queue.drawingEvFlagId, 2, 0, 0, 0);
         if (ret >= 0)
         {
             SceGeDisplayList *dl = &g_displayLists[0];
@@ -2360,42 +2368,42 @@ int sceGeDrawSync(int syncType)
             for (i = 0; i < 64; i++)
             {
                 SceGeDisplayList *curDl = &g_displayLists[i];
-                if (curDl->unk8 == 3)
+                if (curDl->state == SCE_GE_DL_STATE_COMPLETED)
                 {
                     // 4010
-                    curDl->unk8 = 0;
-                    curDl->unk10 = 0;
+                    curDl->state = SCE_GE_DL_STATE_NONE;
+                    curDl->ctxUpToDate = 0;
                 }
                 // 4000
             }
-            ret = 0;
+            ret = SCE_GE_LIST_COMPLETED;
         }
     }
     else if (syncType == 1)
     {
         // 3F40
         int oldIntr = sceKernelCpuSuspendIntr();
-        SceGeDisplayList *dl = g_queue.unk8;
+        SceGeDisplayList *dl = g_queue.cur;
         if (dl == NULL)
         {
             // 3F9C
-            ret = 0;
+            ret = SCE_GE_LIST_COMPLETED;
         }
         else
         {
-            if (dl->unk8 == 3)
+            if (dl->state == SCE_GE_DL_STATE_COMPLETED)
                 dl = dl->next;
 
             // 3F68
             if (dl != NULL)
             {
                 if ((int)dl->stall != *(int*)(0xBD400108))
-                    ret = 2;
+                    ret = SCE_GE_LIST_STALLING;
                 else
-                    ret = 3;
+                    ret = SCE_GE_LIST_DRAWING;
             }
             else
-                ret = 0;
+                ret = SCE_GE_LIST_COMPLETED;
         }
         // 3F8C
         sceKernelCpuResumeIntr(oldIntr);
@@ -2421,7 +2429,7 @@ int sceGeBreak(u32 resetQueue, int arg1)
         return 0x80000023;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     if (dl != NULL)
     {
         if (resetQueue)
@@ -2435,20 +2443,20 @@ int sceGeBreak(u32 resetQueue, int arg1)
                 SceGeDisplayList *cur = &g_displayLists[i];
                 cur->next = &g_displayLists[i + 1];
                 cur->prev = &g_displayLists[i - 1];
-                cur->unk9 = 0;
-                cur->unk8 = 0;
-                cur->unk10 = 0;
+                cur->signal = SCE_GE_DL_SIGNAL_NONE;
+                cur->state = SCE_GE_DL_STATE_NONE;
+                cur->ctxUpToDate = 0;
             }
             g_queue.last = &g_displayLists[63];
-            g_queue.unk0 = NULL;
-            g_queue.unk12 = NULL;
+            g_queue.curRunning = NULL;
+            g_queue.next = NULL;
             g_displayLists[0].prev = NULL;
             g_displayLists[63].next = NULL;
             g_queue.first = g_displayLists;
-            g_queue.unk8 = NULL;
+            g_queue.cur = NULL;
             ret = 0;
         }
-        else if (dl->unk8 == 2)
+        else if (dl->state == SCE_GE_DL_STATE_RUNNING)
         {
             // 4174
             *(int*)(0xBD400100) = 0;
@@ -2457,12 +2465,12 @@ int sceGeBreak(u32 resetQueue, int arg1)
             // 4180
             while ((*(int*)(0xBD400100) & 1) != 0)
                 ;
-            if (g_queue.unk0 != NULL)
-            {   
+            if (g_queue.curRunning != NULL)
+            {
                 int *cmdList = (int*)*(int*)(0xBD400108);
                 int state = *(int*)(0xBD400100);
                 dl->list = cmdList;
-                dl->unk16 = state;
+                dl->flags = state;
                 dl->stall = (int*)*(int*)(0xBD40010C);
                 dl->unk28 = *(int*)(0xBD400110);
                 dl->unk32 = *(int*)(0xBD400114);
@@ -2493,7 +2501,7 @@ int sceGeBreak(u32 resetQueue, int arg1)
                 }
                 
                 // 4258
-                if (dl->unk9 == 3) {
+                if (dl->signal == SCE_GE_DL_SIGNAL_SYNC) {
                     // 42D4
                     dl->list += 2;
                 }
@@ -2501,24 +2509,24 @@ int sceGeBreak(u32 resetQueue, int arg1)
             }
         
             // 426C
-            dl->unk8 = 4;
-            dl->unk9 = 1;
+            dl->state = SCE_GE_DL_STATE_PAUSED;
+            dl->signal = SCE_GE_DL_SIGNAL_BREAK;
             *(int*)(0xBD40010C) = 0;
             *(int*)(0xBD400108) = (int)UUNCACHED(g_cmdList);
             *(int*)(0xBD400310) = 6;
             *(int*)(0xBD400100) = 1;
             SYNC();
-            g_queue.unk4 = 1;
-            g_queue.unk0 = NULL;
+            g_queue.isBreak = 1;
+            g_queue.curRunning = NULL;
             ret = (int)dl ^ g_dlMask;
         }
-        else if (dl->unk8 == 4)
+        else if (dl->state == SCE_GE_DL_STATE_PAUSED)
         {
             // 4130
             ret = 0x80000021;
             if (g_queue.sdkVer > 0x02000010)
             {
-                if (dl->unk9 == 2) {
+                if (dl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
                     // 4160
                     Kprintf("sceGeBreak(): can't break signal-pausing list\n"); // 64B4
                 }
@@ -2526,10 +2534,10 @@ int sceGeBreak(u32 resetQueue, int arg1)
                     ret = 0x80000020;
             }
         }
-        else if (dl->unk8 == 1)
+        else if (dl->state == SCE_GE_DL_STATE_QUEUED)
         {
             // 40FC
-            dl->unk8 = 4;
+            dl->state = SCE_GE_DL_STATE_PAUSED;
             ret = (int)dl ^ g_dlMask;
         }
         else if (g_queue.sdkVer >= 0x02000000)
@@ -2553,31 +2561,31 @@ int sceGeContinue()
     K1_BACKUP();
     int ret = 0;
     int oldIntr = sceKernelCpuSuspendIntr();
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     if (dl != NULL)
     {
-        if (dl->unk8 == 4)
+        if (dl->state == SCE_GE_DL_STATE_PAUSED)
         {
             // 4444
-            if (g_queue.unk4 == 0)
+            if (g_queue.isBreak == 0)
             {
                 // 4474
-                if (dl->unk9 != 2)
+                if (dl->signal != SCE_GE_DL_SIGNAL_PAUSE)
                 {
-                    dl->unk8 = g_queue.unk4;
-                    dl->unk9 = 0;
+                    dl->state = SCE_GE_DL_STATE_NONE;
+                    dl->signal = SCE_GE_DL_SIGNAL_NONE;
                     sceSysregAwRegABusClockEnable();
                     // 448C
                     while ((*(int*)(0xBD400100) & 1) != 0)
                         ;
                     *(int*)(0xBD400310) = 6;
-                    if (dl->ctx != NULL && dl->unk10 == 0) {
+                    if (dl->ctx != NULL && dl->ctxUpToDate == 0) {
                         // 4598
                         sceGeSaveContext(dl->ctx);
                     }
                     // 44BC
                     _sceGeWriteBp(dl->list);
-                    dl->unk10 = 1;
+                    dl->ctxUpToDate = 1;
                     *(int*)(0xBD400108) = (int)UCACHED(dl->list);
                     *(int*)(0xBD40010C) = (int)UCACHED(dl->stall);
                     *(int*)(0xBD400120) = dl->unk36;
@@ -2585,10 +2593,10 @@ int sceGeContinue()
                     *(int*)(0xBD400128) = dl->unk44;
                     _sceGeSetBaseRadr(dl->unk48, dl->unk28, dl->unk32);
                     *(int*)(0xBD400310) = 6;
-                    *(int*)(0xBD400100) = dl->unk16 | 1;
+                    *(int*)(0xBD400100) = dl->flags | 1;
                     SYNC();
-                    g_queue.unk0 = dl;
-                    sceKernelClearEventFlag(g_queue.evFlagId1, 0xFFFFFFFD);
+                    g_queue.curRunning = dl;
+                    sceKernelClearEventFlag(g_queue.drawingEvFlagId, 0xFFFFFFFD);
                     if (g_logHandler != NULL)
                     {
                         g_logHandler(4, 0);
@@ -2603,12 +2611,12 @@ int sceGeContinue()
             }
             else
             {
-                dl->unk8 = 1;
+                dl->state = SCE_GE_DL_STATE_QUEUED;
                 if (g_logHandler != NULL)
                     g_logHandler(4, 0);
             }
         }
-        else if (dl->unk8 == 2)
+        else if (dl->state == SCE_GE_DL_STATE_RUNNING)
         {
             // 4428
             if (g_queue.sdkVer >= 0x02000000)
@@ -2774,7 +2782,7 @@ int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
         return 0x80000023;
     }
     // 49E8
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     int storedCount = 0;
     int totalCount = 0;
     // 4A04
@@ -2834,7 +2842,7 @@ int sceGeGetList(int dlId, SceGeDisplayList *outDl, int *outFlag)
     }
     // 4B14
     if (outFlag != NULL)
-        *outFlag = (dl->unk8 << 2) | dl->unk9;
+        *outFlag = (dl->state << 2) | dl->signal;
     // 4B30
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
@@ -2842,7 +2850,7 @@ int sceGeGetList(int dlId, SceGeDisplayList *outDl, int *outFlag)
 
 int sceGeGetStack(int stackId, SceGeStack *stack)
 {   
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     if (dl == NULL)
         return 0;
     if (stackId < 0)
@@ -2866,14 +2874,14 @@ int sceGeGetStack(int stackId, SceGeStack *stack)
     if (stack != NULL)
     {
         SceGeStack *inStack = &dl->stack[stackId];
-        stack->unk0  = inStack->unk0;
-        stack->unk4  = inStack->unk4;
-        stack->unk8  = inStack->unk8;
-        stack->unk12 = inStack->unk12;
-        stack->unk16 = inStack->unk16;
-        stack->unk20 = inStack->unk20;
-        stack->unk24 = inStack->unk24;
-        stack->unk28 = inStack->unk28;
+        stack->stack[0] = inStack->stack[0];
+        stack->stack[1] = inStack->stack[1];
+        stack->stack[2] = inStack->stack[2];
+        stack->stack[3] = inStack->stack[3];
+        stack->stack[4] = inStack->stack[4];
+        stack->stack[5] = inStack->stack[5];
+        stack->stack[6] = inStack->stack[6];
+        stack->stack[7] = inStack->stack[7];
     }
     // 4C04
     K1_RESET();
@@ -2910,7 +2918,7 @@ int sceGeDebugBreak()
 
 int sceGeDebugContinue(int arg0)
 {
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     if (dl == NULL)
         return 0;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -3009,7 +3017,7 @@ int sceGeDebugContinue(int arg0)
                             if (signalOp != 0x15)
                             {
                                 if ((signalOp != 0x16 || arg0 != 1) && signalOp == 0x12 && dl->stackOff != 0) // 4FDC
-                                    nextCmdPtr1 = (int*)dl->stack[dl->stackOff - 1].unk4;
+                                    nextCmdPtr1 = (int*)dl->stack[dl->stackOff - 1].stack[1];
                             }
                             else
                             {
@@ -3088,25 +3096,25 @@ int _sceGeQueueInitCallback()
     if (str != NULL)
     {
         void *str2 = (void*)*(int*)(str + 8);
-        *(int*)(str2 + 204) = ((g_queue.unk1068 << 6) & 0x03FFFFC0) | 0xC;
+        *(int*)(str2 + 204) = ((g_queue.syscallId << 6) & 0x03FFFFC0) | 0xC;
         CACHE(0x1A, str2 + 204);
         CACHE(0x08, str2 + 204);
-        g_queue.unk1072 = (int*)*(int*)(str + 12);
+        g_queue.lazySyncData = (int*)*(int*)(str + 12);
     }
     return 0;
 }
 
 int _sceGeQueueEnd()
 {
-    sceKernelDeleteEventFlag(g_queue.evFlagId1);
-    sceKernelDeleteEventFlag(g_queue.evFlagId2);
-    sceKernelDeleteEventFlag(g_queue.evFlagId3);
+    sceKernelDeleteEventFlag(g_queue.drawingEvFlagId);
+    sceKernelDeleteEventFlag(g_queue.loListEvFlagId);
+    sceKernelDeleteEventFlag(g_queue.hiListEvFlagId);
     return 0;
 }
 
 int _sceGeQueueStatus(void)
 {
-    if (g_queue.unk8 == NULL)
+    if (g_queue.cur == NULL)
         return 0;
     return -1;
 }
@@ -3360,7 +3368,7 @@ void _sceGeClearBp()
 
 void _sceGeListLazyFlush()
 {
-    int *ptr = g_queue.unk1072;
+    int *ptr = g_queue.lazySyncData;
     if (ptr != NULL && ptr[0] >= 0)
     {
         ptr[0] = -1;
@@ -3383,11 +3391,11 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     g_queue.sdkVer = ver;
     void *stack = &g_queue.stack;
     SceGeContext *ctx = NULL;
-    int stackSize = 32;
+    int numStacks = 32;
     int newVer = 1;
     if (ver > 0x01FFFFFF)
     {
-        stackSize = 0;
+        numStacks = 0;
         stack = NULL;
         newVer = 0;
     }
@@ -3402,14 +3410,14 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         }
         if (arg->size >= 16)
         {
-            stackSize = arg->unk8;
-            if (stackSize >= 256)
+            numStacks = arg->numStacks;
+            if (numStacks >= 256)
             {
                 // 5CBC
                 K1_RESET();
                 return 0x80000104;
             }
-            if (!K1_USER_BUF_DYN_SZ(arg->unk12, stackSize * 32)) {
+            if (!K1_USER_BUF_DYN_SZ(arg->stacks, numStacks * 32)) {
                 K1_RESET();
                 return 0x80000023;
             }
@@ -3431,7 +3439,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     // 58FC
     int oldIntr = sceKernelCpuSuspendIntr();
     _sceGeListLazyFlush();
-    SceGeDisplayList *dl = g_queue.unk8;
+    SceGeDisplayList *dl = g_queue.cur;
     // 5920
     while (dl != NULL)
     {
@@ -3445,7 +3453,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
             K1_RESET();
             return 0x80000021;
         }
-        if (dl->unk10 != 0 && stack != NULL && dl->stack == stack && !newVer) // 5C44
+        if (dl->ctxUpToDate && stack != NULL && dl->stack == stack && !newVer) // 5C44
         {
             Kprintf("_sceGeListEnQueue(): can't enqueue duplicated stack(STACK=0x%08X)\n", stack); // 0x65FC
             // 5C60
@@ -3487,15 +3495,15 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         K1_RESET();
         return 0x80000022;
     }
-    dl->unk10 = 0;
-    dl->unk9 = 0;
+    dl->ctxUpToDate = 0;
+    dl->signal = SCE_GE_DL_SIGNAL_NONE;
     dl->cbId = MAX(cbid, -1);
     int dlId = (int)dl ^ g_dlMask;
-    dl->stackSize = stackSize;
+    dl->numStacks = numStacks;
     dl->stack = stack;
     dl->next = NULL;
     dl->ctx = ctx;
-    dl->unk16 = 0;
+    dl->flags = 0;
     dl->list = list;
     dl->stall = stall;
     dl->unk28 = 0;
@@ -3508,43 +3516,43 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     if (head != 0)
     {
         // 5B8C
-        if (g_queue.unk8 != NULL)
+        if (g_queue.cur != NULL)
         {                                                                                                                                       
             // 5BE0
-            if (g_queue.unk8->unk8 != 4)
+            if (g_queue.cur->state != SCE_GE_DL_STATE_PAUSED)
             {
                 // 5C0C
                 sceKernelCpuResumeIntr(oldIntr);
                 K1_RESET();
                 return 0x800001FE;
             }
-            dl->unk8 = 4;
-            g_queue.unk8->unk8 = 1;
+            dl->state = SCE_GE_DL_STATE_PAUSED;
+            g_queue.cur->state = SCE_GE_DL_STATE_QUEUED;
             dl->prev = NULL;
-            g_queue.unk8->prev = dl;
-            dl->next = g_queue.unk8;
+            g_queue.cur->prev = dl;
+            dl->next = g_queue.cur;
         }
         else
         {
-            dl->unk8 = 4;
+            dl->state = SCE_GE_DL_STATE_PAUSED;
             dl->prev = NULL;
             dl->next = NULL;
-            g_queue.unk12 = dl;
+            g_queue.next = dl;
         }
 
         // 5BB8
-        g_queue.unk8 = dl;
+        g_queue.cur = dl;
         if (g_logHandler != NULL)
             g_logHandler(0, dlId, 1, list, stall);
     }
-    else if (g_queue.unk8 == NULL)
+    else if (g_queue.cur == NULL)
     {
         // 5A8C
-        dl->unk8 = 2;
-        dl->unk10 = 1;
+        dl->state = SCE_GE_DL_STATE_RUNNING;
+        dl->ctxUpToDate = 1;
         dl->prev = NULL;
-        g_queue.unk8 = dl;
-        g_queue.unk12 = dl;
+        g_queue.cur = dl;
+        g_queue.next = dl;
         sceSysregAwRegABusClockEnable();
         if (ctx != NULL)
             sceGeSaveContext(ctx);
@@ -3562,8 +3570,8 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         SYNC();
         *(int*)(0xBD400100) = 1;
         SYNC();
-        g_queue.unk0 = dl;
-        sceKernelClearEventFlag(g_queue.evFlagId1, 0xFFFFFFFD);
+        g_queue.curRunning = dl;
+        sceKernelClearEventFlag(g_queue.drawingEvFlagId, 0xFFFFFFFD);
         if (g_logHandler != NULL)
         {
             g_logHandler(0, dlId, 0, list, stall);
@@ -3573,10 +3581,10 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     }
     else
     {
-        dl->unk8 = 1;
-        g_queue.unk12->next = dl;
-        dl->prev = g_queue.unk12;
-        g_queue.unk12 = dl;
+        dl->state = SCE_GE_DL_STATE_QUEUED;
+        g_queue.next->next = dl;
+        dl->prev = g_queue.next;
+        g_queue.next = dl;
         if (g_logHandler != NULL) {
             // 5A6C
             g_logHandler(0, dlId, 0, list, stall);
@@ -3585,7 +3593,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
 
     // 5A28
     u32 off = dl - g_displayLists;
-    sceKernelClearEventFlag(*(int*)(&g_queue.evFlagId2 + (off / 2048)), ~(1 << ((off / 64) & 0x1F)));
+    sceKernelClearEventFlag(*(int*)(&g_queue.loListEvFlagId + (off / 2048)), ~(1 << ((off / 64) & 0x1F)));
     sceKernelCpuResumeIntr(oldIntr);
     K1_RESET();
     return dlId;

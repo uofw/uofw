@@ -273,7 +273,7 @@ int sceLcdcCheckMode(void) // load current display specs into g_lcdc, from the h
     g_lcdc.disp.sync = 9000000.0f; // 0xC1B4
     g_lcdc.realY = v76;
     if (g_lcdc.disp.syncDiff != 0)
-    {   
+    {
         // 7D20
         if (g_lcdc.hwData[0] == 1)
         {   
@@ -516,8 +516,8 @@ int sceLcdcSetMode(int id, int xres, int yres, int arg3)
     g_lcdc.disp = *disp;
     if (g_lcdc.scale != 1)
     {   
-        g_lcdc.disp.x.bPrch  *= g_lcdc.scale;
-        g_lcdc.disp.x.res *= g_lcdc.scale;
+        g_lcdc.disp.x.bPrch *= g_lcdc.scale;
+        g_lcdc.disp.x.res   *= g_lcdc.scale;
         g_lcdc.disp.x.sync  *= g_lcdc.scale;
         g_lcdc.disp.x.fPrch *= g_lcdc.scale;
     }

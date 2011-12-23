@@ -102,6 +102,8 @@ for num1 in `seq $numlist1`; do
     fi
 done
 
+echo "Storing functions"
+
 # put each function in a file
 a1=`echo func-1-*`
 a2=`echo func-2-*`
@@ -117,15 +119,19 @@ if [ "$a1" = "func-1-*" ] || [ "$a2" = "func-2-*" ]; then
     done
 fi
 
+echo "Doing diff"
+
 # put each diff in a file
 a=`echo diff-*`
 if [ "$a" = "diff-*" ]; then
-    for f1 in func-1-*; do
-        for f2 in func-2-*; do
-            diff $f1 $f2 > diff-`echo $f1|sed -e "s/func-1-//"`-`echo $f2|sed -e "s/func-2-//"`
+    for l1 in `echo "$list1"|sed -e "s/ .*//"`; do
+        for l2 in `echo "$list2"|sed -e "s/ .*//"`; do
+            diff "func-1-$l1" "func-2-$l2" > diff-$l1-$l2
         done
     done
 fi
+
+echo "Regrouping functions by number of differences"
 
 # regroup functions by number of differences
 for l1 in `echo "$list1"|sed -e "s/ .*//"`; do
@@ -155,6 +161,9 @@ for num1 in `seq $numlist1`; do
     if [ ! "$num2" = "" ]; then
         name1=`echo "$list1back"|grep "^$num1 "|sed -e "s/.* //"`
         name2=`echo "$list2back"|grep "^$num2 "|sed -e "s/.* //"`
+        if [ ! -f "diff-$num1-$num2" ]; then
+            diff "func-1-$num1" "func-2-$num2" > diff-$num1-$num2
+        fi
         echo "$name1 <=> $name2"
         if [ "$name1" = "$name2" ]; then
             if [ `cat diff-$num1-$num2|wc -l` -ne 0 ]; then
