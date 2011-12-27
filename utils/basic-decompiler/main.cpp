@@ -4,6 +4,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <cstdlib>
 
 #define INDENT "    "
 
@@ -263,8 +264,8 @@ std::string getCInstr(std::string line)
     {
         std::string r1 = getArg('r', args[0]);
         std::string r2 = getArg('r', args[1]);
-        int pos = stoi(args[2]);
-        int size = stoi(args[3]);
+        int pos = atoi(args[2].c_str());
+        int size = atoi(args[3].c_str());
         int mask = ~(0xFFFFFFFF << size);
         char maskStr[11], posStr[3];
         snprintf(maskStr, 11, "0x%08X", mask);
@@ -275,8 +276,8 @@ std::string getCInstr(std::string line)
     {
         std::string r1 = getArg('r', args[0]);
         std::string r2 = getArg('r', args[1]);
-        int pos = stoi(args[2]);
-        int size = stoi(args[3]);
+        int pos = atoi(args[2].c_str());
+        int size = atoi(args[3].c_str());
         int mask = ~(0xFFFFFFFF << size) << pos;
         char mask2[11];
         snprintf(mask2, 11, "0x%08X", ~mask);

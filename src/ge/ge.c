@@ -1465,7 +1465,7 @@ int sceGeEdramSetSize(int size)
         // 2934 dup
         sceSysregSetAwEdramSize(0);
     }
-    else if (size == 0x400104)
+    else if (size == 0x400000)
     {
         // 28FC
         if (sceSysregGetTachyonVersion() <= 0x4FFFFF)
