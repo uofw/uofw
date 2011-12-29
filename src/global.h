@@ -24,6 +24,69 @@ typedef s32 SceMode;
 typedef u32 SceSize;
 typedef SceInt64 SceOff;
 
+typedef struct
+{
+    unsigned short  modattribute;
+    unsigned char   modversion[2];
+    char            modname[27];
+    char            terminal;
+    void *          gp_value;
+    void *          ent_top;
+    void *          ent_end;
+    void *          stub_top;
+    void *          stub_end;
+} _sceModuleInfo;
+
+typedef const _sceModuleInfo SceModuleInfo;
+
+extern char _gp[];
+
+enum PspModuleInfoAttr
+{
+    PSP_MODULE_USER         = 0,
+    PSP_MODULE_NO_STOP      = 0x0001,
+    PSP_MODULE_SINGLE_LOAD  = 0x0002,
+    PSP_MODULE_SINGLE_START = 0x0004,
+    PSP_MODULE_KERNEL       = 0x1000,
+};
+
+/* Declare a module.  This must be specified in the source of a library or executable. */
+#define PSP_MODULE_INFO(name, attributes, major_version, minor_version) \
+    __asm__ (                                                       \
+    "    .set push\n"                                               \
+    "    .section .lib.ent.top, \"a\", @progbits\n"                 \
+    "    .align 2\n"                                                \
+    "    .word 0\n"                                                 \
+    "__lib_ent_top:\n"                                              \
+    "    .section .lib.ent.btm, \"a\", @progbits\n"                 \
+    "    .align 2\n"                                                \
+    "__lib_ent_bottom:\n"                                           \
+    "    .word 0\n"                                                 \
+    "    .section .lib.stub.top, \"a\", @progbits\n"                \
+    "    .align 2\n"                                                \
+    "    .word 0\n"                                                 \
+    "__lib_stub_top:\n"                                             \
+    "    .section .lib.stub.btm, \"a\", @progbits\n"                \
+    "    .align 2\n"                                                \
+    "__lib_stub_bottom:\n"                                          \
+    "    .word 0\n"                                                 \
+    "    .set pop\n"                                                \
+    "    .text\n"                                                   \
+    );                                                              \
+    extern char __lib_ent_top[], __lib_ent_bottom[];                \
+    extern char __lib_stub_top[], __lib_stub_bottom[];              \
+    SceModuleInfo module_info                                       \
+        __attribute__((section(".rodata.sceModuleInfo"),        \
+                   aligned(16), unused)) = {                \
+      attributes, { minor_version, major_version }, name, 0, _gp,  \
+      __lib_ent_top, __lib_ent_bottom,                              \
+      __lib_stub_top, __lib_stub_bottom                             \
+    }
+
+#define PSP_SDK_VERSION(ver) int syslib_11B97506 = ver
+
+#define PSP_MODULE_BOOTSTART(name) int module_bootstart(int arglen, void *argp) __attribute__((alias(name)))
+
 /********** TEMPORARY: it'll be in their corresponding module's header *********/
 typedef int (*SceKernelCallbackFunction)(int arg1, int arg2, void *arg);
 
@@ -119,12 +182,9 @@ typedef struct
     void (*ops[14])();
 } SceKernelDeci2Ops;
 
-int sceKernelRegisterExceptionHandler(int exno, void *func); // ExceptionManagerForKernel_06372550
-int sceKernelRegisterPriorityExceptionHandler(int exno, int priority, void *func); // ExceptionManagerForKernel_7D995AE8
 int sceKernelRegisterSuspendHandler(int no, void *func, int num); // sceSuspendForKernel_91A77137
 int sceKernelRegisterResumeHandler(int no, void *func, int num); // sceSuspendForKernel_B43D1A8C
 int sceKernelRegisterLibrary(char **name); // LoadCoreForKernel_211FEA3D
-int sceKernelReleaseExceptionHandler(int exno, void *func); // ExceptionManagerForKernel_51763A88
 int sceKernelGetModuleGPByAddressForKernel(void *func); // LoadCoreForKernel_18CFDAA0
 
 SceUID sceKernelCreateHeap(SceUID partitionid, SceSize size, int unk, const char *name); // SysMemForKernel_AF85EB1B

@@ -1,0 +1,27 @@
+# Copyright (C) 2011 The uOFW team
+# See the file COPYING for copying permission.
+
+# Automatically exports file generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_bootstart)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_NID(syslib_11B97506, 0x11B97506)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(ExceptionManagerForKernel, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterDefaultExceptionHandler, 0x0A998599)
+PSP_EXPORT_FUNC_HASH(sceKernelRegisterNmiHandler)
+PSP_EXPORT_FUNC_NID(sceKernelGetActiveDefaultExceptionHandler, 0x27E6A663)
+PSP_EXPORT_FUNC_NID(sceKernelReleaseDefaultExceptionHandler, 0x409DBB53)
+PSP_EXPORT_FUNC_NID(sceKernelReleaseExceptionHandler, 0x54B0CAD2)
+PSP_EXPORT_FUNC_NID(ExceptionManagerForKernel_79454858, 0x79454858)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterPriorityExceptionHandler, 0x7C11759D)
+PSP_EXPORT_FUNC_NID(ExceptionManagerForKernel_96D47F7E, 0x96D47F7E)
+PSP_EXPORT_FUNC_HASH(sceKernelReleaseNmiHandler)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterExceptionHandler, 0xFBC2353A)
+PSP_EXPORT_VAR_NID(ExcepManCB, 0x6437D22A)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

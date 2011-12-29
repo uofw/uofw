@@ -1,3 +1,7 @@
+/* Copyright (C) 2011 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -160,7 +164,7 @@ std::string getInstrType(std::string line)
 
 bool isBranch(std::string line)
 {
-    return (getInstrType(line)[0] == 'b');
+    return (getInstrType(line)[0] == 'b' && getInstrType(line) != "break");
 }
 
 bool isJump(std::string line)
