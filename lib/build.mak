@@ -23,10 +23,10 @@ $(TARGET).elf: $(OBJS) $(EXPORT_OBJ)
 	-$(FIXUP) $@
 
 %.prx: %.elf
-	psp-prxgen $< $@
+	../../utils/kprxgen/psp-kprxgen $< $@
 
 %.c: %.exp
-	psp-build-exports -b $< > $@
+	../../utils/build-exports/psp-build-exports -b $< > $@
 
 clean: 
 	-rm -f $(TARGET).prx $(TARGET).elf $(EXPORT_OBJ) $(OBJS)

@@ -2,6 +2,7 @@
 OUTPUT_FORMAT("elf32-littlemips", "elf32-bigmips",
 	      "elf32-littlemips")
 OUTPUT_ARCH(mips:allegrex)
+ENTRY(module_start)
 /* SEARCH_DIR("/usr/local/pspdev/psp/lib"); */
 /* Do we need any of these for elf?
    __DYNAMIC = 0;    */
@@ -72,6 +73,7 @@ SECTIONS
     *(.gnu.warning)
     *(.mips16.fn.*) *(.mips16.call.*)
   } =0
+  . = ALIGN(16);
   .init           :
   {
     KEEP (*(.init))
@@ -108,9 +110,6 @@ SECTIONS
   .eh_frame_hdr : { *(.eh_frame_hdr) }
   .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }
   .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
-  /* Adjust the address for the data segment.  We want to adjust up to
-     the same address within the page on the next page up.  */
-  . = ALIGN(256) + (. & (256 - 1));
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }
   .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
