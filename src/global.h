@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 The uOFW team
+/* Copyright (C) 2011, 2012 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -76,12 +76,10 @@ enum PspModuleInfoAttr
     extern char __lib_ent_top[], __lib_ent_bottom[];                \
     extern char __lib_stub_top[], __lib_stub_bottom[];              \
     SceModuleInfo module_info                                       \
-        __attribute__((section(".rodata.sceModuleInfo"),        \
-                   , unused)) = {                \
-      attributes, { minor_version, major_version }, name, 0, _gp,  \
-      __lib_ent_top, __lib_ent_bottom,                              \
-      __lib_stub_top, __lib_stub_bottom                             \
-    }
+        __attribute__((section(".rodata.sceModuleInfo"), unused))   \
+      = { attributes, { minor_version, major_version }, name, 0,    \
+      _gp, __lib_ent_top, __lib_ent_bottom,                         \
+      __lib_stub_top, __lib_stub_bottom }                           \
 
 #define PSP_SDK_VERSION(ver) const int syslib_11B97506 = ver
 
@@ -235,7 +233,7 @@ SET_REG(K1, _k1)
 int _k1; \
 GET_REG(_k1, K1);
 #define K1_GETOLD() _oldK1
-#define K1_USER_PTR(ptr) (((u32)(void*)(ptr) & _k1) >= 0)
+#define K1_USER_PTR(ptr) (((s32)(void*)(ptr) & _k1) >= 0)
 #define K1_USER_BUF_DYN_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr) | size) & _k1) >= 0)
 #define K1_USER_BUF_STA_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr)       ) & _k1) >= 0)
 #define K1_USER_MODE() ((_k1 >> 31) == 1)

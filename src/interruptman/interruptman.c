@@ -1,8 +1,11 @@
-/* Copyright (C) 2011 The uOFW team
+/* Copyright (C) 2011, 2012 The uOFW team
    See the file COPYING for copying permission.
 */
 
 #include "../global.h"
+
+#include "../exceptionman/exceptionman.h"
+
 #include "interruptman.h"
 
 extern int sub_0038();
@@ -41,7 +44,7 @@ int sceKernelSuspendIntr(int arg0, int arg1);
 void sub_2968(int intrNum);
 void sub_29B0(int intrNum);
 int sceKernelIsIntrContext();
-int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, int arg4);
+int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, SceIntrHandler *handler);
 int sceKernelEnableIntr(int intNum);
 
 char intrMgrStr[] = "InterruptManager"; // 0x36F4
@@ -61,10 +64,7 @@ typedef struct CbMap
     int (*callbacks[64])(void);
 } CbMap;
 
-CbMap emptyMap = // 0x38D0
-{
-    NULL, 0
-};
+CbMap emptyMap = {NULL, 0, 0, 0, {}}; // 0x38D0
 
 CbMap cbMap = // 0x37C0
 {
@@ -232,7 +232,7 @@ int sceKernelSetPrimarySyscallHandler(int arg0, int (*arg1)())
         return 0x80020039;
     }
     // 2B68
-    if (arg1 >= 0)
+    if ((int)arg1 >= 0)
     {
         // 2B8C
         sceKernelCpuResumeIntr(oldIntr);
@@ -753,9 +753,9 @@ int module_bootstart()
         intInfo.intr[i].u16 = -1;
         intInfo.intr[i].u20 = -1;
     }
-    sceKernelRegisterExceptionHandler(0, sub_0038);
-    sceKernelRegisterPriorityExceptionHandler(0, 3, sub_0924);
-    sceKernelRegisterExceptionHandler(8, sub_0CF8);
+    sceKernelRegisterExceptionHandler(0, (void*)sub_0038);
+    sceKernelRegisterPriorityExceptionHandler(0, 3, (void*)sub_0924);
+    sceKernelRegisterExceptionHandler(8, (void*)sub_0CF8);
     sceKernelRegisterIntrHandler(67, 0, sub_0000, 0, 0);
     sceKernelRegisterSuspendHandler(29, sub_3110, 0);
     sceKernelRegisterResumeHandler(29, sub_3160, 0);
@@ -779,9 +779,9 @@ int module_reboot_before()
     COP0_STATE_GET(st, COP0_STATE_STATUS);
     COP0_STATE_SET(COP0_STATE_STATUS, st & 0xFFFF7BFF);
     InterruptManagerForKernel_F987B1F0(67);
-    sceKernelReleaseExceptionHandler(0, sub_0038);
-    sceKernelReleaseExceptionHandler(0, sub_0924);
-    sceKernelReleaseExceptionHandler(8, sub_0CF8);
+    sceKernelReleaseExceptionHandler(0, (void*)sub_0038);
+    sceKernelReleaseExceptionHandler(0, (void*)sub_0924);
+    sceKernelReleaseExceptionHandler(8, (void*)sub_0CF8);
     return 0;
 }
 

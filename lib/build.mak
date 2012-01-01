@@ -1,4 +1,4 @@
-# Copyright (C) 2011 The uOFW team
+# Copyright (C) 2011, 2012 The uOFW team
 # See the file COPYING for copying permission.
 
 CC       = psp-gcc
@@ -6,7 +6,7 @@ CXX      = psp-g++
 AS       = psp-gcc
 FIXUP    = psp-fixup-imports
 
-CFLAGS   := -I../../include -O1 -G0 -Wall -Wextra -Werror -nostdlib
+CFLAGS   := -I../../include -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -Werror -nostdlib
 LDFLAGS  := -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
 
 # Setup default exports if needed
