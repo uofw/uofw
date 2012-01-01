@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 The uOFW team
+/* Copyright (C) 2011, 2012 The uOFW team
    See the file COPYING for copying permission.
 
    Based on the original file from PSPSDK, written by tyranid; many thanks to him!
@@ -16,9 +16,9 @@
 #include "config.h"
 #endif
 
-#include "types.h"
-#include "elftypes.h"
-#include "prxtypes.h"
+#include "../common/types.h"
+#include "../common/elftypes.h"
+#include "../common/prxtypes.h"
 
 /* Arrangement of ELF file after stripping
  *

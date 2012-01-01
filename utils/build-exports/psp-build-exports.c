@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 The uOFW team
+/* Copyright (C) 2011, 2012 The uOFW team
    See the file COPYING for copying permission.
 
    Based on the original file from PSPSDK, written by tyranid; many thanks to him!
@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <ctype.h>
 
-#include "sha1.h"
+#include "../common/sha1.h"
 
 #define MAX_LIB_NAME 27
 #define MAX_LIB_FUNCS 65535
@@ -472,6 +472,7 @@ void build_stubs_output_lib_new(struct psp_lib *pLib)
 		fprintf(fp, "\t.set noreorder\n\n");
 		fprintf(fp, "#include \"pspimport.s\"\n\n");
 
+        /*
 		fprintf(fp, "// Build files\n");
 		fprintf(fp, "// %s_0000.o ", pLib->name);
 		pExp = pLib->pFuncHead;
@@ -481,9 +482,39 @@ void build_stubs_output_lib_new(struct psp_lib *pLib)
 			fprintf(fp, "%s_%04d.o ", pLib->name, i++);
 			pExp = pExp->pNext;
 		}
+        pExp = pLib->pVarHead;
+        while(pExp != NULL)
+        {
+            fprintf(fp, "%s_%04d.o ", pLib->name, i++);
+            pExp = pExp->pNext;
+        }
 		fprintf(fp, "\n\n");
+        */
 
-		fprintf(fp, "#ifdef F_%s_0000\n", pLib->name);
+        int count = 1;
+        pExp = pLib->pFuncHead;
+        while(pExp != NULL)
+        {
+            count++;
+            pExp = pExp->pNext;
+        }
+        pExp = pLib->pVarHead;
+        while(pExp != NULL)
+        {
+            count++;
+            pExp = pExp->pNext;
+        }
+
+        printf("%s_OBJS = ", pLib->name);
+        for (i = 0; i < count; i++)
+            printf("%s_%04d.o ", pLib->name, i);
+        printf("\n\n$(%s_OBJS): %s.S\n", pLib->name, pLib->name);
+        printf("\t$(CC) -D$* $(CFLAGS) -c $< -o $@\n\n");
+        printf("lib%s.a: $(%s_OBJS)\n", pLib->name, pLib->name);
+        printf("\t$(AR) cru $@ $^\n");
+        printf("\t$(RANLIB) $@\n");
+    
+		fprintf(fp, "#ifdef %s_0000\n", pLib->name);
 		fprintf(fp, "\tIMPORT_START \"%s\",0x%08X\n", pLib->name, ((pLib->attr | 0x8) << 16) | pLib->ver);
 		fprintf(fp, "#endif\n");
 
@@ -492,7 +523,7 @@ void build_stubs_output_lib_new(struct psp_lib *pLib)
 		while(pExp != NULL)
 		{
 			const char *alias;
-			fprintf(fp, "#ifdef F_%s_%04d\n", pLib->name, i++);
+			fprintf(fp, "#ifdef %s_%04d\n", pLib->name, i++);
 
 			alias = find_alias(pLib->pAliasHead, pExp->name);
 			if(alias)
@@ -508,6 +539,15 @@ void build_stubs_output_lib_new(struct psp_lib *pLib)
 			pExp = pExp->pNext;
 		}
 
+        pExp = pLib->pVarHead;
+        while(pExp != NULL)
+        {
+			fprintf(fp, "#ifdef %s_%04d\n", pLib->name, i++);
+            fprintf(fp, "\tIMPORT_VAR   \"%s\",0x%08X,%s\n", pLib->name, pExp->nid, pExp->name);
+			fprintf(fp, "#endif\n");
+            pExp = pExp->pNext;
+        }
+
 		fclose(fp);
 	}
 	else
@@ -521,7 +561,19 @@ void build_stubs(void)
 	struct psp_lib *pLib;
 
 	pLib = g_libhead;
+    if(g_outputmode != PSP_BUILD_STUBS)
+    {
+        printf("all: ");
+        while (pLib != NULL)
+        {
+            if(strcmp(pLib->name, SYSTEM_LIB_NAME))
+                printf("lib%s.a ", pLib->name);
+            pLib = pLib->pNext;
+        }
+        printf("\n");
+    }
 
+    pLib = g_libhead;
 	while(pLib != NULL)
 	{
 		if(strcmp(pLib->name, SYSTEM_LIB_NAME))
@@ -538,6 +590,19 @@ void build_stubs(void)
 
 		pLib = pLib->pNext;
 	}
+
+	pLib = g_libhead;
+    if(g_outputmode != PSP_BUILD_STUBS)
+    {
+        printf("clean:\n\t-rm -f ");
+        while (pLib != NULL)
+        {
+            if(strcmp(pLib->name, SYSTEM_LIB_NAME))
+                printf("$(%s_OBJS) ", pLib->name);
+            pLib = pLib->pNext;
+        }
+        printf("\n");
+    }
 }
 
 int validate_number(const char *str, unsigned int *num)

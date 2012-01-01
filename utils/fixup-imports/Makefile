@@ -4,8 +4,8 @@
 CPP=gcc
 CFLAGS=-Wall -Wextra -Werror
 LDFLAGS=
-TARGET=psp-kprxgen
-OBJECTS=psp-kprxgen.o
+TARGET=psp-fixup-imports
+OBJECTS=../common/sha1.o psp-fixup-imports.o
 
 all: $(TARGET)
 

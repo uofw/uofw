@@ -57,6 +57,7 @@ struct PspModuleImport
 	u16 func_count;
 	u32 nids;
 	u32 funcs;
+    u32 vars;
 };
 
 /* Structure to hold the module info */
