@@ -858,6 +858,95 @@ int fixup_variables(void)
             sect->sh_offset += shift;
         if (sect->sh_offset == g_vstub->iOffset)
             sect->sh_size += shift;
+        if (sect->sh_type == SHT_REL)
+        {
+            int relCount = sect->sh_size / sizeof(Elf32_Rel);
+            int j;
+            printf("Loading relocations %s\n", g_elfsections[i].szName);
+   
+            // check the relocations pointing to the imported variable
+            for(j = 0; j < relCount; j++)
+            {  
+                Elf32_Rel *rel = &((Elf32_Rel*)(g_elfdata + sect->sh_offset))[j];
+                if (rel->r_offset > g_vstub->iOffset)
+                    rel->r_offset += shift;
+
+                u32 dwRealOfs;
+                u32 dwCurrBase;
+                int iOfsPH;
+                int iValPH;
+                int type = ELF32_R_TYPE(LW(rel->r_info));
+                int symbol = ELF32_R_SYM(LW(rel->r_info));
+                int offset = rel->r_offset;
+                Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
+                u32 *pData;
+                int lastJ = j;
+
+                iOfsPH = symbol & 0xFF;
+                iValPH = (symbol >> 8) & 0xFF;
+                dwRealOfs = offset + LW(seg[iOfsPH].p_vaddr);
+                dwCurrBase = LW(seg[iValPH].p_vaddr);
+                pData = (u32*)(g_elfdata + g_text->iOffset + dwRealOfs);
+                if (strcmp(g_elfsections[i].szName, ".rel.rodata.sceModuleInfo") == 0 && j == 0) // disable _gp relocation
+                    continue;
+
+                switch (type)
+                {
+                case R_MIPS_HI16: {
+                    int addr = ((LW(*pData) & 0xFFFF) << 16) + dwCurrBase;
+                    int loinst;
+                    while (++j < relCount) {
+                        if (ELF32_R_TYPE(LW(((Elf32_Rel*)g_textrel->pData)[j].r_info)) != R_MIPS_HI16) break;
+                    }
+                    if (j < relCount) {
+                        loinst = LW(*(u32*)(g_elfdata + g_text->iOffset + ((Elf32_Rel*)g_textrel->pData)[j].r_offset + LW(seg[iOfsPH].p_vaddr)));
+                    } else {
+                        loinst = 0;
+                    }
+                    addr = (s32) addr + (s16) (loinst & 0xFFFF);
+                    if ((u32)addr > g_vstub->iAddr)
+                        SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) >> 16));
+                    }
+                    break;
+                case R_MIPS_16:
+                case R_MIPS_LO16: {
+                    u32 addr = (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
+                    if (addr > g_vstub->iAddr)
+                        SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) & 0xFFFF));
+                    }
+                    break;
+                    /*
+                case R_MIPS_X_HI16: {
+                    u32 addr = ((LW(*pData) & 0xFFFF) << 16) + rel->base + dwCurrBase;
+                    if (addr > g_vstub->iAddr)
+                        SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - rel->base - dwCurrBase + shift) >> 16));
+                    }
+                    break;
+                    */
+                case R_MIPS_26: {
+                    u32 addr = (LW(*pData) & 0x03FFFFFF) << 2;
+                    addr += dwCurrBase;
+                    if (addr > g_vstub->iAddr)
+                        SW(pData, (LW(*pData) & 0xFC000000) | (((addr - dwCurrBase) >> 2) + shift));
+                    }
+                    break;
+                case R_MIPS_REL32:
+                case R_MIPS_32: {
+                    u32 addr = ((LW(*pData) + (dwCurrBase & 0x03FFFFFF)) & 0x03FFFFFF);
+                    if (addr > g_vstub->iAddr)
+                        SW(pData, (LW(*pData) & 0xFC000000) | ((LW(*pData) & 0x03FFFFFF) + shift));
+                    }
+                    break;
+                case R_MIPS_NONE:
+                    break;
+                default:
+                    printf("Error: can't patch unhandled relocation type %d!\n", type);
+                    return 0;
+                }
+
+                j = lastJ;
+            }
+        }
     }
     for (i = 0; i < (int)g_elfhead.iPhnum; i++)
     {
