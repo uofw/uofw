@@ -21,6 +21,7 @@
 #define FALSE                                   0
 #define TRUE                                    1
 
+#define CTRL_POLL_MODE_OFF                      0
 #define CTRL_POLL_MODE_ON                       1
 
 #define CTRL_INTERNAL_CONTROLLER_BUFFERS        64
@@ -59,13 +60,13 @@ typedef struct _SceCtrl {
     SceSysTimerId timerID; //0
     int eventFlag; //4
     u32 btnCycle; //8
-    PspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODE_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode
+    pspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODE_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode
     u8 unk_Byte_0; //14
     u8 unk_Byte_1; //15
     u8 unk_Byte_8; //16
     char unk_Byte_7; //17
     u8 unk_Byte_2; //20
-    PspCtrlPadPollMode pollMode; //21
+    pspCtrlPadPollMode pollMode; //21
     u16 suspendSamples; //22
     int unk_1; //24
     SceSysconPacket sysPacket[2]; //28 -- size of one array member is 96.
@@ -1192,7 +1193,7 @@ int sceCtrlResume() {
  * Subroutine sceCtrl_driver_196CF2F4 - Address 0x00001C30 
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
+int sceCtrlSetPollingMode(pspCtrlPadPollMode pollMode) {
     ctrl.pollMode = pollMode; //0x00001C3C
     return 0;
 }
@@ -1202,7 +1203,7 @@ int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
+pspCtrlPadInputMode sceCtrlGetSamplingMode(pspCtrlPadInputMode *mode) {
     int privMode;
     int index;
     
@@ -1218,11 +1219,11 @@ PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {    
+pspCtrlPadInputMode sceCtrlSetSamplingMode(pspCtrlPadInputMode mode) {    
     int suspendFlag;
     int privMode;
     u8 index;
-    PspCtrlPadInputMode prevMode;
+    pspCtrlPadInputMode prevMode;
     
     if (mode > CTRL_SAMPLING_MODE_MAX_MODE) { //0x000012D0 & 0x000012E4
         return SCE_ERROR_INVALID_MODE; 
@@ -1683,11 +1684,11 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
 /* Subroutine sceCtrl_driver_33AB5BDB - Address 0x00001878
  * Exported in sceCtrl_driver 
  */
-PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {   
+pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {   
     int suspendFlag;
     int curMaskSupBtns;
     int curMaskSetBtns;
-    PspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
+    pspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
        
     suspendFlag = sceKernelCpuSuspendIntr(); //0x0000188C
     curMaskSetBtns = ctrl.maskSetButtons; //0x0000189C
@@ -1704,25 +1705,25 @@ PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {
 /* Subroutine sceCtrl_driver_5B15473C - Address 0x000017C4
  * Exported in sceCtrl_driver 
  */
-PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, PspCtrlPadButtonMaskMode ButtonMaskMode) {   
+pspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, pspCtrlPadButtonMaskMode buttonMaskMode) {   
     int curMaskSupBtns = ctrl.maskSupportButtons;
     int newMaskSupBtns;
     int curMaskSetBtns = ctrl.maskSetButtons;
     int newMaskSetBtns;
     int suspendFlag;    
-    PspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
+    pspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
        
     suspendFlag = sceKernelCpuSuspendIntr(); //0x000017E0
     
     if (mask & curMaskSupBtns) { //0x00001800        
         prevBtnMaskMode = (mask & curMaskSetBtns) ?  PSP_CTRL_MASK_SET_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x00001808 & 0x00001810
     }
-    if (ButtonMaskMode != PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING) { //0x00001814
-        if (ButtonMaskMode == PSP_CTRL_MASK_IGNORE_BUTTON_MASK) { //0x00001818 & 0x00001850
+    if (buttonMaskMode != PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING) { //0x00001814
+        if (buttonMaskMode == PSP_CTRL_MASK_IGNORE_BUTTON_MASK) { //0x00001818 & 0x00001850
             newMaskSupBtns = curMaskSupBtns & ~mask; //0x00001854 & 0x00001874
             newMaskSetBtns = curMaskSetBtns & ~mask; //0x00001850 & 0x0000186C          
         }
-        else if (ButtonMaskMode == PSP_CTRL_MASK_SET_BUTTON_MASK) { //0x0000185C
+        else if (buttonMaskMode == PSP_CTRL_MASK_SET_BUTTON_MASK) { //0x0000185C
                  newMaskSupBtns = curMaskSupBtns | mask; //0x00001868
                  newMaskSetBtns = curMaskSetBtns | mask; //0x00001820
         }
@@ -1741,7 +1742,7 @@ PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, PspCtrlPadButtonMas
 /* Subroutine sceCtrl_driver_5D8CE0B2 - Address 0x00001D04
  * Exported in sceCtrl_driver 
  */
-int sceCtrlSetSpecialButtonCallback(u32 slot, PspCtrlPadButtons btnMask, SceCtrlCb cb, void *arg) {   
+int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *arg) {   
     int suspendFlag;
      
     if (slot > CTRL_BUTTON_CALLBACK_MAX_SLOT) { //0x00001D14 & 0x00001D34
