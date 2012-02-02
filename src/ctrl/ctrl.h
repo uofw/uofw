@@ -30,19 +30,25 @@
 #include "../errors.h"
 #include "../global.h"
 
-/* Some custom function names. They might not represent the real function names used by Sony. */
+/** Custom function name. */
 #define sceCtrlPeekBufferPositiveExt            sceCtrl_5A36B1C2
+/** Custom function name. */
 #define sceCtrlPeekBufferNegativeExt            sceCtrl_239A6BA7
+/** Custom function name. */
 #define sceCtrlReadBufferPositiveExt            sceCtrl_1098030B
+/** Custom function name. */
 #define sceCtrlReadBufferNegativeExt            sceCtrl_7C3675AB
+/** Custom function name. */
 #define sceCtrlExtendInternalCtrlBuffers        sceCtrl_driver_65698764
 
 /** The callback function used by ::sceCtrlSetSpecialButtonCallback. */
 typedef void (*SceCtrlCb)(int curr, int last, void *opt);
 
-/* Type definitions for improved style. */
+/** Type definition for improved style. */
 typedef u8   pspCtrlPadInputMode;
+/** Type definition for improved style. */
 typedef u8   pspCtrlPadPollMode;
+/** Type definition for improved style. */
 typedef u8   pspCtrlPadButtonMaskMode;
 
 /** General information about an internal PSP controller buffer. Including current pressed button(s) and current position 
@@ -231,7 +237,7 @@ int sceCtrlSetPollingMode(pspCtrlPadPollMode pollMode);
 /**
  * Get the current controller input mode.
  * 
- * @param mode Pointer to int receiving the current controller mode. One of ::PspCtrlInputMode.
+ * @param mode Pointer to int receiving the current controller mode. One of ::PspCtrlPadInputMode.
  * 
  * @return 0.
  */
@@ -240,7 +246,7 @@ pspCtrlPadInputMode sceCtrlGetSamplingMode(pspCtrlPadInputMode *mode);
 /**
  * Set the controller input mode.
  * 
- * @param mode The new controller input mode. One of ::PspCtrlInputMode.
+ * @param mode The new controller input mode. One of ::PspCtrlPadInputMode.
  * 
  * @return The previous input mode on success, or < 0 (invalid argument).
  */
