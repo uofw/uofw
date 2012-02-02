@@ -422,7 +422,7 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads);
 
 /**
  * Read the current internal SceCtrlData buffer. By default, the internal controller buffer will be read after every VSYNC period (60 times/sec).
- * You can set your own update timer by using sceCtrlSetSamplingCycle.
+ * You can set your own update timer by calling ::sceCtrlSetSamplingCycle.
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. 
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
@@ -434,7 +434,7 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
 
 /**
  * Read the current internal SceCtrlData buffer. By default, the internal controller buffer will be read after every VSYNC period (60 times/sec).
- * You can set your own update time by using sceCtrlSetSamplingCycle.
+ * You can set your own update time by calling ::sceCtrlSetSamplingCycle.
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer. Negative button values have to be used. 
  *            Check ::PspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
@@ -533,12 +533,12 @@ int sceCtrlClearRapidFire(u8 slot);
  * 
  * @par Example:
  * @code
- * //A rapid fire event for the RTrigger while the D-Pad-Up button is pressed.
- * //R button will be turned ON and OFF for 64 internal ctrl buffer updates in both cases (as long as D-Pad-Up is pressed).
+ * //A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
+ * //R-button will be turned ON and OFF for 64 internal ctrl buffer updates in both cases (as long as D-Pad-Up is pressed).
  * sceCtrlSetRapidFire(0, 0xFF, PSP_CTRL_UP, PSP_CTRL_RTRIGGER, 63, 63, 63);
  * 
- * //A rapid fire event for the RTrigger while the D-Pad-Up button is pressed.
- * //RTrigger will be turned OFF and ON for 40 internal ctrl buffer updates in both cases (as long as D-Pad-Up is pressed).
+ * //A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
+ * //R-button will be turned OFF and ON for 40 internal ctrl buffer updates in both cases (as long as D-Pad-Up is pressed).
  * sceCtrlSetRapidFire(0, 0xFF, PSP_CTRL_UP, PSP_CTRL_RTRIGGER, 0, 40, 40);
  * @endcode
  * 
@@ -579,8 +579,8 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
  * @param btnMask The button bit value to check for (one or more buttons of ::PspCtrlPadButtons).
  * 
  * @return The button mask mode for the given btnMask. One of ::PspCtrlPadButtonMaskMode. 
- *         PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0), if btnMask (or parts of it) is/are included in the currently set button mask,
- *         PSP_CTRL_MASK_IGNORE_BUTTON_MASK (1), if btnMask is not included in the current button mask or
+ *         PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0), if btnMask (or parts of it) is/are included in the currently set button mask.
+ *         PSP_CTRL_MASK_IGNORE_BUTTON_MASK (1), if btnMask is not included in the current button mask.
  *         PSP_CTRL_MASK_SET_BUTTON_MASK (2), if btnMask (or parts of it) are set to ON by the current set button mask.
  */
 pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
