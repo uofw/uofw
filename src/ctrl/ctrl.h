@@ -31,15 +31,15 @@
 #include "../global.h"
 
 /** Custom function name. */
-#define sceCtrlPeekBufferPositiveExt            sceCtrl_5A36B1C2
+int sceCtrl_5A36B1C2(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferPositiveExt")));       
 /** Custom function name. */
-#define sceCtrlPeekBufferNegativeExt            sceCtrl_239A6BA7
+int sceCtrl_239A6BA7(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferNegativeExt")));  
 /** Custom function name. */
-#define sceCtrlReadBufferPositiveExt            sceCtrl_1098030B
+int sceCtrl_1098030B(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferPositiveExt"))); 
 /** Custom function name. */
-#define sceCtrlReadBufferNegativeExt            sceCtrl_7C3675AB
+int sceCtrl_7C3675AB(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferNegativeExt"))); 
 /** Custom function name. */
-#define sceCtrlExtendInternalCtrlBuffers        sceCtrl_driver_65698764
+int sceCtrl_driver_65698764(u8 mode, int arg2, int arg3)__attribute__((alias("sceCtrlExtendInternalCtrlBuffers"))); 
 
 /** The callback function used by ::sceCtrlSetSpecialButtonCallback. */
 typedef void (*SceCtrlCb)(int curr, int last, void *opt);

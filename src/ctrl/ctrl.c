@@ -91,7 +91,7 @@ typedef struct _SceCtrl {
     /** Button bit mask defining buttons going to be supported (recognized if being pressed or not). 
      *  Can be used to ignore buttons (buttons constantly turned off). */
     u32 maskSupportButtons; //668
-    /** Button bit mask defining buttons going to be simualated as being pressed. */
+    /** Button bit mask defining buttons going to be simulated as being pressed. */
     u32 maskSetButtons; //672
     int unk_4; //676
     int unk_5; //680
@@ -1716,7 +1716,7 @@ pspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, pspCtrlPadButtonMas
     suspendFlag = sceKernelCpuSuspendIntr(); //0x000017E0
     
     if (mask & curMaskSupBtns) { //0x00001800        
-        prevBtnMaskMode = (mask & curMaskSetBtns) ?  PSP_CTRL_MASK_SET_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x00001808 & 0x00001810
+        prevBtnMaskMode = (mask & curMaskSetBtns) ? PSP_CTRL_MASK_SET_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x00001808 & 0x00001810
     }
     if (buttonMaskMode != PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING) { //0x00001814
         if (buttonMaskMode == PSP_CTRL_MASK_IGNORE_BUTTON_MASK) { //0x00001818 & 0x00001850
