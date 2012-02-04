@@ -6,7 +6,7 @@
  * ctrl.c
  *    Reverse engineered controller libraries of the SCE PSP system.
  * Author: _Felix_
- * Version: 6.39
+ * Version: 6.60
  * 
  */
 
@@ -60,13 +60,13 @@ typedef struct _SceCtrl {
     SceSysTimerId timerID; //0
     int eventFlag; //4
     u32 btnCycle; //8
-    pspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODE_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode
+    PspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODE_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode
     u8 unk_Byte_0; //14
     u8 unk_Byte_1; //15
     u8 unk_Byte_8; //16
     char unk_Byte_7; //17
     u8 unk_Byte_2; //20
-    pspCtrlPadPollMode pollMode; //21
+    PspCtrlPadPollMode pollMode; //21
     u16 suspendSamples; //22
     int unk_1; //24
     SceSysconPacket sysPacket[2]; //28 -- size of one array member is 96.
@@ -103,31 +103,31 @@ typedef struct _SceCtrl {
     SceCtrlButtonCallback buttonCallback[CTRL_BUTTON_CALLBACK_SLOTS]; //704  
     int unk_array2[2]; //768 -- array of functions?
     int unk_array3[3]; //776
-} SceCtrl; //sizeof SceCtrl: 788 (0x314)
+} SceCtrl; //size of SceCtrl: 788 (0x314)
 
 typedef struct _SceCtrlRapidFire {
     /** The pressed-button-range to check for. */
     u32 pressedButtonRange; //0
-    /** The button(s) which will fire the pressed/unpressed period for a button/buttons when being pressed. 
+    /** The button(s) which will fire the pressed/un-pressed period for a button/buttons when being pressed. 
      *  The button(s) has/have to be included in the pressed-button-range. *
      */
     u32 reqButtonsEventTrigger; //4
-    /** The requested button(s) on which the pressed/unpressed period (the rapid fire event) will be applied to. 
+    /** The requested button(s) on which the pressed/un-pressed period (the rapid fire event) will be applied to. 
      *  User mode buttons ONLY. 
      */
     u32 reqButtons; //8
-    /** Apply data for a rapidFire period. Keeps track of the apply mode of the requested button(s) (pressed/unpressed) 
+    /** Apply data for a rapidFire period. Keeps track of the apply mode of the requested button(s) (pressed/un-pressed) 
      *  + the amount of left internal controller buffer updates for the current apply mode of the requested button(s). 
      */
     u8 eventData; //12
     /** For how many (consecutive) internal controller buffer updates the requested button(s) will be set to ON (pressed). */
     u8 reqButtonsOnTime; //13
-    /** For how many (consecutive) internal controller buffer updates the requested button(s) will be set to OFF (unpressed). */
+    /** For how many (consecutive) internal controller buffer updates the requested button(s) will be set to OFF (un-pressed). */
     u8 reqButtonsOffTime; //14;
     /** For how many (consecutive) internal controller buffer updates the requested button(s) will be set to ON. 
      *  It will only be applied for the first ON period of a (not canceled) rapid fire event. */
     u8 reqButtonsEventOnTime; //15;
-} SceCtrlRapidFire; //sizeof SceCtrlRapidFire: 16
+} SceCtrlRapidFire; //size of SceCtrlRapidFire: 16
 
 typedef struct _SceCtrlEmulatedData {
     /** Emulated analog pad X-axis offset. */
@@ -146,14 +146,14 @@ typedef struct _SceCtrlEmulatedData {
     u32 kModeBtnEmulation; //12
     /** How many internal controller buffer updates the emulated buttons will be applied for. */
     u32 intCtrlBufUpdates2; //16
-} SceCtrlEmulatedData; //sizeof SceCtrlEmulatedData: 20
+} SceCtrlEmulatedData; //size of SceCtrlEmulatedData: 20
 
 typedef struct _SceCtrlButtonCallback {
     /** Bitwise OR'ed button values (of ::PspCtrlButtons) which will be checked for being pressed. */
     u32 btnMask; //0
     /** Pointer to a callback function handling the button input effects. */
     SceCtrlCb callbackFunc; //4
-    /** The global pointer ($gp) value of the controller module. */
+    /** The global pointer value of the controller module. */
     u32 gp; //8
     /** An optional pointer being passed as the third argument to the callback function. */
     void *arg; //12    
@@ -172,9 +172,9 @@ typedef struct _SceCtrlInternalData {
     u32 readLatchCount; //16
     u32 ctrlBufStartIndex; //20
     u32 ctrlBufIndex; //24
-    /** sceCtrlBuf[0] points to 64 internal ctrl buffers of type sceCtrlData. */
+    /** sceCtrlBuf[0] points to 64 internal controller buffers of type sceCtrlData. */
     void *sceCtrlBuf[3]; //28
-} SceCtrlInternalData; //sizeof SceCtrlLatchInt: 40
+} SceCtrlInternalData; //size of SceCtrlLatchInt: 40
 
 //copied from http://holdpsp.googlecode.com/svn/trunk/sysconhk.h
 typedef struct _SceSysconPacket {
@@ -201,7 +201,7 @@ typedef struct _SceSysconPacket {
     u8 old_sts;	//69 -- old rx_sts
     u8 cur_sts;	//70 --  current rx_sts
     u8 unk47[33]; //71
-} SceSysconPacket; //sizeof SceSysconPacket: 96
+} SceSysconPacket; //size of SceSysconPacket: 96
 
 typedef UnknownType;
 
@@ -415,17 +415,17 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     sysTimeLow = sceKernelGetSystemTimeLow(); //0x000009A0
     
     //User buffer
-    index = ctrl.userModeData.ctrlBufIndex; //0x000009B4 && 0x000009C4 
+    index = ctrl.userModeData.ctrlBufIndex; //0x000009B4 & 0x000009C4 
     ctrlUserBuf = (SceCtrlData *)(ctrl.userModeData.sceCtrlBuf[0] + index * sizeof(SceCtrlData)); //0x000009CC
     ctrlUserBuf->activeTime = sysTimeLow; //0x000009D0
     
     //Kernel buffer
-    index = ctrl.kernelModeData.ctrlBufIndex; //0x000009C0 && 0x000009D4
+    index = ctrl.kernelModeData.ctrlBufIndex; //0x000009C0 & 0x000009D4
     ctrlKernelBuf = (SceCtrlData *)(ctrl.kernelModeData.sceCtrlBuf[0] + index * sizeof(SceCtrlData)); //0x000009D8
     ctrlUserBuf->activeTime = sysTimeLow; //x000009E8
     
     int i;
-    for (i = 0; 0 < 4; i++) { //0x00000A08 && 0x000009F0
+    for (i = 0; i < CTRL_DATA_EMULATION_SLOTS; i++) { //0x00000A08 & 0x000009F0
         if (ctrl.emulatedData[i].intCtrlBufUpdates > 0) { //0x000009F4
             ctrl.emulatedData[i].intCtrlBufUpdates--; //0x000009F8
             analogX = ctrl.emulatedData[i].analogXEmulation; //0x00000A00
@@ -438,21 +438,21 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     ctrlKernelBuf->aY = analogY; //0x00000A24
     
     //User Mode
-    if (ctrl.samplingMode[USER_MODE] == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A2C -- if only the Digital input is to be recongnized
+    if (ctrl.samplingMode[USER_MODE] == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A2C
         ctrlUserBuf->aY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A38
         ctrlUserBuf->aX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A3C       
     }
     //Kernel Mode
-    if (ctrl.samplingMode[KERNEL_MODE] == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A44 -- if only the Digital input is to be recongnized
+    if (ctrl.samplingMode[KERNEL_MODE] == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A44
              ctrlKernelBuf->aY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A50
              ctrlKernelBuf->aX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A54
     }
     //0x00000A6C && 0x00000A7C && 0x00000A88
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < sizeof ctrlUserBuf->rsrv; i++) {
          ctrlUserBuf->rsrv[i] = 0;
     }
     //0x00000A8C && 0x00000AA0 && 0x00000AA4
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < sizeof ctrlKernelBuf->rsrv; i++) {
          ctrlKernelBuf->rsrv[i] = 0;
     }
     //0x00000AB8 && 0x00000AC0
@@ -468,7 +468,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
              if (ret < 0) { //0x00000F78
                  //0x000011AC && 0x000011B8
                  int j;
-                 for (j = 0; j < 6; j++) {
+                 for (j = 0; j < sizeof ctrlKernelBufExt->rsrv; j++) {
                       ctrlKernelBufExt->rsrv[j] = 0; 
                  }
                  ctrlKernelBufExt->activeTime = 0; //0x000011B0
@@ -551,9 +551,9 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons; //0x000010AC && 0x000010C4
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX; //0x000010B0 && 0x000010C8
              ctrlUserBufExt->aY = ctrlKernelBufExt->aY; //0x000010B0 && 0x000010C8
-             //0x000010B0 && 0x000010C8 && 0x000010B4 && 0x000010D0
+             //0x000010B0 & 0x000010C8 & 0x000010B4 & 0x000010D0
              int j;
-             for (j = 0; j < 6; j++) {
+             for (j = 0; j < sizeof ctrlUserBufExt->rsrv; j++) {
                   ctrlUserBufExt->rsrv[j] = ctrlKernelBufExt->rsrv[j];
              }
              ctrlUserBufExt->unk1 = ctrlKernelBufExt->unk1;
@@ -695,7 +695,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
         updatedButtons = pureButtons & CTRL_PSP_HARDWARE_IO_BUTTONS; //0x00000BB0 -- only I/O Buttons permitted?
     }
     //0x00000BB8 & 0x00000BC0 & 0x00000BC8
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < CTRL_DATA_EMULATION_SLOTS; i++) {
          updatedButtons = updatedButtons | ctrl.emulatedData[i].kModeBtnEmulation; //0x00000BBC & 0x00000BCC
     }
     ctrlKernelBuf->buttons = updatedButtons; //0x00000BD0
@@ -855,7 +855,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
     int i; /* Used as a counter variable in for-loops for storing data into a SceCtrlData member. */
     u32 buttons;
     char bufIndex;
-    /* Number of internal ctrl buffers read. */
+    /* Number of read internal controller buffers. */
     int readIntBufs; 
     char startBufIndex;
     int res;  
@@ -1022,7 +1022,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
 }
 
 /*
- * Subroutine sceCtrl_driver_4FAA342D - Address 0x00000000
+ * Subroutine sceCtrl_driver_121097D5 - Address 0x00000000
  * Exported in sceCtrl_driver
  */
 int sceCtrlInit() {
@@ -1055,7 +1055,7 @@ int sceCtrlInit() {
     SysTimerForKernel_B53534B4(timerId, 1, 0x30); //0x00000094
     ctrl.unk_Byte_1 = -1; //0x000000A0
     sceKernelRegisterSysEventHandler(&ctrlSysEvent); //0x000000A4
-    sceSyscon_driver_C325BF4B(0); //0x000000AC
+    sceSyscon_driver_B72DDFD2(0); //0x000000AC
     
     keyConfig = sceKernelInitKeyConfig(); //0x000000B4
     if (keyConfig == PSP_INIT_KEYCONFIG_UPDATER) { //0x000000C0
@@ -1081,9 +1081,9 @@ int sceCtrlInit() {
     ctrl.maskSupportButtons = supportedUserButtons; //0x00000104
     
     pspModel = sceKernelGetModel();
-    if (pspModel < 10) { //0x0000010C
+    if (pspModel < 11) { //0x0000010C
         switch (pspModel) { //0x00000128
-            case 0: case 1: case 2: case 3: case 6: case 8:
+            case 0: case 1: case 2: case 3: case 6: case 8: case 10:
                 unk_2 = 0x1FFF3F9; //0x00000130 & 0x00000138               
                 break;
             case 4: case 5: case 7: case 9:
@@ -1115,14 +1115,14 @@ int sceCtrlInit() {
 }
 
 /*
- * Subroutine sceCtrl_driver_08DE9E04 - Address 0x0000020C
+ * Subroutine sceCtrl_driver_1A1A7D40 - Address 0x0000020C
  * Exported in sceCtrl_driver
  */
 int sceCtrlEnd() {
     SceSysTimerId timerId;
     
     sceKernelUnregisterSysEventHandler(&ctrlSysEvent); //0x00000220
-    sceSyscon_driver_C325BF4B(1); //0x00000228
+    sceSyscon_driver_B72DDFD2(1); //0x00000228
     sceDisplayWaitVblankStart(); //0x00000230
     
     timerId = ctrl.timerID; //0x0000023C
@@ -1141,7 +1141,7 @@ int sceCtrlEnd() {
 }
 
 /*
- * Subroutine sceCtrl_driver_1CDEDDBC - Address 0x00001A50 
+ * Subroutine sceCtrl_driver_55497589 - Address 0x00001A50 
  * Exported in sceCtrl_driver
  */
 int sceCtrlSuspend() {  
@@ -1158,14 +1158,14 @@ int sceCtrlSuspend() {
 }
 
 /*
- * Subroutine sceCtrl_driver_8543BB3B - Address 0x000002AC 
+ * Subroutine sceCtrl_driver_33D03FD5 - Address 0x000002AC 
  * Exported in sceCtrl_driver
  */
 int sceCtrlResume() {
     int retVal;
     int prevButtons;
     
-    retVal = sceSyscon_driver_A59F82EB(); //0x000002B8
+    retVal = sceSyscon_driver_97765E27(); //0x000002B8
     if (retVal != 0) { //0x000002C4
         if (retVal == 1) { //0x00000344
             prevButtons = ctrl.prevButtons; //0x00000350
@@ -1190,20 +1190,20 @@ int sceCtrlResume() {
 } 
 
 /*
- * Subroutine sceCtrl_driver_196CF2F4 - Address 0x00001C30 
+ * Subroutine sceCtrl_driver_F0074903 - Address 0x00001C30 
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetPollingMode(pspCtrlPadPollMode pollMode) {
+int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
     ctrl.pollMode = pollMode; //0x00001C3C
     return 0;
 }
 
 /*
- * Subroutine sceCtrl_DA6B76A1 - Address 0x00001330 - Aliases: sceCtrl_driver_410833B7
+ * Subroutine sceCtrl_DA6B76A1 - Address 0x00001330 - Aliases: sceCtrl_driver_F8EC18BD
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-pspCtrlPadInputMode sceCtrlGetSamplingMode(pspCtrlPadInputMode *mode) {
+PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
     int privMode;
     int index;
     
@@ -1215,15 +1215,15 @@ pspCtrlPadInputMode sceCtrlGetSamplingMode(pspCtrlPadInputMode *mode) {
     return 0; 
 }
 
-/* Subroutine sceCtrl_1F4011E6 - Address 0x000012C8 - Aliases: sceCtrl_driver_6CB49301
+/* Subroutine sceCtrl_1F4011E6 - Address 0x000012C8 - Aliases: sceCtrl_driver_F6E94EA3
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-pspCtrlPadInputMode sceCtrlSetSamplingMode(pspCtrlPadInputMode mode) {    
+PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {    
     int suspendFlag;
     int privMode;
     u8 index;
-    pspCtrlPadInputMode prevMode;
+    PspCtrlPadInputMode prevMode;
     
     if (mode > CTRL_SAMPLING_MODE_MAX_MODE) { //0x000012D0 & 0x000012E4
         return SCE_ERROR_INVALID_MODE; 
@@ -1240,7 +1240,7 @@ pspCtrlPadInputMode sceCtrlSetSamplingMode(pspCtrlPadInputMode mode) {
 }
 
 /*
- * Subroutine sceCtrl_02BAAD91 - Address 0x00001AB8 - Aliases: sceCtrl_driver_4E972A76
+ * Subroutine sceCtrl_02BAAD91 - Address 0x00001AB8 - Aliases: sceCtrl_driver_501E0C70
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1255,14 +1255,14 @@ int sceCtrlGetSamplingCycle(u32 *cycle) {
 }
 
 /*
- * Subroutine sceCtrl_6A2774F3 - Address 0x0000136C - Aliases: sceCtrl_driver_855C255D
+ * Subroutine sceCtrl_6A2774F3 - Address 0x0000136C - Aliases: sceCtrl_driver_83B15A81
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
 int sceCtrlSetSamplingCycle(u32 cycle) {
     int k1;
     int suspendFlag;
-    int prevCycle;
+    u32 prevCycle;
     int sdkVersion;
     u32 nCycle;
     
@@ -1300,7 +1300,7 @@ int sceCtrlSetSamplingCycle(u32 cycle) {
 }
 
 /*
- * Subroutine sceCtrl_687660FA - Address 0x0000170C - Aliases: sceCtrl_driver_390D1A49
+ * Subroutine sceCtrl_687660FA - Address 0x0000170C - Aliases: sceCtrl_driver_E54253E7
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1334,7 +1334,7 @@ int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
 }
 
 /*
- * Subroutine sceCtrl_A7144800 - Address 0x00001680 - Aliases: sceCtrl_driver_84CEAE74
+ * Subroutine sceCtrl_A7144800 - Address 0x00001680 - Aliases: sceCtrl_driver_37533267
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1354,7 +1354,7 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) {
 }
 
 /*
- * Subroutine sceCtrl_AF5960F3 - Address 0x00001C6C - Aliases: sceCtrl_driver_525D27AC
+ * Subroutine sceCtrl_AF5960F3 - Address 0x00001C6C - Aliases: sceCtrl_driver_BC8D1A3B
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1366,7 +1366,7 @@ u16 sceCtrlGetSuspendingExtraSamples() {
 }
 
 /*
- * Subroutine sceCtrl_348D99D4 - Address 0x00001C40 - Aliases: sceCtrl_driver_53E67075
+ * Subroutine sceCtrl_348D99D4 - Address 0x00001C40 - Aliases: sceCtrl_driver_547F89D3
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1383,7 +1383,7 @@ int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples) {
 }
 
 /*
- * Subroutine sceCtrl_driver_65698764 - Address 0x000011F0 
+ * Subroutine sceCtrl_driver_E467BEC8 - Address 0x000011F0 
  * Exported in sceCtrl_driver
  */
 int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3) {
@@ -1411,7 +1411,7 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3) {
 }
 
 /*
- * Subroutine sceCtrl_B1D0E5CD - Address 0x00001490 - Aliases: sceCtrl_driver_6574DC7C
+ * Subroutine sceCtrl_B1D0E5CD - Address 0x00001490 - Aliases: sceCtrl_driver_637CB76C
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1446,7 +1446,7 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch) {
 }
 
 /*
- * Subroutine sceCtrl_0B588501 - Address 0x0000153C - Aliases: sceCtrl_driver_D883CAF9
+ * Subroutine sceCtrl_0B588501 - Address 0x0000153C - Aliases: sceCtrl_driver_7F7C4E0A
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1460,7 +1460,7 @@ int sceCtrlReadLatch(SceCtrlLatch *latch) {
     pspSdkSetK1(k1 << 11); //0x00001548
     suspendFlag = sceKernelCpuSuspendIntr(); //0x00001554
     
-    if ((pspSdkGetK1() & latch) < 0) { //0x00001564 -- protect kernel address from usermode     
+    if ((pspSdkGetK1() & latch) < 0) { //0x00001564 -- protect kernel address from user mode     
         sceKernelCpuResumeIntr(suspendFlag); //0x00001620
         pspSdkSetK1(k1); //0x0000162C
         return SCE_ERROR_PRIV_REQUIRED; //0x00001634
@@ -1491,7 +1491,7 @@ int sceCtrlReadLatch(SceCtrlLatch *latch) {
 } 
 
 /*
- * Subroutine sceCtrl_3A622550 - Address 0x00001AE0 - Aliases: sceCtrl_driver_18654FC0
+ * Subroutine sceCtrl_3A622550 - Address 0x00001AE0 - Aliases: sceCtrl_driver_2BA616AF
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1503,7 +1503,7 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
 }
 
 /*
- * Subroutine sceCtrl_C152080A - Address 0x00001B00 - Aliases: sceCtrl_driver_02DD57CF
+ * Subroutine sceCtrl_C152080A - Address 0x00001B00 - Aliases: sceCtrl_driver_E6085C33
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1515,7 +1515,7 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
 }
 
 /*
- * Subroutine sceCtrl_1F803938 - Address 0x00001B20 - Aliases: sceCtrl_driver_9F3038AC
+ * Subroutine sceCtrl_1F803938 - Address 0x00001B20 - Aliases: sceCtrl_driver_BE30CED0
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1527,7 +1527,7 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
 }
 
 /*
- * Subroutine sceCtrl_60B81F86 - Address 0x00001B40 - Aliases: sceCtrl_driver_EB5F1D7A
+ * Subroutine sceCtrl_60B81F86 - Address 0x00001B40 - Aliases: sceCtrl_driver_3A6A612A
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1539,7 +1539,7 @@ int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
 }
 
 /*
- * Subroutine sceCtrl_5A36B1C2 - Address 0x00001B60 - Aliases: sceCtrl_driver_1D75C1D4
+ * Subroutine sceCtrl_5A36B1C2 - Address 0x00001B60 - Aliases: sceCtrl_driver_D4692E77
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1551,7 +1551,7 @@ int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
 }
 
 /*
- * Subroutine sceCtrl_239A6BA7 - Address 0x00001B8C - Aliases: sceCtrl_driver_6E552572
+ * Subroutine sceCtrl_239A6BA7 - Address 0x00001B8C - Aliases: sceCtrl_driver_41BCD9ED
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1563,7 +1563,7 @@ int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
 }
 
 /*
- * Subroutine sceCtrl_1098030B - Address 0x00001BB8 - Aliases: sceCtrl_driver_16BB4085
+ * Subroutine sceCtrl_1098030B - Address 0x00001BB8 - Aliases: sceCtrl_driver_3BD76EDE
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1575,7 +1575,7 @@ int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
 }
 
 /*
- * Subroutine sceCtrl_7C3675AB - Address 0x00001BE4 - Aliases: sceCtrl_driver_4870C6AF
+ * Subroutine sceCtrl_7C3675AB - Address 0x00001BE4 - Aliases: sceCtrl_driver_7ABDEBAA
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1587,7 +1587,7 @@ int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
 }
 
 /*
- * Subroutine sceCtrl_A68FD260 - Address 0x00001DA8 - Aliases: sceCtrl_driver_FAF675CB
+ * Subroutine sceCtrl_A68FD260 - Address 0x00001DA8 - Aliases: sceCtrl_driver_994488EC
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1600,7 +1600,7 @@ int sceCtrlClearRapidFire(u8 slot) {
 }
 
 /*
- * Subroutine sceCtrl_6841BE1A - Address 0x000018DC - Aliases: sceCtrl_driver_E96A4D84
+ * Subroutine sceCtrl_6841BE1A - Address 0x000018DC - Aliases: sceCtrl_driver_89438C13
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
@@ -1646,7 +1646,7 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
 }
 
 /*
- * Subroutine sceCtrl_driver_A759DB6A - Address 0x00001CB8
+ * Subroutine sceCtrl_driver_DB76878D - Address 0x00001CB8
  * Exported in sceCtrl_driver
  */
 int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {
@@ -1665,7 +1665,7 @@ int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {
 }
 
 /*
- * Subroutine sceCtrl_driver_094EF1BB - Address 0x00001C78 
+ * Subroutine sceCtrl_driver_5130DAE3 - Address 0x00001C78 
  * Exported in sceCtrl_driver
  */
 int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates) {
@@ -1681,14 +1681,14 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
 }
 
 
-/* Subroutine sceCtrl_driver_33AB5BDB - Address 0x00001878
+/* Subroutine sceCtrl_driver_1809B9FC - Address 0x00001878
  * Exported in sceCtrl_driver 
  */
-pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {   
+PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {   
     int suspendFlag;
     int curMaskSupBtns;
     int curMaskSetBtns;
-    pspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
+    PspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
        
     suspendFlag = sceKernelCpuSuspendIntr(); //0x0000188C
     curMaskSetBtns = ctrl.maskSetButtons; //0x0000189C
@@ -1702,16 +1702,16 @@ pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {
     return btnMaskMode;  
 }
 
-/* Subroutine sceCtrl_driver_5B15473C - Address 0x000017C4
+/* Subroutine sceCtrl_driver_F8346777 - Address 0x000017C4
  * Exported in sceCtrl_driver 
  */
-pspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, pspCtrlPadButtonMaskMode buttonMaskMode) {   
+PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, PspCtrlPadButtonMaskMode buttonMaskMode) {   
     int curMaskSupBtns = ctrl.maskSupportButtons;
     int newMaskSupBtns;
     int curMaskSetBtns = ctrl.maskSetButtons;
     int newMaskSetBtns;
     int suspendFlag;    
-    pspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
+    PspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
        
     suspendFlag = sceKernelCpuSuspendIntr(); //0x000017E0
     
@@ -1739,7 +1739,7 @@ pspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, pspCtrlPadButtonMas
     return prevBtnMaskMode;
 }
 
-/* Subroutine sceCtrl_driver_5D8CE0B2 - Address 0x00001D04
+/* Subroutine sceCtrl_driver_DF53E160 - Address 0x00001D04
  * Exported in sceCtrl_driver 
  */
 int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *arg) {   
@@ -1761,7 +1761,7 @@ int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *a
 }
 
 /*
- * Subroutine sceCtrl_driver_DEFAD580 - Address 0x00001AA8 
+ * Subroutine sceCtrl_driver_6C86AF22 - Address 0x00001AA8 
  * Exported in sceCtrl_driver
  */
 int sceCtrl_driver_DEFAD580(int arg1) {
@@ -1770,7 +1770,7 @@ int sceCtrl_driver_DEFAD580(int arg1) {
 }
 
 /*
- * Subroutine sceCtrl_driver_BD119FAB - Address 0x00001638
+ * Subroutine sceCtrl_driver_7511CCFE - Address 0x00001638
  * Exported in sceCtrl_driver
  */
 int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4) {
@@ -1791,7 +1791,7 @@ int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4) {
 }
 
 /*
- * sceCtrl_driver_0D627B90 - Address 0x00001C10
+ * sceCtrl_driver_6A1DF4CB - Address 0x00001C10
  * Exported in sceCtrl_driver
  */
 int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
@@ -1804,7 +1804,7 @@ int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
 }
 
 /*
- * Subroutine sceCtrl_driver_BEF3B4C9 - Address 0x00001A98
+ * Subroutine sceCtrl_driver_5886194C - Address 0x00001A98
  * Exported in sceCtrl_driver
  */
 int sceCtrl_driver_BEF3B4C9(char arg1) {
@@ -1813,7 +1813,7 @@ int sceCtrl_driver_BEF3B4C9(char arg1) {
 }
 
 /*
- * sceCtrl_driver_5F20A0F0 - Address 0x00001D94 
+ * sceCtrl_driver_365BE224 - Address 0x00001D94 
  * Exported in sceCtrl_driver
  */
 int sceCtrlUpdateCableTypeReq(char arg1) {

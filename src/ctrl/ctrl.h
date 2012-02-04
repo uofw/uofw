@@ -6,7 +6,7 @@
  * ctrl.h
  *
  * @author _Felix_
- * @version 6.39
+ * @version 6.60
  * 
  * Controller libraries of the SCE PSP system.
  */
@@ -39,17 +39,17 @@ int sceCtrl_1098030B(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__
 /** Custom function name. */
 int sceCtrl_7C3675AB(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferNegativeExt"))); 
 /** Custom function name. */
-int sceCtrl_driver_65698764(u8 mode, int arg2, int arg3)__attribute__((alias("sceCtrlExtendInternalCtrlBuffers"))); 
+int sceCtrl_driver_E467BEC8(u8 mode, int arg2, int arg3)__attribute__((alias("sceCtrlExtendInternalCtrlBuffers"))); 
 
 /** The callback function used by ::sceCtrlSetSpecialButtonCallback. */
-typedef void (*SceCtrlCb)(int curr, int last, void *opt);
+typedef void (*SceCtrlCb)(int currBtns, int lastBtns, void *opt);
 
 /** Type definition for improved style. */
-typedef u8   pspCtrlPadInputMode;
+typedef u8   PspCtrlPadInputMode;
 /** Type definition for improved style. */
-typedef u8   pspCtrlPadPollMode;
+typedef u8   PspCtrlPadPollMode;
 /** Type definition for improved style. */
-typedef u8   pspCtrlPadButtonMaskMode;
+typedef u8   PspCtrlPadButtonMaskMode;
 
 /** General information about an internal PSP controller buffer. Including current pressed button(s) and current position 
  *  of the analog controller. 
@@ -121,7 +121,7 @@ typedef struct _SceCtrlLatch {
  * @note PSP_CTRL_HOME, PSP_CTRL_WLAN_UP, PSP_CTRL_REMOTE, PSP_CTRL_VOLUP, PSP_CTRL_VOLDOWN, PSP_CTRL_SCREEN, PSP_CTRL_NOTE, PSP_CTRL_DISC, 
  *       PSP_CTRL_MS can only be read in kernel mode.
  */
-enum PspCtrlPadButtons {
+enum pspCtrlPadButtons {
     /** Select button. Negative value = 0xFFFFFFFE. */
     PSP_CTRL_SELECT     = 0x1,
     /** Start button. Negative value = 0xFFFFFFF7. */
@@ -150,7 +150,7 @@ enum PspCtrlPadButtons {
     PSP_CTRL_HOME       = 0x10000,
     /** Hold button. Negative value = 0xFFFDFFFF. */
     PSP_CTRL_HOLD       = 0x20000,
-    /** Wlan switch up. Negative value = 0xFFFBFFFF. */
+    /** W-LAN switch up. Negative value = 0xFFFBFFFF. */
     PSP_CTRL_WLAN_UP    = 0x40000,
     /** Remote hold position. Negative value = 0xFFF7FFFF. */
     PSP_CTRL_REMOTE     = 0x80000,
@@ -169,15 +169,15 @@ enum PspCtrlPadButtons {
 };
 
 /** Controller input modes. */
-enum PspCtrlPadInputMode {
-    /** Digitial input only. No recognizing of analog input. */
+enum pspCtrlPadInputMode {
+    /** Digital input only. No recognizing of analog input. */
     PSP_CTRL_INPUT_DIGITAL_ONLY = 0,         
     /** Recognizing of both digital and analog input. */
     PSP_CTRL_INPUT_DIGITAL_ANALOG = 1,
 };
 
 /** Controller input poll modes. */
-enum PspCtrlPadPollMode {
+enum pspCtrlPadPollMode {
     /** No controller input is recognized. */
     PSP_CTRL_POLL_NO_POLLING = 0,
     /** Controller input is recognized. */
@@ -185,10 +185,10 @@ enum PspCtrlPadPollMode {
 };
 
 /** Button mask settings. */
-enum PspCtrlPadButtonMaskMode {
+enum pspCtrlPadButtonMaskMode {
     /** Remove any custom mask settings involving the specified button bit mask. */
     PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING = 0,
-    /** Block the buttons defined by the button bit mask (their button status (pressed/unpressed) won't be recognized). 
+    /** Block the buttons defined by the button bit mask (their button status (pressed/un-pressed) won't be recognized). 
      *  You can only block user buttons for applications running in user mode. */
     PSP_CTRL_MASK_IGNORE_BUTTON_MASK = 1,
     /** Set the buttons defined by the button bit mask (they will be simulated as being pressed). 
@@ -227,30 +227,30 @@ int sceCtrlResume();
 /**
  * Enable/disable controller input.
  * 
- * @param pollMode One of ::PspCtrlPadPollMode. If set to 0, no button/analog input is recognized.
+ * @param pollMode One of ::pspCtrlPadPollMode. If set to 0, no button/analog input is recognized.
  *                 Set to 1 to enable button/analog input.
  * 
  * @return 0.
  */
-int sceCtrlSetPollingMode(pspCtrlPadPollMode pollMode);
+int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode);
 
 /**
  * Get the current controller input mode.
  * 
- * @param mode Pointer to int receiving the current controller mode. One of ::PspCtrlPadInputMode.
+ * @param mode Pointer to int receiving the current controller mode. One of ::pspCtrlPadInputMode.
  * 
  * @return 0.
  */
-pspCtrlPadInputMode sceCtrlGetSamplingMode(pspCtrlPadInputMode *mode);
+PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode);
 
 /**
  * Set the controller input mode.
  * 
- * @param mode The new controller input mode. One of ::PspCtrlPadInputMode.
+ * @param mode The new controller input mode. One of ::pspCtrlPadInputMode.
  * 
  * @return The previous input mode on success, or < 0 (invalid argument).
  */
-pspCtrlPadInputMode sceCtrlSetSamplingMode(pspCtrlPadInputMode mode);
+PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode);
 
 /**
  * Get the current cycle specifying the update frequency of the internal controller buffer.
@@ -289,7 +289,7 @@ int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack);
  * @param idleback Movement needed by the analog to bring the PSP back from an idle state.
  *
  * Set to -1 for analog to not cancel idle timer.
- * Set to 0 for idle timer to be cancelled even if the analog is not moved.
+ * Set to 0 for idle timer to be canceled even if the analog is not moved.
  * Set between 1 - 128 to specify the movement on either axis needed by the analog to fire the event.
  *
  * @return 0 on success, otherwise < 0.
@@ -321,7 +321,7 @@ int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples);
  * @param arg2 Unknown.
  * @param arg3 Unknown.
  * 
- * @return 0 on succss, otherwise < 0.
+ * @return 0 on success, otherwise < 0.
  */
 int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3);
 
@@ -334,7 +334,7 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3);
  * 
  * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
  * 
- * @return The amount of reads of the internal latch buffer without being reseted on succes, or < 0 on error.
+ * @return The amount of reads of the internal latch buffer without being reseted on success, or < 0 on error.
  * 
  * @par Example:
  * @code
@@ -367,11 +367,11 @@ int sceCtrlReadLatch(SceCtrlLatch *latch);
 /**
  * Read the current internal ctrl buffer. Does not wait for the next VBlank.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
- * @param count The number of internal buffers to read. There are 64 internal ctrl buffers which can be read.
+ * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param count The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *              Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ctrl buffers, or < 0 on error.
+ * @return The amount of read internal controller buffers, or < 0 on error.
  * 
  * @par Example:
  * @code
@@ -395,12 +395,12 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer. Negative button values have to be used. 
- *            Check ::PspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
+ *            Check ::pspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *                    Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ctrl buffers, or < 0 on error.
+ * @return The amount of read internal controller buffers, or < 0 on error.
  * 
  * @par Example:
  * @code
@@ -437,12 +437,12 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * You can set your own update time by calling ::sceCtrlSetSamplingCycle.
  * 
  * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer. Negative button values have to be used. 
- *            Check ::PspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
+ *            Check ::pspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *                    Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ctrl buffers on success, or < 0 on error.
+ * @return The amount of read internal controller buffers on success, or < 0 on error.
  */
 int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads);
 
@@ -452,9 +452,9 @@ int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads);
  * 
  * @param arg1 Pass 1 or 2.
  * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
- * @param reqBufReads. Number of requested internal controller buffers reads. Has to be set to a value in the range of 1 - 64.
+ * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ctrl buffers on success, or < 0 on error.
+ * @return The amount of read internal controller buffers on success, or < 0 on error.
  */
 int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
@@ -464,9 +464,9 @@ int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * 
  * @param arg1 Unknown. Pass 1 or 2.
  * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
- * @param reqBufReads. Number of requested internal controller buffers reads. Has to be set to a value in the range of 1 - 64.
+ * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ontroller buffers, or < 0 on error.
+ * @return The amount of read internal controller buffers, or < 0 on error.
  */
 int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
@@ -475,22 +475,22 @@ int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
  * 
  * @param arg1 Pass 1 or 2.
- * @param padExt Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
- * @param reqBufReads. Number of requested internal controller buffers reads. Has to be set to a value in the range of 1 - 64.
+ * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ontroller buffers, or < 0 on error.
+ * @return The amount of read internal controller buffers, or < 0 on error.
  */
 int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
 /**
  * Extended ::sceCtrlReadBufferNegative. See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuf before use.
+ * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
  * 
  * @param arg1 Pass 1 or 2.
- * @param padExt Pointer to a SceCtrlData struct retrieving the current internal ctrl buffer.
- * @param reqBufReads. Number of requested internal controller buffers reads. Has to be set to a value in the range of 1 - 64.
+ * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ontroller buffers, or < 0 on error.
+ * @return The amount of read internal controller buffers, or < 0 on error.
  */
 int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
@@ -504,13 +504,13 @@ int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
 int sceCtrlClearRapidFire(u8 slot);
 
 /**
- * Set a pressed/unpressed period for a button.
+ * Set a pressed/un-pressed period for a button.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 15. Multiple slots can be used.
- * @param pressedBtnRange The pressed-button-range to check for. One or more buttons of ::PspCtrlPadButtons. 
- * @param reqBtnsEventTrigger The button(s) which will fire the pressed/unpressed period for a button/buttons when being pressed. 
+ * @param pressedBtnRange The pressed-button-range to check for. One or more buttons of ::pspCtrlPadButtons. 
+ * @param reqBtnsEventTrigger The button(s) which will fire the pressed/un-pressed period for a button/buttons when being pressed. 
  *        Has to be included in pressedBtnRange.
- * @param reqBtn The requested button(s) on which the pressed/unpressed period (the rapid fire event) will be applied to. 
+ * @param reqBtn The requested button(s) on which the pressed/un-pressed period (the rapid fire event) will be applied to. 
  *               User mode buttons ONLY.
  * @param reqBtnEventOnTime For how many (consecutive) internal controller buffer updates the requested button(s) will be set to ON (pressed).
  *                          This "ON-time" will only be applied in the beginning of every new fired event 
@@ -520,7 +520,7 @@ int sceCtrlClearRapidFire(u8 slot);
  *                          It will be applied for as long as the same rapid fire event is called without a break
  *                          (i.e. the pressing of a different PSP button). Set to 0 - 64. If set to 0, the reqButton will be turned ON
  *                          for 1 internal controller buffer update. 
- * @param reqBtnOffTime     For how many (consecutive) internal controller buffer updates the requested button(s) will be set to OFF (unpressed). 
+ * @param reqBtnOffTime     For how many (consecutive) internal controller buffer updates the requested button(s) will be set to OFF (un-pressed). 
  *                          This "OFF-time" is set after reqBtnEventOnTime was applied. 
  *                          It will be applied for as long as the same rapid fire event is called without a break
  *                          (i.e. the pressing of a different PSP button). Set to 0 - 64. If  set to 0, the reqButton will be turned OFF
@@ -548,26 +548,26 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
 /**
  * Emulate values for the analog pad's X- and Y-axis.
  * 
- * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, their settings are or'ed together.
+ * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, their settings are bitwise OR'ed together.
  * @param aXEmu New emulated value for the X-axis. Between 0 - 255.
  * @param aYEmu New emulate value for the Y-axis. Between 0 - 255.
  * @param bufUpdates Specifies for how many updates of the internal controller buffers the custom values will be applied for.
  * 
- * @return 0 on succes, otherwise < 0 (invalid arguments).
+ * @return 0 on success, otherwise < 0 (invalid arguments).
  */
 int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates);
 
 /**
  * Emulate buttons for the digital pad.
  * 
- * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, their settings are or'ed together.
- * @param uModeBtnEmu Emulated user buttons of ::PspCtrlPadButtons. You cannot emulate kernel buttons and 
+ * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, their settings are bitwise OR'ed together.
+ * @param uModeBtnEmu Emulated user buttons of ::pspCtrlPadButtons. You cannot emulate kernel buttons and 
  *                    the emulated buttons will only be applied for applications running in user mode. 
- * @param kModeBtnEmu Emulated buttons of ::PspCtrlPadButtons (you can emulate both user and kernel buttons).  
+ * @param kModeBtnEmu Emulated buttons of ::pspCtrlPadButtons (you can emulate both user and kernel buttons).  
  *                    The emulated buttons will only be applied for applications running in kernel mode.
  * @param bufUpdates Specifies for how many updates of the internal controller buffers the custom values will be applied for.
  * 
- * @return 0 on succes, otherwise < 0 (invalid arguments).
+ * @return 0 on success, otherwise < 0 (invalid arguments).
  */
 int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates);
 
@@ -576,14 +576,14 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
  * 
  * @note In the PSPSDK, this function is defined as sceCtrlGetButtonMask.
  * 
- * @param btnMask The button bit value to check for (one or more buttons of ::PspCtrlPadButtons).
+ * @param btnMask The button bit value to check for (one or more buttons of ::pspCtrlPadButtons).
  * 
- * @return The button mask mode for the given btnMask. One of ::PspCtrlPadButtonMaskMode. 
+ * @return The button mask mode for the given btnMask. One of ::pspCtrlPadButtonMaskMode. 
  *         PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0), if btnMask (or parts of it) is/are included in the currently set button mask.
  *         PSP_CTRL_MASK_IGNORE_BUTTON_MASK (1), if btnMask is not included in the current button mask.
  *         PSP_CTRL_MASK_SET_BUTTON_MASK (2), if btnMask (or parts of it) are set to ON by the current set button mask.
  */
-pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
+PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
 
 /**
  * Set a button mask mode for one or more buttons. You can only mask user mode buttons in user applications.
@@ -592,8 +592,8 @@ pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
  * @note In the PSPSDK, this function is defined as sceCtrlSetButtonMask.
  * 
  * @param btnMask The button value for which the button mask mode will be applied. 
- *                One or more buttons of ::PspCtrlPadButtons.
- * @param btnMaskMode Specifies the mask mode of the button mask. One of ::PspCtrlPadButtonMaskMode.
+ *                One or more buttons of ::pspCtrlPadButtons.
+ * @param btnMaskMode Specifies the mask mode of the button mask. One of ::pspCtrlPadButtonMaskMode.
  * 
  * @return The button mask mode regarding the new btnMask compared with the previously set btnMask.   
  *         PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0) for the new btnMask (or parts of it) already being supported by the previously set btnMask,
@@ -611,7 +611,7 @@ pspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
  * sceCtrlSetButtonIntercept(0xFFFF, 0);
  * @endcode
  */
-pspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 btnMask, pspCtrlPadButtonMaskMode btnMaskMode);
+PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 btnMask, PspCtrlPadButtonMaskMode btnMaskMode);
 
 /**
  * Register a button callback.
@@ -619,8 +619,8 @@ pspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 btnMask, pspCtrlPadButton
  * @note In the PSPSDK, this function is defined as sceCtrlRegisterButtonCallback.
  * 
  * @param slot The slot used to register the callback (0-3).
- * @param btnMask Bitwise OR'ed button values which will be checked for being pressed.
- * @param cbFunc Pointer to the callback function (int curr, int last, void *arg), which handles button input effects.
+ * @param btnMask Bitwise OR'ed button values which will be checked for being pressed. One or more buttons of ::pspCtrlPadButtons.
+ * @param cbFunc Pointer to the callback function (int currBtns, int lastBtns, void *opt), which handles button input effects.
  * @param opt Optional user argument. Passed to the callback function as its third argument.
  * 
  * @return 0 on success, or < 0 (invalid arguments).
