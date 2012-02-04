@@ -69,7 +69,7 @@ typedef struct _SceCtrlData {
     u8 rsrv[6]; //10
 } SceCtrlData; //Size of SceCtrlData: 16
 
-/** Extended SceCtrlData struct. */
+/** Extended SceCtrlData structure. */
 typedef struct _SceCtrlDataExt {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
      *  Can be used to get the time period if a button pressing. 
@@ -101,8 +101,8 @@ typedef struct _SceCtrlDataExt {
     int unk8; //44
 } SceCtrlDataExt; //Size of SceCtrlDataExt: 48
 
-/** Status attributes of a button. Each struct member represents an active button
- *  through its button value (one of ::PspCtrlPadButtons).
+/** Status attributes of a button. Each structure member represents an active button
+ *  through its button value (one of ::pspCtrlPadButtons).
  */
 typedef struct _SceCtrlLatch {
     /** Button is newly pressed (was not already been pressed). */
@@ -237,7 +237,7 @@ int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode);
 /**
  * Get the current controller input mode.
  * 
- * @param mode Pointer to int receiving the current controller mode. One of ::pspCtrlPadInputMode.
+ * @param mode Receiving the current controller mode. One of ::pspCtrlPadInputMode.
  * 
  * @return 0.
  */
@@ -255,7 +255,7 @@ PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode);
 /**
  * Get the current cycle specifying the update frequency of the internal controller buffer.
  * 
- * @param cycle Pointer to int receiving the current cycle.
+ * @param cycle Receiving the current cycle.
  * 
  * @return 0.
  */
@@ -313,8 +313,8 @@ u16 sceCtrlGetSuspendingExtraSamples();
 int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples);
 
 /**
- * Extend the 64 internal controller buffers to represent SceCtrlDataExt structs.
- * By default, an internal controller buffer is equivalent to a SceCtrlData struct. This function has to be called before using
+ * Extend the 64 internal controller buffers to represent SceCtrlDataExt structures.
+ * By default, an internal controller buffer is equivalent to a SceCtrlData structures. This function has to be called before using
  * the extended read/peekBuffer functions.
  * 
  * @param mode Seems to be an index. Pass either 1 or 2.
@@ -332,7 +332,7 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3);
  * Once a button has been i.e. pressed, its value is stored in the specific internal latch buffer member (uiMake in this case)
  * until you manually reset the specific latch buffer field.
  * 
- * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
+ * @param latch Pointer to a SceCtrlLatch structure retrieving the current internal latch buffer.
  * 
  * @return The amount of reads of the internal latch buffer without being reseted on success, or < 0 on error.
  * 
@@ -358,16 +358,16 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch);
  *                                                and button has been newly released. 
  * After the internal latch buffer has been read, it will be cleaned (all members will be reset to zero).
  * 
- * @param latch Pointer to a SceCtrlLatch struct retrieving the current internal latch buffer.
+ * @param latch Pointer to a SceCtrlLatch structure retrieving the current internal latch buffer.
  * 
  * @return The amount of reads of the internal latch buffer without being reseted (typically 1) on success, or < 0 on error.
  */
 int sceCtrlReadLatch(SceCtrlLatch *latch);
 
 /**
- * Read the current internal ctrl buffer. Does not wait for the next VBlank.
+ * Read the current internal controller buffer. Does not wait for the next VBlank.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param pad Pointer to a SceCtrlData structure retrieving the current internal controller buffer.
  * @param count The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *              Has to be set to a value in the range of 1 - 64.
  * 
@@ -394,7 +394,7 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads);
 /**
  * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer. Negative button values have to be used. 
+ * @param pad Pointer to a SceCtrlData structure retrieving the current internal controller buffer. Negative button values have to be used. 
  *            Check ::pspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
@@ -424,11 +424,11 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads);
  * Read the current internal SceCtrlData buffer. By default, the internal controller buffer will be read after every VSYNC period (60 times/sec).
  * You can set your own update timer by calling ::sceCtrlSetSamplingCycle.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal button buffer. 
+ * @param pad Pointer to a SceCtrlData structure retrieving the current internal button buffer. 
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *                    Has to be set to a value in the range of 1 - 64.
  * 
- * @return The amount of read internal ctrl buffers on success, or < 0 on error.
+ * @return The amount of read internal controller buffers on success, or < 0 on error.
  */
 int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
 
@@ -436,7 +436,7 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * Read the current internal SceCtrlData buffer. By default, the internal controller buffer will be read after every VSYNC period (60 times/sec).
  * You can set your own update time by calling ::sceCtrlSetSamplingCycle.
  * 
- * @param pad Pointer to a SceCtrlData struct retrieving the current internal controller buffer. Negative button values have to be used. 
+ * @param pad Pointer to a SceCtrlData structure retrieving the current internal controller buffer. Negative button values have to be used. 
  *            Check ::pspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
@@ -451,7 +451,7 @@ int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads);
  * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
  * 
  * @param arg1 Pass 1 or 2.
- * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param padExt Pointer to a SceCtrlData structure retrieving the current internal controller buffer.
  * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
  * @return The amount of read internal controller buffers on success, or < 0 on error.
@@ -463,7 +463,7 @@ int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
  * 
  * @param arg1 Unknown. Pass 1 or 2.
- * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param padExt Pointer to a SceCtrlData structure retrieving the current internal controller buffer.
  * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
  * @return The amount of read internal controller buffers, or < 0 on error.
@@ -475,7 +475,7 @@ int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
  * 
  * @param arg1 Pass 1 or 2.
- * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param padExt Pointer to a SceCtrlData structure retrieving the current internal controller buffer.
  * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
  * @return The amount of read internal controller buffers, or < 0 on error.
@@ -487,7 +487,7 @@ int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
  * 
  * @param arg1 Pass 1 or 2.
- * @param padExt Pointer to a SceCtrlData struct retrieving the current internal controller buffer.
+ * @param padExt Pointer to a SceCtrlData structure retrieving the current internal controller buffer.
  * @param reqBufReads. Number of requested reads of the internal controller buffers. Has to be set to a value in the range of 1 - 64.
  * 
  * @return The amount of read internal controller buffers, or < 0 on error.
@@ -572,7 +572,7 @@ int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates);
 int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates);
 
 /**
- * Get the button mask mode of one or more bitwise OR'ed PSP hardware buttons.
+ * Get the button mask mode of one or more bitwise OR'ed PSP buttons.
  * 
  * @note In the PSPSDK, this function is defined as sceCtrlGetButtonMask.
  * 
