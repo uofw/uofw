@@ -100,7 +100,7 @@ void updateAudioBuf(int arg)
     {
         // 01D0
         AUDIO_SET_BUSY(1);
-        sceCodec_driver_B2EF6B19(1);
+        sceCodec_driver_376399B6(1);
     }
     // 0038
     int v2 = v | g_audio.flags;
@@ -172,7 +172,7 @@ int dmaUpdate(int arg)
     {
         // 0284
         AUDIO_SET_BUSY(0);
-        sceCodec_driver_B2EF6B19(0);
+        sceCodec_driver_376399B6(0);
     }
     return 0;
 }
@@ -653,7 +653,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         return ERROR_AUDIO_CHANNEL_BUSY;
     }
     // 1164
-    if ((SysMemForKernel_F0E0AB7A() > 0x01FFFFFF && (chan->curSampleCnt == 0 || chan->buf == NULL)) || chan->curSampleCnt == 0) // 1214
+    if ((sceKernelGetCompiledSdkVersion() > 0x01FFFFFF && (chan->curSampleCnt == 0 || chan->buf == NULL)) || chan->curSampleCnt == 0) // 1214
     {
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
@@ -805,7 +805,7 @@ int sceAudioSetFrequency(int freq)
     // 14D0
     sceKernelCpuResumeIntr(oldIntr);
     sceClockgenAudioClkSetFreq(freq);
-    sceCodec_driver_431C0C8E(freq);
+    sceCodec_driver_FCA6D35B(freq);
     return 0;
 }
 
@@ -852,7 +852,7 @@ int sceAudioInit()
     } while (i < 4);
     sceClockgenAudioClkSetFreq(g_audio.freq);
     audioHwInit();
-    sceCodec_driver_431C0C8E(g_audio.freq);
+    sceCodec_driver_FCA6D35B(g_audio.freq);
     SceUID id = sceKernelCreateThread("SceAudioMixer" /* 0x34F0 */, audioMixerThread, 5, 0x600, 0x100000, 0);
     if (id < 0 || sceKernelStartThread(id, 0, 0) != 0)
         return 1;
@@ -878,14 +878,14 @@ int sceAudioLoopbackTest(int arg0)
         // 1854
         g_audio.flags = 0;
         audioHwInit();
-        sceCodec_driver_B2EF6B19(0);
+        sceCodec_driver_376399B6(0);
     }
     else
     {
         int oldIntr = sceKernelCpuSuspendIntr();
         g_audio.flags = 7;
         AUDIO_SET_BUSY(1);
-        sceCodec_driver_B2EF6B19(1);
+        sceCodec_driver_376399B6(1);
         *(int*)(0xBE000004) = 7;
         *(int*)(0xBE00002C) = 7;
         *(int*)(0xBE000010) = 4;
@@ -900,7 +900,7 @@ int sceAudioLoopbackTest(int arg0)
 int sceAudioEnd()
 {
     sceCodecOutputEnable(0, 0);
-    sceCodec_driver_E4D7F914();
+    sceCodec_driver_277DFFB6();
     sceKernelUnregisterSysEventHandler(g_audioEvent);
     int oldIntr = sceKernelCpuSuspendIntr();
     sceKernelDeleteEventFlag(g_audio.evFlagId);
@@ -924,7 +924,7 @@ int sceAudio_driver_306D18F1(int arg)
 int sceAudioSetVolumeOffset(int arg)
 {
     // 1948
-    int ret = sceCodec_driver_F071BF60((arg >= 0) ? arg * 6 : -128);
+    int ret = sceCodec_driver_D27707A8((arg >= 0) ? arg * 6 : -128);
     if (ret < 0)
         return ret;
     g_audio.volumeOffset = arg + 8;
@@ -980,7 +980,7 @@ int audioIntrHandler()
     {
         // 19EC
         AUDIO_SET_BUSY(0);
-        sceCodec_driver_B2EF6B19(0);
+        sceCodec_driver_376399B6(0);
     }
     // 19C4
     sceKernelCpuResumeIntrWithSync(oldIntr);
@@ -993,12 +993,12 @@ int audioIntrHandler()
  */
 void audioHwInit()
 {
-    sceSysreg_driver_3A98CABB(0, 1);
-    sceSysreg_driver_789597AB(0);
-    sceSysreg_driver_8E9E76AE(0);
-    sceSysreg_driver_D1999F94(0);
-    sceSysreg_driver_9E80B4E2(0);
-    sceSysreg_driver_9984A972();
+    sceSysregAudioClkSelect(0, 1);
+    sceSysregAudioBusClockEnable(0);
+    sceSysregAudioClkEnable(0);
+    sceSysregAudioIoEnable(0);
+    sceSysregAudioClkoutClkSelect(0);
+    sceSysregAudioClkoutIoEnable();
     AUDIO_SET_BUSY(1);
     *(int*)(0xBE000004) = 0;
     // 1B00
@@ -1061,11 +1061,11 @@ int audioEventHandler(int ev_id, char* ev_name, void* param, int* result)
         break;
     case 0x100000:
         // 1CE8
-        sceCodec_driver_431C0C8E(g_audio.freq);
+        sceCodec_driver_FCA6D35B(g_audio.freq);
         if (g_audio.inputInited != 0)
         {
-            sceCodec_driver_9681738F(g_audio.unkCodecArg);
-            sceCodec_driver_B0141A1B(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
+            sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
+            sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
         }
         break;
     case 0x1000:
@@ -1264,7 +1264,7 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
         ret = (ret2 < 0) ? ret : ret2;
     }
     // 21AC
-    int ret2 = sceCodec_driver_55F1788B();
+    int ret2 = sceCodec_driver_FC355DE0();
     if (ret2 == 0) {
         K1_RESET();
         return 0;
@@ -1399,7 +1399,7 @@ int audioInputThread()
                 sceKernelDmaOpQuit(g_audio.dmaPtr[2]);
                 *(int*)(0xBE000008) = g_audio.flags;
                 sceKernelCpuResumeIntr(oldIntr);
-                sceCodec_driver_E4D7F914();
+                sceCodec_driver_277DFFB6();
             }
         }
         else
@@ -1576,7 +1576,7 @@ int audioInputSetup()
     {
         // 2A68
         AUDIO_SET_BUSY(1);
-        sceCodec_driver_B2EF6B19(1);
+        sceCodec_driver_376399B6(1);
     }
     // 2A10
     *(int*)(0xBE000024) = (char)((flags | 4) & 0xFF) - 4;
@@ -1661,7 +1661,7 @@ int audioInput(int sampleCount, int freq, void *buf)
     if ((g_audio.flags & 4) == 0)
     {
         // 2C04
-        ret = sceCodec_driver_9681738F(g_audio.unkCodecArg);
+        ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
         if (ret < 0) {
             K1_RESET();
             return ret;
@@ -1678,7 +1678,7 @@ int audioInput(int sampleCount, int freq, void *buf)
     if (g_audio.unkCodecArgSet != 0)
     {
         // 2BB0
-        int ret = sceCodec_driver_9681738F(g_audio.unkCodecArg);
+        int ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
         if (ret >= 0)
         {
             g_audio.unkCodecRet = ret & 1;
@@ -1686,7 +1686,7 @@ int audioInput(int sampleCount, int freq, void *buf)
                 *(int*)(0xBE0000D0) = (ret >> 1) & 1;
         }
         // 2BD8
-        ret = sceCodec_driver_B0141A1B(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
+        ret = sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
         g_audio.unkCodecArgSet = 0;
     }
     // 2B9C
@@ -1717,11 +1717,11 @@ int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
     g_audio.unkInput3 = MIN(MAX(arg3,   0), 15);
     g_audio.unkInput4 = MIN(MAX(arg4,   0), 10);
     g_audio.unkInput5 = MIN(MAX(arg5,   0), 10);
-    int ret = sceCodec_driver_9681738F(g_audio.unkCodecArg);
+    int ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
     if (ret < 0)
         return ret;
     g_audio.unkCodecRet = ret & 1;
-    sceCodec_driver_B0141A1B(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
+    sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
     if (ret < 0)
         return ret;
     g_audio.inputInited = 1;

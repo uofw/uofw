@@ -1514,7 +1514,7 @@ int sceGeEdramSetAddrTranslation(int arg)
     }
     else
     {
-        *(int*)(0xBD500080) = ret >> 1;
+        *(int*)(0xBD500080) = arg >> 1;
         *(int*)(0xBD500070) = 0;
         ret = 0;
     }

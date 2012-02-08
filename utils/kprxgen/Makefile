@@ -2,7 +2,7 @@
 # See the file COPYING for copying permission.
 
 CPP=gcc
-CFLAGS=-Wall -Wextra -Werror
+CFLAGS=-Wall -Wextra -Werror -g
 LDFLAGS=
 TARGET=psp-kprxgen
 OBJECTS=psp-kprxgen.o

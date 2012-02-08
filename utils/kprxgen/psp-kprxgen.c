@@ -640,6 +640,7 @@ void output_ph(unsigned char *data)
 	Elf32_Phdr *phdr;
 	struct PspModuleInfo *pModinfo;
 	int mod_flags;
+    int dataAddr, dataSize;
 
 	phdr = (Elf32_Phdr*) data;
 	pModinfo = (struct PspModuleInfo *) (g_modinfo->pData);
@@ -667,12 +668,20 @@ void output_ph(unsigned char *data)
     /* Second program header */
     phdr++;
 
+    if (get_sh(".data") != NULL) {
+        dataAddr = get_sh(".data")->iAddr;
+        dataSize = get_sh(".data")->iSize;
+    }
+    else {
+        dataAddr = g_relocbase;
+        dataSize = 0;
+    }
     SW(&phdr->p_type,   1);
-    SW(&phdr->p_offset, get_sh(".data")->iAddr + g_allocbase);
-    SW(&phdr->p_vaddr,  get_sh(".data")->iAddr);
+    SW(&phdr->p_offset, dataAddr + g_allocbase);
+    SW(&phdr->p_vaddr,  dataAddr);
     SW(&phdr->p_paddr,  0);
-    SW(&phdr->p_filesz, get_sh(".data")->iSize);
-    SW(&phdr->p_memsz,  get_sh(".data")->iSize + get_sh(".bss")->iSize);
+    SW(&phdr->p_filesz, dataSize);
+    SW(&phdr->p_memsz,  dataSize + get_sh(".bss")->iSize);
     SW(&phdr->p_flags,  6);
     SW(&phdr->p_align,  0x40);
 

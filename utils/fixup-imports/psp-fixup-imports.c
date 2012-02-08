@@ -396,12 +396,6 @@ int load_sections()
 				break;
 			}
 
-			if(g_libstub == NULL)
-			{
-				fprintf(stderr, "Error, no .lib.stub section found\n");
-				break;
-			}
-
 			ret = 1;
 		}
 		while(0);
@@ -620,7 +614,7 @@ int fixup_functions(void)
 	struct PspModuleImport *pLastImport = NULL;
 	int count;
 
-    if(g_stubtext == NULL) // no imported functions, everything's ok
+    if(g_stubtext == NULL || g_nid == NULL) // no imported functions
         return 1;
 
 	count = g_stubtext->iSize / 8;
@@ -734,7 +728,7 @@ int fixup_variables(void)
     int numStub;
     Reloc *relocs;
             
-    if(g_vstub == NULL) // no imported variables
+    if(g_vstub == NULL || g_textrel == NULL) // no imported variables
         return 1;
 
     numStub = g_vstub->iSize / 8;
@@ -1094,7 +1088,7 @@ int main(int argc, char **argv)
 	{
 		if(load_mapfile(g_mapfile) && load_elf(g_infile))
 		{
-			if(fixup_functions() && fixup_variables() && fixup_nidmap())
+			if(g_libstub == NULL || (fixup_functions() && fixup_variables() && fixup_nidmap()))
 			{
 				FILE *fp;
 
