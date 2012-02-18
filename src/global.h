@@ -24,6 +24,9 @@ typedef s32 SceMode;
 typedef u32 SceSize;
 typedef SceInt64 SceOff;
 
+typedef int clock_t;
+typedef int time_t;
+
 typedef struct
 {
     unsigned short  modattribute;
@@ -124,18 +127,6 @@ typedef struct
 
 typedef struct
 {
-    int size;
-    char* name;
-    int type_mask;
-    int (*handler)(int ev_id, char* ev_name, void* param, int* result);
-    int r28;
-    int busy;
-    struct SceSysEventHandler *next;
-    int reserved[9];
-} SceSysEventHandler;
-
-typedef struct
-{
     SceSize size;
     u32 startAddr;
     u32 memSize;
@@ -181,8 +172,6 @@ typedef struct
     void (*ops[14])();
 } SceKernelDeci2Ops;
 
-int sceKernelRegisterSuspendHandler(int no, void *func, int num); // sceSuspendForKernel_91A77137
-int sceKernelRegisterResumeHandler(int no, void *func, int num); // sceSuspendForKernel_B43D1A8C
 int sceKernelRegisterLibrary(char **name); // LoadCoreForKernel_211FEA3D
 int sceKernelGetModuleGPByAddressForKernel(void *func); // LoadCoreForKernel_18CFDAA0
 
@@ -234,8 +223,8 @@ int _k1; \
 GET_REG(_k1, K1);
 #define K1_GETOLD() _oldK1
 #define K1_USER_PTR(ptr) (((s32)(void*)(ptr) & _k1) >= 0)
-#define K1_USER_BUF_DYN_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr) | size) & _k1) >= 0)
-#define K1_USER_BUF_STA_SZ(ptr, size) (((((s32)(void*)(ptr) + size) | (s32)(void*)(ptr)       ) & _k1) >= 0)
+#define K1_USER_BUF_DYN_SZ(ptr, size) (((((s32)(void*)(ptr) + (s32)size) | (s32)(void*)(ptr) | (s32)size) & _k1) >= 0)
+#define K1_USER_BUF_STA_SZ(ptr, size) (((((s32)(void*)(ptr) + (s32)size) | (s32)(void*)(ptr)            ) & _k1) >= 0)
 #define K1_USER_MODE() ((_k1 >> 31) == 1)
 
 #define GP_SET(val) MOV_REG(0, GP); SET_REG(GP, val)
@@ -291,7 +280,8 @@ GET_REG(_k1, K1);
     _resetVector(*(int*)(info + 0), *(int*)(info + 4)); \
 }
 
-#define UPALIGN256(v) ((v + 0xFF) & 0xFFFFFF00)
+#define UPALIGN256(v) (((v) + 0xFF) & 0xFFFFFF00)
+#define UPALIGN64(v) (((v) + 0x3F) & 0xFFFFFFC0)
 
 #endif
 
