@@ -84,10 +84,11 @@ enum PspModuleInfoAttr
       _gp, __lib_ent_top, __lib_ent_bottom,                         \
       __lib_stub_top, __lib_stub_bottom }                           \
 
-#define PSP_SDK_VERSION(ver) const int syslib_11B97506 = ver
+#define PSP_SDK_VERSION(ver) const int module_sdk_version = ver
 
 #define PSP_MODULE_BOOTSTART(name) int module_start(int arglen, void *argp) __attribute__((alias(name))); \
 int module_bootstart(int arglen, void *argp) __attribute__((alias(name)))
+#define PSP_MODULE_REBOOT_BEFORE(name) int module_reboot_before(void) __attribute__((alias(name)))
 
 /********** TEMPORARY: it'll be in their corresponding module's header *********/
 typedef int (*SceKernelCallbackFunction)(int arg1, int arg2, void *arg);

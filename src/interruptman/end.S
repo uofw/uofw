@@ -5,6 +5,32 @@
     .set noat
     .set noreorder
 
+    .globl sceKernelCpuSuspendIntr
+sceKernelCpuSuspendIntr:
+    mfic $v0, $0
+    mtic $zr, $0
+    beqz $v0, loc_3164
+
+loc_3154:
+    nop
+    nop
+    nop
+    nop
+loc_3164:
+    jr $ra
+    nop
+
+    .globl sceKernelCpuResumeIntrWithSync
+sceKernelCpuResumeIntrWithSync:
+    sync
+    nop
+
+    .globl sceKernelCpuResumeIntr
+sceKernelCpuResumeIntr:
+    mtic $a0, $0
+    j loc_3154
+    nop
+
 sub_3230:
     addiu      $sp, $sp, -64
     sw         $t7, 8($sp)
@@ -60,12 +86,8 @@ mod_32D4:
     j          loc_00000DDC
     addiu      $sp, $sp, 16
 
-##
-# InterruptManagerForKernel_D5A13B4E
-##
-
-    .globl InterruptManagerForKernel_D5A13B4E
-InterruptManagerForKernel_D5A13B4E:
+    .globl InterruptManagerForKernel_2F3C4DCD
+InterruptManagerForKernel_2F3C4DCD:
     lui        $t0, %hi(sub_3230)
     addiu      $t0, $t0, %lo(sub_3230)
     ext        $a0, $a0, 2, 26
@@ -91,12 +113,8 @@ InterruptManagerForKernel_D5A13B4E:
     jr         $ra
     sync
 
-##
-# InterruptManagerForKernel_C86AD90B
-##
-
-    .globl InterruptManagerForKernel_C86AD90B
-InterruptManagerForKernel_C86AD90B:
+    .globl InterruptManagerForKernel_02AC50D5
+InterruptManagerForKernel_02AC50D5:
     lui        $at, %hi(mod_0DC4)
     sw         $0, %lo(mod_0DC4)($at)
     cache      0x1B, %lo(mod_0DC4)($at)                                                                         

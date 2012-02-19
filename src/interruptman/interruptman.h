@@ -79,15 +79,59 @@ typedef struct
     void *cb;
 } SceIntrHandler;
 
-// Memory map
-// 0x5900 -> 0x595C: options array?
-// 0x595C -> 0x5961: ???
-// 0x5961          : some option used by InterruptManagerForKernel_352FB341
-// 0x5962          : some option used by sceKernelRegisterIntrHandler
-// 0x5963 -> 0x5970: ???
-// 0x5970 -> 0x5974: stores the top of the user space interrupt stack
-// 0x5974 -> 0x5978: stores some unknown option for the userspace interrupt stack
-// 0x5978 -> 0x5980: ???
-// 0x5980 -> 0x6A80: interruptions array
-// 0x6A80 -> 0x6A84: sub interruptions memory pool id
+typedef struct CbMap
+{
+    struct CbMap *next;
+    int unk1, unk2, unk3;
+    void (*callbacks[64])(void);
+} CbMap;
+
+typedef int (*MonitorCb)(int intrNum, int subIntrNum, int, int, int, int, char);
+
+int IntrManInit();
+int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, SceIntrHandler *handler);
+int sceKernelSetUserModeIntrHanlerAcceptable(int intrNum, int subIntrNum, int setBit);
+int sceKernelReleaseIntrHandler(int intrNum);
+int sceKernelSetIntrLevel(int intrNum, int num);
+int sceKernelSetIntrLogging(int intrNum, int arg1);
+int sceKernelEnableIntr(int intNum);
+int sceKernelSuspendIntr(int arg0, int arg1);
+int sceKernelResumeIntr(int intrNum, int arg1);
+void ReleaseContextHooks();
+void InterruptManagerForKernel_E790EAED(int (*arg0)(), int (*arg1)());
+int sceKernelCallSubIntrHandler(int intrNum, int subIntrNum, int arg2, int arg3);
+int sceKernelGetUserIntrStack();
+int sceKernelRegisterSubIntrHandler(int intrNum, int subIntrNum, void *handler, void *arg);
+int sceKernelReleaseSubIntrHandler(int intrNum, int subIntrNum);
+int sceKernelEnableSubIntr(int intrNum, int subIntrNum);
+int sceKernelDisableSubIntr(int intrNum, int subIntrNum);
+int sceKernelSuspendSubIntr(int intrNum, int subIntrNum, int *arg2);
+int sceKernelResumeSubIntr(int intrNum, int subIntrNum, int arg2);
+int sceKernelIsSubInterruptOccured(int intrNum, int subIntrNum);
+int sceKernelQueryIntrHandlerInfo(int intrNum, int subIntrNum, int out);
+void *mymemset(void *dstVoid, char c, int n);
+void InterruptDisableInTable(int intrNum);
+void sub_29B0(int intrNum);
+void AllLevelInterruptDisable(int intrNum);
+int sceKernelSetPrimarySyscallHandler(int arg0, void (*arg1)());
+int IntrManTerminate();
+void sceKernelCpuEnableIntr();
+int InterruptManagerForKernel_6FCBA912(int set);
+int sceKernelClearIntrLogging(int intrNum);
+int sceKernelIsInterruptOccurred(int intrNum);
+int sceKernelDisableIntr(int intrNum);
+void RegisterSubIntrruptMonitor(MonitorCb before, MonitorCb after);
+void ReleaseSubIntrruptMonitor();
+int UnSupportIntr(int intrNum);
+int InterruptManagerForKernel_8DFBD787();
+int QueryIntrHandlerInfoForUser();
+int sceKernelRegisterUserSpaceIntrStack(int addr, int size, int arg2);
+int sceKernelGetCpuClockCounter();
+u64 sceKernelGetCpuClockCounterWide();
+u32 _sceKernelGetCpuClockCounterLow();
+int sceKernelRegisterSystemCallTable(CbMap *newMap);
+int sceKernelQuerySystemCall(int (*arg)());
+void InterruptManagerForKernel_E526B767(int arg);
+int SuspendIntc();
+int ResumeIntc();
 

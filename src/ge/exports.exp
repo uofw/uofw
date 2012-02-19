@@ -9,7 +9,7 @@ PSP_EXPORT_FUNC_HASH(module_start)
 PSP_EXPORT_FUNC_HASH(module_reboot_phase)
 PSP_EXPORT_FUNC_HASH(module_reboot_before)
 PSP_EXPORT_VAR_HASH(module_info)
-PSP_EXPORT_VAR_NID(syslib_11B97506, 0x11B97506)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
 PSP_EXPORT_END
 
 PSP_EXPORT_START(sceGe_driver, 0x0011, 0x0001)

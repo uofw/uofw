@@ -8,7 +8,7 @@ PSP_EXPORT_START(syslib, 0x0000, 0x8000)
 PSP_EXPORT_FUNC_HASH(module_bootstart)
 PSP_EXPORT_FUNC_HASH(module_reboot_before)
 PSP_EXPORT_VAR_HASH(module_info)
-PSP_EXPORT_VAR_NID(syslib_11B97506, 0x11B97506)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
 PSP_EXPORT_END
 
 PSP_EXPORT_START(SysTimerForKernel, 0x0011, 0x0001)

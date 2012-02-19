@@ -146,7 +146,7 @@ loc_019C:
 
     sh    $0, 36($k1)
     or    $ra, $ra, $v1
-    beqz  $ra, InterruptManagerForKernel_1302C512
+    beqz  $ra, InterruptManagerForKernel_551097F2
     move  $a0, $k1
     j     loc_00000978
     sw    $k1, 12($sp)
@@ -319,7 +319,7 @@ loc_03A4:
 mod_0400:
     jal   sub_091C
     li    $k1, 3
-    beqz  $v0, InterruptManagerForKernel_1302C512
+    beqz  $v0, InterruptManagerForKernel_551097F2
     lw    $a0, 12($sp)
     lb    $v0, 36($a0)
     bnez  $v0, loc_0444
@@ -351,12 +351,12 @@ mod_0468:
     jal   sub_091C
 
     move  $a1, $0
-    j     InterruptManagerForKernel_1302C512
+    j     InterruptManagerForKernel_551097F2
     move  $a0, $v0
 
 loc_0478:
     lb    $a2, 37($a0)
-    beqz  $a2, InterruptManagerForKernel_1302C512
+    beqz  $a2, InterruptManagerForKernel_551097F2
     mfc0  $k0, $12
     ins   $k0, $a2, 29, 1
     mtc0  $k0, $12
@@ -394,12 +394,8 @@ loc_0478:
     lwc1  $30, 312($a0)
     lwc1  $31, 316($a0)
 
-##
-# InterruptManagerForKernel_1302C512
-##
-
-    .globl InterruptManagerForKernel_1302C512
-InterruptManagerForKernel_1302C512:
+    .globl InterruptManagerForKernel_551097F2
+InterruptManagerForKernel_551097F2:
     lw    $sp, 180($a0)
     lb    $a2, 36($a0)
     lw    $k0, 60($a0)
@@ -496,21 +492,13 @@ loc_0650:
     jr    $ra
     li    $v0, 1
 
-##
-# InterruptManagerForKernel_FE28C6D9
-##
-
-    .globl InterruptManagerForKernel_FE28C6D9
-InterruptManagerForKernel_FE28C6D9:
+    .globl sceKernelIsIntrContext
+sceKernelIsIntrContext:
     jr   $ra
     cfc0 $v0, $13
 
-##
-# InterruptManagerForKernel_829AFF11
-##
-
-    .globl InterruptManagerForKernel_829AFF11
-InterruptManagerForKernel_829AFF11:
+    .globl SaveThreadContext
+SaveThreadContext:
     cache 0x18, 52($a0)
     cache 0x18, 128($a0)
     sw    $s0, 128($a0)
@@ -542,12 +530,8 @@ InterruptManagerForKernel_829AFF11:
     jr    $ra
     sw    $t4, 40($a0)
 
-##
-# InterruptManagerForKernel_978DDCCD
-##
-
-    .globl InterruptManagerForKernel_978DDCCD
-InterruptManagerForKernel_978DDCCD:
+    .globl sceKernelCallUserIntrHandler
+sceKernelCallUserIntrHandler:
     mfc0       $t2, $12
     mtic       $0, $0
     lui        $t3, %hi(intInfo+112)
@@ -702,17 +686,10 @@ loc_00000914:
     j          loc_00000914
     break      0xFFF
 
-##
-# sub_091C
-##
-
+    .globl sub_091C
 sub_091C:
     jr    $ra
     move  $v0, $0
-
-##
-# sub_0924
-##
 
     .globl sub_0924
 sub_0924:
@@ -945,12 +922,8 @@ loc_00000C00:
     j          loc_00000B18
     sw         $a2, 12($k0)
 
-##
-# InterruptManagerForKernel_9FD93456
-##
-
-    .globl InterruptManagerForKernel_9FD93456
-InterruptManagerForKernel_9FD93456:
+    .globl InterruptManagerForKernel_A6978B70
+InterruptManagerForKernel_A6978B70:
     lui        $t0, %hi(sub_0A74)
     addiu      $t0, $t0, %lo(sub_0A74)
     ext        $a0, $a0, 2, 26
@@ -976,12 +949,8 @@ InterruptManagerForKernel_9FD93456:
     jr         $ra
     sync
 
-##
-# InterruptManagerForKernel_1D70F254
-##
-
-    .globl InterruptManagerForKernel_1D70F254
-InterruptManagerForKernel_1D70F254:
+    .globl InterruptManagerForKernel_1373F20E
+InterruptManagerForKernel_1373F20E:
     lui        $at, %hi(mod_02F8)
     sw         $0, %lo(mod_02F8)
     cache      0x1B, %lo(mod_02F8)
@@ -1005,12 +974,8 @@ loc_00000CC0:
     jr         $v0
     nop
 
-##
-# InterruptManagerForKernel_37BD0C9C
-##
-
-    .globl InterruptManagerForKernel_37BD0C9C
-InterruptManagerForKernel_37BD0C9C:
+    .globl InterruptManagerForKernel_A0F88036
+InterruptManagerForKernel_A0F88036:
     cfc0       $v0, $16
     beqz       $v0, loc_00000CF0
     nop
@@ -1037,7 +1002,7 @@ sub_0CF8:
     slti       $at, $t7, 256
     beqz       $at, loc_00000D34
     ctc0       $t7, $23
-    bltz       $v1, loc_00000E94
+    bltz       $v1, loc_00000E98
     lui        $t4, %hi(cbMap + 0x20000010)
     addu       $t4, $t4, $t7
     lw         $t7, %lo(cbMap+16)($t4)
@@ -1062,8 +1027,9 @@ loc_00000D40:
     lw         $t7, 16($t4)
     cfc0       $t5, $2
     ext        $v1, $t5, 4, 1
-    beqz       $v1, loc_00000E94
+    beqz       $v1, loc_00000E98
     cfc0       $t4, $15
+    bgez       $t7, loc_00000E98
     sw         $sp, -24($t4)
     addiu      $sp, $t4, -32
     cfc0       $t6, $4
@@ -1151,8 +1117,8 @@ mod_0E50:
     move       $t8, $at
     eret
 
-loc_00000E94:
-    j          loc_00000E94
+loc_00000E98:
+    j          loc_00000E98
     break      0xFFE
 
     # OHNOES alignment :O :O
@@ -1304,10 +1270,7 @@ sub_1020:
     addiu      $v0, $v0, 314
     eret
 
-##
-# sub_1030
-##
-
+    .globl sub_1030
 sub_1030:
     lui        $at, 0xBC30
     lui        $v0, 0x2000
@@ -1318,10 +1281,7 @@ sub_1030:
     jr         $ra
     sync
 
-##
-# sub_1050
-##
-
+    .globl sub_1050
 sub_1050:
     lui        $at, 0xBC30
     lw         $v0, 4($at)
@@ -1336,10 +1296,7 @@ sub_1050:
     jr         $ra
     sw         $v1, 4($a0)
 
-##
-# sub_1080
-##
-
+    .globl sub_1080
 sub_1080:
     lui        $at, 0xBC30
     lw         $v0, 8($at)
@@ -1352,10 +1309,7 @@ sub_1080:
     jr         $ra
     sw         $v1, 4($a0)
 
-##
-# sub_10A8
-##
-
+    .globl sub_10A8
 sub_10A8:
     lw         $v0, 0($a0)
     lw         $v1, 4($a0)
