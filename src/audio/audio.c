@@ -31,17 +31,11 @@ typedef struct
 /* The audio controller structure. */
 typedef struct
 {
-    /* TODO */
     u8 buf0[240]; // 0
-    /* TODO */
     u8 buf240[272]; // 240
-    /* TODO */
     u8 buf512[240]; // 512
-    /* TODO */
     u8 buf752[272]; // 752
-    /* TODO */
     u32 hwBuf[48]; // 1024
-    /* TODO */
     u32 *dmaPtr[3]; // 1216
     /* The audio event flag ID. */
     SceUID evFlagId; // 1228
@@ -1114,7 +1108,7 @@ int audioSRCOutputDmaCb(int arg0, int arg1)
     if (*(int*)(arg0 + 40) == 0)
         *ptr2 = 0;
     // 1DB8
-    sceKernelSetEventFlag(g_audio.evFlagId);
+    sceKernelSetEventFlag(g_audio.evFlagId, 0x40000000);
     return 0;
 }
 
@@ -1260,7 +1254,7 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
     if (ret > 0 || (ret == 0 && (g_audio.flags & 2) != 0)) // 222C
     {
         // 2190
-        int ret2 = sceKernelWaitEVentFlag(g_audio.evFlagId, 0x40000000, 32, 0, 0);
+        int ret2 = sceKernelWaitEventFlag(g_audio.evFlagId, 0x40000000, 32, 0, 0);
         ret = (ret2 < 0) ? ret : ret2;
     }
     // 21AC
@@ -1274,7 +1268,7 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
         return ret2;
     }
     sceAudioSetFrequency(ret2);
-    oldIntr = sceKernerCpuSuspendIntr();
+    oldIntr = sceKernelCpuSuspendIntr();
     short freq = g_audio.srcChFreq;
     g_audio.srcChFreq = 0;
     sceAudioSRCChReserve(g_audio.srcChSampleCnt, freq, g_audio.numChans >> 1);

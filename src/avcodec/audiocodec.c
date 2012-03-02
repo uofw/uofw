@@ -124,10 +124,10 @@ int sceAudiocodecDecode(void *codec_buf, int codec)
         return 0x80000004;
     // 0474
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(a0, 104)
-     || !K1_USER_BUF_DYN_SZ(*(int*)(a0 + 12), *(int*)(a0 + 16))
-     || !K1_USER_BUF_STA_SZ(*(int*)(a0 + 24), 0x10000)
-     || !K1_USER_BUF_STA_SZ(*(int*)(a0 + 32), 0x10000)) {
+    if (!K1_USER_BUF_STA_SZ(codec_buf, 104)
+     || !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16))
+     || !K1_USER_BUF_STA_SZ(*(int*)(codec_buf + 24), 0x10000)
+     || !K1_USER_BUF_STA_SZ(*(int*)(codec_buf + 32), 0x10000)) {
         // (04E0)
         // 04E4
         K1_RESET();
@@ -412,7 +412,7 @@ int sub_0B18(int type, int arg1, int sampleType, int freqType, int *sizePtr)
     // 0BE4
     // 0BE8
     if (type != 1)
-        size /= 1;
+        size /= 2;
     *sizePtr = size;
     return size;
 }
