@@ -514,16 +514,16 @@ int sceCtrlClearRapidFire(u8 slot);
  *               User mode buttons ONLY.
  * @param reqBtnEventOnTime For how many (consecutive) internal controller buffer updates the requested button(s) will be set to ON (pressed).
  *                          This "ON-time" will only be applied in the beginning of every new fired event 
- *                          (not being fired immediately before). Set to 0 - 64.
+ *                          (not being fired immediately before). Set to 0 - 63.
  * @param reqBtnOnTime      For how many (consecutive) internal controller buffer updates the requested button(s) will be set to ON (pressed). 
  *                          This "ON-time" is set after reqBtnEventOnTime was applied and the reqButton was turned off. 
  *                          It will be applied for as long as the same rapid fire event is called without a break
- *                          (i.e. the pressing of a different PSP button). Set to 0 - 64. If set to 0, the reqButton will be turned ON
+ *                          (i.e. the pressing of a different PSP button). Set to 0 - 63. If set to 0, the reqButton will be turned ON
  *                          for 1 internal controller buffer update. 
  * @param reqBtnOffTime     For how many (consecutive) internal controller buffer updates the requested button(s) will be set to OFF (un-pressed). 
  *                          This "OFF-time" is set after reqBtnEventOnTime was applied. 
  *                          It will be applied for as long as the same rapid fire event is called without a break
- *                          (i.e. the pressing of a different PSP button). Set to 0 - 64. If  set to 0, the reqButton will be turned OFF
+ *                          (i.e. the pressing of a different PSP button). Set to 0 - 63. If  set to 0, the reqButton will be turned OFF
  *                          for 64 (consecutive) internal controller buffer updates.
  * 
  * @Note Please choose values for reqBtnEventOnTime, reqBtnOnTime and reqBtnOffTime which are, when being bitwise OR'ed together, < 64.

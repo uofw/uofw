@@ -12,14 +12,13 @@
 
 #include "../ctrl/ctrl.h"
 
-#define PSP_BUTTON_AMOUNT                       16  
-#define PSP_INIT_KEYCONFIG_UPDATER              0x110 //might be incorrect
-
 #define USER_MODE                               0
 #define KERNEL_MODE                             1
 
 #define FALSE                                   0
 #define TRUE                                    1
+
+#define PSP_INIT_KEYCONFIG_UPDATER              0x110 //might be incorrect
 
 #define CTRL_POLL_MODE_OFF                      0
 #define CTRL_POLL_MODE_ON                       1
@@ -74,7 +73,7 @@ typedef struct _SceCtrl {
     SceCtrlInternalData kernelModeData; //260
     SceCtrlRapidFire rapidFire[CTRL_BUTTONS_RAPID_FIRE_SLOTS]; //300 - 555
     /** Currently pressed buttons passed to _SceCtrlUpdateButtons(). They are "pure", 
-     *  as custom settings are applied on them in _SceCtrlUpdateButtons(). */
+     *  as custom settings are applied on them in ::_SceCtrlUpdateButtons. */
     int pureButtons; //556
     int unk_array_3[2]; //560 -- previous pressed button?
     int prevButtons; //568 -- previously pressed buttons
@@ -82,8 +81,8 @@ typedef struct _SceCtrl {
     int userButtons; //572
     /* Records the possibly user-modified, pressed buttons of the past VBlank interrupt before the current one. */
     int prevModifiedButtons; //576
-    char analogX; //580;
-    char analogY; //581
+    u8 analogX; //580;
+    u8 analogY; //581
     char unk_Byte_9; //582
     char unk_Byte_3; //583
     SceCtrlEmulatedData emulatedData[CTRL_DATA_EMULATION_SLOTS]; //584
@@ -380,9 +379,9 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     u32 btnMask;
     /** User mode buttons being pressed. */
     u32 pressedUserButtons; 
-    /** Newly pressed buttons, were not pressed immediatley before. */
+    /** Newly pressed buttons, were not pressed before immediately. */
     u32 newPressedButtons; 
-    /** Newly unpressed buttons, were pressed immediatley before. */
+    /** Newly unpressed buttons, were pressed before immediately. */
     u32 newUnpressedButtons; 
     /** Pure pressed buttons, which already went through modification process. */
     u32 updatedButtons; 
@@ -490,7 +489,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                  if (ctrl.unk_Byte_2 == 0) { //0x00000F8C
                      res = ctrlKernelBufExt->buttons ^ ctrl.unk_array_3[i]; //0x00000F9C
                      res = res | ctrlKernelBufExt->buttons; //0x00000FA0
-                     res &=0x1FFFF;//0x00000FA4 -- User mode buttons?
+                     res &= 0x1FFFF;//0x00000FA4 -- User mode buttons?
                      ctrl.unk_array_3[i] = ctrlKernelBufExt->buttons; //0x00000FAC
                      if (res != 0) { //0x00000FA8
                          ctrl.unk_Byte_2 = 1; //0x00000FBC
@@ -547,10 +546,10 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
              }
              //*** start of code: 0x00001094 -- 0x000010D0 ***
              ctrlUserBufExt = (SceCtrlDataExt *)ctrlUserBufExt + sizeof(SceCtrlDataExt); //0x000010A0
-             ctrlUserBufExt->activeTime = ctrlKernelBufExt->activeTime; //0x000010A8 && 0x000010B8
-             ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons; //0x000010AC && 0x000010C4
-             ctrlUserBufExt->aX = ctrlKernelBufExt->aX; //0x000010B0 && 0x000010C8
-             ctrlUserBufExt->aY = ctrlKernelBufExt->aY; //0x000010B0 && 0x000010C8
+             ctrlUserBufExt->activeTime = ctrlKernelBufExt->activeTime; //0x000010A8 & 0x000010B8
+             ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons; //0x000010AC & 0x000010C4
+             ctrlUserBufExt->aX = ctrlKernelBufExt->aX; //0x000010B0 & 0x000010C8
+             ctrlUserBufExt->aY = ctrlKernelBufExt->aY; //0x000010B0 & 0x000010C8
              //0x000010B0 & 0x000010C8 & 0x000010B4 & 0x000010D0
              int j;
              for (j = 0; j < sizeof ctrlUserBufExt->rsrv; j++) {
@@ -576,7 +575,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
              if ((unk1 & 0x1) != 0) { //0x00001108 && 0x0000110C
                  buttons = ctrlKernelBufExt->buttons; //0x00001114
                  ctrl.emulatedData[i+1].intCtrlBufUpdates2 = 1; //0x0000111C
-                 //What is that!? Makes no sence
+                 //Why that?
                  unk1 = buttons & 0x500; //0x00001120
                  unk2 = buttons & 0xA00; //0x00001124
                  unk1 = (0 < unk1); //0x00001128
@@ -749,17 +748,17 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     
     //0x00000CE0 & 0x00000CE4
     for (i = 0; i < CTRL_BUTTON_CALLBACK_SLOTS; i++) {
-        btnMask = ctrl.buttonCallback[i].btnMask; //0x00000CC0
-        btnMask &= pressedButtons; //0x00000CC4
-        //If a "callback" button has been pressed
-        if (btnMask != 0) { //0x00000CC8
-            if (ctrl.buttonCallback[i].callbackFunc != NULL) { //0x00000CD4
-                gp_Val = GP_BACKUP(); //0x00000EC8
-                GP_SET(ctrl.buttonCallback[i].gp); //0x00000ECC
-                btnCbFunc = ctrl.buttonCallback[i].callbackFunc; //0x00000ED0
-                btnCbFunc(curButtons, prevButtons, ctrl.buttonCallback[i].arg); // 0x00000EDC
-            }
-        }
+         btnMask = ctrl.buttonCallback[i].btnMask; //0x00000CC0
+         btnMask &= pressedButtons; //0x00000CC4
+         //If a "callback" button has been pressed
+         if (btnMask != 0) { //0x00000CC8
+             if (ctrl.buttonCallback[i].callbackFunc != NULL) { //0x00000CD4
+                 gp_Val = GP_BACKUP(); //0x00000EC8
+                 GP_SET(ctrl.buttonCallback[i].gp); //0x00000ECC
+                 btnCbFunc = ctrl.buttonCallback[i].callbackFunc; //0x00000ED0
+                 btnCbFunc(curButtons, prevButtons, ctrl.buttonCallback[i].arg); // 0x00000EDC
+             }
+         }
     }
     
     GP_SET(gp_Val); //0x00000CEC
@@ -889,7 +888,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
             return SCE_ERROR_NOT_SUPPORTED;
         }
     }
-    //waiting for the VSNYC callback or your custom timer when using "read"
+    //waiting for the VSYNC callback or your custom timer when using "read"
     if (mode & 2) { //0x00001F10 && 0x00001F28
         res = sceKernelWaitEventFlag(ctrl.timerID, 1, PSP_EVENT_WAITOR, NULL, NULL); //0x00001F44
         if (res < 0) { //0x00001F4C
@@ -923,10 +922,10 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
         }   
     }
     if (arg3 != 0) { //0x00001FA4          
-        ctrlBuf = intDataPtr->sceCtrlBuf[arg3] + startBufIndex * sizeof(SceCtrlDataExt); //0x00002160
+        ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[arg3] + startBufIndex * sizeof(SceCtrlDataExt); //0x00002160
     }
     else {
-         ctrlBuf = intDataPtr->sceCtrlBuf[0] + startBufIndex * sizeof(SceCtrlData); //0x00001FB4
+         ctrlBuf = (SceCtrlData *)intDataPtr->sceCtrlBuf[0] + startBufIndex * sizeof(SceCtrlData); //0x00001FB4
     }
     if (readIntBufs < 0) { //0x00001FB8
         sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
@@ -1011,7 +1010,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
                    ctrlBuf = intDataPtr->sceCtrlBuf[0]; //0x000020F4
                }
                else {
-                   ctrlBuf = intDataPtr->sceCtrlBuf[arg3]; //0x00001FC4 && 0x000020FC
+                   ctrlBuf = intDataPtr->sceCtrlBuf[arg3]; //0x00001FC4 & 0x000020FC
                }
            }
     }
