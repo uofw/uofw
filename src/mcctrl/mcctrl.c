@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pspinit.h>
+#include "../openpsid/ddrdb.h"
 
 PSP_MODULE_INFO("sceMcctrl", 0x5006, 1, 1);
 
@@ -271,7 +272,7 @@ static int sub_00000FE0(u8 *buf, u8 *srcBuf1, u8 *srcBuf2, int size) {
     int status;
     u8 hash[20];
     
-    status = sceDdrdbHash(srcBuf2, hash, size); //0x00001000
+    status = sceDdrdbHash(srcBuf2, size, hash); //0x00001000
     if (status >= 0) { //0x00001014
         status = sceDdrdbSigvry(srcBuf1, hash, buf); //0x0000101C
     }

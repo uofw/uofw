@@ -74,13 +74,13 @@ typedef struct _SceCtrl {
     SceCtrlRapidFire rapidFire[CTRL_BUTTONS_RAPID_FIRE_SLOTS]; //300 - 555
     /** Currently pressed buttons passed to _SceCtrlUpdateButtons(). They are "pure", 
      *  as custom settings are applied on them in ::_SceCtrlUpdateButtons. */
-    int pureButtons; //556
+    u32 pureButtons; //556
     int unk_array_3[2]; //560 -- previous pressed button?
-    int prevButtons; //568 -- previously pressed buttons
+    u32 prevButtons; //568 -- previously pressed buttons
     /** Currently pressed User buttons. */
-    int userButtons; //572
+    u32 userButtons; //572
     /* Records the possibly user-modified, pressed buttons of the past VBlank interrupt before the current one. */
-    int prevModifiedButtons; //576
+    u32 prevModifiedButtons; //576
     u8 analogX; //580;
     u8 analogY; //581
     char unk_Byte_9; //582

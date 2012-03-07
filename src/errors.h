@@ -25,6 +25,7 @@
 #define SCE_ERROR_INVALID_SIZE            0x80000104
 #define SCE_ERROR_INVALID_MODE            0x80000107
 #define SCE_ERROR_INVALID_VALUE           0x800001FE
+#define SCE_ERROR_SEMAPHORE               0x80000041
 
 #endif
 
