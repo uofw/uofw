@@ -53,10 +53,10 @@ extern "C" {
      *              header[3] = 0xB;
      *              header[4] = size;
      * 
-     * @param buf The buffer to decrypt. Max size = 2048 Bytes.
+     * @param buf The buffer to decrypt.
      * @param size The size of the buffer. Max size = 20848 Bytes.
      *
-     * Returns 0 on success, otherwise < 0.
+     * @return 0 on success, otherwise < 0.
      */
     int sceDdrdbDecrypt(u8 buf[], int size);
     
@@ -73,21 +73,21 @@ extern "C" {
      * @param buf The buffer to encrypt.
      * @param size The size of the buffer. Max size = 20848 Bytes.
      *
-     * Returns 0 on success, otherwise < 0.
+     * @return 0 on success, otherwise < 0.
      */
     int sceDdrdbEncrypt(u8 buf[], int size);
     
     /** 
-     * Generate a SHA-1 hash buffer or the source buffer. 
+     * Generate a SHA-1 hash buffer of the source buffer. 
      * 
-     * @note The 4-byte header for buf into sema function:
+     * @note The 4-byte header for srcBuf into sema function:
      *              header[0] = size;
      * 
-     * @param buf The source buffer to generate the hash from. Max size = 2048 Bytes.
-     * @param size The size of source buffer.
+     * @param buf The source buffer to generate the hash from.
+     * @param size The size of source buffer. Max size = 2048 Bytes
      * @param hash The destination buffer for the hash. Size = 20.
      *
-     * Returns 0 on success, otherwise < 0.
+     * @return 0 on success, otherwise < 0.
      */
     int sceDdrdbHash(u8 srcBuf[], int size, u8 hash[SCE_DDRDB_HASH_BUFFER_SIZE]);
     
@@ -108,7 +108,7 @@ extern "C" {
      * 
      * @param buf The destination buffer for the pseudorandom number. Size = 20.
      *
-     * Returns 0 on success, otherwise < 0.
+     * @return 0 on success, otherwise < 0.
      */
     int sceDdrdbPrngen(u8 buf[SCE_DDRDB_PRNG_BUFFER_SIZE]);
     
