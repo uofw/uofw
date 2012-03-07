@@ -341,17 +341,7 @@ int sceDdrdbSiggen(u8 inbuf[32], u8 sha1[20], u8 outbuf[40]) {
     return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x000028A4 - 0x000028AC
 }
 
-/**
- * Subroutine sceDdrdb_driver_B8218473 - Address 0x000028D8
- * 
- * Generate a 20-Byte pseudorandom number. 
- * 
- * @note No need to seed it as KIRK is initialized automatically on boot.
- * 
- * @param buf The destination buffer for the pseudorandom number. Size = 20.
- *
- * Returns 0 on success, otherwise < 0.
- */
+/* Subroutine sceDdrdb_driver_B8218473 - Address 0x000028D8 */
 int sceDdrdbPrngen(u8 buf[SCE_DDRDB_PRNG_BUFFER_SIZE]) {
     int status = 0x80530300; //0x000028FC & 0x00002900
     int retVal;
@@ -417,5 +407,6 @@ int sceDdrdb_F013F8BF(u8 srcBuf1[20], u8 srcBuf2[40]) {
          ddrdbBuf[i] = 0; //0x00002F88
     }
     status = sceKernelSignalSema(semaId, 1); //0x00002F90
+    pspSdkSetK1(k1);
     return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002F98 - 0x00002FA4
 }
