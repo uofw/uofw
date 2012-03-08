@@ -17,7 +17,7 @@
 
 int sceUtilsBufferCopyWithRange(void *outbuff, int outsize, void *inbuff, int insize, int cmd);
 
-u8 ddrdbBuf[SCE_DDRDB_MAX_BUFFER_SIZE+SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE]; //0x00003D00
+u8 ddrdbBuf[SCE_DDRDB_MAX_BUFFER_SIZE+SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE] __attribute__((aligned(4))); //0x00003D00
 const u8 ddrdbBuf2[40] = { 0x44, 0x2E, 0x79, 0xE6, //0
                            0x7B, 0xA2, 0xEB, 0x6C, //4                       
                            0x4B, 0x37, 0xDF, 0xCA, //8
@@ -45,12 +45,12 @@ int sceDdrdbDecrypt(u8 buf[], int size) {
     }
     if (size <= SCE_DDRDB_MAX_BUFFER_SIZE) { //0x00002CFC & 0x00002CD0
         if ((size & 0xF) == 0) { //0x00002D04 & 0x00002D08
-            //Fill in the header of the buffer to be decrypted.
-            ddrdbBuf[0] = 5; //0x00002D8C
-            ddrdbBuf[1] = 0; //0x00002DA8
-            ddrdbBuf[2] = 0; //0x00002DB0
-            ddrdbBuf[3] = 0xB; //0x00002DA0
-            ddrdbBuf[4] = size; //0x00002DA4
+            //Fill in the header of the buffer to be decrypted.           
+            _sw(5, ddrdbBuf); //0x00002D8C
+            _sw(0, &ddrdbBuf[4]); //0x00002DA8
+            _sw(0, &ddrdbBuf[8]); //0x00002DB0
+            _sw(0xB, &ddrdbBuf[12]); //0x00002DA0
+            _sw(size, &ddrdbBuf[16]); //0x00002DA4
             
             if (size != 0) { //0x00002D90 & 0x00002DAC
                 //0x00002DB4 - x00002DD0
@@ -102,11 +102,11 @@ int sceDdrdbEncrypt(u8 buf[], int size) {
     if (size <= SCE_DDRDB_MAX_BUFFER_SIZE) { //0x00002B84 & 0x00002B88
         if ((size & 0xF) == 0) { //0x00002B8C & 0x00002B90
             //Fill in the header of the buffer to be encrypted.
-            ddrdbBuf[0] = 4; //0x00002C10
-            ddrdbBuf[1] = 0; //0x00002C28
-            ddrdbBuf[2] = 0; //0x00002C30
-            ddrdbBuf[3] = 0xB; //0x00002C20
-            ddrdbBuf[4] = size; //0x00002C24
+            _sw(4, ddrdbBuf); //0x00002C10
+            _sw(0, &ddrdbBuf[4]); //0x00002C28
+            _sw(0, &ddrdbBuf[8]); //0x00002C30
+            _sw(0xB, &ddrdbBuf[12]); //0x00002C20
+            _sw(size, &ddrdbBuf[16]); //0x00002C24
             
             if (size != 0) { //0x00002C2C
                 //0x00002C34 - 0x00002C50
@@ -156,7 +156,7 @@ int sceDdrdbHash(u8 srcBuf[], int size, u8 hash[SCE_DDRDB_HASH_BUFFER_SIZE]) {
     sizeVal = size + 4; //0x00002A20
     if (size <= SCE_DDRDB_MAX_BUFFER_SIZE) { //0x00002A1C
         //Fill in the header of the source buffer.
-        ddrdbBuf[0] = size; //0x00002A28
+        _sw(size, ddrdbBuf); //0x00002A28 
         
         if (size != 0) { //0x00002A30
             //0x00002A2C - 0x00002A54
