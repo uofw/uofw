@@ -6,8 +6,6 @@
 
 static int g_0000C820;
 static int g_0000C83C;
-static int g_0000BE24;
-static int g_0000BE64;
 
 /* sceGpio_driver_317D9D2C */
 int
@@ -56,9 +54,9 @@ sceGpioSetPortMode(u32 port, int mode)
     t5 = (g_0000C83C & (~(1 << port))) | (s3 << port);
 
     g_0000C820 = t7;
-    g_0000BE24 = t7;
+    _sw(0xBE240000, t7);
     g_0000C83C = t5;
-    g_0000BE64 = t7;
+    _sw(0xBE240040, t5);
 
     if (mode != 2)
         sceSysregGpioIoEnable(port);
