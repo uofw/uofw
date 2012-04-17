@@ -333,8 +333,8 @@ void showInstr(std::string line, std::string &dataRef)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3) {
-        std::cout << "Usage: " << argv[0] << " FILENAME ENDADDR" << std::endl;
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " FILENAME [ENDADDR]" << std::endl;
         return 1;
     }
     std::ifstream f(argv[1]);
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
         std::cout << "Couldn't open file!" << std::endl;
         return 1;
     }
-    std::string addr(argv[2]);
+    std::string addr(argc >= 3 ? argv[2] : "");
     std::string line;
     std::string dataRef("");
     bool inText = false;
@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
     std::string jumpDest;
     while (getline(f, line) && !stop)
     {
-        if (line.find(addr) != std::string::npos)
+        if (addr != "" && line.find(addr) != std::string::npos)
             stop = true;
 
         if (!inText && line.find("Section .text") != std::string::npos)
@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
                     std::cout << "}" << std::endl << std::endl;
                 std::string func = line.substr(13);
                 func = func.substr(0, func.find_first_of(' '));
-                std::cout << func << "(...)" << std::endl;
+                std::cout << func << "(...) // at " << line.substr(line.find("Address ") + 8) << std::endl;
                 std::cout << "{" << std::endl;
                 firstFunc = false;
             }

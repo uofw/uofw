@@ -966,7 +966,6 @@ InterruptManagerForKernel_1373F20E:
 
     .globl sub_0CC0
 sub_0CC0:
-loc_00000CC0:
     cfc0       $v0, $0
     mtc0       $v0, $14
     lui        $v0, %hi(sub_0CF8)
@@ -974,8 +973,8 @@ loc_00000CC0:
     jr         $v0
     nop
 
-    .globl InterruptManagerForKernel_A0F88036
-InterruptManagerForKernel_A0F88036:
+    .globl sceKernelGetSyscallRA
+sceKernelGetSyscallRA:
     cfc0       $v0, $16
     beqz       $v0, loc_00000CF0
     nop
@@ -1018,7 +1017,7 @@ loc_00000D40:
     lw         $t5, 4($t4)
     mtc0       $v0, $14
     lw         $t6, 8($t4)
-    beqz       $t5, loc_00000CC0
+    beqz       $t5, sub_0CC0
     subu       $t5, $t7, $t5
     sltu       $at, $t5, $t6
     beqzl      $at, loc_00000D40

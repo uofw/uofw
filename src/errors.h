@@ -18,6 +18,8 @@
 #define ERROR_AUDIO_INVALID_VOLUME        0x8026000B
 #define ERROR_AUDIO_INPUT_BUSY            0x80260010
 
+#define ERROR_SIZE                        0x80000104
+
 /** SCE errors */
 #define SCE_ERROR_NOT_SUPPORTED		  0x80000004
 #define SCE_ERROR_PRIV_REQUIRED		  0x80000023

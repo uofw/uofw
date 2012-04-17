@@ -6,19 +6,21 @@
 
 #include "../global.h"
 
+#include "../sysmem/sysclib.h"
+#include "iofilemgr.h"
+
 #define STDIN  0
 #define STDOUT 1
 #define STDERR 2
 
-const char g_dummy[] = "dummy_drv_iofile:"; // 6700
-const char g_tty[] = "tty0:"; // 6714
-const char g_return[] = "\r\n"; // 671C
-const char g_tab[] = "        "; // 6720
-const char g_null[] = "<NULL>"; // 672C
-const char g_ttyDevName[] = "ttyproxy"; // 6734
-const char g_ttyDevDesc[] = "TTY2MsgPipe PROXY"; // 6740
-const char g_tty1[] = "ttyproxy1:"; // 6754
-const char g_tty2[] = "ttyproxy2:"; // 6760
+int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size);
+int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size);
+int _sceTtyProxyDevInit(SceIoDeviceArg *dev);
+int _sceTtyProxyDevExit(SceIoDeviceArg *dev);
+int _sceTtyProxyDevOpen(SceIoIob *iob, char *file, int flags, SceMode mode);
+int _sceTtyProxyDevClose(SceIoIob *iob);
+SceOff _sceTtyProxyDevLseek();
+int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
 
 SceIoDrvFuncs g_TtyOps = // 6948
 {
@@ -46,16 +48,20 @@ SceIoDrvFuncs g_TtyOps = // 6948
     NULL
 };
 
-SceIoDrv g_TtyDevTbl = {g_ttyDevName, 0x00000003, 0x00000001, g_ttyDevDesc, g_TtyOps}; // 69A0
+SceIoDrv g_TtyDevTbl = { "ttyproxy", 0x00000003, 0x00000001, "TTY2MsgPipe PROXY", &g_TtyOps }; // 69A0
 
 int g_stdin = -1; // 6AD0
 int g_stdout = -1; // 6AD4
 int g_stderr = -1; // 6AD8
 
 int g_debugRead; // 6AF0
-int *g_pipeList; // 6AF4
+int g_pipeList[6]; // 6AF4
 
 int g_linePos; // 6C34
+
+int sceTtyProxyInit();
+int stdoutReset(int flags, SceMode mode);
+int _sceKernelRegisterStdPipe(int fd, SceUID id);
 
 // 0000
 int StdioReInit()
@@ -67,7 +73,7 @@ int StdioReInit()
     // 0044
     int i;
     for (i = 0; i < 3; i++)
-        *fds[i] = sceIoOpen(g_dummy, 3, 0x1FF);
+        *fds[i] = sceIoOpen("dummy_drv_iofile:", 3, 0x1FF);
     g_debugRead = 1;
     sceTtyProxyInit();
     return 0;
@@ -138,12 +144,12 @@ int stdoutReset(int flags, SceMode mode)
     if (openDummy)
     {  
         // 0214
-        int ret = sceIoOpen(g_tty, flags, mode);
+        int ret = sceIoOpen("tty0:", flags, mode);
         if (ret >= 0)
             return ret;
     }
     // 01E8
-    return sceIoOpen(g_dummy, flags, mode);
+    return sceIoOpen("dummy_drv_iofile:", flags, mode);
 }
 
 // 0244
@@ -208,25 +214,25 @@ void printf_char(void *ctx, int ch)
 int fdprintf(int fd, const char *fmt, ...)
 {
     va_list ap;
-    int ret;
     char sp[168];
     va_start(ap, fmt);
     *(short*)((int)sp + 0) = fd;
     *(short*)((int)sp + 2) = 0;
     int n = prnt(printf_char, sp, fmt, ap);
     va_end(ap);
+    return n;
 }
 
 int printf(const char *fmt, ...)
 {
     va_list ap;
-    int ret;
     char sp[164];
     va_start(ap, fmt);
     *(short*)((int)sp + 0) = STDOUT;
     *(short*)((int)sp + 2) = 0;
     int n = prnt(printf_char, sp, fmt, ap);
     va_end(ap);
+    return n;
 }
 
 int fdputc(int c, int fd)
@@ -238,7 +244,7 @@ int fdputc(int c, int fd)
         // 0574
         if (sceKernelDipsw(59) == 1) {
             // 05E4
-            sceKernelDebugWrite(fd, g_tab, 8 - (g_linePos & 7)); // "        "
+            sceKernelDebugWrite(fd, "        ", 8 - (g_linePos & 7));
         }
         else
         {
@@ -248,7 +254,7 @@ int fdputc(int c, int fd)
             if (fd == STDERR)
                 fd = g_stderr;
             // 059C
-            sceIoWrite(fd, g_tab, 8 - (g_linePos & 7));
+            sceIoWrite(fd, "        ", 8 - (g_linePos & 7));
         }
         // 05C4
         g_linePos = (g_linePos & 0xFFFFFFF8) + 8;
@@ -257,7 +263,7 @@ int fdputc(int c, int fd)
     {
         // 0504
         if (sceKernelDipsw(59) == 1)
-            sceKernelDebugWrite(fd, g_return, sizeof(g_return));
+            sceKernelDebugWrite(fd, "\r\n", 2);
         else
         {
             if (fd == STDOUT)
@@ -266,7 +272,7 @@ int fdputc(int c, int fd)
             if (fd == STDERR)
                 fd = g_stderr;
             // 052C
-            sceIoWrite(fd, g_return, sizeof(g_return));
+            sceIoWrite(fd, "\r\n", 2);
         }
         // 0544
         g_linePos = 0;
@@ -385,7 +391,7 @@ int fdputs(const char *s, int fd)
 {
     char c;
     if (s == NULL) // 089C
-        s = g_null;
+        s = "<NULL>";
     // 085C, 0880
     while ((c = *(s++)) != '\0')
         fdputc(c, fd);
@@ -396,7 +402,7 @@ int puts(const char *s)
 {
     char c;
     if (s == NULL) // 089C
-        s = g_null;
+        s = "<NULL>";
     // 085C, 0880
     while ((c = *(s++)) != '\0')
         fdputc(c, STDOUT);
@@ -442,7 +448,7 @@ int sceKernelStdioOpen()
     return 0x80020001;
 }
 
-int _sceTtyProxyDevRead(void *iob, void *buf, int size)
+int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
 {
     int cnt;
     K1_BACKUP();
@@ -452,15 +458,16 @@ int _sceTtyProxyDevRead(void *iob, void *buf, int size)
         k1 = 24;
     // 09D0
     SET_REG(K1, k1);
-    int unk1 = g_pipeList[*(int*)(iob + 4) + 3];
-    int unk2 = g_pipeList[*(int*)(iob + 4) + 0];
+    int size2 = g_pipeList[iob->fsNum + 3];
+    SceUID id = g_pipeList[iob->fsNum + 0];
+    int min;
     // 09F8
     do
     {
-        int min = unk1;
-        if (unk1 >= size)
+        min = size2;
+        if (size2 >= size)
             min = size;
-        int ret = sceKernelReceiveMsgPipe(unk2, buf, min, 1, &cnt, 0);
+        int ret = sceKernelReceiveMsgPipe(id, buf, min, 1, &cnt, 0);
         if (ret < 0) {
             K1_RESET();
             return ret;
@@ -473,7 +480,7 @@ int _sceTtyProxyDevRead(void *iob, void *buf, int size)
     return count;
 }
 
-int _sceTtyProxyDevWrite(void *iob, void *buf, int size)
+int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
 {
     K1_BACKUP();
     int count = 0;
@@ -483,15 +490,15 @@ int _sceTtyProxyDevWrite(void *iob, void *buf, int size)
         k1 = 24;
     // 0AC4
     SET_REG(K1, k1);
-    int size2 = g_pipeList[*(int*)(iob + 4) + 3];
-    SceUID id = g_pipeList[*(int*)(iob + 4) + 0];
+    int size2 = g_pipeList[iob->fsNum + 3];
+    SceUID id = g_pipeList[iob->fsNum + 0];
     // 0AE8
     do
     {
         int minSize = size2;
         if (size2 >= size)
             minSize = size;
-        int ret = sceKernelSendMsgPipe(id, buf, minSize, 0, &curCnt, 0);
+        int ret = sceKernelSendMsgPipe(id, (void*)buf, minSize, 0, &curCnt, 0);
         if (ret < 0) {
             K1_RESET();
             return ret;
@@ -507,7 +514,7 @@ int _sceTtyProxyDevWrite(void *iob, void *buf, int size)
 // 0B58
 int sceTtyProxyInit()
 {
-    sceIoAddDrv(g_TtyOps);
+    sceIoAddDrv(&g_TtyDevTbl);
     return 0;
 }
 
@@ -528,37 +535,37 @@ int sceKernelRegisterStderrPipe(SceUID id)
 }
 
 // 0BE4
-int _sceTtyProxyDevInit()
+int _sceTtyProxyDevInit(SceIoDeviceArg *dev __attribute__((unused)))
 {
     return 0;
 }
 
 // 0BEC
-int _sceTtyProxyDevExit()
+int _sceTtyProxyDevExit(SceIoDeviceArg *dev __attribute__((unused)))
 {
     return 0;
 }
 
-int _sceTtyProxyDevOpen(void *iob)
+int _sceTtyProxyDevOpen(SceIoIob *iob, char *file __attribute__((unused)), int flags __attribute__((unused)), SceMode mode __attribute__((unused)))
 {
-    if (*(int*)(iob + 4) < 3)
+    if (iob->fsNum < 3)
         return 0;
     return 0x80010006;
 }
 
-int _sceTtyProxyDevClose(void *iob)
+int _sceTtyProxyDevClose(SceIoIob *iob)
 {
-    if (*(int*)(iob + 4) < 3)
+    if (iob->fsNum < 3)
         return 0;
     return 0x80010006;
 }
 
-long long _sceTtyProxyDevLseek()
+SceOff _sceTtyProxyDevLseek()
 {
     return 0x80020323;
 }
 
-int _sceTtyProxyDevIoctl(void *iob, int cmd)
+int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribute__((unused)), int inlen __attribute__((unused)), void *outdata __attribute__((unused)), int outlen __attribute__((unused)))
 {
     if (cmd != 0x00134002)
         return 0x80020324;
@@ -567,7 +574,7 @@ int _sceTtyProxyDevIoctl(void *iob, int cmd)
     if (sceIoGetIobUserLevel(iob) == 8)
         k1 = 0;
     SET_REG(K1, k1);
-    sceKernelCancelMsgPipe(g_pipeList[*(int*)(iob + 4)], 0, 0);
+    sceKernelCancelMsgPipe(g_pipeList[iob->fsNum], 0, 0);
     K1_RESET();
     return 0;
 }
@@ -591,11 +598,11 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     }
     if (sceKernelGetThreadmanIdType(id) == 7)
         return 0x800200D2;
-    SceSysmemUIDControlBlock blk;
+    SceSysmemUIDControlBlock *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return 0x800200D1;
     K1_GET();
-    if (K1_USER_MODE() && (blk.parent->attribute & 2) != 0)
+    if (K1_USER_MODE() && (blk->parent->attribute & 2) != 0)
         return 0x800200D1;
     SceKernelMppInfo mpp;
     mpp.size = 56;
@@ -604,11 +611,11 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
         return ret;
     if (STDOUT == 1) {
         // 0DB8
-        ret = sceKernelStdoutReopen(g_tty1, 2, 0x1FF);
+        ret = sceKernelStdoutReopen("ttyproxy1:", 2, 0x1FF);
     }
     else if (STDERR == 2) {
         // 0DA0
-        ret = sceKernelStderrReopen(g_tty2, 2, 0x1FF);
+        ret = sceKernelStderrReopen("ttyproxy2:", 2, 0x1FF);
     }
     // 0D58
     if (ret < 0)

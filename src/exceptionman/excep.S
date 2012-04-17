@@ -7,8 +7,8 @@
 
     .globl sub_0000
 sub_0000:
-    lui        $a0, %hi(sub_00F8)
-    addiu      $a0, $a0, %lo(sub_00F8)
+    lui        $a0, %hi(execNmiHandler)
+    addiu      $a0, $a0, %lo(execNmiHandler)
     ctc0       $a0, $9
     lui        $a0, %hi(sub_0040)
     addiu      $a0, $a0, %lo(sub_0040)
@@ -16,6 +16,7 @@ sub_0000:
     mtc0       $a0, $25
 
 # At 0x0000001C
+    # get threadman exception vector?
     .globl ExceptionManagerForKernel_96D47F7E
 ExceptionManagerForKernel_96D47F7E:
     lui        $v0, %hi(sub_0070)
@@ -40,9 +41,10 @@ sub_0040:
     bne        $v0, $v1, loc_00000098
     mfc0       $v1, $14
 
-    .globl sub_0068
-sub_0068:
-    j          sub_0068
+    # 0068
+    .globl syscallHandler
+syscallHandler:
+    j          syscallHandler
     ctc0       $v1, $0
 
 sub_0070:
@@ -65,7 +67,7 @@ loc_0000009C:
     ins        $v1, $v0, 0, 7
     lw         $v0, %lo(ExcepManCB)($v1)
     cfc0       $v1, $25
-    bnezl      $v1, loc_000000BC
+    bnezl      $v1, loc_000000BC # profiler
     sw         $v0, 12($v1)
     jr         $v0
     nop        
@@ -89,7 +91,7 @@ loc_000000E0:
     jr         $v0
     nop        
 
-sub_00F8:
+execNmiHandler:
     ctc0       $v1, $7
     mfc0       $v0, $13
     mfc0       $v1, $30
@@ -105,7 +107,7 @@ sub_00F8:
 sub_0120:
     ctc0       $v0, $6
     mfc0       $v0, $22
-    bne        $0, $v0, ExceptionManagerForKernel_79454858
+    bne        $0, $v0, FUCK#ExceptionManagerForKernel_79454858
     nop        
 
     .globl sub_0130
@@ -127,6 +129,7 @@ sub_0140:
     nop        
 
 # At 0x00000160 
+FUCK:
     .globl ExceptionManagerForKernel_79454858
 ExceptionManagerForKernel_79454858:
     li         $v0, 92
@@ -143,8 +146,9 @@ loc_00000174:
     nop        
     nop        
 
-    .globl sub_0180
-sub_0180:
+    # 0180
+    .globl nmiInit
+nmiInit:
     lui        $v0, 0xBC10
     lui        $v1, 0xFFFF
     ori        $v1, $v1, 0xFFFF
@@ -154,14 +158,15 @@ sub_0180:
     lui        $v1, %hi(g_0D44)
     jr         $ra
     sw         $0, %lo(g_0D44)($v1)
-    nop        
-    nop        
 
-    .globl sub_01A4
-sub_01A4:
+    # 01A4
+    .globl nmiHandler
+nmiHandler:
+    nop        
+    nop        
     lui        $v1, %hi(g_0D40)
     lw         $v0, %lo(g_0D40)($v1)
-    bnez       $v0, loc_000004E0
+    bnez       $v0, loc_000004E0 # handler was already called!
     addi       $v0, $v0, 1
     sw         $v0, %lo(g_0D40)($v1)
     lui        $v0, %hi(g_0D44)
@@ -377,8 +382,8 @@ loc_000003D4:
     nop        
 
 loc_000004CC:
-    lui        $v0, %hi(sub_01A4)
-    lw         $v0, %lo(sub_01A4)($v0)
+    lui        $v0, %hi(nmiHandler)
+    lw         $v0, %lo(nmiHandler)($v0)
     jr         $v0
     nop        
 

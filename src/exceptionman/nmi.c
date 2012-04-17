@@ -9,19 +9,19 @@
 #include "intr.h"
 
 // 1848
-void *g_nmiHandlers[16];
+void *g_nmiHandlers[16] = { NULL };
 
 int NmiManInit(void)
 {   
     int oldIntr = suspendIntr();
+    int i;
     COP0_CTRL_SET(18, 0);
     // 0AEC
-    int i;
     for (i = 0; i < 16; i++)
         g_nmiHandlers[i] = NULL;
-    sub_0180();
+    nmiInit();
     COP0_CTRL_SET(18, g_nmiHandlers);
-    sceKernelRegisterPriorityExceptionHandler(31, 1, sub_01A4);
+    sceKernelRegisterPriorityExceptionHandler(31, 1, nmiHandler);
     resumeIntr(oldIntr);
     return 0;
 }

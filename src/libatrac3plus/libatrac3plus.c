@@ -1169,7 +1169,7 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
         int ret = setBufferSize(&id->info, readByte, bufferByte);
         if (ret != 0)
             return ret;
-        if (id->info.codec == 0x1001)
+        if (id->info.codec == 0x1001) // AT3
         {
             // 25BC
             SceAtracUnk *cur = &g_3F08[4];

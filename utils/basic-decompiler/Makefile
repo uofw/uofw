@@ -11,7 +11,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	@echo "Creating binary $(TARGET)"
-	@$(CPP) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CPP) $(OBJECTS) -o $@ $(LDFLAGS)
 
 %.o: %.cpp
 	@echo "Compiling $^"

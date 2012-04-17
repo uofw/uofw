@@ -1,3 +1,6 @@
+// valid for 0x08......, 0x48......, 0x88...... and 0xA8...... addresses
+#define IS_MAIN_MEMORY(addr) (((0x00220202 >> (((int)addr >> 27) & 0x1F)) & 1) != 0)
+
 // retValues
 int g_retValues[] = { 0x807F00FC, 0x807F00FD, 0x80000002, 0x807F00FF, 0x807F0001 };
 
@@ -16,19 +19,19 @@ short g_freqs[][4] = {
     { 11025, 12000, 8000, 0 }
 };
 
-int sceAudiocodecCheckNeedMem(u32 *codec_buffer, u32 codec)
+int sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, int codec)
 {
-    if (((0x00220202 >> (((int)codec_buffer >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0148
     K1_BACKUP();
     int ret = 0x80000023;
-    if (K1_USER_BUF_STA_SZ(codec_buffer, 104))
+    if (K1_USER_BUF_STA_SZ(info, 104))
     {
-        *codec_buffer = 0x05100601;
-        int id = sceMeAudio_driver_81956A0B(codec, codec_buffer);
+        info->unk0 = 0x05100601;
+        int id = sceMeAudio_driver_81956A0B(codec, info);
         ret = 0;
         if (id != 0)
         {
@@ -42,15 +45,15 @@ int sceAudiocodecCheckNeedMem(u32 *codec_buffer, u32 codec)
     return ret;
 }
 
-int sceAudiocodecInit(void *codec_buf, int codec)
+int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
 {   
-    if (((0x00220202 >> (((int)codec_buf >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0214
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 104) || !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16))) {
+    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)) {
         K1_RESET();
         return 0x80000023;
     }
@@ -58,16 +61,16 @@ int sceAudiocodecInit(void *codec_buf, int codec)
     if (codec == 0x1002)
     {
         // 02CC
-        *(int*)(codec_buf + 56) = 9999;
+        info->unk56 = 9999;
     }
     // 0264
-    if (((0x00220202 >> ((*(int*)(codec_buf + 12) >> 27) & 0x1F)) & 1) != 0) {
+    if (IS_MAIN_MEMORY(info->edramAddr))
         // 02BC
-        sceKernelDcacheWritebackInvalidateRange(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16));
+        sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
     }
     // 027C
-    *(int*)(codec_buf + 0) = 0x05100601;
-    int id = sceMeAudio_driver_6AD33F60(codec, codec_buf);
+    info->unk0 = 0x05100601;
+    int id = sceMeAudio_driver_6AD33F60(codec, info);
     int ret = 0;
     if (id != 0)
     {
@@ -79,15 +82,15 @@ int sceAudiocodecInit(void *codec_buf, int codec)
     return ret;
 }
 
-int sceAudiocodec_3DD7EE1A(void *codec_buf, int codec)
+int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
 {
-    if (((0x00220202 >> (((int)codec_buf >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0344
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 104) || !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16))) {
+    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)) {
         K1_RESET();
         return 0x80000023;
     }
@@ -95,16 +98,16 @@ int sceAudiocodec_3DD7EE1A(void *codec_buf, int codec)
     if (codec == 0x1002)
     {
         // 03FC
-        *(int*)(codec_buf + 56) = 9999;
+        info->unk56 = 9999;
     }
     // 0394
-    if (((0x00220202 >> ((*(int*)(codec_buf + 12) >> 27) & 0x1F)) & 1) != 0) {
+    if (IS_MAIN_MEMORY(info->edramAddr))
         // 03EC
-        sceKernelDcacheWritebackInvalidateRange(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16));
+        sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
     }
     // 03AC
-    *(int*)(codec_buf + 0) = 0x05100601;
-    int id = sceMeAudio_driver_B57F033A(codec, codec_buf);
+    info->unk0 = 0x05100601;
+    int id = sceMeAudio_driver_B57F033A(codec, info);
     int ret = 0;
     if (id != 0)
     {
@@ -116,18 +119,18 @@ int sceAudiocodec_3DD7EE1A(void *codec_buf, int codec)
     return ret;
 }
 
-int sceAudiocodecDecode(void *codec_buf, int codec)
+int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
 {
-    if (((0x00220202 >> (((int)codec_buf >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0474
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 104)
-     || !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16))
-     || !K1_USER_BUF_STA_SZ(*(int*)(codec_buf + 24), 0x10000)
-     || !K1_USER_BUF_STA_SZ(*(int*)(codec_buf + 32), 0x10000)) {
+    if (!K1_USER_BUF_STA_SZ(info, 104)
+     || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)
+     || !K1_USER_BUF_STA_SZ(info->inBuf, 0x10000)
+     || !K1_USER_BUF_STA_SZ(info->outBuf, 0x10000)) {
         // (04E0)
         // 04E4
         K1_RESET();
@@ -138,25 +141,25 @@ int sceAudiocodecDecode(void *codec_buf, int codec)
     if (codec == 0x1002 || codec == 0x1004)
     {
         // 0570
-        size = *(int*)(codec_buf + 40);
+        size = *(int*)&info->unk40;
     }
     else
     {
-        size = getBufSize(codec_buf, codec);
+        size = getBufSize(info, codec);
         if (size < 0) {
             K1_RESET();
             return size;
         }
     }
     // 0510
-    sceKernelDcacheWritebackRange(*(int*)(codec_buf + 24), size);
-    size = sub_0A40(codec_buf, codec);
+    sceKernelDcacheWritebackRange(info->inBuf, size);
+    size = sub_0A40(info, codec);
     if (size < 0) {
         K1_RESET();
         return size;
     }
-    sceKernelDcacheWritebackInvalidateRange(*(int*)(codec_buf + 32), size);
-    int id = sceMeAudio_driver_9A9E21EE(codec, codec_buf);
+    sceKernelDcacheWritebackInvalidateRange(info->outBuf, size);
+    int id = sceMeAudio_driver_9A9E21EE(codec, info);
     int ret = 0;
     if (id != 0)
     {
@@ -168,22 +171,22 @@ int sceAudiocodecDecode(void *codec_buf, int codec)
     return ret;
 }
 
-int sceAudiocodecGetInfo(void *codec_buf, int codec)
+int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
 {
-    if (((0x00220202 >> (((int)codec_buf >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 05D4
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 104) || !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16)))
+    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem))
     {
         // 060C
         K1_RESET();
         return 0x80000023;
     }
     // 0620
-    if ((codec == 0x1002 || codec == 0x1004) && !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 24), *(int*)(codec_buf + 40))) {
+    if ((codec == 0x1002 || codec == 0x1004) && !K1_USER_BUF_DYN_SZ(info->inBuf, (int*)&info->unk40)) {
         K1_RESET();
         return 0x80000023;
     }
@@ -206,8 +209,8 @@ int sceAudiocodecGetInfo(void *codec_buf, int codec)
         return 0;
     }
     // 0684
-    *(int*)(codec_buf + 0) = 0x05100601;
-    int id = sceMeAudio_driver_C300D466(codec, opt, codec_buf);
+    info->unk0 = 0x05100601;
+    int id = sceMeAudio_driver_C300D466(codec, opt, info);
     int ret = 0;
     if (id != 0)
     {
@@ -221,22 +224,22 @@ int sceAudiocodecGetInfo(void *codec_buf, int codec)
     return ret;
 }
 
-int sceAudiocodecAlcExtendParameter(void *codec_buf, int codec, int *sizeOut)
+int sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, int codec, int *sizeOut)
 {   
-    if (((0x00220202 >> (((int)codec_buf >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0744
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 104) || !K1_USER_BUF_STA_SZ(sizeOut, 4))
+    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_STA_SZ(sizeOut, 4))
     {
         // 0770
         K1_RESET();
         return 0x80000023;
     }
     // 0780
-    int size = sub_0A40(codec_buf, codec);
+    int size = sub_0A40(info, codec);
     if (size < 0) {
         K1_RESET();
         return size;
@@ -246,57 +249,57 @@ int sceAudiocodecAlcExtendParameter(void *codec_buf, int codec, int *sizeOut)
     return 0;
 }
 
-int sceAudiocodecGetEDRAM(void *codec_buf, int codec)
+int sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, int codec)
 {
-    if (((0x00220202 >> (((int)codec_buf >> 27) & 0x1F)) & 1) == 0)
+    if (!IS_MAIN_MEMORY(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0808
     K1_BACKUP();
     int ret = 0;
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 108)) {
+    if (!K1_USER_BUF_STA_SZ(info, 108)) {
         K1_RESET();
         return 0x80000023;
     }
     // 0838
-    int cnt = sceMeMalloc((*(int*)(codec_buf + 16) + 0x3F) | 0x3F)
-    *(int*)(codec_buf + 104) = cnt;
-    if (cnt == 0 || (cnt & 0x1FFFFFFF) > 0x003FFFFF)
+    void *alloc = sceMeMalloc((info->neededMem + 0x3F) | 0x3F)
+    info->allocMem = alloc;
+    if (alloc == NULL || ((int)alloc & 0x1FFFFFFF) > 0x003FFFFF)
     {
         // (087C)
         // 0880
         ret = 0x807F0003;
-        sceMeFree(*(int*)(codec_buf + 104));
-        *(int*)(codec_buf + 104) = 0;
-        *(int*)(codec_buf + 12) = 0;
+        sceMeFree(info->allocMem);
+        info->allocMem = NULL;
+        info->edramAddr = 0;
     }
     else
-        *(int*)(codec_buf + 12) = (cnt + 0x3F) & 0xFFFFFFC0;
+        info->edramAddr = ((int)alloc + 0x3F) & 0xFFFFFFC0;
     K1_RESET();
     return ret;
 }
 
-int sceAudiocodecReleaseEDRAM(void *codec_buf)
+int sceAudiocodecReleaseEDRAM(SceAudiocodecInfo *info)
 {   
     K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(codec_buf, 108) || !K1_USER_BUF_DYN_SZ(*(int*)(codec_buf + 12), *(int*)(codec_buf + 16))) {
+    if (!K1_USER_BUF_STA_SZ(info, 108) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)) {
         K1_RESET();
         return 0x80000023;
     }
-    if (*(int*)(codec_buf + 104) == 0 || *(int*)(codec_buf + 104) & 0x1FFFFFFF > 0x3FFFFF) {
+    if (info->allocMem == NULL || ((int)info->allocMem & 0x1FFFFFFF) > 0x3FFFFF) {
         K1_RESET();
         return 0x807F0004;
     }
     // 0938
-    sceMeFree(*(int*)(codec_buf + 104));
-    *(int*)(codec_buf + 104) = 0;
-    *(int*)(codec_buf + 12) = 0;
+    sceMeFree(info->allocMem);
+    info->allocMem = NULL;
+    info->edramAddr = 0;
     K1_RESET();
     return 0;
 }
 
-int getBufSize(void *codec_buf, int codec)
+int getBufSize(SceAudiocodecCodec *info, int codec)
 {
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -305,37 +308,37 @@ int getBufSize(void *codec_buf, int codec)
     {
     case 0x1000:
         // 0990
-        if (*(int*)(codec_buf + 48) == 0)
-            return *(int*)(codec_buf + 64) + 2;
+        if (info->unk48 == 0)
+            return info->unk64 + 2;
         return 0x100A;
 
     case 0x1001:
         // 09B8
-        return *(int*)(codec_buf + 48) * 2 + 1;
+        return info->unk48 * 2 + 1;
 
     case 0x1002:
         // 09C8
-        if (*(int*)(codec_buf + 56) == 9999)
+        if (info->unk56 == 9999)
         {
             // 09F8
-            int ret = sceAudiocodecGetInfo(codec_buf, 0x1002);
+            int ret = sceAudiocodecGetInfo(info, 0x1002);
             if (ret < 0)
                 return ret;
         }
         // 09D8
         // 09E8 dup
-        return sub_0B18(*(int*)(codec_buf + 56), *(int*)(codec_buf + 60), *(int*)(codec_buf + 68), *(int*)(codec_buf + 72), codec_buf + 40);
+        return sub_0B18(info->unk56, info->unk60, info->unk68, info->unk72, &info->unk40);
 
     case 0x1003:
         // 0A10
-        if (*(u8*)(codec_buf + 44) == 0)
+        if (info->unk44 == 0)
             return 0x600;
         return 0x609;
 
     case 0x1004:
         // 0A24
         // 09E8 dup
-        return sub_0B18(*(int*)(codec_buf + 48), *(int*)(codec_buf + 52), *(int*)(codec_buf + 60), *(int*)(codec_buf + 64), codec_buf + 40);
+        return sub_0B18(info->unk48, info->unk52, info->unk60, info->unk64, &info->unk40);
 
     case 0x1005:
         // 0A38
@@ -343,7 +346,7 @@ int getBufSize(void *codec_buf, int codec)
     }
 }
 
-int sub_0A40(void *codec_buf, int codec)
+int sub_0A40(SceAudiocodecCodec *info, int codec)
 {
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x1000;
@@ -351,10 +354,10 @@ int sub_0A40(void *codec_buf, int codec)
     {
     case 0x1000:
         // 0A7C
-        if (*(int*)(codec_buf + 56) == 1 && *(int*)(s0 + 72) != *(int*)(s0 + 56)) // 0AA4
+        if (info->unk56 == 1 && info->unk72 != info->unk56)
             return 0x2000;
         // 0A8C
-        return *(int*)(codec_buf + 72) << 12;
+        return info->unk72 << 12;
 
     case 0x1001:
         // 0AB4
@@ -362,23 +365,23 @@ int sub_0A40(void *codec_buf, int codec)
 
     case 0x1002:
         // 0ABC
-        if (*(int*)(codec_buf + 56) == 9999)
+        if (info->unk56 == 9999)
         {
             // 0AE0
-            int ret = sceAudiocodecGetInfo(codec_buf, 0x1002);
+            int ret = sceAudiocodecGetInfo(info, 0x1002);
             if (ret < 0)
                 return ret;
         }
         // 0ACC
         // 0AD8 dup
-        if (*(int*)(codec_buf + 56) == 1)
+        if (info->unk56 == 1)
             return 0x1200;
         return 0x900;
 
     case 0x1003:
         // 0AF8
         // 0AD8 dup
-        if (*(u8*)(codec_buf + 45) == 0)
+        if (info->unk45 == 0)
             return 0x1000;
         return 0x2000;
 

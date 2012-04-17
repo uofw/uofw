@@ -1,17 +1,5 @@
 #include "../global.h"
 
-typedef struct SceSysEventHandler
-{
-    int size;
-    char* name;
-    int type_mask;
-    int (*handler)(int ev_id, char* ev_name, void* param, int* result);
-    int gp;
-    int busy;
-    struct SceSysEventHandler *next;
-    int reserved[9];
-} SceSysEventHandler;
-
 // 140F0
 SceSysEventHandler *g_sysEvHandlers;
 

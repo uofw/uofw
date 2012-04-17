@@ -13,7 +13,7 @@ __stub_modulestr_\module:
 __stub_module_\module:
 	.word   __stub_modulestr_\module
 	.word   \flags_ver
-	.word   0x5
+	.word   0x6
 	.word   __executable_start
 	.word   __executable_start
     .word   __executable_start

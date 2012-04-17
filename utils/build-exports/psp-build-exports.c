@@ -276,7 +276,7 @@ int parse_string(char *line, char **params, int max_params)
 	param_start = pos;
 
 	/* Scan parameters */
-	while((isalnum(line[pos])) || (line[pos] == '_') || (line[pos] == ','))
+	while((isalnum(line[pos])) || (line[pos] == '_') || (line[pos] == ',') || (line[pos] == '.'))
 	{
 		pos++;
 	}
@@ -325,7 +325,7 @@ void build_exports_output_extern(struct psp_export *pHead)
 	pExp = pHead;
 	while(pExp != NULL)
 	{
-		fprintf(stdout, "extern void %s;\n", pExp->name);
+		fprintf(stdout, "extern int %s;\n", pExp->name);
 		pExp = pExp->pNext;
 	}
 }

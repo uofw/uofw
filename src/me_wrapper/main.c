@@ -677,96 +677,94 @@ int sub_00001240(int codec, unsigned long *codec_buffer, int error)
 }
 
 //decode
-int sceMeAudio_driver_9A9E21EE(u32 codec, unsigned long *codec_buffer){ //same -310C9CDA
-	unsigned long *cb17 = &codec_buffer[17];
-	unsigned long *cb16 = &codec_buffer[16];
-	void *memory = (void*)codec_buffer[3];
-	void *data = (void*)codec_buffer[6];
-	u32 samples = codec_buffer[8];
-	if (codec_buffer[0] > 0x05100601)
+int sceMeAudio_driver_9A9E21EE(u32 codec, SceAudiocodecCodec *info) //same -310C9CDA
+{
+	if (info->unk0 != 0x05100601)
 	    return -2;
-	if (codec_buffer[3] == 0)
+	if (info->edramAddr == 0)
 	    return 0x80000103;
-	codec_buffer[9] = 0;
-	codec_buffer[2] = 0;
-	sceKernelDcacheWritebackInvalidateRange(codec_buffer, 104);
+	info->unk36 = 0;
+	info->err = 0;
+	sceKernelDcacheWritebackInvalidateRange(info, 104);
+	int ret = 0;
 	if (codec < 0x1000 || codec >= 0x1006)
 	    return -1;
-	int ret = 0;
 	switch (codec)
 	{
-		case 0x1000:
-			ret = sceMeCore_driver_FA398D71(96, codec_buffer);
+		case 0x1000: // AT3+
+			ret = sceMeCore_driver_FA398D71(96, info);
 		break;
-		case 0x1001:
-			ret = sceMeCore_driver_FA398D71(112, codec_buffer);
+		case 0x1001: // AT3
+			ret = sceMeCore_driver_FA398D71(112, info);
 		break;
 		case 0x1002:
-			ret = sceMeCore_driver_FA398D71(140, codec_buffer);
+			ret = sceMeCore_driver_FA398D71(140, info);
 		break;
 		case 0x1003:
-			ret = sceMeCore_driver_FA398D71(144, data, &codec_buffer[7], samples, &codec_buffer[9], memory);
+			ret = sceMeCore_driver_FA398D71(144, info->inBuf, &info->unk28, info->outBuf, &info->unk36, info->unk12);
 		break;
 		case 0x1005:
-			ret = sceMeCore_driver_FA398D71(229, data, codec_buffer[15], cb16, samples, &codec_buffer[9], cb17, memory);
+			ret = sceMeCore_driver_FA398D71(229, info->inBuf, info->unk60, &info->unk64, info->outBuf, &info->unk36, &info->unk68, info->unk12);
 		break;
 		default:
 			return -1;
-		break;
 	}
-	if (ret < 0){
-		return sub_00001240(codec, codec_buffer, ret);
-	}
+	if (ret < 0)
+		return sub_00001240(codec, info, ret);
 	return 0;
 }
+
 //check need memory
-int sceMeAudio_driver_81956A0B(u32 codec, unsigned long *codec_buffer){
-	if (0x5100601 < codec_buffer[0]) return -2;
-	u32 codecIndex = codec - 0x1000;
-	if (codecIndex > 5) return -1;
+int sceMeAudio_driver_81956A0B(u32 codec, SceAudiocodecCodec *info)
+{
+	if (info->unk0 != 0x05100601)
+	    return -2;
 	int ret = 0;
-	switch (codecIndex){
-		case 0://at3+
-			ret = sceMeCore_driver_635397BB(99, &codec_buffer[13], &codec_buffer[15], &codec_buffer[16], &codec_buffer[10]);
-			if (ret >= 0){
-				codec_buffer[2] = 0;
-				ret = sceMeCore_driver_635397BB(102, codec_buffer[15], &codec_buffer[4], &codec_buffer[2]);
-				if (ret == 0){
+	if (codec < 0x1000 || codec >= 0x1006)
+	    return -1;
+	switch (codec)
+	{
+		case 0x1000: //at3+
+			ret = sceMeCore_driver_635397BB(99, &info->unk52, &info->unk60, &info->unk64, &info->unk40);
+			if (ret >= 0)
+			{
+				info->err = 0;
+				ret = sceMeCore_driver_635397BB(102, info->unk60, &info->neededMem, &info->err);
+				if (ret == 0)
 					return 0;
-				}
 				return -3;
 			}
-		break;
-		case 1://at3
-			ret = sceMeCore_driver_635397BB(114, 2, &codec_buffer[4], &codec_buffer[2]);
-			if (ret == 0){
-				return 0;
-			}
-			return -3;
-		break;
-		case 2://mp3
-			ret = sceMeCore_driver_635397BB(138, 2, &codec_buffer[4], &codec_buffer[2]);
-			if (ret == 0){
-				return 0;
-			}
-			return -3;
-		break;
-		case 3://aac
-			codec_buffer[4] = sceMeCore_driver_FA398D71(146);//=0x648c
-			codec_buffer[2] = 0;
-			return 0;
 			break;
-		case 4://not supported
-			return -1;
+
+		case 0x1001: //at3
+			ret = sceMeCore_driver_635397BB(114, 2, &info->neededMem, &info->err);
+			if (ret == 0)
+				return 0;
+			return -3;
 		break;
-		case 5://wma
-			codec_buffer[4] = sceMeCore_driver_FA398D71(226);
-			codec_buffer[2] = 0;
+
+		case 0x1002: //mp3
+			ret = sceMeCore_driver_635397BB(138, 2, &info->neededMem, &info->err);
+			if (ret == 0)
+				return 0;
+			return -3;
+
+		case 0x1003: //aac
+			info->neededMem = sceMeCore_driver_FA398D71(146);
+			info->err = 0;
 			return 0;
-		break;
+
+		case 0x1005: //wma
+			info->neededMem = sceMeCore_driver_FA398D71(226);
+			info->err = 0;
+			return 0;
+		
+		default:
+			return -1;
 	}
-	return sub_00001240(codec, codec_buffer, ret);
+	return sub_00001240(codec, info, ret);
 }
+
 int unk[] = {//guessed, codec_buffer[10] should be 4 or 6, got 8744 from a snd0 file
 			0x00000000,
 			0x00000100,
@@ -800,22 +798,26 @@ int unk[] = {//guessed, codec_buffer[10] should be 4 or 6, got 8744 from a snd0 
 			0x000000C0,
 			0x00000002,
 			0x00000098};
+
 //init
-int sceMeAudio_driver_6AD33F60(u32 codec, unsigned long *codec_buffer){
-	if (0x05100601 < codec_buffer[0]) return -2;
-	u32 codecIndex = codec - 0x1000;
-	codec_buffer[2] = 0;
-	if (codecIndex > 5) return -1;
+int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecInit *info)
+{
+    if (info->unk0 != 0x05100601)
+	    return -2;
+	info->err = 0;
+	if (codec < 0x1000 || codec >= 0x1006)
+		return -1;
 	int ret = 0;
-	switch (codecIndex){
-		case 0://at3+
-			ret = sceMeCore_driver_635397BB(99, &codec_buffer[13], &codec_buffer[15], &codec_buffer[16], &codec_buffer[10]);
+	switch (codec)
+	{
+		case 0x1000://at3+
+			ret = sceMeCore_driver_635397BB(99, &info->unk52, &info->unk60, &info->unk64, &info->unk40); // set options (sets unk52, unk60, unk64 with the help of unk40)
 			if (ret >= 0){
-				int val = codec_buffer[15];
+				int val = info->unk60; // check http://wiki.multimedia.cx/index.php?title=ATRAC3plus#Multichannel_ATRAC3plus_.28ATRAC-X.29 : it's probably this!
 				switch (val){
 					case 0:
 					default :
-						codec_buffer[2] = 514;
+						info->err = 514;
 						return -3;
 					break;
 					case 1:
@@ -831,32 +833,31 @@ int sceMeAudio_driver_6AD33F60(u32 codec, unsigned long *codec_buffer){
 						val++;
 					break;
 				}
-				codec_buffer[18] = 2;
-				ret = sceMeCore_driver_635397BB(103, codec_buffer[13], codec_buffer[15], codec_buffer[16], 2, codec_buffer[3]);
+				info->unk72 = 2;
+				ret = sceMeCore_driver_635397BB(103, info->unk52, info->unk60, info->unk64, 2, info->edramAddr); // setup channels, probably
 				if (ret >= 0){
-					ret = sceMeCore_driver_635397BB(105, &codec_buffer[11], codec_buffer[3]);
+					ret = sceMeCore_driver_635397BB(105, &info->unk44, info->edramAddr); // probably sets unk44
 					if (ret >= 0){
-						ret = sceMeCore_driver_635397BB(100, &codec_buffer[17], codec_buffer[3]);
+						ret = sceMeCore_driver_635397BB(100, &info->unk68, info->edramAddr); // probably sets unk68
 						if (ret >= 0){
-							ret = sceMeCore_driver_FA398D71(104, codec_buffer[5], codec_buffer[3]);
+							ret = sceMeCore_driver_FA398D71(104, info->unk20, info->edramAddr); // check unk20 (where is it set???)
 						}
 					}
 				}
 			}
 		break;
-		case 1://at3
-			codec_buffer[11] = 44100;
-			codec_buffer[12] = unk[codec_buffer[10]*2+1];
-			ret = sceMeCore_driver_635397BB(115, unk[codec_buffer[10]*2], 44100, unk[codec_buffer[10]*2+1], codec_buffer[3]);
-			if ((codec_buffer[10]-14)<2){
-				codec_buffer[13] = 2;
-			}
+		case 0x1001://at3
+			*(int*)&info->unk44 = 44100;
+			info->unk48 = unk[*(int*)&info->unk40 * 2 + 1];
+			ret = sceMeCore_driver_635397BB(115, unk[*(int*)&info->unk40 * 2], 44100, unk[*(int*)&info->unk40 * 2 + 1], info->edramAddr);
+			if (*(int*)&info->unk40 >= 14 && *(int*)&info->unk40 < 16)
+				info->unk52 = 2;
 		break;
-		case 2://mp3
-			ret = sceMeCore_driver_635397BB(139, codec_buffer[3]);
+		case 0x1002://mp3
+			ret = sceMeCore_driver_635397BB(139, info->unk12);
 		break;
-		case 3://aac
-			switch (codec_buffer[10]){
+		case 0x1003://aac
+			switch (*(int*)&info->unk40){
 				case 96000:
 				case 88200:
 				case 64000:
@@ -868,21 +869,17 @@ int sceMeAudio_driver_6AD33F60(u32 codec, unsigned long *codec_buffer){
 				case 16000:
 				case 11050:
 				case 8000:
-					ret = sceMeCore_driver_635397BB(147, codec_buffer[10], codec_buffer[3]);
-					if (ret >= 0){					
-						if (((short*)codec_buffer)[22] != 0){
-							ret = sceMeCore_driver_635397BB(149, ((u8*)codec_buffer)[44], codec_buffer[3]);
-							if (ret >= 0){
-								if (((char*)codec_buffer)[45] != 0){
-									ret = sceMeCore_driver_635397BB(151, 0, 2, 0, codec_buffer[3]);
-								}
-							}
+					ret = sceMeCore_driver_635397BB(147, *(int*)&info->unk40, info->edramAddr);
+					if (ret >= 0)
+					{
+						if (*(short*)&info->unk44 != 0)
+						{
+							ret = sceMeCore_driver_635397BB(149, info->unk44, info->edramAddr);
+							if (ret >= 0 && info->unk45 != 0)
+								ret = sceMeCore_driver_635397BB(151, 0, 2, 0, info->edramAddr);
 						}
-						else{
-							if (((char*)codec_buffer)[45] != 0){
-								ret = sceMeCore_driver_635397BB(151, 0, 2, 0, codec_buffer[3]);
-							}
-						}
+						else if (info->unk45 != 0)
+							ret = sceMeCore_driver_635397BB(151, 0, 2, 0, info->edramAddr);
 					}
 				break;
 				default:
@@ -890,16 +887,15 @@ int sceMeAudio_driver_6AD33F60(u32 codec, unsigned long *codec_buffer){
 				break;
 			}			
 		break;
-		case 4://not used
+		case 0x1004://not used
 			return -1;
 		break;
-		case 5://wma
-			ret = sceMeCore_driver_635397BB(227, &codec_buffer[10], codec_buffer[3]);
+		case 0x1005://wma
+			ret = sceMeCore_driver_635397BB(227, &info->unk40, info->edramAddr);
 		break;
 	}
-	if (ret < 0){
-		return sub_00001240(codec, codec_buffer, ret);
-	}
+	if (ret < 0)
+		return sub_00001240(codec, info, ret);
 	return ret;	
 }
 //probably for umd(only at3/+)

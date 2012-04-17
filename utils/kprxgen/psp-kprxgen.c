@@ -673,7 +673,7 @@ void output_ph(unsigned char *data)
         dataSize = get_sh(".data")->iSize;
     }
     else {
-        dataAddr = g_relocbase;
+        dataAddr = g_relocbase - g_allocbase;
         dataSize = 0;
     }
     SW(&phdr->p_type,   1);

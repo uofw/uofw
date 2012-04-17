@@ -34,17 +34,17 @@ SceExceptionHandler *newExcepCB(void);
 void FreeExcepCB(SceExceptionHandler *ex);
 void Allocexceppool(void);
 
-int g_0D40;
-int g_0D44;
+int g_0D40 = 0;
+int g_0D44 = 0;
 
 // 0D48 (?)
-char g_stack[2108];
+char g_stack[2108] = {0};
 
 // 1580
-char g_stackCtx[192];
+char g_stackCtx[192] = {0};
 
 // 1640
-SceExceptions ExcepManCB;
+SceExceptions ExcepManCB = { { NULL }, { NULL }, NULL, NULL, { { NULL, NULL } }};
 
 int ExcepManInit(void)
 {   
@@ -98,6 +98,7 @@ int sceKernelRegisterPriorityExceptionHandler(int exno, int prio, void (*func)()
         resumeIntr(oldIntr);
         return 0x80020032;
     }
+    int i;
     prio &= 0x3;
     SceExceptionHandler *newEx = newExcepCB();
     SceExceptionHandler *ex = ExcepManCB.hdlr1[exno];
@@ -220,7 +221,7 @@ void build_exectbl(void)
         }
         // 0918
     }
-    int op = *(int*)(sub_0068);
+    int op = *(int*)(syscallHandler);
     // 0948
     for (i = 0; i < 32; i++)
     {
@@ -238,11 +239,11 @@ void build_exectbl(void)
         {
             // 097C
             op = (((int)ExcepManCB.hdlr1[8] >> 2) & 0x03FFFFFF) + 0x08000000;
-            CACHE(0x1A, &sub_0068);
+            CACHE(0x1A, &syscallHandler);
         }
         // 0964
     }
-    *(int*)(sub_0068) = op;
+    *(int*)(syscallHandler) = op;
 }
 
 SceExceptionHandler *newExcepCB(void)

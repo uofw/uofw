@@ -43,33 +43,6 @@ typedef struct
 
 typedef struct
 {
-    // ...
-    int err; // 8
-    int edramAddr; // 12
-    int neededMem; // 16
-    int unk20;
-    void *inBuf;
-    int unk28;
-    void *outBuf;
-    int unk36;
-    char unk40;
-    char unk41;
-    char unk42;
-    char unk43;
-    char unk44;
-    char unk45;
-    char unk46;
-    char unk47;
-    int unk48;
-    int unk52;
-    int unk56;
-    // ...
-    int unk72;
-    // ...
-} SceAudiocodecCodec;
-
-typedef struct
-{
     SceAudiocodecCodec codec __attribute__((aligned(256))); // size: 128
     SceAtracIdInfo info __attribute__((aligned(128))); // size: 128
 } SceAtracId; // size: 256

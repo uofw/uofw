@@ -3,8 +3,9 @@
 
 include ../../lib/common.mak
 
-CFLAGS   := -I../../include -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -Werror -nostdlib
-LDFLAGS  := -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
+PSPSDK = `psp-config --pspsdk-path`
+CFLAGS   := -I../../include -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -Werror -fno-builtin -nostdlib -I$(PSPSDK)/include
+LDFLAGS  := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
 
 # Setup default exports if needed
 ifdef PRX_EXPORTS
@@ -25,7 +26,8 @@ $(TARGET).elf: $(OBJS) $(EXPORT_OBJ)
 	$(CC) -c $^ -o $@ $(CFLAGS)
 
 %.prx: %.elf
-	../../utils/kprxgen/psp-kprxgen $< $@
+	#../../utils/kprxgen/psp-kprxgen $< $@
+	psp-prxgen $< $@
 
 $(PRX_EXPORTS:.exp=.c): $(PRX_EXPORTS)
 	../../utils/build-exports/psp-build-exports -b $< > $@

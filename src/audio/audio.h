@@ -233,7 +233,7 @@ int sceAudioEnd();
  *
  * @return 0.
  */
-int sceAudio_driver_306D18F1(int arg);
+int sceAudio_driver_FF298CE7(int arg);
 
 /**
  * Sets the volume offset/shifting.
@@ -313,13 +313,13 @@ int sceAudioInputBlocking(int sampleCount, int freq, void *buf);
 /**
  * Store input.
  *
- * @param unk1 \todo ?
- * @param gain The input gain.
- * @param unk2 \todo ?
+ * @param sampleCount The number of samples to read.
+ * @param freq The input frequency.
+ * @param buf The audio PCM input buffer.
  *
  * @return The number of played samples on success, otherwise less than zero.
  */
-int sceAudioInput(int unk1, int gain, int unk2);
+int sceAudioInput(int sampleCount, int freq, void *buf);
 
 /**
  * Get the number of samples read from input.

@@ -2,15 +2,7 @@
 
 #include "../global.h"
 
-#define CTYPE_DOWNCASE_LETTER 0x01
-#define CTYPE_UPCASE_LETTER   0x02
-#define CTYPE_CIPHER          0x04
-#define CTYPE_TRANSPARENT     0x08
-#define CTYPE_PUNCTUATION     0x10
-#define CTYPE_CTRL            0x20
-#define CTYPE_HEX_CIPHER      0x40
-
-#define CTYPE_LETTER (CTYPE_DOWNCASE_LETTER | CTYPE_UPCASE_LETTER)
+#include "sysclib.h"
 
 char g_ctypeTbl[] =
 {
@@ -144,8 +136,6 @@ char g_ctypeTbl[] =
     CTYPE_PUNCTUATION,
     CTYPE_CTRL
 };
-
-typedef void (*prnt_callback)(void *ctx, int ch);
 
 int bcmp(void *s1, void *s2, int n)
 {
@@ -944,7 +934,7 @@ char *strcat(char *dst, const char *src)
     return dst;
 }
 
-char *strchr(char *s, char c)
+char *strchr(const char *s, char c)
 {
     if (s == NULL)
         return NULL;
@@ -1153,6 +1143,30 @@ int strncmp(const char *s1, const char *s2, int n)
     if (s1 != NULL)
         return 1;
     return -1;
+}
+
+char *strncpy(char *dest, const char *src, int n)
+{
+    char *curDst = dest;
+    if (dest == NULL || src == NULL)
+        return 0;
+    int i;
+    // E92C
+    for (i = 0; i < n; i++)
+    {  
+        char c = *(src++);
+        *(curDst++) = c;
+        if (c == '\0')
+        {  
+            // E958, E968
+            while ((++i) < n)
+                *(curDst++) = '\0';
+            // E97C
+            break;
+        }
+    }
+    // E94C
+    return dest;
 }
 
 u32 strnlen(const char *s, int maxlen)

@@ -355,7 +355,7 @@ int sceCodec_driver_FCA6D35B(int freq)
     return ret;
 }
 
-int sceCodec_driver_6FFC0FA4(void)
+int sceCodec_driver_6FFC0FA4(char __attribute__((unused)) arg0)
 {
     int ret = sub_01FC(0, 0, 1, 1);
     if (ret < 0)

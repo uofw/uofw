@@ -95,9 +95,9 @@ int IntrManInit()
         intInfo.intr[i].u16 = -1;
         intInfo.intr[i].u20 = -1;
     }
-    sceKernelRegisterExceptionHandler(0, (void*)sub_0038);
-    sceKernelRegisterPriorityExceptionHandler(0, 3, (void*)sub_0924);
-    sceKernelRegisterExceptionHandler(8, (void*)sub_0CF8);
+    sceKernelRegisterExceptionHandler(EXCEP_INT, (void*)sub_0038);
+    sceKernelRegisterPriorityExceptionHandler(EXCEP_INT, 3, (void*)sub_0924);
+    sceKernelRegisterExceptionHandler(EXCEP_SYS, (void*)sub_0CF8);
     sceKernelRegisterIntrHandler(67, 0, sub_0000, 0, 0);
     sceKernelRegisterSuspendHandler(29, SuspendIntc, 0);
     sceKernelRegisterResumeHandler(29, ResumeIntc, 0);
@@ -1062,9 +1062,9 @@ int IntrManTerminate()
     COP0_STATE_GET(st, COP0_STATE_STATUS);
     COP0_STATE_SET(COP0_STATE_STATUS, st & 0xFFFF7BFF);
     sceKernelReleaseIntrHandler(67);
-    sceKernelReleaseExceptionHandler(0, (void*)sub_0038);
-    sceKernelReleaseExceptionHandler(0, (void*)sub_0924);
-    sceKernelReleaseExceptionHandler(8, (void*)sub_0CF8);
+    sceKernelReleaseExceptionHandler(EXCEP_INT, (void*)sub_0038);
+    sceKernelReleaseExceptionHandler(EXCEP_INT, (void*)sub_0924);
+    sceKernelReleaseExceptionHandler(EXCEP_SYS, (void*)sub_0CF8);
     return 0;
 }
 
