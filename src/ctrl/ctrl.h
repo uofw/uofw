@@ -56,7 +56,7 @@ typedef u8   PspCtrlPadButtonMaskMode;
  */
 typedef struct _SceCtrlData {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
-     *  Can be used to get the time period if a button pressing. 
+     *  Can be used to get the time period of a button pressing event. 
      */ 
     u32 activeTime; //0
     /** The currently pressed D-Pad button(s). Bitwise OR'ed values of ::PspCtrlPadButtons. */
@@ -314,7 +314,7 @@ int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples);
 
 /**
  * Extend the 64 internal controller buffers to represent SceCtrlDataExt structures.
- * By default, an internal controller buffer is equivalent to a SceCtrlData structures. This function has to be called before using
+ * By default, an internal controller buffer is equivalent to a SceCtrlData structure. This function has to be called before using
  * the extended read/peekBuffer functions.
  * 
  * @param mode Seems to be an index. Pass either 1 or 2.
@@ -329,12 +329,12 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3);
  * Read the current internal latch buffer. The following button states are delivered:
  *                                         Button is pressed, button is not pressed, button has been newly pressed
  *                                         and button has been newly released. 
- * Once a button has been i.e. pressed, its value is stored in the specific internal latch buffer member (uiMake in this case)
+ * Once a button has been i.e. pressed, its value is stored into the specific internal latch buffer member (uiMake in this case)
  * until you manually reset the specific latch buffer field.
  * 
  * @param latch Pointer to a SceCtrlLatch structure retrieving the current internal latch buffer.
  * 
- * @return The amount of reads of the internal latch buffer without being reseted on success, or < 0 on error.
+ * @return The amount of reads of the internal latch buffer, without being reseted, on success, or < 0 on error.
  * 
  * @par Example:
  * @code

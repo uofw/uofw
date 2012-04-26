@@ -54,7 +54,7 @@ extern "C" {
      *              header[4] = size;
      * 
      * @param buf The buffer to decrypt.
-     * @param size The size of the buffer. Max size = 20848 Bytes.
+     * @param size The size of the buffer. Max size = 2048 Bytes.
      *
      * @return 0 on success, otherwise < 0.
      */
@@ -71,7 +71,7 @@ extern "C" {
      *              header[4] = size;
      * 
      * @param buf The buffer to encrypt.
-     * @param size The size of the buffer. Max size = 20848 Bytes.
+     * @param size The size of the buffer. Max size = 2048 Bytes.
      *
      * @return 0 on success, otherwise < 0.
      */

@@ -12,6 +12,11 @@
 
 #include "../ctrl/ctrl.h"
 
+/* "external" defines */
+
+/** The PSP SDK defines this as PSP_POWER_TICK_ALL. Cancels all timers. */
+#define SCE_KERNEL_POWER_TICK_DEFAULT           0 
+
 #define USER_MODE                               0
 #define KERNEL_MODE                             1
 
@@ -19,6 +24,8 @@
 #define TRUE                                    1
 
 #define PSP_INIT_KEYCONFIG_UPDATER              0x110 //might be incorrect
+
+/** CTRL defines */
 
 #define CTRL_POLL_MODE_OFF                      0
 #define CTRL_POLL_MODE_ON                       1
@@ -35,8 +42,8 @@
 #define CTRL_BUFFER_UPDATE_MIN_CUSTOM_CYCLES    5555
 #define CTRL_BUFFER_UPDATE_MAX_CUSTOM_CYCLES    20000
 
-#define CTRL_SAMPLING_MODE_MODES                2
-#define CTRL_SAMPLING_MODE_MAX_MODE             CTRL_SAMPLING_MODE_MODES -1
+#define CTRL_SAMPLING_MODES                     2
+#define CTRL_SAMPLING_MODE_MAX_MODE             CTRL_SAMPLING_MODES -1
 
 #define CTRL_BUTTON_CALLBACK_SLOTS              4
 #define CTRL_DATA_EMULATION_SLOTS               4
@@ -59,7 +66,7 @@ typedef struct _SceCtrl {
     SceSysTimerId timerID; //0
     int eventFlag; //4
     u32 btnCycle; //8
-    PspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODE_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode
+    PspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode
     u8 unk_Byte_0; //14
     u8 unk_Byte_1; //15
     u8 unk_Byte_8; //16
@@ -208,14 +215,811 @@ SceCtrl ctrl; //0x2890
 SceKernelDeci2Ops ctrlDeci2Ops; //0x000027F8
 _PspSysEventHandler ctrlSysEvent; //0x00002850
 
-static SceUInt _sceCtrlDummyAlarm(void *common); //0x00001DD8
-static int _sceCtrlVblankIntr(int subIntNm, void *arg); //0x00000440
+static SceUInt _sceCtrlDummyAlarm(void *common); //sub_00001DD8
+static int _sceCtrlVblankIntr(int subIntNm, void *arg); //sub_00000440
 static int _sceCtrlTimerIntr(); //sub_00000528
-static int _sceCtrlSysconCmdIntr1(); //0x00000610;
+static int _sceCtrlSysconCmdIntr1(); //sub_00000610;
 static int _sceCtrlSysconCmdIntr2(); //sub_00001E4C
 static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY); //sub_00000968
 static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode); //sub_00001E70
 
+
+/*
+ * Subroutine sceCtrl_driver_121097D5 - Address 0x00000000
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlInit() {
+    int eventId;
+    int keyConfig;
+    SceSysTimerId timerId;
+    u32 supportedUserButtons;
+    int unk_2;
+    void (*func)(SceKernelDeci2Ops *);
+    UnknownType *retPtr;
+    int pspModel;
+    
+    memset(ctrl, 0, sizeof(SceCtrl)); //0x00000024
+    ctrl.pollMode = PSP_CTRL_POLL_POLLING; //0x00000048
+    ctrl.userModeData.sceCtrlBuf = (void *)0x00002BB0; //0x00000054 -- size of SceCtrlData is 16 (default) -> required size is 0x400.
+    //Default values of the analog pad.
+    ctrl.analogY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000060
+    ctrl.analogX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000064
+    ctrl.kernelModeData.sceCtrlBuf = (void *)0x00002FB0; //0x0000006C
+    ctrl.unk_1 = -1; //0x00000074
+    
+    eventId = sceKernelCreateEventFlag("SceCtrl", 1, 0, NULL); //0x00000070
+    ctrl.eventFlag = eventId; //0x0000007C
+    
+    timerId = sceSTimerAlloc(); //0x00000078
+    if (timerId < 0) { //0x00000080
+        return timerId;
+    }
+    ctrl.timerID = timerId;
+    sceSTimerSetPrscl(timerId, 1, 0x30); //0x00000094
+    ctrl.unk_Byte_1 = -1; //0x000000A0
+    sceKernelRegisterSysEventHandler(&ctrlSysEvent); //0x000000A4
+    sceSyscon_driver_B72DDFD2(0); //0x000000AC
+    
+    keyConfig = sceKernelInitKeyConfig(); //0x000000B4
+    if (keyConfig == PSP_INIT_KEYCONFIG_UPDATER) { //0x000000C0
+        supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
+    }
+    if (keyConfig > PSP_INIT_KEYCONFIG_UPDATER) { //0x000000CC
+        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
+        if (keyConfig == PSP_INIT_KEYCONFIG_POPS) { //0x000000E0
+            supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
+        }
+    }
+    if (keyConfig == 0) { //0x000000D4
+        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
+    }
+    else { //0x000000DC
+         supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
+         if (keyConfig == PSP_INIT_KEYCONFIG_VSH) { //0x000000E0
+             supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
+         }
+    }
+    ctrl.userModeButtons = supportedUserButtons; //0x000000F0
+    ctrl.maskSetButtons = 0; //0x000000FC
+    ctrl.maskSupportButtons = supportedUserButtons; //0x00000104
+    
+    pspModel = sceKernelGetModel();
+    if (pspModel < 11) { //0x0000010C
+        switch (pspModel) { //0x00000128
+            case 0: case 1: case 2: case 3: case 6: case 8: case 10:
+                unk_2 = 0x1FFF3F9; //0x00000130 & 0x00000138               
+                break;
+            case 4: case 5: case 7: case 9:
+                unk_2 = CTRL_ALL_SUPPORTED_BUTTONS; //0x000001EC & 0x00000138
+                break;
+        }
+        ctrl.unk_4 = unk_2; //0x0000013C
+    }
+    else { //0x000001F0
+        ctrl.unk_4 = 0x1FFF3F9; //0x00000110 & 0x000001F0
+    }    
+    ctrl.unk_5 = CTRL_ALL_SUPPORTED_BUTTONS; //0x00000168
+    ctrl.unk_6 = 0xF1F3F9; //0x00000174
+    ctrl.unk_7 = 0x390E0000; //0x0000017C
+    ctrl.unk_8 = 0; //0x00000180
+    ctrl.idleReset = 129; //0x00000188
+    ctrl.idleBack = 129; //0x00000158
+    
+    sceKernelRegisterSubIntrHandler(PSP_VBLANK_INT, 0x13, _sceCtrlVblankIntr, NULL); //0x00000184
+    sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x00000190
+    
+    //TODO: Reverse the function below.
+    retPtr = sceKernelDeci2pReferOperations(); 
+    if ((retPtr != NULL) && (*retPtr == 48)) { //0x000001A0 & 0x000001AC
+         func = *(retPtr + 0x2C)(SceKernelDeci2Ops *); //0x000001B0
+         func(&ctrlDeci2Ops); //0x000001D8            
+    }
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_driver_1A1A7D40 - Address 0x0000020C
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlEnd() {
+    SceSysTimerId timerId;
+    
+    sceKernelUnregisterSysEventHandler(&ctrlSysEvent); //0x00000220
+    sceSyscon_driver_B72DDFD2(1); //0x00000228
+    sceDisplayWaitVblankStart(); //0x00000230
+    
+    timerId = ctrl.timerID; //0x0000023C
+    ctrl.timerID = -1; //0x00000244
+    if (timerId >= 0) { //0x00000248
+        sceSTimerStopCount(timerId); //0x00000250
+        sceSTimerFree(timerId); //0x00000258
+    }
+    sceKernelReleaseSubIntrHandler(PSP_VBLANK_INT, 0x13); //0x00000264
+    sceKernelDeleteEventFlag(ctrl.eventFlag); //0x0000026C
+    
+    while (ctrl.suspendSamples != 0) { //0x0000028C
+           sceDisplayWaitVblankStart(); //0x00000280
+    }
+    return SCE_KERNEL_ERROR_OK; //0x000002A0
+}
+
+/*
+ * Subroutine sceCtrl_driver_55497589 - Address 0x00001A50 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSuspend() {  
+    int cycle;
+    
+    cycle = ctrl.btnCycle; //0x00001A58
+    if (cycle != 0) { //0x00001A68
+        sceSTimerStopCount(ctrl.timerID); //0x00001A88
+    }
+    else {
+         sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001A70 
+    }
+    return SCE_KERNEL_ERROR_OK;       
+}
+
+/*
+ * Subroutine sceCtrl_driver_33D03FD5 - Address 0x000002AC 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlResume() {
+    int retVal;
+    int prevButtons;
+    
+    retVal = sceSyscon_driver_97765E27(); //0x000002B8
+    if (retVal != 0) { //0x000002C4
+        if (retVal == 1) { //0x00000344
+            prevButtons = ctrl.prevButtons; //0x00000350
+            prevButtons |= 0x20000000; //0x00000358
+            ctrl.prevButtons = prevButtons; //0x00000360
+        }
+    }
+    else {
+         prevButtons = ctrl.prevButtons; //0x000002CC
+         prevButtons &= 0xDFFFFFFF; //0x000002D0
+         ctrl.prevButtons = prevButtons; //0x000002D4
+    }
+    ctrl.unk_Byte_1 = -1;
+    if (ctrl.btnCycle == 0) { //0x000002DC & 0x000002F0
+        sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x000002F8
+    }
+    else {
+         sceSTimerStartCount(ctrl.timerID); //0x00000318
+         sceSTimerSetHandler(ctrl.timerID, ctrl.btnCycle, _sceCtrlTimerIntr, 0); //0x00000330
+    }
+    return SCE_KERNEL_ERROR_OK;
+} 
+
+/*
+ * Subroutine sceCtrl_driver_F0074903 - Address 0x00001C30 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
+    ctrl.pollMode = pollMode; //0x00001C3C
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_DA6B76A1 - Address 0x00001330 - Aliases: sceCtrl_driver_F8EC18BD
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
+    int privMode;
+    int index;
+    
+    privMode = pspSdkGetK1() << 11; //0x00001330
+    index = ((privMode >> 31) < 1); //0x00001338 & 0x00001340
+    if ((privMode & mode) >= 0) { //0x00001348 & 0x00001350
+        *mode = ctrl.samplingMode[index]; //0x00001358 & 0x0000135C
+    }
+    return SCE_KERNEL_ERROR_OK; 
+}
+
+/* Subroutine sceCtrl_1F4011E6 - Address 0x000012C8 - Aliases: sceCtrl_driver_F6E94EA3
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {    
+    int suspendFlag;
+    int privMode;
+    u8 index;
+    PspCtrlPadInputMode prevMode;
+    
+    if (mode > CTRL_SAMPLING_MODE_MAX_MODE) { //0x000012D0 & 0x000012E4
+        return SCE_ERROR_INVALID_MODE; 
+    }
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x000012EC
+    privMode = (pspSdkGetK1() >> 20) & 0x1; //0x000012F4
+    index = (privMode < 1); //0x000012FC
+    
+    prevMode = ctrl.samplingMode[index]; //0x00001308
+    ctrl.samplingMode[index] = mode; //0x0000130C
+    
+    sceKernelCpuResumeIntr(suspendFlag); //0x00001310:
+    return prevMode; //0x00001318   
+}
+
+/*
+ * Subroutine sceCtrl_02BAAD91 - Address 0x00001AB8 - Aliases: sceCtrl_driver_501E0C70
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlGetSamplingCycle(u32 *cycle) {
+    int privMode;
+    
+    privMode = pspSdkGetK1() << 11; //0x00001AB8   
+    if ((privMode & cycle) >= 0) { //0x00001ABC && 0x00001AC0
+        *cycle = ctrl.btnCycle; //0x00001ACC && 0x00001AD0
+    }
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_6A2774F3 - Address 0x0000136C - Aliases: sceCtrl_driver_83B15A81
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetSamplingCycle(u32 cycle) {
+    u32 k1;
+    int suspendFlag;
+    u32 prevCycle;
+    int sdkVersion;
+    u32 nCycle;
+    
+    k1 = pspSdkGetK1();
+    pspSdkSetK1(k1 << 11); //0x00001378
+    
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001398
+    if (cycle == 0) { //0x000013B0        
+        prevCycle = ctrl.btnCycle; //0x00001460
+        sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001464
+        ctrl.btnCycle = 0; //0x00001468
+        
+        sceSTimerSetHandler(ctrl.timerID, 0, NULL, 0); //0x00001478
+        sceSTimerStopCount(ctrl.timerID); //0x00001480            
+    }
+    else {
+        if (cycle < CTRL_BUFFER_UPDATE_MIN_CUSTOM_CYCLES || cycle > CTRL_BUFFER_UPDATE_MAX_CUSTOM_CYCLES) { //0x000013B4 & 0x000013B8
+            return SCE_ERROR_INVALID_VALUE; //0x0000138C & 0x000013C0
+        }
+        else {
+             prevCycle = ctrl.btnCycle; //0x0000140C
+             sceSTimerStartCount(ctrl.timerID); //0x00001410
+             ctrl.btnCycle = cycle; //0x00001414
+             sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00001418
+        
+             nCycle = ((0x204FFFF < sdkVersion) < 1); //0x00001428 && 0x0000142C
+             nCycle += cycle; //0x00001434 -- If the PSP Firmware version is < 2.5, the original cycle is used, otherwise original cycle + 1
+             sceSTimerSetHandler(ctrl.timerID, nCycle, _sceCtrlTimerIntr, 0); //0x00001408 & 0x00001444
+             sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001450      
+       }
+    }
+    sceKernelCpuResumeIntr(suspendFlag); //0x000013D8
+    pspSdkSetK1(k1); //0x000013E4
+    return prevCycle; //0x000013E0  
+}
+
+/*
+ * Subroutine sceCtrl_687660FA - Address 0x0000170C - Aliases: sceCtrl_driver_E54253E7
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
+    u32 k1;
+    int privMode;
+    int suspendFlag;
+    int tempIdleBack;
+    int tempIdleReset;   
+    
+    privMode = pspSdkGetK1() << 11; //0x00001710    
+    idleReset = idleReset | privMode; //0x0000171C
+    k1 = pspSdkSetK1(privMode); //0x00001728
+    
+    if (((idleReset & privMode) < 0) || ((privMode & idleBack) < 0)) { //0x00001734 & 0x00001740
+        pspSdkSetK1(k1);
+        return SCE_ERROR_PRIV_REQUIRED; /* protect kernel addresses from user mode. */
+    }   
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000176C  
+    if (idleReset != NULL) { //0x00001774
+        tempIdleReset = ctrl.idleReset;
+        *idleReset = (tempIdleReset == 129) ? -1 : idleReset; //0x00001788
+    }
+    if (idleBack != NULL) { //0x00001794
+        tempIdleBack = ctrl.idleBack;
+        *idleBack = (tempIdleBack == 129) ? -1 : tempIdleBack; //0x000017A4
+    }
+    sceKernelCpuResumeIntr(suspendFlag); //0x000017B0
+    pspSdkSetK1(k1); //0x000017B8
+    return SCE_KERNEL_ERROR_OK; //0x000017C0
+}
+
+/*
+ * Subroutine sceCtrl_A7144800 - Address 0x00001680 - Aliases: sceCtrl_driver_37533267
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) {
+    int suspendFlag;
+    
+    if ((idlereset < -1 && idlereset > 128) && (idleback < -1 && idleback > 128)) { //0x000016A0 & 0x000016B4 & 0x000016C8
+        return SCE_ERROR_INVALID_VALUE; //0x000016A8 & 0x000016AC & 0x00001700
+    }       
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x000016D0
+    
+    ctrl.idleBack = (idleback == -1) ? 129 : idleback; //0x000016D4 & 0x000016E0
+    ctrl.idleReset = (idlereset == -1) ? 129 : idlereset; //0x000016CC & 0x000016EC
+    
+    sceKernelCpuResumeIntr(suspendFlag); //0x000016E8
+    return SCE_KERNEL_ERROR_OK; //0x000016F0
+}
+
+/*
+ * Subroutine sceCtrl_AF5960F3 - Address 0x00001C6C - Aliases: sceCtrl_driver_BC8D1A3B
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+u16 sceCtrlGetSuspendingExtraSamples() {
+    u16 curSuspendSamples;
+    
+    curSuspendSamples = ctrl.suspendSamples;  //0x00001C74
+    return curSuspendSamples;
+}
+
+/*
+ * Subroutine sceCtrl_348D99D4 - Address 0x00001C40 - Aliases: sceCtrl_driver_547F89D3
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples) {
+    u16 nSuspendSamples;
+    
+    if (suspendSamples > CTRL_MAX_EXTRA_SUSPEND_SAMPLES) { //0x00001C44
+        return SCE_ERROR_INVALID_VALUE; //0x00001C48 & 0x00001C54
+    }
+    //nSuspendSamples = ((suspendSamples ^ 0x1) == 0) ? 0 : suspendSamples; //0x00001C40 & 0x00001C4C
+    nSuspendSamples = (suspendSamples == 1) ? 0 : suspendSamples; //0x00001C40 & 0x00001C4C
+    ctrl.suspendSamples = nSuspendSamples;
+    
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_driver_E467BEC8 - Address 0x000011F0 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3) {
+    int isExtended;
+    SceUID poolId;
+    void *ctrlBuf;    
+    
+    //0x0000122C
+    if (mode > 2) {
+        return SCE_ERROR_INVALID_VALUE;
+    }
+    isExtended = ctrl.unk_array2[mode]; //0x00001238
+    if (!isExtended) { //0x00001254
+        poolId = sceKernelCreateFpl("SceCtrlBuf", PSP_MEMORY_PARTITION_KERNEL, 0, 2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL); //0x00001294
+        if (poolId < 0) { //0x000012A4
+            return poolId;
+        }
+        sceKernelTryAllocateFpl(poolId, &ctrlBuf); //0x000012AC
+        ctrl.kernelModeData.sceCtrlBuf = (void *)ctrlBuf + sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS; //0x000012BC
+        ctrl.userModeData.sceCtrlBuf = (void *)ctrlBuf; //0x000012C4
+    }
+    ctrl.unk_array3[mode] = arg3; //0x00001264
+    ctrl.unk_array2[mode] = arg2; //0x0000126C
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_B1D0E5CD - Address 0x00001490 - Aliases: sceCtrl_driver_637CB76C
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlPeekLatch(SceCtrlLatch *latch) {
+    int k1;
+    int suspendFlag;
+    SceCtrlInternalData *latchPtr;
+    
+    k1 = pspSdkGetK1();
+    pspSdkSetK1(k1 << 11); //0x0000149C  
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x000014A8
+    
+    if ((pspSdkGetK1() & latch) < 0) { //0x000014B8
+        sceKernelCpuResumeIntr(suspendFlag); //0x00001524
+        pspSdkSetK1(k1); //0x00001530
+        return SCE_ERROR_PRIV_REQUIRED; //0x0000152C & 0x00001538 -- protect kernel address from usermode
+    }
+    if (pspSdkGetK1() >= 0) { //0x000014C4
+        latchPtr = &ctrl.kernelModeData; //0x00001520
+    }
+    else {
+         latchPtr = &ctrl.userModeData; //0x000014D0
+    }
+    latch->btnMake = latchPtr->btnMake; //0x000014D4
+    latch->btnBreak = latchPtr->btnBreak; //0x000014DC
+    latch->btnPress = latchPtr->btnPress; //0x000014E4
+    latch->btnRelease = latchPtr->btnRelease; //0x000014EC
+    
+    sceKernelCpuResumeIntr(suspendFlag); //0x000014F4
+    pspSdkSetK1(k1); //0x000014FC
+    return latchPtr->readLatchCount; //0x00001500
+}
+
+/*
+ * Subroutine sceCtrl_0B588501 - Address 0x0000153C - Aliases: sceCtrl_driver_7F7C4E0A
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlReadLatch(SceCtrlLatch *latch) {
+    int k1;
+    int suspendFlag;
+    SceCtrlInternalData *latchPtr;
+    int readLatchCount;
+    
+    k1 = pspSdkGetK1(); //0x00001540
+    pspSdkSetK1(k1 << 11); //0x00001548
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001554
+    
+    if ((pspSdkGetK1() & latch) < 0) { //0x00001564 -- protect kernel address from user mode     
+        sceKernelCpuResumeIntr(suspendFlag); //0x00001620
+        pspSdkSetK1(k1); //0x0000162C
+        return SCE_ERROR_PRIV_REQUIRED; //0x00001634
+    }
+    if (pspSdkGetK1() >= 0) { //0x00001570
+        latchPtr = &ctrl.kernelModeData; //0x000015E0       
+        readLatchCount = latchPtr->readLatchCount; //0x00001614
+        latchPtr->readLatchCount = 0; //0x0000161C
+    }
+    else {
+         latchPtr = &ctrl.userModeData; //0x0000157C
+         readLatchCount = latchPtr->readLatchCount; //0x000015A0
+         latchPtr->readLatchCount = 0; //0x000015A8
+    }
+    latch->btnMake = latchPtr->btnMake; //0x00001584 & 0x000015E8
+    latch->btnBreak = latchPtr->btnBreak; //0x0000158C & 0x000015F0
+    latch->btnPress = latchPtr->btnPress; //0x00001594 & 0x000015F8
+    latch->btnRelease = latchPtr->btnRelease; //0x0000159C & 0x00001600
+    
+    latchPtr->btnMake = 0; //0x000015A4 & 0x00001604
+    latchPtr->btnBreak = 0; //0x000015AC & 0x00001608
+    latchPtr->btnPress = 0; //0x000015B0 & 0x0000160C
+    latchPtr->btnRelease = 0; //0x000015B4 & 0x00001610
+    
+    sceKernelCpuResumeIntr(suspendFlag); //0x000015B8
+    pspSdkSetK1(k1); //0x000015C0
+    return readLatchCount; //0x000015C4
+} 
+
+/*
+ * Subroutine sceCtrl_3A622550 - Address 0x00001AE0 - Aliases: sceCtrl_driver_2BA616AF
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 0); //0x00001AEC
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_C152080A - Address 0x00001B00 - Aliases: sceCtrl_driver_E6085C33
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 1); //0x00001B0C
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_1F803938 - Address 0x00001B20 - Aliases: sceCtrl_driver_BE30CED0
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 2); //0x00001B2C
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_60B81F86 - Address 0x00001B40 - Aliases: sceCtrl_driver_3A6A612A
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 3); //0x00001B4C
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_5A36B1C2 - Address 0x00001B60 - Aliases: sceCtrl_driver_D4692E77
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 4); //0x00001B78
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_239A6BA7 - Address 0x00001B8C - Aliases: sceCtrl_driver_41BCD9ED
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 5); //0x00001BA4
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_1098030B - Address 0x00001BB8 - Aliases: sceCtrl_driver_3BD76EDE
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 6); //0x00001BD0
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_7C3675AB - Address 0x00001BE4 - Aliases: sceCtrl_driver_7ABDEBAA
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+    int readBuffers;
+    
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 7); //0x00001BFC
+    return readBuffers;
+}
+
+/*
+ * Subroutine sceCtrl_A68FD260 - Address 0x00001DA8 - Aliases: sceCtrl_driver_994488EC
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlClearRapidFire(u8 slot) {
+    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x00001DBC && 0x00001DC0
+        return SCE_ERROR_INVALID_INDEX;
+    }
+    ctrl.rapidFire[slot].pressedButtonRange = 0; //0x00001DC8
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_6841BE1A - Address 0x000018DC - Aliases: sceCtrl_driver_89438C13
+ * Exported in sceCtrl
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, u8 reqBtnOnTime, u8 reqBtnOffTime) {
+    u32 usedButtons;
+    u32 kernelButtons;
+    int k1;
+    int suspendFlag;
+    
+    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x000018FC & 0x0000193C
+        return SCE_ERROR_INVALID_INDEX;
+    }
+    if ((reqBtnEventOnTime | reqBtnOnTime | reqBtnOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER) { //0x000018E8 & 0x000018F4 & 0x00001910 & 0x00001954
+        return SCE_ERROR_INVALID_VALUE;
+    }
+    k1 = pspSdkGetK1(); //0x0000194C
+    pspSdkSetK1(k1 << 11); // 0x00001960
+    
+    usedButtons = pressedBtnRange | reqBtnsEventTrigger; //0x0000195C    
+    usedButtons = usedButtons | reqBtn; //0x00001968
+    if (k1 < 0) { //0x00001964
+        kernelButtons = ~ctrl.userModeButtons; //0x0000197C
+        kernelButtons = kernelButtons | PSP_CTRL_HOLD; //0x00001980
+        //if the buttons given by the user include kernel buttons or the HOLD button -> return error
+        if (kernelButtons & usedButtons) { //0x00001984 & 0x00001988
+            pspSdkSetK1(k1); //0x00001A0C
+            return SCE_ERROR_PRIV_REQUIRED;
+        }
+    }
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001990
+    
+    ctrl.rapidFire[slot].reqButtonsOnTime = reqBtnOnTime; //0x00001998 & 0x0000199C & 0x000019A0 & 0x000019A4 & 0x000019A8
+    ctrl.rapidFire[slot].pressedButtonRange = pressedBtnRange; //0x000019B4
+    ctrl.rapidFire[slot].reqButtonsEventTrigger = reqBtnsEventTrigger; //0x000019B8
+    ctrl.rapidFire[slot].reqButtons = reqBtn; //0x000019BC
+    ctrl.rapidFire[slot].reqButtonsOffTime = reqBtnOffTime; //0x000019C0
+    ctrl.rapidFire[slot].reqButtonsEventOnTime = reqBtnEventOnTime; //0x000019B0
+    ctrl.rapidFire[slot].eventData = 0; //0x000019C8
+    
+    sceKernelCpuResumeIntr(suspendFlag); //0x000019C4
+    pspSdkSetK1(k1); //0x000019CC
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_driver_DB76878D - Address 0x00001CB8
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {  
+    if (slot > CTRL_DATA_EMULATION_MAX_SLOT) { //0x00001CE4
+        return SCE_ERROR_INVALID_VALUE; //0x00001CD0 & 0x00001CE8
+    }
+    aXEmu &= 0xFF; //0x00001CDC
+    aYEmu &= 0xFF; //0x00001CE0
+    
+    ctrl.emulatedData[slot].analogXEmulation = aXEmu; //0x00001CF8
+    ctrl.emulatedData[slot].analogYEmulation = aYEmu; //0x00001CEC
+    ctrl.emulatedData[slot].intCtrlBufUpdates = bufUpdates; //0x00001CF4
+    
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_driver_5130DAE3 - Address 0x00001C78 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates) {   
+    if (slot > CTRL_DATA_EMULATION_MAX_SLOT) { //0x00001C98
+        return SCE_ERROR_INVALID_VALUE; //0x00001C90 & 0x00001C9C
+    }
+    ctrl.emulatedData[slot].uModeBtnEmulation = uModeBtnEmu; //0x00001CA8
+    ctrl.emulatedData[slot].kModeBtnEmulation = kModeBtnEmu; //0x00001CAC
+    ctrl.emulatedData[slot].intCtrlBufUpdates2 = bufUpdates; //0x00001CA0
+    
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/* Subroutine sceCtrl_driver_1809B9FC - Address 0x00001878
+ * Exported in sceCtrl_driver 
+ */
+PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {   
+    int suspendFlag;
+    int curMaskSupBtns;
+    int curMaskSetBtns;
+    PspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
+       
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000188C
+    curMaskSetBtns = ctrl.maskSetButtons; //0x0000189C
+    curMaskSupBtns = ctrl.maskSupportButtons; //0x000018A0             
+              
+    if (curMaskSupBtns & btnMask) { //0x000018AC          
+        btnMaskMode = (curMaskSetBtns & btnMask) ? PSP_CTRL_MASK_IGNORE_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x000018B0 & 0x000018B8
+    }
+    
+    sceKernelCpuResumeIntr(suspendFlag);
+    return btnMaskMode;  
+}
+
+/* Subroutine sceCtrl_driver_F8346777 - Address 0x000017C4
+ * Exported in sceCtrl_driver 
+ */
+PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, PspCtrlPadButtonMaskMode buttonMaskMode) {   
+    int curMaskSupBtns = ctrl.maskSupportButtons;
+    int newMaskSupBtns;
+    int curMaskSetBtns = ctrl.maskSetButtons;
+    int newMaskSetBtns;
+    int suspendFlag;    
+    PspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
+       
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x000017E0
+    
+    if (mask & curMaskSupBtns) { //0x00001800        
+        prevBtnMaskMode = (mask & curMaskSetBtns) ? PSP_CTRL_MASK_SET_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x00001808 & 0x00001810
+    }
+    if (buttonMaskMode != PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING) { //0x00001814
+        if (buttonMaskMode == PSP_CTRL_MASK_IGNORE_BUTTON_MASK) { //0x00001818 & 0x00001850
+            newMaskSupBtns = curMaskSupBtns & ~mask; //0x00001854 & 0x00001874
+            newMaskSetBtns = curMaskSetBtns & ~mask; //0x00001850 & 0x0000186C          
+        }
+        else if (buttonMaskMode == PSP_CTRL_MASK_SET_BUTTON_MASK) { //0x0000185C
+                 newMaskSupBtns = curMaskSupBtns | mask; //0x00001868
+                 newMaskSetBtns = curMaskSetBtns | mask; //0x00001820
+        }
+    }
+    else {
+         newMaskSetBtns = curMaskSetBtns & ~mask; //0x000017F8 & 0x00001804 & 0x0000181C
+         newMaskSupBtns = curMaskSupBtns | mask; //0x000017E4 & 0x000017F0 & 0x00001820
+    }
+    ctrl.maskSupportButtons = newMaskSupBtns; //0x00001828
+    ctrl.maskSetButtons = newMaskSetBtns; //0x00001830 
+    
+    sceKernelCpuResumeIntr(suspendFlag); //0x0000182C
+    return prevBtnMaskMode;
+}
+
+/* Subroutine sceCtrl_driver_DF53E160 - Address 0x00001D04
+ * Exported in sceCtrl_driver 
+ */
+int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *opt) {   
+    int suspendFlag;
+     
+    if (slot > CTRL_BUTTON_CALLBACK_MAX_SLOT) { //0x00001D14 & 0x00001D34
+        return SCE_ERROR_INVALID_INDEX;
+    }      
+    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001D3C
+    
+    //collect information for a button callback
+    ctrl.buttonCallback[slot].btnMask = btnMask; //0x00001D54
+    ctrl.buttonCallback[slot].callbackFunc = cb; //0x00001D58
+    ctrl.buttonCallback[slot].arg = opt; //0x00001D64
+    ctrl.buttonCallback[slot].gp = GP_BACKUP(); //0x00001D6C
+            
+    sceKernelCpuResumeIntr(suspendFlag); //0x00001D68 
+    return SCE_KERNEL_ERROR_OK;   
+}
+
+/*
+ * Subroutine sceCtrl_driver_6C86AF22 - Address 0x00001AA8 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrl_driver_DEFAD580(int arg1) {
+    ctrl.unk_array2[0] = arg1; //0x00001AB4
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * Subroutine sceCtrl_driver_7511CCFE - Address 0x00001638
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4) {
+    if (arg1 != NULL) { //0x00001638
+        *arg1 = ctrl.unk_5; //0x00001644
+    }
+    if (arg2 != NULL) { //0x00001648
+        *arg2 = ctrl.unk_6; //0x00001654
+    }
+    if (arg3 != NULL) { //0x00001658
+        *arg3 = ctrl.unk_7; //0x00001664
+    }
+    if (arg4 != NULL) { //0x00001668
+        *arg4 = ctrl.unk_8; //0x00001674
+    }
+    return SCE_KERNEL_ERROR_OK; //0x0000167C
+}
+
+/*
+ * sceCtrl_driver_6A1DF4CB - Address 0x00001C10
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
+    ctrl.unk_8 = arg4; //0x00001C1C
+    ctrl.unk_5 = arg1; //0x00001C20
+    ctrl.unk_6 = arg2; //0x00001C24
+    ctrl.unk_7 = arg3; //0x00001C2C
+    
+    return SCE_KERNEL_ERROR_OK; //0x00001C18
+}
+
+/*
+ * Subroutine sceCtrl_driver_5886194C - Address 0x00001A98
+ * Exported in sceCtrl_driver
+ */
+int sceCtrl_driver_BEF3B4C9(char arg1) {
+    ctrl.unk_Byte_3 = arg1; //0x00001AA4
+    return SCE_KERNEL_ERROR_OK;
+}
+
+/*
+ * sceCtrl_driver_365BE224 - Address 0x00001D94 
+ * Exported in sceCtrl_driver
+ */
+int sceCtrlUpdateCableTypeReq(char arg1) {
+    ctrl.unk_Byte_0 = arg1; //0x00001D9C
+    return SCE_KERNEL_ERROR_OK;
+}
 
 /* sub_00001DD8 */
 static SceUInt _sceCtrlDummyAlarm(void *common) {
@@ -231,7 +1035,7 @@ static SceUInt _sceCtrlDummyAlarm(void *common) {
     sceKernelSetEventFlag(ctrl.eventFlag, 1); //0x00001E1C
     sceKernelCpuResumeIntr(suspendFlag); //0x00001E24
     
-    return 0;
+    return SCE_KERNEL_ERROR_OK;
 }
 
 /* sub_00000440 */
@@ -266,7 +1070,7 @@ static int _sceCtrlVblankIntr(int subIntNm, void *arg) {
     }
     if (ctrl.unk_Byte_2 != 0) { //0x000004A0
         ctrl.unk_Byte_2 = 0; //0x000004A4
-        sceKernelPowerTick(PSP_POWER_TICK_ALL); //0x000004CC             
+        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT); //0x000004CC             
     }
     
     sceKernelCpuResumeIntr(suspendFlag); //0x000004A8
@@ -298,7 +1102,7 @@ static int _sceCtrlTimerIntr() {
     }
     if (ctrl.unk_Byte_2 != 0) { //0x00000588
         ctrl.unk_Byte_2 = 0; //0x0000058C
-        sceKernelPowerTick(PSP_POWER_TICK_ALL); //0x000005B4       
+        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT); //0x000005B4       
     }
     
     sceKernelCpuResumeIntr(suspendFlag); //0x00000590
@@ -327,11 +1131,11 @@ static int _sceCtrlSysconCmdIntr1() {
         sceKernelSetEventFlag(ctrl.eventFlag, 1); //0x00000948
         sceKernelCpuResumeIntr(suspendFlag); //0x00000950
         
-        return 0; //0x00000820
+        return SCE_KERNEL_ERROR_OK; //0x00000820
     }
     //TODO: Reversing of sceSysconCmdExecAsync to be able to continue here!
     else {
-        return 0;
+        return SCE_KERNEL_ERROR_OK;
     } 
 }
 
@@ -341,7 +1145,7 @@ static int _sceCtrlSysconCmdIntr2() {
     ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx_data[0] & 0x1; //0x00001E64
     ctrl.unk_Byte_7 = 0; //0x00001E6C
     
-    return 0;
+    return SCE_KERNEL_ERROR_OK;
 }
 
 /* sub_00000968 */
@@ -404,8 +1208,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     u8 reqButtonEventMode;
     u8 rapidFireEventData;
     SceCtrlCb btnCbFunc;
-    u32 gp_Val;
-    
+    u32 gp_Val;    
     _Bool check = 0;
     
     analogX = aX & 0xFF; //0x00000974
@@ -525,8 +1328,8 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                      res2 ^= 0x1; //0x0000104C
                      res ^= 0x1; //0x00001050
                      res3 = res2 | res; //0x0000105C
-                     unk2 = ((unk2 ^ 0x7F) == 0) ? 128 : unk2; //0x00001058 && 0x00001060
-                     unk1 = ((unk1 ^ 0x7F) == 0) ? 128 : unk1; //0x00001054 && 0x00001068
+                     unk2 = ((unk2 ^ 0x7F) == 0) ? 128 : unk2; //0x00001058 & 0x00001060
+                     unk1 = ((unk1 ^ 0x7F) == 0) ? 128 : unk1; //0x00001054 & 0x00001068
                      
                      storeData = 1;
                      if (res3 == 0) { //0x00001064
@@ -842,14 +1645,14 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     ctrl.userModeData.btnMake = ctrl.userModeData.btnMake | mergedButtons; //0x00000E38
     ctrl.userModeData.readLatchCount++; //0x00000DD8 & 0x00000DF8 & 0x00000E2C
     
-    return 0; //0x00000E30
+    return SCE_KERNEL_ERROR_OK; //0x00000E30
 }
 
 /* Subroutine sub_00001E70 - Address 0x00001E70 */
 static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
     SceCtrlInternalData *intDataPtr;
     void *ctrlBuf;
-    int k1;
+    u32 k1;
     int privMode;
     int i; /* Used as a counter variable in for-loops for storing data into a SceCtrlData member. */
     u32 buttons;
@@ -1021,812 +1824,12 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
 }
 
 /*
- * Subroutine sceCtrl_driver_121097D5 - Address 0x00000000
- * Exported in sceCtrl_driver
- */
-int sceCtrlInit() {
-    int eventId;
-    int keyConfig;
-    SceSysTimerId timerId;
-    u32 supportedUserButtons;
-    int unk_2;
-    void (*func)(SceKernelDeci2Ops *);
-    UnknownType *retPtr;
-    int pspModel;
-    
-    memset(ctrl, 0, sizeof(SceCtrl)); //0x00000024
-    ctrl.pollMode = PSP_CTRL_POLL_POLLING; //0x00000048
-    ctrl.userModeData.sceCtrlBuf = (void *)0x00002BB0; //0x00000054 -- size of SceCtrlData is 16 (default) -> required size is 0x400.
-    //Default values of the analog pad.
-    ctrl.analogY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000060
-    ctrl.analogX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000064
-    ctrl.kernelModeData.sceCtrlBuf = (void *)0x00002FB0; //0x0000006C
-    ctrl.unk_1 = -1; //0x00000074
-    
-    eventId = sceKernelCreateEventFlag("SceCtrl", 1, 0, NULL); //0x00000070
-    ctrl.eventFlag = eventId; //0x0000007C
-    
-    timerId = sceSTimerAlloc(); //0x00000078
-    if (timerId < 0) { //0x00000080
-        return timerId;
-    }
-    ctrl.timerID = timerId;
-    SysTimerForKernel_B53534B4(timerId, 1, 0x30); //0x00000094
-    ctrl.unk_Byte_1 = -1; //0x000000A0
-    sceKernelRegisterSysEventHandler(&ctrlSysEvent); //0x000000A4
-    sceSyscon_driver_B72DDFD2(0); //0x000000AC
-    
-    keyConfig = sceKernelInitKeyConfig(); //0x000000B4
-    if (keyConfig == PSP_INIT_KEYCONFIG_UPDATER) { //0x000000C0
-        supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
-    }
-    if (keyConfig > PSP_INIT_KEYCONFIG_UPDATER) { //0x000000CC
-        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
-        if (keyConfig == PSP_INIT_KEYCONFIG_POPS) { //0x000000E0
-            supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
-        }
-    }
-    if (keyConfig == 0) { //0x000000D4
-        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
-    }
-    else { //0x000000DC
-         supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
-         if (keyConfig == PSP_INIT_KEYCONFIG_VSH) { //0x000000E0
-             supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
-         }
-    }
-    ctrl.userModeButtons = supportedUserButtons; //0x000000F0
-    ctrl.maskSetButtons = 0; //0x000000FC
-    ctrl.maskSupportButtons = supportedUserButtons; //0x00000104
-    
-    pspModel = sceKernelGetModel();
-    if (pspModel < 11) { //0x0000010C
-        switch (pspModel) { //0x00000128
-            case 0: case 1: case 2: case 3: case 6: case 8: case 10:
-                unk_2 = 0x1FFF3F9; //0x00000130 & 0x00000138               
-                break;
-            case 4: case 5: case 7: case 9:
-                unk_2 = CTRL_ALL_SUPPORTED_BUTTONS; //0x000001EC & 0x00000138
-                break;
-        }
-        ctrl.unk_4 = unk_2; //0x0000013C
-    }
-    else { //0x000001F0
-        ctrl.unk_4 = 0x1FFF3F9; //0x00000110 & 0x000001F0
-    }    
-    ctrl.unk_5 = CTRL_ALL_SUPPORTED_BUTTONS; //0x00000168
-    ctrl.unk_6 = 0xF1F3F9; //0x00000174
-    ctrl.unk_7 = 0x390E0000; //0x0000017C
-    ctrl.unk_8 = 0; //0x00000180
-    ctrl.idleReset = 129; //0x00000188
-    ctrl.idleBack = 129; //0x00000158
-    
-    sceKernelRegisterSubIntrHandler(PSP_VBLANK_INT, 0x13, _sceCtrlVblankIntr, NULL); //0x00000184
-    sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x00000190
-    
-    //TODO: Reverse the function below.
-    retPtr = sceKernelDeci2pReferOperations(); 
-    if ((retPtr != NULL) && (*retPtr == 48)) { //0x000001A0 & 0x000001AC
-         func = *(retPtr + 0x2C)(SceKernelDeci2Ops *); //0x000001B0
-         func(&ctrlDeci2Ops); //0x000001D8            
-    }
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_driver_1A1A7D40 - Address 0x0000020C
- * Exported in sceCtrl_driver
- */
-int sceCtrlEnd() {
-    SceSysTimerId timerId;
-    
-    sceKernelUnregisterSysEventHandler(&ctrlSysEvent); //0x00000220
-    sceSyscon_driver_B72DDFD2(1); //0x00000228
-    sceDisplayWaitVblankStart(); //0x00000230
-    
-    timerId = ctrl.timerID; //0x0000023C
-    ctrl.timerID = -1; //0x00000244
-    if (timerId >= 0) { //0x00000248
-        sceSTimerStopCount(timerId); //0x00000250
-        sceSTimerFree(timerId); //0x00000258
-    }
-    sceKernelReleaseSubIntrHandler(PSP_VBLANK_INT, 0x13); //0x00000264
-    sceKernelDeleteEventFlag(ctrl.eventFlag); //0x0000026C
-    
-    while (ctrl.suspendSamples != 0) { //0x0000028C
-           sceDisplayWaitVblankStart(); //0x00000280
-    }
-    return 0; //0x000002A0
-}
-
-/*
- * Subroutine sceCtrl_driver_55497589 - Address 0x00001A50 
- * Exported in sceCtrl_driver
- */
-int sceCtrlSuspend() {  
-    int cycle;
-    
-    cycle = ctrl.btnCycle; //0x00001A58
-    if (cycle != 0) { //0x00001A68
-        sceSTimerStopCount(ctrl.timerID); //0x00001A88
-    }
-    else {
-         sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001A70 
-    }
-    return 0;       
-}
-
-/*
- * Subroutine sceCtrl_driver_33D03FD5 - Address 0x000002AC 
- * Exported in sceCtrl_driver
- */
-int sceCtrlResume() {
-    int retVal;
-    int prevButtons;
-    
-    retVal = sceSyscon_driver_97765E27(); //0x000002B8
-    if (retVal != 0) { //0x000002C4
-        if (retVal == 1) { //0x00000344
-            prevButtons = ctrl.prevButtons; //0x00000350
-            prevButtons |= 0x20000000; //0x00000358
-            ctrl.prevButtons = prevButtons; //0x00000360
-        }
-    }
-    else {
-         prevButtons = ctrl.prevButtons; //0x000002CC
-         prevButtons &= 0xDFFFFFFF; //0x000002D0
-         ctrl.prevButtons = prevButtons; //0x000002D4
-    }
-    ctrl.unk_Byte_1 = -1;
-    if (ctrl.btnCycle == 0) { //0x000002DC & 0x000002F0
-        sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x000002F8
-    }
-    else {
-         sceSTimerStartCount(ctrl.timerID); //0x00000318
-         sceSTimerSetHandler(ctrl.timerID, ctrl.btnCycle, _sceCtrlTimerIntr, 0); //0x00000330
-    }
-    return 0;
-} 
-
-/*
- * Subroutine sceCtrl_driver_F0074903 - Address 0x00001C30 
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
-    ctrl.pollMode = pollMode; //0x00001C3C
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_DA6B76A1 - Address 0x00001330 - Aliases: sceCtrl_driver_F8EC18BD
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
-    int privMode;
-    int index;
-    
-    privMode = pspSdkGetK1() << 11; //0x00001330
-    index = ((privMode >> 31) < 1); //0x00001338 & 0x00001340
-    if ((privMode & mode) >= 0) { //0x00001348 & 0x00001350
-        *mode = ctrl.samplingMode[index]; //0x00001358 & 0x0000135C
-    }
-    return 0; 
-}
-
-/* Subroutine sceCtrl_1F4011E6 - Address 0x000012C8 - Aliases: sceCtrl_driver_F6E94EA3
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {    
-    int suspendFlag;
-    int privMode;
-    u8 index;
-    PspCtrlPadInputMode prevMode;
-    
-    if (mode > CTRL_SAMPLING_MODE_MAX_MODE) { //0x000012D0 & 0x000012E4
-        return SCE_ERROR_INVALID_MODE; 
-    }
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000012EC
-    privMode = (pspSdkGetK1() >> 20) & 0x1; //0x000012F4
-    index = (privMode < 1); //0x000012FC
-    
-    prevMode = ctrl.samplingMode[index]; //0x00001308
-    ctrl.samplingMode[index] = mode; //0x0000130C
-    
-    sceKernelCpuResumeIntr(suspendFlag); //0x00001310:
-    return prevMode; //0x00001318   
-}
-
-/*
- * Subroutine sceCtrl_02BAAD91 - Address 0x00001AB8 - Aliases: sceCtrl_driver_501E0C70
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlGetSamplingCycle(u32 *cycle) {
-    int privMode;
-    
-    privMode = pspSdkGetK1() << 11; //0x00001AB8   
-    if ((privMode & cycle) >= 0) { //0x00001ABC && 0x00001AC0
-        *cycle = ctrl.btnCycle; //0x00001ACC && 0x00001AD0
-    }
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_6A2774F3 - Address 0x0000136C - Aliases: sceCtrl_driver_83B15A81
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetSamplingCycle(u32 cycle) {
-    int k1;
-    int suspendFlag;
-    u32 prevCycle;
-    int sdkVersion;
-    u32 nCycle;
-    
-    k1 = pspSdkGetK1();
-    pspSdkSetK1(k1 << 11); //0x00001378
-    
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001398
-    if (cycle == 0) { //0x000013B0        
-        prevCycle = ctrl.btnCycle; //0x00001460
-        sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001464
-        ctrl.btnCycle = 0; //0x00001468
-        
-        sceSTimerSetHandler(ctrl.timerID, 0, NULL, 0); //0x00001478
-        sceSTimerStopCount(ctrl.timerID); //0x00001480            
-    }
-    else {
-        if (cycle < CTRL_BUFFER_UPDATE_MIN_CUSTOM_CYCLES || cycle > CTRL_BUFFER_UPDATE_MAX_CUSTOM_CYCLES) { //0x000013B4 & 0x000013B8
-            return SCE_ERROR_INVALID_VALUE; //0x0000138C & 0x000013C0
-        }
-        else {
-             prevCycle = ctrl.btnCycle; //0x0000140C
-             sceSTimerStartCount(ctrl.timerID); //0x00001410
-             ctrl.btnCycle = cycle; //0x00001414
-             sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00001418
-        
-             nCycle = ((0x204FFFF < sdkVersion) < 1); //0x00001428 && 0x0000142C
-             nCycle += cycle; //0x00001434 -- If the PSP Firmware version is < 2.5, the original cycle is used, otherwise original cycle + 1
-             sceSTimerSetHandler(ctrl.timerID, nCycle, _sceCtrlTimerIntr, 0); //0x00001408 && 0x00001444
-             sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001450      
-       }
-    }
-    sceKernelCpuResumeIntr(suspendFlag); //0x000013D8
-    pspSdkSetK1(k1); //0x000013E4
-    return prevCycle; //0x000013E0  
-}
-
-/*
- * Subroutine sceCtrl_687660FA - Address 0x0000170C - Aliases: sceCtrl_driver_E54253E7
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
-    int k1;
-    int privMode;
-    int suspendFlag;
-    int tempIdleBack;
-    int tempIdleReset;   
-    
-    privMode = pspSdkGetK1() << 11; //0x00001710    
-    idleReset = idleReset | privMode; //0x0000171C
-    k1 = pspSdkSetK1(privMode); //0x00001728
-    
-    if (((idleReset & privMode) < 0) || ((privMode & idleBack) < 0)) { //0x00001734 & 0x00001740
-        pspSdkSetK1(k1);
-        return SCE_ERROR_PRIV_REQUIRED; /* protect kernel addresses from user mode. */
-    }   
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000176C  
-    if (idleReset != NULL) { //0x00001774
-        tempIdleReset = ctrl.idleReset;
-        *idleReset = (tempIdleReset == 129) ? -1 : idleReset; //0x00001788
-    }
-    if (idleBack != NULL) { //0x00001794
-        tempIdleBack = ctrl.idleBack;
-        *idleBack = (tempIdleBack == 129) ? -1 : tempIdleBack; //0x000017A4
-    }
-    sceKernelCpuResumeIntr(suspendFlag); //0x000017B0
-    pspSdkSetK1(k1); //0x000017B8
-    return 0; //0x000017C0
-}
-
-/*
- * Subroutine sceCtrl_A7144800 - Address 0x00001680 - Aliases: sceCtrl_driver_37533267
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) {
-    int suspendFlag;
-    
-    if ((idlereset < -1 && idlereset > 128) && (idleback < -1 && idleback > 128)) { //0x000016A0 & 0x000016B4 & 0x000016C8
-        return SCE_ERROR_INVALID_VALUE; //0x000016A8 & 0x000016AC & 0x00001700
-    }       
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000016D0
-    
-    ctrl.idleBack = (idleback == -1) ? 129 : idleback; //0x000016D4 & 0x000016E0
-    ctrl.idleReset = (idlereset == -1) ? 129 : idlereset; //0x000016CC & 0x000016EC
-    
-    sceKernelCpuResumeIntr(suspendFlag); //0x000016E8
-    return 0; //0x000016F0
-}
-
-/*
- * Subroutine sceCtrl_AF5960F3 - Address 0x00001C6C - Aliases: sceCtrl_driver_BC8D1A3B
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-u16 sceCtrlGetSuspendingExtraSamples() {
-    u16 curSuspendSamples;
-    
-    curSuspendSamples = ctrl.suspendSamples;  //0x00001C74
-    return curSuspendSamples;
-}
-
-/*
- * Subroutine sceCtrl_348D99D4 - Address 0x00001C40 - Aliases: sceCtrl_driver_547F89D3
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetSuspendingExtraSamples(u16 suspendSamples) {
-    u16 nSuspendSamples;
-    
-    if (suspendSamples > CTRL_MAX_EXTRA_SUSPEND_SAMPLES) { //0x00001C44
-        return SCE_ERROR_INVALID_VALUE; //0x00001C48 & 0x00001C54
-    }
-    nSuspendSamples = ((suspendSamples ^ 0x1) == 0) ? 0 : suspendSamples; //0x00001C40 & 0x00001C4C
-    ctrl.suspendSamples = nSuspendSamples;
-    
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_driver_E467BEC8 - Address 0x000011F0 
- * Exported in sceCtrl_driver
- */
-int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3) {
-    int isExtended;
-    SceUID poolId;
-    void *ctrlBuf;    
-    
-    //0x0000122C
-    if (mode > 2) {
-        return SCE_ERROR_INVALID_VALUE;
-    }
-    isExtended = ctrl.unk_array2[mode]; //0x00001238
-    if (!isExtended) { //0x00001254
-        poolId = sceKernelCreateFpl("SceCtrlBuf", PSP_MEMORY_PARTITION_KERNEL, 0, 2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL); //0x00001294
-        if (poolId < 0) { //0x000012A4
-            return poolId;
-        }
-        sceKernelTryAllocateFpl(poolId, &ctrlBuf); //0x000012AC
-        ctrl.kernelModeData.sceCtrlBuf = (void *)ctrlBuf + sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS; //0x000012BC
-        ctrl.userModeData.sceCtrlBuf = (void *)ctrlBuf; //0x000012C4
-    }
-    ctrl.unk_array3[mode] = arg3; //0x00001264
-    ctrl.unk_array2[mode] = arg2; //0x0000126C
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_B1D0E5CD - Address 0x00001490 - Aliases: sceCtrl_driver_637CB76C
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlPeekLatch(SceCtrlLatch *latch) {
-    int k1;
-    int suspendFlag;
-    SceCtrlInternalData *latchPtr;
-    
-    k1 = pspSdkGetK1();
-    pspSdkSetK1(k1 << 11); //0x0000149C  
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000014A8
-    
-    if ((pspSdkGetK1() & latch) < 0) { //0x000014B8
-        sceKernelCpuResumeIntr(suspendFlag); //0x00001524
-        pspSdkSetK1(k1); //0x00001530
-        return SCE_ERROR_PRIV_REQUIRED; //0x0000152C & 0x00001538 -- protect kernel address from usermode
-    }
-    if (pspSdkGetK1() >= 0) { //0x000014C4
-        latchPtr = &ctrl.kernelModeData; //0x00001520
-    }
-    else {
-         latchPtr = &ctrl.userModeData; //0x000014D0
-    }
-    latch->btnMake = latchPtr->btnMake; //0x000014D4
-    latch->btnBreak = latchPtr->btnBreak; //0x000014DC
-    latch->btnPress = latchPtr->btnPress; //0x000014E4
-    latch->btnRelease = latchPtr->btnRelease; //0x000014EC
-    
-    sceKernelCpuResumeIntr(suspendFlag); //0x000014F4
-    pspSdkSetK1(k1); //0x000014FC
-    return latchPtr->readLatchCount; //0x00001500
-}
-
-/*
- * Subroutine sceCtrl_0B588501 - Address 0x0000153C - Aliases: sceCtrl_driver_7F7C4E0A
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlReadLatch(SceCtrlLatch *latch) {
-    int k1;
-    int suspendFlag;
-    SceCtrlInternalData *latchPtr;
-    int readLatchCount;
-    
-    k1 = pspSdkGetK1(); //0x00001540
-    pspSdkSetK1(k1 << 11); //0x00001548
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001554
-    
-    if ((pspSdkGetK1() & latch) < 0) { //0x00001564 -- protect kernel address from user mode     
-        sceKernelCpuResumeIntr(suspendFlag); //0x00001620
-        pspSdkSetK1(k1); //0x0000162C
-        return SCE_ERROR_PRIV_REQUIRED; //0x00001634
-    }
-    if (pspSdkGetK1() >= 0) { //0x00001570
-        latchPtr = &ctrl.kernelModeData; //0x000015E0       
-        readLatchCount = latchPtr->readLatchCount; //0x00001614
-        latchPtr->readLatchCount = 0; //0x0000161C
-    }
-    else {
-         latchPtr = &ctrl.userModeData; //0x0000157C
-         readLatchCount = latchPtr->readLatchCount; //0x000015A0
-         latchPtr->readLatchCount = 0; //0x000015A8
-    }
-    latch->btnMake = latchPtr->btnMake; //0x00001584 & 0x000015E8
-    latch->btnBreak = latchPtr->btnBreak; //0x0000158C & 0x000015F0
-    latch->btnPress = latchPtr->btnPress; //0x00001594 & 0x000015F8
-    latch->btnRelease = latchPtr->btnRelease; //0x0000159C & 0x00001600
-    
-    latchPtr->btnMake = 0; //0x000015A4 & 0x00001604
-    latchPtr->btnBreak = 0; //0x000015AC & 0x00001608
-    latchPtr->btnPress = 0; //0x000015B0 & 0x0000160C
-    latchPtr->btnRelease = 0; //0x000015B4 & 0x00001610
-    
-    sceKernelCpuResumeIntr(suspendFlag); //0x000015B8
-    pspSdkSetK1(k1); //0x000015C0
-    return readLatchCount; //0x000015C4
-} 
-
-/*
- * Subroutine sceCtrl_3A622550 - Address 0x00001AE0 - Aliases: sceCtrl_driver_2BA616AF
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 0); //0x00001AEC
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_C152080A - Address 0x00001B00 - Aliases: sceCtrl_driver_E6085C33
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 1); //0x00001B0C
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_1F803938 - Address 0x00001B20 - Aliases: sceCtrl_driver_BE30CED0
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 2); //0x00001B2C
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_60B81F86 - Address 0x00001B40 - Aliases: sceCtrl_driver_3A6A612A
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, 0, 3); //0x00001B4C
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_5A36B1C2 - Address 0x00001B60 - Aliases: sceCtrl_driver_D4692E77
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 4); //0x00001B78
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_239A6BA7 - Address 0x00001B8C - Aliases: sceCtrl_driver_41BCD9ED
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 5); //0x00001BA4
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_1098030B - Address 0x00001BB8 - Aliases: sceCtrl_driver_3BD76EDE
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 6); //0x00001BD0
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_7C3675AB - Address 0x00001BE4 - Aliases: sceCtrl_driver_7ABDEBAA
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
-    int readBuffers;
-    
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 7); //0x00001BFC
-    return readBuffers;
-}
-
-/*
- * Subroutine sceCtrl_A68FD260 - Address 0x00001DA8 - Aliases: sceCtrl_driver_994488EC
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlClearRapidFire(u8 slot) {
-    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x00001DBC && 0x00001DC0
-        return SCE_ERROR_INVALID_INDEX;
-    }
-    ctrl.rapidFire[slot].pressedButtonRange = 0; //0x00001DC8
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_6841BE1A - Address 0x000018DC - Aliases: sceCtrl_driver_89438C13
- * Exported in sceCtrl
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, u8 reqBtnOnTime, u8 reqBtnOffTime) {
-    u32 usedButtons;
-    u32 kernelButtons;
-    int k1;
-    int suspendFlag;
-    
-    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x000018FC & 0x0000193C
-        return SCE_ERROR_INVALID_INDEX;
-    }
-    if ((reqBtnEventOnTime | reqBtnOnTime | reqBtnOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER) { //0x000018E8 & 0x000018F4 & 0x00001910 & 0x00001954
-        return SCE_ERROR_INVALID_VALUE;
-    }
-    k1 = pspSdkGetK1(); //0x0000194C
-    pspSdkSetK1(k1 << 11); // 0x00001960
-    
-    usedButtons = pressedBtnRange | reqBtnsEventTrigger; //0x0000195C    
-    usedButtons = usedButtons | reqBtn; //0x00001968
-    if (k1 < 0) { //0x00001964
-        kernelButtons = ~ctrl.userModeButtons; //0x0000197C
-        kernelButtons = kernelButtons | PSP_CTRL_HOLD; //0x00001980
-        //if the buttons given by the user include kernel buttons or the HOLD button -> return error
-        if (kernelButtons & usedButtons) { //0x00001984 & 0x00001988
-            pspSdkSetK1(k1); //0x00001A0C
-            return SCE_ERROR_PRIV_REQUIRED;
-        }
-    }
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001990
-    
-    ctrl.rapidFire[slot].reqButtonsOnTime = reqBtnOnTime; //0x00001998 & 0x0000199C & 0x000019A0 & 0x000019A4 & 0x000019A8
-    ctrl.rapidFire[slot].pressedButtonRange = pressedBtnRange; //0x000019B4
-    ctrl.rapidFire[slot].reqButtonsEventTrigger = reqBtnsEventTrigger; //0x000019B8
-    ctrl.rapidFire[slot].reqButtons = reqBtn; //0x000019BC
-    ctrl.rapidFire[slot].reqButtonsOffTime = reqBtnOffTime; //0x000019C0
-    ctrl.rapidFire[slot].reqButtonsEventOnTime = reqBtnEventOnTime; //0x000019B0
-    ctrl.rapidFire[slot].eventData = 0; //0x000019C8
-    
-    sceKernelCpuResumeIntr(suspendFlag); //0x000019C4
-    pspSdkSetK1(k1); //0x000019CC
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_driver_DB76878D - Address 0x00001CB8
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {
-    
-    if (slot > CTRL_DATA_EMULATION_MAX_SLOT) { //0x00001CE4
-        return SCE_ERROR_INVALID_VALUE; //0x00001CD0 & 0x00001CE8
-    }
-    aXEmu &= 0xFF; //0x00001CDC
-    aYEmu &= 0xFF; //0x00001CE0
-    
-    ctrl.emulatedData[slot].analogXEmulation = aXEmu; //0x00001CF8
-    ctrl.emulatedData[slot].analogYEmulation = aYEmu; //0x00001CEC
-    ctrl.emulatedData[slot].intCtrlBufUpdates = bufUpdates; //0x00001CF4
-    
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_driver_5130DAE3 - Address 0x00001C78 
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates) {
-    
-    if (slot > CTRL_DATA_EMULATION_MAX_SLOT) { //0x00001C98
-        return SCE_ERROR_INVALID_VALUE; //0x00001C90 & 0x00001C9C
-    }
-    ctrl.emulatedData[slot].uModeBtnEmulation = uModeBtnEmu; //0x00001CA8
-    ctrl.emulatedData[slot].kModeBtnEmulation = kModeBtnEmu; //0x00001CAC
-    ctrl.emulatedData[slot].intCtrlBufUpdates2 = bufUpdates; //0x00001CA0
-    
-    return 0;
-}
-
-
-/* Subroutine sceCtrl_driver_1809B9FC - Address 0x00001878
- * Exported in sceCtrl_driver 
- */
-PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {   
-    int suspendFlag;
-    int curMaskSupBtns;
-    int curMaskSetBtns;
-    PspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
-       
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000188C
-    curMaskSetBtns = ctrl.maskSetButtons; //0x0000189C
-    curMaskSupBtns = ctrl.maskSupportButtons; //0x000018A0             
-              
-    if (curMaskSupBtns & btnMask) { //0x000018AC          
-        btnMaskMode = (curMaskSetBtns & btnMask) ? PSP_CTRL_MASK_IGNORE_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x000018B0 & 0x000018B8
-    }
-    
-    sceKernelCpuResumeIntr(suspendFlag);
-    return btnMaskMode;  
-}
-
-/* Subroutine sceCtrl_driver_F8346777 - Address 0x000017C4
- * Exported in sceCtrl_driver 
- */
-PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, PspCtrlPadButtonMaskMode buttonMaskMode) {   
-    int curMaskSupBtns = ctrl.maskSupportButtons;
-    int newMaskSupBtns;
-    int curMaskSetBtns = ctrl.maskSetButtons;
-    int newMaskSetBtns;
-    int suspendFlag;    
-    PspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
-       
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000017E0
-    
-    if (mask & curMaskSupBtns) { //0x00001800        
-        prevBtnMaskMode = (mask & curMaskSetBtns) ? PSP_CTRL_MASK_SET_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x00001808 & 0x00001810
-    }
-    if (buttonMaskMode != PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING) { //0x00001814
-        if (buttonMaskMode == PSP_CTRL_MASK_IGNORE_BUTTON_MASK) { //0x00001818 & 0x00001850
-            newMaskSupBtns = curMaskSupBtns & ~mask; //0x00001854 & 0x00001874
-            newMaskSetBtns = curMaskSetBtns & ~mask; //0x00001850 & 0x0000186C          
-        }
-        else if (buttonMaskMode == PSP_CTRL_MASK_SET_BUTTON_MASK) { //0x0000185C
-                 newMaskSupBtns = curMaskSupBtns | mask; //0x00001868
-                 newMaskSetBtns = curMaskSetBtns | mask; //0x00001820
-        }
-    }
-    else {
-         newMaskSetBtns = curMaskSetBtns & ~mask; //0x000017F8 & 0x00001804 & 0x0000181C
-         newMaskSupBtns = curMaskSupBtns | mask; //0x000017E4 & 0x000017F0 & 0x00001820
-    }
-    ctrl.maskSupportButtons = newMaskSupBtns; //0x00001828
-    ctrl.maskSetButtons = newMaskSetBtns; //0x00001830 
-    
-    sceKernelCpuResumeIntr(suspendFlag); //0x0000182C
-    return prevBtnMaskMode;
-}
-
-/* Subroutine sceCtrl_driver_DF53E160 - Address 0x00001D04
- * Exported in sceCtrl_driver 
- */
-int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *arg) {   
-    int suspendFlag;
-     
-    if (slot > CTRL_BUTTON_CALLBACK_MAX_SLOT) { //0x00001D14 & 0x00001D34
-        return SCE_ERROR_INVALID_INDEX;
-    }      
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001D3C
-    
-    //collect information for a button callback
-    ctrl.buttonCallback[slot].btnMask = btnMask; //0x00001D54
-    ctrl.buttonCallback[slot].callbackFunc = cb; //0x00001D58
-    ctrl.buttonCallback[slot].arg = arg; //0x00001D64
-    ctrl.buttonCallback[slot].gp = GP_BACKUP(); //0x00001D6C
-            
-    sceKernelCpuResumeIntr(suspendFlag); //0x00001D68 
-    return 0;   
-}
-
-/*
- * Subroutine sceCtrl_driver_6C86AF22 - Address 0x00001AA8 
- * Exported in sceCtrl_driver
- */
-int sceCtrl_driver_DEFAD580(int arg1) {
-    ctrl.unk_array2[0] = arg1; //0x00001AB4
-    return 0;
-}
-
-/*
- * Subroutine sceCtrl_driver_7511CCFE - Address 0x00001638
- * Exported in sceCtrl_driver
- */
-int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4) {
-    
-    if (arg1 != NULL) { //0x00001638
-        *arg1 = ctrl.unk_5; //0x00001644
-    }
-    if (arg2 != NULL) { //0x00001648
-        *arg2 = ctrl.unk_6; //0x00001654
-    }
-    if (arg3 != NULL) { //0x00001658
-        *arg3 = ctrl.unk_7; //0x00001664
-    }
-    if (arg4 != NULL) { //0x00001668
-        *arg4 = ctrl.unk_8; //0x00001674
-    }
-    return 0; //0x0000167C
-}
-
-/*
- * sceCtrl_driver_6A1DF4CB - Address 0x00001C10
- * Exported in sceCtrl_driver
- */
-int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
-    ctrl.unk_8 = arg4; //0x00001C1C
-    ctrl.unk_5 = arg1; //0x00001C20
-    ctrl.unk_6 = arg2; //0x00001C24
-    ctrl.unk_7 = arg3; //0x00001C2C
-    
-    return 0; //0x00001C18
-}
-
-/*
- * Subroutine sceCtrl_driver_5886194C - Address 0x00001A98
- * Exported in sceCtrl_driver
- */
-int sceCtrl_driver_BEF3B4C9(char arg1) {
-    ctrl.unk_Byte_3 = arg1; //0x00001AA4
-    return 0;
-}
-
-/*
- * sceCtrl_driver_365BE224 - Address 0x00001D94 
- * Exported in sceCtrl_driver
- */
-int sceCtrlUpdateCableTypeReq(char arg1) {
-    ctrl.unk_Byte_0 = arg1; //0x00001D9C
-    return 0;
-}
-
-/*
  * Subroutine module_start - Address 0x00001A10 
  * Exported in syslib
  */
 int module_start(SceSize args, void *argp) {    
     sceCtrlInit();
-    return 0;
+    return SCE_KERNEL_ERROR_OK;
 }
 
 /*
@@ -1835,5 +1838,5 @@ int module_start(SceSize args, void *argp) {
  */
 int module_reboot_before(SceSize args, void *argp) {
     sceCtrlEnd();
-    return 0;
+    return SCE_KERNEL_ERROR_OK;
 }

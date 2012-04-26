@@ -116,10 +116,39 @@ int sceKernelPowerUnlockForUser(int);
 #define NULL ((void*)0)
 #endif
 
-#define K1 27
-#define GP 28
-#define SP 29
-#define RA 31
+#define ZERO    0     /* hardwired zero */
+#define AT      1     /* assembler temporary */
+#define V0      2     /* return value */
+#define V1      3
+#define A0      4     /* argument registers */
+#define A1      5
+#define A2      6
+#define A3      7
+#define T0      8     /* temporary registers */
+#define T1      9
+#define T2      10
+#define T3      11
+#define T4      12    
+#define T5      13
+#define T6      14
+#define T7      15
+#define S0      16     /* saved (temporary) registers - preserved by callee */
+#define S1      17
+#define S2      18
+#define S3      19
+#define S4      20
+#define S5      21
+#define S6      22
+#define S7      23
+#define T8      24     /* temporary registers */
+#define T9      25
+#define K0      26     /* Reserved for OS kernel */
+#define K1      27
+#define GP      28     /* global pointer - preserved by callee */
+#define SP      29     /* stack pointer - preserved by callee */
+#define FP      30     /* frame pointer - preserved by callee */
+#define RA      31     /* return address - preserved by callee */
+
 
 #define GET_REG(val, reg) asm("move %0, $%1" : "=r" (val) : "ri" (reg))
 #define SET_REG(reg, val) asm("move $%1, %0" : : "r" (val), "ri" (reg))

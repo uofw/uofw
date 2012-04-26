@@ -25,7 +25,8 @@ extern void *memcpy(void *, void *, int);
 extern int memcmp(void *, void *, int);
 extern void* SysMemForKernel_5339A163();
 extern int SysMemForKernel_374E8E66();
-extern void* sceKernelMemset32(void*, int, void*);
+//Previous declaration was 'extern void* sceKernelMemset32(void*, int, void*);'
+extern void* sceKernelMemset32(void*, char, int);
 extern int sceSysregAvcResetEnable();
 extern int sceSysregAvcResetDisable();
 extern int sceSysregInterruptToOther();

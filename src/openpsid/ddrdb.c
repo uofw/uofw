@@ -53,7 +53,7 @@ int sceDdrdbDecrypt(u8 buf[], int size) {
             _sw(size, &ddrdbBuf[16]); //0x00002DA4
             
             if (size != 0) { //0x00002D90 & 0x00002DAC
-                //0x00002DB4 - x00002DD0
+                //0x00002DB4 - 0x00002DD0
                 for (i = 0; i < size; i++) {
                      ddrdbBuf[SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE+i] = buf[i]; //0x00002C50
                 }
@@ -85,8 +85,6 @@ int sceDdrdbDecrypt(u8 buf[], int size) {
     status = sceKernelSignalSema(semaId, 1); //0x00002D44
     return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002D4C & 0x00002D50 & 0x00002D54
 }
-
-
 
 /* Subroutine sceDdrdb_driver_05D50F41 - Address 0x00002B3C */
 int sceDdrdbEncrypt(u8 buf[], int size) {
@@ -368,7 +366,7 @@ int sceDdrdbPrngen(u8 buf[SCE_DDRDB_PRNG_BUFFER_SIZE]) {
 
 /* Subroutine sceDdrdb_F013F8BF - Address 0x00002E2C */
 int sceDdrdb_F013F8BF(u8 srcBuf1[20], u8 srcBuf2[40]) {
-    int val;
+    int bufAddr;
     int status;
     u32 k1;
     int i;
@@ -376,13 +374,20 @@ int sceDdrdb_F013F8BF(u8 srcBuf1[20], u8 srcBuf2[40]) {
     k1 = pspSdkGetK1();
     pspSdkSetK1(k1 << 11); //0x00002E30
     
-    val = srcBuf1 + 20; //0x00002E2C
-    val |= srcBuf1; //0x00002E34
+    bufAddr = srcBuf1 + 20; //0x00002E2C
+    bufAddr |= srcBuf1; //0x00002E34
     
-    if ((val & pspSdkGetK1()) < 0) { //0x00002E3C & 0x00002E68
+    if ((bufAddr & pspSdkGetK1()) < 0) { //0x00002E3C & 0x00002E68
         pspSdkSetK1(k1); 
         return SCE_ERROR_PRIV_REQUIRED; //0x00002E84 - 0x00002E88
     } 
+    bufAddr = srcBuf2 + 40; //0x00002E70
+    bufAddr |= srcBuf2; //0x00002E74
+    if ((bufAddr & pspSdkGetK1()) < 0) { //0x00002E78 & 0x00002E7C
+        pspSdkSetK1(k1); 
+        return SCE_ERROR_PRIV_REQUIRED;
+    }
+                
     status = sceKernelWaitSema(semaId, 1); //0x00002EC4
     if (status != 0) { //0x00002ECC
         pspSdkSetK1(k1);
