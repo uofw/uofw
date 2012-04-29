@@ -4796,7 +4796,7 @@ int sub_F28C(int arg0, int arg1, int arg2, int arg3)
     }
 
     // F360
-    SYNC();
+    pspSync();
     // F374
     while ((nandOpt2.u0 != -1))
     {
@@ -4879,7 +4879,7 @@ int sub_F458(int arg0, int arg1, int arg2, int arg3, int arg4)
     }
 
     // F53C
-    SYNC();
+    pspSync();
     // F550
     while (nandOpt2.u0 != -1)
     {
@@ -5139,7 +5139,7 @@ int sub_FC40()
 {
     a1 = *(int*)(0xBD101038);
     *(int*)(0xBD101038) = ((a1 & 0xFFFFFFFC) | ((a1 & (a1 >> 8)) & 3)) | 0x300;
-    SYNC();
+    pspSync();
     switch (nandOpt2.u0)
     {
     case 3:

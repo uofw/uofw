@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 #include "lcdc.h"
 

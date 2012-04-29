@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 typedef struct {
     u32 count;
@@ -27,76 +27,76 @@ typedef struct
 int sceKernelDcacheInvalidateRangeForUser(const void *p, u32 size)
 {
     int ret;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(p, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(p, size))
         ret = 0x800200D3;
     else
         ret = sceKernelDcacheInvalidateRange(p, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int UtilsForUser_157A383A(const void *p, u32 size)
 {
     int ret;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(p, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(p, size))
         ret = 0x800200D3;
     else
         ret = UtilsForKernel_157A383A(p, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceKernelDcachePurgeRangeForUser(const void *p, u32 size)
 {
     int ret;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(p, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(p, size))
         ret = 0x800200D3;
     else
         ret = sceKernelDcachePurgeRange(p, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceKernelIcacheInvalidateRangeForUser(const void *p, u32 size)
 {
     int ret;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(p, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(p, size))
         ret = 0x800200D3;
     else
         ret = sceKernelIcacheInvalidateRange(p, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int UtilsForUser_43C9A8DB(const void *p, u32 size)
 {
     int ret;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(p, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(p, size))
         ret = 0x800200D3;
     else
         ret = UtilsForKernel_43C9A8DB(p, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 size)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx)
-     || !K1_USER_BUF_DYN_SZ(data, size)
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx)
+     || !pspK1DynBufOk(data, size)
      || ctx == NULL || data == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // ED60
     if (ctx->usComputed != 0)
     {
-        K1_RESET();
+        pspSetK1(oldK1);
         // EE44
         return -1;
     }
@@ -104,7 +104,7 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
     if (ctx->usRemains >= 64)
     {
         // EE34
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800201BC;
     }
     ctx->ullTotalLen += size;
@@ -135,17 +135,17 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
     }
     ctx->usRemains = numTotal;
     // EDF8
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
 {
     char buf[64];
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx) || !K1_USER_PTR(digest)
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx) || !pspK1PtrOk(digest)
      || ctx == NULL || digest == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // EED0
@@ -155,7 +155,7 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
         if (remain >= 64)
         {
             // EFE4
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x800201BC;
         }
         memset(buf, 0, 64);
@@ -181,22 +181,22 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
     }
     // EFA8
     memcpy(digest, ctx, 16);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest)
 {
     SceKernelUtilsMd5Context ctx;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(data, size) || !K1_USER_PTR(digest))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(data, size) || !pspK1PtrOk(digest))
     {
         // F04C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // F068
-    if (K1_USER_PTR(&ctx)) // ?!?
+    if (pspK1PtrOk(&ctx)) // ?!?
     {
         ctx.h[0] = 0x67452301;
         ctx.h[1] = 0xEFCDAB89;
@@ -209,15 +209,15 @@ int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest)
     // F0B8
     sceKernelUtilsMd5BlockUpdate(&ctx, data, size);
     sceKernelUtilsMd5BlockResult(&ctx, digest);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsMd5BlockInit(SceKernelUtilsMd5Context *ctx)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx) || ctx == NULL) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx) || ctx == NULL) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     ctx->h[0] = 0x67452301;
@@ -227,24 +227,24 @@ int sceKernelUtilsMd5BlockInit(SceKernelUtilsMd5Context *ctx)
     ctx->h[3] = 0x10325476;
     ctx->usRemains = 0;
     ctx->usComputed = 0;
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 size)
 {
     int buf[16];
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx) || !K1_USER_BUF_DYN_SZ(data, size) || ctx == NULL || data == NULL)
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx) || !pspK1DynBufOk(data, size) || ctx == NULL || data == NULL)
     {
         // F1B8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // F1E8
     if (ctx->usComputed != 0)
     {
-        K1_RESET();
+        pspSetK1(oldK1);
         // F2F8
         return -1;
     }
@@ -252,7 +252,7 @@ int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 
     if (remaining >= 64)
     {
         // F2E8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800201BC;
     }
     ctx->ullTotalLen += size;
@@ -288,18 +288,18 @@ int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 
     }
     ctx->usRemains = total;
     // F2B0
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
 {
     int buf[16];
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx) || !K1_USER_PTR(digest) || ctx == NULL || digest == NULL)
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx) || !pspK1PtrOk(digest) || ctx == NULL || digest == NULL)
     {
         // F358
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // F384
@@ -309,7 +309,7 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
         if (ctx->usRemains >= 64)
         {
             // F500
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x800201BC;
         }
         memset(buf, 0, 64);
@@ -338,31 +338,31 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
     }
     // F4E8
     memcpy(digest, ctx->h, 20);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(digest) || !K1_USER_BUF_DYN_SZ(data, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(digest) || !pspK1DynBufOk(data, size))
     {
         // F550
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     sub_1A40(data, size, digest);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsSha1BlockInit(SceKernelUtilsSha1Context *ctx)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx) || ctx == NULL)
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx) || ctx == NULL)
     {
         // F5F8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     ctx->ullTotalLen = 0;
@@ -373,17 +373,17 @@ int sceKernelUtilsSha1BlockInit(SceKernelUtilsSha1Context *ctx)
     ctx->h[4] = 0xC3D2E1F0;
     ctx->usRemains = 0;
     ctx->usComputed = 0;
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceKernelUtilsMt19937Init(SceKernelUtilsMt19937Context *ctx, u32 seed)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(ctx))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx))
     {
         // F6A8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     ctx->state[0] = seed;
@@ -395,7 +395,7 @@ int sceKernelUtilsMt19937Init(SceKernelUtilsMt19937Context *ctx, u32 seed)
     // F678
     for (i = 0; i < 624; i++)
         sceKernelUtilsMt19937UInt(ctx);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -435,9 +435,9 @@ clock_t sceKernelLibcClock(void)
 {
     if (g_clock == NULL)
         return 0;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     clock_t ret = g_clock();
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -446,12 +446,12 @@ time_t sceKernelLibcTime(time_t *t)
     time_t ret;
     if (g_time == NULL)
         return 0;
-    K1_BACKUP();
-    if (!K1_USER_PTR(t))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(t))
         ret = 0;
     else
         ret = g_time(t);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -460,12 +460,12 @@ int sceKernelLibcGettimeofday(struct timeval *tp, struct timezone *tzp)
     int ret;
     if (g_gettimeofday == NULL)
         return 1;
-    K1_BACKUP();
-    if (!K1_USER_PTR(tp) || !K1_USER_PTR(tzp))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(tp) || !pspK1PtrOk(tzp))
         ret = 1;
     else
         ret = g_gettimeofday(tp, tzp);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 

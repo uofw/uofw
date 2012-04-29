@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "../global.h"
+#include "../common/common.h"
 
 // 13BC4
 int (*g_kprintfHandler)(short*, const char*, va_list, int) = kprnt;
@@ -125,15 +125,15 @@ void *sceKernelSm1ReferOperations()
 
 int DipswSet(int reg, int val)
 {   
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     if (reg < 0 || reg >= 64)
     {
         // FDA0 dup
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020001;
     }
 
-    if (K1_USER_MODE())
+    if (pspK1IsUserMode())
     {
         switch (reg) // jump table at 0x13858
         {
@@ -151,7 +151,7 @@ int DipswSet(int reg, int val)
 
         default:
             // FDA0 dup
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020001;
         }
     }
@@ -172,7 +172,7 @@ int DipswSet(int reg, int val)
     else
         *regPtr |= (1 << reg);
     // FDF8
-    K1_RESET();
+    pspSetK1(oldK1);
     return oldVar;
 }
 
@@ -213,7 +213,6 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
     char *hexNumChars = g_downHexChars;
     int numChars = 0;
     int stringLen;
-    K1_GET();
     // FF00
     for (;;)
     {
@@ -293,7 +292,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         fmt--;
                     }
                     // 10068
-                    strSize = MAX(val, -1);
+                    strSize = pspMax(val, -1);
                     continue;
             
                 case '0':
@@ -448,7 +447,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         {
                             // 10680
                             int *ptr = va_arg(ap, int*);
-                            if (userMode != 0 && !K1_USER_PTR(ptr))
+                            if (userMode != 0 && !pspK1PtrOk(ptr))
                                 return 0x800200D3;
                             // 1069C
                             *ptr = numChars;
@@ -456,7 +455,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         else
                         {
                             short *ptr = va_arg(ap, short*);
-                            if (userMode != 0 && !K1_USER_PTR(ptr))
+                            if (userMode != 0 && !pspK1PtrOk(ptr))
                                 return 0x800200D3;
                             // 10674
                             *ptr = numChars;
@@ -465,7 +464,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     else
                     {
                         int *ptr = va_arg(ap, int*);
-                        if (userMode != 0 && !K1_USER_PTR(ptr))
+                        if (userMode != 0 && !pspK1PtrOk(ptr))
                             return 0x800200D3;
                         // 10640
                         *ptr = numChars;
@@ -488,7 +487,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         s = g_null;
                     }
                     // 106CC
-                    if (userMode != 0 && !K1_USER_PTR(s))
+                    if (userMode != 0 && !pspK1PtrOk(s))
                         return 0x800200D3;
                     // 106E4
                     if (strSize < 0)
@@ -585,7 +584,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     strSize = stringLen + 1;
                 if ((attr & 0x40) != 0)
                     strSize += 2;
-                int maxSize = MAX(strSize, oldStrSize);
+                int maxSize = pspMax(strSize, oldStrSize);
                 int i;
                 if ((attr & 0x30) == 0 && argWidth != 0)
                     for (i = 0; i < argWidth - maxSize; i++)
@@ -624,7 +623,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         func(arg0, ' ');
                 // (10338)
                 // 1033C
-                numChars += MAX(maxSize, argWidth);
+                numChars += pspMax(maxSize, argWidth);
             } while (0);
         }
         else
@@ -641,11 +640,11 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
 int KprintfForUser(const char *fmt, ...)
 {
     va_list ap;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = 0;
     va_start(ap, fmt);
-    if (!K1_USER_PTR(fmt)) {
-        K1_RESET();
+    if (!pspK1PtrOk(fmt)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int oldIntr = suspendIntr();
@@ -654,14 +653,14 @@ int KprintfForUser(const char *fmt, ...)
     // 107F4
     resumeIntr(oldIntr);
     va_end(ap);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int Kprintf(const char *fmt, ...)
 {
     va_list ap;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     va_start(ap, fmt);
     int ret = 0;
     int oldIntr = suspendIntr();
@@ -670,7 +669,7 @@ int Kprintf(const char *fmt, ...)
     // 108CC
     resumeIntr(oldIntr);
     va_end(ap);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 

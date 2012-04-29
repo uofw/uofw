@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 /** Structure for LoadExecVSH* functions */
 typedef struct
@@ -863,7 +863,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
         if (t3 != end)
         {
             curBuf--;
-            curBuf = MAX((int)curBuf, (int)buf);
+            curBuf = pspMax((int)curBuf, (int)buf);
             t1 -= s1;
             s3 -= s1;
             continue; // 080
@@ -879,7 +879,7 @@ void decodeKL4E(char *dst, int size, char *src, int arg3)
 
 int LoadExecForUser_362A956B()
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     SceUID cbId;
     SceKernelCallbackInfo cbInfo;
     int *argOpt;
@@ -888,23 +888,23 @@ int LoadExecForUser_362A956B()
     cbInfo.size = 56;
     int ret = sceKernelReferCallbackStatus(cbId, &cbInfo);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     int *argm8 = cbInfo.common - 8;
-    if (!K1_USER_PTR(argm8)) {
-        K1_RESET();
+    if (!pspK1PtrOk(argm8)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int pos  = *(int*)(argm8 + 0);
     int *unk = (int*)*(int*)(argm8 + 4);
     if ((unsigned int)pos >= 4) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D2;
     }
-    if (!K1_USER_PTR(unk))
+    if (!pspK1PtrOk(unk))
         return 0x800200D3;
-    K1_RESET();
+    pspSetK1(oldK1);
     if (unk[0] < 12)
         return 0x800201BC;
     unk[1] = 0;
@@ -1092,10 +1092,10 @@ void sub_0BBC(SceKernelUnkStruct *hwOpt)
 int sceKernelLoadExec(char *arg0, int arg1)
 {
     int ret;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     int oldD384 = g_loadExecCb;
@@ -1106,7 +1106,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
     {
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020149;
     }
 
@@ -1118,7 +1118,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020149;
         }
         // FE0
@@ -1126,48 +1126,48 @@ int sceKernelLoadExec(char *arg0, int arg1)
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020064;
         }
-        if (K1_USER_MODE())
+        if (pspK1IsUserMode())
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020149;
         }
-        if (arg0 == 0 || !K1_USER_PTR(arg0))
+        if (arg0 == 0 || !pspK1PtrOk(arg0))
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x800200D3;
         }
         if (arg1 != 0)
         {
-            if (!K1_PTRSTATICSIZEOK(arg1, 16))
+            if (!pspK1StaBufOk(arg1, 16))
             {
                 g_loadExecCb = oldD384;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x800200D3;
             }
             int addr12 = *(int*)(arg1 + 12);
-            if (addr12 != 0 && !K1_USER_PTR(addr12))
+            if (addr12 != 0 && !pspK1PtrOk(addr12))
             {
                 g_loadExecCb = oldD384;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x800200D3;
             }
             int addr8 = *(int*)(arg1 + 8);
             int addr4 = *(int*)(arg1 + 4);
             // 1058
-            if (addr8 != 0 && !K1_USER_BUF_DYN_SZ(addr8, addr4))
+            if (addr8 != 0 && !pspK1DynBufOk(addr8, addr4))
             {
                 g_loadExecCb = oldD384;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x800200D3;
             }
         }
@@ -1208,7 +1208,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
         if (sceKernelIsToolMode() != 0)
@@ -1221,7 +1221,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
             {
                 g_loadExecCb = oldD384;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x80020001;
             }
         }
@@ -1272,7 +1272,7 @@ int sceKernelLoadExec(char *arg0, int arg1)
 
     g_loadExecCb = oldD384;
     sceKernelUnlockMutex(g_loadExecMutex, 1);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -1285,10 +1285,10 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     SceUID fileId;
     int oldD384;
 
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     oldD384 = g_loadExecCb;
@@ -1302,50 +1302,50 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     {
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020064;
     }
-    if (K1_USER_MODE())
+    if (pspK1IsUserMode())
     {
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020149;
     }
-    if (fileName == NULL || !K1_USER_PTR(fileName))
+    if (fileName == NULL || !pspK1PtrOk(fileName))
     {
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
 
     if (arg1 != 0)
     {
-        if (!K1_PTRSTATICSIZEOK(arg1, 16))
+        if (!pspK1StaBufOk(arg1, 16))
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x800200D3;
         }
         int addr1 = *(int*)(arg1 + 12);
-        if (addr1 != 0 && K1_USER_PTR(addr1))
+        if (addr1 != 0 && pspK1PtrOk(addr1))
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x800200D3;
         }
         addr1 = *(int*)(arg1 + 8);
         int size = *(int*)(arg1 + 4);
     
         // 135C
-        if (addr1 != 0 && !K1_USER_BUF_DYN_SZ(addr1, size))
+        if (addr1 != 0 && !pspK1DynBufOk(addr1, size))
         {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x800200D3;
         }
     }
@@ -1356,7 +1356,7 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     {
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
 
@@ -1365,7 +1365,7 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     {
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return fileId;
     }
     ret = ModuleMgrForKernel_C3DDABEF(fileId, unkPtr, unkPtr2);
@@ -1374,7 +1374,7 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
         sceIoClose(fileId);
         g_loadExecCb = oldD384;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     args2.size = 48;
@@ -1461,7 +1461,7 @@ int LoadExecForUser_8ADA38D3(char *fileName, int arg1)
     sceIoClose(fileId);
     g_loadExecCb = oldD384;
     sceKernelUnlockMutex(g_loadExecMutex, 1);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -1471,10 +1471,10 @@ int LoadExecForUser_D1FB50DC(int arg)
     RebootArgs args;
     int ret, oldVar;
 
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     
@@ -1482,7 +1482,7 @@ int LoadExecForUser_D1FB50DC(int arg)
     g_loadExecCb = 0;
     if (sceKernelIsIntrContext() == 0)
     {   
-        if (K1_USER_MODE())
+        if (pspK1IsUserMode())
         {   
             args.opt0 = 0x210;
             args.opt1 = 0;
@@ -1516,7 +1516,7 @@ int LoadExecForUser_D1FB50DC(int arg)
 
     g_loadExecCb = oldVar;
     sceKernelUnlockMutex(g_loadExecMutex, 1);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -1525,25 +1525,25 @@ int sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
 {
     SceKernelLoadExecVSHParam args2;
     RebootArgs args;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
 
     if (sceKernelIsIntrContext() != 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020064;
     }
-    if (K1_USER_MODE()) {
-        K1_RESET();
+    if (pspK1IsUserMode()) {
+        pspSetK1(oldK1);
         return 0x80020149;
     }
 
     // 16B0
     if (sceKernelGetUserLevel() != 4) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020149;
     }
     int ret = sub_2308(opt);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     args2.size = 48;
@@ -1600,17 +1600,17 @@ int sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
     args.opt6 = 0;
     args.opt7 = 0;
     ret = runExec(&args);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 // 1F88A490
 int sceKernelRegisterExitCallback(int arg) // alias: 4AC57943 in ForUser
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int mtx = sceKernelLockMutex(g_loadExecMutex, 1, 0);
     if (mtx < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return mtx;
     }
     if (sceKernelGetThreadmanIdType(arg) == 8)
@@ -1626,15 +1626,15 @@ int sceKernelRegisterExitCallback(int arg) // alias: 4AC57943 in ForUser
         // 18B4
         if (arg != 0 && g_loadExecIsInited == 1)
             sceKernelInvokeExitCallback();
-        K1_RESET();
+        pspSetK1(oldK1);
         return mtx;
     }
     sceKernelUnlockMutex(g_loadExecMutex, 1);
     if (sceKernelGetCompiledSdkVersion() <= 0x30904FF) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return mtx;
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0x800200D2;
 }
 
@@ -1967,18 +1967,17 @@ int sub_21E0(char *name, int devcmd, int iocmd)
 
 int sub_2308(SceKernelLoadExecVSHParam *opt)
 {
-    K1_GET();
     if (opt != NULL)
     {
-        if (!K1_USER_BUF_STA_SZ(opt, 16))
+        if (!pspK1StaBufOk(opt, 16))
             return 0x800200D3;
-        if (opt->key != NULL && !K1_USER_PTR(opt->key))
+        if (opt->key != NULL && !pspK1PtrOk(opt->key))
             return 0x800200D3;
         // 2328
-        if (opt->configFile != NULL && !K1_USER_PTR(opt->configFile))
+        if (opt->configFile != NULL && !pspK1PtrOk(opt->configFile))
             return 0x800200D3;
         // 2344
-        if (opt->unk4 != NULL && !K1_USER_PTR(opt->unk4))
+        if (opt->unk4 != NULL && !pspK1PtrOk(opt->unk4))
             return 0x800200D3;
     }
     return 0;
@@ -1987,27 +1986,27 @@ int sub_2308(SceKernelLoadExecVSHParam *opt)
 // 2384
 int loadExecVSH(int arg0, int arg1, int arg2, int arg3)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     if (sceKernelIsIntrContext() == 0)
     {
-        if (K1_USER_MODE())
+        if (pspK1IsUserMode())
         {
             int iocmd, devcmd;
             // 23EC
             if (sceKernelGetUserLevel() != 4) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x80020149;
             }
             if (arg1 == 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x800200D3;
             }
-            if (!K1_USER_PTR(arg1)) {
-                K1_RESET();
+            if (!pspK1PtrOk(arg1)) {
+                pspSetK1(oldK1);
                 return 0x800200D3;
             }
             if (sub_2308(arg2) < 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x800200D3;
             }
             switch (arg0 - 288)
@@ -2046,13 +2045,13 @@ int loadExecVSH(int arg0, int arg1, int arg2, int arg3)
                 break;
 
             default:
-                K1_RESET();
+                pspSetK1(oldK1);
                 return 0x80020001;
             }
 
             int ret = sub_21E0(arg1, devcmd, iocmd);
             if (ret < 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return ret;
             }
             if (arg0 == 290)
@@ -2067,12 +2066,12 @@ int loadExecVSH(int arg0, int arg1, int arg2, int arg3)
                         {
                             // 2514
                             if (stat.st_ctime == 0 && stat.st_size > 0x1780000) {
-                                K1_RESET();
+                                pspSetK1(oldK1);
                                 return 0x80020001;
                             }
                         }
                         else {
-                            K1_RESET();
+                            pspSetK1(oldK1);
                             return 0x80020001;
                         }
                     }
@@ -2092,51 +2091,51 @@ int loadExecVSH(int arg0, int arg1, int arg2, int arg3)
             args.opt6 = 0;
             args.opt7 = 0;
             ret = runExec(&args);
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
         else {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020149;
         }
     }
     else {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020064;
     }
 }
 
 int sub_2580(int arg0, int arg1, int arg2, int arg3, int arg4)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     if (sceKernelIsIntrContext() != 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020064;
     }
 
-    if (K1_USER_MODE())
+    if (pspK1IsUserMode())
     {
         int ret;
         RebootArgs args;
         SceKernelLoadExecVSHParam args2;
         // 25F4
         if (sceKernelGetUserLevel() != 4) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020149;
         }
         if (arg1 == 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x8002014B;
         }
-        if (arg2 != 0 && !K1_USER_BUF_DYN_SZ(arg1, arg2)) {
-            K1_RESET();
+        if (arg2 != 0 && !pspK1DynBufOk(arg1, arg2)) {
+            pspSetK1(oldK1);
             return 0x800200D3;
         }
 
         // 263C
         ret = sub_2308(arg3);
         if (ret < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
         sub_29A4(&args2, arg4, arg3);
@@ -2149,11 +2148,11 @@ int sub_2580(int arg0, int arg1, int arg2, int arg3, int arg4)
         args.opt6 = 0;
         args.opt7 = 0;
         ret = runExec(&args);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     else {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020149;
     }
 }
@@ -2163,21 +2162,21 @@ int sub_26B0(int arg0, SceKernelLoadExecVSHParam *opt)
     SceKernelLoadExecVSHParam args2;
     RebootArgs args;
     int ret;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
    
     if (arg0 ^ 0x300 != 0 && sceKernelIsIntrContext() != 0) { // 2810
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020064;
     }
 
     // 26C4
-    if (K1_USER_MODE()) {
-        K1_RESET();
+    if (pspK1IsUserMode()) {
+        pspSetK1(oldK1);
         return 0x80020149;
     }
     ret = sub_2308(opt);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     args2.size = 48;
@@ -2234,7 +2233,7 @@ int sub_26B0(int arg0, SceKernelLoadExecVSHParam *opt)
     args2.flags |= 0x10000;
     args2.opt11 = 0;
     ret = runExec(&args);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -2479,9 +2478,7 @@ int sub_2A64(RebootArgs *opt)
     }
 
     // 2BC4
-    int st;
-    COP0_STATE_GET(st, COP0_STATE_STATUS);
-    COP0_STATE_SET(COP0_STATE_STATUS, st & 0xFFF7FFE0);
+    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & 0xFFF7FFE0);
     // Skipped useless part
 
     // 2C58

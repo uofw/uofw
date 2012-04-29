@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 static int
 sub_000001B8(int a0, int enable)

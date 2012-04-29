@@ -39,7 +39,7 @@ int sub_0BB8(int arg0, int arg1, int arg2)
             if (*(int*)(0xBDE0001C) & 2 != 0)
             {
                 *(int*)(0xBDE00028) = *(int*)(0xBDE0001C);
-                SYNC();
+                pspSync();
                 return -1;
             }
         }
@@ -47,14 +47,14 @@ int sub_0BB8(int arg0, int arg1, int arg2)
         {
             int ret = *(int*)(0xBDE00014);
             *(int*)(0xBDE00028) = *(int*)(0xBDE0001C);
-            SYNC();
+            pspSync();
             return ret;
         }
     }
     *(int*)(0xBDE00008) = 1;
-    SYNC();
+    pspSync();
     *(int*)(0xBDE00028) = *(int*)(0xBDE0001C);
-    SYNC();
+    pspSync();
     return -1;
 }
 

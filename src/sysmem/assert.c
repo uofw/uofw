@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 // 143FC
 void (*g_assertHandler)(int);

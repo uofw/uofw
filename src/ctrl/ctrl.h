@@ -19,16 +19,7 @@
 #ifndef CTRL_H
 #define	CTRL_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <pspsysevent.h>
-#include <pspsystimer.h>
-#include <pspsysmem.h>
-#include <pspdisplay.h>
-#include <pspinit.h>
-#include <psppower.h>
-#include "../errors.h"
-#include "../global.h"
+#include "../common/common.h"
 
 /** Custom function name. */
 int sceCtrl_5A36B1C2(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferPositiveExt")));       

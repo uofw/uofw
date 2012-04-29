@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 typedef struct
 {
@@ -16,14 +16,14 @@ typedef struct
 
 typedef struct
 {
-    void (*handler)(int unk, void* param);
+    int (*handler)(int unk, void* param);
     int gp;
     void *param;
 } SceSuspendHandler;
 
 typedef struct
 {
-    void (*handler)(int unk, void* param);
+    int (*handler)(int unk, void* param);
     int gp;
     void *param;
 } SceResumeHandler;
@@ -132,7 +132,7 @@ int sceKernelPowerRebootStart(int unk)
     return 0;
 }
 
-int sceKernelRegisterSuspendHandler(int reg, void (*handler)(int unk, void *param), void *param)
+int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;
@@ -140,12 +140,12 @@ int sceKernelRegisterSuspendHandler(int reg, void (*handler)(int unk, void *para
     SceSuspendHandler *cur = &g_suspendHandlers[reg];
     cur->handler = handler;
     cur->param = param;
-    GET_REG(cur->gp, GP);
+    cur->gp = pspGetGp();
     resumeIntr(oldIntr);
     return 0;
 }
 
-int sceKernelRegisterResumeHandler(int reg, void (*handler)(int, void*), void *param)
+int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;
@@ -153,14 +153,14 @@ int sceKernelRegisterResumeHandler(int reg, void (*handler)(int, void*), void *p
     SceResumeHandler *cur = &g_resumeHandlers[reg];
     cur->handler = handler;
     cur->param = param;
-    GET_REG(cur->param, GP);
+    cur->gp = pspGetGp();
     resumeIntr(oldIntr);
     return 0;
 }
 
 int scekernelDispatchSuspendHandlers(int unk)
 {
-    GP_BACKUP();
+    int oldGp = pspGetGp();
     SceSuspendHandler *cur = &g_suspendHandlers[0];
     int i;
     // CEB0
@@ -169,19 +169,19 @@ int scekernelDispatchSuspendHandlers(int unk)
         if (cur->handler != NULL)
         {
             // CEF0
-            GP_SET(cur->gp);
+            pspSetGp(cur->gp);
             cur->handler(unk, cur->param);
         }
         // CEC0
         cur++;
     }
-    GP_RESET();
+    pspSetGp(oldGp);
     return 0;
 }
 
 int sceKernelDispatchResumeHandlers(int unk)
 {
-    GP_BACKUP();
+    int oldGp = pspGetGp();
     SceResumeHandler *cur = &g_resumeHandlers[31];
     // CF40
     int i;
@@ -190,12 +190,12 @@ int sceKernelDispatchResumeHandlers(int unk)
         if (cur->handler != NULL)
         {
             // CF80
-            GP_SET(cur->gp);
+            pspSetGp(cur->gp);
             cur->handler(unk, cur->param);
         }
         cur--;
     }
-    GP_RESET();
+    pspSetGp(oldGp);
     return 0;
 }
 

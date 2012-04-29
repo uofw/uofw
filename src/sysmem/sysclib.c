@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "../global.h"
+#include "../common/common.h"
 
 #include "sysclib.h"
 
@@ -372,7 +372,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                 // D894
                 do
                 {
-                    CACHE(0x18, curDst);
+                    pspCache(0x18, curDst);
                     int i;
                     for (i = 0; i < 4; i++)
                     {
@@ -407,7 +407,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                 // D7A0
                 do
                 {
-                    CACHE(0x18, curDst);
+                    pspCache(0x18, curDst);
                     int i;
                     for (i = 0; i < 4; i++)
                     {
@@ -574,7 +574,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                         fmt--;
                     }
                     // DBEC
-                    precision = MAX(precision, -1);
+                    precision = pspMax(precision, -1);
                     continue;
             
                 case '0':
@@ -816,7 +816,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     len = stringLen + 1;
                 if ((flag & 0x40) != 0)
                     len += 2;
-                int maxSize = MAX(len, usedPrecision);
+                int maxSize = pspMax(len, usedPrecision);
                 int i;
                 if ((flag & 0x30) == 0 && numAlign != 0)
                 {
@@ -862,7 +862,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 }
                 // DE68
                 // DE6C
-                count += MAX(maxSize, numAlign);
+                count += pspMax(maxSize, numAlign);
             } while (0);
         }
         else

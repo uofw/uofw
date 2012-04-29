@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 #include "excep.h"
 #include "exceptionman.h"
@@ -15,12 +15,12 @@ int NmiManInit(void)
 {   
     int oldIntr = suspendIntr();
     int i;
-    COP0_CTRL_SET(18, 0);
+    pspCop0CtrlSet(COP0_CTRL_NMI_TABLE, 0);
     // 0AEC
     for (i = 0; i < 16; i++)
         g_nmiHandlers[i] = NULL;
     nmiInit();
-    COP0_CTRL_SET(18, g_nmiHandlers);
+    pspCop0CtrlSet(COP0_CTRL_NMI_TABLE, (int)g_nmiHandlers);
     sceKernelRegisterPriorityExceptionHandler(31, 1, nmiHandler);
     resumeIntr(oldIntr);
     return 0;

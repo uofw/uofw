@@ -407,14 +407,13 @@ int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
  * Exported in sceCtrl_driver
  */
 PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
-    int privMode;
+    int oldK1 = pspShiftK1(); //0x00001330
     int index;
     
-    privMode = pspSdkGetK1() << 11; //0x00001330
-    index = ((privMode >> 31) < 1); //0x00001338 & 0x00001340
-    if ((privMode & mode) >= 0) { //0x00001348 & 0x00001350
+    if (pspK1PtrOk(privMode)) { //0x00001348 & 0x00001350
         *mode = ctrl.samplingMode[index]; //0x00001358 & 0x0000135C
     }
+    pspSetK1(oldK1);
     return SCE_KERNEL_ERROR_OK; 
 }
 
@@ -432,7 +431,7 @@ PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {
         return SCE_ERROR_INVALID_MODE; 
     }
     suspendFlag = sceKernelCpuSuspendIntr(); //0x000012EC
-    privMode = (pspSdkGetK1() >> 20) & 0x1; //0x000012F4
+    privMode = (pspGetK1() >> 20) & 0x1; //0x000012F4
     index = (privMode < 1); //0x000012FC
     
     prevMode = ctrl.samplingMode[index]; //0x00001308
@@ -448,12 +447,12 @@ PspCtrlPadInputMode sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlGetSamplingCycle(u32 *cycle) {
-    int privMode;
+    int oldK1 = pspShiftK1(); //0x00001AB8
     
-    privMode = pspSdkGetK1() << 11; //0x00001AB8   
-    if ((privMode & cycle) >= 0) { //0x00001ABC && 0x00001AC0
+    if (pspK1PtrOk(cycle)) { //0x00001ABC && 0x00001AC0
         *cycle = ctrl.btnCycle; //0x00001ACC && 0x00001AD0
     }
+    pspSetK1(oldK1);
     return SCE_KERNEL_ERROR_OK;
 }
 
@@ -463,14 +462,12 @@ int sceCtrlGetSamplingCycle(u32 *cycle) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlSetSamplingCycle(u32 cycle) {
-    u32 k1;
     int suspendFlag;
     u32 prevCycle;
     int sdkVersion;
     u32 nCycle;
     
-    k1 = pspSdkGetK1();
-    pspSdkSetK1(k1 << 11); //0x00001378
+    int oldK1 = pspShiftK1(); // 0x00001378
     
     suspendFlag = sceKernelCpuSuspendIntr(); //0x00001398
     if (cycle == 0) { //0x000013B0        
@@ -498,7 +495,7 @@ int sceCtrlSetSamplingCycle(u32 cycle) {
        }
     }
     sceKernelCpuResumeIntr(suspendFlag); //0x000013D8
-    pspSdkSetK1(k1); //0x000013E4
+    pspSetK1(oldK1); //0x000013E4
     return prevCycle; //0x000013E0  
 }
 
@@ -508,31 +505,27 @@ int sceCtrlSetSamplingCycle(u32 cycle) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
-    u32 k1;
+    int oldK1 = pspShiftK1();
     int privMode;
     int suspendFlag;
     int tempIdleBack;
     int tempIdleReset;   
     
-    privMode = pspSdkGetK1() << 11; //0x00001710    
-    idleReset = idleReset | privMode; //0x0000171C
-    k1 = pspSdkSetK1(privMode); //0x00001728
-    
-    if (((idleReset & privMode) < 0) || ((privMode & idleBack) < 0)) { //0x00001734 & 0x00001740
-        pspSdkSetK1(k1);
+    if (!pspK1PtrOk(idleReset) || !pspK1PtrOk(idleBack)) { //0x00001734 & 0x00001740
+        pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED; /* protect kernel addresses from user mode. */
     }   
     suspendFlag = sceKernelCpuSuspendIntr(); //0x0000176C  
     if (idleReset != NULL) { //0x00001774
         tempIdleReset = ctrl.idleReset;
-        *idleReset = (tempIdleReset == 129) ? -1 : idleReset; //0x00001788
+        *idleReset = (tempIdleReset == 129) ? -1 : tempIdleReset; //0x00001788
     }
     if (idleBack != NULL) { //0x00001794
         tempIdleBack = ctrl.idleBack;
         *idleBack = (tempIdleBack == 129) ? -1 : tempIdleBack; //0x000017A4
     }
     sceKernelCpuResumeIntr(suspendFlag); //0x000017B0
-    pspSdkSetK1(k1); //0x000017B8
+    pspSetK1(oldK1); //0x000017B8
     return SCE_KERNEL_ERROR_OK; //0x000017C0
 }
 
@@ -620,20 +613,18 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, int arg2, int arg3) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlPeekLatch(SceCtrlLatch *latch) {
-    int k1;
     int suspendFlag;
     SceCtrlInternalData *latchPtr;
     
-    k1 = pspSdkGetK1();
-    pspSdkSetK1(k1 << 11); //0x0000149C  
+    int oldK1 = pspShiftK1();
     suspendFlag = sceKernelCpuSuspendIntr(); //0x000014A8
     
-    if ((pspSdkGetK1() & latch) < 0) { //0x000014B8
+    if (!pspK1PtrOk(latch)) { //0x000014B8
         sceKernelCpuResumeIntr(suspendFlag); //0x00001524
-        pspSdkSetK1(k1); //0x00001530
+        pspSetK1(oldK1); //0x00001530
         return SCE_ERROR_PRIV_REQUIRED; //0x0000152C & 0x00001538 -- protect kernel address from usermode
     }
-    if (pspSdkGetK1() >= 0) { //0x000014C4
+    if (!pspK1IsUserMode()) { //0x000014C4
         latchPtr = &ctrl.kernelModeData; //0x00001520
     }
     else {
@@ -645,7 +636,7 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch) {
     latch->btnRelease = latchPtr->btnRelease; //0x000014EC
     
     sceKernelCpuResumeIntr(suspendFlag); //0x000014F4
-    pspSdkSetK1(k1); //0x000014FC
+    pspSetK1(oldK1); //0x000014FC
     return latchPtr->readLatchCount; //0x00001500
 }
 
@@ -655,21 +646,19 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlReadLatch(SceCtrlLatch *latch) {
-    int k1;
     int suspendFlag;
     SceCtrlInternalData *latchPtr;
     int readLatchCount;
     
-    k1 = pspSdkGetK1(); //0x00001540
-    pspSdkSetK1(k1 << 11); //0x00001548
+    int oldK1 = pspShiftK1();
     suspendFlag = sceKernelCpuSuspendIntr(); //0x00001554
     
-    if ((pspSdkGetK1() & latch) < 0) { //0x00001564 -- protect kernel address from user mode     
+    if (!pspK1PtrOk(latch)) { //0x00001564 -- protect kernel address from user mode     
         sceKernelCpuResumeIntr(suspendFlag); //0x00001620
-        pspSdkSetK1(k1); //0x0000162C
+        pspSetK1(oldK1); //0x0000162C
         return SCE_ERROR_PRIV_REQUIRED; //0x00001634
     }
-    if (pspSdkGetK1() >= 0) { //0x00001570
+    if (!pspK1UserMode()) { //0x00001570
         latchPtr = &ctrl.kernelModeData; //0x000015E0       
         readLatchCount = latchPtr->readLatchCount; //0x00001614
         latchPtr->readLatchCount = 0; //0x0000161C
@@ -690,7 +679,7 @@ int sceCtrlReadLatch(SceCtrlLatch *latch) {
     latchPtr->btnRelease = 0; //0x000015B4 & 0x00001610
     
     sceKernelCpuResumeIntr(suspendFlag); //0x000015B8
-    pspSdkSetK1(k1); //0x000015C0
+    pspSetK1(k1); //0x000015C0
     return readLatchCount; //0x000015C4
 } 
 
@@ -811,7 +800,7 @@ int sceCtrlClearRapidFire(u8 slot) {
 int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, u8 reqBtnOnTime, u8 reqBtnOffTime) {
     u32 usedButtons;
     u32 kernelButtons;
-    int k1;
+    int oldK1;
     int suspendFlag;
     
     if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x000018FC & 0x0000193C
@@ -820,17 +809,16 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
     if ((reqBtnEventOnTime | reqBtnOnTime | reqBtnOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER) { //0x000018E8 & 0x000018F4 & 0x00001910 & 0x00001954
         return SCE_ERROR_INVALID_VALUE;
     }
-    k1 = pspSdkGetK1(); //0x0000194C
-    pspSdkSetK1(k1 << 11); // 0x00001960
+    oldK1 = pspShiftK1();
     
     usedButtons = pressedBtnRange | reqBtnsEventTrigger; //0x0000195C    
     usedButtons = usedButtons | reqBtn; //0x00001968
-    if (k1 < 0) { //0x00001964
+    if (pspK1IsUserMode()) { //0x00001964
         kernelButtons = ~ctrl.userModeButtons; //0x0000197C
         kernelButtons = kernelButtons | PSP_CTRL_HOLD; //0x00001980
         //if the buttons given by the user include kernel buttons or the HOLD button -> return error
         if (kernelButtons & usedButtons) { //0x00001984 & 0x00001988
-            pspSdkSetK1(k1); //0x00001A0C
+            pspSetK1(oldK1); //0x00001A0C
             return SCE_ERROR_PRIV_REQUIRED;
         }
     }
@@ -845,7 +833,7 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
     ctrl.rapidFire[slot].eventData = 0; //0x000019C8
     
     sceKernelCpuResumeIntr(suspendFlag); //0x000019C4
-    pspSdkSetK1(k1); //0x000019CC
+    pspSetK1(oldK1); //0x000019CC
     return SCE_KERNEL_ERROR_OK;
 }
 
@@ -955,7 +943,7 @@ int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *o
     ctrl.buttonCallback[slot].btnMask = btnMask; //0x00001D54
     ctrl.buttonCallback[slot].callbackFunc = cb; //0x00001D58
     ctrl.buttonCallback[slot].arg = opt; //0x00001D64
-    ctrl.buttonCallback[slot].gp = GP_BACKUP(); //0x00001D6C
+    ctrl.buttonCallback[slot].gp = pspGetGp(); //0x00001D6C
             
     sceKernelCpuResumeIntr(suspendFlag); //0x00001D68 
     return SCE_KERNEL_ERROR_OK;   
@@ -1306,9 +1294,9 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                      analogY -= 128; //0x00000FF0
                      tempAnalogX = -analogX; //0x00000FF4
                      tempAnalogY = -analogY; //0x00000FF8
-                     temp2 = MAX(analogX, tempAnalogX); //0x00001004
+                     temp2 = pspMax(analogX, tempAnalogX); //0x00001004
                      tempAnalogX = temp2;
-                     temp3 = MAX(analogY, tempAnalogY); //0x00001008
+                     temp3 = pspMax(analogY, tempAnalogY); //0x00001008
                      tempAnalogY = temp3;
                      
                      res = (ctrl.idleReset < 37); //0x0000100C
@@ -1323,8 +1311,8 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                      temp3 = (tempAnalogY == 0) ? 128 : temp3; //0x00001030
                      res = (temp3 < temp1); //0x00001034
                      res2 = (temp2 < temp1); //0x00001038
-                     unk1 = MAX(unk1, (-unk1)); //0x00001044
-                     unk2 = MAX(unk2, (-unk2)); //0x00001048
+                     unk1 = pspMax(unk1, (-unk1)); //0x00001044
+                     unk2 = pspMax(unk2, (-unk2)); //0x00001048
                      res2 ^= 0x1; //0x0000104C
                      res ^= 0x1; //0x00001050
                      res3 = res2 | res; //0x0000105C
@@ -1395,14 +1383,14 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                  analogX = ctrlKernelBufExt->aX; //0x00001154
                  analogX -= 128; //0x00001158
                  tempAnalogX = -analogX; //0x0000115C
-                 analogX = MAX(analogX, tempAnalogX); //0x00001160
+                 analogX = pspMax(analogX, tempAnalogX); //0x00001160
                  res = (analogX < 38); //0x00001164
                  analogY = ctrlKernelBufExt->aY; //0x0000116C
                  if (res != 0) { //0x00001168
                      res = res & 0xFF; //0x00001170
                      res -= 128; //0x00001174
                      res2 = -res; //0x00001178
-                     res2 = MAX(res, res2); //0x00001178
+                     res2 = pspMax(res, res2); //0x00001178
                      res = (res2 < 38); //0x00001180
                      if (res == 0) { //0x00001184
                          check = 1; //0x00001194
@@ -1438,12 +1426,12 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
             analogX = CTRL_ANALOG_PAD_MAX_VALUE; //0x00000B00
         }
         tempAnalogY += analogY; //0x00000B04
-        tempAnalogX = MIN(tempAnalogX2, analogX); //0x00000B0C
+        tempAnalogX = pspMin(tempAnalogX2, analogX); //0x00000B0C
         if (tempAnalogX2 < CTRL_ANALOG_PAD_MIN_VALUE) { //0x00000B08
             tempAnalogX = CTRL_ANALOG_PAD_MIN_VALUE; //0x00000F38 
         }
         analogY = CTRL_ANALOG_PAD_MAX_VALUE; //0x00000B10
-        tempAnalogY2 = MIN(tempAnalogY, analogY); //0x00000B18
+        tempAnalogY2 = pspMin(tempAnalogY, analogY); //0x00000B18
         if (tempAnalogY < CTRL_ANALOG_PAD_MIN_VALUE) { //0x00000B14
             tempAnalogY2 = CTRL_ANALOG_PAD_MIN_VALUE; //0x00000F30
         }
@@ -1556,15 +1544,15 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
          //If a "callback" button has been pressed
          if (btnMask != 0) { //0x00000CC8
              if (ctrl.buttonCallback[i].callbackFunc != NULL) { //0x00000CD4
-                 gp_Val = GP_BACKUP(); //0x00000EC8
-                 GP_SET(ctrl.buttonCallback[i].gp); //0x00000ECC
+                 gp_Val = pspGetGp(); //0x00000EC8
+                 pspSetGp(ctrl.buttonCallback[i].gp); //0x00000ECC
                  btnCbFunc = ctrl.buttonCallback[i].callbackFunc; //0x00000ED0
                  btnCbFunc(curButtons, prevButtons, ctrl.buttonCallback[i].arg); // 0x00000EDC
              }
          }
     }
     
-    GP_SET(gp_Val); //0x00000CEC
+    pspSetGp(gp_Val); //0x00000CEC
     
     for (i = CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT; i >= 0; i--) {
         if (ctrl.rapidFire[i].pressedButtonRange != 0) { //0x00000D0C
@@ -1649,11 +1637,10 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
 }
 
 /* Subroutine sub_00001E70 - Address 0x00001E70 */
-static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
+static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) { // TODO: use SceCtrlDataExt *pad so you don't have to use casting everywhere
     SceCtrlInternalData *intDataPtr;
     void *ctrlBuf;
-    u32 k1;
-    int privMode;
+    int oldK1;
     int i; /* Used as a counter variable in for-loops for storing data into a SceCtrlData member. */
     u32 buttons;
     char bufIndex;
@@ -1672,12 +1659,10 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
     if ((arg3 != 0) && (mode & 2)) { //0x00001ECC & 0x00001ED8
         return SCE_ERROR_NOT_SUPPORTED; 
     }
-    k1 = pspSdkGetK1();
-    privMode = k1 << 11;
-    pspSdkSetK1(privMode); //0x00001EF4
+    oldK1 = pspShiftK1();
     
-    if ((privMode & pad) < 0) { //0x00001EF0 -- protect kernel address from user mode
-        pspSdkSetK1(k1);
+    if (!pspK1PtrOk(pad)) { //0x00001EF0 -- protect kernel address from user mode
+        pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
     if (privMode < 0) { //0x00001EFC -- user mode
@@ -1695,7 +1680,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
     if (mode & 2) { //0x00001F10 && 0x00001F28
         res = sceKernelWaitEventFlag(ctrl.timerID, 1, PSP_EVENT_WAITOR, NULL, NULL); //0x00001F44
         if (res < 0) { //0x00001F4C
-            pspSdkSetK1(k1); //0x00001F50
+            pspSetK1(oldK1); //0x00001F50
             return res;
         }
         suspendFlag = sceKernelCpuSuspendIntr(); //0x00001F54
@@ -1732,7 +1717,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
     }
     if (readIntBufs < 0) { //0x00001FB8
         sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
-        pspSdkSetK1(k1); //0x000020B0
+        pspSetK1(oldK1); //0x000020B0
         return readIntBufs;
     }  
     while (reqBufReads-- > 0) { //0x0000209C & 0x000020A0
@@ -1740,7 +1725,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
            ((SceCtrlData *)pad)->activeTime = ((SceCtrlData *)ctrlBuf)->activeTime; //0x00001FE4 & 0x00001FF0
          
            buttons = ((SceCtrlData *)ctrlBuf)->buttons; //0x00001FE8
-           if (pspSdkGetK1() >> 31) { //0x00001FEC          
+           if (pspK1IsUserMode()) { //0x00001FEC          
                buttons &= ctrl.userModeButtons; //0x00001FF8 -- Save only user mode buttons.
            }
            /* The current button value(s) will be turned negative, if this function is called through read/peekBufferNegative. */
@@ -1760,7 +1745,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
                ((SceCtrlDataExt *)pad)->activeTime = ((SceCtrlDataExt *)ctrlBuf)->activeTime; //0x00001FE4 & 0x00001FF0
              
                buttons = ((SceCtrlData *)ctrlBuf)->buttons; //0x00001FE8
-               if (pspSdkGetK1() >> 31) { //0x00001FEC                 
+               if (pspK1IsUserMode()) { //0x00001FEC                 
                    buttons &= ctrl.userModeButtons; //0x00001FF8 -- Save only user mode buttons
                }
                /* The current button value(s) will be turned negative, if this function is called through read/peekBufferNegative. */
@@ -1819,7 +1804,7 @@ static int _sceCtrlReadBuf(void *pad, u8 reqBufReads, int arg3, u8 mode) {
     }
  
     sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
-    pspSdkSetK1(k1); //0x000020B0
+    pspSetK1(oldK1); //0x000020B0
     return readIntBufs;
 }
 

@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 #include "libatrac3plus_int.h"
 
@@ -1624,7 +1624,7 @@ int sub_2DB8(SceAtracIdInfo *info)
 {
     if (info->streamDataByte >= info->dataEnd - info->curOff)
         return -2;
-    return MAX(info->streamDataByte / info->sampleSize - info->numFrame, 0);
+    return pspMax(info->streamDataByte / info->sampleSize - info->numFrame, 0);
 }
 
 int sub_2DF8(SceAtracIdInfo *info)
@@ -1658,7 +1658,7 @@ int sub_2EA4(SceAtracIdInfo *info)
     else
         count = info->streamDataByte / info->sampleSize;
     // 2EFC
-    return MAX(count - info->numFrame, 0);
+    return pspMax(count - info->numFrame, 0);
 }
 
 int sub_2FA8(u32 arg0, u32 arg1, u32 arg2, u32 arg3)

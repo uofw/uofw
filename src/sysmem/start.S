@@ -1,4 +1,4 @@
-#include "../global.S"
+#include "../common/common.S"
 
 loc_00000000:
     move $t9, $ra

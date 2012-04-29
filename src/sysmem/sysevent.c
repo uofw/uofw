@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 // 140F0
 SceSysEventHandler *g_sysEvHandlers;
@@ -40,7 +40,7 @@ int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
 
 int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* param, int* result, int break_nonzero, SceSysEventHandler **break_handler)
 {
-    GP_BACKUP();
+    int oldGp = pspGetGp();
     int ret = 0;
     int oldIntr = suspendIntr();
     SceSysEventHandler *cur = g_sysEvHandlers;
@@ -52,7 +52,7 @@ int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* 
             // C984
             cur->busy = 1;
             resumeIntr(oldIntr);
-            GP_SET(cur->gp);
+            pspSetGp(cur->gp);
             ret = cur->handler(ev_id, ev_name, param, result);
             oldIntr = suspendIntr();
             cur->busy = 0;
@@ -70,7 +70,7 @@ int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* 
     }
     // C940
     resumeIntr(oldIntr);
-    GP_RESET();
+    pspSetGp(oldGp);
     return ret;
 }
 
@@ -114,7 +114,7 @@ int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler)
     {   
         handler->busy = 0;
         // CAE0
-        GET_REG(handler->gp, GP);
+        handler->gp = pspGetGp();
         handler->next = g_sysEvHandlers;
         g_sysEvHandlers = handler;
         resumeIntr(oldIntr1);

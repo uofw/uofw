@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 #include "excep.h"
 #include "intr.h"
@@ -54,10 +54,9 @@ int ExcepManInit(void)
         ExcepManCB.hdlr2[i] = NULL;
     ExcepManCB.defaultHdlr = NULL;
     Allocexceppool();
-    COP0_CTRL_SET(25, 0);
+    pspCop0CtrlSet(25, 0);
     sub_0000();
-    int cpuid;
-    COP0_STATE_GET(cpuid, 22);
+    int cpuid = pspCop0StateGet(COP0_STATE_CPUID);
     int *src, *srcEnd, *dst;
     if (cpuid == 1)
     {
@@ -239,7 +238,7 @@ void build_exectbl(void)
         {
             // 097C
             op = (((int)ExcepManCB.hdlr1[8] >> 2) & 0x03FFFFFF) + 0x08000000;
-            CACHE(0x1A, &syscallHandler);
+            pspCache(0x1A, &syscallHandler);
         }
         // 0964
     }

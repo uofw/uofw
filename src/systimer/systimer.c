@@ -2,9 +2,15 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
+
+#include "../sysmem/sysmem.h"
 
 #include "systimer.h"
+
+PSP_SDK_VERSION(0x06060010);
+PSP_MODULE_INFO("sceSystimer", 0x1007, 1, 2);
+PSP_MODULE_BOOTSTART("STimerInit");
 
 typedef struct {
     int unk0, unk4, unk8, unk12;
@@ -39,11 +45,11 @@ int initVar = 0x00352341; // 0x0BA0
 
 int systimerhandler(int arg0, SceSysTimer *arg1, int arg2);
 void _sceSTimerStopCount(SceSysTimer *arg);
-int _sceSTimerStopCount(SceSysTimer *arg);
+int _sceSTimerGetCount(SceSysTimer *arg);
 int suspendSTimer();
 int resumeSTimer();
 
-int module_bootstart()
+int STimerInit()
 {
     int oldIntr = sceKernelCpuSuspendIntr();
     // 0328
@@ -60,7 +66,7 @@ int module_bootstart()
         timers[i].unk24 = 0;
         timers[i].unk28 = 0;
         timers[i].curTimer = -1;
-        sceKernelRegisterIntrHandler(timers[i].intNum, 2, systimerhandler, timers[i], 0);
+        sceKernelRegisterIntrHandler(timers[i].intNum, 2, systimerhandler, &timers[i], 0);
     }
     sceKernelRegisterSuspendHandler(10, suspendSTimer, 0);
     sceKernelRegisterResumeHandler(10, resumeSTimer, 0);
@@ -82,7 +88,7 @@ int module_reboot_before()
 }
 
 // 00E0
-int systimerhandler(int arg0, SceSysTimer *arg1, int arg2)
+int systimerhandler(int arg0 __attribute__((unused)), SceSysTimer *arg1, int arg2)
 {
     if (arg1->cb == NULL)
         return -1;
@@ -97,7 +103,7 @@ int systimerhandler(int arg0, SceSysTimer *arg1, int arg2)
     arg1->unk24 += v2 * (v1 - arg1->unk16);
     arg1->unk12 = 0;
     arg1->unk16 = 0;
-    if (arg1->cb(arg1->curTimer, arg1->unk24 + _sceSTimerStopCount(arg1), arg1->unk28, arg2) != -1)
+    if (arg1->cb(arg1->curTimer, arg1->unk24 + _sceSTimerGetCount(arg1), arg1->unk28, arg2) != -1)
     {
         // 01A4
         _sceSTimerStopCount(arg1);
@@ -127,7 +133,7 @@ int suspendSTimer()
     {
         timerSave[i].unk0 = timers[i].hw->unk0;
         timerSave[i].unk4 = timers[i].hw->unk8;
-        timerSave[i].curTimer = timers[i].hw->unk12;
+        timerSave[i].unk8 = timers[i].hw->unk12;
         sceKernelDisableIntr(timers[i].intNum);
     }
     return 0;
@@ -161,7 +167,7 @@ int sceSTimerSetPrscl(int timerId, int arg1, int arg2)
     if (arg2 / arg1 < 12)
         return 0x80020099;
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (timer->hw->unk256 & 0x00800000 != 0)
+    if ((timer->hw->unk256 & 0x00800000) != 0)
     {
         // 05C4
         sceKernelCpuResumeIntr(oldIntr);
@@ -247,7 +253,7 @@ int sceSTimerStartCount(int timerId)
     if (timer->curTimer != timerId)
         return 0x80020097;
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (timer->hw->unk256 & 0x00800000 != 0)
+    if ((timer->hw->unk256 & 0x00800000) != 0)
     {
         // 0650
         sceKernelCpuResumeIntr(oldIntr);
@@ -263,8 +269,8 @@ int sceSTimerGetCount(int timerId, int *arg1)
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
-    int oldIntr = sceKernelCpuSupendIntr();
-    *arg1 = _sceSTimerStopCount(timer);
+    int oldIntr = sceKernelCpuSuspendIntr();
+    *arg1 = _sceSTimerGetCount(timer);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }

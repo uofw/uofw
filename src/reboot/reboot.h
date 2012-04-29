@@ -5,7 +5,7 @@
 #ifndef REBOOT_H
 #define REBOOT_H
 
-#include "../global.h"
+#include "../common/common.h"
 
 typedef int (*Callback1)(int, int, int);
 typedef int (*Callback2)(int, int);

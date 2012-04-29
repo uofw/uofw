@@ -12,6 +12,8 @@
 
 typedef void (*prnt_callback)(void *ctx, int ch);
 
+int memset(void *s, int c, int n);
+
 int bcmp(void *s1, void *s2, int n);
 int bcopy(void *src, void *dst, int n);
 int bzero(void *s, int n);

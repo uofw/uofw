@@ -6,8 +6,8 @@ typedef struct
 {   
     // Handler address
     int handler; // 0
-    // Unknown result of unknown function LoadCoreForKernel_18CFDAA0(handler_addr);
-    int loadCoreRes; // 4
+    // GP of the module
+    int gp; // 4
     // Argument given by sceKernelRegisterSubIntrHandler
     int arg; // 8
     int u12, u16, u20;
@@ -51,8 +51,8 @@ typedef struct
 {   
     // Handler address, sometimes OR'ed with 2 ?!?
     int handler; // 0
-    // Unknown result of unknown function LoadCoreForKernel_18CFDAA0(handler_addr);
-    int loadCoreRes; // 4
+    // GP of the module
+    int gp; // 4
     // Argument given by sceKernelRegisterIntrHandler
     int arg; // 8
     int u12, u16, u20, u24, u28, u32, u36;

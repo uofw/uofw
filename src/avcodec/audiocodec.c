@@ -26,9 +26,9 @@ int sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, int codec)
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0148
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = 0x80000023;
-    if (K1_USER_BUF_STA_SZ(info, 104))
+    if (pspK1StaBufOk(info, 104))
     {
         info->unk0 = 0x05100601;
         int id = sceMeAudio_driver_81956A0B(codec, info);
@@ -41,7 +41,7 @@ int sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, int codec)
             ret = g_retValues[id + 4];
         }
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -52,9 +52,9 @@ int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0214
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(info, 104) || !pspK1DynBufOk(info->edramAddr, info->neededMem)) {
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 025C
@@ -78,7 +78,7 @@ int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
             id = 0;
         ret = g_retValues[id + 4];
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -89,9 +89,9 @@ int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0344
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(info, 104) || !pspK1DynBufOk(info->edramAddr, info->neededMem)) {
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 038C
@@ -115,7 +115,7 @@ int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
             id = 0;
         ret = g_retValues[id + 4];
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -126,14 +126,14 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0474
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(info, 104)
-     || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)
-     || !K1_USER_BUF_STA_SZ(info->inBuf, 0x10000)
-     || !K1_USER_BUF_STA_SZ(info->outBuf, 0x10000)) {
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(info, 104)
+     || !pspK1DynBufOk(info->edramAddr, info->neededMem)
+     || !pspK1StaBufOk(info->inBuf, 0x10000)
+     || !pspK1StaBufOk(info->outBuf, 0x10000)) {
         // (04E0)
         // 04E4
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 04F0
@@ -147,7 +147,7 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
     {
         size = getBufSize(info, codec);
         if (size < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return size;
         }
     }
@@ -155,7 +155,7 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
     sceKernelDcacheWritebackRange(info->inBuf, size);
     size = sub_0A40(info, codec);
     if (size < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return size;
     }
     sceKernelDcacheWritebackInvalidateRange(info->outBuf, size);
@@ -167,7 +167,7 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
             id = 0;
         ret = g_retValues[id + 4];
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -178,16 +178,16 @@ int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 05D4
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem))
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(info, 104) || !pspK1DynBufOk(info->edramAddr, info->neededMem))
     {
         // 060C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 0620
-    if ((codec == 0x1002 || codec == 0x1004) && !K1_USER_BUF_DYN_SZ(info->inBuf, (int*)&info->unk40)) {
-        K1_RESET();
+    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, (int*)&info->unk40)) {
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 0660
@@ -205,7 +205,7 @@ int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
         break;
     
     default:
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0;
     }
     // 0684
@@ -220,7 +220,7 @@ int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
         ret = g_retValues[id + 4];
     }
     // 06A8
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -231,21 +231,21 @@ int sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, int codec, int *si
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0744
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(info, 104) || !K1_USER_BUF_STA_SZ(sizeOut, 4))
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(info, 104) || !pspK1StaBufOk(sizeOut, 4))
     {
         // 0770
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 0780
     int size = sub_0A40(info, codec);
     if (size < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return size;
     }
     *sizeOut = size;
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -256,10 +256,10 @@ int sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, int codec)
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
     // 0808
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = 0;
-    if (!K1_USER_BUF_STA_SZ(info, 108)) {
-        K1_RESET();
+    if (!pspK1StaBufOk(info, 108)) {
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     // 0838
@@ -276,26 +276,26 @@ int sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, int codec)
     }
     else
         info->edramAddr = ((int)alloc + 0x3F) & 0xFFFFFFC0;
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceAudiocodecReleaseEDRAM(SceAudiocodecInfo *info)
 {   
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(info, 108) || !K1_USER_BUF_DYN_SZ(info->edramAddr, info->neededMem)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(info, 108) || !pspK1DynBufOk(info->edramAddr, info->neededMem)) {
+        pspSetK1(oldK1);
         return 0x80000023;
     }
     if (info->allocMem == NULL || ((int)info->allocMem & 0x1FFFFFFF) > 0x3FFFFF) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x807F0004;
     }
     // 0938
     sceMeFree(info->allocMem);
     info->allocMem = NULL;
     info->edramAddr = 0;
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 

@@ -835,7 +835,7 @@ void sub_1DF8(int arg0, int arg1, int arg2, int arg3)
                 }
                 else
                 {
-                    CACHE(0x18, t3 + 63);
+                    pspCache(0x18, t3 + 63);
                     s1 = t7 < 3;
                     a1 = (a1 & 0xFFFFFFFE) | (v0 & 1);
                     if (s1 == 0)

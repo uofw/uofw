@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 #include "../exceptionman/exceptionman.h"
 
@@ -82,9 +82,9 @@ InterruptInfo intInfo; // 0x5840
 int IntrManInit()
 {
     int oldIc = sceKernelCpuSuspendIntr();
-    COP0_CTRL_SET(COP0_CTRL_IS_INTERRUPT, 0);
-    COP0_CTRL_SET(COP0_CTRL_SP_KERNEL, (int)globUnk);
-    COP0_CTRL_SET(COP0_CTRL_SP_USER, 0);
+    pspCop0CtrlSet(COP0_CTRL_IS_INTERRUPT, 0);
+    pspCop0CtrlSet(COP0_CTRL_SP_KERNEL, (int)globUnk);
+    pspCop0CtrlSet(COP0_CTRL_SP_USER, 0);
     mymemset(&intInfo, 0, sizeof(InterruptInfo));
     intInfo.opt = 1;
     sub_1030();
@@ -102,12 +102,10 @@ int IntrManInit()
     sceKernelRegisterSuspendHandler(29, SuspendIntc, 0);
     sceKernelRegisterResumeHandler(29, ResumeIntc, 0);
     sceKernelSetIntrLogging(67, 0);
-    int st;
-    COP0_STATE_GET(st, COP0_STATE_STATUS);
-    COP0_STATE_SET(COP0_STATE_STATUS, (st & 0xFFFF00FF) | 0x0400);
+    pspCop0StateSet(COP0_STATE_STATUS, (pspCop0StateGet(COP0_STATE_STATUS) & 0xFFFF00FF) | 0x0400);
     sceKernelEnableIntr(67);
-    COP0_STATE_SET(COP0_STATE_COUNT, 0);
-    COP0_STATE_SET(COP0_STATE_COMPARE, 0x80000000);
+    pspCop0StateSet(COP0_STATE_COUNT, 0);
+    pspCop0StateSet(COP0_STATE_COMPARE, 0x80000000);
     sceKernelCpuResumeIntr(oldIc);
     int ret = sceKernelRegisterLibrary(intrMgrStrPtr); // This address contains a pointer to "InterruptManager"
     if (ret < 0)
@@ -187,7 +185,7 @@ int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, Sc
         arg1 = 2;
     intr->v48 = (intr->v48 & 0xFFFFFCFF) | ((unk2 << 8) & 0x300);
     intr->handler = arg1 | (int)func;
-    intr->loadCoreRes = sceKernelGetModuleGPByAddressForKernel(func);
+    intr->gp = sceKernelGetModuleGPByAddressForKernel(func);
     intr->arg = arg3;
     *(char*)&intr->v48 = 0;
     if (handler != NULL)
@@ -366,9 +364,7 @@ int sceKernelEnableIntr(int intNum)
     else
         v = 0;
     // 1960
-    int st;
-    COP0_STATE_GET(st, COP0_STATE_STATUS);
-    COP0_STATE_SET(COP0_STATE_STATUS, st | (v & 0xFF00));
+    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | (v & 0xFF00));
     sceKernelCpuResumeIntr(oldIc);
     return 0;
 }
@@ -397,12 +393,9 @@ int sceKernelSuspendIntr(int arg0, int arg1)
         // 1A78
         if (arg1 != 0)
         {
-            if (arg0 >= 64)
-            {
+            if (arg0 >= 64) {
                 // 1AA8
-                int st;
-                COP0_STATE_GET(st, COP0_STATE_STATUS);
-                *(int*)arg1 = (st & 0xFF00) | mask;
+                *(int*)arg1 = (pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00) | mask;
             }
             else
                 *(int*)arg1 = (intInfo.grpsOpt[(arg0 >> 5) + 24] >> (arg0 & 0x1F)) & 1;
@@ -420,11 +413,8 @@ int sceKernelSuspendIntr(int arg0, int arg1)
         // 1A68
         AllLevelInterruptDisable(arg0);
     }
-    else {
-        int st;
-        COP0_STATE_GET(st, COP0_STATE_STATUS);
-        COP0_STATE_SET(COP0_STATE_STATUS, st & ~(mask & 0xFF00));
-    }
+    else
+        pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & ~(mask & 0xFF00));
     // 1A3C
     sceKernelCpuResumeIntr(oldIc);
     return ret;
@@ -456,9 +446,7 @@ int sceKernelResumeIntr(int intrNum, int arg1)
             // 1BC8
             if (arg1 != 0)
             {
-                int st;
-                COP0_STATE_GET(st, COP0_STATE_STATUS);
-                COP0_STATE_SET(COP0_STATE_STATUS, st | (mask & 0xFF00));
+                pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | (mask & 0xFF00));
                 sceKernelCpuResumeIntr(oldIntr);
                 return 0;
             }
@@ -485,16 +473,12 @@ int sceKernelResumeIntr(int intrNum, int arg1)
     }
     else
     {
-        int st;
-        COP0_STATE_GET(st, COP0_STATE_STATUS);
-        COP0_STATE_SET(COP0_STATE_STATUS, st | ~(mask & 0xFF00));
+        pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | ~(mask & 0xFF00));
         sceKernelCpuResumeIntr(oldIntr);
         return 0x80020068;
     }
     // 1B5C
-    int st;
-    COP0_STATE_GET(st, COP0_STATE_STATUS);
-    COP0_STATE_SET(COP0_STATE_STATUS, st | ~(mask & 0xFF00));
+    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | ~(mask & 0xFF00));
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
@@ -509,11 +493,11 @@ void InterruptManagerForKernel_E790EAED(int (*arg0)(), int (*arg1)())
 {
     int oldIc = sceKernelCpuSuspendIntr();
     *(int*)(mod_0468) = 0x0C000000 + (((int)arg1 >> 2) & 0x3FFFFFF);
-    CACHE(0x1A, mod_0468);
-    CACHE(0x08, mod_0468);
+    pspCache(0x1A, mod_0468);
+    pspCache(0x08, mod_0468);
     *(int*)(mod_0400) = 0x0C000000 + (((int)arg0 >> 2) & 0x3FFFFFF);
-    CACHE(0x1A, mod_0400);
-    CACHE(0x08, mod_0400);
+    pspCache(0x1A, mod_0400);
+    pspCache(0x08, mod_0400);
     sceKernelCpuResumeIntr(oldIc);
 }
 
@@ -531,9 +515,8 @@ int sceKernelCallSubIntrHandler(int intrNum, int subIntrNum, int arg2, int arg3)
         intInfo.monitorCbBefore(intrNum, subIntrNum, arg2, subIntr->arg, arg3, subIntr->handler, intInfo.opt2);
     }
     // 1D28
-    int oldGp;
-    GET_REG(oldGp, GP);
-    SET_REG(GP, subIntr->loadCoreRes);
+    int oldGp = pspGetGp();
+    pspSetGp(subIntr->gp);
     int ret;
     if (subIntr->handler >= 0) {
         // 1DB8
@@ -544,7 +527,7 @@ int sceKernelCallSubIntrHandler(int intrNum, int subIntrNum, int arg2, int arg3)
         ret = func(arg2, subIntr->arg, arg3);
     }
     // 1D4C
-    SET_REG(GP, oldGp);
+    pspSetGp(oldGp);
     if (intInfo.monitorCbAfter != 0) {
         // 1D94
         intInfo.monitorCbAfter(intrNum, subIntrNum, arg2, subIntr->arg, arg3, ret, intInfo.opt2);
@@ -557,9 +540,7 @@ int sceKernelGetUserIntrStack()
 {
     if (intInfo.opt2 == 0)
         return intInfo.intrStack;
-    int sp;
-    COP0_CTRL_GET(sp, COP0_CTRL_SP_KERNEL);
-    return *(int*)(sp + 180);
+    return *(int*)(pspCop0CtrlGet(COP0_CTRL_SP_KERNEL) + 180);
 }
 
 // FFA8B183 (kernel) / CA04A2B9
@@ -567,19 +548,19 @@ int sceKernelRegisterSubIntrHandler(int intrNum, int subIntrNum, void *handler, 
 {
     if (intrNum >= 68)
         return 0x80020065;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (intr->handler == 0) {
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     // 1ED4
-    if (((int)handler >> 31) == 0 && K1_USER_MODE()) // 200C
+    if (((int)handler >> 31) == 0 && pspK1IsUserMode()) // 200C
     {
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     else
@@ -589,28 +570,28 @@ int sceKernelRegisterSubIntrHandler(int intrNum, int subIntrNum, void *handler, 
         if (((intr->v48 >> 11) & 1) == 0)
         {
             sceKernelCpuResumeIntr(oldIntr);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020065;
         }
     }
     // 1F00
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)) {
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     SubInterrupt *subIntr = &intr->subIntrs[subIntrNum];
     if (subIntr->handler != 0)
     {
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020067;
     }
     // 1F3C
     if (((int)handler >> 31) == 0 && (((subIntr->v48 & 0xFF) >> 10) & 1) == 0)
     {
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 1F60
@@ -621,13 +602,13 @@ int sceKernelRegisterSubIntrHandler(int intrNum, int subIntrNum, void *handler, 
         if (ret != 0)
         {
             sceKernelCpuResumeIntr(oldIntr);
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
     }
     subIntr->handler = (int)handler;
     // 1F78
-    subIntr->loadCoreRes = sceKernelGetModuleGPByAddressForKernel(handler);
+    subIntr->gp = sceKernelGetModuleGPByAddressForKernel(handler);
     *(char*)&subIntr->v48 = 0;
     subIntr->arg = (int)arg;
     subIntr->v48 = (subIntr->v48 & 0xFFFF7FFF) | (intr->v48 & 0x00008000) | 0x80000300;
@@ -640,12 +621,12 @@ int sceKernelRegisterSubIntrHandler(int intrNum, int subIntrNum, void *handler, 
             // (moved 1FC4)
             subIntr->handler = 0;
             sceKernelCpuResumeIntr(oldIntr);
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
     }
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -654,30 +635,30 @@ int sceKernelReleaseSubIntrHandler(int intrNum, int subIntrNum)
 {
     if (intrNum >= 68)
         return 0x80020065;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (intr->handler == 0)
     {
         // 2108
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF))
     {
         // 20A0
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 20E0
     SubInterrupt *subIntr = &intr->subIntrs[subIntrNum];
-    if (subIntr->handler == 0 || (subIntr->handler < 0 && K1_USER_MODE()))
+    if (subIntr->handler == 0 || (subIntr->handler < 0 && pspK1IsUserMode()))
     {
         // 2108
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     // 2110
@@ -688,7 +669,7 @@ int sceKernelReleaseSubIntrHandler(int intrNum, int subIntrNum)
         if (ret != 0)
         {
             sceKernelCpuResumeIntr(oldIntr);
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
     }
@@ -704,12 +685,12 @@ int sceKernelReleaseSubIntrHandler(int intrNum, int subIntrNum)
         {
             subIntr->handler = oldHandler;
             sceKernelCpuResumeIntr(oldIntr);
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
     }
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -718,16 +699,16 @@ int sceKernelEnableSubIntr(int intrNum, int subIntrNum)
 {
     if (intrNum >= 68)
         return 0x80020065;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (K1_USER_MODE() && (((intr->v48 >> 11) & 1) == 0
+     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
                               || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0)))
     {
         // 2210
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 2248
@@ -735,13 +716,13 @@ int sceKernelEnableSubIntr(int intrNum, int subIntrNum)
     {
         // 226C
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     // 2274
     int ret = intr->cb->cbEnable(intrNum, subIntrNum);
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -750,16 +731,16 @@ int sceKernelDisableSubIntr(int intrNum, int subIntrNum)
 {
     if (intrNum >= 68)
         return 0x80020065;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (K1_USER_MODE() && (((intr->v48 >> 11) & 1) == 0
+     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
                               || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0)))
     {
         // 231C
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 2354
@@ -767,12 +748,12 @@ int sceKernelDisableSubIntr(int intrNum, int subIntrNum)
     {
         // 2378
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     int ret = intr->cb->cbDisable(intrNum, subIntrNum);
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -781,22 +762,22 @@ int sceKernelSuspendSubIntr(int intrNum, int subIntrNum, int *arg2)
 {
     if (intrNum >= 68)
         return 0x80020065;
-    K1_BACKUP();
-    if (!K1_USER_PTR(arg2))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(arg2))
     {
         // 24C4
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (K1_USER_MODE() && (((intr->v48 >> 11) & 1) == 0
+     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
                               || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0)))
     {
         // 2440
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 247C
@@ -806,13 +787,13 @@ int sceKernelSuspendSubIntr(int intrNum, int subIntrNum, int *arg2)
         if (arg2 != NULL)
             *arg2 = 0;
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     
     int ret = intr->cb->cbSuspend(intrNum, subIntrNum, arg2);
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -821,16 +802,16 @@ int sceKernelResumeSubIntr(int intrNum, int subIntrNum, int arg2)
 {
     if (intrNum >= 0)
         return 0x80020065;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (K1_USER_MODE() && (((intr->v48 >> 11) & 1) == 0
+     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
                               || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0)))
     {
         // 2574
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 25B0
@@ -838,12 +819,12 @@ int sceKernelResumeSubIntr(int intrNum, int subIntrNum, int arg2)
     {
         // 25D4
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     int ret = intr->cb->cbResume(intrNum, subIntrNum, arg2);
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -852,16 +833,16 @@ int sceKernelIsSubInterruptOccured(int intrNum, int subIntrNum)
 {
     if (intrNum >= 68)
         return 0x80020065;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (K1_USER_MODE() && (((intr->v48 >> 11) & 1) == 0
+     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
                               || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0)))
     {
         // 2688
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020065;
     }
     // 26C0
@@ -869,13 +850,13 @@ int sceKernelIsSubInterruptOccured(int intrNum, int subIntrNum)
     {
         // 26E4
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020068;
     }
     // 26EC
     int ret = intr->cb->cbIsOccured(intrNum, subIntrNum);
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -912,15 +893,13 @@ int sceKernelQueryIntrHandlerInfo(int intrNum, int subIntrNum, int out)
     // 2798
     *(int*)(out + 8) = intr->arg;
     *(int*)(out + 4) = intr->handler;
-    *(int*)(out + 12) = intr->loadCoreRes;
+    *(int*)(out + 12) = intr->gp;
     *(short*)(out + 16) = intrNum;
     *(short*)(out + 20) = (intr->v48 >> 8) & 3;
     if (intrNum >= 64)
     {
         // 28D0
-        int st;
-        COP0_STATE_GET(st, COP0_STATE_STATUS);
-        st &= 0xFF00;
+        int st = pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00;;
         int mask;
         if (intrNum == 64)
             mask = 0x0100;
@@ -1051,16 +1030,14 @@ int sceKernelSetPrimarySyscallHandler(int arg0, void (*arg1)())
         return 0x800200D3;
     }
     cbMap.callbacks[arg0] = arg1;
-    CACHE(0x1A, &cbMap.callbacks[arg0]);
+    pspCache(0x1A, &cbMap.callbacks[arg0]);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
 int IntrManTerminate()
 {
-    int st;
-    COP0_STATE_GET(st, COP0_STATE_STATUS);
-    COP0_STATE_SET(COP0_STATE_STATUS, st & 0xFFFF7BFF);
+    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & 0xFFFF7BFF);
     sceKernelReleaseIntrHandler(67);
     sceKernelReleaseExceptionHandler(EXCEP_INT, (void*)sub_0038);
     sceKernelReleaseExceptionHandler(EXCEP_INT, (void*)sub_0924);
@@ -1146,8 +1123,7 @@ int InterruptManagerForKernel_8DFBD787()
 {
     if (intInfo.opt2 != 0)
     {
-        int addr;
-        COP0_CTRL_GET(addr, COP0_CTRL_TCB);
+        int addr = pspCop0CtrlGet(COP0_CTRL_TCB);
         if (addr != 0)
             return *(int*)addr;
     }
@@ -1184,9 +1160,7 @@ int sceKernelRegisterUserSpaceIntrStack(int addr, int size, int arg2)
 // 30C08374
 int sceKernelGetCpuClockCounter()
 {
-    int ret;
-    COP0_STATE_GET(ret, COP0_STATE_COUNT);
-    return ret;
+    return pspCop0StateGet(COP0_STATE_COUNT);
 }
 
 // F9E06DF1
@@ -1194,8 +1168,7 @@ u64 sceKernelGetCpuClockCounterWide()
 {
     int oldIntr = sceKernelCpuSuspendIntr();
     u32 hi = intInfo.clockCounterHi;
-    u32 count;
-    COP0_STATE_GET(count, COP0_STATE_COUNT);
+    u32 count = pspCop0StateGet(COP0_STATE_COUNT);
     if (count >= intInfo.clockCounterLo)
         intInfo.clockCounterLo = count;
     else
@@ -1240,7 +1213,7 @@ int sceKernelRegisterSystemCallTable(CbMap *newMap)
     // 303C
     newMap->next = map;
     oldMap->next = newMap;
-    COP0_CTRL_SET(COP0_CTRL_SC_TABLE, (int)cbMap.next);
+    pspCop0CtrlSet(COP0_CTRL_SC_TABLE, (int)cbMap.next);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
@@ -1287,8 +1260,8 @@ void InterruptManagerForKernel_E526B767(int arg)
 int SuspendIntc()
 {
     int sp[2];
-    COP0_STATE_GET(intInfo.compare, COP0_STATE_COMPARE);
-    COP0_STATE_GET(intInfo.count, COP0_STATE_COUNT);
+    intInfo.compare = pspCop0StateGet(COP0_STATE_COMPARE);
+    intInfo.count = pspCop0StateGet(COP0_STATE_COUNT);
     sub_1080(intInfo.intcState);
     mymemset(sp, 0, 8);
     sub_10A8(sp);
@@ -1299,8 +1272,8 @@ int SuspendIntc()
 int ResumeIntc()
 {
     sub_10A8(intInfo.intcState);
-    COP0_STATE_SET(COP0_STATE_COMPARE, intInfo.compare);
-    COP0_STATE_SET(COP0_STATE_COUNT, intInfo.count);
+    pspCop0StateSet(COP0_STATE_COMPARE, intInfo.compare);
+    pspCop0StateSet(COP0_STATE_COUNT, intInfo.count);
     return 0;
 }
 

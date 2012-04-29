@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 #include "../sysmem/sysclib.h"
 
@@ -198,29 +198,29 @@ int sceIoChangeAsyncPriority(int fd, int prio)
     SceIoIob *iob;
     if (prio != -1 && (prio <= 0 || prio >= 127))
         return 0x80020193;
-    K1_BACKUP();
-    if (K1_USER_MODE() && prio != -1 && (prio <= 7 || prio >= 120))
+    int oldK1 = pspShiftK1();
+    if (pspK1IsUserMode() && prio != -1 && (prio <= 7 || prio >= 120))
     {
         // 0F34
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020193;
     }
     // 0E8C
     if (fd == -1)
     {
         // 0F20
-        K1_RESET();
+        pspSetK1(oldK1);
         default_thread_priority = prio;
         return 0;
     }
     int ret = validate_fd(fd, 0, 2, 1, &iob);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     iob->asyncPrio = prio;
     if (iob->asyncThread == 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0;
     }
     if (prio < 0) {
@@ -230,17 +230,17 @@ int sceIoChangeAsyncPriority(int fd, int prio)
     // 0ECC
     ret = sceKernelChangeThreadPriority(iob->asyncThread, prio);
     if (ret != 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 void sceIoCloseAll()
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     SceSysmemUIDControlBlock *cur = g_uid_type->parent;
     // 0F74
     while (cur != g_uid_type)
@@ -266,7 +266,7 @@ void sceIoCloseAll()
     }
 
     // 0FB4
-    K1_RESET();
+    pspSetK1(oldK1);
 }
 
 int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async)
@@ -330,7 +330,7 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
                 sceKernelChangeThreadPriority(iob->asyncThread, 0);
             // 1168
             iob->asyncCmd = 1;
-            GET_REG(iob->k1, K1);
+            iob->k1 = pspGetK1();
             ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
             // 1180
             if (ret < 0)
@@ -376,25 +376,24 @@ int open_main(SceIoIob *iob)
 int sceIoReopen(const char *file, int flags, SceMode mode, int fd)
 {
     SceIoIob *iob;
-    int ra;
-    GET_REG(ra, RA);
-    K1_BACKUP();
-    if (!K1_USER_PTR(file))
+    int ra = pspGetRa();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(file))
     {
         // 1434
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = do_close(fd, 0, 0);
     if (ret < 0)
     {
         // 142C
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     ret = validate_fd(fd, 0, 2, 3, &iob);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     iob_power_unlock(iob);
@@ -403,7 +402,7 @@ int sceIoReopen(const char *file, int flags, SceMode mode, int fd)
     {
         // 141C
         free_iob(iob);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (sceKernelDeci2pReferOperations() != 0)
@@ -422,9 +421,9 @@ int sceIoReopen(const char *file, int flags, SceMode mode, int fd)
         iob->newPath = path;
     }
     // 13CC
-    GET_REG(iob->retAddr, RA);
+    iob->retAddr = ra;
     iob->curThread = sceKernelGetThreadId();
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -434,20 +433,19 @@ SceUID sceIoDopen(const char *dirname)
     SceIoDeviceArg *dev;
     int fsNum;
     char *dirName;
-    int ra;
-    GET_REG(ra, RA);
-    K1_BACKUP();
-    if (!K1_USER_PTR(dirname))
+    int ra = pspGetRa();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(dirname))
     {
         // 15A8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     char *path = alloc_pathbuf();
     if (path == NULL)
     {
         // 1598
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     int ret = alloc_iob(&iob, 1);
@@ -455,7 +453,7 @@ SceUID sceIoDopen(const char *dirname)
         goto freepath;
 
     sceKernelRenameUID(sceIoGetUID(ret), dirname);
-    if (K1_USER_MODE()) {
+    if (pspK1IsUserMode()) {
         // 1584
         iob->retAddr = InterruptManagerForKernel_A0F88036();
     }
@@ -491,42 +489,42 @@ SceUID sceIoDopen(const char *dirname)
     // 152C
     if (path != NULL)
         free_pathbuf(path);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoDread(int fd, SceIoDirent *dir)
 {
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_PTR(dir)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(dir)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = validate_fd(fd, 8, 4, 0, &iob);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->dev->drv->funcs->IoDread == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     // 1650
     ret = iob->dev->drv->funcs->IoDread(iob, dir);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoDclose(int fd)
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = validate_fd(fd, 8, 4, 2, &iob);
     if (ret < 0)
     {
         // 1704
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     ret = 0x80020325;
@@ -534,7 +532,7 @@ int sceIoDclose(int fd)
     {
         // 16F0
         free_iob(iob);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0;
     }
     if (iob->dev->drv->funcs->IoDclose != NULL)
@@ -545,12 +543,12 @@ int sceIoDclose(int fd)
         {
             // 16F0
             free_iob(iob);
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0;
         }
     }
     // 16C4
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -561,18 +559,18 @@ int sceIoRemove(const char *file)
     int fsNum;
     char *realPath;
     int ret;
-    K1_BACKUP();
-    if (!K1_USER_PTR(file))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(file))
     {
         // 181C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     char *path = alloc_pathbuf();
     if (path == NULL)
     {
         // 180C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     ret = alloc_iob(&iob, 0);
@@ -604,24 +602,24 @@ int sceIoRemove(const char *file)
     // 17C4
     if (path != NULL)
         free_pathbuf(path);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoRename(const char *oldname, const char *newname)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(oldname) || !K1_USER_PTR(newname))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(oldname) || !pspK1PtrOk(newname))
     {
         // 1A08
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     char *buf1 = alloc_pathbuf();
     if (buf1 == NULL)
     {
         // 19FC
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     char *buf2 = alloc_pathbuf();
@@ -629,7 +627,7 @@ int sceIoRename(const char *oldname, const char *newname)
     {
         // 19E4
         free_pathbuf(buf1);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     SceIoIob *iob;
@@ -686,28 +684,28 @@ int sceIoRename(const char *oldname, const char *newname)
     // 1934
     if (buf2 != NULL)
         free_pathbuf(buf2);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(dev) || !K1_USER_BUF_DYN_SZ(indata, inlen) || !K1_USER_BUF_DYN_SZ(outdata, outlen))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(dev) || !pspK1DynBufOk(indata, inlen) || !pspK1DynBufOk(outdata, outlen))
     {
         // 1A9C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
-    if (K1_USER_MODE() && ((cmd >> 15) & 1) != 0)
+    if (pspK1IsUserMode() && ((cmd >> 15) & 1) != 0)
     {
         // 1A90
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D1;
     }
     // 1A74
     int ret = do_devctl(dev, cmd, indata, inlen, outdata, outlen);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -718,17 +716,17 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     char fsAliasName[32];
     int fsNum;
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_PTR(dev) || !K1_USER_PTR(blockDev) || !K1_USER_PTR(fs) || !K1_USER_BUF_DYN_SZ(unk1, unk2))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(dev) || !pspK1PtrOk(blockDev) || !pspK1PtrOk(fs) || !pspK1DynBufOk(unk1, unk2))
     {
         // 1FE8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     if (dev == NULL || (blockDev == NULL && fs != NULL))
     {
         // 1F44
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     if (blockDev == NULL && fs == NULL)
@@ -736,7 +734,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     if (sub_35D0(dev) != NULL)
     {
         // 1FD8
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020326;
     }
     if (fs != NULL && (~mode >> 31) != 0)
@@ -777,7 +775,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     if (list == NULL)
     {
         // 1F44
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     if (blkAlias != NULL)
@@ -787,7 +785,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     if (newAlias == NULL)
     {
         // 1F34
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020320;
     }
     newAlias->attr = attr;
@@ -885,7 +883,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     // 1DC8
     add_alias_tbl(newAlias);
     free_iob(iob);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 
     err_free_iob:
@@ -893,43 +891,43 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
 
     err:
     free_alias_tbl(newAlias);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 
     err_invalid_device:
     free_alias_tbl(newAlias);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0x80020321;
 }
 
 int sceIoUnassign(const char *dev)
 {
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_PTR(dev))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(dev))
     {
         // 2138
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     if (dev == NULL)
     {
         // 2130
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     SceIoAlias *alias = sub_35D0(dev);
     if (alias == NULL)
     {
         // 212C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     int ret = alloc_iob(&iob, 0);
     if (ret < 0)
     {
         // 2124
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     ret = init_iob(iob, alias->attr, alias->dev, 0x1000000, alias->fsNum);
@@ -951,55 +949,55 @@ int sceIoUnassign(const char *dev)
     {
         // 20C4
         free_iob(iob);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     free_alias_tbl(alias);
     free_iob(iob);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 
     error:
     free_iob(iob);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int fsNum;
     char name[32];
-    if (!K1_USER_PTR(aliasName) || !K1_USER_PTR(blockDev))
+    if (!pspK1PtrOk(aliasName) || !pspK1PtrOk(blockDev))
     {
         // 22C0
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     if (aliasName == NULL)
     {
         // 22A4
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     if (sub_36C4(aliasName) != NULL)
     {
         // 22AC
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020326;
     }
     parsedev(blockDev, name, &fsNum);
     if (lookup_device_list(name) == NULL)
     {
         // 22A4
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     SceIoAlias *alias = alloc_alias_tbl();
     if (alias == NULL)
     {
         // 2294
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020320;
     }
     alias->attr = 0x100;
@@ -1015,7 +1013,7 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
     {
         // 220C
         free_alias_tbl(alias);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     // 223C
@@ -1024,32 +1022,32 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
     strncpy(alias->blockDev, name, 31);
     alias->blockDev[31] = '\0';
     add_alias_tbl(alias);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int IoFileMgrForKernel_E972F70B(const char *name)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(name)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(name)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     if (name == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     SceIoAlias *alias = sub_36C4(name);
     if (alias == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     if (delete_alias_tbl(alias) != 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     free_alias_tbl(alias);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -1058,18 +1056,18 @@ int sceIoChangeThreadCwd(SceUID threadId, const char *path)
     SceIoDeviceArg *dev;
     int fsNum;
     char *realPath;
-    K1_BACKUP();
-    if (!K1_USER_PTR(path))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(path))
     {
         // 2494
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     char *buf = alloc_pathbuf();
     if (buf == NULL)
     {
         // 2484
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     realPath = buf;
@@ -1099,31 +1097,31 @@ int sceIoChangeThreadCwd(SceUID threadId, const char *path)
     end:
     if (buf != NULL)
         free_pathbuf(buf);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoCancel(int fd)
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = validate_fd(fd, 0, 8, 1, &iob);
     if (ret < 0)
     {
         // 2588
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->dev->drv->funcs->IoCancel == NULL)
     {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     ret = iob->dev->drv->funcs->IoCancel(iob);
     if (ret < 0)
     {
         // 2588
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -1139,17 +1137,17 @@ int sceIoCancel(int fd)
     }
     // 252C
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceIoGetFdList(SceUID *fds, int numFd, int *count)
 {
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(fds, numFd * 4) || !K1_USER_BUF_STA_SZ(count, 4))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(fds, numFd * 4) || !pspK1StaBufOk(count, 4))
     {
         // 25F0
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // 261C
@@ -1161,7 +1159,7 @@ int sceIoGetFdList(SceUID *fds, int numFd, int *count)
     while (cur != g_uid_type)
     {
         u8 perm = cur->attribute;
-        if (!K1_USER_MODE())
+        if (!pspK1IsUserMode())
             perm = 0xFF;
         if (perm != 0)
         {
@@ -1180,7 +1178,7 @@ int sceIoGetFdList(SceUID *fds, int numFd, int *count)
         *count = curCount;
     // 266C
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return stored;
 }
 
@@ -1188,11 +1186,11 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
 {
     SceIoFdDebugInfo info;
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_BUF_STA_SZ(outInfo, 88))
+    int oldK1 = pspShiftK1();
+    if (!pspK1StaBufOk(outInfo, 88))
     {
         // 2864
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -1201,7 +1199,7 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
     {
         // 2850
         sceKernelCpuResumeIntr(oldIntr);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     // 2718
@@ -1251,36 +1249,36 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
     info.iob = iob;
     memcpy(outInfo, &info, size);
     sceKernelCpuResumeIntr(oldIntr);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceIoAddDrv(SceIoDrv *drv)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(drv))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(drv))
     {
         // 2954
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     if (lookup_device_list(drv->name) != 0)
     {
         // 2948
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x8002032B;
     }
     SceIoDeviceList *list = alloc_device_list();
     if (list == NULL)
     {
         // 2938
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     list->arg.drv = drv;
     list->arg.openedFiles = 0;
     if (drv->funcs->IoInit == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     // 2904
@@ -1289,28 +1287,28 @@ int sceIoAddDrv(SceIoDrv *drv)
     {
         // 2928
         free_device_list(list);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     add_device_list(list);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceIoDelDrv(const char *drv)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(drv)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(drv)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     SceIoDeviceList *dev = lookup_device_list(drv);
     if (dev == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     if (dev->arg.drv->funcs->IoExit == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     // 29F4
@@ -1320,12 +1318,12 @@ int sceIoDelDrv(const char *drv)
     {
         // 2A34
         add_device_list(dev);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     do_deldrv(&dev->arg);
     free_device_list(dev);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -1545,15 +1543,14 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
     }
     // 2FC4
     int flag = *(u16*)(block + 22) & arg2;
-    K1_GET();
-    if (K1_USER_MODE() == 0)
+    if (pspK1IsUserMode() == 0)
         flag = arg2;
     if (flag == 0)
         return 0x800200D1;
     if ((arg3 & 0x10) == 0 && sceKernelGetUserLevel() < ((iob->dev_type >> 24) & 0xF)) // 3014
         return 0x800200D1;
     // 2FE8
-    if (K1_USER_MODE() && (iob->unk000 & 0x4000000) != 0)
+    if (pspK1IsUserMode() && (iob->unk000 & 0x4000000) != 0)
         return 0x800200D1;
     // 300C
     *outIob = iob;
@@ -1577,11 +1574,10 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
 // 3114
 int alloc_iob(SceIoIob **outIob, int arg1)
 {
-    K1_GET();
     if (sceKernelIsIntrContext() != 0)
         return 0x80020064;
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (arg1 != 0 && !K1_USER_MODE())
+    if (arg1 != 0 && !pspK1IsUserMode())
         arg1 = 0;
     // 3170
     int *ptr = g_UIDs;
@@ -1601,7 +1597,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
     }
     // 31E0
     int lvl = sceKernelGetUserLevel();
-    char usrMode = K1_USER_MODE();
+    char usrMode = pspK1IsUserMode();
     if (usrMode && (lvl < 4))
     {
         if (g_iobCount >= 64)
@@ -1614,7 +1610,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
     }
     // 3214
     SceSysmemUIDControlBlock *blk;
-    int ret = sceKernelCreateUID(g_uid_type, "Iob", (K1_USER_MODE() == 1 ? 0xFF : 0), &blk);
+    int ret = sceKernelCreateUID(g_uid_type, "Iob", (pspK1IsUserMode() == 1 ? 0xFF : 0), &blk);
     if (ret == 0)
     {
         SceIoIob *iob = (void*)blk + g_uid_type->size * 4;
@@ -2060,24 +2056,24 @@ int sceIoSetAsyncCallback(SceUID fd, SceUID cb, void *argp)
     SceIoIob *iob;
     if (sceKernelGetThreadmanIdType(cb) != 8)
         return 0x800200D2;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     if (sceKernelGetUIDcontrolBlock(cb, &blk) != 0)
     {
         // 3F4C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D1;
     }
     int flag = 2;
-    if (K1_USER_MODE())
+    if (pspK1IsUserMode())
         flag = blk->attribute & 2;
     if (flag == 0)
     {
         // 3F4C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D1;
     }
     int ret = validate_fd(fd, 0, 2, 1, &iob);
-    K1_RESET();
+    pspSetK1(oldK1);
     if (ret < 0)
         return ret;
     iob->asyncCbArgp = argp;
@@ -2087,10 +2083,10 @@ int sceIoSetAsyncCallback(SceUID fd, SceUID cb, void *argp)
 
 int sceIoValidateFd(SceUID fd, int arg1)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     SceIoIob *iob;
     int ret = validate_fd(fd, 0, arg1, 0, &iob);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -2106,24 +2102,22 @@ int sceIoCloseAsync(SceUID fd)
 
 SceUID sceIoOpen(const char *file, int flags, SceMode mode)
 {
-    K1_BACKUP();
-    int retAddr;
-    GET_REG(retAddr, RA);
+    int oldK1 = pspShiftK1();
+    int retAddr = pspGetRa();
     int ret;
-    if (K1_USER_MODE() && (ret = InterruptManagerForKernel_A0F88036()) != 0)
+    if (pspK1IsUserMode() && (ret = InterruptManagerForKernel_A0F88036()) != 0)
         retAddr = ret;
-    return do_open(file, flags, mode, 0, retAddr, K1_GETOLD());
+    return do_open(file, flags, mode, 0, retAddr, oldK1);
 }
 
 SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode)
 {
-    K1_BACKUP();
-    int retAddr;
-    GET_REG(retAddr, RA);
+    int oldK1 = pspShiftK1();
+    int retAddr = pspGetRa();
     int ret;
-    if (K1_USER_MODE() && (ret = InterruptManagerForKernel_A0F88036()) != 0)
+    if (pspK1IsUserMode() && (ret = InterruptManagerForKernel_A0F88036()) != 0)
         retAddr = ret;
-    return do_open(file, flags, mode, 1, retAddr, K1_GETOLD());
+    return do_open(file, flags, mode, 1, retAddr, oldK1);
 }
 
 int sceIoRead(SceUID fd, void *data, SceSize size)
@@ -2205,22 +2199,22 @@ int sceIoSync(const char *device, unsigned int unk)
 {
     int buf[4];
     buf[0] = unk;
-    K1_BACKUP();
-    if (!K1_USER_PTR(device)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(device)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = do_devctl(device, 256, buf, 4, 0, 0);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoGetDevType(SceUID fd)
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = validate_fd(fd, 0, 1, 0, &iob);
-    K1_RESET();
+    pspSetK1(oldK1);
     if (ret < 0)
         return ret;
     return iob->dev_type;
@@ -2228,8 +2222,8 @@ int sceIoGetDevType(SceUID fd)
 
 int sceIoGetThreadCwd(SceUID uid, char *dir, int len)
 {
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(dir, len))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(dir, len))
         return 0x800200D3;
     int ret = 0;
     void *ktls = sceKernelGetThreadKTLS(g_ktls, uid, 0);
@@ -2247,44 +2241,44 @@ int sceIoGetThreadCwd(SceUID uid, char *dir, int len)
         }
     }
     // 43DC
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceIoTerminateFd(char *drive)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(drive)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(drive)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     SceIoDeviceList *dev = lookup_device_list(drive);
     if (dev == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020321;
     }
     do_deldrv(&dev->arg);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
 int sceIoAddHook(SceIoHookType *hook)
 {
-    K1_BACKUP();
-    if (!K1_USER_PTR(hook)) {
-        K1_RESET();
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(hook)) {
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     SceIoHookList *new = sceKernelAllocHeapMemory(g_heap, sizeof(SceIoHookList));
     if (new == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     new->arg.hook = hook;
     new->next = g_hookList;
     g_hookList = new;
     new->arg.hook->funcs->Add(&new->arg.hook);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -2368,24 +2362,24 @@ int create_async_thread(SceIoIob *iob)
 int do_get_async_stat(SceUID fd, SceInt64 *res, int poll, int cb, char *func)
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     if (sceKernelGetCompiledSdkVersion() >= 0x05070000 && res == NULL)
     {
         // 4918 dup
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     // 4780
-    if (!K1_USER_BUF_STA_SZ(res, 8))
+    if (!pspK1StaBufOk(res, 8))
     {
         // 4914
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = validate_fd(fd, 0, 4, 3, &iob);
     if (ret < 0)
     {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->asyncThread == 0)
@@ -2409,7 +2403,7 @@ int do_get_async_stat(SceUID fd, SceInt64 *res, int poll, int cb, char *func)
         if (ret < 0)
         {
             // 4890
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
     }
@@ -2419,14 +2413,14 @@ int do_get_async_stat(SceUID fd, SceInt64 *res, int poll, int cb, char *func)
     {
         // 4874
         ret = sceKernelSignalSema(iob->asyncSema, 1);
-        K1_RESET();
+        pspSetK1(oldK1);
         if (ret < 0)
             return ret;
     }
     else
         free_iob(iob);
     // 4868
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 
 error:
@@ -2437,27 +2431,27 @@ error:
     else
         Kprintf("%sasync thread is not running fd=0x%08X, thid=0x%08X\n", func, fd, sceKernelGetThreadId());
     // 48F0
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0x8002032A;
 }
 
 int do_close(SceUID fd, int async, int remove)
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int sdk = sceKernelGetCompiledSdkVersion();
     int ret = validate_fd(fd, 0, (sdk >= 0x3050010) ? 0x10 : 0xFE, (async == 0) ? 3 : 2, &iob);
     if (ret < 0)
     {
         // 4BFC
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if ((iob->unk000 & 8) != 0)
     {
         // 4BDC
         Kprintf("bad file descriptor %d\n", fd);
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020323;
     }
     if (iob->dev == &deleted_device && iob->hook.arg == NULL) // 4B54
@@ -2481,7 +2475,7 @@ int do_close(SceUID fd, int async, int remove)
         if (iob->asyncPrio < 0 && sceKernelGetCompiledSdkVersion() >= 0x04020000) // 4BB0
             sceKernelChangeThreadPriority(iob->asyncThread, 0);
         // 4BA4
-        GET_REG(iob->k1, K1);
+        iob->k1 = pspGetK1();
         iob->asyncCmd = 0;
         // 4B08 dup
         ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
@@ -2491,7 +2485,7 @@ int do_close(SceUID fd, int async, int remove)
     if (iob->dev->drv->funcs->IoClose == NULL)
     {
         // 4B48
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     if (async)
@@ -2513,7 +2507,7 @@ int do_close(SceUID fd, int async, int remove)
             sceKernelChangeThreadPriority(iob->asyncThread, 0);
         // 4AFC
         iob->asyncCmd = 2;
-        GET_REG(iob->k1, K1);
+        iob->k1 = pspGetK1();
         // 4B08 dup
         ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
         goto end;
@@ -2523,7 +2517,7 @@ int do_close(SceUID fd, int async, int remove)
         // 4A88
         ret = sceKernelPollSema(iob->asyncSema, 1);
         if (ret < 0 && sdk > 0x02060010) { // 4AA0
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020329;
         }
     }
@@ -2543,7 +2537,7 @@ int do_close(SceUID fd, int async, int remove)
         // 4A60
         free_iob(iob);
     }
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -2551,18 +2545,17 @@ int do_close(SceUID fd, int async, int remove)
 int do_open(const char *path, int flags, SceMode mode, int async, int retAddr, int oldK1)
 {
     SceIoIob *iob;
-    K1_GET();
-    if (!K1_USER_PTR(path))
+    if (!pspK1PtrOk(path))
     {
         // 4D2C
-        SET_REG(K1, oldK1);
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = alloc_iob(&iob, (flags & 0x08000000) == 0);
     if (ret < 0)
     {
         // 4D24
-        SET_REG(K1, oldK1);
+        pspSetK1(oldK1);
         return ret;
     }
     sceKernelRenameUID(((SceSysmemUIDControlBlock*)((void*)iob - g_uid_type->size * 4))->UID, path);
@@ -2584,18 +2577,18 @@ int do_open(const char *path, int flags, SceMode mode, int async, int retAddr, i
         // 4CE4
         free_iob(iob);
     }
-    SET_REG(K1, oldK1);
+    pspSetK1(oldK1);
     return ret;
 }
 
 int do_read(SceUID fd, void *data, SceSize size, int async)
 {
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(data, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(data, size))
     {
         // 4EC0
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = validate_fd(fd, 1, 4, 0, &iob);
@@ -2604,7 +2597,7 @@ int do_read(SceUID fd, void *data, SceSize size, int async)
     if (iob->dev->drv->funcs->IoRead == NULL)
     {
         // 4EB4
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     if (async)
@@ -2616,55 +2609,55 @@ int do_read(SceUID fd, void *data, SceSize size, int async)
         {
             ret = create_async_thread(iob);
             if (ret < 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return ret;
             }
         }
         // 4E44
         if (sceKernelPollSema(iob->asyncSema, 1) < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020329;
         }
         if (iob->asyncPrio < 0 && sceKernelGetCompiledSdkVersion() >= 0x04020000) // 4E84
             sceKernelChangeThreadPriority(iob->asyncThread, 0);
         // 4E64
         iob->asyncCmd = 3;
-        GET_REG(iob->k1, K1);
+        iob->k1 = pspGetK1();
         ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->hook.arg == NULL)
     {
         // 4E00
         ret = iob->dev->drv->funcs->IoRead(iob, data, size);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     ret = iob->hook.arg->hook->funcs->Read(&iob->hook, data, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int do_write(SceUID fd, const void *data, SceSize size, int async)
 {
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(data, size))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(data, size))
     {
         // 5054
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     int ret = validate_fd(fd, 2, 2, 0, &iob);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->dev->drv->funcs->IoWrite == NULL)
     {
         // 5048
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     if (async)
@@ -2676,22 +2669,22 @@ int do_write(SceUID fd, const void *data, SceSize size, int async)
         {
             ret = create_async_thread(iob);
             if (ret < 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return ret;
             }
         }
         // 4FD8
         if (sceKernelPollSema(iob->asyncSema, 1) < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020329;
         }
         if (iob->asyncPrio < 0 && sceKernelGetCompiledSdkVersion() >= 0x04020000) // 5018
             sceKernelChangeThreadPriority(iob->asyncThread, 0);
         // 4FF8
         iob->asyncCmd = 4;
-        GET_REG(iob->k1, K1);
+        iob->k1 = pspGetK1();
         ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->hook.arg == NULL) {
@@ -2700,29 +2693,29 @@ int do_write(SceUID fd, const void *data, SceSize size, int async)
     }
     else
         ret = iob->hook.arg->hook->funcs->Write(&iob->hook, data, size);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
 {
     SceIoIob *iob;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     s64 ret = validate_fd(fd, 0, 4, 0, &iob);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (whence < 0 || whence >= 3)
     {
         // 5218
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020324;
     }
     if (iob->dev->drv->funcs->IoLseek == NULL)
     {
         // 5204
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     if (async)
@@ -2735,23 +2728,23 @@ SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
         {
             ret = create_async_thread(iob);
             if (ret < 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return ret;
             }
         }
         // 5190
         if (sceKernelPollSema(iob->asyncSema, 1) < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020329;
         }
         if (iob->asyncPrio < 0 && sceKernelGetCompiledSdkVersion() >= 0x04020000) // 51D4
             sceKernelChangeThreadPriority(iob->asyncThread, 0);
         // 51B0
         iob->asyncCmd = 5;
-        GET_REG(iob->k1, K1);
+        iob->k1 = pspGetK1();
         ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
         // 51C8
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->hook.arg == NULL) {
@@ -2761,7 +2754,7 @@ SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
     else
         ret = iob->hook.arg->hook->funcs->Lseek(&iob->hook, offset, whence);
     // 5114
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -2769,27 +2762,27 @@ SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
 int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen, int async)
 {
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_BUF_DYN_SZ(indata, inlen) || !K1_USER_BUF_DYN_SZ(outdata, outlen))
+    int oldK1 = pspShiftK1();
+    if (!pspK1DynBufOk(indata, inlen) || !pspK1DynBufOk(outdata, outlen))
     {
         // 5438
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     if (inlen < 0 && ((cmd >> 15) & 1) != 0)
     {
         // 542C
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D1;
     }
     // 52B0
     int ret = validate_fd(fd, 0, 2, 0, &iob);
     if (ret < 0) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->dev->drv->funcs->IoIoctl == NULL) {
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020325;
     }
     if (async)
@@ -2804,22 +2797,22 @@ int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata
         {
             ret = create_async_thread(iob);
             if (ret < 0) {
-                K1_RESET();
+                pspSetK1(oldK1);
                 return ret;
             }
         }
         // 53B0
         if (sceKernelPollSema(iob->asyncSema, 1) < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return 0x80020329;
         }
         if (iob->asyncPrio < 0 && sceKernelGetCompiledSdkVersion() >= 0x04020000) // 53F0
             sceKernelChangeThreadPriority(iob->asyncThread, 0);
         // 53D0
         iob->asyncCmd = 6;
-        GET_REG(iob->k1, K1);
+        iob->k1 = pspGetK1();
         ret = sceKernelSetEventFlag(iob->asyncEvFlag, 3);
-        K1_RESET();
+        pspSetK1(oldK1);
         return ret;
     }
     if (iob->hook.arg == NULL) {
@@ -2829,7 +2822,7 @@ int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata
     else
         ret = iob->hook.arg->hook->funcs->Ioctl(&iob->hook, cmd, indata, inlen, outdata, outlen);
     // 531C
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -2842,18 +2835,18 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
     int fsNum;
     char *dirName;
     SceIoIob *iob;
-    K1_BACKUP();
-    if (!K1_USER_PTR(path))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(path))
     {
         // 5684
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     char *pathBuf = alloc_pathbuf();
     if (pathBuf == NULL)
     {
         // 5674
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     ret = alloc_iob(&iob, 0);
@@ -2923,7 +2916,7 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
     // 5518
     if (pathBuf != NULL)
         free_pathbuf(pathBuf);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -2933,18 +2926,18 @@ int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
     SceIoDeviceArg *dev;
     int fsNum;
     char *dirNamePtr;
-    K1_BACKUP();
-    if (!K1_USER_PTR(file) || !K1_USER_PTR(stat))
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(file) || !pspK1PtrOk(stat))
     {
         // 5824
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x800200D3;
     }
     char *buf = alloc_pathbuf();
     if (buf == NULL)
     {
         // 5814
-        K1_RESET();
+        pspSetK1(oldK1);
         return 0x80020190;
     }
     int ret = alloc_iob(&iob, 0);
@@ -2980,7 +2973,7 @@ int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
     end:
     if (buf != NULL)
         free_pathbuf(buf);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -3088,7 +3081,7 @@ int async_loop(SceSize args __attribute__((unused)), void *argp)
         if (sceKernelWaitEventFlag(iob->asyncEvFlag, 2, 33, &bits, 0) != 0)
             return 0;
         s64 ret = 0x80020323;
-        SET_REG(K1, iob->k1);
+        pspSetK1(iob->k1);
         switch (iob->asyncCmd)
         {
         case 0:

@@ -1,4 +1,4 @@
-#include "../global.h"
+#include "../common/common.h"
 
 typedef struct
 {
@@ -272,7 +272,7 @@ int sceCodec_driver_261C6EE8(int reg)
 
 int sceCodec_driver_49C13ACF(int arg0)
 {
-    int flag = MAX(arg0 + g_codec.flag2 + 121, 0);
+    int flag = pspMax(arg0 + g_codec.flag2 + 121, 0);
     if (flag >= 128)
         return 0x800001FE;
     int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
@@ -300,8 +300,8 @@ int sceCodec_driver_EACF7284(int arg0)
     if (flag >= 128)
         return 0x800001FE;
     flag += g_codec.flag2;
-    flag = MIN(flag, 0x7F);
-    flag = MAX(flag, 0);
+    flag = pspMin(flag, 0x7F);
+    flag = pspMax(flag, 0);
     int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
     if (ret < 0)
         return ret;
@@ -370,27 +370,27 @@ int sceCodec_driver_A88FD064(int arg0, int arg1, int arg2, int arg3, int arg4, i
     {
         arg0 = 43;
         arg1 = (arg1 * 4 + 69) / 3;
-        arg1 = MAX(arg1, 0);
-        arg1 = MIN(arg1, 63);
+        arg1 = pspMax(arg1, 0);
+        arg1 = pspMin(arg1, 63);
         arg1 += 256;
     }
     else
     {
         // 0854
         arg0 = (arg0 * 2 + 57) / 3;
-        arg0 = MAX(arg0, 0);
-        arg0 = MIN(arg0, 15);
-        arg0 = (arg0 & 0xFFFFFF8F) | ((MIN(MAX((arg1 / 6) + 2, 0), 7) << 4) & 0x70);
+        arg0 = pspMax(arg0, 0);
+        arg0 = pspMin(arg0, 15);
+        arg0 = (arg0 & 0xFFFFFF8F) | ((pspMin(pspMax((arg1 / 6) + 2, 0), 7) << 4) & 0x70);
         arg0 += 128;
         arg1 = 279;
     }
     // 08B8
-    arg2 = MIN(arg2, 0);
+    arg2 = pspMin(arg2, 0);
     if (arg2 != 0)
     {
         arg2 = (arg2 * 2 + 153) / 3;
-        arg2 = MAX(arg2, 0);
-        arg2 = MIN(arg2, 31);
+        arg2 = pspMax(arg2, 0);
+        arg2 = pspMin(arg2, 31);
         arg2 = (arg2 << 3) + 1;
     }
     // 08FC
@@ -412,9 +412,9 @@ int sceCodec_driver_A88FD064(int arg0, int arg1, int arg2, int arg3, int arg4, i
     ret = sub_004C(20, arg2);
     if (ret < 0)
         return ret;
-    ret = sub_004C(18, MIN(MAX(arg3, 0), 15));
+    ret = sub_004C(18, pspMin(pspMax(arg3, 0), 15));
     if (ret >= 0)
-        ret = sub_004C(19, (MIN(MAX(arg5, 0), 10) & 0xFFFFFF0F) | ((MIN(MAX(arg4, 0), 10) << 4) & 0xF0));
+        ret = sub_004C(19, (pspMin(pspMax(arg5, 0), 10) & 0xFFFFFF0F) | ((pspMin(pspMax(arg4, 0), 10) << 4) & 0xF0));
     // 09C0
     sceKernelUnlockMutex(g_codec.mutexId, 1);
     return ret;

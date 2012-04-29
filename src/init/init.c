@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../global.h"
+#include "../common/common.h"
 
 #define IS_JUMP(op) ((op & 0xFC000000) == 0x0C000000)
 #define JUMP(ref, addr) ((ref & 0xF0000000) | ((addr & 0x03FFFFFFF) << 2))
@@ -793,7 +793,15 @@ int sub_1038(void *buf, int opt)
 void sub_1198(char *s, int line) // probably some masked debug thing
 {
     int oldIntr = sceKernelCpuSuspendIntr();
-    RESET_VECTOR(&g_init.resetVectorInfo, &g_init.addr, bzero2);
+    if (g_init.resetVectorInfo.size > 0x2000000)
+        AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 2, 0xBC100040);
+    else
+        AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 1, 0xBC100040);
+    memset(0xBFC00000, 0, 0x1000);
+    memcpy(0xBFC00000, &bzero2, &bzero2 + sizeof(bzero2));
+    g_init.addr = 0xBFC00000;
+    int (*_resetVector)(int, int) = 0xBFC00000;
+    _resetVector(g_init.resetVectorInfo.addr, g_init.resetVectorInfo.size);
     sceKernelCpuResumeIntr(oldIntr);
     for (;;)
         ;
@@ -813,14 +821,15 @@ int InitThreadEntry(int argSize, int args[2])
     if (bootInfo->unk_48 != 0)
         printf("build version 0x%08x\n");
     // 12CC
-    int sp;
-    // TODO: $sp is modified but $fp is backup'ed from $sp and $fp is used as the stack
-    GET_REG(sp, SP);
-    SET_REG(SP, (sp = sp - ALIGN_16_UP(bootInfo->numMods * sizeof(SceLoadCoreBootModuleInfo))));
+    // TODO: $sp is modified but $fp is backup'ed from $sp and $fp is used as the stack during all the function; $sp is set to the original $fp value at the end
+    int sp = pspGetSp();
+    sp = sp - ALIGN_16_UP(bootInfo->numMods * sizeof(SceLoadCoreBootModuleInfo));
+    pspSetSp(sp);
     *(int*)sp = 0;
     *(int*)(g_28A0 + 112) = sp;
     *(int*)(g_28A0 + 116) = sp;
-    SET_REG(SP, (sp = sp - ALIGN_16_UP(bootInfo->numMods * sizeof(SceLoadCoreBootModuleInfo))));
+    sp = sp - ALIGN_16_UP(bootInfo->numMods * sizeof(SceLoadCoreBootModuleInfo));
+    pspSetSp(sp);
     *(int*)sp = 0;
     *(int*)(g_28A0 + 120) = sp;
     *(int*)(g_28A0 + 108) = bootInfo->unk_76;

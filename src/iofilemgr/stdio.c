@@ -4,7 +4,7 @@
 
 #include <stdarg.h>
 
-#include "../global.h"
+#include "../common/common.h"
 
 #include "../sysmem/sysclib.h"
 #include "iofilemgr.h"
@@ -451,13 +451,13 @@ int sceKernelStdioOpen()
 int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
 {
     int cnt;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int count = 0;
     int k1 = 0;
     if (sceIoGetIobUserLevel(iob) != 8)
         k1 = 24;
     // 09D0
-    SET_REG(K1, k1);
+    pspSetK1(k1);
     int size2 = g_pipeList[iob->fsNum + 3];
     SceUID id = g_pipeList[iob->fsNum + 0];
     int min;
@@ -469,27 +469,27 @@ int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
             min = size;
         int ret = sceKernelReceiveMsgPipe(id, buf, min, 1, &cnt, 0);
         if (ret < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
         size -= cnt;
         buf += cnt;
         count += cnt;
     } while (cnt >= min && size != 0);
-    K1_RESET();
+    pspSetK1(oldK1);
     return count;
 }
 
 int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int count = 0;
     int curCnt;
     int k1 = 0;
     if (sceIoGetIobUserLevel(iob) != 8)
         k1 = 24;
     // 0AC4
-    SET_REG(K1, k1);
+    pspSetK1(k1);
     int size2 = g_pipeList[iob->fsNum + 3];
     SceUID id = g_pipeList[iob->fsNum + 0];
     // 0AE8
@@ -500,14 +500,14 @@ int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
             minSize = size;
         int ret = sceKernelSendMsgPipe(id, (void*)buf, minSize, 0, &curCnt, 0);
         if (ret < 0) {
-            K1_RESET();
+            pspSetK1(oldK1);
             return ret;
         }
         size -= curCnt;
         count += curCnt;
         buf += curCnt;
     } while (size != 0);
-    K1_RESET();
+    pspSetK1(oldK1);
     return count;
 }
 
@@ -520,17 +520,17 @@ int sceTtyProxyInit()
 
 int sceKernelRegisterStdoutPipe(SceUID id)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = _sceKernelRegisterStdPipe(STDOUT, id);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
 int sceKernelRegisterStderrPipe(SceUID id)
 {
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int ret = _sceKernelRegisterStdPipe(STDERR, id);
-    K1_RESET();
+    pspSetK1(oldK1);
     return ret;
 }
 
@@ -569,13 +569,13 @@ int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribu
 {
     if (cmd != 0x00134002)
         return 0x80020324;
-    K1_BACKUP();
+    int oldK1 = pspShiftK1();
     int k1 = 24;
     if (sceIoGetIobUserLevel(iob) == 8)
         k1 = 0;
-    SET_REG(K1, k1);
+    pspSetK1(k1);
     sceKernelCancelMsgPipe(g_pipeList[iob->fsNum], 0, 0);
-    K1_RESET();
+    pspSetK1(oldK1);
     return 0;
 }
 
@@ -601,8 +601,7 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     SceSysmemUIDControlBlock *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return 0x800200D1;
-    K1_GET();
-    if (K1_USER_MODE() && (blk->parent->attribute & 2) != 0)
+    if (pspK1IsUserMode() && (blk->parent->attribute & 2) != 0)
         return 0x800200D1;
     SceKernelMppInfo mpp;
     mpp.size = 56;
