@@ -20,6 +20,7 @@
 #define	CTRL_H
 
 #include "../common/common.h"
+#include <pspmodulemgr.h>
 
 /** Custom function name. */
 int sceCtrl_5A36B1C2(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferPositiveExt")));       

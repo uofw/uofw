@@ -28,6 +28,12 @@ typedef struct SceSysmemUIDControlBlock
     SceSysmemUIDLookupFunction *func_table; // 32
 } __attribute__((packed)) SceSysmemUIDControlBlock;
 
+typedef struct
+{ 
+    int size; 
+    void (*ops[])();
+} SceKernelDeci2Ops;
+
 int sceKernelDeci2pRegisterOperations(void *op);
 void *sceKernelDeci2pReferOperations();
 
