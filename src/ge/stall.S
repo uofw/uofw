@@ -7,10 +7,10 @@
 
     .globl sceGeListUpdateStallAddr
 sceGeListUpdateStallAddr:
-    lui   $v0, %hi(g_7604)
-    lw    $v0, %lo(g_7604)($v0)
-    lui   $v1, %hi(g_7640) # g_displayLists
-    addiu $v1, $v1, %lo(g_7640)
+    lui   $v0, %hi(g_dlMask)
+    lw    $v0, %lo(g_dlMask)($v0)
+    lui   $v1, %hi(g_displayLists)
+    addiu $v1, $v1, %lo(g_displayLists)
     xor   $v0, $v0, $a0 # the SceGeDisplayList
     subu  $v1, $v0, $v1
     sltiu $v1, $v1, 4096
@@ -18,12 +18,12 @@ sceGeListUpdateStallAddr:
     ext   $t0, $a1, 0, 29 # uncached stall address
     mfic  $v1, $0
     mtic  $0,  $0
-    lbu   $t1, 8($v0) # dl->unk8
+    lbu   $t1, 8($v0)
     lui   $t3, 0xBD40
-    lui   $t9, %hi(g_6890)
+    lui   $t9, %hi(g_logHandler)
     xori  $t2, $t1, 0x2
-    bnez  $t2, mode_is_not_2 # dl->unk8 != 2
-    lw    $t9, %lo(g_6890)($t9) # logging function
+    bnez  $t2, not_running
+    lw    $t9, %lo(g_logHandler)($t9) # logging function
 
     ## when dl->unk8 == 2: store stall address at 0xBD40010C and change dl->stall
     sw    $t0, 268($t3) # store stall address at 0xBD40010C
@@ -34,14 +34,12 @@ sceGeListUpdateStallAddr:
     jr    $ra
     move  $v0, $0
 
-mode_is_not_2:
+not_running:
     xori  $t2, $t1, 0x1
     xori  $t3, $t1, 0x4
     movz  $t2, $0, $t3
-    bnez  $t2, mode_is_not_1_2_4 # dl->unk8 != 1 && dl->unk8 != 4
+    bnez  $t2, not_waiting
     nop
-
-    ## when dl->unk8 == 1 or dl->unk8 == 4: just change dl->stall
     bnez  $t9, logging
     sw    $a1, 24($v0) # dl->stall
     mtic  $v1, $0
@@ -66,10 +64,10 @@ logging:
     jr    $ra
     addiu $sp, $sp, 16
 
-mode_is_not_1_2_4:
+not_waiting:
     mtic   $v1, $0                                                                                      
     xori   $t2, $t1, 0x3
-    bnez   $t2, err_invalid_id # dl->unk8 != 3
+    bnez   $t2, err_invalid_id
     nop
     lui    $v0, 0x8000
     ori    $v0, $v0, 0x20
@@ -80,7 +78,5 @@ err_invalid_id:
     lui    $v0, 0x8000
     ori    $v0, $v0, 0x100
     jr     $ra
-    nop
-    nop
     nop
 

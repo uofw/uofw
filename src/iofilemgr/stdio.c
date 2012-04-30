@@ -72,10 +72,13 @@ int StdioReInit()
     fds[2] = &g_stderr;
     // 0044
     int i;
+    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x0000FFFF;
     for (i = 0; i < 3; i++)
         *fds[i] = sceIoOpen("dummy_drv_iofile:", 3, 0x1FF);
+    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FF00FF;
     g_debugRead = 1;
     sceTtyProxyInit();
+    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FFFFFF;
     return 0;
 }
 

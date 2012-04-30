@@ -14,6 +14,11 @@ else
 $(error You have to define PRX_EXPORTS in your Makefile)
 endif
 
+ifdef DEBUG
+CFLAGS += -DDEBUG
+LIBS := -ldebug $(LIBS) -lSysclibForKernel
+endif
+
 MODULE_STUBS=$(foreach mod,$(MODULES), $($(mod)_STUBS))
 
 all: $(TARGET).prx

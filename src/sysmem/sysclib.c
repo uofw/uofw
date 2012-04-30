@@ -483,7 +483,7 @@ char g_upHexChars[] = "0123456789ABCDEF";
 char g_null[] = "(null)";
 
 int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
-{   
+{
     if (fmt == NULL)
         return 0;
     cb(ctx, 512);
@@ -913,7 +913,7 @@ void sprintf_char(int *ctx, int c)
 void snprintf_char(int *ctx, int c)
 {
     if (c >= 256 || ctx[1] >= ctx[0])
-        *((char*)ctx[2]) = c;
+        *((char*)ctx[2]) = '\0';
     else
     {
         *((char*)ctx[2]) = c;

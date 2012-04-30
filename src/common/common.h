@@ -12,6 +12,7 @@
 #include "module.h"
 #include "prototypes.h"
 #include "registers.h"
+#include "../debug/debug.h"
 
 #endif
 

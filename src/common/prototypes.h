@@ -29,8 +29,8 @@ typedef struct SceSysmemUIDControlBlock
 } __attribute__((packed)) SceSysmemUIDControlBlock;
 
 typedef struct
-{ 
-    int size; 
+{
+    int size;
     void (*ops[])();
 } SceKernelDeci2Ops;
 
@@ -57,15 +57,24 @@ int sceClockgenAudioClkSetFreq(int);
 
 int sceSysregAudioClkEnable(int);
 int sceSysregAudioClkSelect(int, int);
-
 int sceSysregAudioBusClockEnable(int);
-
 int sceSysregAudioIoEnable(int);
 int sceSysregAudioIoDisable(int);
-
 int sceSysregAudioClkoutClkSelect(int);
 int sceSysregAudioClkoutIoEnable(void);
-int sceSysregAudioClkoutIoDisable();
+int sceSysregAudioClkoutIoDisable(void);
+
+int sceSysregAwRegABusClockEnable(void);
+int sceSysregAwRegABusClockDisable(void);
+int sceSysregAwRegBBusClockEnable(void);
+int sceSysregAwRegBBusClockDisable(void);
+int sceSysregAwEdramBusClockEnable(void);
+int sceSysregAwEdramBusClockDisable(void);
+int sceSysregAwResetEnable(void);
+int sceSysregAwResetDisable(void);
+
+int sceSysregSetMasterPriv(int, int);
+int sceSysregSetAwEdramSize(int);
 
 int DmacManForKernel_E18A93A5(void*, void*);
 
@@ -88,6 +97,11 @@ SceUID sceKernelCreateUID(SceSysmemUIDControlBlock *type, const char *name, shor
 int sceKernelDeleteUID(SceUID uid);
 int sceKernelCallUIDObjCommonFunction(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
 
+void *sceKernelGetUsersystemLibWork(void);
+void *sceKernelGetGameInfo(void);
+void *sceKernelGetAWeDramSaveAddr(void);
+int sceSysregGetTachyonVersion(void);
+
 void Kprintf(const char *format, ...);
 int sceKernelGetUserLevel(void);
 
@@ -101,4 +115,6 @@ int sceKernelPowerLock(int);
 int sceKernelPowerLockForUser(int);
 int sceKernelPowerUnlock(int);
 int sceKernelPowerUnlockForUser(int);
+
+int sceKernelSetInitCallback(void *, int, int);
 

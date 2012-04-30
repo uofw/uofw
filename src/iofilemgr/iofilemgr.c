@@ -195,6 +195,7 @@ int async_loop(SceSize args, void *argp);
 
 int sceIoChangeAsyncPriority(int fd, int prio)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     if (prio != -1 && (prio <= 0 || prio >= 127))
         return 0x80020193;
@@ -239,6 +240,7 @@ int sceIoChangeAsyncPriority(int fd, int prio)
 
 void sceIoCloseAll()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     SceSysmemUIDControlBlock *cur = g_uid_type->parent;
@@ -271,6 +273,7 @@ void sceIoCloseAll()
 
 int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int ret;
     SceIoDeviceArg *dev;
     int fsNum;
@@ -348,6 +351,7 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
 
 int open_main(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if ((iob->unk000 & 0x02000000) != 0) {
         // 12D0
         iob_power_lock(iob);
@@ -375,6 +379,7 @@ int open_main(SceIoIob *iob)
 
 int sceIoReopen(const char *file, int flags, SceMode mode, int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int ra = pspGetRa();
     int oldK1 = pspShiftK1();
@@ -429,6 +434,7 @@ int sceIoReopen(const char *file, int flags, SceMode mode, int fd)
 
 SceUID sceIoDopen(const char *dirname)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     SceIoDeviceArg *dev;
     int fsNum;
@@ -495,6 +501,7 @@ SceUID sceIoDopen(const char *dirname)
 
 int sceIoDread(int fd, SceIoDirent *dir)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(dir)) {
@@ -518,6 +525,7 @@ int sceIoDread(int fd, SceIoDirent *dir)
 
 int sceIoDclose(int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     int ret = validate_fd(fd, 8, 4, 2, &iob);
@@ -554,6 +562,7 @@ int sceIoDclose(int fd)
 
 int sceIoRemove(const char *file)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     SceIoDeviceArg *dev;
     int fsNum;
@@ -608,6 +617,7 @@ int sceIoRemove(const char *file)
 
 int sceIoRename(const char *oldname, const char *newname)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(oldname) || !pspK1PtrOk(newname))
     {
@@ -690,6 +700,7 @@ int sceIoRename(const char *oldname, const char *newname)
 
 int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(dev) || !pspK1DynBufOk(indata, inlen) || !pspK1DynBufOk(outdata, outlen))
     {
@@ -711,6 +722,7 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
 
 int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char outDev[32];
     char blkAliasName[32];
     char fsAliasName[32];
@@ -902,6 +914,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
 
 int sceIoUnassign(const char *dev)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(dev))
@@ -965,6 +978,7 @@ int sceIoUnassign(const char *dev)
 
 int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int fsNum;
     char name[32];
@@ -1028,6 +1042,7 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
 
 int IoFileMgrForKernel_E972F70B(const char *name)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(name)) {
         pspSetK1(oldK1);
@@ -1053,6 +1068,7 @@ int IoFileMgrForKernel_E972F70B(const char *name)
 
 int sceIoChangeThreadCwd(SceUID threadId, const char *path)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoDeviceArg *dev;
     int fsNum;
     char *realPath;
@@ -1103,6 +1119,7 @@ int sceIoChangeThreadCwd(SceUID threadId, const char *path)
 
 int sceIoCancel(int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     int ret = validate_fd(fd, 0, 8, 1, &iob);
@@ -1143,6 +1160,7 @@ int sceIoCancel(int fd)
 
 int sceIoGetFdList(SceUID *fds, int numFd, int *count)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(fds, numFd * 4) || !pspK1StaBufOk(count, 4))
     {
@@ -1184,6 +1202,7 @@ int sceIoGetFdList(SceUID *fds, int numFd, int *count)
 
 int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoFdDebugInfo info;
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
@@ -1255,6 +1274,7 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
 
 int sceIoAddDrv(SceIoDrv *drv)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv))
     {
@@ -1297,6 +1317,7 @@ int sceIoAddDrv(SceIoDrv *drv)
 
 int sceIoDelDrv(const char *drv)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv)) {
         pspSetK1(oldK1);
@@ -1330,6 +1351,7 @@ int sceIoDelDrv(const char *drv)
 // 2A4C
 SceIoDeviceList *lookup_device_list(const char *drive)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     SceIoDeviceList *cur = g_devList;
     // 2A7C
@@ -1350,6 +1372,7 @@ SceIoDeviceList *lookup_device_list(const char *drive)
 
 void add_device_list(SceIoDeviceList *list)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     list->next = g_devList;
     g_devList = list;
@@ -1358,6 +1381,7 @@ void add_device_list(SceIoDeviceList *list)
 
 int delete_device_list(SceIoDeviceList *list)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     SceIoDeviceList *cur = g_devList;
     SceIoDeviceList *prev = (SceIoDeviceList*)&g_devList;
@@ -1381,6 +1405,7 @@ int delete_device_list(SceIoDeviceList *list)
 
 SceIoDeviceList *alloc_device_list(void)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoDeviceList *list = sceKernelAllocHeapMemory(g_heap, sizeof(SceIoDeviceList));
     if (list != NULL)
     {
@@ -1394,11 +1419,13 @@ SceIoDeviceList *alloc_device_list(void)
 
 void free_device_list(SceIoDeviceList *list)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelFreeHeapMemory(g_heap, list);
 }
 
 void add_alias_tbl(SceIoAlias *alias)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     alias->next = g_aliasList;
     g_aliasList = alias;
@@ -1407,6 +1434,7 @@ void add_alias_tbl(SceIoAlias *alias)
 
 int delete_alias_tbl(SceIoAlias *alias)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     SceIoAlias *cur = g_aliasList;
     SceIoAlias *prev = (SceIoAlias*)&g_aliasList;
@@ -1429,6 +1457,7 @@ int delete_alias_tbl(SceIoAlias *alias)
 
 SceIoAlias *alloc_alias_tbl(void)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     void *buf = sceKernelAllocHeapMemory(g_heap, sizeof(SceIoAlias));
     if (buf != NULL)
     {
@@ -1442,12 +1471,14 @@ SceIoAlias *alloc_alias_tbl(void)
 
 void free_alias_tbl(SceIoAlias *alias)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelFreeHeapMemory(g_heap, alias);
 }
 
 // 2CE4
 SceIoAlias *lookup_alias_tbl(char *drive)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     SceIoAlias *curAlias = g_aliasList;
     // 2D14
@@ -1467,12 +1498,16 @@ SceIoAlias *lookup_alias_tbl(char *drive)
 
 int preobe_fdhook(SceIoIob *iob, char *file, int flags, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoHookList *cur = g_hookList;
+    int i; for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x000000FF;
     iob->hook.iob = iob;
+    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x0000FF00;
     // 2DB8
     while (cur != NULL)
     {
         iob->hook.arg = &cur->arg;
+        for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FF0000;
         if (cur->arg.hook->funcs->Preobe(&iob->hook, file, flags, mode) == 1)
         {
             // 2E24
@@ -1481,14 +1516,17 @@ int preobe_fdhook(SceIoIob *iob, char *file, int flags, SceMode mode)
         }
         cur = cur->next;
     }
+    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x0000FFFF;
     // 2DF0
     iob->hook.funcs = NULL;
-    iob->hook.arg->hook = NULL;
+    iob->hook.arg = NULL;
+    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FFFF00;
     return 0;
 }
 
 int sceIoGetUID(int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (fd < 0 || fd >= 64)
         return 0x80020323;
     SceUID uid = g_UIDs[fd];
@@ -1499,6 +1537,7 @@ int sceIoGetUID(int fd)
 
 int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceUID id = fd;
     if (fd < 0)
         goto error;
@@ -1574,6 +1613,7 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
 // 3114
 int alloc_iob(SceIoIob **outIob, int arg1)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (sceKernelIsIntrContext() != 0)
         return 0x80020064;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -1640,6 +1680,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
 // 32B4
 int free_iob(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     iob_power_unlock(iob);
     int oldIntr = sceKernelCpuSuspendIntr();
     SceUID thId = iob->asyncThread;
@@ -1683,6 +1724,7 @@ int free_iob(SceIoIob *iob)
 // 33D0
 int init_iob(SceIoIob *iob, int devType, SceIoDeviceArg *dev, int unk, int fsNum)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (iob->userLevel < ((devType >> 24) & 0xF))
         return 0x800200D1;
     if (iob->userMode != 0 && iob->userLevel < 4)
@@ -1705,6 +1747,7 @@ int init_iob(SceIoIob *iob, int devType, SceIoDeviceArg *dev, int unk, int fsNum
 // 3444
 int iob_power_lock(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (iob->powerLocked == 0)
     {
         iob->powerLocked = 1;
@@ -1719,6 +1762,7 @@ int iob_power_lock(SceIoIob *iob)
 // 3494
 int iob_power_unlock(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (iob->powerLocked)
     {
         iob->powerLocked = 0;
@@ -1732,6 +1776,7 @@ int iob_power_unlock(SceIoIob *iob)
 
 char *parsedev(const char *dev, char *outDev, int *fsNum)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     // 35B4, 35BC
     while (*dev == ' ')
         dev++;
@@ -1763,6 +1808,7 @@ char *parsedev(const char *dev, char *outDev, int *fsNum)
 
 SceIoAlias *sub_35D0(const char *dev)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     // 36A8, 36B0
     while (*dev == ' ')
         dev++;
@@ -1795,6 +1841,7 @@ SceIoAlias *sub_35D0(const char *dev)
 
 SceIoAlias *sub_36C4(const char *name)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char buf[32];
     // 3740, 3748
     while (*name == ' ')
@@ -1811,11 +1858,13 @@ SceIoAlias *sub_36C4(const char *name)
 
 int sub_375C(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNamePtr)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return sub_3778(path, dev, fsNum, dirNamePtr, 1);
 }
 
 int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNamePtr, int userMode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char drive[32];
     if (path[0] == ' ')
     {
@@ -1934,6 +1983,7 @@ int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNameP
 // 3A70
 int strcmp_bs(const char *s1, const char *s2)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (s1 == NULL || s2 == NULL)
     {
         if (s1 == s2)
@@ -1958,6 +2008,7 @@ int strcmp_bs(const char *s1, const char *s2)
 // 3B10
 void *alloc_pathbuf()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     char *path;
     if (g_pathbufCount <= 0) {
@@ -1974,6 +2025,7 @@ void *alloc_pathbuf()
 // 3B88
 void free_pathbuf(void *ptr)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_pathbufCount < 2) {
         // 3BF4
@@ -1989,7 +2041,9 @@ int StdioInit(int, int);
 
 int IoFileMgrInit()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceSysmemUIDControlBlock *in, *out, *err;
+    dbg_init();
     g_heap = sceKernelCreateHeap(1, 0x2000, 1, "SceIofile");
     sceKernelCreateUIDtype("Iob", 0x90, IobFuncs, 0, &g_uid_type);
     g_ktls = sceKernelAllocateKTLS(4, (void*)free_cwd, 0);
@@ -2013,6 +2067,7 @@ int IoFileMgrInit()
 
 int IoFileMgrRebootBefore(void)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoDeviceList *cur = g_devList;
     // 3D7C
     while (cur != NULL)
@@ -2032,26 +2087,31 @@ int IoFileMgrRebootBefore(void)
 
 int sceIoPollAsync(SceUID fd, SceInt64 *res)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_get_async_stat(fd, res, 1, 0, "SceIoPollAsync:");
 }
 
 int sceIoWaitAsync(SceUID fd, SceInt64 *res)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_get_async_stat(fd, res, 0, 0, "SceIoWaitAsync:");
 }
 
 int sceIoWaitAsyncCB(SceUID fd, SceInt64 *res)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_get_async_stat(fd, res, 0, 1, "SceIoWaitAsyncCB:");
 }
 
 int sceIoGetAsyncStat(SceUID fd, int poll, SceInt64 *res)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_get_async_stat(fd, res, poll, 0, "");
 }
 
 int sceIoSetAsyncCallback(SceUID fd, SceUID cb, void *argp)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceSysmemUIDControlBlock *blk;
     SceIoIob *iob;
     if (sceKernelGetThreadmanIdType(cb) != 8)
@@ -2083,6 +2143,7 @@ int sceIoSetAsyncCallback(SceUID fd, SceUID cb, void *argp)
 
 int sceIoValidateFd(SceUID fd, int arg1)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     SceIoIob *iob;
     int ret = validate_fd(fd, 0, arg1, 0, &iob);
@@ -2092,16 +2153,19 @@ int sceIoValidateFd(SceUID fd, int arg1)
 
 int sceIoClose(SceUID fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_close(fd, 0, 1);
 }
 
 int sceIoCloseAsync(SceUID fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_close(fd, 1, 0);
 }
 
 SceUID sceIoOpen(const char *file, int flags, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int retAddr = pspGetRa();
     int ret;
@@ -2112,6 +2176,7 @@ SceUID sceIoOpen(const char *file, int flags, SceMode mode)
 
 SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int retAddr = pspGetRa();
     int ret;
@@ -2122,81 +2187,97 @@ SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode)
 
 int sceIoRead(SceUID fd, void *data, SceSize size)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_read(fd, data, size, 0);
 }
 
 int sceIoReadAsync(SceUID fd, void *data, SceSize size)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_read(fd, data, size, 1);
 }
 
 int sceIoWrite(SceUID fd, void *data, SceSize size)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_write(fd, data, size, 0);
 }
 
 int sceIoWriteAsync(SceUID fd, void *data, SceSize size)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_write(fd, data, size, 1);
 }
 
 SceOff sceIoLseek(SceUID fd, SceOff offset, int whence)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_lseek(fd, offset, whence, 0);
 }
 
 SceOff sceIoLseekAsync(SceUID fd, SceOff offset, int whence)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_lseek(fd, offset, whence, 1);
 }
 
 int sceIoLseek32(SceUID fd, int offset, int whence)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_lseek(fd, offset, whence, 0);
 }
 
 int sceIoLseek32Async(SceUID fd, int offset, int whence)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_lseek(fd, offset, whence, 1);
 }
 
 int sceIoIoctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_ioctl(fd, cmd, indata, inlen, outdata, outlen, 0);
 }
 
 int sceIoIoctlAsync(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return do_ioctl(fd, cmd, indata, inlen, outdata, outlen, 1);
 }
 
 int sceIoMkdir(const char *path, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return xx_dir(path, mode, 1);
 }
 
 int sceIoRmdir(const char *path)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return xx_dir(path, 0, 2);
 }
 
 int sceIoChdir(const char *path)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return xx_dir(path, 0, 0);
 }
 
 int sceIoGetstat(const char *file, SceIoStat *stat)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return xx_stat(file, stat, 0, 1);
 }
 
 int sceIoChstat(const char *file, SceIoStat *stat, int bits)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return xx_stat(file, stat, bits, 0);
 }
 
 int sceIoSync(const char *device, unsigned int unk)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int buf[4];
     buf[0] = unk;
     int oldK1 = pspShiftK1();
@@ -2211,6 +2292,7 @@ int sceIoSync(const char *device, unsigned int unk)
 
 int sceIoGetDevType(SceUID fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     int ret = validate_fd(fd, 0, 1, 0, &iob);
@@ -2222,6 +2304,7 @@ int sceIoGetDevType(SceUID fd)
 
 int sceIoGetThreadCwd(SceUID uid, char *dir, int len)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(dir, len))
         return 0x800200D3;
@@ -2247,6 +2330,7 @@ int sceIoGetThreadCwd(SceUID uid, char *dir, int len)
 
 int sceIoTerminateFd(char *drive)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drive)) {
         pspSetK1(oldK1);
@@ -2264,6 +2348,7 @@ int sceIoTerminateFd(char *drive)
 
 int sceIoAddHook(SceIoHookType *hook)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(hook)) {
         pspSetK1(oldK1);
@@ -2284,11 +2369,13 @@ int sceIoAddHook(SceIoHookType *hook)
 
 int sceIoGetIobUserLevel(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return iob->userLevel;
 }
 
 void free_cwd(void *ktls)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char *cwd = *(char**)(ktls + 0);
     if (cwd != NULL)
     {
@@ -2300,21 +2387,25 @@ void free_cwd(void *ktls)
 
 int deleted_func()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return g_deleted_error;
 }
 
 int deleted_func_close()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
 }
 
 s64 deleted_func_offt()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return g_deleted_error;
 }
 
 int create_async_thread(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int ret;
     iob->unk050 = 0;
     int prio = iob->asyncPrio;
@@ -2361,6 +2452,7 @@ int create_async_thread(SceIoIob *iob)
 
 int do_get_async_stat(SceUID fd, SceInt64 *res, int poll, int cb, char *func)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (sceKernelGetCompiledSdkVersion() >= 0x05070000 && res == NULL)
@@ -2437,6 +2529,7 @@ error:
 
 int do_close(SceUID fd, int async, int remove)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     int sdk = sceKernelGetCompiledSdkVersion();
@@ -2544,6 +2637,7 @@ int do_close(SceUID fd, int async, int remove)
 // 4C04
 int do_open(const char *path, int flags, SceMode mode, int async, int retAddr, int oldK1)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     if (!pspK1PtrOk(path))
     {
@@ -2583,6 +2677,7 @@ int do_open(const char *path, int flags, SceMode mode, int async, int retAddr, i
 
 int do_read(SceUID fd, void *data, SceSize size, int async)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(data, size))
@@ -2641,6 +2736,7 @@ int do_read(SceUID fd, void *data, SceSize size, int async)
 
 int do_write(SceUID fd, const void *data, SceSize size, int async)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(data, size))
@@ -2699,6 +2795,7 @@ int do_write(SceUID fd, const void *data, SceSize size, int async)
 
 SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     s64 ret = validate_fd(fd, 0, 4, 0, &iob);
@@ -2761,6 +2858,7 @@ SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
 
 int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen, int async)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(indata, inlen) || !pspK1DynBufOk(outdata, outlen))
@@ -2829,6 +2927,7 @@ int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata
 // 5448
 int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 = mkdir, 2 = rmdir
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int ret;
     char str[32];
     SceIoDeviceArg *dev;
@@ -2922,6 +3021,7 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
 
 int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     SceIoDeviceArg *dev;
     int fsNum;
@@ -2979,6 +3079,7 @@ int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
 
 int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     SceIoDeviceArg *arg;
     int fsNum;
@@ -3013,6 +3114,7 @@ int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *
 
 int do_deldrv(SceIoDeviceArg *dev)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     SceSysmemUIDControlBlock *cur = g_uid_type->parent;
     // 59C4
@@ -3043,16 +3145,19 @@ int do_deldrv(SceIoDeviceArg *dev)
 
 int _nulldev()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
 }
 
 s64 _nulldev_offt()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
 }
 
 int _nulldev_write(SceIoIob *iob __attribute__((unused)), const char *data, int len)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (sceKernelDipsw(59) == 1) {
         // 5ADC
         sceKernelDebugWrite(0, data, len);
@@ -3062,18 +3167,21 @@ int _nulldev_write(SceIoIob *iob __attribute__((unused)), const char *data, int 
 
 int iob_do_initialize(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelCallUIDObjCommonFunction(cb, funcid, arg1, arg2, arg3, arg4, arg5, arg6);
     return cb->UID;
 }
 
 int iob_do_delete(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelCallUIDObjCommonFunction(cb, funcid, arg1, arg2, arg3, arg4, arg5, arg6);
     return 0;
 }
 
 int async_loop(SceSize args __attribute__((unused)), void *argp)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob = *(SceIoIob**)argp;
     do
     {

@@ -22,3 +22,8 @@ static inline void pspCache(char op, const void *ptr)
     asm("cache %0, 0(%1)" : : "ri" (op), "r" (ptr));
 }
 
+static inline void pspBreak(int op)
+{
+    asm("break %0" : : "ri" (op));
+}
+

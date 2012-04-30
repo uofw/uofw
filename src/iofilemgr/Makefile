@@ -4,7 +4,9 @@
 TARGET = iofilemgr
 OBJS = stdio.o iofilemgr.o
 
-LIBS = -lThreadManForUser -lThreadManForKernel -lSysclibForKernel -lSysMemUserForUser -lSysMemForKernel -lKDebugForKernel -lInterruptManagerForKernel -lsceSuspendForKernel
+DEBUG = 1
+
+LIBS = -lThreadManForKernel -lSysclibForKernel -lSysMemForKernel -lKDebugForKernel -lInterruptManagerForKernel -lsceSuspendForKernel
 
 PRX_EXPORTS=exports.exp
 

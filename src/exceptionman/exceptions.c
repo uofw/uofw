@@ -97,7 +97,6 @@ int sceKernelRegisterPriorityExceptionHandler(int exno, int prio, void (*func)()
         resumeIntr(oldIntr);
         return 0x80020032;
     }
-    int i;
     prio &= 0x3;
     SceExceptionHandler *newEx = newExcepCB();
     SceExceptionHandler *ex = ExcepManCB.hdlr1[exno];

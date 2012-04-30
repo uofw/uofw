@@ -358,7 +358,7 @@ SceGeListState sceGeDrawSync(int syncType);
  *
  * @return The stopped display list ID on success, otherwise less than zero.
  */
-int sceGeBreak(u32 resetQueue, int arg1);
+int sceGeBreak(u32 resetQueue, void *arg1);
 
 /**
  * Continues the queue execution after a sceGeBreak().

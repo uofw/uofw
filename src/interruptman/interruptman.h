@@ -89,7 +89,7 @@ typedef struct CbMap
 typedef int (*MonitorCb)(int intrNum, int subIntrNum, int, int, int, int, char);
 
 int IntrManInit();
-int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, SceIntrHandler *handler);
+//int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, SceIntrHandler *handler);
 int sceKernelSetUserModeIntrHanlerAcceptable(int intrNum, int subIntrNum, int setBit);
 int sceKernelReleaseIntrHandler(int intrNum);
 int sceKernelSetIntrLevel(int intrNum, int num);
