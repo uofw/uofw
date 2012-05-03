@@ -5,7 +5,7 @@ CPP=gcc
 CFLAGS=-Wall -Wextra -Werror
 LDFLAGS=
 TARGET=psp-build-exports
-OBJECTS=../common/sha1.o psp-build-exports.o
+OBJECTS= ..\common\sha1.o psp-build-exports.o
 
 all: $(TARGET)
 

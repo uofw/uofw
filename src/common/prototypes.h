@@ -1,11 +1,26 @@
 /* This file is temporary: all the prototypes will be in the modules' headers */
 
+#include <pspdisplay.h>
+#include <pspinit.h>
 #include <pspintrman.h>
 #include <pspintrman_kernel.h>
+#include <pspsysevent.h>
 #include <pspsysmem.h>
+#include <pspsysmem_kernel.h>
+#include <pspsystimer.h>
 #include <pspthreadman.h>
 #include <pspthreadman_kernel.h>
 #include <psputils.h>
+
+/* Defines */
+
+/** The PSP SDK defines this as PSP_POWER_TICK_ALL. Cancels all timers. */
+#define SCE_KERNEL_POWER_TICK_DEFAULT           0 
+
+/* syscon hardware controller transfer modes. */
+#define SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ONLY    7
+#define SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ANALOG  8
+
 
 typedef struct
 {   
@@ -31,8 +46,37 @@ typedef struct SceSysmemUIDControlBlock
 typedef struct
 {
     int size;
-    void (*ops[])();
+    int (*ops[])();
 } SceKernelDeci2Ops;
+
+typedef struct _SceSysconPacket SceSysconPacket;
+
+//copied from http://holdpsp.googlecode.com/svn/trunk/sysconhk.h
+struct _SceSysconPacket {
+    u8 unk00[4]; //0 -- (0x00,0x00,0x00,0x00)
+    u8 unk04[2]; //4 -- (arg2)
+    u8 status; //6
+    u8 unk07; //7 -- (0x00)
+    u8 unk08[4]; //8 -- (0xff,0xff,0xff,0xff)
+    /** transmit data. */
+    u8 tx_cmd; //12 -- command code
+    u8 tx_len; //13 -- number of transmit bytes
+    u8 tx_data[14]; //14 -- transmit parameters
+    /** receive data. */
+    u8 rx_sts; //28 --  generic status
+    u8 rx_len; //29 --  receive length
+    u8 rx_response; //30 --  response code(tx_cmd or status code)
+    u8 rx_data[9]; //31 --  receive parameters
+    u32 unk28; //40
+    /** user callback (when finish an access?) */
+    void (*callback)(SceSysconPacket *, u32); //44
+    u32	callback_r28; //48
+    u32	callback_arg2; //52 -- arg2 of callback (arg4 of sceSycconCmdExec)
+    u8 unk38[13]; //56
+    u8 old_sts;	//69 -- old rx_sts
+    u8 cur_sts;	//70 --  current rx_sts
+    u8 unk47[33]; //71
+}; //size of SceSysconPacket: 96
 
 int sceKernelDeci2pRegisterOperations(void *op);
 void *sceKernelDeci2pReferOperations();
@@ -90,8 +134,8 @@ typedef struct
     int (*func)();
 } SceSysmemUIDLookupFunc;
 
-int sceKernelGetUIDcontrolBlockWithType(SceUID uid, SceSysmemUIDControlBlock *type, SceSysmemUIDControlBlock **block);
-int sceKernelGetUIDcontrolBlock(SceUID uid, SceSysmemUIDControlBlock **block);
+//int sceKernelGetUIDcontrolBlockWithType(SceUID uid, SceSysmemUIDControlBlock *type, SceSysmemUIDControlBlock **block);
+//int sceKernelGetUIDcontrolBlock(SceUID uid, SceSysmemUIDControlBlock **block);
 SceSysmemUIDControlBlock *sceKernelCreateUIDtype(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, SceSysmemUIDControlBlock **type);
 SceUID sceKernelCreateUID(SceSysmemUIDControlBlock *type, const char *name, short attr, SceSysmemUIDControlBlock **block);
 int sceKernelDeleteUID(SceUID uid);
@@ -115,6 +159,15 @@ int sceKernelPowerLock(int);
 int sceKernelPowerLockForUser(int);
 int sceKernelPowerUnlock(int);
 int sceKernelPowerUnlockForUser(int);
+int sceKernelPowerTick(int unk);
 
 int sceKernelSetInitCallback(void *, int, int);
+
+int sceKernelApplicationType();
+
+void sceSyscon_driver_B72DDFD2(int);
+int sceSyscon_driver_97765E27();
+int sceSysconCmdExecAsync(SceSysconPacket *, int, int (*)(), int);
+
+int sceSTimerSetPrscl(int timerId, int arg1, int arg2);
 
