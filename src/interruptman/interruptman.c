@@ -4,7 +4,7 @@
 
 #include "../common/common.h"
 
-#include "../exceptionman/exceptionman.h"
+#include "exceptionman.h"
 
 #include "interruptman.h"
 #include "end.h"

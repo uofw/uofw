@@ -6,7 +6,5 @@ OBJS = ctrl.o
 
 LIBS = -lSysMemForKernel -lsceSuspendForKernel -lsceSysEventForKernel -lKDebugForKernel -lInterruptManagerForKernel -lSysclibForKernel -lThreadManForKernel -lSysTimerForKernel -lInitForKernel -lsceDisplay_driver -lsceSyscon_driver
 
-PRX_EXPORTS = exports.exp
-
 include ../../lib/build.mak
 

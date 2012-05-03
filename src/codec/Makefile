@@ -4,7 +4,5 @@
 TARGET = codec
 OBJS = codec.o
 
-PRX_EXPORTS=exports.exp
-
 include ../../lib/build.mak
 

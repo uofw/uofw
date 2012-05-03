@@ -48,7 +48,6 @@ static inline int pspGetGp(void)
 
 static inline void pspSetGp(int gp)
 {
-    asm("move $zr, $gp");
     asm("move $gp, %0" : : "r" (gp));
 }
 

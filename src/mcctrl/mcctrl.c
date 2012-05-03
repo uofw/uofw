@@ -12,10 +12,9 @@
 
 /* TODO: Reverse the sceDdrdb_driver library functions in openpsid.prx.*/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <pspinit.h>
-#include "../openpsid/ddrdb.h"
+#include "../common/common.h"
+
+#include "openpsid_ddrdb.h"
 
 PSP_MODULE_INFO("sceMcctrl", 0x5006, 1, 1);
 

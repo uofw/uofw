@@ -5,16 +5,11 @@
 #include "../common/common.h"
 
 #include "excep.h"
+#include "exceptions.h"
 #include "intr.h"
 #include "nmi.h"
 
 #include "exceptionman.h"
-
-typedef struct SceExceptionHandler
-{
-    struct SceExceptionHandler *next;
-    void *cb;
-} SceExceptionHandler;
 
 typedef struct
 {
@@ -29,11 +24,6 @@ PSP_MODULE_INFO("sceExceptionManager", PSP_MODULE_NO_STOP | PSP_MODULE_SINGLE_LO
 PSP_SDK_VERSION(0x06060010);
 PSP_MODULE_BOOTSTART("ExcepManInit");
 
-void build_exectbl(void);
-SceExceptionHandler *newExcepCB(void);
-void FreeExcepCB(SceExceptionHandler *ex);
-void Allocexceppool(void);
-
 int g_0D40 = 0;
 int g_0D44 = 0;
 
@@ -47,7 +37,9 @@ char g_stackCtx[192] = {0};
 SceExceptions ExcepManCB = { { NULL }, { NULL }, NULL, NULL, { { NULL, NULL } }};
 
 int ExcepManInit(void)
-{   
+{
+    dbg_init(1, FB_NONE, FAT_BASIC);
+    dbg_printf("-- ExcepManInit()\n");
     int oldIntr = suspendIntr();
     int i;
     for (i = 0; i < 32; i++)
@@ -78,29 +70,33 @@ int ExcepManInit(void)
     // 0578
     sceKernelRegisterDefaultExceptionHandler(sub_016C);
     NmiManInit();
+    dbg_printf("-- init ended\n");
     resumeIntr(oldIntr);
     return 0;
 }
 
 int sceKernelRegisterPriorityExceptionHandler(int exno, int prio, void (*func)())
 {
+    dbg_printf("sceKernelRegisterPriorityExceptionHandler(ex = %d, prio = %d, %08x)\n", exno, prio, func);
     int oldIntr = suspendIntr();
     if (*(int*)(func) != 0)
     {
         // 06B0
         resumeIntr(oldIntr);
+        dbg_printf("(ERROR)\n");
         return 0x80020034;
     }
     if (exno < 0 || exno >= 32)
     {
         // 069C
         resumeIntr(oldIntr);
+        dbg_printf("(ERROR)\n");
         return 0x80020032;
     }
     prio &= 0x3;
     SceExceptionHandler *newEx = newExcepCB();
-    SceExceptionHandler *ex = ExcepManCB.hdlr1[exno];
-    SceExceptionHandler *lastEx = ex;
+    SceExceptionHandler *ex = ExcepManCB.hdlr2[exno];
+    SceExceptionHandler *lastEx = (SceExceptionHandler*)&ex;
     newEx->cb = (void*)(((int)func & 0xFFFFFFFC) | prio);
     // 0640
     while (ex != NULL)
@@ -116,17 +112,20 @@ int sceKernelRegisterPriorityExceptionHandler(int exno, int prio, void (*func)()
     lastEx->next = newEx;
     build_exectbl();
     resumeIntr(oldIntr);
+    dbg_printf("(end)\n");
     return 0;
 }
 
 int sceKernelRegisterDefaultExceptionHandler(void *func)
 {
     int oldIntr = suspendIntr();
+    dbg_printf("sceKernelRegisterDefaultExceptionHandler(%08x)\n", func);
     SceExceptionHandler *handler = func;
     if (handler->next != NULL || (func == sub_016C && ExcepManCB.defaultHdlr != NULL)) // 0734
     {
         // 0744
         resumeIntr(oldIntr);
+        dbg_printf("(ERROR)\n");
         return 0x80020034;
     }
     // 0700
@@ -134,19 +133,22 @@ int sceKernelRegisterDefaultExceptionHandler(void *func)
     ExcepManCB.defaultHdlr = func + 8;
     build_exectbl();
     resumeIntr(oldIntr);
+    dbg_printf("(end)\n");
     return 0;
 }
 
 int sceKernelReleaseExceptionHandler(int exno, void (*func)())
 {
+    dbg_printf("exec %s\n", __FUNCTION__);
     int oldIntr = suspendIntr();
     if (exno < 0 || exno >= 32)
     {
         // 080C
         resumeIntr(oldIntr);
+        dbg_printf("(ERROR)\n");
         return 0x80020032;
     }
-    SceExceptionHandler *lastEx = ExcepManCB.hdlr1[exno];
+    SceExceptionHandler *lastEx = ExcepManCB.hdlr2[exno];
     SceExceptionHandler *ex = lastEx->next;
     // 07A0
     while (ex != NULL)
@@ -159,6 +161,7 @@ int sceKernelReleaseExceptionHandler(int exno, void (*func)())
             FreeExcepCB(ex);
             build_exectbl();
             resumeIntr(oldIntr);
+            dbg_printf("(end)\n");
             return 0;
         }
         lastEx = ex;
@@ -166,11 +169,13 @@ int sceKernelReleaseExceptionHandler(int exno, void (*func)())
     }
     // 07C0
     resumeIntr(oldIntr);
+    dbg_printf("(ERROR)\n");
     return 0x80020033;
 }
 
 int sceKernelReleaseDefaultExceptionHandler(void (*func)())
 {
+    dbg_printf("exec %s\n", __FUNCTION__);
     int oldIntr = suspendIntr();
     void (*actualFunc)() = func + 8;
     SceExceptionHandler *releaseEx = (SceExceptionHandler*)func;
@@ -189,6 +194,7 @@ int sceKernelReleaseDefaultExceptionHandler(void (*func)())
                 releaseEx->next = 0;
                 build_exectbl();
                 resumeIntr(oldIntr);
+                dbg_printf("(end)\n");
                 return 0;
             }
             ex = nextFunc - 8;
@@ -197,6 +203,7 @@ int sceKernelReleaseDefaultExceptionHandler(void (*func)())
     }
     // 0874
     resumeIntr(oldIntr);
+    dbg_printf("(ERROR)\n");
     return 0x80020033;
 }
 
@@ -209,8 +216,10 @@ void build_exectbl(void)
         SceExceptionHandler *hdlr = ExcepManCB.hdlr2[i];
         if (hdlr != NULL)
         {  
+            dbg_printf("handler set for excep %d\n", i);
             // 08DC
             while (hdlr->next != NULL) {
+                dbg_printf("- next\n");
                 *(int*)((int)hdlr->cb & 0xFFFFFFFC) = ((int)hdlr->next->cb & 0xFFFFFFFC) + 8;
                 hdlr = hdlr->next;
             }
@@ -261,6 +270,7 @@ void FreeExcepCB(SceExceptionHandler *ex)
 void Allocexceppool(void)
 {
     ExcepManCB.curPool = &ExcepManCB.pool[0];
+    dbg_printf("Allocexceppool()\n");
     // 09F4
     int i;
     for (i = 0; i < 31; i++)
@@ -270,11 +280,13 @@ void Allocexceppool(void)
 
 int sceKernelRegisterExceptionHandler(int exno, void (*func)())
 {
+    dbg_printf("exec %s\n", __FUNCTION__);
     return sceKernelRegisterPriorityExceptionHandler(exno, 2, func);
 }
 
 SceExceptionHandler *sceKernelGetActiveDefaultExceptionHandler(void)
 {
+    dbg_printf("exec %s\n", __FUNCTION__);
     if ((void*)ExcepManCB.defaultHdlr == sub_016C)
         return NULL;
     return ExcepManCB.defaultHdlr;

@@ -9,6 +9,7 @@ typedef struct{
 	int event;
 	int sema;
 }MERpc;
+
 #define PSP_O_UNKNOWN0 0x04000000
 
 int sceMeRpcLock();
@@ -17,29 +18,6 @@ int sub_00001C30(void* data, int wait);
 int sceMeBootStart(unsigned int bootCode);
 int sceMePowerControlAvcPower(int arg0);
 
-
 extern void me_boot_code_end();
 extern void me_boot_code();
 
-extern void *memcpy(void *, void *, int);
-extern int memcmp(void *, void *, int);
-extern void* SysMemForKernel_5339A163();
-extern int SysMemForKernel_374E8E66();
-//Previous declaration was 'extern void* sceKernelMemset32(void*, int, void*);'
-extern void* sceKernelMemset32(void*, char, int);
-extern int sceSysregAvcResetEnable();
-extern int sceSysregAvcResetDisable();
-extern int sceSysregInterruptToOther();
-extern float sceSysregPllGetFrequency();
-extern unsigned int sceSysregGetTachyonVersion();
-extern int sceSysregIntrEnd();
-extern int sceDdrFlush(int);
-extern int sceKernelCreateMutex(char *, int, int, int);
-extern int sceKernelTryLockMutex(int, int);
-extern int sceKernelLockMutex(int, int, int);
-extern int sceKernelUnlockMutex(int, int);
-extern int sceKernelEnableIntr(int);
-extern void sceSysconCtrlTachyonAvcPower(int);
-extern int UtilsForKernel_6C6887EE(void*, void*, void*, void**);
-extern void sceKernelIcacheInvalidateAll();
-extern int sceWmd_driver_7A0E484C(void* , int, int*);

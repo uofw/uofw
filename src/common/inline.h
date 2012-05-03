@@ -27,3 +27,9 @@ static inline void pspBreak(int op)
     asm("break %0" : : "ri" (op));
 }
 
+static inline void pspHalt(void)
+{
+    /* The 'HALT' instruction */
+    asm(".word 0x70000000");
+}
+

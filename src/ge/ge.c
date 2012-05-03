@@ -3,9 +3,10 @@
 */
 
 #include "../common/common.h"
-#include "../interruptman/interruptman.h"
-#include "../sysmem/sysmem.h"
-#include "../sysmem/sysclib.h"
+
+#include "interruptman.h"
+#include "sysmem_sysevent.h"
+#include "sysmem_sysclib.h"
 
 #include "ge.h"
 

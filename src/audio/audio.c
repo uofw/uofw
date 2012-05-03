@@ -3,9 +3,11 @@
 */
 
 #include "../common/common.h"
-#include "../sysmem/sysmem.h"
-#include "../sysmem/sysclib.h"
-#include "../codec/codec.h"
+
+#include "codec.h"
+#include "sysmem_sysclib.h"
+#include "sysmem_sysevent.h"
+
 #include "audio.h"
 
 #include <pspsdk.h>

@@ -8,7 +8,5 @@ DEBUG = 1
 
 LIBS = -lThreadManForKernel -lSysclibForKernel -lSysMemForKernel -lKDebugForKernel -lInterruptManagerForKernel -lsceSuspendForKernel
 
-PRX_EXPORTS=exports.exp
-
 include ../../lib/build.mak
 

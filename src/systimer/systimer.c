@@ -4,7 +4,8 @@
 
 #include "../common/common.h"
 
-#include "../sysmem/sysmem.h"
+#include "sysmem_suspend_kernel.h"
+#include "sysmem_sysevent.h"
 
 #include "systimer.h"
 
@@ -51,6 +52,8 @@ int resumeSTimer();
 
 int STimerInit()
 {
+    dbg_init(1, FB_NONE, FAT_BASIC);
+    dbg_printf("called %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     // 0328
     int i;
@@ -76,6 +79,7 @@ int STimerInit()
 
 int module_reboot_before()
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     // 03F8
     int i;
@@ -90,6 +94,7 @@ int module_reboot_before()
 // 00E0
 int systimerhandler(int arg0 __attribute__((unused)), SceSysTimer *arg1, int arg2)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     if (arg1->cb == NULL)
         return -1;
     int var = arg1->hw->unk0;
@@ -115,18 +120,21 @@ int systimerhandler(int arg0 __attribute__((unused)), SceSysTimer *arg1, int arg
 // 02B0
 void _sceSTimerStopCount(SceSysTimer *arg)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     arg->hw->unk0 = arg->hw->unk256 & 0x7F7FFFFF;
 }
 
 // 02CC
 int _sceSTimerGetCount(SceSysTimer *arg)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     return (arg->hw->unk256 & 0x003FFFFF) - (arg->hw->unk4 & 0x003FFFFF);
 }
 
 // 0864
 int suspendSTimer()
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     // 088C
     int i;
     for (i = 0; i < 4; i++)
@@ -142,6 +150,7 @@ int suspendSTimer()
 // 08DC
 int resumeSTimer()
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     // 0908
     int i;
     for (i = 0; i < 4; i++)
@@ -158,6 +167,7 @@ int resumeSTimer()
 // B53534B4
 int sceSTimerSetPrscl(int timerId, int arg1, int arg2)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -181,6 +191,7 @@ int sceSTimerSetPrscl(int timerId, int arg1, int arg2)
 
 int sceSTimerAlloc()
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     if (sceKernelIsIntrContext() != 0)
         return 0x80020064;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -215,6 +226,7 @@ int sceSTimerAlloc()
 
 int sceSTimerSetHandler(int timerId, int arg1, SceSysTimerCb arg2, int arg3)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -249,6 +261,7 @@ int sceSTimerSetHandler(int timerId, int arg1, SceSysTimerCb arg2, int arg3)
 
 int sceSTimerStartCount(int timerId)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -266,6 +279,7 @@ int sceSTimerStartCount(int timerId)
 
 int sceSTimerGetCount(int timerId, int *arg1)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -277,6 +291,7 @@ int sceSTimerGetCount(int timerId, int *arg1)
 
 int sceSTimerResetCount(int timerId)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -290,6 +305,7 @@ int sceSTimerResetCount(int timerId)
 // 53231A15
 int sceSTimerSetTMCY(int timerId, int arg1)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -307,6 +323,7 @@ int sceSTimerSetTMCY(int timerId, int arg1)
 
 int sceSTimerStopCount(int timerId)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (timer->curTimer != timerId)
         return 0x80020097;
@@ -318,6 +335,7 @@ int sceSTimerStopCount(int timerId)
 
 int sceSTimerFree(int timerId)
 {
+    dbg_printf("called %s\n", __FUNCTION__);
     SceSysTimer *timer = &timers[timerId & 3];
     if (sceKernelIsIntrContext() != 0)
         return 0x80020064;

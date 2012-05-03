@@ -2,9 +2,7 @@
 # See the file COPYING for copying permission.
 
 TARGET = interruptman
-OBJS = start.o interruptman.o end.o imports.o
-
-PRX_EXPORTS=exports.exp
+OBJS = start.o interruptman.o end.o
 
 include ../../lib/build.mak
 

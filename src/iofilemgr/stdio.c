@@ -6,8 +6,8 @@
 
 #include "../common/common.h"
 
-#include "../sysmem/sysclib.h"
-#include "iofilemgr.h"
+#include "sysmem_sysclib.h"
+#include "iofilemgr_kernel.h"
 
 #define STDIN  0
 #define STDOUT 1
@@ -66,45 +66,48 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id);
 // 0000
 int StdioReInit()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     SceUID *fds[3];
     fds[0] = &g_stdin;
     fds[1] = &g_stdout;
     fds[2] = &g_stderr;
     // 0044
     int i;
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x0000FFFF;
     for (i = 0; i < 3; i++)
         *fds[i] = sceIoOpen("dummy_drv_iofile:", 3, 0x1FF);
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FF00FF;
     g_debugRead = 1;
     sceTtyProxyInit();
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FFFFFF;
     return 0;
 }
 
 // 0094
 int StdioInit()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return StdioReInit();
 }
 
 int sceKernelStdin()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return g_stdin;
 }
 
 int sceKernelStdout()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return g_stdout;
 }
 
 int sceKernelStderr()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return g_stderr;
 }
 
 int sceKernelStdoutReopen(const char *file, int flags, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (g_stdout < 0)
         return 0x80020384;
     return sceIoReopen(file, flags, mode, g_stdout);
@@ -112,6 +115,7 @@ int sceKernelStdoutReopen(const char *file, int flags, SceMode mode)
 
 int sceKernelStderrReopen(const char *file, int flags, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (g_stderr < 0)
         return 0x80020384;
     return sceIoReopen(file, flags, mode, g_stderr);
@@ -119,6 +123,7 @@ int sceKernelStderrReopen(const char *file, int flags, SceMode mode)
 
 int sceKernelStdoutReset()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int ret = stdoutReset(3, 0x1FF);
     if (ret < 0)
         return ret;
@@ -128,6 +133,7 @@ int sceKernelStdoutReset()
 
 int sceKernelStderrReset()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int ret = stdoutReset(3, 0x1FF);
     if (ret < 0)
         return ret;
@@ -138,6 +144,7 @@ int sceKernelStderrReset()
 // 019C
 int stdoutReset(int flags, SceMode mode)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char openDummy = 0;
     if (sceKernelDipsw(58) == 1 && !sceKernelDipsw(59))
         openDummy = 1;
@@ -158,6 +165,7 @@ int stdoutReset(int flags, SceMode mode)
 // 0244
 void printf_char(void *ctx, int ch)
 {   
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (ch == 0x200) {
         *(short*)(ctx + 2) = 0;
         return;
@@ -216,6 +224,7 @@ void printf_char(void *ctx, int ch)
 
 int fdprintf(int fd, const char *fmt, ...)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     va_list ap;
     char sp[168];
     va_start(ap, fmt);
@@ -228,6 +237,7 @@ int fdprintf(int fd, const char *fmt, ...)
 
 int printf(const char *fmt, ...)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     va_list ap;
     char sp[164];
     va_start(ap, fmt);
@@ -240,6 +250,7 @@ int printf(const char *fmt, ...)
 
 int fdputc(int c, int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char str[1] = {c};
     if (c == '\t')
     {
@@ -305,6 +316,7 @@ int fdputc(int c, int fd)
 
 int fdgetc(int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char buf[1];
     int ret;
     if (g_debugRead == 0) {
@@ -321,6 +333,7 @@ int fdgetc(int fd)
 
 char *fdgets(char *s, int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char *end = s + 125;
     char *curS = s;
     for (;;)
@@ -387,11 +400,13 @@ char *fdgets(char *s, int fd)
 
 int putchar(int c)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return fdputc(c, STDOUT);
 }
 
 int fdputs(const char *s, int fd)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char c;
     if (s == NULL) // 089C
         s = "<NULL>";
@@ -403,6 +418,7 @@ int fdputs(const char *s, int fd)
 
 int puts(const char *s)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     char c;
     if (s == NULL) // 089C
         s = "<NULL>";
@@ -414,45 +430,54 @@ int puts(const char *s)
 
 int getchar(void)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return fdgetc(STDIN);
 }
 
 char *gets(char *s)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return fdgets(s, STDIN);
 }
 
 int sceKernelStdioRead()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0x80020001;
 }
 
 int sceKernelStdioLseek()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0x80020001;
 }
 
 void sceKernelStdioSendChar()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
 }
 
 int sceKernelStdioWrite()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0x80020001;
 }
 
 int sceKernelStdioClose()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0x80020001;
 }
 
 int sceKernelStdioOpen()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0x80020001;
 }
 
 int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int cnt;
     int oldK1 = pspShiftK1();
     int count = 0;
@@ -485,6 +510,7 @@ int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
 
 int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int count = 0;
     int curCnt;
@@ -517,12 +543,14 @@ int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
 // 0B58
 int sceTtyProxyInit()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     sceIoAddDrv(&g_TtyDevTbl);
     return 0;
 }
 
 int sceKernelRegisterStdoutPipe(SceUID id)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int ret = _sceKernelRegisterStdPipe(STDOUT, id);
     pspSetK1(oldK1);
@@ -531,6 +559,7 @@ int sceKernelRegisterStdoutPipe(SceUID id)
 
 int sceKernelRegisterStderrPipe(SceUID id)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int ret = _sceKernelRegisterStdPipe(STDERR, id);
     pspSetK1(oldK1);
@@ -540,17 +569,20 @@ int sceKernelRegisterStderrPipe(SceUID id)
 // 0BE4
 int _sceTtyProxyDevInit(SceIoDeviceArg *dev __attribute__((unused)))
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
 }
 
 // 0BEC
 int _sceTtyProxyDevExit(SceIoDeviceArg *dev __attribute__((unused)))
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
 }
 
 int _sceTtyProxyDevOpen(SceIoIob *iob, char *file __attribute__((unused)), int flags __attribute__((unused)), SceMode mode __attribute__((unused)))
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (iob->fsNum < 3)
         return 0;
     return 0x80010006;
@@ -558,6 +590,7 @@ int _sceTtyProxyDevOpen(SceIoIob *iob, char *file __attribute__((unused)), int f
 
 int _sceTtyProxyDevClose(SceIoIob *iob)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (iob->fsNum < 3)
         return 0;
     return 0x80010006;
@@ -565,11 +598,13 @@ int _sceTtyProxyDevClose(SceIoIob *iob)
 
 SceOff _sceTtyProxyDevLseek()
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     return 0x80020323;
 }
 
 int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribute__((unused)), int inlen __attribute__((unused)), void *outdata __attribute__((unused)), int outlen __attribute__((unused)))
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (cmd != 0x00134002)
         return 0x80020324;
     int oldK1 = pspShiftK1();
@@ -585,6 +620,7 @@ int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribu
 // 0CBC
 int _sceKernelRegisterStdPipe(int fd, SceUID id)
 {
+    dbg_printf("Calling %s\n", __FUNCTION__);
     if (id < 0)
     {  
         // 0DD8
@@ -601,7 +637,7 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     }
     if (sceKernelGetThreadmanIdType(id) == 7)
         return 0x800200D2;
-    SceSysmemUIDControlBlock *blk;
+    uidControlBlock *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return 0x800200D1;
     if (pspK1IsUserMode() && (blk->parent->attribute & 2) != 0)

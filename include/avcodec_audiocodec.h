@@ -25,7 +25,13 @@ typedef struct
     int unk64;
     int unk68;
     int unk72;
-    // ...
+    int unk76;
+    int unk80;
+    int unk84;
+    int unk88;
+    int unk92;
+    int unk96;
+    int unk100;
     void *allocMem; // 104
 } SceAudiocodecCodec;
 

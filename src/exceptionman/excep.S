@@ -19,6 +19,9 @@ sub_0000:
     # get threadman exception vector?
     .globl ExceptionManagerForKernel_96D47F7E
 ExceptionManagerForKernel_96D47F7E:
+    #lui $a0, %hi(_79454858)
+    #jal dbg_printf
+    #addiu $a0, %lo(_79454858)
     lui        $v0, %hi(sub_0070)
     jr         $ra
     addiu      $v0, $v0, %lo(sub_0070)
@@ -132,6 +135,9 @@ sub_0140:
 FUCK:
     .globl ExceptionManagerForKernel_79454858
 ExceptionManagerForKernel_79454858:
+    #lui $a0, %hi(_79454858)
+    #jal dbg_printf
+    #addiu $a0, %lo(_79454858)
     li         $v0, 92
     b          loc_0000009C
     nop        
@@ -392,4 +398,16 @@ loc_000004DC:
 
 loc_000004E0:
     break      0x20000
+
+        .rdata
+        .align  2
+        .type   _96D47F7E, @object
+        .size   _96D47F7E, 10
+_96D47F7E:
+        .ascii  "hey 96D4\00A\000"
+        .align  2
+        .type   _79454858, @object
+        .size   _79454858, 10
+_79454858:
+        .ascii  "hey 7945\00A\000"
 

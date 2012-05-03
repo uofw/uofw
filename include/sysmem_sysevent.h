@@ -17,6 +17,3 @@ int sceKernelIsRegisterSysEventHandler(SceSysEventHandler* handler);
 int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler);
 SceSysEventHandler *sceKernelReferSysEventHandler(void);
 
-int sceKernelRegisterResumeHandler(int reg, int (*handler)(int unk, void *param), void *param);
-int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param);
-

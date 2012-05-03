@@ -5,9 +5,15 @@
  *  See the file COPYING for copying permission.
 */
 
-#include <pspkernel.h>
-#include <pspsysevent.h>
-#include <pspsysmem_kernel.h>
+#include <stdarg.h>
+
+#include "../common/common.h"
+
+#include "avcodec_audiocodec.h"
+#include "iofilemgr_kernel.h"
+#include "sysmem_sysevent.h"
+#include "sysmem_sysclib.h"
+
 #include "me_wrapper.h"
 
 PSP_MODULE_INFO("sceMeCodecWrapper", 0x1007, 1, 9);//I'm not sure if the versions are correct
@@ -16,7 +22,11 @@ u32 module_sdk_version = 0x06060010;
 int meStarted;
 
 MERpc meRpc;
-int interruptHandler(int a0, int SceMediaEngineRpcWait)
+
+int sceMeCore_driver_FA398D71(int cmd, ...);
+int sceMeCore_driver_635397BB(int cmd, ...);
+
+int interruptHandler(int a0 __attribute__((unused)), int SceMediaEngineRpcWait)
 {
 	sceKernelSetEventFlag(SceMediaEngineRpcWait, 1);
 	return -1;
@@ -153,7 +163,8 @@ int sub_0x1000002(int arg)
 int sub_0x1000f()
 {
 	volatile int *hwAddress = (int*)0xbfc00700;
-	while (*hwAddress != -4);
+	while (*hwAddress != -4)
+	    ;
 	if (*(int*)0xbfc00718 == 0){
 		*(int*)0xbc100070 = *(int*)0xbc100070 & (~4);//clear 3rd bit
 		sceSysregAvcResetEnable();
@@ -162,7 +173,7 @@ int sub_0x1000f()
 	return 0;
 }
 
-int eventHandler(int ev_id, char *ev_name, void *param, int *result)
+int eventHandler(int ev_id, char *ev_name __attribute__((unused)), void *param, int *result __attribute__((unused)))
 {
 	if (!meStarted)
 		return 0;
@@ -192,9 +203,9 @@ int eventHandler(int ev_id, char *ev_name, void *param, int *result)
 	return 0;
 }
 
-PspSysEventHandler SceMeRpc = {sizeof(PspSysEventHandler), "SceMeRpc", 0x01ffff00, &eventHandler, 0,0, NULL, {0,0,0,0,0,0,0,0,0}};
+SceSysEventHandler SceMeRpc = {sizeof(SceSysEventHandler), "SceMeRpc", 0x01ffff00, &eventHandler, 0,0, NULL, {0,0,0,0,0,0,0,0,0}};
 
-int module_start(int argc, char *argv[])
+int module_start(int argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
 	initRpc();
 	sceLfatfsWaitReady();
@@ -223,7 +234,7 @@ int sceMeWrapperEnd()
 	return 0;
 }	
 
-int module_reboot_phase(int argc, char *argv[])
+int module_reboot_phase(int argc, void *argp __attribute__((unused)))
 {
 	if (argc == 1)
 		sceMeWrapperEnd();
@@ -289,7 +300,7 @@ int sceMePowerControlAvcPower(int arg0)
 /**************************sceMeVideo_driver****************************/
 int sub_000011E4(u32 *arg0, int error)
 {
-	if (error == 0x80000003)
+	if (error == (int)0x80000003)
 	    return -1;
 	arg0[2] = error;
 	return (error != -8) ? -3 : -4;
@@ -297,15 +308,15 @@ int sub_000011E4(u32 *arg0, int error)
 
 int sub_00001214(u32 *arg0, int error)
 {
-	if (val == 0x80000003)
+	if (error == (int)0x80000003)
 	    return -1;
-	arg0[2] = val;
-	return (val >= 0) ? -3 : -4;
+	arg0[2] = error;
+	return (error >= 0) ? -3 : -4;
 }
 
 int sceMeVideo_driver_C441994C(int arg0, u32 *arg1)
 {
-	if (0x5100601 < arg1[0])
+	if (arg1[0] != 0x05100601)
 	    return -2;
 	if (arg1[4] == 0)
 	    return -1;
@@ -348,7 +359,7 @@ int sceMeVideo_driver_C441994C(int arg0, u32 *arg1)
 int unkVideo;
 int sceMeVideo_driver_E8CD3C75(int arg0, u32 *arg1)
 {
-	if (0x5100601 < arg1[0])
+	if (arg1[0] != 0x05100601)
 	    return -2;
 	arg1[2] = 0;
 	int intr = sceKernelCpuSuspendIntr();
@@ -390,7 +401,7 @@ int sceMeVideo_driver_E8CD3C75(int arg0, u32 *arg1)
 //decode
 int sceMeVideo_driver_8768915D(int arg0, u32 *arg1)
 {
-	if (0x5100601 < arg1[0])
+	if (arg1[0] != 0x05100601)
 	    return -2;
 	int ret;
 	arg1[2] = 0;
@@ -451,7 +462,7 @@ int sceMeVideo_driver_8768915D(int arg0, u32 *arg1)
 //Stop
 int sceMeVideo_driver_4D78330C(int arg0, u32 *arg1)
 {
-	if (0x5100601 < arg1[0])
+	if (arg1[0] != 0x05100601)
 	    return -2;
 	arg1[2] = 0;
 	int ret;
@@ -505,7 +516,7 @@ int sceMeVideo_driver_4D78330C(int arg0, u32 *arg1)
 //Delete, FinishMJPEG
 int sceMeVideo_driver_8DD56014(int arg0, u32 *arg1)
 {
-	if (0x5100601 < arg1[0])
+	if (arg1[0] != 0x05100601)
 	    return -2;
 	int ret;
 	int intr = sceKernelCpuSuspendIntr();
@@ -539,7 +550,7 @@ int sceMeVideo_driver_8DD56014(int arg0, u32 *arg1)
 //GetFrameCrop, SetMemory, ScanHeader, GetVersion, GetSEI, _893B32B1
 int sceMeVideo_driver_6D68B223(int arg0, u32 arg1, u32 *codec_buffer)
 {
-	if (0x5100601 < codec_buffer[0])
+	if (codec_buffer[0] != 0x05100601)
 	    return -2;
 	int ret;
 	switch (arg1)
@@ -634,44 +645,39 @@ int sceMeVideo_driver_21521BE5(int a0)
 }
 
 /**************************sceMeAudio_driver****************************/
-int sub_00001240(int codec, unsigned long *codec_buffer, int error)
+int sub_00001240(int codec, SceAudiocodecCodec *info, int error)
 {
-	if (error == 0x80000003 || codec < 0x1000 || codec >= 0x1006)
+	if (error == (int)0x80000003 || codec < 0x1000 || codec >= 0x1006)
 	    return -1;
 	switch (codec)
 	{
 		case 0x1000: //at3+
-			sceMeCore_driver_635397BB(106, &codec_buffer[2], codec_buffer[3]);
-			if (error>=256){
-				codec_buffer[9] = 0;
-			}
-			return error<256?-3:-4;
-		break;
+			sceMeCore_driver_635397BB(106, &info->err, info->edramAddr);
+			if (error >= 256)
+			    info->unk36 = 0;
+			return error < 256 ? -3 : -4;
+
 		case 0x1001://at3
-			sceMeCore_driver_635397BB(113, &codec_buffer[2], codec_buffer[3]);
-			if (error>=256){
-				codec_buffer[9] = 0;
-			}
-			return error<256?-3:-4;
-		break;
+			sceMeCore_driver_635397BB(113, &info->err, info->edramAddr);
+			if (error >= 256)
+			    info->unk36 = 0;
+			return error < 256 ? -3 : -4;
+
 		case 0x1002://mp3
-			codec_buffer[2] = (u32)error;
+			info->err = error;
 			return -3;
-		break;
+
 		case 0x1003://aac
-			sceMeCore_driver_635397BB(145, &codec_buffer[2], codec_buffer[3]);
-			if (error>=256){
-				codec_buffer[9] = 0;
-			}
-			return error<256?-3:-4;
-		break;
+			sceMeCore_driver_635397BB(145, &info->err, info->edramAddr);
+			if (error >= 256)
+			    info->unk36 = 0;
+			return error < 256 ? -3 : -4;
+
 		case 0x1005://wma
-			sceMeCore_driver_635397BB(230, &codec_buffer[2], codec_buffer[3]);
-			if (error<0){
-				codec_buffer[9] = 0;
-			}
-			return error>=0?-3:-4;
-		break;
+			sceMeCore_driver_635397BB(230, &info->err, info->edramAddr);
+			if (error < 0)
+			    info->unk36 = 0;
+			return error >=0 ? -3 : -4;
 	}
 	return -1;
 }
@@ -701,10 +707,10 @@ int sceMeAudio_driver_9A9E21EE(u32 codec, SceAudiocodecCodec *info) //same -310C
 			ret = sceMeCore_driver_FA398D71(140, info);
 		break;
 		case 0x1003:
-			ret = sceMeCore_driver_FA398D71(144, info->inBuf, &info->unk28, info->outBuf, &info->unk36, info->unk12);
+			ret = sceMeCore_driver_FA398D71(144, info->inBuf, &info->unk28, info->outBuf, &info->unk36, info->edramAddr);
 		break;
 		case 0x1005:
-			ret = sceMeCore_driver_FA398D71(229, info->inBuf, info->unk60, &info->unk64, info->outBuf, &info->unk36, &info->unk68, info->unk12);
+			ret = sceMeCore_driver_FA398D71(229, info->inBuf, info->unk60, &info->unk64, info->outBuf, &info->unk36, &info->unk68, info->edramAddr);
 		break;
 		default:
 			return -1;
@@ -800,7 +806,7 @@ int unk[] = {//guessed, codec_buffer[10] should be 4 or 6, got 8744 from a snd0 
 			0x00000098};
 
 //init
-int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecInit *info)
+int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecCodec *info)
 {
     if (info->unk0 != 0x05100601)
 	    return -2;
@@ -854,7 +860,7 @@ int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecInit *info)
 				info->unk52 = 2;
 		break;
 		case 0x1002://mp3
-			ret = sceMeCore_driver_635397BB(139, info->unk12);
+			ret = sceMeCore_driver_635397BB(139, info->edramAddr);
 		break;
 		case 0x1003://aac
 			switch (*(int*)&info->unk40){
@@ -898,53 +904,59 @@ int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecInit *info)
 		return sub_00001240(codec, info, ret);
 	return ret;	
 }
+
 //probably for umd(only at3/+)
-int sceMeAudio_driver_B57F033A(u32 codec, unsigned long *codec_buffer){
-	if (0x5100601 < codec_buffer[0]) return -2;
-	codec_buffer[2] = 0;
+int sceMeAudio_driver_B57F033A(u32 codec, SceAudiocodecCodec *info)
+{
+	if (info->unk0 != 0x05100601)
+	    return -1;
+	info->err = 0;
 	int ret;
-	if (codec == 0x1000){
-		ret = sceMeCore_driver_635397BB(99, &codec_buffer[13], &codec_buffer[15], &codec_buffer[16], &codec_buffer[10]);
-		if (ret >= 0){
-			codec_buffer[2] = 0;
-			if (codec_buffer[15] != -1){
+	switch (codec)
+	{
+	case 0x1000:
+		ret = sceMeCore_driver_635397BB(99, &info->unk52, &info->unk60, &info->unk64, &info->unk40);
+		if (ret >= 0)
+		{
+			info->err = 0;
+			if (info->unk60 != -1)
 				return -1;
-			}
-			codec_buffer[18] = codec_buffer[15];
-			ret = sceMeCore_driver_635397BB(103, codec_buffer[13], 1, codec_buffer[16], 1, codec_buffer[3]);
-			if (ret >= 0){
-				ret = sceMeCore_driver_635397BB(105, &codec_buffer[11], codec_buffer[3]);
-				if (ret >= 0){
-					ret = sceMeCore_driver_635397BB(100, &codec_buffer[17], codec_buffer[3]);
-					if (ret >= 0){
-						ret = sceMeCore_driver_FA398D71(104, codec_buffer[5], codec_buffer[3]);
-					}
+			info->unk72 = info->unk60;
+			ret = sceMeCore_driver_635397BB(103, info->unk52, 1, info->unk64, 1, info->edramAddr);
+			if (ret >= 0)
+			{
+				ret = sceMeCore_driver_635397BB(105, &info->unk44, info->edramAddr);
+				if (ret >= 0)
+				{
+					ret = sceMeCore_driver_635397BB(100, &info->unk68, info->edramAddr);
+					if (ret >= 0)
+						ret = sceMeCore_driver_FA398D71(104, info->unk20, info->edramAddr);
 				}
 			}
 		}
-	}
-	else if (codec == 0x1001){
-		if ((u32)(codec_buffer[10]-14) >= 2){
+		break;
+
+    case 0x1001:
+        if (*(int*)&info->unk40 < 14 || *(int*)&info->unk40 >= 16)
 			return -1;
-		}
-		codec_buffer[13] = 1;
-		codec_buffer[12] = unk[codec_buffer[10]*2+1];
-		ret = sceMeCore_driver_635397BB(115, unk[codec_buffer[10]*2], 44100, unk[codec_buffer[10]*2+1], codec_buffer[3]);
-	}
-	else{
+		info->unk52 = 1;
+		info->unk48 = unk[*(int*)&info->unk40 * 2 + 1];
+		ret = sceMeCore_driver_635397BB(115, unk[*(int*)&info->unk40 * 2], 44100, unk[*(int*)&info->unk40 * 2 + 1], info->edramAddr);
+		break;
+	
+	default:
 		return -1;
 	}
-	if (ret < 0){
-		return sub_00001240(codec, codec_buffer, ret);
-	}
+	if (ret < 0)
+		return sub_00001240(codec, info, ret);
 	return ret;
 }
 //get info?
-int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, unsigned long *codec_buffer)
+int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, SceAudiocodecCodec *info)
 {
-	if (codec_buffer[0] > 0x05100601)
+	if (info->unk0 != 0x05100601)
 		return -2;
-	codec_buffer[2] = 0;
+	info->err = 0;
 	int ret;
 	switch (arg1)
 	{
@@ -973,17 +985,17 @@ int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, unsigned long *codec_buffer)
 			break;
 		}
 		ret = sceMeCore_driver_FA398D71(index);
-		codec_buffer[1] = ret;
+		info->unk4 = ret;
 		return ret;
 	}
 	case 4: {
-		if (codec != 4096){
+		if (codec != 4096) {
 			return -1;
 		}
 		//at3+ checkneed mem
-		ret = sceMeCore_driver_635397BB(99, &codec_buffer[13], &codec_buffer[15], &codec_buffer[16], &codec_buffer[10]);
-		if (ret < 0){
-			return sub_00001240(codec, codec_buffer, ret);
+		ret = sceMeCore_driver_635397BB(99, &info->unk52, &info->unk60, &info->unk64, &info->unk40);
+		if (ret < 0) {
+			return sub_00001240(codec, info, ret);
 		}
 		return ret;
 	}
@@ -991,12 +1003,12 @@ int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, unsigned long *codec_buffer)
 		if (codec != 4098){
 			return -1;
 		}
-		ret = sceMeCore_driver_635397BB(137, codec_buffer[10], codec_buffer[3]);
-		if (ret == 0){
-			ret = sceMeCore_driver_635397BB(130, codec_buffer[6], &codec_buffer[11], &codec_buffer[14], codec_buffer[3]);
+		ret = sceMeCore_driver_635397BB(137, info->unk40, info->edramAddr);
+		if (ret == 0) {
+			ret = sceMeCore_driver_635397BB(130, info->inBuf, &info->unk44, &info->unk56, info->edramAddr);
 		}
 		if (ret < 0){
-			return sub_00001240(codec, codec_buffer, ret);
+			return sub_00001240(codec, info, ret);
 		}
 		return ret;
 	}
@@ -1004,25 +1016,36 @@ int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, unsigned long *codec_buffer)
     	return -1;
     }
 }
+
 /**************************sceMeMemory_driver****************************/
-void *sceMeMalloc(int size){
+void *sceMeMalloc(int size)
+{
 	return (void*)sceMeCore_driver_FA398D71(384, size);
 }
-void *sceMeCalloc(int num, int size){
+
+void *sceMeCalloc(int num, int size)
+{
 	return (void*)sceMeCore_driver_FA398D71(386, num, size);
 }
-void sceMeFree(void *ptr){
+
+void sceMeFree(void *ptr)
+{
 	sceMeCore_driver_FA398D71(385, ptr);
 }
 /**************************sceMeCore_driver****************************/
-int sceMeRpcLock(){
+int sceMeRpcLock()
+{
 	return sceKernelLockMutex(meRpc.mutex, 1, 0);
 }
-int sceMeRpcUnlock(){
+
+int sceMeRpcUnlock()
+{
 	return sceKernelUnlockMutex(meRpc.mutex, 1);
 }
+
 //me*img.img contains 2 sets of compressed data(except maybe sd), code and contents of main memory
-__attribute__((noreturn)) void decompressAndRunMeImage(void *data){
+__attribute__((noreturn)) void decompressAndRunMeImage(void *data)
+{
 	void *end = data;
 	int ret;
 	if (0x3fffff < ((u32)data & ~0x88000000)){
@@ -1030,31 +1053,33 @@ __attribute__((noreturn)) void decompressAndRunMeImage(void *data){
 	}
 	*(int*)0xbfc00700 = -4;
 	if (memcmp(data, "KL4E", 4) == 0){
-		ret = UtilsForKernel_6C6887EE((void*)0x88300000, (void*)((u32)data & ~0x88300000), data + 4, &end);//decompress meimg.img
+		ret = UtilsForKernel_6C6887EE((void*)0x88300000, (u32)data & ~0x88300000, data + 4, &end);//decompress meimg.img
 		if (ret >= 0){
 			sceKernelDcacheWritebackInvalidateAll()	;
 			sceKernelIcacheInvalidateAll();
 			((void (*)(void*))0x88300000)(end);
 		}
 	}
-	sceKernelMemset32(end, 0, (void*)0x88400000 - (u32)end);
+	sceKernelMemset32(end, 0, 0x88400000 - (u32)end);
 	*(int*)0xBFC00700 = -5;	
 	*(int*)0xBFC00710 = -2;
-	//dead end
-	asm volatile("haltLoop:\n"
-				 ".word 0x70000000\n"
-				 "b haltLoop\n"
-				 "nop\n");
+	pspHalt();
+	for (;;)
+	    ;
 }
-int decrypt(void *data, int size){
+
+int decrypt(void *data, int size)
+{
 	int ret, newSize;
 	ret = sceWmd_driver_7A0E484C(data, size, &newSize);
-	if (ret < 0){
+	if (ret < 0) {
 		return ret;
 	}
 	return newSize;
 }
-int sub_00001C30(void* data, int wait){
+
+int sub_00001C30(void* data, int wait)
+{
 	sceSysregMeResetEnable();
 	sceSysregMeBusClockEnable();
 	int size = (u32)me_boot_code_end - (u32)me_boot_code;
@@ -1085,7 +1110,8 @@ int sub_00001C30(void* data, int wait){
 
 int sceMeBootStart(u32 arg)
 {
-	if (arg >= 5) return 0x80000102;
+	if (arg >= 5)
+	    return 0x80000102;
 	int genArg = arg;
 	u32 tachyon = sceSysregGetTachyonVersion();
 	if (tachyon > 0x4fffff && genArg != 2) // > 01g
@@ -1128,7 +1154,7 @@ int sceMeBootStart(u32 arg)
 	sceIoClose(fd);
 	if (read != size){
 		sceMeRpcUnlock();
-		return (read<0)?read:0x80000022;
+		return (read < 0) ? read : (int)0x80000022;
 	}
 	decrypt(address, read);
 	sub_00001C30(address, 1);
@@ -1138,27 +1164,34 @@ int sceMeBootStart(u32 arg)
 	return 0;
 }
 
-int sceMeCore_driver_635397BB(int index, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7)
+int sceMeCore_driver_635397BB(int cmd, ...)
 {
+    va_list ap;
+    va_start(ap, cmd);
 	sceKernelDcacheWritebackInvalidateAll();
-	return sceMeCore_driver_FA398D71(index, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+	int ret = sceMeCore_driver_FA398D71(cmd, va_arg(ap, int), va_arg(ap, int), va_arg(ap, int), va_arg(ap, int), va_arg(ap, int), va_arg(ap, int), va_arg(ap, int), va_arg(ap, int));
+	va_end(ap);
+	return ret;
 }
 
-int sceMeCore_driver_FA398D71(int index, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7)
+int sceMeCore_driver_FA398D71(int cmd, ...)
 {
+    va_list ap;
+    va_start(ap, cmd);
 	int ret = sceKernelLockMutex(meRpc.mutex, 1, 0);
 	if (ret < 0)
 		return ret;
 	int* meTable = (int*)0xbfc00600;
-	meTable[0] = index;
-	meTable[2] = arg0;
-	meTable[3] = arg1;
-	meTable[4] = arg2;
-	meTable[5] = arg3;
-	meTable[6] = arg4;
-	meTable[7] = arg5;
-	meTable[8] = arg6;
-	meTable[9] = arg7;
+	meTable[0] = cmd;
+	meTable[2] = va_arg(ap, int);
+	meTable[3] = va_arg(ap, int);
+	meTable[4] = va_arg(ap, int);
+	meTable[5] = va_arg(ap, int);
+	meTable[6] = va_arg(ap, int);
+	meTable[7] = va_arg(ap, int);
+	meTable[8] = va_arg(ap, int);
+	meTable[9] = va_arg(ap, int);
+	va_end(ap);
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
 	sceKernelWaitEventFlag(meRpc.event, 1, PSP_EVENT_WAITCLEAR, 0, 0);

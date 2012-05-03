@@ -228,26 +228,21 @@ int pspMsInit(void)
 
   //initialize the hardware
     int i;
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x0000FFFF;
 	*((volatile int*)(0xBC100054)) |= 0x00000100;
 	*((volatile int*)(0xBC100050)) |= 0x00000400;
 	*((volatile int*)(0xBC100078)) |= 0x00000010;
 	*((volatile int*)(0xBC10004C)) &= 0xFFFFFEFF;
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FF00FF;
 
 //Kprintf("reset\n");
 
 	//reset the controller
 	IO_MEM_STICK_SYS = MSRST;
 	while(IO_MEM_STICK_SYS & MSRST);
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FFFF00;
 
 //Kprintf("check status\n");
 	ms_check_status();
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00000000;
 	ms_wait_ready();
 	ms_wait_ced();
-    for (i = 0; i < 480 * 272 * 2; i++) ((int*)0x44000000)[i] = 0x00FFFFFF;
 
 	return 0;
 }

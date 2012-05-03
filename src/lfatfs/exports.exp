@@ -1,0 +1,24 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_stop)
+PSP_EXPORT_FUNC_HASH(module_reboot_before)
+PSP_EXPORT_FUNC_HASH(module_reboot_phase)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_VAR_NID(syslib_1D4042A5, 0x1D4042A5)
+PSP_EXPORT_VAR_HASH(module_start_thread_parameter)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceLFatFs_driver, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_HASH(sceLfatfsStop)
+PSP_EXPORT_FUNC_HASH(sceLfatfsWaitReady)
+PSP_EXPORT_FUNC_NID(sceLFatFs_driver_BED8D616, 0xBED8D616)
+PSP_EXPORT_FUNC_NID(sceLFatFs_driver_F1FBA85F, 0xF1FBA85F)
+PSP_EXPORT_FUNC_NID(sceLFatFs_driver_F28896C0, 0xF28896C0)
+PSP_EXPORT_VAR_NID(sceLFatFs_driver_E63DDEB5, 0xE63DDEB5)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

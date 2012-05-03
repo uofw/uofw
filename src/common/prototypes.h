@@ -4,10 +4,8 @@
 #include <pspinit.h>
 #include <pspintrman.h>
 #include <pspintrman_kernel.h>
-#include <pspsysevent.h>
 #include <pspsysmem.h>
 #include <pspsysmem_kernel.h>
-#include <pspsystimer.h>
 #include <pspthreadman.h>
 #include <pspthreadman_kernel.h>
 #include <psputils.h>
@@ -119,6 +117,26 @@ int sceSysregAwResetDisable(void);
 
 int sceSysregSetMasterPriv(int, int);
 int sceSysregSetAwEdramSize(int);
+int sceSysregIntrEnd(void);
+int sceSysregInterruptToOther(void);
+
+int sceSysregMeResetEnable(void);
+int sceSysregMeResetDisable(void);
+
+int sceSysregMeBusClockEnable(void);
+int sceSysregMeBusClockDisable(void);
+
+int sceSysregAvcResetEnable(void);
+int sceSysregAvcResetDisable(void);
+
+int sceSysregPllGetFrequency(void);
+
+int sceSysregGetTachyonVersion(void);
+
+int sceSysregVmeResetEnable(void);
+int sceSysregVmeResetDisable(void);
+
+int sceSysconCtrlTachyonAvcPower(int);
 
 int DmacManForKernel_E18A93A5(void*, void*);
 
@@ -134,17 +152,16 @@ typedef struct
     int (*func)();
 } SceSysmemUIDLookupFunc;
 
-//int sceKernelGetUIDcontrolBlockWithType(SceUID uid, SceSysmemUIDControlBlock *type, SceSysmemUIDControlBlock **block);
-//int sceKernelGetUIDcontrolBlock(SceUID uid, SceSysmemUIDControlBlock **block);
-SceSysmemUIDControlBlock *sceKernelCreateUIDtype(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, SceSysmemUIDControlBlock **type);
-SceUID sceKernelCreateUID(SceSysmemUIDControlBlock *type, const char *name, short attr, SceSysmemUIDControlBlock **block);
+uidControlBlock *sceKernelCreateUIDtype(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, uidControlBlock **type);
+SceUID sceKernelCreateUID(uidControlBlock *type, const char *name, short attr, uidControlBlock **block);
 int sceKernelDeleteUID(SceUID uid);
-int sceKernelCallUIDObjCommonFunction(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
+int sceKernelCallUIDObjCommonFunction(uidControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
 
 void *sceKernelGetUsersystemLibWork(void);
 void *sceKernelGetGameInfo(void);
 void *sceKernelGetAWeDramSaveAddr(void);
-int sceSysregGetTachyonVersion(void);
+int sceKernelGetMEeDramSaveAddr(void);
+int sceKernelGetMEeDramSaveSize(void);
 
 void Kprintf(const char *format, ...);
 int sceKernelGetUserLevel(void);
@@ -155,6 +172,12 @@ int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugRead(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugEcho(void);
 
+int UtilsForKernel_6C6887EE(void *outBuf, int outSize, void *inBuf, void **end);
+
+void *sceKernelMemset32(void *buf, int c, int size);
+
+int sceWmd_driver_7A0E484C(void *data, int inSize, int *outSize);
+
 int sceKernelPowerLock(int);
 int sceKernelPowerLockForUser(int);
 int sceKernelPowerUnlock(int);
@@ -162,6 +185,13 @@ int sceKernelPowerUnlockForUser(int);
 int sceKernelPowerTick(int unk);
 
 int sceKernelSetInitCallback(void *, int, int);
+
+int sceKernelCreateMutex(char *, int, int, int);
+int sceKernelTryLockMutex(int, int);
+int sceKernelLockMutex(int, int, int);
+int sceKernelUnlockMutex(int, int);
+
+int sceLfatfsWaitReady(void);
 
 int sceKernelApplicationType();
 

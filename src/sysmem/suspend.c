@@ -158,7 +158,7 @@ int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *pa
     return 0;
 }
 
-int scekernelDispatchSuspendHandlers(int unk)
+int sceKernelDispatchSuspendHandlers(int unk)
 {
     int oldGp = pspGetGp();
     SceSuspendHandler *cur = &g_suspendHandlers[0];

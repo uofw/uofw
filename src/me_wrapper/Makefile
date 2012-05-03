@@ -4,9 +4,7 @@
 TARGET = me_wrapper
 OBJS = init.o main.o
 
-LIBS = 
-
-PRX_EXPORTS = exports.exp
+LIBS = -lsceSysreg_driver -lUtilsForKernel -lIoFileMgrForKernel -lsceSysEventForKernel -lSysclibForKernel -lSysMemForKernel -lInterruptManagerForKernel -lThreadManForKernel -lsceDdr_driver -lsceSyscon_driver -lsceLFatFs_driver -lsceWmd_driver
 
 include ../../lib/build.mak
 

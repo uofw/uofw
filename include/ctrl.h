@@ -19,12 +19,6 @@
 #ifndef CTRL_H
 #define	CTRL_H
 
-#include "../common/common.h"
-#include "../sysmem/sysclib.h"
-#include "../systimer/systimer.h"
-#include <pspsysmem_kernel.h>
-#include <pspmodulemgr.h> 
-
 /** The callback function used by ::sceCtrlSetSpecialButtonCallback. */
 typedef void (*SceCtrlCb)(int currBtns, int lastBtns, void *opt);
 
@@ -196,28 +190,28 @@ enum pspCtrlPadButtonMaskMode {
  * 
  * @return 0 on success, otherwise < 0.
  */
-int sceCtrlInit();
+int sceCtrlInit(void);
 
 /**
  * Terminate the controller library.
  * 
  * @return 0.
  */
-int sceCtrlEnd();
+int sceCtrlEnd(void);
 
 /**
  * Suspend the controller library.
  * 
  * @return 0.
  */
-int sceCtrlSuspend();
+int sceCtrlSuspend(void);
 
 /**
  * Resume the controller library after it has been suspended.
  * 
  * @return 0.
  */
-int sceCtrlResume();
+int sceCtrlResume(void);
 
 /**
  * Enable/disable controller input.
@@ -297,7 +291,7 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback);
  * 
  * @return The number of VBlanks.
  */
-short int sceCtrlGetSuspendingExtraSamples();
+short int sceCtrlGetSuspendingExtraSamples(void);
 
 /**
  * Set a number of VBlanks for which will be waited when terminating the controller library.
@@ -307,6 +301,11 @@ short int sceCtrlGetSuspendingExtraSamples();
  * @return 0 on success, otherwise less than 0.
  */
 int sceCtrlSetSuspendingExtraSamples(short int suspendSamples);
+
+typedef struct _ctrlUnkStruct {
+    int unk1;
+    int (*func)(int);
+} ctrlUnkStruct;
 
 /**
  * Extend the 64 internal controller buffers to represent SceCtrlDataExt structures.
