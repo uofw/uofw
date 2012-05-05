@@ -86,11 +86,21 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
 {
     switch (fatMode)
     {
-    case FAT_BASIC:
-        pspSyscon_init();
-        pspSysconCtrlLED(0,1);
-        pspSysconCtrlLED(1,1);
-        pspSysconCtrlMsPower(1);
+    case FAT_HARDWARE:
+    case FAT_AFTER_SYSCON:
+        if (fatMode == FAT_HARDWARE)
+        {
+            pspSyscon_init();
+            pspSysconCtrlLED(0,1);
+            pspSysconCtrlLED(1,1);
+            pspSysconCtrlMsPower(1);
+        }
+        else
+        {
+            sceSysconCtrlLED(0,1);
+            sceSysconCtrlLED(1,1);
+            sceSysconCtrlMsPower(1);
+        }
         pspMsInit();
         fat_append = ms_append;
         if (eraseLog)
@@ -102,7 +112,7 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
         }
         break;
 
-    case FAT_AFTER_FATFS:
+    case FAT_AFTER_FATMS:
         fat_append = io_append;
         if (eraseLog)
         {
@@ -119,7 +129,7 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
 
     switch (fbMode)
     {
-    case FB_BASIC:
+    case FB_HARDWARE:
         pspDebugScreenInitEx((void*)0x44000000, PSP_DISPLAY_PIXEL_FORMAT_8888, 0);
         //pspDebugScreenPrintData("hello\n", 6);
         pspDebugScreenPutChar(0, 50, 0xFFFFFF, 'l');
@@ -147,11 +157,8 @@ void dbg_printf(const char *format, ...)
     int size = my_vsnprintf(buf, 512, format, ap);
     if (size > 0)
     {
-        if (fat_append != NULL) {
-            pspSyscon_init();
-            pspMsInit();
+        if (fat_append != NULL)
             fat_append(buf, size);
-        }
         if (fb_append != NULL)
             fb_append(buf, size);
     }

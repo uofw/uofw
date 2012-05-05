@@ -12,10 +12,11 @@ BUILD_EXPORTS = ../../utils/build-exports/psp-build-exports
 PRXGEN = psp-prxgen
 
 PRX_EXPORTS = exports.exp
+EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
 
 ifdef DEBUG
 CFLAGS += -DDEBUG
-LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForUser
+LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForUser -lsceSyscon_driver
 endif
 
 MODULE_STUBS=$(foreach mod,$(MODULES), $($(mod)_STUBS))

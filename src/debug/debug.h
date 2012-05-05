@@ -4,15 +4,16 @@
 typedef enum
 {
     FB_NONE,
-    FB_BASIC,
+    FB_HARDWARE,
     FB_AFTER_DISPLAY
 } FbMode;
 
 typedef enum
 {
     FAT_NONE,
-    FAT_BASIC,
-    FAT_AFTER_FATFS
+    FAT_HARDWARE,
+    FAT_AFTER_SYSCON,
+    FAT_AFTER_FATMS
 } FatMode;
 
 #ifdef DEBUG
