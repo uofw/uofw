@@ -2,6 +2,38 @@
    See the file COPYING for copying permission.
 */
 
+#include "common.h"
+
+enum PspInterrupts
+{
+    PSP_GPIO_INT = 4,
+    PSP_ATA_INT  = 5,
+    PSP_UMD_INT  = 6,
+    PSP_MSCM0_INT = 7,
+    PSP_WLAN_INT  = 8,
+    PSP_AUDIO_INT = 10,
+    PSP_I2C_INT   = 12,
+    PSP_SIRCS_INT = 14,
+    PSP_SYSTIMER0_INT = 15,
+    PSP_SYSTIMER1_INT = 16,
+    PSP_SYSTIMER2_INT = 17,
+    PSP_SYSTIMER3_INT = 18,
+    PSP_THREAD0_INT   = 19,
+    PSP_NAND_INT      = 20,
+    PSP_DMACPLUS_INT  = 21,
+    PSP_DMA0_INT      = 22,
+    PSP_DMA1_INT      = 23,
+    PSP_MEMLMD_INT    = 24,
+    PSP_GE_INT        = 25,
+    PSP_VBLANK_INT = 30,
+    PSP_MECODEC_INT  = 31,
+    PSP_HPREMOTE_INT = 36,
+    PSP_MSCM1_INT    = 60,
+    PSP_MSCM2_INT    = 61,
+    PSP_THREAD1_INT  = 65,
+    PSP_INTERRUPT_INT = 66
+};
+
 typedef struct
 {   
     // Handler address
@@ -88,8 +120,7 @@ typedef struct CbMap
 
 typedef int (*MonitorCb)(int intrNum, int subIntrNum, int, int, int, int, char);
 
-int IntrManInit();
-//int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, int arg3, SceIntrHandler *handler);
+int sceKernelRegisterIntrHandler(int intrNum, int arg1, void *func, void *arg3, SceIntrHandler *handler);
 int sceKernelSetUserModeIntrHanlerAcceptable(int intrNum, int subIntrNum, int setBit);
 int sceKernelReleaseIntrHandler(int intrNum);
 int sceKernelSetIntrLevel(int intrNum, int num);
@@ -109,12 +140,7 @@ int sceKernelSuspendSubIntr(int intrNum, int subIntrNum, int *arg2);
 int sceKernelResumeSubIntr(int intrNum, int subIntrNum, int arg2);
 int sceKernelIsSubInterruptOccured(int intrNum, int subIntrNum);
 int sceKernelQueryIntrHandlerInfo(int intrNum, int subIntrNum, int out);
-void *mymemset(void *dstVoid, char c, int n);
-void InterruptDisableInTable(int intrNum);
-void sub_29B0(int intrNum);
-void AllLevelInterruptDisable(int intrNum);
 int sceKernelSetPrimarySyscallHandler(int arg0, void (*arg1)());
-int IntrManTerminate();
 void sceKernelCpuEnableIntr();
 int InterruptManagerForKernel_6FCBA912(int set);
 int sceKernelClearIntrLogging(int intrNum);
@@ -132,6 +158,9 @@ u32 _sceKernelGetCpuClockCounterLow();
 int sceKernelRegisterSystemCallTable(CbMap *newMap);
 int sceKernelQuerySystemCall(int (*arg)());
 void InterruptManagerForKernel_E526B767(int arg);
-int SuspendIntc();
-int ResumeIntc();
+int sceKernelGetSyscallRA(void);
+int sceKernelCpuSuspendIntr(void);
+void sceKernelCpuResumeIntr(int intr);
+void sceKernelCpuResumeIntrWithSync(int intr);
+int sceKernelIsIntrContext(void);
 

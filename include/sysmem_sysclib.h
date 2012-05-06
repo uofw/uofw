@@ -1,4 +1,10 @@
+/* Copyright (C) 2011, 2012 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #include <stdarg.h>
+
+#include "common.h"
 
 #define CTYPE_DOWNCASE_LETTER 0x01
 #define CTYPE_UPCASE_LETTER   0x02

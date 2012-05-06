@@ -1,4 +1,4 @@
-#include "../common/common.h"
+#include "common.h"
 
 // 140F0
 SceSysEventHandler *g_sysEvHandlers;

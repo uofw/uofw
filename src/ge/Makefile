@@ -4,7 +4,9 @@
 TARGET = ge
 OBJS = stall.o ge.o
 
-LIBS = -lInterruptManagerForKernel -lThreadManForKernel -lsceSysreg_driver -lKDebugForKernel -lUtilsForKernel -lsceSysEventForKernel -lSysMemForKernel -lSysclibForKernel
+DEBUG = 1
+
+LIBS = -lInterruptManagerForKernel -lThreadManForKernel -lsceSysreg_driver -lKDebugForKernel -lUtilsForKernel -lsceSysEventForKernel -lSysMemForKernel -lSysclibForKernel -lInitForKernel
 
 include ../../lib/build.mak
 

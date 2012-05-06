@@ -14,7 +14,7 @@ void sub_0924();
 void InterruptManagerForKernel_A6978B70();
 void InterruptManagerForKernel_1373F20E();
 void sub_0CC0();
-int InterruptManagerForKernel_A0F88036();
+int sceKernelGetSyscallRA();
 void sub_0CF8();
 void loc_00000DDC();
 void sub_0EC0();

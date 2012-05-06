@@ -2,11 +2,17 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
 #include "interruptman.h"
+#include "lowio_sysreg.h"
+#include "modulemgr_init.h"
+#include "sysmem_kdebug.h"
+#include "sysmem_kernel.h"
 #include "sysmem_sysevent.h"
 #include "sysmem_sysclib.h"
+#include "sysmem_utils_kernel.h"
+#include "threadman_kernel.h"
 
 #include "ge.h"
 
@@ -203,7 +209,7 @@ int g_edramHwSize;
 int g_edramSize;
 
 // 70C8
-int g_edramAddrTrans;
+u16 g_edramAddrTrans;
 
 // 70CC
 SceGeQueue g_queue;
@@ -233,16 +239,17 @@ SceGeDisplayList g_displayLists[64];
 
 int _sceGeReset()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     sceSysregAwRegABusClockEnable();
     pspSync();
     *(int*)(0xBD500010) = 2;
     *(int*)(0xBD400000) = 1;
     // 0144
-    while ((*(int*)(0xBD400000) & 1) != 0)
+    while ((LW(0xBD400000) & 1) != 0)
         ;
     sceGeSaveContext(&g_context);
-    g_context.ctx[16] = *(int*)(0xBD400200);
+    g_context.ctx[16] = LW(0xBD400200);
     sceSysregAwResetEnable();
     sceSysregAwResetDisable();
     *(int*)(0xBD500010) = 0;
@@ -256,8 +263,8 @@ int _sceGeReset()
     *(int*)(0xBD400120) = 0;
     *(int*)(0xBD400124) = 0;
     *(int*)(0xBD400128) = 0;
-    *(int*)(0xBD400310) = *(int*)(0xBD400304);
-    *(int*)(0xBD40030C) = *(int*)(0xBD400308);
+    *(int*)(0xBD400310) = LW(0xBD400304);
+    *(int*)(0xBD40030C) = LW(0xBD400308);
     *(int*)(0xBD400308) = 7;
     *(int*)(0xBD400200) = g_context.ctx[16];
     sceSysregSetMasterPriv(64, 1);
@@ -270,13 +277,16 @@ int _sceGeReset()
 
 int sceGeInit()
 {
+    dbg_init(1, FB_NONE, FAT_HARDWARE);
+    dbg_printf("Ran %s\n", __FUNCTION__);
     sceSysregAwResetDisable();
     sceSysregAwRegABusClockEnable();
     sceSysregAwRegBBusClockEnable();
     sceSysregAwEdramBusClockEnable();
-    g_dlMask = (*(int*)(0xBD400804) ^ *(int*)(0xBD400810)
-              ^ *(int*)(0xBD400814) ^ *(int*)(0xBD400818)
-              ^ *(int*)(0xBD4008EC)) | 0x80000000;
+    g_dlMask = (LW(0xBD400804) ^ LW(0xBD400810)
+              ^ LW(0xBD400814) ^ LW(0xBD400818)
+              ^ LW(0xBD4008EC)) | 0x80000000;
+    dbg_printf("%d\n", __LINE__);
     sceGeEdramInit();
     *(int*)(0xBD400100) = 0;
     u32 *dlist = &g_context.ctx[17];
@@ -284,6 +294,7 @@ int sceGeInit()
     *(int*)(0xBD40010C) = 0;
     u32 *curDl = dlist;
     *(int*)(0xBD400110) = 0;
+    dbg_printf("%d\n", __LINE__);
     *(int*)(0xBD400114) = 0;
     *(int*)(0xBD400118) = 0;
     *(int*)(0xBD40011C) = 0;
@@ -293,6 +304,7 @@ int sceGeInit()
     *(int*)(0xBD400310) = *(int*)(0xBD400304);
     *(int*)(0xBD40030C) = *(int*)(0xBD400308);
     *(int*)(0xBD400308) = 7;
+    dbg_printf("%d\n", __LINE__);
     int i;
     for (i = 0; i < 256; i++)
     {
@@ -328,31 +340,43 @@ int sceGeInit()
     *(curDl + 1) = 0x0C000000;
     *(curDl + 0) = 0x04000000;
     sceKernelDcacheWritebackInvalidateRange(dlist, 1980);
-    *(int*)(0xBD40030C) = *(int*)(0xBD40030C);
+    dbg_printf("%d\n", __LINE__);
+    *(int*)(0xBD40030C) = LW(0xBD400308);
     *(int*)(0xBD400108) = (int)UCACHED(dlist);
     *(int*)(0xBD40010C) = 0;
+    dbg_printf("%d\n", __LINE__);
     sceSysregSetMasterPriv(64, 1);
+    dbg_printf("%d\n", __LINE__);
     *(int*)(0xBD400100) = 1;
 
     // 04B8
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
+    dbg_printf("%d\n", __LINE__);
     sceSysregSetMasterPriv(64, 0);
+    dbg_printf("%d\n", __LINE__);
     *(int*)(0xBD400100) = 0;
     *(int*)(0xBD400108) = 0;
     *(int*)(0xBD40010C) = 0;
-    *(int*)(0xBD400310) = *(int*)(0xBD400304);
+    *(int*)(0xBD400310) = LW(0xBD400304);
     *(int*)(0xBD400308) = 7;
+    dbg_printf("%d\n", __LINE__);
     sceKernelRegisterIntrHandler(25, 1, _sceGeInterrupt, 0, &g_GeIntrOpt);
+    dbg_printf("%d\n", __LINE__);
 
     // 0534
     for (i = 0; i < 16; i++)
         sceKernelSetUserModeIntrHanlerAcceptable(25, i, 1);
+    dbg_printf("%d\n", __LINE__);
 
     sceKernelEnableIntr(25);
+    dbg_printf("%d\n", __LINE__);
     sceSysregAwRegABusClockDisable();
+    dbg_printf("%d\n", __LINE__);
     sceKernelRegisterSysEventHandler(&g_GeSysEv);
+    dbg_printf("%d\n", __LINE__);
     _sceGeQueueInit();
+    dbg_printf("%d\n", __LINE__);
     void *str = (void*)sceKernelGetUsersystemLibWork();
     if (*(int*)(str + 4) == 0) {
         // 05EC
@@ -360,6 +384,7 @@ int sceGeInit()
     }
     else
         _sceGeInitCallback3(0, 0, 0);
+    dbg_printf("%d\n", __LINE__);
 
     // 059C
     sceKernelSetInitCallback(_sceGeInitCallback4, 4, 0);
@@ -371,11 +396,13 @@ int sceGeInit()
         int (*func)(SceKernelDeci2Ops*) = (void*)*(int*)(ret + 28);
         func(&g_Deci2Ops);
     }
+    dbg_printf("%d\n", __LINE__);
     return 0;
 }
 
 int sceGeEnd()
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     _sceGeQueueEnd();
     sceKernelUnregisterSysEventHandler(&g_GeSysEv);
     sceKernelDisableIntr(25);
@@ -383,7 +410,7 @@ int sceGeEnd()
     sceSysregAwRegABusClockEnable();
     *(int*)(0xBD400100) = 0;
     // 0640
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
 
     if (g_cmdList != NULL)
@@ -402,7 +429,7 @@ int sceGeEnd()
         pspSync();
         *(int*)(0xBD400100) = 1;
         // 06E0
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
     }
     sceSysregAwRegABusClockDisable();
@@ -412,6 +439,7 @@ int sceGeEnd()
 // 070C
 int _sceGeInitCallback3(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)), int arg2 __attribute__((unused)))
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     void *str = (void*)sceKernelGetUsersystemLibWork();
     void *uncached = UUNCACHED(*(int*)(str + 4));
     if (*(int*)(str + 4) != 0)
@@ -426,6 +454,7 @@ int _sceGeInitCallback3(int arg0 __attribute__((unused)), int arg1 __attribute__
 
 int _sceGeInitCallback4()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     void *str = sceKernelGetGameInfo();
     if (str != NULL)
     {
@@ -453,6 +482,7 @@ int _sceGeInitCallback4()
 
 int sceGeGetReg(u32 regId)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (regId >= 32)
         return 0x80000102;
     int oldK1 = pspShiftK1();
@@ -471,6 +501,7 @@ int sceGeGetReg(u32 regId)
 
 int sceGeSetReg(u32 regId, u32 value)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (regId >= 32)
         return 0x80000102;
     if (regId >= 5 && regId < 14 && (value & 3) != 0)
@@ -511,6 +542,7 @@ int sceGeSetReg(u32 regId, u32 value)
 
 int sceGeGetCmd(u32 cmdOff)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (cmdOff >= 0xFF)
         return 0x80000102;
     int oldK1 = pspShiftK1();
@@ -530,6 +562,7 @@ int sceGeGetCmd(u32 cmdOff)
 
 int sceGeSetCmd(u32 cmdOff, u32 cmd)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (cmdOff >= 0xFF)
         return 0x80000102;
     int oldK1 = pspShiftK1();
@@ -794,10 +827,10 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         pspSync();
         *(int*)(0xBD400100) = old100 | 1;
         // 0CC0
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
         // 0CD4
-        while ((*(int*)(0xBD400304) & 4) == 0)
+        while ((LW(0xBD400304) & 4) == 0)
             ;
         *(int*)(0xBD400108) = old108;
         *(int*)(0xBD40010C) = sp128;
@@ -818,6 +851,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
 
 int sceGeGetMtx(int id, int *mtx)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (id < 0 || id >= 12)
         return 0x80000102;
     int oldK1 = pspShiftK1();
@@ -869,6 +903,7 @@ int sceGeGetMtx(int id, int *mtx)
 
 int sceGeSetMtx(int id, int *mtx)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret;
     if (id < 0 || id >= 12)
         return 0x80000102;
@@ -903,6 +938,7 @@ int sceGeSetMtx(int id, int *mtx)
 
 int sceGeSaveContext(SceGeContext *ctx)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (((int)ctx & 3) != 0)
         return 0x80000103;
     int oldK1 = pspShiftK1();
@@ -1000,6 +1036,7 @@ int sceGeSaveContext(SceGeContext *ctx)
 
 int sceGeRestoreContext(SceGeContext *ctx)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret = 0;
     if (((int)ctx & 3) != 0)
         return 0x80000103;
@@ -1026,7 +1063,7 @@ int sceGeRestoreContext(SceGeContext *ctx)
     *(int*)(0xBD40010C) = 0;
     *(int*)(0xBD400100) = ctx->ctx[0] | 1;
     // 1B64
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
     int n304 = *(int*)(0xBD400304);
     *(int*)(0xBD400310) = (old304 ^ *(int*)(0xBD400304)) & 0xFFFFFFFA;
@@ -1054,16 +1091,19 @@ int sceGeRestoreContext(SceGeContext *ctx)
 
 int _sceGeSetRegRadr1(int arg0)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return _sceGeSetInternalReg(2, 0, arg0, 0);
 }
 
 int _sceGeSetRegRadr2(int arg0)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return _sceGeSetInternalReg(4, 0, 0, arg0);
 }
 
 int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int *cmdList = g_cmdList;
     if (cmdList == NULL)
         return 0;
@@ -1105,12 +1145,12 @@ int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3)
         *(int*)(0xBD400108) = (int)UCACHED(cmdList + 4);
         *(int*)(0xBD400100) = 1;
         // 1E4C
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
         *(int*)(0xBD400108) = (int)UCACHED(uncachedNewCmdList);
         *(int*)(0xBD400100) = 1;
         // 1E74
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
         uncachedNewCmdList[0] = oldCmd;
         if ((pspCop0StateGet(24) & 1) != 0)
@@ -1143,13 +1183,13 @@ int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3)
         *(int*)(0xBD400100) = 1;
     
         // 1F88
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
         *(int*)(0xBD400108) = (int)UCACHED(uncachedNewCmdList);
         *(int*)(0xBD400100) = 0x101;
         
         // 1FB0
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
         uncachedNewCmdList[0] = oldCmd;
         pspCache(0x1A, uncachedNewCmdList);
@@ -1168,7 +1208,7 @@ int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3)
     *(int*)(0xBD400100) = old100 | 1;
     
     // 2034
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
     *(int*)(0xBD400108) = old108;
     *(int*)(0xBD40010C) = old10C;
@@ -1190,9 +1230,10 @@ int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3)
 
 int _sceGeInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)), int arg2 __attribute__((unused)))
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
-    int attr = *(int*)(0xBD400304);
-    int unk1 = *(int*)(0xBD400004);
+    int attr = LW(0xBD400304);
+    int unk1 = LW(0xBD400004);
     if ((attr & 8) != 0)
     {
         // 2228
@@ -1220,7 +1261,7 @@ int _sceGeInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((un
         else
         {
             // 21C0
-            while ((*(int*)(0xBD400100) & 1) != 0)
+            while ((LW(0xBD400100) & 1) != 0)
                 ;
             *(int*)(0xBD400310) = 3;
             *(int*)(0xBD400308) = 3;
@@ -1236,7 +1277,7 @@ int _sceGeInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((un
         }
 
         // 213C
-        while ((*(int*)(0xBD400100) & 1) != 0)
+        while ((LW(0xBD400100) & 1) != 0)
             ;
         *(int*)(0xBD400310) = 6;
         *(int*)(0xBD400308) = 6;
@@ -1250,6 +1291,7 @@ int _sceGeInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((un
 
 int _sceGeSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), void* param, int* result __attribute__((unused)))
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     switch (ev_id)
     {
     case 0x4005:
@@ -1318,12 +1360,14 @@ int _sceGeSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), void
 
 int _sceGeModuleStart()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     sceGeInit();
     return 0;
 }
 
 int _sceGeModuleRebootPhase(int unk)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (unk == 1)
         sceGeBreak(0, NULL); // 24E4
     return 0;
@@ -1331,18 +1375,21 @@ int _sceGeModuleRebootPhase(int unk)
 
 int _sceGeModuleRebootBefore()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     sceGeEnd();
     return 0;
 }
 
 int sceGeRegisterLogHandler(void (*handler)())
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     g_logHandler = handler;
     return 0;
 }
 
 int sceGeSetGeometryClock(int opt)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int old = *(int*)(0xBD400200);
     *(int*)(0xBD400200) = opt & 1;
     return old & 1;
@@ -1350,12 +1397,14 @@ int sceGeSetGeometryClock(int opt)
 
 int _sceGeSetBaseRadr(int arg0, int arg1, int arg2)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return _sceGeSetInternalReg(7, arg0, arg1, arg2);
 }
 
 int _sceGeEdramResume()
 {
-    sceGeEdramSetAddrTranslation(g_edramAddrTrans); // u16
+    dbg_printf("Ran %s\n", __FUNCTION__);
+    sceGeEdramSetAddrTranslation(g_edramAddrTrans);
     if (g_edramHwSize == 0x00400000)
     {
         // 261C
@@ -1374,13 +1423,14 @@ int _sceGeEdramResume()
 
 int sceGeEdramInit()
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int i = 83;
     // 264C
     while ((i--) != 0)
         ;
     *(int*)(0xBD500010) = 1;
     // 2660
-    while ((*(int*)(0xBD500010) & 1) != 0)
+    while ((LW(0xBD500010) & 1) != 0)
         ;
     *(int*)(0xBD500020) = 0x6C4;
     *(int*)(0xBD500040) = 1;
@@ -1391,7 +1441,7 @@ int sceGeEdramInit()
     if ((*(int*)(0xBD500070) & 1) == 0)
     {
         // 2758
-        g_edramAddrTrans = *(int*)(0xBD500080) << 1; // u16
+        g_edramAddrTrans = *(int*)(0xBD500080) << 1;
     }
     else
         g_edramAddrTrans = 0;
@@ -1417,23 +1467,30 @@ int sceGeEdramInit()
 }
 
 int sceGeEdramSetRefreshParam(int arg0, int arg1, int arg2, int arg3)
-{   
+{
+    dbg_init(0, FB_NONE, FAT_AFTER_SYSCON);
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret = 0;
     int oldIntr = sceKernelCpuSuspendIntr();
-    int old44 = *(int*)(0xBC000044);
+    int old44 = LW(0xBC000044);
+    dbg_printf("%d\n", __LINE__);
     *(int*)(0xBC000044) &= 0xFF9BFFFF;
     if (arg0 != 0)
     {
         // 2858
         if (arg0 == 1)
         {
-            *(int*)(0xBD500000) = ((arg3 & 0xF) << 20) | (*(int*)(0xBD500000) & 0xFF0FFFFF);
+    dbg_printf("%d\n", __LINE__);
+            *(int*)(0xBD500000) = ((arg3 & 0xF) << 20) | (LW(0xBD500000) & 0xFF0FFFFF);
             *(int*)(0xBD500030) = arg2 & 0x3FF;
             *(int*)(0xBD500020) = arg1 & 0x007FFFFF;
-            if ((*(int*)(0xBD500040) & 2) == 0)
+    dbg_printf("%d\n", __LINE__);
+            if ((LW(0xBD500040) & 2) == 0)
             {
+    dbg_printf("%d\n", __LINE__);
                 // 284C
                 *(int*)(0xBD500040) = 3;
+    dbg_printf("%d\n", __LINE__);
             }
         }
         else
@@ -1441,23 +1498,34 @@ int sceGeEdramSetRefreshParam(int arg0, int arg1, int arg2, int arg3)
     }
     else
     {
-        *(int*)(0xBD500000) = ((arg3 & 0xF) << 20) | (*(int*)(0xBD500000) & 0xFF0FFFFF);
+    dbg_printf("%d\n", __LINE__);
+        *(int*)(0xBD500000) = ((arg3 & 0xF) << 20) | (LW(0xBD500000) & 0xFF0FFFFF);
         *(int*)(0xBD500030) = arg2 & 0x3FF;
         *(int*)(0xBD500020) = arg1 & 0x007FFFFF;
-        if ((*(int*)(0xBD500040) & 2) != 0) {
+    dbg_printf("%d\n", __LINE__);
+        if ((LW(0xBD500040) & 2) != 0) {
+    dbg_printf("%d\n", __LINE__);
             // 284C dup
             *(int*)(0xBD500040) = 1;
+    dbg_printf("%d\n", __LINE__);
         }
+    dbg_printf("%d\n", __LINE__);
     }
 
+    dbg_printf("%d\n", __LINE__);
     // 281C
     *(int*)(0xBC000044) = old44;
+    dbg_printf("%d\n", __LINE__);
     sceKernelCpuResumeIntrWithSync(oldIntr);
+    dbg_printf("%d\n", __LINE__);
+    dbg_init(0, FB_NONE, FAT_AFTER_FATMS);
+    dbg_printf("after fatms?\n");
     return ret;
 }
 
 int sceGeEdramSetSize(int size)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (size == 0x200000)
     {
         // 2944
@@ -1484,11 +1552,13 @@ int sceGeEdramSetSize(int size)
 
 int sceGeEdramGetAddr()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return 0x04000000;
 }
 
 int sceGeEdramSetAddrTranslation(int arg)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret;
     if (arg != 0 && arg != 0x200 && arg != 0x400 
       && arg != 0x800 && arg != 0x1000)
@@ -1525,6 +1595,7 @@ int sceGeEdramSetAddrTranslation(int arg)
 
 int _sceGeEdramSuspend()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     sceKernelDcacheWritebackInvalidateAll();
     if (g_edramHwSize == 0x00400000)
     {
@@ -1540,16 +1611,19 @@ int _sceGeEdramSuspend()
 
 int sceGeEdramGetSize()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return g_edramSize;
 }
 
 int sceGeEdramGetHwSize()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return g_edramHwSize;
 }
 
 int _sceGeQueueInit()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     // 2B10
     int i;
     for (i = 0; i < 64; i++)
@@ -1581,11 +1655,12 @@ int _sceGeQueueInit()
 
 int _sceGeQueueSuspend()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (g_queue.cur == NULL)
         return 0;
 
     // 2C5C
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
     {
         if (*(int*)(0xBD400108) == *(int*)(0xBD40010C))
         {
@@ -1617,7 +1692,7 @@ int _sceGeQueueSuspend()
             // 2ECC
             *(int*)(0xBD40010C) += 8;
             // 2EE0
-            while ((*(int*)(0xBD400100) & 1) != 0)
+            while ((LW(0xBD400100) & 1) != 0)
                 ;
             if (*(int*)(0xBD400108) == (int)g_queueSuspendInfo.unk12)
             {
@@ -1632,7 +1707,7 @@ int _sceGeQueueSuspend()
             else
             {
                 // 2F08
-                while ((*(int*)(0xBD400304) & 4) == 0)
+                while ((LW(0xBD400304) & 4) == 0)
                     ;
                 stall[0] = oldCmd1;
                 stall[1] = oldCmd2;
@@ -1647,7 +1722,7 @@ int _sceGeQueueSuspend()
     if ((*(int*)(0xBD400304) & 1) == 0 && (g_queue.cur->signal != SCE_GE_DL_SIGNAL_BREAK || g_queue.isBreak != 0)) // 2DE8
     {
         // 2CB0
-        while ((*(int*)(0xBD400304) & 4) == 0)
+        while ((LW(0xBD400304) & 4) == 0)
             ;
     }
 
@@ -1669,10 +1744,10 @@ int _sceGeQueueSuspend()
     *(int*)(0xBD40010C) = 0;
     *(int*)(0xBD400100) = 1;
     // 2D80
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
     // 2D94
-    while ((*(int*)(0xBD400304) & 4) == 0)
+    while ((LW(0xBD400304) & 4) == 0)
         ;
     *(int*)(0xBD400108) = old108;
     *(int*)(0xBD40010C) = old10C;
@@ -1683,6 +1758,7 @@ int _sceGeQueueSuspend()
 
 int _sceGeQueueResume()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (g_queue.cur == NULL)
         return 0;
     // 2F88
@@ -1691,10 +1767,10 @@ int _sceGeQueueResume()
     *(int*)(0xBD40010C) = 0;
     *(int*)(0xBD400100) = g_queueSuspendInfo.unk4 | 1;
     // 2FC0
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
     // 2FD4
-    while ((*(int*)(0xBD400304) & 4) == 0)
+    while ((LW(0xBD400304) & 4) == 0)
         ;
     sceSysregSetMasterPriv(64, 0);
     int oldFlag = g_queueSuspendInfo.unk16;
@@ -1714,6 +1790,7 @@ int _sceGeQueueResume()
 
 void _sceGeFinishInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)), int arg2 __attribute__((unused)))
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     SceGeDisplayList *dl = g_queue.curRunning;
     g_queue.isBreak = 0;
     g_queue.curRunning = NULL;
@@ -1939,6 +2016,7 @@ void _sceGeFinishInterrupt(int arg0 __attribute__((unused)), int arg1 __attribut
 
 void _sceGeListInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)), int arg2 __attribute__((unused)))
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     SceGeDisplayList *dl = g_queue.cur;
     if (dl == NULL)
     {
@@ -2217,6 +2295,7 @@ void _sceGeListInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute_
 
 int sceGeListDeQueue(int dlId)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret;
     SceGeDisplayList *dl = (SceGeDisplayList*)(dlId ^ g_dlMask);
     int oldK1 = pspShiftK1();
@@ -2283,6 +2362,7 @@ int sceGeListDeQueue(int dlId)
 
 SceGeListState sceGeListSync(int dlId, int mode)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret;
     SceGeDisplayList *dl = (SceGeDisplayList*)(dlId ^ g_dlMask);
     u32 off = dl - &g_displayLists[0];
@@ -2350,6 +2430,7 @@ SceGeListState sceGeListSync(int dlId, int mode)
  */
 SceGeListState sceGeDrawSync(int syncType)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret;
     int oldK1 = pspShiftK1();
     if (syncType == 0)
@@ -2416,6 +2497,7 @@ SceGeListState sceGeDrawSync(int syncType)
 
 int sceGeBreak(u32 resetQueue, void *arg1)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int ret;
     if (resetQueue >= 2)
         return 0x80000107;
@@ -2461,7 +2543,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             pspSync();
         
             // 4180
-            while ((*(int*)(0xBD400100) & 1) != 0)
+            while ((LW(0xBD400100) & 1) != 0)
                 ;
             if (g_queue.curRunning != NULL)
             {
@@ -2556,6 +2638,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
 
 int sceGeContinue()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int ret = 0;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -2574,7 +2657,7 @@ int sceGeContinue()
                     dl->signal = SCE_GE_DL_SIGNAL_NONE;
                     sceSysregAwRegABusClockEnable();
                     // 448C
-                    while ((*(int*)(0xBD400100) & 1) != 0)
+                    while ((LW(0xBD400100) & 1) != 0)
                         ;
                     *(int*)(0xBD400310) = 6;
                     if (dl->ctx != NULL && dl->ctxUpToDate == 0) {
@@ -2640,6 +2723,7 @@ int sceGeContinue()
 
 int sceGeSetCallback(SceGeCallbackData *cb)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(cb)
      || !pspK1PtrOk(cb->signal_func)
@@ -2686,6 +2770,7 @@ int sceGeSetCallback(SceGeCallbackData *cb)
 
 int sceGePutBreakpoint(int *inPtr, int size)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (size >= 9)
         return 0x80000104;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -2731,6 +2816,7 @@ int sceGePutBreakpoint(int *inPtr, int size)
 
 int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(outPtr, size * 8)
@@ -2769,6 +2855,7 @@ int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
 
 int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(outPtr, size * 4)
@@ -2807,6 +2894,7 @@ int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
 
 int sceGeGetList(int dlId, SceGeDisplayList *outDl, int *outFlag)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     if (!pspK1PtrOk(outDl) || !pspK1PtrOk(outFlag))
     {
@@ -2847,6 +2935,7 @@ int sceGeGetList(int dlId, SceGeDisplayList *outDl, int *outFlag)
 
 int sceGeGetStack(int stackId, SceGeStack *stack)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     SceGeDisplayList *dl = g_queue.cur;
     if (dl == NULL)
         return 0;
@@ -2888,6 +2977,7 @@ int sceGeGetStack(int stackId, SceGeStack *stack)
 
 int sceGeDebugBreak()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_bpCtrl.busy != 0)
     {
@@ -2900,7 +2990,7 @@ int sceGeDebugBreak()
     int wasEnabled = sceSysregAwRegABusClockEnable();
     *(int*)(0xBD400100) = 0;
     // 4C9C
-    while ((*(int*)(0xBD400100) & 1) != 0)
+    while ((LW(0xBD400100) & 1) != 0)
         ;
     if (!wasEnabled) {
         // 4CE4
@@ -2915,6 +3005,7 @@ int sceGeDebugBreak()
 
 int sceGeDebugContinue(int arg0)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     SceGeDisplayList *dl = g_queue.cur;
     if (dl == NULL)
         return 0;
@@ -3089,6 +3180,7 @@ int sceGeDebugContinue(int arg0)
 
 int _sceGeQueueInitCallback()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     void *str = (void*)sceKernelGetUsersystemLibWork();
     if (str != NULL)
     {
@@ -3103,6 +3195,7 @@ int _sceGeQueueInitCallback()
 
 int _sceGeQueueEnd()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     sceKernelDeleteEventFlag(g_queue.drawingEvFlagId);
     sceKernelDeleteEventFlag(g_queue.listEvFlagIds[0]);
     sceKernelDeleteEventFlag(g_queue.listEvFlagIds[1]);
@@ -3111,6 +3204,7 @@ int _sceGeQueueEnd()
 
 int _sceGeQueueStatus(void)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (g_queue.cur == NULL)
         return 0;
     return -1;
@@ -3118,20 +3212,24 @@ int _sceGeQueueStatus(void)
 
 void _sceGeErrorInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)), int arg2 __attribute__((unused)))
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
 }
 
 int sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return _sceGeListEnQueue(list, stall, cbid, arg, 0);
 }
 
 int sceGeListEnQueueHead(void *list, void *stall, int cbid, SceGeListArgs *arg)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     return _sceGeListEnQueue(list, stall, cbid, arg, 1);
 }
 
 int sceGeUnsetCallback(int cbId)
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (cbId < 0 || cbId >= 16)
     {
@@ -3152,6 +3250,7 @@ int sceGeUnsetCallback(int cbId)
 
 void _sceGeListError(u32 cmd, int err) // err: 0 = alignment problem, 1: overflow, 2: underflow
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int op = (cmd >> 16) & 0xFF;
     int *curAddr = (int*)*(int*)(0xBD400108) - 2;
     char *cmdStr;
@@ -3237,6 +3336,7 @@ void _sceGeListError(u32 cmd, int err) // err: 0 = alignment problem, 1: overflo
 
 void _sceGeWriteBp(int *list)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (g_deci2p == NULL)
         return;
     if (g_bpCtrl.clear != 0)
@@ -3310,6 +3410,7 @@ void _sceGeWriteBp(int *list)
 
 void _sceGeClearBp()
 {   
+    dbg_printf("Ran %s\n", __FUNCTION__);
     if (g_deci2p == NULL)
         return;
     if (g_bpCtrl.clear == 0)
@@ -3357,6 +3458,7 @@ void _sceGeClearBp()
 
 void _sceGeListLazyFlush()
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int *ptr = g_queue.lazySyncData;
     if (ptr != NULL && ptr[0] >= 0)
     {
@@ -3368,6 +3470,7 @@ void _sceGeListLazyFlush()
 
 int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int head)
 {
+    dbg_printf("Ran %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(list)
      || !pspK1PtrOk(stall)
@@ -3377,6 +3480,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     }
     // 5834
     int ver = sceKernelGetCompiledSdkVersion();
+    dbg_printf("%d\n", __LINE__);
     g_queue.sdkVer = ver;
     void *stack = &g_queue.stack;
     SceGeContext *ctx = NULL;
@@ -3388,6 +3492,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         stack = NULL;
         newVer = 0;
     }
+    dbg_printf("%d\n", __LINE__);
 
     // 5878
     if (arg != NULL)
@@ -3412,6 +3517,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
             }
         }
     }
+    dbg_printf("%d\n", __LINE__);
     // (58DC)
     // 58E0
     if ((((int)list | (int)stall | (int)ctx | (int)stack) & 3) != 0)
@@ -3420,15 +3526,20 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         pspSetK1(oldK1);
         return 0x80000103;
     }
+    dbg_printf("%d\n", __LINE__);
     if (g_queue.patched != 0 && pspK1IsUserMode()) { // 5C94
         g_queue.patched--;
         sceKernelDcacheWritebackAll();
     }
+    dbg_printf("%d\n", __LINE__);
 
     // 58FC
     int oldIntr = sceKernelCpuSuspendIntr();
+    dbg_printf("%d\n", __LINE__);
     _sceGeListLazyFlush();
+    dbg_printf("%d\n", __LINE__);
     SceGeDisplayList *dl = g_queue.cur;
+    dbg_printf("%d\n", __LINE__);
     // 5920
     while (dl != NULL)
     {
@@ -3453,6 +3564,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         dl = dl->next;
         // 5954
     }
+    dbg_printf("%d\n", __LINE__);
 
     // 5960
     dl = g_queue.first;

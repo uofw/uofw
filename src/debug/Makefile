@@ -4,7 +4,7 @@
 include ../../lib/common.mak
 
 PSPSDK = `psp-config --pspsdk-path`
-CFLAGS  := -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -fno-builtin -nostdlib -I$(PSPSDK)/include
+CFLAGS  := -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -fno-builtin -nostdlib -I$(PSPSDK)/include -I../../include
 LDFLAGS := -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
 TARGET = ../../lib/libdebug.a
 OBJS =	tff/diskio.o \

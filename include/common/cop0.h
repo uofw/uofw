@@ -1,3 +1,11 @@
+/* Copyright (C) 2011, 2012 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
+#ifndef COMMON_H
+# error "Only include common.h!"
+#endif
+
 #define COP0_CTRL_EPC            0
 #define COP0_CTRL_STATUS         2
 #define COP0_CTRL_CAUSE          3

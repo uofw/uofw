@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
 #define IS_JUMP(op) ((op & 0xFC000000) == 0x0C000000)
 #define JUMP(ref, addr) ((ref & 0xF0000000) | ((addr & 0x03FFFFFFF) << 2))

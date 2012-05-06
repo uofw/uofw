@@ -14,7 +14,7 @@
 #define IO_DEBUG_FILE "ms0:/" DEBUG_FILE
 
 #define DEBUG
-#include "debug.h"
+#include "common.h"
 
 typedef struct {
     int size;
@@ -154,6 +154,19 @@ void dbg_printf(const char *format, ...)
     va_list ap;
     char buf[512];
     va_start(ap, format);
+    int oldIntr;
+    asm("mfic %0, $0" : "=r" (oldIntr));
+    asm("mtic $zero, $0");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
     int size = my_vsnprintf(buf, 512, format, ap);
     if (size > 0)
     {
@@ -162,6 +175,7 @@ void dbg_printf(const char *format, ...)
         if (fb_append != NULL)
             fb_append(buf, size);
     }
+    asm("mtic %0, $0" : : "r" (oldIntr));
     va_end(ap);
 }
 

@@ -9,6 +9,8 @@
  * The audio.prx module RE'ing.
  */
 
+#include "common.h"
+
 /** @defgroup Audio Audio Module
  *
  * @{

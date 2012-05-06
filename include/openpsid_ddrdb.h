@@ -14,7 +14,7 @@
 #ifndef DDRDB_H
 #define	DDRDB_H
 
-#include "../errors.h"
+#include "common.h"
 
 #ifdef	__cplusplus
 extern "C" {

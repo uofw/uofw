@@ -10,7 +10,7 @@
  *
  */
 
-#include "../common/common.h"
+#include "common.h"
 
 #include <pspmodulemgr.h>
 #include "sysmem_sysclib.h"
@@ -299,7 +299,7 @@ int sceCtrlInit(void) {
          func = (void (*)(SceKernelDeci2Ops *))*(retPtr + 44); //0x000001B0
          func(&ctrlDeci2Ops); //0x000001D8
     }
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -336,7 +336,7 @@ int sceCtrlEnd(void) {
            sysconStatus |= ctrl.resv[0];
            sysconStatus |= ctrl.resv[1];
     }
-    return SCE_KERNEL_ERROR_OK; //0x000002A0
+    return SCE_ERROR_OK; //0x000002A0
 }
 
 /*
@@ -353,7 +353,7 @@ int sceCtrlSuspend(void) {
     else {
         sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001A70
     }
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -385,7 +385,7 @@ int sceCtrlResume(void) {
         sceSTimerStartCount(ctrl.timerID); //0x00000318
         sceSTimerSetHandler(ctrl.timerID, ctrl.btnCycle, _sceCtrlTimerIntr, 0); //0x00000330
     }
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -394,7 +394,7 @@ int sceCtrlResume(void) {
  */
 int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
     ctrl.pollMode = pollMode; //0x00001C3C
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -408,7 +408,7 @@ PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
         *mode = ctrl.samplingMode[!pspK1IsUserMode()]; //0x00001358 & 0x0000135C
     }
     pspSetK1(oldK1);
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /* Subroutine sceCtrl_1F4011E6 - Address 0x000012C8 - Aliases: sceCtrl_driver_F6E94EA3
@@ -448,7 +448,7 @@ int sceCtrlGetSamplingCycle(u32 *cycle) {
         *cycle = ctrl.btnCycle; //0x00001ACC && 0x00001AD0
     }
     pspSetK1(oldK1);
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -524,7 +524,7 @@ int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
     }
     sceKernelCpuResumeIntr(suspendFlag); //0x000017B0
     pspSetK1(oldK1); //0x000017B8
-    return SCE_KERNEL_ERROR_OK; //0x000017C0
+    return SCE_ERROR_OK; //0x000017C0
 }
 
 /*
@@ -543,7 +543,7 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) {
     ctrl.idleReset = (idlereset == -1) ? 129 : idlereset; //0x000016CC & 0x000016EC
 
     sceKernelCpuResumeIntr(suspendFlag); //0x000016E8
-    return SCE_KERNEL_ERROR_OK; //0x000016F0
+    return SCE_ERROR_OK; //0x000016F0
 }
 
 /*
@@ -572,7 +572,7 @@ int sceCtrlSetSuspendingExtraSamples(short suspendSamples) {
     nSuspendSamples = (suspendSamples == 1) ? 0 : suspendSamples; //0x00001C40 & 0x00001C4C
     ctrl.suspendSamples = nSuspendSamples;
 
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -598,7 +598,7 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3) {
     }
     ctrl.unk_array3[mode - 1] = arg3; //0x00001264
     ctrl.unk_array2[mode - 1] = arg2; //0x0000126C
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -785,7 +785,7 @@ int sceCtrlClearRapidFire(u8 slot) {
         return SCE_ERROR_INVALID_INDEX;
     }
     ctrl.rapidFire[slot].pressedButtonRange = 0; //0x00001DC8
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -830,7 +830,7 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
 
     sceKernelCpuResumeIntr(suspendFlag); //0x000019C4
     pspSetK1(oldK1); //0x000019CC
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -846,7 +846,7 @@ int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {
     ctrl.emulatedData[slot].analogYEmulation = aYEmu; //0x00001CEC
     ctrl.emulatedData[slot].intCtrlBufUpdates = bufUpdates; //0x00001CF4
 
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -861,7 +861,7 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
     ctrl.emulatedData[slot].kModeBtnEmulation = kModeBtnEmu; //0x00001CAC
     ctrl.emulatedData[slot].intCtrlBufUpdates2 = bufUpdates; //0x00001CA0
 
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /* Subroutine sceCtrl_driver_1809B9FC - Address 0x00001878
@@ -933,7 +933,7 @@ int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *o
     ctrl.buttonCallback[slot].gp = pspGetGp(); //0x00001D6C
 
     sceKernelCpuResumeIntr(suspendFlag); //0x00001D68
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -942,7 +942,7 @@ int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *o
  */
 int sceCtrl_driver_6C86AF22(int *arg0) {
     ctrl.unk_9 = (int)arg0; //0x00001AB4
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -962,7 +962,7 @@ int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4) {
     if (arg4 != NULL) { //0x00001668
         *arg4 = ctrl.unk_8; //0x00001674
     }
-    return SCE_KERNEL_ERROR_OK; //0x0000167C
+    return SCE_ERROR_OK; //0x0000167C
 }
 
 /*
@@ -975,7 +975,7 @@ int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
     ctrl.unk_6 = arg2; //0x00001C24
     ctrl.unk_7 = arg3; //0x00001C2C
 
-    return SCE_KERNEL_ERROR_OK; //0x00001C18
+    return SCE_ERROR_OK; //0x00001C18
 }
 
 /*
@@ -984,7 +984,7 @@ int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
  */
 int sceCtrl_driver_5886194C(char arg1) {
     ctrl.unk_Byte_3 = arg1; //0x00001AA4
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -992,12 +992,6 @@ int sceCtrl_driver_5886194C(char arg1) {
  * Exported in sceCtrl_driver
  */
 int sceCtrlUpdateCableTypeReq(void) {
-    ctrl.unk_Byte_0 = 1; //0x00001D9C
-    return SCE_KERNEL_ERROR_OK;
-}
-
-//0x00000364
-int _sceCtrlSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), void* param __attribute__((unused)), int* result __attribute__((unused))) {
     int sysconStatus;
     int status;
 
@@ -1008,10 +1002,10 @@ int _sceCtrlSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), vo
         sysconStatus |= ctrl.resv[0];
         sysconStatus |= ctrl.resv[1];
         if (sysconStatus == 0) { //0x00000420
-            return SCE_KERNEL_ERROR_OK;
+            return SCE_ERROR_OK;
         }
         if (ctrl.unk_1 == 0) { //0x00000430
-            return SCE_KERNEL_ERROR_OK;
+            return SCE_ERROR_OK;
         }
         return SCE_ERROR_BUSY;
     }
@@ -1019,7 +1013,7 @@ int _sceCtrlSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), vo
         if (ev_id == 0x400) { //0x00000384
             ctrl.unk_1 = ctrl.suspendSamples; //0x000003AC
         }
-        return SCE_KERNEL_ERROR_OK;
+        return SCE_ERROR_OK;
     }
     else if (ev_id == 0x400C) { //0x0000037C & 0x000003B0 -- going into sleep mode?
              status = sceCtrlSuspend();
@@ -1031,7 +1025,7 @@ int _sceCtrlSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), vo
             //sceCtrlResume already does that!
             ctrl.unk_1 = -1; //0x000003D8
         }
-        return SCE_KERNEL_ERROR_OK;
+        return SCE_ERROR_OK;
     }
 }
 
@@ -1057,7 +1051,7 @@ static SceUInt _sceCtrlDummyAlarm(void *common __attribute__((unused))) {
     sceKernelSetEventFlag(ctrl.eventFlag, 1); //0x00001E1C
     sceKernelCpuResumeIntr(suspendFlag); //0x00001E24
 
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /* sub_00000440 */
@@ -1190,7 +1184,7 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
         sceKernelSetEventFlag(ctrl.eventFlag, 1); //0x00000948
         sceKernelCpuResumeIntr(suspendFlag); //0x00000950
 
-        return SCE_KERNEL_ERROR_OK; //0x00000820
+        return SCE_ERROR_OK; //0x00000820
     }
     //TODO: Reverse of sceSysconCmdExecAsync to get structure members!
     else {
@@ -1287,7 +1281,7 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
             }
         }
         sceKernelSetEventFlag(ctrl.eventFlag, 1); //0x000007FC
-        return SCE_KERNEL_ERROR_OK;
+        return SCE_ERROR_OK;
     }
 }
 
@@ -1297,7 +1291,7 @@ static int _sceCtrlSysconCmdIntr2(void) {
     ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx_data[0] & 0x1; //0x00001E64
     ctrl.unk_Byte_7 = 0; //0x00001E6C
 
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /* sub_00000968 */
@@ -1756,7 +1750,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     ctrl.userModeData.btnMake = ctrl.userModeData.btnMake | mergedButtons; //0x00000E38
     ctrl.userModeData.readLatchCount++; //0x00000DD8 & 0x00000DF8 & 0x00000E2C
 
-    return SCE_KERNEL_ERROR_OK; //0x00000E30
+    return SCE_ERROR_OK; //0x00000E30
 }
 
 /* Subroutine sub_00001E70 - Address 0x00001E70 */
@@ -1927,7 +1921,7 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
  */
 int CtrlInit(void) {
     sceCtrlInit();
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -1936,5 +1930,5 @@ int CtrlInit(void) {
  */
 int module_reboot_before(void) {
     sceCtrlEnd();
-    return SCE_KERNEL_ERROR_OK;
+    return SCE_ERROR_OK;
 }

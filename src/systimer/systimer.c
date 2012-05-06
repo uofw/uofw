@@ -2,10 +2,10 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
+#include "interruptman.h"
 #include "sysmem_suspend_kernel.h"
-#include "sysmem_sysevent.h"
 
 #include "systimer.h"
 
@@ -52,7 +52,7 @@ int resumeSTimer();
 
 int STimerInit()
 {
-    dbg_init(1, FB_NONE, FAT_BASIC);
+    dbg_init(1, FB_NONE, FAT_HARDWARE);
     dbg_printf("called %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
     // 0328

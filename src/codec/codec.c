@@ -1,4 +1,6 @@
-#include "../common/common.h"
+#include "common.h"
+
+#include "sysmem_sysevent.h"
 
 typedef struct
 {
@@ -26,7 +28,7 @@ char g_regs[] = {
 };
 
 // 0F50
-Codec g_codec = 
+Codec g_codec =
 {
     -1, {
     0xFF68, 0xFF68, 0x0180, 0x0180,
@@ -72,11 +74,11 @@ int sub_0000(int reg, int set)
     g_codec.flags[reg] = set;
     sp[0] = (reg << 1) | (set >> 8);
     sp[1] = set;
-    return sceI2c_driver_8CBD8CCF(52, sp, 2);
+    return sceI2cMasterTransmit(52, sp, 2);
 }
 
 int sub_004C(int reg, int flag)
-{   
+{
     if (reg < 0 || reg >= 43)
         return 0x80000102;
     if (g_codec.unk97 <= 0)
@@ -87,37 +89,36 @@ int sub_004C(int reg, int flag)
 }
 
 void sub_00A0(int set)
-{   
-    if (set == 0)
-    {
+{
+    if (set == 0) {
         // 0C4
-        sceGpio_driver_310F0CCF(32);
+        sceGpioPortSet(32);
     }
     else
-        sceGpio_driver_103C3EB2(32);
+        sceGpioPortClear(32);
 }
 
 void sub_00D8(void)
-{   
-    sceGpio_driver_103C3EB2(2);
+{
+    sceGpioPortClear(2);
 }
 
 void sub_00F4(void)
 {
-    sceGpio_driver_310F0CCF(2);
+    sceGpioPortSet(2);
 }
 
 int sub_0110()
 {
-    sceGpio_driver_317D9D2C(5, 0);
+    sceGpioSetPortMode(5, 0);
     sub_00A0(0);
-    sceGpio_driver_317D9D2C(1, 0);
+    sceGpioSetPortMode(1, 0);
     sub_00D8();
     return 0;
 }
 
 void sub_0150()
-{   
+{
     int ret = 0;
     if (g_codec.unk97 != 0)
         return;
@@ -143,7 +144,7 @@ void sub_0150()
 }
 
 int sub_01FC(int arg0, int arg1, int arg2, int arg3)
-{   
+{
     int flag1 = 0;
     int flag2 = 0;
     int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
@@ -171,7 +172,7 @@ int sub_01FC(int arg0, int arg1, int arg2, int arg3)
     }
     else
     {
-        flag = 0;                                                                                                                                                                                      
+        flag = 0;
         arg1 = -1;
         arg0 = -1;
         flag2 = 1;
@@ -249,20 +250,20 @@ int sceCodecOutputEnable(int arg0, int arg1)
             return ret;
     }
     // 0460
-    return sceCodec_driver_261C6EE8(g_codec.reg);
+    return sceCodecSetOutputVolume(g_codec.reg);
 }
 
-int sceCodec_driver_261C6EE8(int reg)
+int sceCodecSetOutputVolume(int reg)
 {
     if (reg < 0 || reg >= 31)
         return 0x80000102;
     int shift = 0;
     if (g_codec.outputDisabled == 0)
         shift = reg;
-    int ret = sceCodec_driver_49C13ACF(-g_regs[g_codec.unk93 * 31 + shift]);
+    int ret = sceCodecSetHeadphoneVolume(-g_regs[g_codec.unk93 * 31 + shift]);
     if (ret >= 0)
     {
-        ret = sceCodec_driver_EACF7284(-g_regs[shift + 31]);
+        ret = sceCodecSetSpeakerVolume(-g_regs[shift + 31]);
         if (ret >= 0)
             g_codec.reg = reg;
     }
@@ -270,7 +271,7 @@ int sceCodec_driver_261C6EE8(int reg)
     return ret;
 }
 
-int sceCodec_driver_49C13ACF(int arg0)
+int sceCodecSetHeadphoneVolume(int arg0)
 {
     int flag = pspMax(arg0 + g_codec.flag2 + 121, 0);
     if (flag >= 128)
@@ -294,7 +295,7 @@ int sceCodec_driver_49C13ACF(int arg0)
     return ret;
 }
 
-int sceCodec_driver_EACF7284(int arg0)
+int sceCodecSetSpeakerVolume(int arg0)
 {
     int flag = arg0 + 121;
     if (flag >= 128)
@@ -321,14 +322,14 @@ int sceCodec_driver_EACF7284(int arg0)
     return ret;
 }
 
-int sceCodec_driver_D27707A8(char arg0)
+int sceCodecSetVolumeOffset(char arg0)
 {
     g_codec.flag2 = arg0;
-    sceCodec_driver_261C6EE8(g_codec.reg);
+    sceCodecSetOutputVolume(g_codec.reg);
     return 0;
 }
 
-int sceCodec_driver_359C2B9F(void)
+int sceCodecOutputDisable(void)
 {
     return sub_01FC(-1, -1, 0, 0);
 }
@@ -441,8 +442,8 @@ int sysEvHandler(int ev_id, char* ev_name __attribute__((unused)), void* param _
 
     case 0x4003:
         // 0AB8
-        sceGpio_driver_317D9D2C(1, 2);
-        sceGpio_driver_317D9D2C(5, 2);
+        sceGpioDisableTimerCapture(1, 2);
+        sceGpioDisableTimerCapture(5, 2);
         g_codec.unk97 = 0;
         g_codec.flag = 0;
         break;
@@ -476,12 +477,12 @@ int module_start()
     return 0;
 }
 
-int sceCodec_driver_E4456BC3(int arg0)
+int sceCodecSelectVolumeTable(int arg0)
 {
     if (arg0 != 0)
         return 0x80000102;
     g_codec.unk93 = 0;
-    sceCodec_driver_261C6EE8(g_codec.reg);
+    sceCodecSetOutputVolume(g_codec.reg);
     return 0;
 }
 

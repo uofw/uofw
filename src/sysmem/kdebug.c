@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "../common/common.h"
+#include "common.h"
 
 // 13BC4
 int (*g_kprintfHandler)(short*, const char*, va_list, int) = kprnt;

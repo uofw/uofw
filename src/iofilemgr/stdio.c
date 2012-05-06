@@ -4,10 +4,13 @@
 
 #include <stdarg.h>
 
-#include "../common/common.h"
+#include "common.h"
 
+#include "sysmem_kdebug.h"
+#include "sysmem_kernel.h"
 #include "sysmem_sysclib.h"
 #include "iofilemgr_kernel.h"
+#include "threadman_kernel.h"
 
 #define STDIN  0
 #define STDOUT 1
@@ -637,7 +640,7 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     }
     if (sceKernelGetThreadmanIdType(id) == 7)
         return 0x800200D2;
-    uidControlBlock *blk;
+    SceSysmemUIDControlBlock *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return 0x800200D1;
     if (pspK1IsUserMode() && (blk->parent->attribute & 2) != 0)

@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
 #include "excep.h"
 #include "exceptions.h"
@@ -38,7 +38,7 @@ SceExceptions ExcepManCB = { { NULL }, { NULL }, NULL, NULL, { { NULL, NULL } }}
 
 int ExcepManInit(void)
 {
-    dbg_init(1, FB_NONE, FAT_BASIC);
+    dbg_init(1, FB_NONE, FAT_HARDWARE);
     dbg_printf("-- ExcepManInit()\n");
     int oldIntr = suspendIntr();
     int i;

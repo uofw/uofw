@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
 static int g_0000C820;
 static int g_0000C83C;

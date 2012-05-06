@@ -2,307 +2,245 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
-static int
-sub_000001B8(int a0, int enable)
+int sub_01B8(int flag, int enable)
 {
-    int intr;
-    int r, t1, t2, t3;
-
-    intr = sceKernelCpuSuspendIntr();
-
-    t1 = _lw(0xBC10004C);
-    t2 = t1 & a0;
-    t3 = t1 ^ t2;
-    r = (0 < t2);
-    t1 |= a0;
-    if (enable == 0)
-        t1 = t3;
-    _sw(0xBC10004C, t1);
-
+    int oldIntr = sceKernelCpuSuspendIntr();
+    int reg = LW(0xBC10004C);
+    *(int*)(0xBC10004C) = enable ? (reg | flag) : (reg ^ (reg & flag));
     sceKernelCpuResumeIntr(intr);
-
-    return r;
+    return (reg & flag) != 0;
 }
 
 /* sceSysreg_driver_47C971B2 */
-int
-sceSysregTopResetEnable(void)
+int sceSysregTopResetEnable(void)
 {
-    return sub_000001B8(1, 1);
+    return sub_01B8(1, 1);
 }
 
 /* sceSysreg_driver_655C9CFC */
-int
-sceSysregScResetEnable(void)
+int sceSysregScResetEnable(void)
 {
-    return sub_000001B8(2, 1);
+    return sub_01B8(2, 1);
 }
 
 /* sceSysreg_driver_457FEBA9 */
-int
-sceSysregMeResetEnable(void)
+int sceSysregMeResetEnable(void)
 {
-    return sub_000001B8(4, 1);
+    return sub_01B8(4, 1);
 }
 
 /* sceSysreg_driver_48F1C4AD */
-int
-sceSysregMeResetDisable(void)
+int sceSysregMeResetDisable(void)
 {
-    return sub_000001B8(4, 0);
+    return sub_01B8(4, 0);
 }
 
 /* sceSysreg_driver_66899952 */
-int
-sceSysregAwResetEnable(void)
+int sceSysregAwResetEnable(void)
 {
-    return sub_000001B8(8, 1);
+    return sub_01B8(8, 1);
 }
 
 /* sceSysreg_driver_AEB8DBD1 */
-int
-sceSysregAwResetDisable(void)
+int sceSysregAwResetDisable(void)
 {
-    return sub_000001B8(8, 0);
+    return sub_01B8(8, 0);
 }
 
 /* sceSysreg_driver_1A27B224 */
-int
-sceSysregVmeResetEnable(void)
+int sceSysregVmeResetEnable(void)
 {
-    return sub_000001B8(0x10, 1);
+    return sub_01B8(0x10, 1);
 }
 
 /* sceSysreg_driver_B73D3619 */
-int
-sceSysregVmeResetDisable(void)
+int sceSysregVmeResetDisable(void)
 {
-    return sub_000001B8(0x10, 0);
+    return sub_01B8(0x10, 0);
 }
 
 /* sceSysreg_driver_0AE8E549 */
-int
-sceSysregAvcResetEnable(void)
+int sceSysregAvcResetEnable(void)
 {
-    return sub_000001B8(0x20, 1);
+    return sub_01B8(0x20, 1);
 }
 
 /* sceSysreg_driver_55FF02E9 */
-int
-sceSysregAvcResetDisable(void)
+int sceSysregAvcResetDisable(void)
 {
-    return sub_000001B8(0x20, 0);
+    return sub_01B8(0x20, 0);
 }
 
 /* sceSysreg_driver_30C0A141 */
-int
-sceSysregUsbResetEnable(void)
+int sceSysregUsbResetEnable(void)
 {
-    return sub_000001B8(0x40, 1);
+    return sub_01B8(0x40, 1);
 }
 
 /* sceSysreg_driver_9306F27B */
-int
-sceSysregUsbResetDisable(void)
+int sceSysregUsbResetDisable(void)
 {
-    return sub_000001B8(0x40, 0);
+    return sub_01B8(0x40, 0);
 }
 
 /* sceSysreg_driver_64C8E8DD */
-int
-sceSysregAtaResetEnable(void)
+int sceSysregAtaResetEnable(void)
 {
-    return sub_000001B8(0x80, 1);
+    return sub_01B8(0x80, 1);
 }
 
 /* sceSysreg_driver_8CFD0DCA */
-int
-sceSysregAtaResetDisable(void)
+int sceSysregAtaResetDisable(void)
 {
-    return sub_000001B8(0x80, 0);
+    return sub_01B8(0x80, 0);
 }
 
 /* sceSysreg_driver_370419AD */
-int
-sceSysregMsifResetEnable(int no)
+int sceSysregMsifResetEnable(int no)
 {
     if (no < 0 || no >= 2)
         return 0x80000102;
 
-    return sub_000001B8(0x100 << no, 1);
+    return sub_01B8(0x100 << no, 1);
 }
 
 /* sceSysreg_driver_7DD0CBEE */
-int
-sceSysregMsifResetDisable(int no)
+int sceSysregMsifResetDisable(int no)
 {
     if (no < 0 || no >= 2)
         return 0x80000102;
 
-    return sub_000001B8(0x100 << no, 0);
+    return sub_01B8(0x100 << no, 0);
 }
 
 /* sceSysreg_driver_C1A37B37 */
-int
-sceSysregKirkResetEnable(void)
+int sceSysregKirkResetEnable(void)
 {
-    return sub_000001B8(0x400, 1);
+    return sub_01B8(0x400, 1);
 }
 
 /* sceSysreg_driver_2F9B03E0 */
-int
-sceSysregKirkResetDisable(void)
+int sceSysregKirkResetDisable(void)
 {
-    return sub_000001B8(0x400, 0);
+    return sub_01B8(0x400, 0);
 }
 
 /* sceSysreg_driver_866EEB74 */
-int
-sceSysregAtahddResetEnable(void)
+int sceSysregAtahddResetEnable(void)
 {
-    return sub_000001B8(0x1000, 1);
+    return sub_01B8(0x1000, 1);
 }
 
 /* sceSysreg_driver_9EB8C49E */
-int
-sceSysregAtahddResetDisable(void)
+int sceSysregAtahddResetDisable(void)
 {
-    return sub_000001B8(0x1000, 0);
+    return sub_01B8(0x1000, 0);
 }
 
 /* sceSysreg_driver_4A433DC3 */
-int
-sceSysregUsbhostResetEnable(void)
+int sceSysregUsbhostResetEnable(void)
 {
-    return sub_000001B8(0x2000, 1);
+    return sub_01B8(0x2000, 1);
 }
 
 /* sceSysreg_driver_9B710D3C */
-int
-sceSysregUsbhostResetDisable(void)
+int sceSysregUsbhostResetDisable(void)
 {
-    return sub_000001B8(0x2000, 0);
+    return sub_01B8(0x2000, 0);
 }
 
 /* sceSysreg_driver_C6C75585 */
-int
-sceSysreg_driver_C6C75585(int no)
+int sceSysreg_driver_C6C75585(int no)
 {
     if (no < 0 || no >= 2)
         return 0x80000102;
 
-    return sub_000001B8(0x4000 << no, 1);
+    return sub_01B8(0x4000 << no, 1);
 }
 
 /* sceSysreg_driver_0995F8F6 */
-int
-sceSysreg_driver_0995F8F6(int no)
+int sceSysreg_driver_0995F8F6(int no)
 {
     if (no < 0 || no >= 2)
         return 0x80000102;
 
-    return sub_000001B8(0x4000 << no, 0);
+    return sub_01B8(0x4000 << no, 0);
 }
 
 /* sceSysreg_driver_72887197 */
-int
-sceSysreg_driver_72887197(void)
+int sceSysreg_driver_72887197(void)
 {
-    return sub_000001B8(1, 1);
+    return sub_01B8(1, 1);
 }
 
 /* sceSysreg_driver_32E02FDF */
-int
-sceSysreg_driver_32E02FDF(void)
+int sceSysreg_driver_32E02FDF(void)
 {
-    return sub_000001B8(1, 0);
+    return sub_01B8(1, 0);
 }
 
 /* sceSysreg_driver_73B3E52D */
-int
-sceSysreg_driver_73B3E52D(void)
+int sceSysreg_driver_73B3E52D(void)
 {
-    return (_lw(0xBC10004C) >> 16) & 1;
+    return (LW(0xBC10004C) >> 16) & 1;
 }
 
-static int
-sub_000004B8(int a0, int a1)
+int sub_04B8(int flag, int enable)
 {
-    int intr;
-    int r, t1, t2, t3;
-
-    intr = sceKernelCpuSuspendIntr();
-
-    t1 = _lw(0xBC100050);
-    t2 = t1 & a0;
-    t3 = t1 ^ t2;
-    r = (0 < t2);
-    t1 |= a0;
-    if (enable == 0)
-        t1 = t3;
-    _sw(0xBC100050, t1);
-
+    int oldIntr = sceKernelCpuSuspendIntr();
+    int reg = LW(0xBC100050);
+    *(int*)(0xBC100050) = enable ? (reg | flag) : (reg ^ (reg & flag));
     sceKernelCpuResumeIntr(intr);
-
-    return r;
+    return ((reg & flag) != 0);
 }
 
 /* sceSysreg_driver_38527743 */
-int
-sceSysregMeBusClockEnable(void)
+int sceSysregMeBusClockEnable(void)
 {
-    return sub_000004B8(1, 1);
+    return sub_04B8(1, 1);
 }
 
 /* sceSysreg_driver_C4C21CAB */
-int
-sceSysregMeBusClockDisable(void)
+int sceSysregMeBusClockDisable(void)
 {
-    return sub_000004B8(1, 0);
+    return sub_04B8(1, 0);
 }
 
 /* sceSysreg_driver_51571E8F */
-int
-sceSysregAwRegABusClockEnable(void)
+int sceSysregAwRegABusClockEnable(void)
 {
-    return sub_000004B8(2, 1);
+    return sub_04B8(2, 1);
 }
 
 /* sceSysreg_driver_52B74976 */
-int
-sceSysregAwRegABusClockDisable(void)
+int sceSysregAwRegABusClockDisable(void)
 {
-    return sub_000004B8(2, 0);
+    return sub_04B8(2, 0);
 }
 
 /* sceSysreg_driver_44277D0D */
-int
-sceSysregAwRegBBusClockEnable(void)
+int sceSysregAwRegBBusClockEnable(void)
 {
-    return sub_000004B8(4, 1);
+    return sub_04B8(4, 1);
 }
 
 /* sceSysreg_driver_7E1B1F28 */
-int
-sceSysregAwRegBBusClockDisable(void)
+int sceSysregAwRegBBusClockDisable(void)
 {
-    return sub_000004B8(4, 0);
+    return sub_04B8(4, 0);
 }
 
 /* sceSysreg_driver_C2E0E869 */
-int
-sceSysregAwEdramBusClockEnable(void)
+int sceSysregAwEdramBusClockEnable(void)
 {
-    return sub_000004B8(8, 1);
+    return sub_04B8(8, 1);
 }
 
 /* sceSysreg_driver_258782A3 */
-int
-sceSysregAwEdramBusClockDisable(void)
+int sceSysregAwEdramBusClockDisable(void)
 {
-    return sub_000004B8(8, 0);
+    return sub_04B8(8, 0);
 }
-
 

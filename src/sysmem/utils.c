@@ -1,4 +1,4 @@
-#include "../common/common.h"
+#include "common.h"
 
 typedef struct {
     u32 count;

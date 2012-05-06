@@ -11,6 +11,8 @@
  * Controller libraries of the SCE PSP system.
  */
 
+#include "common.h"
+
 /** @defgroup Controller Controller libraries
  *
  * @{	

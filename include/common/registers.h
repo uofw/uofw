@@ -1,3 +1,11 @@
+/* Copyright (C) 2011, 2012 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
+#ifndef COMMON_H
+# error "Only include common.h!"
+#endif
+
 static inline int pspGetK1(void)
 {
     int ret;

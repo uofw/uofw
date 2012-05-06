@@ -2,6 +2,8 @@
    See the file COPYING for copying permission.
 */
 
+#include "common.h"
+
 // interruption
 #define EXCEP_INT 1
 // load or instruction fetch exception

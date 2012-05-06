@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "../common/common.h"
+#include "common.h"
 
 #include "excep.h"
 #include "exceptionman.h"

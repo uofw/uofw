@@ -9,6 +9,8 @@
  * The ge.prx module RE'ing.
  */
 
+#include "common.h"
+
 /** @defgroup GE sceGE_Manager Module
  *
  * @{

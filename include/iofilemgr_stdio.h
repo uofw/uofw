@@ -9,6 +9,8 @@
  * The StdioForUser/Kernel libraries
  */
 
+#include "common.h"
+
 /** @defgroup Stdio StdioForUser/Kernel libraries
  *
  * @{

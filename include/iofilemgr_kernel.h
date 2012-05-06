@@ -2,6 +2,8 @@
    See the file COPYING for copying permission.
 */
 
+#include "common.h"
+
 #define PSP_O_RDONLY    0x0001
 #define PSP_O_WRONLY    0x0002
 #define PSP_O_RDWR  (PSP_O_RDONLY | PSP_O_WRONLY)
@@ -178,7 +180,6 @@ struct SceIoIob
     int retAddr; // 140
 };
 
-int sceIoGetUID(int fd);;
 int sceIoChangeAsyncPriority(int fd, int prio);
 void sceIoCloseAll();
 int sceIoReopen(const char *file, int flags, SceMode mode, int fd);

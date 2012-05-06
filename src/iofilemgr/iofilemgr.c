@@ -1,6 +1,11 @@
-#include "../common/common.h"
+#include "common.h"
 
+#include "interruptman.h"
+#include "sysmem_kernel.h"
+#include "sysmem_kdebug.h"
+#include "sysmem_suspend_kernel.h"
 #include "sysmem_sysclib.h"
+#include "threadman_kernel.h"
 
 #include "iofilemgr_kernel.h"
 #include "iofilemgr_stdio.h"
@@ -101,8 +106,8 @@ SceIoDrvFuncs _nullcon_function =
 // 6A7C
 SceIoDrv _dummycon_driver = { "dummy_drv_iofile", 0, 0x00000800, "DUMMY_DRV", &_nullcon_function };
 
-int iob_do_initialize(uidControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
-int iob_do_delete(uidControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
+int iob_do_initialize(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
+int iob_do_delete(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6);
 
 // 6A90
 SceSysmemUIDLookupFunc IobFuncs[] =
@@ -143,7 +148,7 @@ SceUID g_ktls;
 int g_iobCount;
 
 // 6B28
-uidControlBlock *g_uid_type;
+SceSysmemUIDControlBlock *g_uid_type;
 
 // 6B2C
 SceUID g_UIDs[64];
@@ -243,7 +248,7 @@ void sceIoCloseAll()
     dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
-    uidControlBlock *cur = g_uid_type->parent;
+    SceSysmemUIDControlBlock *cur = g_uid_type->parent;
     // 0F74
     while (cur != g_uid_type)
     {
@@ -461,7 +466,7 @@ SceUID sceIoDopen(const char *dirname)
     sceKernelRenameUID(sceIoGetUID(ret), dirname);
     if (pspK1IsUserMode()) {
         // 1584
-        iob->retAddr = InterruptManagerForKernel_A0F88036();
+        iob->retAddr = sceKernelGetSyscallRA();
     }
     else
         iob->retAddr = ra;
@@ -723,6 +728,18 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
 int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s\n", __FUNCTION__);
+    return 0;
     char outDev[32];
     char blkAliasName[32];
     char fsAliasName[32];
@@ -1171,7 +1188,7 @@ int sceIoGetFdList(SceUID *fds, int numFd, int *count)
     // 261C
     int stored = 0;
     int oldIntr = sceKernelCpuSuspendIntr();
-    uidControlBlock *cur = g_uid_type->parent;
+    SceSysmemUIDControlBlock *cur = g_uid_type->parent;
     int curCount = 0;
     // 2648
     while (cur != g_uid_type)
@@ -1226,13 +1243,13 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
     for (i = 0; i < 88; i++)
         ((int*)&info)[i] = 0;
     info.size = 88;
-    char *name = ((uidControlBlock*)((void*)iob - g_uid_type->size * 4))->name;
+    char *name = ((SceSysmemUIDControlBlock*)((void*)iob - g_uid_type->size * 4))->name;
     if (name != NULL) {
         // 2840
         strncpy(info.name, name, 31);
     }
     // 2750
-    info.attribute = ((uidControlBlock*)((void*)iob - g_uid_type->size * 4))->attribute;
+    info.attribute = ((SceSysmemUIDControlBlock*)((void*)iob - g_uid_type->size * 4))->attribute;
     info.unk40 = iob->unk000;
     if (iob->dev != NULL)
         info.drvName = iob->dev->drv->name;
@@ -1275,6 +1292,7 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
 int sceIoAddDrv(SceIoDrv *drv)
 {
     dbg_printf("sceIoAddDrv(): %s\n", drv->name);
+    return 0;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv))
     {
@@ -1320,6 +1338,7 @@ int sceIoAddDrv(SceIoDrv *drv)
 int sceIoDelDrv(const char *drv)
 {
     dbg_printf("sceIoDelDrv(%s)\n", drv);
+    return 0;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv)) {
         pspSetK1(oldK1);
@@ -1549,7 +1568,7 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
             goto error;
     }
     // 2EE4
-    uidControlBlock *block;
+    SceSysmemUIDControlBlock *block;
     if (sceKernelGetUIDcontrolBlockWithType(id, g_uid_type, &block) != 0)
         goto error;
     SceIoIob *iob = (void*)block + g_uid_type->size * 4;
@@ -1650,7 +1669,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
         g_iobCount++;
     }
     // 3214
-    uidControlBlock *blk;
+    SceSysmemUIDControlBlock *blk;
     int ret = sceKernelCreateUID(g_uid_type, "Iob", (pspK1IsUserMode() == 1 ? 0xFF : 0), &blk);
     if (ret == 0)
     {
@@ -1717,7 +1736,7 @@ int free_iob(SceIoIob *iob)
     if (fileId < 64)
         g_UIDs[fileId] = 0; // contains u32s
     // 3360
-    sceKernelDeleteUID(((uidControlBlock*)((void*)iob - g_uid_type->size * 4))->UID);
+    sceKernelDeleteUID(((SceSysmemUIDControlBlock*)((void*)iob - g_uid_type->size * 4))->UID);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
@@ -2042,12 +2061,13 @@ int StdioInit(int, int);
 
 int IoFileMgrInit()
 {
-    uidControlBlock *in, *out, *err;
-    dbg_init(1, FB_NONE, FAT_BASIC);
+    //SceSysmemUIDControlBlock *in, *out, *err;
+    dbg_init(1, FB_NONE, FAT_HARDWARE);
     dbg_printf("-- iofilemgr init\n");
-    g_heap = sceKernelCreateHeap(1, 0x2000, 1, "SceIofile");
-    sceKernelCreateUIDtype("Iob", 0x90, IobFuncs, 0, &g_uid_type);
-    g_ktls = sceKernelAllocateKTLS(4, (void*)free_cwd, 0);
+    //g_heap = sceKernelCreateHeap(1, 0x2000, 1, "SceIofile");
+    //sceKernelCreateUIDtype("Iob", 0x90, IobFuncs, 0, &g_uid_type);
+    //g_ktls = sceKernelAllocateKTLS(4, (void*)free_cwd, 0);
+    /*
     sceIoDelDrv("dummy_drv_iofile");
     sceIoAddDrv(&_dummycon_driver);
     StdioInit(0, 0);
@@ -2059,10 +2079,11 @@ int IoFileMgrInit()
     // 3CF8
     if (sceKernelGetUIDcontrolBlock(sceIoGetUID(sceKernelStderr()), &err) == 0)
         err->attribute |= 3;
+    */
     // 3D28
-    g_UIDs[0] = sceKernelStdin();
-    g_UIDs[1] = sceKernelStdout();
-    g_UIDs[2] = sceKernelStderr();
+    //g_UIDs[0] = sceKernelStdin();
+    //g_UIDs[1] = sceKernelStdout();
+    //g_UIDs[2] = sceKernelStderr();
     dbg_printf("-- init finished\n");
     return 0;
 }
@@ -2114,7 +2135,7 @@ int sceIoGetAsyncStat(SceUID fd, int poll, SceInt64 *res)
 int sceIoSetAsyncCallback(SceUID fd, SceUID cb, void *argp)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    uidControlBlock *blk;
+    SceSysmemUIDControlBlock *blk;
     SceIoIob *iob;
     if (sceKernelGetThreadmanIdType(cb) != 8)
         return 0x800200D2;
@@ -2171,7 +2192,7 @@ SceUID sceIoOpen(const char *file, int flags, SceMode mode)
     int oldK1 = pspShiftK1();
     int retAddr = pspGetRa();
     int ret;
-    if (pspK1IsUserMode() && (ret = InterruptManagerForKernel_A0F88036()) != 0)
+    if (pspK1IsUserMode() && (ret = sceKernelGetSyscallRA()) != 0)
         retAddr = ret;
     return do_open(file, flags, mode, 0, retAddr, oldK1);
 }
@@ -2182,7 +2203,7 @@ SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode)
     int oldK1 = pspShiftK1();
     int retAddr = pspGetRa();
     int ret;
-    if (pspK1IsUserMode() && (ret = InterruptManagerForKernel_A0F88036()) != 0)
+    if (pspK1IsUserMode() && (ret = sceKernelGetSyscallRA()) != 0)
         retAddr = ret;
     return do_open(file, flags, mode, 1, retAddr, oldK1);
 }
@@ -2654,7 +2675,7 @@ int do_open(const char *path, int flags, SceMode mode, int async, int retAddr, i
         pspSetK1(oldK1);
         return ret;
     }
-    sceKernelRenameUID(((uidControlBlock*)((void*)iob - g_uid_type->size * 4))->UID, path);
+    sceKernelRenameUID(((SceSysmemUIDControlBlock*)((void*)iob - g_uid_type->size * 4))->UID, path);
     if (sceKernelDeci2pReferOperations() != 0)
     {
         // 4CF4
@@ -3118,7 +3139,7 @@ int do_deldrv(SceIoDeviceArg *dev)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
-    uidControlBlock *cur = g_uid_type->parent;
+    SceSysmemUIDControlBlock *cur = g_uid_type->parent;
     // 59C4
     while (cur != g_uid_type)
     {
@@ -3167,14 +3188,14 @@ int _nulldev_write(SceIoIob *iob __attribute__((unused)), const char *data, int 
     return len;
 }
 
-int iob_do_initialize(uidControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
+int iob_do_initialize(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelCallUIDObjCommonFunction(cb, funcid, arg1, arg2, arg3, arg4, arg5, arg6);
     return cb->UID;
 }
 
-int iob_do_delete(uidControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
+int iob_do_delete(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelCallUIDObjCommonFunction(cb, funcid, arg1, arg2, arg3, arg4, arg5, arg6);

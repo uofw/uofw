@@ -7,12 +7,21 @@
 
 #include <stdarg.h>
 
-#include "../common/common.h"
+#include "common.h"
 
 #include "avcodec_audiocodec.h"
+#include "interruptman.h"
 #include "iofilemgr_kernel.h"
+#include "lfatfs.h"
+#include "lowio_ddr.h"
+#include "lowio_sysreg.h"
+#include "mesgled.h"
+#include "syscon.h"
+#include "sysmem_kernel.h"
 #include "sysmem_sysevent.h"
 #include "sysmem_sysclib.h"
+#include "sysmem_utils_kernel.h"
+#include "threadman_kernel.h"
 
 #include "me_wrapper.h"
 
@@ -125,7 +134,7 @@ int sub_0x1000020(){
 	meTable[9] = 0;
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, PSP_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
 	sceKernelUnlockMutex(meRpc.mutex, 1);
 	return 0;
 }
@@ -156,7 +165,7 @@ int sub_0x1000002(int arg)
 	meTable[9] = 0;
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, PSP_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
 	return 0;	
 }
 
@@ -216,8 +225,8 @@ int module_start(int argc __attribute__((unused)), void *argp __attribute__((unu
 	sceMePowerControlAvcPower(0);
 	if (sceSysregGetTachyonVersion() > 0x4fffff) // > 01g
 	{
-		PspSysmemPartitionInfo info;
-		info.size = sizeof(PspSysmemPartitionInfo);
+		SceSysmemPartitionInfo info;
+		info.size = sizeof(SceSysmemPartitionInfo);
 		if (sceKernelQueryMemoryPartitionInfo(4, &info) < 0 || info.startaddr != 0x88300000)
 			sceKernelAllocPartitionMemory(1, "old ME partition", 2, 0x100000, (void*)0x88300000);
 	}
@@ -1194,7 +1203,7 @@ int sceMeCore_driver_FA398D71(int cmd, ...)
 	va_end(ap);
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, PSP_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
 	ret = meTable[10];
 	sceKernelUnlockMutex(meRpc.mutex, 1);
 	return ret;
