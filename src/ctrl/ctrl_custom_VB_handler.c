@@ -2121,7 +2121,7 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
  * Exported in syslib
  */
 int CtrlInit(void) {
-    dbg_init(1, FB_NONE, FAT_AFTER_SYSCON);
+    dbg_init(1, FB_AFTER_DISPLAY, FAT_NONE);
     
     dbg_printf("Ctrl_Start: %s\n", __FUNCTION__);
     

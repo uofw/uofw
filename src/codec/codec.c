@@ -1,6 +1,11 @@
 #include "common.h"
 
+#include "codec.h"
+#include "lowio_gpio.h"
+#include "lowio_i2c.h"
+#include "lowio_sysreg.h"
 #include "sysmem_sysevent.h"
+#include "threadman_kernel.h"
 
 typedef struct
 {
@@ -66,6 +71,8 @@ SceSysEventHandler g_sysEv = {
 };
 
 PSP_MODULE_INFO("sceWM8750_Driver", PSP_MODULE_NO_STOP | PSP_MODULE_SINGLE_LOAD | PSP_MODULE_SINGLE_START | PSP_MODULE_KERNEL, 1, 7);
+PSP_MODULE_BOOTSTART("sceCodecInitEntry");
+PSP_MODULE_REBOOT_BEFORE("sceCodecStopEntry");
 PSP_SDK_VERSION(0x06060010);
 
 int sub_0000(int reg, int set)
@@ -466,8 +473,10 @@ void sceCodec_driver_376399B6(int enable)
         sceSysregAudioClkoutClkEnable();
 }
 
-int module_start()
+int sceCodecInitEntry()
 {
+    for (;;)
+        ;
     sub_0110();
     sub_0150(1);
     g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, 0);
@@ -496,7 +505,7 @@ int sceCodec_driver_FC355DE0()
     return 0;
 }
 
-int module_reboot_before()
+int sceCodecStopEntry()
 {
     sub_01FC(-1, -1, -1, -1);
     sceKernelUnregisterSysEventHandler(&g_sysEv);

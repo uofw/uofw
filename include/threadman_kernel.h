@@ -56,6 +56,7 @@ int sceKernelCreateMutex(char *, int, int, int);
 int sceKernelTryLockMutex(int, int);
 int sceKernelLockMutex(int, int, int);
 int sceKernelUnlockMutex(int, int);
+int sceKernelDeleteMutex(int);
 
 /* Event flags */
 

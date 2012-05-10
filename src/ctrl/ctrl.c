@@ -1214,17 +1214,17 @@ static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __
     int suspendFlag;
     int retVal;
     
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    //dbg_printf("In function: %s\n", __FUNCTION__);
     
     suspendFlag = sceKernelCpuSuspendIntr(); //0x00000454
     
     if (ctrl.btnCycle == 0) { //0x00000464
-        dbg_printf("sysconHwDataTransferBusy VALUE: %d in function: %s\n", ctrl.sysconHwDataTransferBusy, __FUNCTION__);
+        //dbg_printf("sysconHwDataTransferBusy VALUE: %d in function: %s\n", ctrl.sysconHwDataTransferBusy, __FUNCTION__);
         if (ctrl.sysconHwDataTransferBusy == FALSE) { //0x00000470
             if (ctrl.pollMode != PSP_CTRL_POLL_NO_POLLING) { //0x0000047C
                 ctrl.sysconHwDataTransferBusy = TRUE; //0x000004E0
 
-                dbg_printf("receiving SYSCON data: %s\n", __FUNCTION__);
+                //dbg_printf("receiving SYSCON data: %s\n", __FUNCTION__);
                 if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x000004E4
                     ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ONLY; //0x000004E8
                 }
@@ -1233,35 +1233,35 @@ static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __
                 }
                 ctrl.sysPacket[0].tx_len = 2; //0x00000514
 
-                dbg_printf("calling sceSysconCmdExecAsync: %s\n", __FUNCTION__);
+                //dbg_printf("calling sceSysconCmdExecAsync: %s\n", __FUNCTION__);
                 retVal = sceSysconCmdExecAsync(&ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, 0); //0x00000510
-                dbg_printf("called sceSysconCmdExecAsync returns: 0x%08X in function: %s\n", retVal, __FUNCTION__);
+                //dbg_printf("called sceSysconCmdExecAsync returns: 0x%08X in function: %s\n", retVal, __FUNCTION__);
                 if (retVal < 0) { //0x00000518
                     ctrl.sysconHwDataTransferBusy = FALSE; //0x0000051C
                 }
             }
             else {
-                dbg_printf("set alarm handler_1: %s\n", __FUNCTION__);
+                //dbg_printf("set alarm handler_1: %s\n", __FUNCTION__);
                 
                 //register an alarm occurring every 700 micro seconds
                 sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL); //0x00000490
             }
         }
         else {
-            dbg_printf("set alarm handler_2: %s\n", __FUNCTION__);
+            //dbg_printf("set alarm handler_2: %s\n", __FUNCTION__);
             sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL); //0x00000490
         }
     }
     if (ctrl.unk_Byte_2 != 0) { //0x000004A0
-        dbg_printf("calling sceKernelPowerTick: %s\n", __FUNCTION__);
+        //dbg_printf("calling sceKernelPowerTick: %s\n", __FUNCTION__);
         ctrl.unk_Byte_2 = 0; //0x000004A4
         sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT); //0x000004CC
     }
 
-    dbg_printf("resuming all interrupts: %s\n", __FUNCTION__);
+    //dbg_printf("resuming all interrupts: %s\n", __FUNCTION__);
     sceKernelCpuResumeIntr(suspendFlag); //0x000004A8
     
-    dbg_printf("returning from %s.\n", __FUNCTION__);
+    //dbg_printf("returning from %s.\n", __FUNCTION__);
     return -1;
 }
 
@@ -1964,6 +1964,7 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
         return SCE_ERROR_NOT_SUPPORTED;
     }
     oldK1 = pspShiftK1();
+    dbg_printf("%d\n", __LINE__);
 
     if (!pspK1PtrOk(pad)) { //0x00001EF0 -- protect kernel address from user mode
         pspSetK1(oldK1);
@@ -1980,9 +1981,12 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
             return SCE_ERROR_NOT_SUPPORTED;
         }
     }
+    dbg_printf("%d\n", __LINE__);
     //waiting for the VSYNC callback when using the "read" functions.
     if (mode & 2) { //0x00001F10 && 0x00001F28
+        dbg_printf("%d\n", __LINE__);
         res = sceKernelWaitEventFlag(ctrl.eventFlag, 1, SCE_EVENT_WAITOR, NULL, NULL); //0x00001F44
+        dbg_printf("%d\n", __LINE__);
         if (res < 0) { //0x00001F4C
             pspSetK1(oldK1); //0x00001F50
             return res;
@@ -1992,30 +1996,37 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
         
         /* Clear the event flag to wait for the VBlank interrupt the next call. */
         sceKernelClearEventFlag(ctrl.eventFlag, 0xFFFFFFFE); //0x00001F64
+        dbg_printf("%d\n", __LINE__);
 
         startBufIndex = intDataPtr->ctrlBufStartIndex; //0x00001F70
         readIntBufs = intDataPtr->ctrlBufIndex - startBufIndex; //0x00001F74
         if (readIntBufs < 0) { //0x00001F7C
             readIntBufs += 64; //0x00001F78 & 0x00001F80
         }
+        dbg_printf("%d\n", __LINE__);
         intDataPtr->ctrlBufStartIndex = intDataPtr->ctrlBufIndex; //0x00001F8C
         if (reqBufReads < readIntBufs) { //0x00001F88
+            dbg_printf("%d\n", __LINE__);
             startBufIndex = intDataPtr->ctrlBufIndex - reqBufReads; //0x00001F90
             startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_INTERNAL_CONTROLLER_BUFFERS : startBufIndex; //0x00001F98 & 0x00001F9C
             readIntBufs = reqBufReads;
         }
     }
     else {
+        dbg_printf("%d\n", __LINE__);
         suspendFlag = sceKernelCpuSuspendIntr(); //0x0000216C
         bufIndex = intDataPtr->ctrlBufIndex; //0x00002174
 
         startBufIndex = bufIndex; //0x00002184
+        dbg_printf("%d\n", __LINE__);
         if (reqBufReads < 64) { //0x00002178
+            dbg_printf("%d\n", __LINE__);
             startBufIndex = bufIndex - reqBufReads; //0x0000218C
             startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_INTERNAL_CONTROLLER_BUFFERS : startBufIndex; //0x00001F98 & 0x00001F9C
             readIntBufs = reqBufReads; //0x00001FA0
         }
     }
+    dbg_printf("%d\n", __LINE__);
     if (arg3 != 0) { //0x00001FA4
         ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[arg3] + startBufIndex; //0x00002160
     }
@@ -2027,6 +2038,7 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
         pspSetK1(oldK1); //0x000020B0
         return readIntBufs;
     }
+    dbg_printf("%d\n", __LINE__);
     /* read internal data buffers. */
     while (reqBufReads-- > 0) { //0x0000209C & 0x000020A0
            pad->activeTime = ctrlBuf->activeTime; //0x00001FE4 & 0x00001FF0
@@ -2099,6 +2111,7 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
                }
            }
     }
+    dbg_printf("%d\n", __LINE__);
 
     sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
     pspSetK1(oldK1); //0x000020B0
@@ -2110,11 +2123,11 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
  * Exported in syslib
  */
 int CtrlInit(void) {
-    dbg_init(1, FB_NONE, FAT_AFTER_SYSCON);
+    dbg_init(1, FB_AFTER_DISPLAY, FAT_NONE);
     
     dbg_printf("Ctrl_Start: %s\n", __FUNCTION__);
     
-    sceCtrlInit();
+    //sceCtrlInit();
     return SCE_ERROR_OK;
 }
 

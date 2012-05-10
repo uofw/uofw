@@ -727,6 +727,19 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
 
 int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2)
 {
+    int oldIntr;
+    asm("mfic %0, $0" : "=r" (oldIntr));
+    asm("mtic $zero, $0");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
     dbg_printf("Calling %s\n", __FUNCTION__);
     dbg_printf("Calling %s\n", __FUNCTION__);
     dbg_printf("Calling %s\n", __FUNCTION__);
@@ -739,6 +752,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     dbg_printf("Calling %s\n", __FUNCTION__);
     dbg_printf("Calling %s\n", __FUNCTION__);
     dbg_printf("Calling %s\n", __FUNCTION__);
+    asm("mtic %0, $0" : : "r" (oldIntr));
     return 0;
     char outDev[32];
     char blkAliasName[32];

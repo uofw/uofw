@@ -855,7 +855,7 @@ int sceAudioInit()
 {
     //dbg_init(1, FB_AFTER_DISPLAY, FAT_AFTER_FATMS);
     //dbg_init(1, FB_NONE, FAT_AFTER_FATMS);
-    dbg_init(1, FB_NONE, FAT_HARDWARE);
+    dbg_init(1, FB_NONE, FAT_AFTER_FATMS);
     dbg_printf("Running %s\n", __FUNCTION__);
     memset(&g_audio, 0, sizeof(g_audio));
     // 1558

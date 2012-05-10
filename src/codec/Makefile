@@ -4,5 +4,7 @@
 TARGET = codec
 OBJS = codec.o
 
+LIBS = -lThreadManForKernel -lsceSysEventForKernel -lsceI2c_driver -lsceSysreg_driver -lsceGpio_driver
+
 include ../../lib/build.mak
 

@@ -47,6 +47,8 @@ int sceSysregAudioClkSelect(int, int);
 int sceSysregAudioBusClockEnable(int);
 int sceSysregAudioIoEnable(int);
 int sceSysregAudioIoDisable(int);
+int sceSysregAudioClkoutClkEnable(void);
+int sceSysregAudioClkoutClkDisable(void);
 int sceSysregAudioClkoutClkSelect(int);
 int sceSysregAudioClkoutIoEnable(void);
 int sceSysregAudioClkoutIoDisable(void);

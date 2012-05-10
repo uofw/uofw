@@ -16,7 +16,7 @@ EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
 
 ifdef DEBUG
 CFLAGS += -DDEBUG
-LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForUser -lsceSyscon_driver
+LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
 endif
 
 MODULE_STUBS=$(foreach mod,$(MODULES), $($(mod)_STUBS))
