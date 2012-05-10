@@ -12,8 +12,7 @@
  */
 
 #include <stdlib.h>
-#include <pspinit.h>
-#include "ddrdb.h"
+#include "../../include/openpsid_ddrdb.h"
 
 int sceUtilsBufferCopyWithRange(void *outbuff, int outsize, void *inbuff, int insize, int cmd);
 

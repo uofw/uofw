@@ -65,4 +65,5 @@ int sceKernelGetMEeDramSaveSize(void);
 void *sceKernelMemset32(void *buf, int c, int size);
 
 int sceKernelGetCompiledSdkVersion(void);
+int sceKernelGetModel(void);
 

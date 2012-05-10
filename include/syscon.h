@@ -34,7 +34,7 @@ struct SceSysconPacket
     u8 unk38[13]; //56
     u8 old_sts; //69 -- old rx_sts
     u8 cur_sts; //70 --  current rx_sts
-    u8 unk47[33]; //71
+    u8 unk47[24]; //71
 }; //size of SceSysconPacket: 96
 
 int sceSysconCtrlTachyonAvcPower(int);

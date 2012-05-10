@@ -14,5 +14,5 @@ int sceKernelPowerLock(int);
 int sceKernelPowerLockForUser(int);
 int sceKernelPowerUnlock(int);
 int sceKernelPowerUnlockForUser(int);
-int sceKernelPowerTick(int unk);
+int sceKernelPowerTick(int);
 

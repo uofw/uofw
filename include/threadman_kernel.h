@@ -64,7 +64,7 @@ enum SceEventFlagWaitTypes
     /** Wait for all bits in the pattern to be set */
     SCE_EVENT_WAITAND = 0,
     /** Wait for one or more bits in the pattern to be set */
-    SCE_EVENT_WAITOR  = 1,
+    SCE_EVENT_WAITOR = 1,
     /** Clear the wait pattern when it matches */
     SCE_EVENT_WAITCLEAR = 0x20
 };
@@ -103,10 +103,10 @@ int sceKernelReceiveMsgPipeCB(SceUID uid, void *message, unsigned int size, int 
 int sceKernelTryReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2);
 int sceKernelCancelMsgPipe(SceUID uid, int *psend, int *precv);
 
-typedef struct SceKernelMppInfo {
-        SceSize         size;
+typedef struct _SceKernelMppInfo {
+        SceSize size;
         char    name[32];
-        SceUInt         attr;
+        SceUInt attr;
         int     bufSize;
         int     freeSize;
         int     numSendWaitThreads;
@@ -146,6 +146,80 @@ int sceKernelFreeKTLS(int id);
 void *sceKernelGetKTLS(int id);
 void *sceKernelGetThreadKTLS(int id, SceUID thid, int mode);
 
+/* Alarms. */
+
+typedef SceUInt (*SceKernelAlarmHandler)(void *common);
+
+typedef struct _SceKernelSysClock {
+	SceUInt32   low;
+	SceUInt32   hi;
+} SceKernelSysClock;
+
+typedef struct _SceKernelAlarmInfo {
+	SceSize size;
+	SceKernelSysClock schedule;
+	SceKernelAlarmHandler handler;
+	void *common;
+} SceKernelAlarmInfo;
+
+SceUID sceKernelSetAlarm(SceUInt clock, SceKernelAlarmHandler handler, void *common);
+SceUID sceKernelSetSysClockAlarm(SceKernelSysClock *clock, SceKernelAlarmHandler handler, void *common);
+int sceKernelCancelAlarm(SceUID alarmid);
+int sceKernelReferAlarmStatus(SceUID alarmid, SceKernelAlarmInfo *info);
+
 /* Callbacks */
 int sceKernelNotifyCallback(SceUID cb, int arg2);
+
+/* VPL Functions */
+
+typedef struct _SceKernelVplOptParam {
+    SceSize 	size;
+} SceKernelVplOptParam;
+
+
+SceUID sceKernelCreateVpl(const char *name, int part, int attr, unsigned int size, SceKernelVplOptParam *opt);
+
+int sceKernelDeleteVpl(SceUID uid);
+int sceKernelAllocateVpl(SceUID uid, unsigned int size, void **data, unsigned int *timeout);
+int sceKernelAllocateVplCB(SceUID uid, unsigned int size, void **data, unsigned int *timeout);
+int sceKernelTryAllocateVpl(SceUID uid, unsigned int size, void **data);
+int sceKernelFreeVpl(SceUID uid, void *data);
+int sceKernelCancelVpl(SceUID uid, int *pnum);
+
+typedef struct _SceKernelVplInfo {
+	SceSize 	size;
+	char 	name[32];
+	SceUInt 	attr;
+	int 	poolSize;
+	int 	freeSize;
+	int 	numWaitThreads;
+} SceKernelVplInfo;
+
+int sceKernelReferVplStatus(SceUID uid, SceKernelVplInfo *info);
+
+/* FPL Functions */
+
+typedef struct _SceKernelFplOptParam {
+    SceSize 	size;
+} SceKernelFplOptParam;
+
+int sceKernelCreateFpl(const char *name, int part, int attr, unsigned int size, unsigned int blocks, SceKernelFplOptParam *opt);
+int sceKernelDeleteFpl(SceUID uid);
+int sceKernelAllocateFpl(SceUID uid, void **data, unsigned int *timeout);
+int sceKernelAllocateFplCB(SceUID uid, void **data, unsigned int *timeout);
+int sceKernelTryAllocateFpl(SceUID uid, void **data);
+int sceKernelFreeFpl(SceUID uid, void *data);
+int sceKernelCancelFpl(SceUID uid, int *pnum);
+
+typedef struct _SceKernelFplInfo {
+    SceSize 	size;
+    char 	name[32];
+    SceUInt 	attr;
+    int 	blockSize;
+    int 	numBlocks;
+    int 	freeBlocks;
+    int 	numWaitThreads;
+} SceKernelFplInfo;
+
+int sceKernelReferFplStatus(SceUID uid, SceKernelFplInfo *info);
 

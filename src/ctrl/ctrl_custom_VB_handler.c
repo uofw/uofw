@@ -204,7 +204,7 @@ typedef struct _SceCtrl {
 
 static int _sceCtrlSysEventHandler(int ev_id, char* ev_name, void* param, int* result); //0x00000364
 static SceUInt _sceCtrlDummyAlarm(void *common); //sub_00001DD8
-static int _sceCtrlVblankIntr(int subIntNm, void *arg); //sub_00000440
+//static int _sceCtrlVblankIntr(int subIntNm, void *arg); //sub_00000440
 static int _sceCtrlTimerIntr(int, int, int, int); //sub_00000528
 static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket); //sub_00000610;
 static int _sceCtrlSysconCmdIntr2(void); //sub_00001E4C
@@ -224,6 +224,13 @@ SceSysEventHandler ctrlSysEvent = { sizeof(SceSysEventHandler), "SceCtrl", 0x00F
 
 SceCtrlData g_2BB0[CTRL_INTERNAL_CONTROLLER_BUFFERS]; //0x00002BB0
 SceCtrlData g_2FB0[CTRL_INTERNAL_CONTROLLER_BUFFERS]; //0x00002FB0
+
+int _vblankHandler(void) {
+    dbg_printf("VBLANK_Handler: %s\n", __FUNCTION__); 
+    
+    return -1;
+}
+
 
 /*
  * Subroutine sceCtrl_driver_121097D5 - Address 0x00000000
@@ -311,7 +318,7 @@ int sceCtrlInit(void) {
     ctrl.idleBack = 129; //0x00000158
 
     dbg_printf("register custom sub interrupt handler: %s\n", __FUNCTION__);
-    dbg_status = sceKernelRegisterSubIntrHandler(PSP_VBLANK_INT, 0x13, _sceCtrlVblankIntr, NULL); //0x00000184 
+    dbg_status = sceKernelRegisterSubIntrHandler(PSP_VBLANK_INT, 0x13, _vblankHandler, NULL); //0x00000184 
     dbg_printf("registered sub interrupt handler with 0x%08X: in: %s\n", dbg_status, __FUNCTION__);
     
     dbg_printf("enable sub interrupt handler: %s\n", __FUNCTION__);
@@ -1209,14 +1216,17 @@ static SceUInt _sceCtrlDummyAlarm(void *common __attribute__((unused))) {
  * @return -1.
  */
 
-
+/*
 static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __attribute__((unused))) {
     int suspendFlag;
     int retVal;
     
     dbg_printf("In function: %s\n", __FUNCTION__);
     
+    
+
     suspendFlag = sceKernelCpuSuspendIntr(); //0x00000454
+    dbg_printf("suspending all interuppts: %s\n", __FUNCTION__);
     
     if (ctrl.btnCycle == 0) { //0x00000464
         dbg_printf("sysconHwDataTransferBusy VALUE: %d in function: %s\n", ctrl.sysconHwDataTransferBusy, __FUNCTION__);
@@ -1258,12 +1268,13 @@ static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __
         sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT); //0x000004CC
     }
 
-    dbg_printf("resuming all interrupts: %s\n", __FUNCTION__);
+    dbg_printf("resuming all interuppts: %s\n", __FUNCTION__);
     sceKernelCpuResumeIntr(suspendFlag); //0x000004A8
     
     dbg_printf("returning from %s.\n", __FUNCTION__);
     return -1;
 }
+**/
 
 /* sub_00000528 */
 /**

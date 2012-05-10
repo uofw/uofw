@@ -7,14 +7,14 @@
 #endif
 
 #define SCE_ERROR_OK                                           0x0
-#define SCE_ERROR_NOT_SUPPORTED		                           0x80000004
+#define SCE_ERROR_NOT_SUPPORTED		                       0x80000004
 #define SCE_ERROR_ALREADY                                      0x80000020
 #define SCE_ERROR_BUSY                                         0x80000021
 #define SCE_ERROR_OUT_OF_MEMORY                                0x80000022
-#define SCE_ERROR_PRIV_REQUIRED		                           0x80000023
-#define SCE_ERROR_NOT_FOUND		                               0x80000025
-#define SCE_ERROR_ILLEGAL_CONTEXT	                           0x80000030
-#define SCE_ERROR_CPUDI			                               0x80000031
+#define SCE_ERROR_PRIV_REQUIRED		                       0x80000023
+#define SCE_ERROR_NOT_FOUND		                       0x80000025
+#define SCE_ERROR_ILLEGAL_CONTEXT	                       0x80000030
+#define SCE_ERROR_CPUDI			                       0x80000031
 #define SCE_ERROR_SEMAPHORE                                    0x80000041
 #define SCE_ERROR_INVALID_ID                                   0x80000100
 #define SCE_ERROR_INVALID_NAME                                 0x80000101
@@ -27,8 +27,15 @@
 #define SCE_ERROR_INVALID_FORMAT                               0x80000108
 #define SCE_ERROR_INVALID_VALUE                                0x800001FE
 #define SCE_ERROR_INVALID_ARGUMENT                             0x800001FF
+#define SCE_ERROR_NOENT                                        0x80000202
 #define SCE_ERROR_BAD_FILE                                     0x80000209
 #define SCE_ERROR_ACCESS_ERROR                                 0x8000020D
+#define SCE_ERROR_EXIST                                        0x80000211
+#define SCE_ERROR_INVAL                                        0x80000216
+#define SCE_ERROR_MFILE                                        0x80000218
+#define SCE_ERROR_NOSPC                                        0x8000021C
+#define SCE_ERROR_DFUNC                                        0x800002FF
+
 #define SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED                0x80010001
 #define SCE_ERROR_ERRNO_FILE_NOT_FOUND                         0x80010002
 #define SCE_ERROR_ERRNO_FILE_OPEN_ERROR                        0x80010003
@@ -73,6 +80,8 @@
 #define SCE_ERROR_ERRNO_INVALID_UNIT_NUM                       0x8001B002
 #define SCE_ERROR_ERRNO_INVALID_FILE_SIZE                      0x8001B003
 #define SCE_ERROR_ERRNO_INVALID_FLAG                           0x8001B004
+#define SCE_ERROR_ERRNO_NO_CACHE                               0x8001B005
+
 #define SCE_ERROR_KERNEL_ERROR                                 0x80020001
 #define SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT       0x80020064
 #define SCE_ERROR_KERNEL_INTERRUPTS_ALREADY_DISABLED           0x80020066
@@ -214,6 +223,7 @@
 #define SCE_ERROR_KERNEL_NO_ASYNC_OP                           0x8002032A
 #define SCE_ERROR_KERNEL_NOT_CACHE_ALIGNED                     0x8002044C
 #define SCE_ERROR_KERNEL_MAX_ERROR                             0x8002044D
+
 #define SCE_ERROR_UTILITY_INVALID_STATUS                       0x80110001
 #define SCE_ERROR_UTILITY_INVALID_PARAM_ADDR                   0x80110002
 #define SCE_ERROR_UTILITY_IS_UNKNOWN                           0x80110003
