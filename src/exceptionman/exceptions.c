@@ -29,7 +29,7 @@ int g_0D40 = 0;
 int g_0D44 = 0;
 
 // 0D48 (?)
-char g_stack[2108] = {0};
+char g_stack[2104] = {0};
 
 // 1580
 char g_stackCtx[192] = {0};

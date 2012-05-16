@@ -102,6 +102,7 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
             sceSysconCtrlMsPower(1);
         }
         pspMsInit();
+    case FAT_NOINIT:
         fat_append = ms_append;
         if (eraseLog)
         {
@@ -151,31 +152,50 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
 
 void dbg_printf(const char *format, ...)
 {
+    if (fat_append == NULL && fb_append == NULL)
+        return;
     va_list ap;
     char buf[512];
+    //dbg_puts("hey1\n");
     va_start(ap, format);
-    int oldIntr;
-    asm("mfic %0, $0" : "=r" (oldIntr));
-    asm("mtic $zero, $0");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
+    //dbg_puts("hey2\n");
     int size = my_vsnprintf(buf, 512, format, ap);
+    //dbg_puts("hey3\n");
     if (size > 0)
     {
-        if (fat_append != NULL)
+        //dbg_puts("hey4\n");
+        if (fat_append != NULL) 
+        {
+            //dbg_puts("hey4a\n");
             fat_append(buf, size);
+            //dbg_puts("hey4b\n");
+        }
+        //dbg_puts("hey5\n");
         if (fb_append != NULL)
+        {
+            //dbg_puts("hey5a\n");
             fb_append(buf, size);
+            //dbg_puts("hey5b\n");
+        }
+        //dbg_puts("hey6\n");
     }
-    asm("mtic %0, $0" : : "r" (oldIntr));
+    //dbg_puts("hey7\n");
     va_end(ap);
+    //dbg_puts("hey8\n");
+}
+
+void dbg_puts(const char *str)
+{
+    if (fat_append == NULL && fb_append == NULL)
+        return;
+    int count = 0;
+    const char *curStr = str;
+    while (*(curStr++) != '\0')
+        count++;
+
+    if (fat_append != NULL)
+        fat_append(str, count);
+    if (fb_append != NULL)
+        fb_append(str, count);
 }
 

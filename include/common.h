@@ -5,7 +5,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <pspkerneltypes.h>
+#include "types.h"
 
 #include "common/cop0.h"
 #include "common/debug.h"

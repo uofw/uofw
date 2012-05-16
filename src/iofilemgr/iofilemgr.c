@@ -440,7 +440,7 @@ int sceIoReopen(const char *file, int flags, SceMode mode, int fd)
 
 SceUID sceIoDopen(const char *dirname)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("sceIoDopen(%s)\n", dirname);
     SceIoIob *iob;
     SceIoDeviceArg *dev;
     int fsNum;
@@ -728,33 +728,27 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
 
 int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2)
 {
-    int oldIntr;
-    asm("mfic %0, $0" : "=r" (oldIntr));
-    asm("mtic $zero, $0");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    dbg_printf("Calling %s\n", __FUNCTION__);
-    asm("mtic %0, $0" : : "r" (oldIntr));
     return 0;
+    dbg_init(0, FB_NONE, FAT_NONE);
+    //dbg_printf("Calling %s\n", __FUNCTION__);
+    //dbg_printf("Calling %s\n", __FUNCTION__);
+    //dbg_printf("Calling %s\n", __FUNCTION__);
+    //dbg_init(0, FB_NONE, FAT_NOINIT);
+    //return -1;
+    //return 0;
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
+    dbg_puts("hey\n");
     char outDev[32];
     char blkAliasName[32];
     char fsAliasName[32];
@@ -928,6 +922,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     add_alias_tbl(newAlias);
     free_iob(iob);
     pspSetK1(oldK1);
+    dbg_init(0, FB_NONE, FAT_NOINIT);
     return 0;
 
     err_free_iob:
@@ -946,7 +941,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
 
 int sceIoUnassign(const char *dev)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("sceIoUnassign(%s)\n", dev);
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(dev))
@@ -1307,7 +1302,6 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
 int sceIoAddDrv(SceIoDrv *drv)
 {
     dbg_printf("sceIoAddDrv(): %s\n", drv->name);
-    return 0;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv))
     {
@@ -1352,8 +1346,9 @@ int sceIoAddDrv(SceIoDrv *drv)
 
 int sceIoDelDrv(const char *drv)
 {
+    //if (drv[0] == 'l' && drv[1] == 'f' && drv[2] == 'l')
+        //dbg_init(1, FB_HARDWARE, FAT_NONE);
     dbg_printf("sceIoDelDrv(%s)\n", drv);
-    return 0;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv)) {
         pspSetK1(oldK1);
@@ -2076,13 +2071,12 @@ int StdioInit(int, int);
 
 int IoFileMgrInit()
 {
-    //SceSysmemUIDControlBlock *in, *out, *err;
+    SceSysmemUIDControlBlock *in, *out, *err;
     dbg_init(1, FB_NONE, FAT_HARDWARE);
     dbg_printf("-- iofilemgr init\n");
-    //g_heap = sceKernelCreateHeap(1, 0x2000, 1, "SceIofile");
-    //sceKernelCreateUIDtype("Iob", 0x90, IobFuncs, 0, &g_uid_type);
-    //g_ktls = sceKernelAllocateKTLS(4, (void*)free_cwd, 0);
-    /*
+    g_heap = sceKernelCreateHeap(1, 0x2000, 1, "SceIofile");
+    sceKernelCreateUIDtype("Iob", 0x90, IobFuncs, 0, &g_uid_type);
+    g_ktls = sceKernelAllocateKTLS(4, (void*)free_cwd, 0);
     sceIoDelDrv("dummy_drv_iofile");
     sceIoAddDrv(&_dummycon_driver);
     StdioInit(0, 0);
@@ -2094,11 +2088,10 @@ int IoFileMgrInit()
     // 3CF8
     if (sceKernelGetUIDcontrolBlock(sceIoGetUID(sceKernelStderr()), &err) == 0)
         err->attribute |= 3;
-    */
     // 3D28
-    //g_UIDs[0] = sceKernelStdin();
-    //g_UIDs[1] = sceKernelStdout();
-    //g_UIDs[2] = sceKernelStderr();
+    g_UIDs[0] = sceKernelStdin();
+    g_UIDs[1] = sceKernelStdout();
+    g_UIDs[2] = sceKernelStderr();
     dbg_printf("-- init finished\n");
     return 0;
 }
@@ -2203,7 +2196,7 @@ int sceIoCloseAsync(SceUID fd)
 
 SceUID sceIoOpen(const char *file, int flags, SceMode mode)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("sceIoOpen(%s, %08x, %08x)\n", file, flags, mode);
     int oldK1 = pspShiftK1();
     int retAddr = pspGetRa();
     int ret;
@@ -2303,7 +2296,7 @@ int sceIoChdir(const char *path)
 
 int sceIoGetstat(const char *file, SceIoStat *stat)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("sceIoGetstat(%s, %p)\n", file, stat);
     return xx_stat(file, stat, 0, 1);
 }
 

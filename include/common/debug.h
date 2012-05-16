@@ -16,6 +16,7 @@ typedef enum
 typedef enum
 {
     FAT_NONE,
+    FAT_NOINIT,
     FAT_HARDWARE,
     FAT_AFTER_SYSCON,
     FAT_AFTER_FATMS
@@ -24,12 +25,17 @@ typedef enum
 #ifdef DEBUG
 void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode);
 void dbg_printf(const char *format, ...);
+void dbg_puts(const char *str);
 #else
 static inline void dbg_init()
 {
 }
 
 static inline void dbg_printf()
+{
+}
+
+static inline void dbg_puts()
 {
 }
 #endif
