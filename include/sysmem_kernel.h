@@ -4,8 +4,7 @@
 
 #include "common.h"
 
-typedef struct
-{
+typedef struct {
     SceSize size;
     unsigned int startaddr;
     unsigned int memsize;
@@ -15,14 +14,12 @@ typedef struct
 int sceKernelQueryMemoryPartitionInfo(int pid, SceSysmemPartitionInfo *info);
 SceUID sceKernelAllocPartitionMemory(SceUID partitionid, const char *name, int type, SceSize size, void *addr);
 
-typedef struct
-{   
+typedef struct {   
     int id;
     int (*func)(void *, int, int funcid, void *args);
 } SceSysmemUIDLookupFunction;
 
-typedef struct SceSysmemUIDControlBlock
-{   
+typedef struct SceSysmemUIDControlBlock {   
     struct SceSysmemUIDControlBlock *parent; // 0
     struct SceSysmemUIDControlBlock *nextChild; // 4
     struct SceSysmemUIDControlBlock *type; // 8
@@ -36,8 +33,7 @@ typedef struct SceSysmemUIDControlBlock
     SceSysmemUIDLookupFunction *func_table; // 32
 } __attribute__((packed)) SceSysmemUIDControlBlock;
 
-typedef struct
-{   
+typedef struct {   
     int id;
     int (*func)();
 } SceSysmemUIDLookupFunc;

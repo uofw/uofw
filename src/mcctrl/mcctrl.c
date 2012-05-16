@@ -16,7 +16,8 @@
 
 #include "openpsid_ddrdb.h"
 
-PSP_MODULE_INFO("sceMcctrl", 0x5006, 1, 1);
+SCE_MODULE_INFO("sceMcctrl", 0x5006, 1, 1);
+SCE_SDK_VERSION(SDK_VERSION);
 
 //static functions
 static int sub_00000BC0(u8 *arg1, u8 *arg2, int size);

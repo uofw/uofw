@@ -4,38 +4,36 @@
 
 #include "common.h"
 
-enum PspInterrupts
-{
-    PSP_GPIO_INT = 4,
-    PSP_ATA_INT  = 5,
-    PSP_UMD_INT  = 6,
-    PSP_MSCM0_INT = 7,
-    PSP_WLAN_INT  = 8,
-    PSP_AUDIO_INT = 10,
-    PSP_I2C_INT   = 12,
-    PSP_SIRCS_INT = 14,
-    PSP_SYSTIMER0_INT = 15,
-    PSP_SYSTIMER1_INT = 16,
-    PSP_SYSTIMER2_INT = 17,
-    PSP_SYSTIMER3_INT = 18,
-    PSP_THREAD0_INT   = 19,
-    PSP_NAND_INT      = 20,
-    PSP_DMACPLUS_INT  = 21,
-    PSP_DMA0_INT      = 22,
-    PSP_DMA1_INT      = 23,
-    PSP_MEMLMD_INT    = 24,
-    PSP_GE_INT        = 25,
-    PSP_VBLANK_INT = 30,
-    PSP_MECODEC_INT  = 31,
-    PSP_HPREMOTE_INT = 36,
-    PSP_MSCM1_INT    = 60,
-    PSP_MSCM2_INT    = 61,
-    PSP_THREAD1_INT  = 65,
-    PSP_INTERRUPT_INT = 66
+enum SceInterrupts {
+    SCE_GPIO_INT = 4,
+    SCE_ATA_INT  = 5,
+    SCE_UMD_INT  = 6,
+    SCE_MSCM0_INT = 7,
+    SCE_WLAN_INT  = 8,
+    SCE_AUDIO_INT = 10,
+    SCE_I2C_INT   = 12,
+    SCE_SIRCS_INT = 14,
+    SCE_SYSTIMER0_INT = 15,
+    SCE_SYSTIMER1_INT = 16,
+    SCE_SYSTIMER2_INT = 17,
+    SCE_SYSTIMER3_INT = 18,
+    SCE_THREAD0_INT   = 19,
+    SCE_NAND_INT      = 20,
+    SCE_DMACPLUS_INT  = 21,
+    SCE_DMA0_INT      = 22,
+    SCE_DMA1_INT      = 23,
+    SCE_MEMLMD_INT    = 24,
+    SCE_GE_INT        = 25,
+    SCE_VBLANK_INT = 30,
+    SCE_MECODEC_INT  = 31,
+    SCE_HPREMOTE_INT = 36,
+    SCE_MSCM1_INT    = 60,
+    SCE_MSCM2_INT    = 61,
+    SCE_THREAD1_INT  = 65,
+    SCE_INTERRUPT_INT = 66
 };
 
-typedef struct
-{   
+typedef struct {   
     // Handler address
     int handler; // 0
     // GP of the module
@@ -59,8 +57,7 @@ typedef struct
     int u52, u56, u60;
 } SubInterrupt; // Size: 64
 
-typedef struct
-{   
+typedef struct {   
     int size; // 0
     int u4;
     // Callback called before setting sub interrupt, when registering
@@ -79,8 +76,7 @@ typedef struct
 } SceIntrCb; // Size: 44
 
 // Arg4 in sceKernelRegisterIntrHandler()
-typedef struct
-{   
+typedef struct {   
     // Handler address, sometimes OR'ed with 2 ?!?
     int handler; // 0
     // GP of the module
@@ -97,22 +93,19 @@ typedef struct
     int u52, u56, u60;
 } Interrupt; // Size: 64
 
-typedef struct
-{
+typedef struct {
     int size; // must be 12
     int numSubIntrs; // 4
     SceIntrCb *callbacks; // 8
 } SubIntrInfo; // Size: 12
 
-typedef struct
-{
+typedef struct {
     int size;
     int attr;
     void *cb;
 } SceIntrHandler;
 
-typedef struct CbMap
-{
+typedef struct CbMap {
     struct CbMap *next;
     int unk1, unk2, unk3;
     void (*callbacks[64])(void);

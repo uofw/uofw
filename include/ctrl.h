@@ -25,21 +25,21 @@
 typedef void (*SceCtrlCb)(int currBtns, int lastBtns, void *opt);
 
 /** Type definition for improved style. */
-typedef u8   PspCtrlPadInputMode;
+typedef u8   SceCtrlPadInputMode;
 /** Type definition for improved style. */
-typedef u8   PspCtrlPadPollMode;
+typedef u8   SceCtrlPadPollMode;
 /** Type definition for improved style. */
-typedef u8   PspCtrlPadButtonMaskMode;
+typedef u8   SceCtrlPadButtonMaskMode;
 
 /** General information about an internal PSP controller buffer. Including current pressed button(s) and current position 
  *  of the analog controller. 
  */
-typedef struct _SceCtrlData {
+typedef struct {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
      *  Can be used to get the time period of a button pressing event. 
      */ 
     u32 activeTime; //0
-    /** The currently pressed D-Pad button(s). Bitwise OR'ed values of ::PspCtrlPadButtons. */
+    /** The currently pressed D-Pad button(s). Bitwise OR'ed values of ::sceCtrlPadButtons. */
     u32 buttons; //4
     /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
     u8 aX; //8
@@ -50,12 +50,12 @@ typedef struct _SceCtrlData {
 } SceCtrlData; //Size of SceCtrlData: 16
 
 /** Extended SceCtrlData structure. */
-typedef struct _SceCtrlDataExt {
+typedef struct {
     /** The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
      *  Can be used to get the time period if a button pressing. 
      */ 
     u32 activeTime; //0
-    /** The currently pressed D-Pad button(s). Bitwise OR'ed values of ::PspCtrlPadButtons. */
+    /** The currently pressed D-Pad button(s). Bitwise OR'ed values of ::sceCtrlPadButtons. */
     u32 buttons; //4
     /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
     u8 aX; //8
@@ -82,9 +82,9 @@ typedef struct _SceCtrlDataExt {
 } SceCtrlDataExt; //Size of SceCtrlDataExt: 48
 
 /** Status attributes of a button. Each structure member represents an active button
- *  through its button value (one of ::pspCtrlPadButtons).
+ *  through its button value (one of ::sceCtrlPadButtons).
  */
-typedef struct _SceCtrlLatch {
+typedef struct {
     /** Button is newly pressed (was not already been pressed). */
     u32 btnMake; //0
     /** Stop of button press. */
@@ -112,139 +112,140 @@ int sceCtrl_driver_E467BEC8(u8 mode, int arg2, int arg3)__attribute__((alias("sc
  * @note PSP_CTRL_HOME, PSP_CTRL_WLAN_UP, PSP_CTRL_REMOTE, PSP_CTRL_VOLUP, PSP_CTRL_VOLDOWN, PSP_CTRL_SCREEN, PSP_CTRL_NOTE, PSP_CTRL_DISC, 
  *       PSP_CTRL_MS can only be read in kernel mode.
  */
-enum pspCtrlPadButtons {
+enum sceCtrlPadButtons {
     /** Select button. Negative value = 0xFFFFFFFE. */
-    PSP_CTRL_SELECT     = 0x1,
+    SCE_CTRL_SELECT     = 0x1,
     /** Start button. Negative value = 0xFFFFFFF7. */
-    PSP_CTRL_START      = 0x8,
+    SCE_CTRL_START      = 0x8,
     /** Up D-Pad button. Negative value = 0xFFFFFFEF. */
-    PSP_CTRL_UP         = 0x10,
+    SCE_CTRL_UP         = 0x10,
     /** Right D-Pad button. Negative value = 0xFFFFFFDF. */
-    PSP_CTRL_RIGHT      = 0x20,
+    SCE_CTRL_RIGHT      = 0x20,
     /** Down D-Pad button. Negative value = 0xFFFFFFBF. */
-    PSP_CTRL_DOWN       = 0x40,
+    SCE_CTRL_DOWN       = 0x40,
     /** Left D-Pad button. Negative value = 0xFFFFFF7F. */
-    PSP_CTRL_LEFT       = 0x80,
+    SCE_CTRL_LEFT       = 0x80,
     /** Left trigger. Negative value = 0xFFFFFEFF. */
-    PSP_CTRL_LTRIGGER   = 0x100,
+    SCE_CTRL_LTRIGGER   = 0x100,
     /** Right trigger. Negative value = 0xFFFFFDFF. */
-    PSP_CTRL_RTRIGGER   = 0x200,
+    SCE_CTRL_RTRIGGER   = 0x200,
     /** Triangle button. Negative value = 0xFFFFEFFF. */
-    PSP_CTRL_TRIANGLE   = 0x1000,
+    SCE_CTRL_TRIANGLE   = 0x1000,
     /** Circle button. Negative value = 0xFFFFDFFF. */
-    PSP_CTRL_CIRCLE     = 0x2000,
+    SCE_CTRL_CIRCLE     = 0x2000,
     /** Cross button. Negative value = 0xFFFFBFFF. */
-    PSP_CTRL_CROSS      = 0x4000,
+    SCE_CTRL_CROSS      = 0x4000,
     /** Square button. Negative value = 0xFFFF7FFF. */
-    PSP_CTRL_SQUARE     = 0x8000,
+    SCE_CTRL_SQUARE     = 0x8000,
     /** Home button. In user mode this bit is set if the exit dialog is visible.  Negative value = 0xFFFEFFFF. */
-    PSP_CTRL_HOME       = 0x10000,
+    SCE_CTRL_HOME       = 0x10000,
     /** Hold button. Negative value = 0xFFFDFFFF. */
-    PSP_CTRL_HOLD       = 0x20000,
+    SCE_CTRL_HOLD       = 0x20000,
     /** W-LAN switch up. Negative value = 0xFFFBFFFF. */
-    PSP_CTRL_WLAN_UP    = 0x40000,
+    SCE_CTRL_WLAN_UP    = 0x40000,
     /** Remote hold position. Negative value = 0xFFF7FFFF. */
-    PSP_CTRL_REMOTE     = 0x80000,
+    SCE_CTRL_REMOTE     = 0x80000,
     /** Volume up button. Negative value = 0xFFEFFFFF. */
-    PSP_CTRL_VOLUP      = 0x100000,
+    SCE_CTRL_VOLUP      = 0x100000,
     /** Volume down button. Negative value = 0xFFBFFFFF. */
-    PSP_CTRL_VOLDOWN    = 0x200000,
+    SCE_CTRL_VOLDOWN    = 0x200000,
     /** Screen button. Negative value = 0xFFBFFFFF. */
-    PSP_CTRL_SCREEN     = 0x400000,
+    SCE_CTRL_SCREEN     = 0x400000,
     /** Music Note button. Negative value = 0xFF7FFFFF. */
-    PSP_CTRL_NOTE       = 0x800000,   	
+    SCE_CTRL_NOTE       = 0x800000,   	
     /** Disc present. Negative value = 0xFEFFFFFF. */
-    PSP_CTRL_DISC       = 0x1000000,
+    SCE_CTRL_DISC       = 0x1000000,
     /** Memory stick present. Negative value = 0xFDFFFFFF. */
-    PSP_CTRL_MS         = 0x2000000,
+    SCE_CTRL_MS         = 0x2000000,
 };
 
 /** Controller input modes. */
-enum pspCtrlPadInputMode {
+enum sceCtrlPadInputMode {
     /** Digital input only. No recognizing of analog input. */
-    PSP_CTRL_INPUT_DIGITAL_ONLY = 0,         
+    SCE_CTRL_INPUT_DIGITAL_ONLY = 0,         
     /** Recognizing of both digital and analog input. */
-    PSP_CTRL_INPUT_DIGITAL_ANALOG = 1,
+    SCE_CTRL_INPUT_DIGITAL_ANALOG = 1,
 };
 
 /** Controller input poll modes. */
-enum pspCtrlPadPollMode {
+enum sceCtrlPadPollMode {
     /** No controller input is recognized. */
-    PSP_CTRL_POLL_NO_POLLING = 0,
+    SCE_CTRL_POLL_KILLED = 0,
     /** Controller input is recognized. */
-    PSP_CTRL_POLL_POLLING = 1,
+    SCE_CTRL_POLL_RUNNING = 1,
 };
 
 /** Button mask settings. */
-enum pspCtrlPadButtonMaskMode {
-    /** Remove any custom mask settings involving the specified button bit mask. */
-    PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING = 0,
-    /** Block the buttons defined by the button bit mask (their button status (pressed/un-pressed) won't be recognized). 
-     *  You can only block user buttons for applications running in user mode. */
-    PSP_CTRL_MASK_IGNORE_BUTTON_MASK = 1,
-    /** Set the buttons defined by the button bit mask (they will be simulated as being pressed). 
-     *  You can only set user buttons for applications running in user mode. */
-    PSP_CTRL_MASK_SET_BUTTON_MASK = 2,
+enum sceCtrlPadButtonMaskMode {
+    /** Remove any masks involving the specified buttons. */
+    SCE_CTRL_MASK_NO_MASK = 0,
+    /** Block the specified buttons (their button status (pressed/un-pressed) won't be recognized). 
+     *  You can only block user buttons for applications running in User Mode. */
+    SCE_CTRL_MASK_IGNORE_BUTTONS = 1,
+    /** Set the specified buttons (they will be simulated as being pressed). 
+     *  You can only set user buttons for applications running in User Mode. */
+    SCE_CTRL_MASK_SET_BUTTONS = 2,
 };
 
 /**
- * Initialize the controller library.
+ * Initialize the controller device. Bind the controller driver to the controller device.
  * 
  * @return 0 on success, otherwise < 0.
  */
 int sceCtrlInit(void);
 
 /**
- * Terminate the controller library.
+ * Terminate the controller device. Unbind the controller driver from the controller device.
  * 
  * @return 0.
  */
 int sceCtrlEnd(void);
 
 /**
- * Suspend the controller library.
+ * Suspend the controller driver and put the controller device into a low-power state.
  * 
  * @return 0.
  */
 int sceCtrlSuspend(void);
 
 /**
- * Resume the controller library after it has been suspended.
+ * Resume the controller driver after and bring the controller device 
+ * back from a low-power state.
  * 
  * @return 0.
  */
 int sceCtrlResume(void);
 
 /**
- * Enable/disable controller input.
+ * Enable/disable controller device input.
  * 
- * @param pollMode One of ::pspCtrlPadPollMode. If set to 0, no button/analog input is recognized.
+ * @param pollMode One of ::sceCtrlPadPollMode. If set to 0, no button/analog input is recognized.
  *                 Set to 1 to enable button/analog input.
  * 
  * @return 0.
  */
-int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode);
+int sceCtrlSetPollingMode(SceCtrlPadPollMode pollMode);
 
 /**
- * Get the current controller input mode.
+ * Get the current controller device input mode.
  * 
- * @param mode Receiving the current controller mode. One of ::pspCtrlPadInputMode.
+ * @param mode Receiving the current controller mode. One of ::sceCtrlPadInputMode.
  * 
  * @return 0.
  */
-PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode);
+SceCtrlPadInputMode sceCtrlGetSamplingMode(SceCtrlPadInputMode *mode);
 
 /**
- * Set the controller input mode.
+ * Set the controller device input mode.
  * 
- * @param mode The new controller input mode. One of ::pspCtrlPadInputMode.
+ * @param mode The new controller input mode. One of ::sceCtrlPadInputMode.
  * 
  * @return The previous input mode on success, otherwise less than 0.
  */
-int sceCtrlSetSamplingMode(PspCtrlPadInputMode mode);
+int sceCtrlSetSamplingMode(SceCtrlPadInputMode mode);
 
 /**
- * Get the current cycle specifying the update frequency of the internal controller buffer.
+ * Get the current cycle specifying the update frequency of the internal controller data buffers.
  * 
  * @param cycle Receiving the current cycle.
  * 
@@ -257,7 +258,8 @@ int sceCtrlGetSamplingCycle(u32 *cycle);
  * 
  * @param cycle The new time period between two samplings of controller attributes in microseconds.
  *                Setting to 0 enables the VBlank-Interrupt-Update process. If you want to set an own
- *                time period for updating the internal controller buffer(s), cycle has to be > 5554 and < 20001.
+ *                time period for updating the internal controller buffer(s), cycle has to be greater 5554 
+ *                and less than 20001.
  *                This will disable the VBlank-Interrupt-Update process.
  * 
  * @return The previous cycle on success, otherwise less than 0.
@@ -392,7 +394,7 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
  * 
  * @param pad Pointer to a SceCtrlData structure retrieving the current internal controller buffer. Negative button values have to be used. 
- *            Check ::pspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
+ *            Check ::sceCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *                    Has to be set to a value in the range of 1 - 64.
@@ -434,7 +436,7 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * You can set your own update time by calling ::sceCtrlSetSamplingCycle.
  * 
  * @param pad Pointer to a SceCtrlData structure retrieving the current internal controller buffer. Negative button values have to be used. 
- *            Check ::pspCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
+ *            Check ::sceCtrlPadButtons for the negative active values of the buttons. If no button is active, the internal
  *            button value is 0xFFFFFFFF.
  * @param reqBufReads The number of internal buffers to read. There are 64 internal controller buffers which can be read.
  *                    Has to be set to a value in the range of 1 - 64.
@@ -504,7 +506,7 @@ int sceCtrlClearRapidFire(u8 slot);
  * Set a pressed/un-pressed period for a button.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 15. Multiple slots can be used.
- * @param pressedBtnRange The pressed-button-range to check for. One or more buttons of ::pspCtrlPadButtons. 
+ * @param pressedBtnRange The pressed-button-range to check for. One or more buttons of ::sceCtrlPadButtons. 
  * @param reqBtnsEventTrigger The button(s) which will fire the pressed/un-pressed period for a button/buttons when being pressed. 
  *        Has to be included in pressedBtnRange.
  * @param reqBtn The requested button(s) on which the pressed/un-pressed period (the rapid fire event) will be applied to. 
@@ -558,9 +560,9 @@ int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates);
  * Emulate buttons for the digital pad.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, their settings are bitwise OR'ed together.
- * @param uModeBtnEmu Emulated user buttons of ::pspCtrlPadButtons. You cannot emulate kernel buttons and 
+ * @param uModeBtnEmu Emulated user buttons of ::sceCtrlPadButtons. You cannot emulate kernel buttons and 
  *                    the emulated buttons will only be applied for applications running in user mode. 
- * @param kModeBtnEmu Emulated buttons of ::pspCtrlPadButtons (you can emulate both user and kernel buttons).  
+ * @param kModeBtnEmu Emulated buttons of ::sceCtrlPadButtons (you can emulate both user and kernel buttons).  
  *                    The emulated buttons will only be applied for applications running in kernel mode.
  * @param bufUpdates Specifies for how many updates of the internal controller buffers the custom values will be applied for.
  * 
@@ -573,14 +575,15 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
  * 
  * @note In the PSPSDK, this function is defined as sceCtrlGetButtonMask.
  * 
- * @param btnMask The button bit value to check for (one or more buttons of ::pspCtrlPadButtons).
+ * @param buttons The button(s) to check for (one or more buttons of ::sceCtrlPadButtons)
+ *                an existing button mask mode applying to it/them.
  * 
- * @return The button mask mode for the given btnMask. One of ::pspCtrlPadButtonMaskMode. 
- *         PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0), if btnMask (or parts of it) is/are included in the currently set button mask.
- *         PSP_CTRL_MASK_IGNORE_BUTTON_MASK (1), if btnMask is not included in the current button mask.
- *         PSP_CTRL_MASK_SET_BUTTON_MASK (2), if btnMask (or parts of it) are set to ON by the current set button mask.
+ * @return The button mask mode for the given button(s). One of ::sceCtrlPadButtonMaskMode. 
+ *         SCE_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0), if btnMask (or parts of it) is/are included in the currently set button mask.
+ *         SCE_CTRL_MASK_IGNORE_BUTTON_MASK (1), if btnMask is not included in the current button mask.
+ *         SCE_CTRL_MASK_SET_BUTTON_MASK (2), if btnMask (or parts of it) are set to ON by the current set button mask.
  */
-PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
+SceCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 buttons);
 
 /**
  * Set a button mask mode for one or more buttons. You can only mask user mode buttons in user applications.
@@ -588,14 +591,24 @@ PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
  * 
  * @note In the PSPSDK, this function is defined as sceCtrlSetButtonMask.
  * 
- * @param btnMask The button value for which the button mask mode will be applied. 
- *                One or more buttons of ::pspCtrlPadButtons.
- * @param btnMaskMode Specifies the mask mode of the button mask. One of ::pspCtrlPadButtonMaskMode.
+ * @param buttons The button value for which the button mask mode will be applied for. 
+ *                One or more buttons of ::sceCtrlPadButtons.
+ * @param btnMaskMode Specifies the mask mode of the button mask. One of ::sceCtrlPadButtonMaskMode.
+ *  
+ *        btnMaskMode = SCE_CTRL_MASK_IGNORE_BUTTONS:
+ *              Delete the specified buttons from the supported buttons 
+ *              and remove them from the 'set to ON' buttons.
+ *        btnMaskMode = SCE_CTRL_MASK_SET_BUTTONS:
+ *              Add the specified buttons to both the supported buttons
+ *              and to the 'set to ON' buttons.
+ *        btnMaskMode = SCE_CTRL_MASK_NO_MASK:
+ *              Add the specified buttons to the supported buttons 
+ *              and remove them from the 'set to ON' buttons.
  * 
  * @return The button mask mode regarding the new btnMask compared with the previously set btnMask.   
- *         PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0) for the new btnMask (or parts of it) already being supported by the previously set btnMask,
- *         PSP_CTRL_MASK_IGNORE_BUTTON_MASK (1) for the new btnMask already being ignored by the previously btnMask or
- *         PSP_CTRL_MASK_SET_BUTTON_MASK (2) for the new btnMask (or parts of being) being already being set to ON
+ *         SCE_CTRL_MASK_DELETE_BUTTON_MASK_SETTING (0) for the new btnMask (or parts of it) already being supported by the previously set btnMask,
+ *         SCE_CTRL_MASK_IGNORE_BUTTON_MASK (1) for the new btnMask already being ignored by the previously btnMask or
+ *         SCE_CTRL_MASK_SET_BUTTON_MASK (2) for the new btnMask (or parts of being) being already being set to ON
  *         by the previously set btnMask.
  * 
  * @par Example:
@@ -608,7 +621,7 @@ PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask);
  * sceCtrlSetButtonIntercept(0xFFFF, 0);
  * @endcode
  */
-PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 btnMask, PspCtrlPadButtonMaskMode btnMaskMode);
+SceCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 buttons, SceCtrlPadButtonMaskMode btnMaskMode);
 
 /**
  * Register a button callback.
@@ -616,7 +629,7 @@ PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 btnMask, PspCtrlPadButton
  * @note In the PSPSDK, this function is defined as sceCtrlRegisterButtonCallback.
  * 
  * @param slot The slot used to register the callback (0-3).
- * @param btnMask Bitwise OR'ed button values which will be checked for being pressed. One or more buttons of ::pspCtrlPadButtons.
+ * @param btnMask Bitwise OR'ed button values which will be checked for being pressed. One or more buttons of ::sceCtrlPadButtons.
  * @param cbFunc Pointer to the callback function (int currBtns, int lastBtns, void *opt), which handles button input effects.
  * @param opt Optional user argument. Passed to the callback function as its third argument.
  * 

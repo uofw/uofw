@@ -4,8 +4,7 @@
 
 #include "common.h"
 
-typedef struct SceSysEventHandler
-{
+typedef struct {
     int size;
     char* name;
     int type_mask;

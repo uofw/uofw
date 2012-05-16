@@ -4,8 +4,7 @@
 
 #include "common.h"
 
-typedef struct
-{   
+typedef struct {   
     int size;
     int (*ops[])();
 } SceKernelDeci2Ops;

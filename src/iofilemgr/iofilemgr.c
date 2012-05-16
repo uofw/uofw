@@ -10,10 +10,11 @@
 #include "iofilemgr_kernel.h"
 #include "iofilemgr_stdio.h"
 
-PSP_MODULE_BOOTSTART("IoFileMgrInit");
-PSP_MODULE_REBOOT_BEFORE("IoFileMgrRebootBefore");
-PSP_MODULE_INFO("sceIOFileManager", 0x1007, 1, 7);
-PSP_SDK_VERSION(0x06060010);
+SCE_MODULE_INFO("sceIOFileManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                    | SCE_MODULE_SINGLE_START, 1, 7);
+SCE_MODULE_BOOTSTART("IoFileMgrInit");
+SCE_MODULE_REBOOT_BEFORE("IoFileMgrRebootBefore");
+SCE_SDK_VERSION(SDK_VERSION);
 
 typedef struct SceIoDeviceList
 {

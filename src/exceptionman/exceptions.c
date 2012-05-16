@@ -20,9 +20,10 @@ typedef struct
     SceExceptionHandler pool[32];
 } SceExceptions;
 
-PSP_MODULE_INFO("sceExceptionManager", PSP_MODULE_NO_STOP | PSP_MODULE_SINGLE_LOAD | PSP_MODULE_SINGLE_START | PSP_MODULE_KERNEL, 1, 3);
-PSP_SDK_VERSION(0x06060010);
-PSP_MODULE_BOOTSTART("ExcepManInit");
+SCE_MODULE_INFO("sceExceptionManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                       | SCE_MODULE_SINGLE_START, 1, 3);
+SCE_MODULE_BOOTSTART("ExcepManInit");
+SCE_SDK_VERSION(SDK_VERSION);
 
 int g_0D40 = 0;
 int g_0D44 = 0;

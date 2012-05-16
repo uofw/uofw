@@ -10,8 +10,6 @@
  *
  */
 
-#include "../../include/common.h"
-
 #include "../../include/ctrl.h"
 #include "../../include/display.h"
 #include "../../include/modulemgr_init.h"
@@ -28,16 +26,11 @@
 
 /* common defines */
 
-#define SCE_KERNEL_POWER_TICK_DEFAULT           0
-#define PSP_MEMORY_PARTITION_KERNEL             1
-
 #define USER_MODE                               0
 #define KERNEL_MODE                             1
 
 #define FALSE                                   0
 #define TRUE                                    1
-
-#define PSP_INIT_KEYCONFIG_UPDATER              0x110 //might be incorrect
 
 /** CTRL defines */
 
@@ -70,16 +63,18 @@
 #define CTRL_USER_MODE_BUTTONS_DEFAULT          0x3F3F9
 #define CTRL_USER_MODE_BUTTONS_EXTENDED         0x3FFFF
 #define CTRL_ALL_SUPPORTED_BUTTONS              0x39FFF3F9
-//PSP_CTRL_MS | PSP_CTRL_DISC | PSP_CTRL_REMOTE | PSP_CTRL_WLAN_UP | PSP_CTRL_HOLD | ?
-#define CTRL_PSP_HARDWARE_IO_BUTTONS            0x3B0E0000
+//SCE_CTRL_MS | SCE_CTRL_DISC | SCE_CTRL_REMOTE | SCE_CTRL_WLAN_UP | SCE_CTRL_HOLD | ?
+#define CTRL_HARDWARE_IO_BUTTONS            0x3B0E0000
 
 
-PSP_MODULE_BOOTSTART("CtrlInit");
-PSP_MODULE_REBOOT_BEFORE("CtrlRebootBefore");
-PSP_MODULE_INFO("sceController_Service", 0x1007, 1, 1);
-PSP_SDK_VERSION(0x06060010);
+SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                         | SCE_MODULE_SINGLE_START, 1, 1);
+SCE_MODULE_BOOTSTART("CtrlInit");
+SCE_MODULE_REBOOT_BEFORE("CtrlRebootBefore");
+SCE_SDK_VERSION(SDK_VERSION);
 
-typedef struct _SceCtrlRapidFire {
+
+typedef struct {
     /** The pressed-button-range to check for. */
     u32 pressedButtonRange; //0
     /** The button(s) which will fire the pressed/un-pressed period for a button/buttons when being pressed.
@@ -103,7 +98,7 @@ typedef struct _SceCtrlRapidFire {
     u8 reqButtonsEventOnTime; //15;
 } SceCtrlRapidFire; //size of SceCtrlRapidFire: 16
 
-typedef struct _SceCtrlEmulatedData {
+typedef struct {
     /** Emulated analog pad X-axis offset. */
     u8 analogXEmulation; //0
     /** Emulated analog pad Y-axis offset. */
@@ -122,7 +117,7 @@ typedef struct _SceCtrlEmulatedData {
     u32 intCtrlBufUpdates2; //16
 } SceCtrlEmulatedData; //size of SceCtrlEmulatedData: 20
 
-typedef struct _SceCtrlButtonCallback {
+typedef struct {
     /** Bitwise OR'ed button values (of ::PspCtrlButtons) which will be checked for being pressed. */
     u32 btnMask; //0
     /** Pointer to a callback function handling the button input effects. */
@@ -133,7 +128,7 @@ typedef struct _SceCtrlButtonCallback {
     void *arg; //12
 } SceCtrlButtonCallback; //Size of SceCtrlButtonCallback: 16
 
-typedef struct _SceCtrlInternalData {
+typedef struct {
     /** Button is newly pressed (was not already been pressed). */
     u32 btnMake; //0
     /** Stop of button press. */
@@ -150,21 +145,21 @@ typedef struct _SceCtrlInternalData {
     void *sceCtrlBuf[3]; //28
 } SceCtrlInternalData; //Size of SceCtrlInternalData: 40
 
-typedef struct _SceCtrl {
+typedef struct {
     SceSysTimerId timerID; //0
     int eventFlag; //4
     u32 btnCycle; //8
-    PspCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode -- correct
+    SceCtrlPadInputMode samplingMode[CTRL_SAMPLING_MODES]; //12 -- samplingMode[0] for User mode, samplingMode[1] for Kernel mode -- correct
     u8 unk_Byte_0; //14
     u8 unk_Byte_1; //15
-    u8 sysconHwDataTransferBusy; //16
-    u8 unk_Byte_7; //17 -- correct
+    u8 sysconBusy; //16
+    u8 sysconBusyIntr2; //17 -- correct
     /** Reserved. */
     u8 resv[2]; //18
     u8 unk_Byte_2; //20
-    PspCtrlPadPollMode pollMode; //21
+    SceCtrlPadPollMode pollMode; //21
     short int suspendSamples; //22
-    u32 unk_1; //24
+    u32 sysconTransfersLeft; //24
     SceSysconPacket sysPacket[2]; //28 -- size of one array member is 96.
     SceCtrlInternalData userModeData; //220
     SceCtrlInternalData kernelModeData; //260
@@ -229,106 +224,110 @@ SceCtrlData g_2FB0[CTRL_INTERNAL_CONTROLLER_BUFFERS]; //0x00002FB0
  * Subroutine sceCtrl_driver_121097D5 - Address 0x00000000
  * Exported in sceCtrl_driver
  */
-int sceCtrlInit(void) {   
+int sceCtrlInit(void) 
+{   
     int eventId;
-    int keyConfig;
+    int appType;
     SceSysTimerId timerId;
     u32 supportedUserButtons;
     void (*func)(SceKernelDeci2Ops *);
     int *retPtr;
-    int pspModel;
-    
-    int dbg_status;   
-    
-    dbg_printf("Calling: %s\n", __FUNCTION__);  
+    int pspModel; 
 
-    memset(&ctrl, 0, sizeof(SceCtrl)); //0x00000024
+    memset(&ctrl, 0, sizeof(SceCtrl));
 
-    ctrl.pollMode = PSP_CTRL_POLL_POLLING; //0x00000048
-    ctrl.userModeData.sceCtrlBuf[0] = g_2BB0; //0x00000054 -- size of SceCtrlData is 16 (default) -> required size is 64 * 16 = 0x400.
-    ctrl.analogY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000060
-    ctrl.analogX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000064
-    ctrl.kernelModeData.sceCtrlBuf[0] = g_2FB0; //0x0000006C
-    ctrl.unk_1 = -1; //0x00000074
+    ctrl.pollMode = SCE_CTRL_POLL_RUNNING;
+    ctrl.userModeData.sceCtrlBuf[0] = g_2BB0;
+    ctrl.analogY = CTRL_ANALOG_PAD_DEFAULT_VALUE;
+    ctrl.analogX = CTRL_ANALOG_PAD_DEFAULT_VALUE;
+    ctrl.kernelModeData.sceCtrlBuf[0] = g_2FB0;
+    ctrl.sysconTransfersLeft = UINT_MAX;
 
-    dbg_printf("creating event flag in: %s\n", __FUNCTION__);
-    eventId = sceKernelCreateEventFlag("SceCtrl", SCE_EVENT_WAITOR, 0, NULL); //0x00000070
-    ctrl.eventFlag = eventId; //0x0000007C
+    /* 
+     * Create the event used for the ::_sceCtrlReadBuffer[...] functions 
+     * to wait for the next V-blank interrupt.
+     */
+    eventId = sceKernelCreateEventFlag("SceCtrl", SCE_EVENT_WAITOR, 0, NULL);
+    ctrl.eventFlag = eventId;
 
-    dbg_printf("allocating timer in: %s\n", __FUNCTION__);
-    timerId = sceSTimerAlloc(); //0x00000078
-    if (timerId < 0) { //0x00000080
+    /* 
+     * Allocate a timer used for handling an own button data update time
+     * and calling the specific user set time interrupt handler.
+     */
+    timerId = sceSTimerAlloc();
+    if (timerId < 0)
         return timerId;
-    }
+
     ctrl.timerID = timerId;
-    sceSTimerSetPrscl(timerId, 1, 0x30); //0x00000094
-    ctrl.unk_Byte_1 = -1; //0x000000A0
+    sceSTimerSetPrscl(timerId, 1, 0x30);
     
-    dbg_printf("registering sysEventHandler: %s\n", __FUNCTION__);
-    sceKernelRegisterSysEventHandler(&ctrlSysEvent); //0x000000A4
-    sceSyscon_driver_B72DDFD2(0); //0x000000AC
+    ctrl.unk_Byte_1 = -1;
+    
+    /* 
+     * Register a SYSCON event handler which will listen to PSP state changes
+     * like 'going into sleep mode' or 'resuming from sleep mode' 
+     * and handle them properly regarding the controller module
+     * i.e. suspending/resuming the module's registered interrupts.
+     */
+    sceKernelRegisterSysEventHandler(&ctrlSysEvent);
+    sceSyscon_driver_B72DDFD2(0);
 
-    dbg_printf("retrieving application type: %s\n", __FUNCTION__);
-    keyConfig = sceKernelApplicationType(); //0x000000B4
-    if (keyConfig == PSP_INIT_KEYCONFIG_UPDATER) { //0x000000C0
-        supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
+    /* Set the user mode buttons to be supported by the application. */
+    appType = sceKernelApplicationType();
+    if (appType == SCE_INIT_APPLICATION_UPDATER) {
+        supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED;
     }
-    if (keyConfig > PSP_INIT_KEYCONFIG_UPDATER) { //0x000000CC
-        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
-        if (keyConfig == PSP_INIT_ALLPICATION_POPS) { //0x000000E0
-            supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
-        }
+    if (appType > SCE_INIT_APPLICATION_UPDATER) {
+        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT;
+        if (appType == SCE_INIT_APPLICATION_POPS)
+            supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED;
     }
-    if (keyConfig == 0) { //0x000000D4
-        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
+    //0x000000D4
+    if (appType == 0) {
+        supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT;
     }
-    else { //0x000000DC
-         supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT; //0x000000EC
-         if (keyConfig == PSP_INIT_ALLPICATION_VSH) { //0x000000E0
-             supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED; //0x00000208
-         }
+    else {
+         supportedUserButtons = CTRL_USER_MODE_BUTTONS_DEFAULT;
+         if (appType == SCE_INIT_APPLICATION_VSH)
+             supportedUserButtons = CTRL_USER_MODE_BUTTONS_EXTENDED;
     }
-    dbg_printf("setting masks: %s\n", __FUNCTION__);
-    ctrl.userModeButtons = supportedUserButtons; //0x000000F0
-    ctrl.maskSetButtons = 0; //0x000000FC
-    ctrl.maskSupportButtons = supportedUserButtons; //0x00000104
+    //0x000000F0
+    ctrl.userModeButtons = supportedUserButtons;
+    ctrl.maskSetButtons = 0;
+    ctrl.maskSupportButtons = supportedUserButtons;
 
-    dbg_printf("get psp model: %s\n", __FUNCTION__);
     pspModel = sceKernelGetModel();
-    switch (pspModel) { //0x00000128
+    switch (pspModel) { 
         case 4: case 5: case 7: case 9:
-            ctrl.unk_4 = CTRL_ALL_SUPPORTED_BUTTONS; //0x000001EC & 0x00000138
+            ctrl.unk_4 = CTRL_ALL_SUPPORTED_BUTTONS;
             break;
-        default: //0x0000010C -> 0x000001F0
-            ctrl.unk_4 = 0x1FFF3F9; //0x00000130 & 0x00000138
+        default:
+            ctrl.unk_4 = 0x1FFF3F9;
             break;
     }
-    ctrl.unk_5 = CTRL_ALL_SUPPORTED_BUTTONS; //0x00000168
-    ctrl.unk_6 = 0xF1F3F9; //0x00000174
-    ctrl.unk_7 = 0x390E0000; //0x0000017C
-    ctrl.unk_8 = 0; //0x00000180
-    ctrl.idleReset = 129; //0x00000188
-    ctrl.idleBack = 129; //0x00000158
+    //0x00000168
+    ctrl.unk_5 = CTRL_ALL_SUPPORTED_BUTTONS; 
+    ctrl.unk_6 = 0xF1F3F9;
+    ctrl.unk_7 = 0x390E0000;
+    ctrl.unk_8 = 0;
+    ctrl.idleReset = 129;
+    ctrl.idleBack = 129;
 
-    dbg_printf("register custom sub interrupt handler: %s\n", __FUNCTION__);
-    dbg_status = sceKernelRegisterSubIntrHandler(PSP_VBLANK_INT, 0x13, _sceCtrlVblankIntr, NULL); //0x00000184 
-    dbg_printf("registered sub interrupt handler with 0x%08X: in: %s\n", dbg_status, __FUNCTION__);
-    
-    dbg_printf("enable sub interrupt handler: %s\n", __FUNCTION__);
-    sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x00000190
+    /* 
+     * Register the V-blank interrupt handler (_sceCtrlVblankIntr()) and 
+     * enable the V-blank interrupt. _sceCtrlVblankIntr() is used to update the 
+     * internal controller data buffers of the controller module via a SYSCON
+     * hardware data transfer.
+     */
+    sceKernelRegisterSubIntrHandler(SCE_VBLANK_INT, 0x13, _sceCtrlVblankIntr, NULL); 
+    sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x13);
 
-    //TODO: Reverse the function below.
-    dbg_printf("calling sceKernelDeci2p.... in: %s\n", __FUNCTION__);  
-    
-    retPtr = sceKernelDeci2pReferOperations(); //0x00000198
-    if ((retPtr != NULL) && (*retPtr == 48)) { //0x000001A0 & 0x000001AC
-        dbg_printf("retrieving function pointer in: %s\n", __FUNCTION__);
-         func = (void (*)(SceKernelDeci2Ops *))*(retPtr + 11); //0x000001B0
-         dbg_printf("calling Deci2Ops custom function: %s\n", __FUNCTION__);
-         func(&ctrlDeci2Ops); //0x000001D8
+    //TODO: Reverse the function below.   
+    retPtr = sceKernelDeci2pReferOperations();
+    if ((retPtr != NULL) && (*retPtr == 48)) {
+         func = (void (*)(SceKernelDeci2Ops *))*(retPtr + 11);
+         func(&ctrlDeci2Ops);
     }
-       
-    dbg_printf("return from: %s\n", __FUNCTION__);
     return SCE_ERROR_OK;
 }
 
@@ -336,56 +335,68 @@ int sceCtrlInit(void) {
  * Subroutine sceCtrl_driver_1A1A7D40 - Address 0x0000020C
  * Exported in sceCtrl_driver
  */
-int sceCtrlEnd(void) {
+int sceCtrlEnd(void) 
+{
     SceSysTimerId timerId;
     int sysconStatus;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    sceKernelUnregisterSysEventHandler(&ctrlSysEvent); //0x00000220
-    sceSyscon_driver_B72DDFD2(1); //0x00000228
-    sceDisplayWaitVblankStart(); //0x00000230
+    /* 
+     * Unregister the SYSCON event handler used to listen to 
+     * PSP state changes.
+     */
+    sceKernelUnregisterSysEventHandler(&ctrlSysEvent);
+    sceSyscon_driver_B72DDFD2(1);
+    sceDisplayWaitVblankStart();
 
-    timerId = ctrl.timerID; //0x0000023C
-    ctrl.timerID = -1; //0x00000244
-    if (timerId >= 0) { //0x00000248
-        sceSTimerStopCount(timerId); //0x00000250
-        sceSTimerFree(timerId); //0x00000258
+    /* Cancel and delete the registered timer. */
+    timerId = ctrl.timerID;
+    ctrl.timerID = -1;  
+    if (timerId >= 0) {  //0x00000248
+        sceSTimerStopCount(timerId);
+        sceSTimerFree(timerId);
     }
-    sceKernelReleaseSubIntrHandler(PSP_VBLANK_INT, 0x13); //0x00000264
-    sceKernelDeleteEventFlag(ctrl.eventFlag); //0x0000026C
+    /* 
+     * Release the registered V-blank handler and 
+     * delete the set event flag.
+     */
+    sceKernelReleaseSubIntrHandler(SCE_VBLANK_INT, 0x13);
+    sceKernelDeleteEventFlag(ctrl.eventFlag);
 
     //0x00000274
-    sysconStatus = ctrl.sysconHwDataTransferBusy;
-    sysconStatus |= ctrl.unk_Byte_7;
+    sysconStatus = ctrl.sysconBusy;
+    sysconStatus |= ctrl.sysconBusyIntr2;
     sysconStatus |= ctrl.resv[0];
     sysconStatus |= ctrl.resv[1];
 
-    while (sysconStatus != 0) { //0x0000028C
-           sceDisplayWaitVblankStart(); //0x00000280
-           sysconStatus = ctrl.sysconHwDataTransferBusy;
-           sysconStatus |= ctrl.unk_Byte_7;
+    //0x0000028C
+    while (sysconStatus != 0) { 
+           sceDisplayWaitVblankStart();
+           sysconStatus = ctrl.sysconBusy;
+           sysconStatus |= ctrl.sysconBusyIntr2;
            sysconStatus |= ctrl.resv[0];
            sysconStatus |= ctrl.resv[1];
     }
-    return SCE_ERROR_OK; //0x000002A0
+    return SCE_ERROR_OK;
 }
 
 /*
  * Subroutine sceCtrl_driver_55497589 - Address 0x00001A50
  * Exported in sceCtrl_driver
  */
-int sceCtrlSuspend(void) {
+int sceCtrlSuspend(void) 
+{
     int cycle;
-
-    dbg_printf("In function: %s\n", __FUNCTION__);
     
-    cycle = ctrl.btnCycle; //0x00001A58
-    if (cycle != 0) { //0x00001A68
-        sceSTimerStopCount(ctrl.timerID); //0x00001A88
+    /*
+     * Stop the user timer if it is active,
+     * otherwise disable the V-blank interrupt.
+     */
+    cycle = ctrl.btnCycle;
+    if (cycle != 0) {
+        sceSTimerStopCount(ctrl.timerID);
     }
     else {
-        sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001A70
+        sceKernelDisableSubIntr(SCE_VBLANK_INT, 0x13);
     }
     return SCE_ERROR_OK;
 }
@@ -394,32 +405,31 @@ int sceCtrlSuspend(void) {
  * Subroutine sceCtrl_driver_33D03FD5 - Address 0x000002AC
  * Exported in sceCtrl_driver
  */
-int sceCtrlResume(void) {
+int sceCtrlResume(void) 
+{
     int retVal;
-    int prevButtons;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    retVal = sceSyscon_driver_97765E27(); //0x000002B8
-    if (retVal != 0) { //0x000002C4
-        if (retVal == 1) { //0x00000344
-            prevButtons = ctrl.prevButtons; //0x00000350
-            prevButtons |= 0x20000000; //0x00000358
-            ctrl.prevButtons = prevButtons; //0x00000360
-        }
-    }
-    else {
-        prevButtons = ctrl.prevButtons; //0x000002CC
-        prevButtons &= 0xDFFFFFFF; //0x000002D0
-        ctrl.prevButtons = prevButtons; //0x000002D4
+    retVal = sceSyscon_driver_97765E27();
+    if (retVal == 1) {
+        ctrl.prevButtons |= 0x20000000; //0x00000350
+    }    
+    else { //0x000002CC
+        ctrl.prevButtons &= 0xDFFFFFFF;
     }
     ctrl.unk_Byte_1 = -1;
-    if (ctrl.btnCycle == 0) { //0x000002DC & 0x000002F0
-        sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x000002F8
+    
+    /*
+     * If no user timer was active before, re-enable the V-blank interrupt.
+     * Otherwise, start the user timer (set it to active) and set the appropriate
+     * timer interrupt handler used to update the internal controller buffers 
+     * of the controller module.
+     */
+    if (ctrl.btnCycle == 0) {
+        sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x13);
     }
     else {
-        sceSTimerStartCount(ctrl.timerID); //0x00000318
-        sceSTimerSetHandler(ctrl.timerID, ctrl.btnCycle, _sceCtrlTimerIntr, 0); //0x00000330
+        sceSTimerStartCount(ctrl.timerID);
+        sceSTimerSetHandler(ctrl.timerID, ctrl.btnCycle, _sceCtrlTimerIntr, 0);
     }
     return SCE_ERROR_OK;
 }
@@ -428,10 +438,10 @@ int sceCtrlResume(void) {
  * Subroutine sceCtrl_driver_F0074903 - Address 0x00001C30
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
+int sceCtrlSetPollingMode(SceCtrlPadPollMode pollMode) 
+{   
+    ctrl.pollMode = pollMode;
     
-    ctrl.pollMode = pollMode; //0x00001C3C
     return SCE_ERROR_OK;
 }
 
@@ -440,13 +450,17 @@ int sceCtrlSetPollingMode(PspCtrlPadPollMode pollMode) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
-    int oldK1 = pspShiftK1(); //0x00001330
+SceCtrlPadInputMode sceCtrlGetSamplingMode(SceCtrlPadInputMode *mode) 
+{
+    int oldK1 = pspShiftK1();
     
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
-    if (pspK1PtrOk(mode)) { //0x00001348 & 0x00001350
-        *mode = ctrl.samplingMode[!pspK1IsUserMode()]; //0x00001358 & 0x0000135C
+    /* Protect Kernel memory from User Mode. */
+    if (pspK1PtrOk(mode)) {
+        /*
+         * If the current application is running in User Mode, slot 0 is used.
+         * Otherwise (in Kernel Mode), slot 1 will be accessed.
+         */
+        *mode = ctrl.samplingMode[!pspK1IsUserMode()];
     }
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
@@ -456,28 +470,29 @@ PspCtrlPadInputMode sceCtrlGetSamplingMode(PspCtrlPadInputMode *mode) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {
+int sceCtrlSetSamplingMode(SceCtrlPadInputMode mode) 
+{
     int suspendFlag;
-    int privMode;
-    u8 index;
-    PspCtrlPadInputMode prevMode;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    int index;
+    SceCtrlPadInputMode prevMode;
 
-    if (mode > CTRL_SAMPLING_MODE_MAX_MODE) { //0x000012D0 & 0x000012E4
+    if (mode > CTRL_SAMPLING_MODE_MAX_MODE)
         return SCE_ERROR_INVALID_MODE;
-    }
-    /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000012EC
-    privMode = (pspGetK1() >> 20) & 0x1; //0x000012F4
-    index = (privMode < 1); //0x000012FC
 
-    prevMode = ctrl.samplingMode[index]; //0x00001308
-    ctrl.samplingMode[index] = mode; //0x0000130C
+    /* Disable all interrupts and thread dispatches. */
+    suspendFlag = sceKernelCpuSuspendIntr();
+    
+    /*
+     * If the current application is running in User Mode, slot 0 is used.
+     * Otherwise (in Kernel Mode), slot 1 will be accessed.
+     */
+    index = !pspK1IsUserMode();
+    prevMode = ctrl.samplingMode[index];
+    ctrl.samplingMode[index] = mode;
 
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x00001310:
-    return prevMode; //0x00001318
+    sceKernelCpuResumeIntr(suspendFlag);
+    return prevMode;
 }
 
 /*
@@ -485,16 +500,15 @@ int sceCtrlSetSamplingMode(PspCtrlPadInputMode mode) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlGetSamplingCycle(u32 *cycle) {
+int sceCtrlGetSamplingCycle(u32 *cycle) 
+{
     int oldK1;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    /* Protect kernel memory from user mode. */
-    oldK1 = pspShiftK1(); //0x00001AB8
-    if (pspK1PtrOk(cycle)) { //0x00001ABC && 0x00001AC0
-        *cycle = ctrl.btnCycle; //0x00001ACC && 0x00001AD0
-    }
+    /* Protect Kernel memory from User Mode. */
+    oldK1 = pspShiftK1();
+    if (pspK1PtrOk(cycle))
+        *cycle = ctrl.btnCycle;
+    
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
@@ -504,49 +518,57 @@ int sceCtrlGetSamplingCycle(u32 *cycle) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetSamplingCycle(u32 cycle) {
+int sceCtrlSetSamplingCycle(u32 cycle) 
+{
     int suspendFlag;
     u32 prevCycle;
     u32 nCycle;
     int sdkVersion;
     int oldK1;
+
+    oldK1 = pspShiftK1();
     
-    dbg_printf("In function: %s\n", __FUNCTION__);
-
-    oldK1 = pspShiftK1(); // 0x00001378
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001398
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    /* Enable the VBlank-Interrupt and terminate the registered Timer-Handler. */
+    /*
+     * If the cycle is set to 0, enable the V-blank interrupt
+     * and delete the timer handler and stop the user timer.
+     */
     if (cycle == 0) { //0x000013B0
         prevCycle = ctrl.btnCycle; //0x00001460
-        sceKernelEnableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001464
-        ctrl.btnCycle = 0; //0x00001468
+        sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x13);
+        ctrl.btnCycle = 0;
 
-        sceSTimerSetHandler(ctrl.timerID, 0, NULL, 0); //0x00001478
-        sceSTimerStopCount(ctrl.timerID); //0x00001480
+        sceSTimerSetHandler(ctrl.timerID, 0, NULL, 0);
+        sceSTimerStopCount(ctrl.timerID);
     }
-    else if (cycle < CTRL_BUFFER_UPDATE_MIN_CUSTOM_CYCLES || cycle > CTRL_BUFFER_UPDATE_MAX_CUSTOM_CYCLES) { //0x000013B4 & 0x000013B8
-        return SCE_ERROR_INVALID_VALUE; //0x0000138C & 0x000013C0
+    else if (cycle < CTRL_BUFFER_UPDATE_MIN_CUSTOM_CYCLES || cycle > CTRL_BUFFER_UPDATE_MAX_CUSTOM_CYCLES) { //0x000013B4
+             return SCE_ERROR_INVALID_VALUE;
     }
-    /* Start the registered Timer-Handler process and disable the VBlank-Interrupt. */
+    
+    /*
+     * The new cycle value is > 0: Disable the V-blank interrupt
+     * and set the new timer handler to be executed after 'cycle' microseconds.
+     */
     else {
         prevCycle = ctrl.btnCycle; //0x0000140C
-        sceSTimerStartCount(ctrl.timerID); //0x00001410
-        ctrl.btnCycle = cycle; //0x00001414
-        sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00001418
+        sceSTimerStartCount(ctrl.timerID);
+        ctrl.btnCycle = cycle;
+        sdkVersion = sceKernelGetCompiledSdkVersion();
 
         /* If the PSP Firmware version is >= 2.5, the original cycle is used, otherwise cycle + 1. */
-        nCycle = (sdkVersion > 0x204FFFF) ? 0 : 1; //0x00001428 && 0x0000142C
+        nCycle = (sdkVersion > 0x204FFFF) ? 0 : 1;
         nCycle += cycle;
 
-        sceSTimerSetHandler(ctrl.timerID, nCycle, _sceCtrlTimerIntr, 0); //0x00001408 & 0x00001444
-        sceKernelDisableSubIntr(PSP_VBLANK_INT, 0x13); //0x00001450
+        sceSTimerSetHandler(ctrl.timerID, nCycle, _sceCtrlTimerIntr, 0);
+        sceKernelDisableSubIntr(SCE_VBLANK_INT, 0x13);
     }
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x000013D8
-    pspSetK1(oldK1); //0x000013E4
-    return prevCycle; //0x000013E0
+    sceKernelCpuResumeIntr(suspendFlag); 
+    pspSetK1(oldK1);
+    
+    return prevCycle;
 }
 
 /*
@@ -554,36 +576,32 @@ int sceCtrlSetSamplingCycle(u32 cycle) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
+int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) 
+{
     int oldK1;
     int suspendFlag;
-    int tempIdleBack;
-    int tempIdleReset;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
     oldK1 = pspShiftK1();
     
-    /* Protect kernel memory from user mode. */
-    if (!pspK1PtrOk(idleReset) || !pspK1PtrOk(idleBack)) { //0x00001734 & 0x00001740
+    /* Protect Kernel memory from User Mode. */
+    if (!pspK1PtrOk(idleReset) || !pspK1PtrOk(idleBack)) {
         pspSetK1(oldK1);
-        return SCE_ERROR_PRIV_REQUIRED; /* protect kernel addresses from user mode. */
-    } 
+        return SCE_ERROR_PRIV_REQUIRED;
+    }   
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000176C
+    suspendFlag = sceKernelCpuSuspendIntr();
+    
     if (idleReset != NULL) { //0x00001774
-        tempIdleReset = ctrl.idleReset;
-        *idleReset = (tempIdleReset == 129) ? -1 : tempIdleReset; //0x00001788
+        *idleReset = (ctrl.idleReset == 129) ? -1 : ctrl.idleReset;
     }
+    
     if (idleBack != NULL) { //0x00001794
-        tempIdleBack = ctrl.idleBack;
-        *idleBack = (tempIdleBack == 129) ? -1 : tempIdleBack; //0x000017A4
+        *idleBack = (ctrl.idleBack == 129) ? -1 : ctrl.idleBack;
     }  
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x000017B0
-    pspSetK1(oldK1); //0x000017B8
-    
-    return SCE_ERROR_OK; //0x000017C0
+    sceKernelCpuResumeIntr(suspendFlag);
+    pspSetK1(oldK1);
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -591,23 +609,22 @@ int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) {
+int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) 
+{
     int suspendFlag;
     
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    if (((idlereset < -1 || idlereset > 128) && idleback < -1) || idleback > 128)
+        return SCE_ERROR_INVALID_VALUE;
     
-    if (((idlereset < -1 || idlereset > 128) && idleback < -1) || idleback > 128) { //0x000016A0 & 0x000016B4 & 0x000016C8
-        return SCE_ERROR_INVALID_VALUE; //0x000016A8 & 0x000016AC & 0x00001700
-    }
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000016D0
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    ctrl.idleBack = (idleback == -1) ? 129 : idleback; //0x000016D4 & 0x000016E0
-    ctrl.idleReset = (idlereset == -1) ? 129 : idlereset; //0x000016CC & 0x000016EC
+    ctrl.idleBack = (idleback == -1) ? 129 : idleback;
+    ctrl.idleReset = (idlereset == -1) ? 129 : idlereset;
 
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x000016E8
-    return SCE_ERROR_OK; //0x000016F0
+    sceKernelCpuResumeIntr(suspendFlag);
+    return SCE_ERROR_OK;
 }
 
 /*
@@ -615,13 +632,9 @@ int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-short int sceCtrlGetSuspendingExtraSamples(void) {
-    short int curSuspendSamples;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
-
-    curSuspendSamples = ctrl.suspendSamples;  //0x00001C74
-    return curSuspendSamples;
+short int sceCtrlGetSuspendingExtraSamples(void) 
+{
+    return ctrl.suspendSamples;
 }
 
 /*
@@ -629,17 +642,12 @@ short int sceCtrlGetSuspendingExtraSamples(void) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetSuspendingExtraSamples(short suspendSamples) {
-    short int nSuspendSamples;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+int sceCtrlSetSuspendingExtraSamples(short suspendSamples) 
+{
+    if (suspendSamples > CTRL_MAX_EXTRA_SUSPEND_SAMPLES)
+        return SCE_ERROR_INVALID_VALUE;
 
-    if (suspendSamples > CTRL_MAX_EXTRA_SUSPEND_SAMPLES) { //0x00001C44
-        return SCE_ERROR_INVALID_VALUE; //0x00001C48 & 0x00001C54
-    }
-    nSuspendSamples = (suspendSamples == 1) ? 0 : suspendSamples; //0x00001C40 & 0x00001C4C
-    ctrl.suspendSamples = nSuspendSamples;
-
+    ctrl.suspendSamples = (suspendSamples == 1) ? 0 : suspendSamples;
     return SCE_ERROR_OK;
 }
 
@@ -647,27 +655,26 @@ int sceCtrlSetSuspendingExtraSamples(short suspendSamples) {
  * Subroutine sceCtrl_driver_E467BEC8 - Address 0x000011F0
  * Exported in sceCtrl_driver
  */
-int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3) {
+int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3) 
+{
     SceUID poolId;
     void *ctrlBuf;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    //0x0000122C
-    if (mode < 1 || mode > 2) {
+    if (mode < 1 || mode > 2)
         return SCE_ERROR_INVALID_VALUE;
-    }
+    
     if (ctrl.unk_array2[mode - 1] == NULL) { //0x00001238 & 0x00001254
-        poolId = sceKernelCreateFpl("SceCtrlBuf", PSP_MEMORY_PARTITION_KERNEL, 0, 2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL); //0x00001294
-        if (poolId < 0) { //0x000012A4
+        poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_MEMORY_PARTITION_KERNEL, 0, 
+                                                2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
+        if (poolId < 0)
             return poolId;
-        }
+
         sceKernelTryAllocateFpl(poolId, &ctrlBuf); //0x000012AC
-        ctrl.kernelModeData.sceCtrlBuf[0] = (SceCtrlDataExt *)(ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS); //0x000012BC
-        ctrl.userModeData.sceCtrlBuf[0] = (SceCtrlDataExt *)ctrlBuf; //0x000012C4
+        ctrl.kernelModeData.sceCtrlBuf[0] = (SceCtrlDataExt *)(ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS);
+        ctrl.userModeData.sceCtrlBuf[0] = (SceCtrlDataExt *)ctrlBuf;
     }
-    ctrl.unk_array3[mode - 1] = arg3; //0x00001264
-    ctrl.unk_array2[mode - 1] = arg2; //0x0000126C
+    ctrl.unk_array3[mode - 1] = arg3;
+    ctrl.unk_array2[mode - 1] = arg2;
     
     return SCE_ERROR_OK;
 }
@@ -677,39 +684,44 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlPeekLatch(SceCtrlLatch *latch) {
+int sceCtrlPeekLatch(SceCtrlLatch *latch) 
+{
     SceCtrlInternalData *latchPtr;
     int suspendFlag;
     int oldK1;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
     oldK1 = pspShiftK1();
     
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x000014A8
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    /* Protect kernel memory from user mode. */
-    if (!pspK1PtrOk(latch)) { //0x000014B8
-        sceKernelCpuResumeIntr(suspendFlag); //0x00001524
-        pspSetK1(oldK1); //0x00001530
-        return SCE_ERROR_PRIV_REQUIRED; //0x0000152C & 0x00001538
+    /* Protect Kernel memory from User Mode. */
+    if (!pspK1PtrOk(latch)) {
+        /* Resume all disabled interrupts and thread dispatches. */
+        sceKernelCpuResumeIntr(suspendFlag);
+        pspSetK1(oldK1);
+        return SCE_ERROR_PRIV_REQUIRED;
     }
+    
+    /*
+     * Application in User Mode: Use the User Mode internal latch buffer.
+     * Application in Kernel Mode: Use the Kernel Mode internal latch buffer.
+     */
     if (!pspK1IsUserMode()) { //0x000014C4
-        latchPtr = &ctrl.kernelModeData; //0x00001520
+        latchPtr = &ctrl.kernelModeData;
     }
     else {
-        latchPtr = &ctrl.userModeData; //0x000014D0
+        latchPtr = &ctrl.userModeData;
     }
     latch->btnMake = latchPtr->btnMake; //0x000014D4
-    latch->btnBreak = latchPtr->btnBreak; //0x000014DC
-    latch->btnPress = latchPtr->btnPress; //0x000014E4
-    latch->btnRelease = latchPtr->btnRelease; //0x000014EC
+    latch->btnBreak = latchPtr->btnBreak;
+    latch->btnPress = latchPtr->btnPress;
+    latch->btnRelease = latchPtr->btnRelease;
 
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x000014F4
-    pspSetK1(oldK1); //0x000014FC
-    return latchPtr->readLatchCount; //0x00001500
+    sceKernelCpuResumeIntr(suspendFlag);
+    pspSetK1(oldK1);
+    return latchPtr->readLatchCount;
 }
 
 /*
@@ -717,49 +729,53 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlReadLatch(SceCtrlLatch *latch) {
+int sceCtrlReadLatch(SceCtrlLatch *latch) 
+{
     SceCtrlInternalData *latchPtr;
     int suspendFlag;
     int readLatchCount;
     int oldK1;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
     oldK1 = pspShiftK1();
     
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001554
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    /* Protect kernel memory from user mode. */
-    if (!pspK1PtrOk(latch)) { //0x00001564 --
-        sceKernelCpuResumeIntr(suspendFlag); //0x00001620
-        pspSetK1(oldK1); //0x0000162C
-        return SCE_ERROR_PRIV_REQUIRED; //0x00001634
+    /* Protect Kernel memory from User Mode. */
+    if (!pspK1PtrOk(latch)) {
+        /* Resume all disabled interrupts and thread dispatches. */
+        sceKernelCpuResumeIntr(suspendFlag);
+        pspSetK1(oldK1);
+        return SCE_ERROR_PRIV_REQUIRED;
     }
+    /*
+     * Application in User Mode: Use the User Mode internal latch buffer.
+     * Application in Kernel Mode: Use the Kernel Mode internal latch buffer.
+     */
     if (!pspK1IsUserMode()) { //0x00001570
-        latchPtr = &ctrl.kernelModeData; //0x000015E0
-        readLatchCount = latchPtr->readLatchCount; //0x00001614
-        latchPtr->readLatchCount = 0; //0x0000161C
+        latchPtr = &ctrl.kernelModeData;
+        readLatchCount = latchPtr->readLatchCount;
+        latchPtr->readLatchCount = 0;
     }
     else {
         latchPtr = &ctrl.userModeData; //0x0000157C
-        readLatchCount = latchPtr->readLatchCount; //0x000015A0
-        latchPtr->readLatchCount = 0; //0x000015A8
+        readLatchCount = latchPtr->readLatchCount;
+        latchPtr->readLatchCount = 0;
     }
-    latch->btnMake = latchPtr->btnMake; //0x00001584 & 0x000015E8
-    latch->btnBreak = latchPtr->btnBreak; //0x0000158C & 0x000015F0
-    latch->btnPress = latchPtr->btnPress; //0x00001594 & 0x000015F8
-    latch->btnRelease = latchPtr->btnRelease; //0x0000159C & 0x00001600
+    latch->btnMake = latchPtr->btnMake;
+    latch->btnBreak = latchPtr->btnBreak;
+    latch->btnPress = latchPtr->btnPress;
+    latch->btnRelease = latchPtr->btnRelease;
 
-    latchPtr->btnMake = 0; //0x000015A4 & 0x00001604
-    latchPtr->btnBreak = 0; //0x000015AC & 0x00001608
-    latchPtr->btnPress = 0; //0x000015B0 & 0x0000160C
-    latchPtr->btnRelease = 0; //0x000015B4 & 0x00001610
+    latchPtr->btnMake = 0;
+    latchPtr->btnBreak = 0;
+    latchPtr->btnPress = 0;
+    latchPtr->btnRelease = 0;
 
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x000015B8
-    pspSetK1(oldK1); //0x000015C0
-    return readLatchCount; //0x000015C4
+    sceKernelCpuResumeIntr(suspendFlag);
+    pspSetK1(oldK1); 
+    return readLatchCount;
 }
 
 /*
@@ -767,11 +783,11 @@ int sceCtrlReadLatch(SceCtrlLatch *latch) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
+int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 0); //0x00001AEC
+    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 0);
     return readBuffers;
 }
 
@@ -780,11 +796,11 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
+int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 1); //0x00001B0C
+    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 1);
     return readBuffers;
 }
 
@@ -793,11 +809,11 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
+int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 2); //0x00001B2C
+    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 2);
     return readBuffers;
 }
 
@@ -806,11 +822,11 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
+int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 3); //0x00001B4C
+    readBuffers = _sceCtrlReadBuf((SceCtrlDataExt *)pad, reqBufReads, 0, 3);
     return readBuffers;
 }
 
@@ -819,11 +835,11 @@ int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 4); //0x00001B78
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 4);
     return readBuffers;
 }
 
@@ -832,11 +848,11 @@ int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 5); //0x00001BA4
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 5);
     return readBuffers;
 }
 
@@ -845,11 +861,11 @@ int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 6); //0x00001BD0
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 6);
     return readBuffers;
 }
 
@@ -858,11 +874,11 @@ int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) {
+int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
+{
     int readBuffers;
 
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 7); //0x00001BFC
+    readBuffers = _sceCtrlReadBuf(pad, reqBufReads, arg1, 7);
     return readBuffers;
 }
 
@@ -871,13 +887,12 @@ int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *pad, u8 reqBufReads) 
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlClearRapidFire(u8 slot) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
-    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x00001DBC && 0x00001DC0
+int sceCtrlClearRapidFire(u8 slot) 
+{   
+    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
-    }
-    ctrl.rapidFire[slot].pressedButtonRange = 0; //0x00001DC8
+    
+    ctrl.rapidFire[slot].pressedButtonRange = 0; 
     return SCE_ERROR_OK;
 }
 
@@ -886,47 +901,51 @@ int sceCtrlClearRapidFire(u8 slot) {
  * Exported in sceCtrl
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, u8 reqBtnOnTime, u8 reqBtnOffTime) {
+int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, 
+                        u8 reqBtnOnTime, u8 reqBtnOffTime) 
+{
     u32 usedButtons;
     u32 kernelButtons;
     int oldK1;
     int suspendFlag;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT) { //0x000018FC & 0x0000193C
+    if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
-    }
-    if ((reqBtnEventOnTime | reqBtnOnTime | reqBtnOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER) { //0x000018E8 & 0x000018F4 & 0x00001910 & 0x00001954
+
+    if ((reqBtnEventOnTime | reqBtnOnTime | reqBtnOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER) //0x000018E8
         return SCE_ERROR_INVALID_VALUE;
-    }
+
     oldK1 = pspShiftK1();
 
-    usedButtons = pressedBtnRange | reqBtnsEventTrigger; //0x0000195C
-    usedButtons = usedButtons | reqBtn; //0x00001968
-    if (pspK1IsUserMode()) { //0x00001964
+    usedButtons = pressedBtnRange | reqBtnsEventTrigger | reqBtn;  
+    /*
+     * If the current application is running in User Mode
+     * and the requested Button Range, the requested buttons for the rapid fire
+     * event trigger and/or the requested "rapid fire" button include Kernel Mode 
+     * buttons or the SCE_CTRL_HOLD button -> return an error.
+     */
+    if (pspK1IsUserMode()) { 
         kernelButtons = ~ctrl.userModeButtons; //0x0000197C
-        kernelButtons = kernelButtons | PSP_CTRL_HOLD; //0x00001980
-        //if the buttons given by the user include kernel buttons or the HOLD button -> return error
-        if (kernelButtons & usedButtons) { //0x00001984 & 0x00001988
-            pspSetK1(oldK1); //0x00001A0C
+        kernelButtons |= SCE_CTRL_HOLD;
+        if (kernelButtons & usedButtons) {
+            pspSetK1(oldK1);
             return SCE_ERROR_PRIV_REQUIRED;
         }
     }
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001990
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    ctrl.rapidFire[slot].reqButtonsOnTime = reqBtnOnTime; //0x00001998 & 0x0000199C & 0x000019A0 & 0x000019A4 & 0x000019A8
-    ctrl.rapidFire[slot].pressedButtonRange = pressedBtnRange; //0x000019B4
-    ctrl.rapidFire[slot].reqButtonsEventTrigger = reqBtnsEventTrigger; //0x000019B8
-    ctrl.rapidFire[slot].reqButtons = reqBtn; //0x000019BC
-    ctrl.rapidFire[slot].reqButtonsOffTime = reqBtnOffTime; //0x000019C0
-    ctrl.rapidFire[slot].reqButtonsEventOnTime = reqBtnEventOnTime; //0x000019B0
-    ctrl.rapidFire[slot].eventData = 0; //0x000019C8
+    ctrl.rapidFire[slot].reqButtonsOnTime = reqBtnOnTime;
+    ctrl.rapidFire[slot].pressedButtonRange = pressedBtnRange; 
+    ctrl.rapidFire[slot].reqButtonsEventTrigger = reqBtnsEventTrigger;
+    ctrl.rapidFire[slot].reqButtons = reqBtn;
+    ctrl.rapidFire[slot].reqButtonsOffTime = reqBtnOffTime;
+    ctrl.rapidFire[slot].reqButtonsEventOnTime = reqBtnEventOnTime;
+    ctrl.rapidFire[slot].eventData = 0;
 
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x000019C4
-    pspSetK1(oldK1); //0x000019CC
+    sceKernelCpuResumeIntr(suspendFlag);
+    pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
 
@@ -934,15 +953,14 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
  * Subroutine sceCtrl_driver_DB76878D - Address 0x00001CB8
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
-    if (slot > CTRL_DATA_EMULATION_MAX_SLOT) { //0x00001CE4
-        return SCE_ERROR_INVALID_VALUE; //0x00001CD0 & 0x00001CE8
-    }
-    ctrl.emulatedData[slot].analogXEmulation = aXEmu; //0x00001CF8
-    ctrl.emulatedData[slot].analogYEmulation = aYEmu; //0x00001CEC
-    ctrl.emulatedData[slot].intCtrlBufUpdates = bufUpdates; //0x00001CF4
+int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates)
+{    
+    if (slot > CTRL_DATA_EMULATION_MAX_SLOT)
+        return SCE_ERROR_INVALID_VALUE;
+
+    ctrl.emulatedData[slot].analogXEmulation = aXEmu;
+    ctrl.emulatedData[slot].analogYEmulation = aYEmu;
+    ctrl.emulatedData[slot].intCtrlBufUpdates = bufUpdates;
 
     return SCE_ERROR_OK;
 }
@@ -951,15 +969,14 @@ int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates) {
  * Subroutine sceCtrl_driver_5130DAE3 - Address 0x00001C78
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
-    if (slot > CTRL_DATA_EMULATION_MAX_SLOT) { //0x00001C98
-        return SCE_ERROR_INVALID_VALUE; //0x00001C90 & 0x00001C9C
-    }
-    ctrl.emulatedData[slot].uModeBtnEmulation = uModeBtnEmu; //0x00001CA8
-    ctrl.emulatedData[slot].kModeBtnEmulation = kModeBtnEmu; //0x00001CAC
-    ctrl.emulatedData[slot].intCtrlBufUpdates2 = bufUpdates; //0x00001CA0
+int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates)
+{    
+    if (slot > CTRL_DATA_EMULATION_MAX_SLOT)
+        return SCE_ERROR_INVALID_VALUE;
+
+    ctrl.emulatedData[slot].uModeBtnEmulation = uModeBtnEmu;
+    ctrl.emulatedData[slot].kModeBtnEmulation = kModeBtnEmu;
+    ctrl.emulatedData[slot].intCtrlBufUpdates2 = bufUpdates;
 
     return SCE_ERROR_OK;
 }
@@ -967,22 +984,18 @@ int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 buf
 /* Subroutine sceCtrl_driver_1809B9FC - Address 0x00001878
  * Exported in sceCtrl_driver
  */
-PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {
+SceCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 buttons)
+{
     int suspendFlag;
-    int curMaskSupBtns;
-    int curMaskSetBtns;
-    PspCtrlPadButtonMaskMode btnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    int btnMaskMode;
 
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000188C
-    curMaskSetBtns = ctrl.maskSetButtons; //0x0000189C
-    curMaskSupBtns = ctrl.maskSupportButtons; //0x000018A0
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    if (curMaskSupBtns & btnMask) { //0x000018AC
-        btnMaskMode = (curMaskSetBtns & btnMask) ? PSP_CTRL_MASK_IGNORE_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x000018B0 & 0x000018B8
-    }
+    btnMaskMode = SCE_CTRL_MASK_IGNORE_BUTTONS;
+    if (ctrl.maskSupportButtons & buttons)
+        btnMaskMode = (ctrl.maskSetButtons & buttons) ? SCE_CTRL_MASK_SET_BUTTONS : SCE_CTRL_MASK_NO_MASK;
+
     /* Resume all disabled interrupts and thread dispatches. */
     sceKernelCpuResumeIntr(suspendFlag);
     return btnMaskMode;
@@ -991,58 +1004,61 @@ PspCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 btnMask) {
 /* Subroutine sceCtrl_driver_F8346777 - Address 0x000017C4
  * Exported in sceCtrl_driver
  */
-PspCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 mask, PspCtrlPadButtonMaskMode buttonMaskMode) {
+int sceCtrlSetButtonIntercept(u32 buttons, SceCtrlPadButtonMaskMode buttonMaskMode) 
+{
     int suspendFlag;
-    PspCtrlPadButtonMaskMode prevBtnMaskMode = PSP_CTRL_MASK_IGNORE_BUTTON_MASK;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    int prevBtnMaskMode;    
 
     /* Disable all interrupts and thread dispatches. */
     suspendFlag = sceKernelCpuSuspendIntr(); //0x000017E0
 
-    if (mask & ctrl.maskSupportButtons) { //0x00001800
-        prevBtnMaskMode = (mask & ctrl.maskSetButtons) ? PSP_CTRL_MASK_SET_BUTTON_MASK : PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING; //0x00001808 & 0x00001810
-    }
-    if (buttonMaskMode != PSP_CTRL_MASK_DELETE_BUTTON_MASK_SETTING) { //0x00001814
-        if (buttonMaskMode == PSP_CTRL_MASK_IGNORE_BUTTON_MASK) { //0x00001818 & 0x00001850
-            ctrl.maskSupportButtons &= ~mask; //0x00001854 & 0x00001874
-            ctrl.maskSetButtons &= ~mask; //0x00001850 & 0x0000186C
+    /* Return the previous mask mode of the specified button. */
+    prevBtnMaskMode = SCE_CTRL_MASK_IGNORE_BUTTONS;
+    if (buttons & ctrl.maskSupportButtons)
+        prevBtnMaskMode = (buttons & ctrl.maskSetButtons) ? SCE_CTRL_MASK_SET_BUTTONS : SCE_CTRL_MASK_NO_MASK;
+
+    if (buttonMaskMode != SCE_CTRL_MASK_NO_MASK) { //0x00001814
+        /* Simulate the specified 'buttons' as always not being pressed. */
+        if (buttonMaskMode == SCE_CTRL_MASK_IGNORE_BUTTONS) {
+            ctrl.maskSupportButtons &= ~buttons;
+            ctrl.maskSetButtons &= ~buttons;
         }
-        else if (buttonMaskMode == PSP_CTRL_MASK_SET_BUTTON_MASK) { //0x0000185C
-            ctrl.maskSupportButtons |= mask; //0x00001868
-            ctrl.maskSetButtons |= mask; //0x00001820
+        /* Simulate the specified 'buttons' as always being pressed. */
+        else if (buttonMaskMode == SCE_CTRL_MASK_SET_BUTTONS) { //0x0000185C
+            ctrl.maskSupportButtons |= buttons;
+            ctrl.maskSetButtons |= buttons;
         }
     }
+    /* Remove any existing simulation from the specified 'buttons'. */
     else {
-        ctrl.maskSupportButtons &= ~mask; //0x000017F8 & 0x00001804 & 0x0000181C
-        ctrl.maskSetButtons |= mask; //0x000017E4 & 0x000017F0 & 0x00001820
+        ctrl.maskSupportButtons |= buttons;
+        ctrl.maskSetButtons &= ~buttons;
     }
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x0000182C
+    sceKernelCpuResumeIntr(suspendFlag);
     return prevBtnMaskMode;
 }
 
 /* Subroutine sceCtrl_driver_DF53E160 - Address 0x00001D04
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *opt) {
-    int suspendFlag;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *opt)
+{
+    int suspendFlag;    
 
-    if (slot > CTRL_BUTTON_CALLBACK_MAX_SLOT) { //0x00001D14 & 0x00001D34
+    if (slot > CTRL_BUTTON_CALLBACK_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
-    }
-    /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001D3C
 
-    ctrl.buttonCallback[slot].btnMask = btnMask; //0x00001D54
-    ctrl.buttonCallback[slot].callbackFunc = cb; //0x00001D58
-    ctrl.buttonCallback[slot].arg = opt; //0x00001D64
-    ctrl.buttonCallback[slot].gp = pspGetGp(); //0x00001D6C
+    /* Disable all interrupts and thread dispatches. */
+    suspendFlag = sceKernelCpuSuspendIntr();
+
+    ctrl.buttonCallback[slot].btnMask = btnMask;
+    ctrl.buttonCallback[slot].callbackFunc = cb;
+    ctrl.buttonCallback[slot].arg = opt;
+    ctrl.buttonCallback[slot].gp = pspGetGp();
 
     /* Resume all disabled interrupts and thread dispatches. */
-    sceKernelCpuResumeIntr(suspendFlag); //0x00001D68
+    sceKernelCpuResumeIntr(suspendFlag);
     return SCE_ERROR_OK;
 }
 
@@ -1050,10 +1066,10 @@ int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cb, void *o
  * Subroutine sceCtrl_driver_6C86AF22 - Address 0x00001AA8
  * Exported in sceCtrl_driver
  */
-int sceCtrl_driver_6C86AF22(int *arg0) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
+int sceCtrl_driver_6C86AF22(int arg0)
+{
+    ctrl.unk_9 = arg0;
     
-    ctrl.unk_9 = (int)arg0; //0x00001AB4
     return SCE_ERROR_OK;
 }
 
@@ -1061,47 +1077,45 @@ int sceCtrl_driver_6C86AF22(int *arg0) {
  * Subroutine sceCtrl_driver_7511CCFE - Address 0x00001638
  * Exported in sceCtrl_driver
  */
-int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
-    if (arg1 != NULL) { //0x00001638
-        *arg1 = ctrl.unk_5; //0x00001644
-    }
-    if (arg2 != NULL) { //0x00001648
-        *arg2 = ctrl.unk_6; //0x00001654
-    }
-    if (arg3 != NULL) { //0x00001658
-        *arg3 = ctrl.unk_7; //0x00001664
-    }
-    if (arg4 != NULL) { //0x00001668
-        *arg4 = ctrl.unk_8; //0x00001674
-    }
-    return SCE_ERROR_OK; //0x0000167C
+int sceCtrlGetIdleCancelKey(int *arg1, int *arg2, int *arg3, int *arg4)
+{  
+    if (arg1 != NULL)
+        *arg1 = ctrl.unk_5;
+
+    if (arg2 != NULL)
+        *arg2 = ctrl.unk_6;
+
+    if (arg3 != NULL)
+        *arg3 = ctrl.unk_7;
+
+    if (arg4 != NULL)
+        *arg4 = ctrl.unk_8;
+
+    return SCE_ERROR_OK;
 }
 
 /*
  * sceCtrl_driver_6A1DF4CB - Address 0x00001C10
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
-    ctrl.unk_8 = arg4; //0x00001C1C
-    ctrl.unk_5 = arg1; //0x00001C20
-    ctrl.unk_6 = arg2; //0x00001C24
-    ctrl.unk_7 = arg3; //0x00001C2C
+int sceCtrlSetIdleCancelKey(int arg1, int arg2, int arg3, int arg4)
+{   
+    ctrl.unk_8 = arg4;
+    ctrl.unk_5 = arg1; 
+    ctrl.unk_6 = arg2;
+    ctrl.unk_7 = arg3;
 
-    return SCE_ERROR_OK; //0x00001C18
+    return SCE_ERROR_OK;
 }
 
 /*
  * Subroutine sceCtrl_driver_5886194C - Address 0x00001A98
  * Exported in sceCtrl_driver
  */
-int sceCtrl_driver_5886194C(char arg1) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
+int sceCtrl_driver_5886194C(char arg1) 
+{   
+    ctrl.unk_Byte_3 = arg1;
     
-    ctrl.unk_Byte_3 = arg1; //0x00001AA4
     return SCE_ERROR_OK;
 }
 
@@ -1109,207 +1123,254 @@ int sceCtrl_driver_5886194C(char arg1) {
  * sceCtrl_driver_365BE224 - Address 0x00001D94
  * Exported in sceCtrl_driver
  */
-int sceCtrlUpdateCableTypeReq(void) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
+int sceCtrlUpdateCableTypeReq(void) 
+{   
+    ctrl.unk_Byte_0 = 1;
     
-    ctrl.unk_Byte_0 = 1; //0x00001D9C
     return SCE_ERROR_OK;
 }
 
-//0x00000364
-/**
- * Handles SYSCON hardware events like going into sleep mode, resuming from sleep mode.
+/*
+ * sub_00000364
+ * 
+ * Handle SYSCON hardware events (affecting the PSP device) like going into low-power state 
+ * or resuming from low-power state.
+ * 
+ * Going into low-power state:
+ *    Put the controller device into a low-power state.
+ *    Suspend the update timer, if it is used, or disable the V-blank
+ *    interrupt to stop the SYSCON controller data transfers and to stop
+ *    the updates of the internal data buffers of the controller module.
+ * 
+ * Resuming from low power state:
+ *    Bring the controller device back from a low-power state.
+ *    Re-start the update timer, if it was used before, or re-enable the
+ *    V-blank interrupt to re-start the SYSCON controller data transfers
+ *    and to start the update process of the internal data buffers of the controller 
+ *    module. 
  * 
  * @param ev_id The event id used to identify the current SYSCON event.
  * @param ev_name The event name.
  * @param param An optional argument.
- * @param result Retrieves the result of the event handling process.
+ * @param result Retrieves the result of the event handling process. 
  * 
  * @return 0 on success, otherwise less than 0 to indicate unsuccessful handling of the event request.
  */
-int _sceCtrlSysEventHandler(int ev_id, char* ev_name __attribute__((unused)), void* param __attribute__((unused)), int* result __attribute__((unused))) {
+static int _sceCtrlSysEventHandler(int ev_id, char *ev_name __attribute__((unused)), void *param __attribute__((unused)), 
+                                   int *result __attribute__((unused))) 
+{
     int sysconStatus;
-    int status;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    if (ev_id == 0x402) { //0x0000036C
-        //0x0000041C
-        sysconStatus = ctrl.sysconHwDataTransferBusy;
-        sysconStatus |= ctrl.unk_Byte_7;
+    if (ev_id == 0x402) {
+        sysconStatus = ctrl.sysconBusy;
+        sysconStatus |= ctrl.sysconBusyIntr2;
         sysconStatus |= ctrl.resv[0];
         sysconStatus |= ctrl.resv[1];
-        if (sysconStatus == 0) { //0x00000420
+        if (sysconStatus == 0)
             return SCE_ERROR_OK;
-        }
-        if (ctrl.unk_1 == 0) { //0x00000430
+
+        if (ctrl.sysconTransfersLeft == 0)
             return SCE_ERROR_OK;
-        }
+
         return SCE_ERROR_BUSY;
     }
     if (ev_id < 0x403) { //0x00000378
-        if (ev_id == 0x400) { //0x00000384
-            ctrl.unk_1 = ctrl.suspendSamples; //0x000003AC
-        }
+        if (ev_id == 0x400)
+            ctrl.sysconTransfersLeft = ctrl.suspendSamples;
+
         return SCE_ERROR_OK;
-    }
-    else if (ev_id == 0x400C) { //0x0000037C & 0x000003B0 -- going into sleep mode?
-             status = sceCtrlSuspend();
-             return status;
-    }
-    else {  //resuming from sleep mode?
+    } 
+    /* Put the controller device into a low-power state. */
+    else if (ev_id == 0x400C) {
+             return sceCtrlSuspend();
+    }   
+    /* Bring the controller device back from a low-power state. */
+    else {
         if (ev_id == 0x1000C) { //0x000003BC
             sceCtrlResume();
-            //sceCtrlResume already does that!
-            ctrl.unk_1 = -1; //0x000003D8
+            ctrl.sysconTransfersLeft = UINT_MAX;
         }
         return SCE_ERROR_OK;
     }
 }
 
-/* sub_00001DD8 */
-/**
- * The alarm handler. It updates the internal user and kernel buffers of the ctrl module
- *                    with the buttons placed in the 'pureButton' members.
- *
- * @param common An optional argument passed with the register function.
- *
- * @return 0.
+/*
+ * sub_00001DD8
+ * 
+ * The alarm handler. It updates the internal user and kernel buffers of the 
+ * controller module with already transfered (and possibly old) controller 
+ * device input data. 
+ * _sceCtrlDummyAlarm() does NOT communicate via the SYSCON microcontroller with 
+ * the hardware registers and thus does not update the internal button data buffers 
+ * of the controller module with new button input via the controller device. 
+ *   
+ * It is called when one (or both) of the following conditions 
+ * are satisfied:
+ *    1) The SYSCON microcontroller is busy.
+ *    2) The controller driver is NOT polling for new controller device input.  
+ * 
+ * @return 0.        
  */
-static SceUInt _sceCtrlDummyAlarm(void *common __attribute__((unused))) {
+static SceUInt _sceCtrlDummyAlarm(void *opt __attribute__((unused))) 
+{
     int suspendFlag;
-    u32 pureButtons;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    u32 pureButtons;   
 
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00001DE8
-    pureButtons = ctrl.pureButtons; //0x00001E00
-    if (ctrl.unk_1 == 0) { //0x00001DF8
-        pureButtons &= 0xFFFE0000; //0x00001E04 -- kernel button values?
-    }
-    _sceCtrlUpdateButtons(pureButtons, ctrl.analogX, ctrl.analogY); //0x00001E10
+    suspendFlag = sceKernelCpuSuspendIntr();
     
-    /* Set the event flag to indicate a finished VBlank interruption. */
-    sceKernelSetEventFlag(ctrl.eventFlag, 1); //0x00001E1C
-    sceKernelCpuResumeIntr(suspendFlag); //0x00001E24
+    pureButtons = ctrl.pureButtons;
+    if (ctrl.sysconTransfersLeft == 0)
+        pureButtons &= 0xFFFE0000;
     
-    dbg_printf("returning from %s.\n", __FUNCTION__);
+    /* Update the internal controller data buffers. */
+    _sceCtrlUpdateButtons(pureButtons, ctrl.analogX, ctrl.analogY);
+    
+    /* Set the event flag to indicate a finished V-blank interrupt. */
+    sceKernelSetEventFlag(ctrl.eventFlag, 1);
+    /* Resume all disabled interrupts and thread dispatches. */
+    sceKernelCpuResumeIntr(suspendFlag);
 
     return SCE_ERROR_OK;
 }
 
-/* sub_00000440 */
-/**
- * This function is called whenever the VBlank interrupt is enabled and when that interrupt occurs (60 times/second).
- *
- * @param subIntNm The sub interrupt handler number passed via the register function.
- * @param arg An argument passed to the interrupt handler via the register function.
- *
+/*
+ * sub_00000440
+ * 
+ * The V-blank interrupt handler. It is called whenever the V-blank interrupt occurs, which 
+ * happens approximately 60 times/second. Its purpose is to communicate with the hardware 
+ * button registers via the SYSCON microcontroller to update the internal data buffers 
+ * of the controller module with the new controller device input data.
+ * A SYSCON hardware register data transfer is requested when the following 
+ * two conditions are true:
+ *    1) the SYSCON microcontroller is NOT busy.
+ *    2) The controller driver is polling for new controller device input.
+ * 
+ * _sceCtrlVblankIntr() is the default communication routine and is NOT called when
+ * a timer handler is set via sceCtrlSetSamplingCycle(cycle), where cycle is greater 0.
+ * 
  * @return -1.
  */
-
-
-static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __attribute__((unused))) {
+static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __attribute__((unused)))
+{
     int suspendFlag;
-    int retVal;
+    int sysconStatus;   
     
-    //dbg_printf("In function: %s\n", __FUNCTION__);
+    suspendFlag = sceKernelCpuSuspendIntr();
     
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x00000454
-    
-    if (ctrl.btnCycle == 0) { //0x00000464
-        //dbg_printf("sysconHwDataTransferBusy VALUE: %d in function: %s\n", ctrl.sysconHwDataTransferBusy, __FUNCTION__);
-        if (ctrl.sysconHwDataTransferBusy == FALSE) { //0x00000470
-            if (ctrl.pollMode != PSP_CTRL_POLL_NO_POLLING) { //0x0000047C
-                ctrl.sysconHwDataTransferBusy = TRUE; //0x000004E0
-
-                //dbg_printf("receiving SYSCON data: %s\n", __FUNCTION__);
-                if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x000004E4
-                    ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ONLY; //0x000004E8
-                }
-                else {
-                    ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ANALOG; //0x000004EC
-                }
-                ctrl.sysPacket[0].tx_len = 2; //0x00000514
-
-                //dbg_printf("calling sceSysconCmdExecAsync: %s\n", __FUNCTION__);
-                retVal = sceSysconCmdExecAsync(&ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, 0); //0x00000510
-                //dbg_printf("called sceSysconCmdExecAsync returns: 0x%08X in function: %s\n", retVal, __FUNCTION__);
-                if (retVal < 0) { //0x00000518
-                    ctrl.sysconHwDataTransferBusy = FALSE; //0x0000051C
-                }
+    if (ctrl.btnCycle == 0) {      
+        if (ctrl.sysconBusy == FALSE && ctrl.pollMode == SCE_CTRL_POLL_RUNNING) {
+            ctrl.sysconBusy = TRUE;     
+            
+            /* Specify the requested controller device input data. */
+            if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == SCE_CTRL_INPUT_DIGITAL_ONLY) {
+                ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;
             }
             else {
-                //dbg_printf("set alarm handler_1: %s\n", __FUNCTION__);
-                
-                //register an alarm occurring every 700 micro seconds
-                sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL); //0x00000490
+               ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
             }
+            ctrl.sysPacket[0].tx_len = 2;
+            /*
+             * Fire the controller data request to SYSCON and use
+             * _sceCtrlSysconCmdIntr1() to apply the transfered 
+             * button data to the internal data buffers of the 
+             * controller module.
+             */
+            sysconStatus = sceSysconCmdExecAsync(&ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, 0);
+            if (sysconStatus < 0)
+                ctrl.sysconBusy = FALSE;
         }
-        else {
-            //dbg_printf("set alarm handler_2: %s\n", __FUNCTION__);
-            sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL); //0x00000490
+        else {             
+           /*
+            * Setup an alarm handler in case the SYSCON microcontroller 
+            * is busy or the controller driver is not polling for new
+            * controller device input.
+            */
+           sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL);
         }
     }
-    if (ctrl.unk_Byte_2 != 0) { //0x000004A0
-        //dbg_printf("calling sceKernelPowerTick: %s\n", __FUNCTION__);
-        ctrl.unk_Byte_2 = 0; //0x000004A4
-        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT); //0x000004CC
+    /*
+     * In case _sceCtrlVblankIntr is called although the 
+     * sampling cycle is greater than 0, cancel the 
+     * update timer.
+     */
+    if (ctrl.unk_Byte_2 != 0) {
+        ctrl.unk_Byte_2 = 0;
+        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
     }
-
-    //dbg_printf("resuming all interrupts: %s\n", __FUNCTION__);
-    sceKernelCpuResumeIntr(suspendFlag); //0x000004A8
     
-    //dbg_printf("returning from %s.\n", __FUNCTION__);
+    /* Resume all disabled interrupts and thread dispatches. */
+    sceKernelCpuResumeIntr(suspendFlag);
     return -1;
 }
 
-/* sub_00000528 */
 /**
- * The custom timer interrupt handler. Will be executed every 'ctrl.cycle' micro seconds.
- * Updates the 'pureButton' SceCtrl structure field via a SYSCON hardware transfer or uses the current value of that field
- * to update the internal SceCtrl data buffers.
+ * sub_00000528
+ * 
+ * The timer interrupt handler. It is called every 'ctrl.cycle' microseconds (cycle greater 0).
+ * Its purpose is to communicate with the hardware 
+ * button registers via the SYSCON microcontroller to update the internal data buffers 
+ * of the controller module with the new controller device input data.
+ * A SYSCON hardware register data transfer is requested when the following 
+ * two conditions are true:
+ *    1) the SYSCON microcontroller is NOT busy.
+ *    2) The controller driver is polling for new controller device input.
+ * 
+ * When the timer is active, _sceCtrlTimerIntr() is called instead of the V-blank
+ * interrupt handler. It can be stopped from being called via sceCtrlSetSamplingCycle(cycle), 
+ * where cycle is equal to 0. In addition, the V-blank interrupt handler (_sceCtrlVblankIntr())
+ * will be called again.
+ *
  *
  * @return -1.
  */
-static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __attribute__((unused)), int unused2 __attribute__((unused)), int unused3 __attribute__((unused))) {
+static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __attribute__((unused)), 
+                             int unused2 __attribute__((unused)), int unused3 __attribute__((unused))) 
+{
     u8 sysconReqCtrlData;
     int suspendFlag;
-    int retVal;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    int sysconStatus;    
 
-    sysconReqCtrlData = SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ONLY;
-    
+    sysconReqCtrlData = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;  
     /* Disable all interrupts and thread dispatches. */
-    suspendFlag = sceKernelCpuSuspendIntr(); //0x0000053C
+    suspendFlag = sceKernelCpuSuspendIntr();
 
-    if (ctrl.btnCycle != 0) { //0x00000548 & 0x0000054C
-        if ((ctrl.sysconHwDataTransferBusy == FALSE) && (ctrl.pollMode != CTRL_POLL_MODE_OFF)) { //0x00000558 & 0x00000564
-            ctrl.sysconHwDataTransferBusy = TRUE; //0x000005C8
+    if (ctrl.btnCycle != 0) {
+        if ((ctrl.sysconBusy == FALSE) && (ctrl.pollMode != CTRL_POLL_MODE_OFF)) {
+            ctrl.sysconBusy = TRUE;
 
-            if (ctrl.samplingMode[USER_MODE] != PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x000005CC
-                sysconReqCtrlData = SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ANALOG; //0x000005D4
+            /* Specify the requested controller device input data. */
+            if (ctrl.samplingMode[USER_MODE] != SCE_CTRL_INPUT_DIGITAL_ONLY) {
+                sysconReqCtrlData = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
             }
-            ctrl.sysPacket[0].tx_cmd = sysconReqCtrlData; //0x000005D8
+            ctrl.sysPacket[0].tx_cmd = sysconReqCtrlData;
 
-            retVal = sceSysconCmdExecAsync(&ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, 0); //0x000005F8
-            if (retVal < 0) { //0x00000600
-                ctrl.sysconHwDataTransferBusy = FALSE; //0x00000604
-            }
+            /*
+             * Fire the controller data request to SYSCON and use
+             * _sceCtrlSysconCmdIntr1() to apply the transfered 
+             * button data to the internal data buffers of the 
+             * controller module.
+             */
+            sysconStatus = sceSysconCmdExecAsync(&ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, 0);
+            if (sysconStatus < 0)
+                ctrl.sysconBusy = FALSE;
         }
         else {
-             sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL); //0x00000578
+             sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL);
         }
     }
-    if (ctrl.unk_Byte_2 != 0) { //0x00000588
-        ctrl.unk_Byte_2 = 0; //0x0000058C
-        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT); //0x000005B4
+    /*
+     * In case _sceCtrlTimerIntr() is called although the 
+     * sampling cycle is 0, cancel the update timer.
+     */
+    if (ctrl.unk_Byte_2 != 0) {
+        ctrl.unk_Byte_2 = 0;
+        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
     }
 
-    sceKernelCpuResumeIntr(suspendFlag); //0x00000590
-    return -1; //0x000005A8
+    /* Resume all disabled interrupts and thread dispatches. */
+    sceKernelCpuResumeIntr(suspendFlag);
+    return -1;
 }
 
 /* sub_00000610 */
@@ -1321,7 +1382,8 @@ static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __
  *
  * @return 0.
  */
-static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
+static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) 
+{
     u32 pureButtons;
     int suspendFlag;
     int res;
@@ -1330,19 +1392,16 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
     u8 analogX;
     u8 analogY;
     u8 idleVal;
-    u8 checkVal;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
+    u8 checkVal;    
 
-    ctrl.sysconHwDataTransferBusy = 0; //0x00000644
-    if (ctrl.unk_1 > 0) { //0x00000640
-        ctrl.unk_1--; //0x00000648
-    }
+    ctrl.sysconBusy = FALSE; //0x00000644
+    if (ctrl.sysconTransfersLeft > 0) //0x00000640
+        ctrl.sysconTransfersLeft--; //0x00000648
 
-    if (ctrl.unk_1 == 0) { //0x00000650
+    if (ctrl.sysconTransfersLeft == 0) { //0x00000650
         /* Disable all interrupts and thread dispatches. */
         suspendFlag = sceKernelCpuSuspendIntr(); //0x00000918
-        if (ctrl.unk_1 == 0) { //0x00000924
+        if (ctrl.sysconTransfersLeft == 0) { //0x00000924
             pureButtons = ctrl.pureButtons & 0xFFFE0000; //0x00000930
         }
         else {
@@ -1422,7 +1481,7 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
             unk1 = unk1 | unk2; //0x00000744
 
             checkVal = unk1 & ctrl.unk_4; //0x00000750
-            if (checkVal == 0 && ctrl.samplingMode[USER_MODE] == PSP_CTRL_INPUT_DIGITAL_ANALOG) { //0x00000754 & 0x00000760
+            if (checkVal == 0 && ctrl.samplingMode[USER_MODE] == SCE_CTRL_INPUT_DIGITAL_ANALOG) { //0x00000754 & 0x00000760
                 int xMove = pspMax(analogX - 128, -analogX + 128) & 0xFF; //0x00000764 & 0x00000770 & 0x00000774
                 int yMove = pspMax(analogY - 128, -analogY + 128) & 0xFF; //0x0000076C & 0x00000778 & 0x00000780 & 0x00000788
                 xMove = (xMove == 127) ? 128 : xMove; //0x00000774 & 0x0000078C
@@ -1439,15 +1498,15 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
         u8 sampling = (ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) != 0; //0x000007C8 & 0x000007D4
         sampling = (ctrl.unk_Byte_0 != 0) ? (sampling | 2) : sampling; //0x000007D8 & 0x000007DC
 
-        if (sampling != ctrl.unk_Byte_1 && ctrl.unk_Byte_7 == 0) { //0x000007E0 & 0x000007EC
-            ctrl.unk_Byte_7 = 1; //0x00000834
+        if (sampling != ctrl.unk_Byte_1 && ctrl.sysconBusyIntr2 == 0) { //0x000007E0 & 0x000007EC
+            ctrl.sysconBusyIntr2 = 1; //0x00000834
             ctrl.sysPacket[1].tx_cmd = 51; //0x0000082C & 0x00000840
             ctrl.sysPacket[1].tx_len = 3; //0x00000830 & 0x0000084C
             ctrl.sysPacket[1].tx_data[0] = sampling; //0x00000858
 
             res = sceSysconCmdExecAsync(&ctrl.sysPacket[1], 0, _sceCtrlSysconCmdIntr2, 0); //0x00000854
             if (res < 0) { //0x0000085C
-                ctrl.unk_Byte_7 = 0; //0x00000860
+                ctrl.sysconBusyIntr2 = 0; //0x00000860
             }
         }
         
@@ -1458,18 +1517,18 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) {
 }
 
 /* sub_00001E4C */
-static int _sceCtrlSysconCmdIntr2(void) {
-    dbg_printf("In function: %s\n", __FUNCTION__);
-    
+static int _sceCtrlSysconCmdIntr2(void) 
+{   
     ctrl.unk_Byte_0 = 0; //0x00001E5C
     ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx_data[0] & 0x1; //0x00001E64
-    ctrl.unk_Byte_7 = 0; //0x00001E6C
+    ctrl.sysconBusyIntr2 = 0; //0x00001E6C
 
     return SCE_ERROR_OK;
 }
 
 /* sub_00000968 */
-static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
+static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) 
+{
     SceCtrlData *ctrlUserBuf;
     SceCtrlData *ctrlKernelBuf;
     SceCtrlDataExt *ctrlKernelBufExt;
@@ -1522,8 +1581,6 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     SceCtrlCb btnCbFunc;
     u32 gp; /* global pointer */
     _Bool check = 0;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
     sysTimeLow = sceKernelGetSystemTimeLow(); //0x000009A0
 
@@ -1554,12 +1611,12 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     ctrlKernelBuf->aY = analogY; //0x00000A24
 
     //User Mode
-    if (ctrl.samplingMode[USER_MODE] == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A2C
+    if (ctrl.samplingMode[USER_MODE] == SCE_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A2C
         ctrlUserBuf->aY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A38
         ctrlUserBuf->aX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A3C
     }
     //Kernel Mode
-    if (ctrl.samplingMode[KERNEL_MODE] == PSP_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A44
+    if (ctrl.samplingMode[KERNEL_MODE] == SCE_CTRL_INPUT_DIGITAL_ONLY) { //0x00000A44
         ctrlKernelBuf->aY = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A50
         ctrlKernelBuf->aX = CTRL_ANALOG_PAD_DEFAULT_VALUE; //0x00000A54
     }
@@ -1614,7 +1671,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                          ctrl.unk_Byte_2 = 1; //0x00000FBC
                      }
                  }
-                 if ((ctrl.unk_Byte_2 == 0) && (ctrl.samplingMode[USER_MODE] == PSP_CTRL_INPUT_DIGITAL_ANALOG)) { //0x00000FCC &&  0x00000FD4
+                 if ((ctrl.unk_Byte_2 == 0) && (ctrl.samplingMode[USER_MODE] == SCE_CTRL_INPUT_DIGITAL_ANALOG)) { //0x00000FCC &&  0x00000FD4
                      analogX = ctrlKernelBufExt->aX - 128; //0x00000FE0 & 0x00000FEC
                      analogY = ctrlKernelBufExt->aY - 128; //0x00000FE4 & 0x00000FF0
                      tempAnalogX = -analogX; //0x00000FF4
@@ -1645,7 +1702,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                  }
              }
              //*** start of code: 0x00001094 -- 0x000010D0 ***
-             ctrlUserBufExt = ((SceCtrlDataExt **)ctrl.userModeData.sceCtrlBuf[1])[i]; //0x00000FD0 | 0x00000FDC | 0x00001090 & 0x000010A0 -> check?
+             ctrlUserBufExt = (SceCtrlDataExt *)ctrl.userModeData.sceCtrlBuf[1] + i; //0x00000FD0 | 0x00000FDC | 0x00001090 & 0x000010A0 -> check?
              ctrlUserBufExt->activeTime = ctrlKernelBufExt->activeTime; //0x000010A8 & 0x000010B8
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons; //0x000010AC & 0x000010C4
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX; //0x000010B0 & 0x000010C8
@@ -1713,27 +1770,27 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
                 storeData = 0; /* simple check to not break the ASM code. */
             }
         }
-        if (storeData) {
+        if (storeData)
             analogX = CTRL_ANALOG_PAD_MAX_VALUE; //0x00000B00
-        }
+
         tempAnalogY += analogY; //0x00000B04
         tempAnalogX = pspMin(tempAnalogX2, analogX); //0x00000B0C
-        if ((char)tempAnalogX2 < CTRL_ANALOG_PAD_MIN_VALUE) { //0x00000B08
+        if ((char)tempAnalogX2 < CTRL_ANALOG_PAD_MIN_VALUE) //0x00000B08
             tempAnalogX = CTRL_ANALOG_PAD_MIN_VALUE; //0x00000F38
-        }
+
         analogY = CTRL_ANALOG_PAD_MAX_VALUE; //0x00000B10
         tempAnalogY2 = pspMin(tempAnalogY, analogY); //0x00000B18
-        if ((char)tempAnalogY < CTRL_ANALOG_PAD_MIN_VALUE) { //0x00000B14
+        if ((char)tempAnalogY < CTRL_ANALOG_PAD_MIN_VALUE) //0x00000B14
             tempAnalogY2 = CTRL_ANALOG_PAD_MIN_VALUE; //0x00000F30
-        }
+
 
         //User Mode -- analog input mode
-        if (ctrl.samplingMode[USER_MODE] == PSP_CTRL_INPUT_DIGITAL_ANALOG) { //0x00000B28
+        if (ctrl.samplingMode[USER_MODE] == SCE_CTRL_INPUT_DIGITAL_ANALOG) { //0x00000B28
             ctrlUserBuf->aX = tempAnalogX; //0x00000B30
             ctrlUserBuf->aY = tempAnalogY2; //0x00000B34
         }
         //Kernel Mode -- analog input mode
-        if (ctrl.samplingMode[KERNEL_MODE] == PSP_CTRL_INPUT_DIGITAL_ANALOG) { //0x00000B38
+        if (ctrl.samplingMode[KERNEL_MODE] == SCE_CTRL_INPUT_DIGITAL_ANALOG) { //0x00000B38
             ctrlKernelBuf->aX = tempAnalogX; //0x00000B44
             ctrlKernelBuf->aY = tempAnalogY2; //0x00000B48
         }
@@ -1773,9 +1830,9 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     }
     //if HOLD mode is active
     updatedButtons = pureButtons;
-    if (pureButtons & PSP_CTRL_HOLD) { //0x00000BA4
-        updatedButtons &= CTRL_PSP_HARDWARE_IO_BUTTONS; //0x00000BB0 -- only I/O Buttons permitted?
-    }
+    if (pureButtons & SCE_CTRL_HOLD) //0x00000BA4
+        updatedButtons &= CTRL_HARDWARE_IO_BUTTONS; //0x00000BB0 -- only I/O Buttons permitted?
+
     //0x00000BB8 & 0x00000BC0 & 0x00000BC8
     for (i = 0; i < CTRL_DATA_EMULATION_SLOTS; i++) {
          updatedButtons = updatedButtons | ctrl.emulatedData[i].kModeBtnEmulation; //0x00000BBC & 0x00000BCC
@@ -1803,9 +1860,8 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     ctrl.kernelModeData.readLatchCount++; //0x00000C3C
 
     //HOLD mode active
-    if (updatedButtons & PSP_CTRL_HOLD) { //0x00000C38
-        updatedButtons = updatedButtons & (PSP_CTRL_HOLD | PSP_CTRL_HOME); //0x00000C44
-    }
+    if (updatedButtons & SCE_CTRL_HOLD)//0x00000C38
+        updatedButtons = updatedButtons & (SCE_CTRL_HOLD | SCE_CTRL_HOME); //0x00000C44
     
     /* Apply the user emulation of the digital pad. */
     uModeBtnEmulationAll = 0; //0x00000C50
@@ -1892,7 +1948,7 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     updatedButtons &= ctrl.maskSupportButtons; //0x00000D48
     updatedButtons |= ctrl.maskSetButtons; //0x00000D4C
     //HOLD mode active?
-    if (updatedButtons & PSP_CTRL_HOLD) { //0x00000D50 & 0x00000D54
+    if (updatedButtons & SCE_CTRL_HOLD) { //0x00000D50 & 0x00000D54
         if (check == 0) { //0x00000D60
             if (uModeBtnEmulationAll != 0) { //0x00000E44
                 updatedButtons2 = updatedButtons & 0xFFFEFFFF; //0x00000E54
@@ -1905,18 +1961,18 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
         }
     }
     mergedButtons = updatedButtons ^ ctrl.userButtons; //0x00000D78
-    if (updatedButtons & PSP_CTRL_HOLD) { //0x00000D74
-        updatedButtons = updatedButtons & (PSP_CTRL_HOLD | PSP_CTRL_HOME); //0x00000D80
+    if (updatedButtons & SCE_CTRL_HOLD) { //0x00000D74
+        updatedButtons = updatedButtons & (SCE_CTRL_HOLD | SCE_CTRL_HOME); //0x00000D80
         mergedButtons = updatedButtons ^ ctrl.userButtons; //0x00000D84
     }
-    holdButton = mergedButtons & PSP_CTRL_HOLD; //0x00000D90
+    holdButton = mergedButtons & SCE_CTRL_HOLD; //0x00000D90
     ctrlUserBuf->buttons = updatedButtons; //0x00000D94
     ctrl.userButtons = updatedButtons; //0x00000D9C
-    if (holdButton) { //0x00000D98
+    if (holdButton) //0x00000D98
         ctrl.unk_Byte_9 = ctrl.unk_Byte_3; //0x00000DA4
-    }
+
     if (ctrl.unk_Byte_9 != 0) { //0x00000DAC
-        updatedButtons &= PSP_CTRL_HOME; //0x00000DBC
+        updatedButtons &= SCE_CTRL_HOME; //0x00000DBC
         ctrl.unk_Byte_9--; //0x00000DC0
         mergedButtons = updatedButtons ^ ctrl.userButtons; //0x00000DC4
     }
@@ -1932,14 +1988,13 @@ static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) {
     ctrl.userModeData.btnPress = ctrl.userModeData.btnPress | pressedButtons; //0x00000E34
     ctrl.userModeData.btnMake = ctrl.userModeData.btnMake | mergedButtons; //0x00000E38
     ctrl.userModeData.readLatchCount++; //0x00000DD8 & 0x00000DF8 & 0x00000E2C
-    
-    dbg_printf("returning from %s.\n", __FUNCTION__);
 
     return SCE_ERROR_OK; //0x00000E30
 }
 
 /* Subroutine sub_00001E70 - Address 0x00001E70 */
-static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mode) {
+static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mode) 
+{
     SceCtrlInternalData *intDataPtr;
     SceCtrlDataExt *ctrlBuf;
     int oldK1;
@@ -1951,22 +2006,20 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
     char startBufIndex;
     int res;
     int suspendFlag;
-    
-    dbg_printf("In function: %s\n", __FUNCTION__);
 
-    if (reqBufReads >= CTRL_INTERNAL_CONTROLLER_BUFFERS) { //0x00001E74 & 0x00001E84 & 0x00001EB4
+    if (reqBufReads >= CTRL_INTERNAL_CONTROLLER_BUFFERS) //0x00001E74 & 0x00001E84 & 0x00001EB4
         return SCE_ERROR_INVALID_SIZE;
-    }
-    if (arg3 > 2) { //0x00001EC0 & 0x00001EC4
-        return SCE_ERROR_INVALID_VALUE;
-    }
-    if ((arg3 != 0) && (mode & 2)) { //0x00001ECC & 0x00001ED8
-        return SCE_ERROR_NOT_SUPPORTED;
-    }
-    oldK1 = pspShiftK1();
-    dbg_printf("%d\n", __LINE__);
 
-    if (!pspK1PtrOk(pad)) { //0x00001EF0 -- protect kernel address from user mode
+    if (arg3 > 2) //0x00001EC0 & 0x00001EC4
+        return SCE_ERROR_INVALID_VALUE;
+
+    if ((arg3 != 0) && (mode & 2)) //0x00001ECC & 0x00001ED8
+        return SCE_ERROR_NOT_SUPPORTED;
+
+    oldK1 = pspShiftK1();
+
+    /* Protect Kernel memory from User Mode. */
+    if (!pspK1PtrOk(pad)) { //0x00001EF0
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -1976,17 +2029,12 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
     else { //kernel mode
         intDataPtr = &ctrl.kernelModeData; //0x00001F08
     }
-    if (arg3 != 0) { //0x00001F0C
-        if (intDataPtr->sceCtrlBuf[arg3] == NULL) { //0x00001F18 & 0x00001F1C & 0x00001F20
-            return SCE_ERROR_NOT_SUPPORTED;
-        }
-    }
-    dbg_printf("%d\n", __LINE__);
+    if (arg3 != 0 && intDataPtr->sceCtrlBuf[arg3] == NULL) //0x00001F0C & 0x00001F18 & 0x00001F1C & 0x00001F20
+        return SCE_ERROR_NOT_SUPPORTED;
+
     //waiting for the VSYNC callback when using the "read" functions.
     if (mode & 2) { //0x00001F10 && 0x00001F28
-        dbg_printf("%d\n", __LINE__);
         res = sceKernelWaitEventFlag(ctrl.eventFlag, 1, SCE_EVENT_WAITOR, NULL, NULL); //0x00001F44
-        dbg_printf("%d\n", __LINE__);
         if (res < 0) { //0x00001F4C
             pspSetK1(oldK1); //0x00001F50
             return res;
@@ -1996,37 +2044,30 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
         
         /* Clear the event flag to wait for the VBlank interrupt the next call. */
         sceKernelClearEventFlag(ctrl.eventFlag, 0xFFFFFFFE); //0x00001F64
-        dbg_printf("%d\n", __LINE__);
 
         startBufIndex = intDataPtr->ctrlBufStartIndex; //0x00001F70
         readIntBufs = intDataPtr->ctrlBufIndex - startBufIndex; //0x00001F74
-        if (readIntBufs < 0) { //0x00001F7C
-            readIntBufs += 64; //0x00001F78 & 0x00001F80
-        }
-        dbg_printf("%d\n", __LINE__);
+        if (readIntBufs < 0) //0x00001F7C
+            readIntBufs += CTRL_INTERNAL_CONTROLLER_BUFFERS; //0x00001F78 & 0x00001F80
+
         intDataPtr->ctrlBufStartIndex = intDataPtr->ctrlBufIndex; //0x00001F8C
         if (reqBufReads < readIntBufs) { //0x00001F88
-            dbg_printf("%d\n", __LINE__);
             startBufIndex = intDataPtr->ctrlBufIndex - reqBufReads; //0x00001F90
             startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_INTERNAL_CONTROLLER_BUFFERS : startBufIndex; //0x00001F98 & 0x00001F9C
             readIntBufs = reqBufReads;
         }
     }
     else {
-        dbg_printf("%d\n", __LINE__);
         suspendFlag = sceKernelCpuSuspendIntr(); //0x0000216C
         bufIndex = intDataPtr->ctrlBufIndex; //0x00002174
 
         startBufIndex = bufIndex; //0x00002184
-        dbg_printf("%d\n", __LINE__);
-        if (reqBufReads < 64) { //0x00002178
-            dbg_printf("%d\n", __LINE__);
+        if (reqBufReads < CTRL_INTERNAL_CONTROLLER_BUFFERS) { //0x00002178
             startBufIndex = bufIndex - reqBufReads; //0x0000218C
             startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_INTERNAL_CONTROLLER_BUFFERS : startBufIndex; //0x00001F98 & 0x00001F9C
             readIntBufs = reqBufReads; //0x00001FA0
         }
     }
-    dbg_printf("%d\n", __LINE__);
     if (arg3 != 0) { //0x00001FA4
         ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[arg3] + startBufIndex; //0x00002160
     }
@@ -2038,7 +2079,6 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
         pspSetK1(oldK1); //0x000020B0
         return readIntBufs;
     }
-    dbg_printf("%d\n", __LINE__);
     /* read internal data buffers. */
     while (reqBufReads-- > 0) { //0x0000209C & 0x000020A0
            pad->activeTime = ctrlBuf->activeTime; //0x00001FE4 & 0x00001FF0
@@ -2111,8 +2151,6 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
                }
            }
     }
-    dbg_printf("%d\n", __LINE__);
-
     sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
     pspSetK1(oldK1); //0x000020B0
     return readIntBufs;
@@ -2122,12 +2160,10 @@ static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mod
  * Subroutine module_start - Address 0x00001A10
  * Exported in syslib
  */
-int CtrlInit(void) {
-    dbg_init(1, FB_AFTER_DISPLAY, FAT_NONE);
+int CtrlInit(void) 
+{
+    sceCtrlInit();
     
-    dbg_printf("Ctrl_Start: %s\n", __FUNCTION__);
-    
-    //sceCtrlInit();
     return SCE_ERROR_OK;
 }
 
@@ -2135,7 +2171,8 @@ int CtrlInit(void) {
  * Subroutine module_reboot_before - Address 0x00001A30
  * Exported in syslib
  */
-int CtrlRebootBefore(void) {
+int CtrlRebootBefore(void) 
+{
     sceCtrlEnd();
     
     return SCE_ERROR_OK;

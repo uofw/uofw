@@ -6,7 +6,6 @@
 #define COMMON_H
 
 #include <pspkerneltypes.h>
-#include <pspmoduleinfo.h>
 
 #include "common/cop0.h"
 #include "common/debug.h"

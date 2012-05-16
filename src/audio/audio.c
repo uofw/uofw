@@ -23,11 +23,12 @@ asm(".set noat"); // needed for AUDIO_SET_BUSY()
 /* Sets the audio controller busy state. */
 #define AUDIO_SET_BUSY(busy) asm("lui $at, 0xBE00; sw %0, 0($at)" : : "r" (busy))
 
-PSP_SDK_VERSION(0x06060010);
-PSP_MODULE_BOOTSTART("sceAudioInit");
-PSP_MODULE_REBOOT_BEFORE("sceAudioEnd");
-PSP_MODULE_STOP("sceAudioEnd");
-PSP_MODULE_INFO("sceAudio_Driver", 0x1007, 1, 13);
+SCE_MODULE_INFO("sceAudio_Driver", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                   | SCE_MODULE_SINGLE_START, 1, 13);
+SCE_MODULE_BOOTSTART("sceAudioInit");
+SCE_MODULE_REBOOT_BEFORE("sceAudioEnd");
+SCE_MODULE_STOP("sceAudioEnd");
+SCE_SDK_VERSION(SDK_VERSION);
 
 /* The audio channel structure. */
 typedef struct

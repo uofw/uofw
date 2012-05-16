@@ -14,10 +14,11 @@ char intrMgrStr[] = "InterruptManager"; // 0x36F4
 char **intrMgrStrPtr = (char**)&intrMgrStr; // 0x33E8
 
 // 0x3458
-PSP_MODULE_INFO("sceInterruptManager", 0x1007, 1, 9);
-PSP_MODULE_BOOTSTART(IntrManInit);
-PSP_MODULE_REBOOT_BEFORE(IntrManTerminate);
-PSP_SDK_VERSION(0x06060010);
+SCE_MODULE_INFO("sceInterruptManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                       | SCE_MODULE_SINGLE_START, 1, 9);
+SCE_MODULE_BOOTSTART(IntrManInit);
+SCE_MODULE_REBOOT_BEFORE(IntrManTerminate);
+SCE_SDK_VERSION(SDK_VERSION);
 
 char heapName[] = "SceInterruptManager"; // 0x3778
 

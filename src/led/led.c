@@ -65,7 +65,7 @@ int g_00000F40;
 
 int sceLedInit(void)
 {    
-    int i
+    int i;
     memset(&leds, 0, 0xF0);
     g_00000F40 = 2;
     leds[LED_TYPE_MS].gpioPort = 6;

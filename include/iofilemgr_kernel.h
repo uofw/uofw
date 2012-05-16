@@ -4,20 +4,21 @@
 
 #include "common.h"
 
-#define PSP_O_RDONLY    0x0001
-#define PSP_O_WRONLY    0x0002
-#define PSP_O_RDWR  (PSP_O_RDONLY | PSP_O_WRONLY)
-#define PSP_O_NBLOCK    0x0004
-#define PSP_O_DIROPEN   0x0008  // Internal use for dopen
-#define PSP_O_APPEND    0x0100
-#define PSP_O_CREAT 0x0200
-#define PSP_O_TRUNC 0x0400
-#define PSP_O_EXCL  0x0800
-#define PSP_O_NOWAIT    0x8000
+#define SCE_O_RDONLY    0x0001
+#define SCE_O_WRONLY    0x0002
+#define SCE_O_RDWR      (SCE_O_RDONLY | SCE_O_WRONLY)
+#define SCE_O_NBLOCK    0x0004
+#define SCE_O_DIROPEN   0x0008  // Internal use for dopen
+#define SCE_O_APPEND    0x0100
+#define SCE_O_CREAT     0x0200
+#define SCE_O_TRUNC     0x0400
+#define SCE_O_EXCL      0x0800
+#define SCE_O_NOWAIT    0x8000
+#define SCE_O_UNKNOWN0  0x04000000
 
-#define PSP_SEEK_SET    0
-#define PSP_SEEK_CUR    1
-#define PSP_SEEK_END    2
+#define SCE_SEEK_SET    0
+#define SCE_SEEK_CUR    1
+#define SCE_SEEK_END    2
 
 struct SceIoDeviceArg;
 typedef struct SceIoDeviceArg SceIoDeviceArg;

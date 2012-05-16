@@ -4,6 +4,8 @@
 
 #include "common.h"
 
+#define SCE_MEMORY_PARTITION_KERNEL  1
+
 /* Threads */
 
 typedef int (*SceKernelThreadEntry)(SceSize args, void *argp);
@@ -104,7 +106,7 @@ int sceKernelReceiveMsgPipeCB(SceUID uid, void *message, unsigned int size, int 
 int sceKernelTryReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2);
 int sceKernelCancelMsgPipe(SceUID uid, int *psend, int *precv);
 
-typedef struct _SceKernelMppInfo {
+typedef struct {
         SceSize size;
         char    name[32];
         SceUInt attr;
@@ -151,12 +153,12 @@ void *sceKernelGetThreadKTLS(int id, SceUID thid, int mode);
 
 typedef SceUInt (*SceKernelAlarmHandler)(void *common);
 
-typedef struct _SceKernelSysClock {
+typedef struct {
 	SceUInt32   low;
 	SceUInt32   hi;
 } SceKernelSysClock;
 
-typedef struct _SceKernelAlarmInfo {
+typedef struct {
 	SceSize size;
 	SceKernelSysClock schedule;
 	SceKernelAlarmHandler handler;
@@ -173,7 +175,7 @@ int sceKernelNotifyCallback(SceUID cb, int arg2);
 
 /* VPL Functions */
 
-typedef struct _SceKernelVplOptParam {
+typedef struct {
     SceSize 	size;
 } SceKernelVplOptParam;
 
@@ -187,7 +189,7 @@ int sceKernelTryAllocateVpl(SceUID uid, unsigned int size, void **data);
 int sceKernelFreeVpl(SceUID uid, void *data);
 int sceKernelCancelVpl(SceUID uid, int *pnum);
 
-typedef struct _SceKernelVplInfo {
+typedef struct {
 	SceSize 	size;
 	char 	name[32];
 	SceUInt 	attr;
@@ -200,7 +202,7 @@ int sceKernelReferVplStatus(SceUID uid, SceKernelVplInfo *info);
 
 /* FPL Functions */
 
-typedef struct _SceKernelFplOptParam {
+typedef struct {
     SceSize 	size;
 } SceKernelFplOptParam;
 
@@ -212,7 +214,7 @@ int sceKernelTryAllocateFpl(SceUID uid, void **data);
 int sceKernelFreeFpl(SceUID uid, void *data);
 int sceKernelCancelFpl(SceUID uid, int *pnum);
 
-typedef struct _SceKernelFplInfo {
+typedef struct {
     SceSize 	size;
     char 	name[32];
     SceUInt 	attr;

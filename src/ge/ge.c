@@ -16,11 +16,12 @@
 
 #include "ge.h"
 
-PSP_SDK_VERSION(0x06060010);
-PSP_MODULE_INFO("sceGE_Manager", 0x1007, 1, 11);
-PSP_MODULE_BOOTSTART("_sceGeModuleStart");
-PSP_MODULE_REBOOT_BEFORE("_sceGeModuleRebootBefore");
-PSP_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
+SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                 | SCE_MODULE_SINGLE_START, 1, 11);
+SCE_MODULE_BOOTSTART("_sceGeModuleStart");
+SCE_MODULE_REBOOT_BEFORE("_sceGeModuleRebootBefore");
+SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
+SCE_SDK_VERSION(SDK_VERSION);
 
 /******************************/
 

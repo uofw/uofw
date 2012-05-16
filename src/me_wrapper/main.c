@@ -25,9 +25,10 @@
 
 #include "me_wrapper.h"
 
-PSP_MODULE_INFO("sceMeCodecWrapper", 0x1007, 1, 9);//I'm not sure if the versions are correct
+SCE_MODULE_INFO("sceMeCodecWrapper", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                                     | SCE_MODULE_SINGLE_START, 1, 9); //I'm not sure if the versions are correct
+SCE_SDK_VERSION(SDK_VERSION);
 
-u32 module_sdk_version = 0x06060010;
 int meStarted;
 
 MERpc meRpc;
@@ -53,10 +54,10 @@ int initRpc()
 	if (meRpc.event < 0)
 		return meRpc.event;
 	sceSysregIntrEnd();
-	int ret = sceKernelRegisterIntrHandler(PSP_MECODEC_INT, 2, (void*)&interruptHandler, (void*)meRpc.event, 0);
+	int ret = sceKernelRegisterIntrHandler(SCE_MECODEC_INT, 2, (void*)&interruptHandler, (void*)meRpc.event, 0);
 	if (ret < 0)
 		return ret;
-	return sceKernelEnableIntr(PSP_MECODEC_INT);
+	return sceKernelEnableIntr(SCE_MECODEC_INT);
 }
 
 int sub_1026()
@@ -1145,13 +1146,13 @@ int sceMeBootStart(u32 arg)
 		meImage = "flash0:/kd/resource/me_blimg.img";
 	else
 		meImage = "flash0:/kd/resource/meimg.img";
-	SceUID fd = sceIoOpen(meImage, PSP_O_UNKNOWN0|PSP_O_RDONLY, 0);
+	SceUID fd = sceIoOpen(meImage, SCE_O_UNKNOWN0|SCE_O_RDONLY, 0);
 	if (fd < 0){
 		sceMeRpcUnlock();
 		return fd;
 	}
-	int size = sceIoLseek(fd, 0, PSP_SEEK_END);
-	sceIoLseek(fd, 0, PSP_SEEK_SET);
+	int size = sceIoLseek(fd, 0, SCE_SEEK_END);
+	sceIoLseek(fd, 0, SCE_SEEK_SET);
 	if (size > 0x63FFF){
 		sceIoClose(fd);
 		sceMeRpcUnlock();

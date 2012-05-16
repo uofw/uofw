@@ -9,9 +9,10 @@
 
 #include "systimer.h"
 
-PSP_SDK_VERSION(0x06060010);
-PSP_MODULE_INFO("sceSystimer", 0x1007, 1, 2);
-PSP_MODULE_BOOTSTART("STimerInit");
+SCE_MODULE_INFO("sceSystimer", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
+                               | SCE_MODULE_SINGLE_START, 1, 2);
+SCE_MODULE_BOOTSTART("STimerInit");
+SCE_SDK_VERSION(SDK_VERSION);
 
 typedef struct {
     int unk0, unk4, unk8, unk12;

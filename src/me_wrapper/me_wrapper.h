@@ -10,8 +10,6 @@ typedef struct{
 	int sema;
 }MERpc;
 
-#define PSP_O_UNKNOWN0 0x04000000
-
 int sceMeRpcLock();
 int sceMeRpcUnlock();
 int sub_00001C30(void* data, int wait);

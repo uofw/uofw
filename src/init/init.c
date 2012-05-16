@@ -20,8 +20,7 @@ char g_2294[] = "InitThreadEntry";
 
 char g_22A4[] = "backup area";
 
-typedef struct
-{
+typedef struct {
     char *game;
     int **strcpy256;
     int numStrcpy256;

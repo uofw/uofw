@@ -5,13 +5,12 @@
 #include "common.h"
 
 /* syscon hardware controller transfer modes. */
-#define SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ONLY    7
-#define SYSCON_CTRL_TRANSFER_DATA_DIGITAL_ANALOG  8
+#define SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER    7
+#define SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER  8
 
-typedef struct SceSysconPacket SceSysconPacket;
+typedef struct _SceSysconPacket SceSysconPacket;
 
-struct SceSysconPacket
-{
+struct _SceSysconPacket {
     u8 unk00[4]; //0 -- (0x00,0x00,0x00,0x00)
     u8 unk04[2]; //4 -- (arg2)
     u8 status; //6
