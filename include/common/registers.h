@@ -54,9 +54,12 @@ static inline int pspGetGp(void)
     return gp;
 }
 
-static inline void pspSetGp(int gp)
+static inline int pspSetGp(int gp)
 {
+    int oldGp;
+    asm("move %0, $gp" : "=r" (oldGp));
     asm("move $gp, %0" : : "r" (gp));
+    return oldGp;
 }
 
 static inline int pspGetSp(void)

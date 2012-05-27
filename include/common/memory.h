@@ -13,6 +13,5 @@
 #define UPALIGN256(v) (((v) + 0xFF) & 0xFFFFFF00)
 #define UPALIGN64(v) (((v) + 0x3F) & 0xFFFFFFC0)
 
-/* Using inline assembly is not needed */
-#define LW(addr) (*(volatile int*)(addr))
+#define HW(addr) (*(vs32*)(addr))
 

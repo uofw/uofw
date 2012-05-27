@@ -6,16 +6,16 @@
 # error "Only include common.h!"
 #endif
 
-static inline int pspMax(int a, int b)
+static inline s32 pspMax(s32 a, s32 b)
 {
-    int ret;
+    s32 ret;
     asm("max %0, %1, %2" : "=r" (ret) : "r" (a), "r" (b));
     return ret;
 }
 
-static inline int pspMin(int a, int b)
+static inline s32 pspMin(s32 a, s32 b)
 {
-    int ret;
+    s32 ret;
     asm("min %0, %1, %2" : "=r" (ret) : "r" (a), "r" (b));
     return ret;
 }
@@ -30,7 +30,7 @@ static inline void pspCache(char op, const void *ptr)
     asm("cache %0, 0(%1)" : : "ri" (op), "r" (ptr));
 }
 
-static inline void pspBreak(int op)
+static inline void pspBreak(s32 op)
 {
     asm("break %0" : : "ri" (op));
 }
@@ -39,5 +39,12 @@ static inline void pspHalt(void)
 {
     /* The 'HALT' instruction */
     asm(".word 0x70000000");
+}
+
+static inline s32 pspMfic(void)
+{
+    s32 ret;
+    asm("mfic %0, $0" : "=r" (ret));
+    return ret;
 }
 

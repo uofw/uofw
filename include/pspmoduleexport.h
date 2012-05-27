@@ -6,7 +6,7 @@
 #define PSPMODULEEXPORT_H
 
 /** Structure to hold a single export entry */
-struct _SceLibraryEntry {
+struct SceLibraryEntry {
     const char *    name;
     unsigned short  version;
     unsigned short  attribute;

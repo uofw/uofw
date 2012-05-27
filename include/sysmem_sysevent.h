@@ -5,20 +5,20 @@
 #include "common.h"
 
 typedef struct {
-    int size;
-    char* name;
-    int type_mask;
-    int (*handler)(int ev_id, char* ev_name, void* param, int* result);
-    int gp;
-    int busy;
+    s32 size;
+    s8 *name;
+    s32 type_mask;
+    s32 (*handler)(s32 ev_id, s8* ev_name, void* param, s32* result);
+    s32 gp;
+    s32 busy;
     struct SceSysEventHandler *next;
-    int reserved[9];
+    s32 reserved[9];
 } SceSysEventHandler;
 
-int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler);
-int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* param, int* result, int break_nonzero, SceSysEventHandler **break_handler);
-int sceKernelSysEventInit(void);
-int sceKernelIsRegisterSysEventHandler(SceSysEventHandler* handler);
-int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler);
+s32 sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler);
+s32 sceKernelSysEventDispatch(s32 ev_type_mask, s32 ev_id, s8* ev_name, void* param, s32* result, s32 break_nonzero, SceSysEventHandler **break_handler);
+s32 sceKernelSysEventInit(void);
+s32 sceKernelIsRegisterSysEventHandler(SceSysEventHandler* handler);
+s32 sceKernelRegisterSysEventHandler(SceSysEventHandler* handler);
 SceSysEventHandler *sceKernelReferSysEventHandler(void);
 

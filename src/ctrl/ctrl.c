@@ -270,7 +270,7 @@ int sceCtrlInit(void)
      * i.e. suspending/resuming the module's registered interrupts.
      */
     sceKernelRegisterSysEventHandler(&ctrlSysEvent);
-    sceSyscon_driver_B72DDFD2(0);
+    sceSysconSetAffirmativeRertyMode(0);
 
     /* Set the user mode buttons to be supported by the application. */
     appType = sceKernelApplicationType();
@@ -345,7 +345,7 @@ int sceCtrlEnd(void)
      * PSP state changes.
      */
     sceKernelUnregisterSysEventHandler(&ctrlSysEvent);
-    sceSyscon_driver_B72DDFD2(1);
+    sceSysconSetAffirmativeRertyMode(1);
     sceDisplayWaitVblankStart();
 
     /* Cancel and delete the registered timer. */

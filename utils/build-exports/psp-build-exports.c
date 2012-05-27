@@ -385,7 +385,7 @@ void build_exports(void)
 		pLib = pLib->pNext;
 	}
 
-	fprintf(stdout, "const struct _PspLibraryEntry __library_exports[%d] __attribute__((section(\".lib.ent\"), used)) = {\n", g_libcount);
+	fprintf(stdout, "const struct SceLibraryEntry __library_exports[%d] __attribute__((section(\".lib.ent\"), used)) = {\n", g_libcount);
 	pLib = g_libhead;
 	while(pLib != NULL)
 	{

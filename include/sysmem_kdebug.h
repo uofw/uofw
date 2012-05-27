@@ -11,6 +11,9 @@ typedef struct {
 
 int sceKernelDeci2pRegisterOperations(void *op);
 void *sceKernelDeci2pReferOperations();
+
+void *sceKernelSm1ReferOperations();
+
 void Kprintf(const char *format, ...);
 int sceKernelDipsw(int);
 

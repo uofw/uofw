@@ -28,6 +28,8 @@
 
 #define zr 0
 
+#define halt .word 0x70000000
+
 .set noat
 .set noreorder
 
