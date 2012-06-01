@@ -82,7 +82,7 @@ typedef void SceVoid;
 typedef void *ScePVoid;
 
 /* Permission mode when creating a file (in octal, like the chmod function and UNIX command */
-typedef int SceMode;
+typedef s32 SceMode;
 /* An offset inside a file */
 typedef SceInt64 SceOff;
 

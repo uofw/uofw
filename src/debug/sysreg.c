@@ -1,8 +1,8 @@
 /****************************************************************************
 	PSP IPL SYSREG Driver
 ****************************************************************************/
-#include <psptypes.h>
-//#include "kprintf.h"
+
+#include <common.h>
 
 #define REG32(ADDR) (*(vu32*)(ADDR))
 #define SYNC() asm(" sync; nop"::)

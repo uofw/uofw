@@ -4,6 +4,8 @@
 TARGET = syscon
 OBJS = power.o syscon.o
 
+DEBUG = 1
+
 LIBS = -lsceSysEventForKernel -lKDebugForKernel -lInterruptManagerForKernel -lThreadManForKernel -lSysclibForKernel -lUtilsForKernel -lsceSysreg_driver -lsceGpio_driver
 
 include ../../lib/build.mak

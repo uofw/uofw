@@ -1,6 +1,8 @@
 #ifndef __SYSCON_H__
 #define __SYSCON_H__ 
 
+#include "common.h"
+
 /*
 	CMD 07,08 : CTRL data
 

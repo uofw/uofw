@@ -1,10 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <pspdebug.h>
-#include <pspdisplay.h>
-#include <pspiofilemgr.h>
-#include <pspkerneltypes.h>
+#define DEBUG
 
 #include "memstk.h"
 #include "syscon.h"
@@ -13,8 +10,18 @@
 #define DEBUG_FILE "uofw/log.txt"
 #define IO_DEBUG_FILE "ms0:/" DEBUG_FILE
 
-#define DEBUG
-#include "common.h"
+#include <common.h>
+
+#include <display.h>
+#include <iofilemgr_kernel.h>
+#include <syscon.h>
+
+/* From pspdebug.h */
+void pspDebugScreenInit(void);
+void pspDebugScreenInitEx(void *vram_base, int mode, int setup);
+void pspDebugScreenPrintf(const char *fmt, ...) __attribute__((format(printf,1,2)));
+void pspDebugScreenPutChar(int x, int y, u32 color, u8 ch);
+int pspDebugScreenPrintData(const char *buff, int size);
 
 typedef struct {
     int size;
@@ -70,7 +77,7 @@ int ms_append(const void *data, int size)
 
 int io_append(const void *data, int size)
 {
-    SceUID id = sceIoOpen(IO_DEBUG_FILE, PSP_O_CREAT | PSP_O_WRONLY, 0777);
+    SceUID id = sceIoOpen(IO_DEBUG_FILE, SCE_O_CREAT | SCE_O_WRONLY, 0777);
     if (id < 0)
         return -1;
     sceIoLseek(id, 0, SEEK_END);
@@ -84,8 +91,7 @@ int (*fb_append)(const char*, int);
 
 void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
 {
-    switch (fatMode)
-    {
+    switch (fatMode) {
     case FAT_HARDWARE:
     case FAT_AFTER_SYSCON:
         if (fatMode == FAT_HARDWARE)
@@ -118,7 +124,7 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
         if (eraseLog)
         {
             SceUID fd;
-            if ((fd = sceIoOpen(IO_DEBUG_FILE, PSP_O_CREAT | PSP_O_TRUNC, 0777)) > 0)
+            if ((fd = sceIoOpen(IO_DEBUG_FILE, SCE_O_CREAT | SCE_O_TRUNC, 0777)) > 0)
                 sceIoClose(fd);
         }
         break;
@@ -128,14 +134,9 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode)
         break;
     }
 
-    switch (fbMode)
-    {
+    switch (fbMode) {
     case FB_HARDWARE:
         pspDebugScreenInitEx((void*)0x44000000, PSP_DISPLAY_PIXEL_FORMAT_8888, 0);
-        //pspDebugScreenPrintData("hello\n", 6);
-        pspDebugScreenPutChar(0, 50, 0xFFFFFF, 'l');
-        for (;;);
-        //pspDebugScreenSetBackColor(0xFFFFFFFF);
         fb_append = pspDebugScreenPrintData;
         break;
 
@@ -156,32 +157,15 @@ void dbg_printf(const char *format, ...)
         return;
     va_list ap;
     char buf[512];
-    //dbg_puts("hey1\n");
     va_start(ap, format);
-    //dbg_puts("hey2\n");
     int size = my_vsnprintf(buf, 512, format, ap);
-    //dbg_puts("hey3\n");
-    if (size > 0)
-    {
-        //dbg_puts("hey4\n");
+    if (size > 0) {
         if (fat_append != NULL) 
-        {
-            //dbg_puts("hey4a\n");
             fat_append(buf, size);
-            //dbg_puts("hey4b\n");
-        }
-        //dbg_puts("hey5\n");
         if (fb_append != NULL)
-        {
-            //dbg_puts("hey5a\n");
             fb_append(buf, size);
-            //dbg_puts("hey5b\n");
-        }
-        //dbg_puts("hey6\n");
     }
-    //dbg_puts("hey7\n");
     va_end(ap);
-    //dbg_puts("hey8\n");
 }
 
 void dbg_puts(const char *str)

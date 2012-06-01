@@ -20,6 +20,16 @@
 #define SCE_SEEK_CUR    1
 #define SCE_SEEK_END    2
 
+typedef struct ScePspDateTime {
+    u16 year;
+    u16 month;
+    u16 day;
+    u16 hour;
+    u16 minute;
+    u16 second;
+    u32 microsecond;
+} ScePspDateTime;
+
 struct SceIoDeviceArg;
 typedef struct SceIoDeviceArg SceIoDeviceArg;
 struct SceIoIob;
@@ -211,8 +221,8 @@ SceUID sceIoOpen(const char *file, int flags, SceMode mode);
 SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode);
 int sceIoRead(SceUID fd, void *data, SceSize size);
 int sceIoReadAsync(SceUID fd, void *data, SceSize size);
-int sceIoWrite(SceUID fd, void *data, SceSize size);
-int sceIoWriteAsync(SceUID fd, void *data, SceSize size);
+int sceIoWrite(SceUID fd, const void *data, SceSize size);
+int sceIoWriteAsync(SceUID fd, const void *data, SceSize size);
 SceOff sceIoLseek(SceUID fd, SceOff offset, int whence);
 SceOff sceIoLseekAsync(SceUID fd, SceOff offset, int whence);
 int sceIoLseek32(SceUID fd, int offset, int whence);

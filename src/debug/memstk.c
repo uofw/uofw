@@ -5,10 +5,6 @@ note:
 	Supported MsProDuo Only.
 
 ****************************************************************************/
-//#include <pspkernel.h>
-//#include "kprintf.h"
-
-//#include "syscon.h"
 
 // debug switches
 #define SHOW_READ_DATA     0

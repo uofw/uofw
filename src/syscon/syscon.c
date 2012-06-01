@@ -2,19 +2,20 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include <common.h>
 
-#include "interruptman.h"
-#include "lowio_gpio.h"
-#include "lowio_sysreg.h"
-#include "sysmem_kdebug.h"
-#include "sysmem_sysclib.h"
-#include "sysmem_sysevent.h"
-#include "sysmem_utils_kernel.h"
-#include "threadman_kernel.h"
+#include <interruptman.h>
+#include <lowio_gpio.h>
+#include <lowio_sysreg.h>
+#include <sysmem_kdebug.h>
+#include <sysmem_sysclib.h>
+#include <sysmem_sysevent.h>
+#include <sysmem_utils_kernel.h>
+#include <threadman_kernel.h>
+
+#include <syscon.h>
 
 #include "syscon.h"
-#include "syscon_int.h"
 
 SCE_MODULE_INFO("sceSYSCON_Driver", SCE_MODULE_KERNEL | SCE_MODULE_SINGLE_START | SCE_MODULE_SINGLE_LOAD | SCE_MODULE_NO_STOP, 1, 11);
 SCE_MODULE_BOOTSTART("_sceSysconModuleStart");
@@ -90,6 +91,7 @@ SceSyscon g_4EB0;
 // 0220
 s32 _sceSysconModuleRebootBefore(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (g_4EB0.unk376 != 0) {
         // 02A0
         sceSyscon_driver_765775EB(0);
@@ -110,6 +112,7 @@ s32 _sceSysconModuleRebootBefore(void)
 // 02B0
 s32 sceSysconInit(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     sceSysregSpiClkSelect(0, 1);
     sceSysregSpiClkEnable(0);
     sceSysregSpiIoEnable(0);
@@ -188,13 +191,17 @@ s32 sceSysconInit(void)
 // 0540
 s32 _sceSysconInitPowerStatus(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 powerStatus;
     // 0554
     while (sceSysconGetPommelVersion(&g_4EB0.pommelVersion) < 0)
         ;
+    dbg_puts("1\n");
     // 0564
     while (sceSysconGetPowerStatus(&powerStatus) < 0)
         ;
+    dbg_puts("2\n");
+    dbg_printf("baryon 0x%08x, pommel 0x%08x\n", g_4EB0.baryonVersion, g_4EB0.pommelVersion);
     u16 baryon = g_4EB0.baryonVersion >> 16;
     if ((baryon & 0xF0) == 0 || (baryon & 0xF0) == 0x10) {
         // 0670
@@ -254,6 +261,7 @@ s32 _sceSysconInitPowerStatus(void)
 // 06FC
 s32 sceSysconEnd(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     // 074C, 0750
     while (g_4EB0.curPacket != NULL)
         sceKernelDelayThread(100000);
@@ -267,6 +275,7 @@ s32 sceSysconEnd(void)
 // 076C
 s32 sceSysconResume(void *arg0)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     sceSysregSpiClkSelect(0, 1);
     sceSysregSpiClkEnable(0);
     sceSysregSpiIoEnable(0);
@@ -318,6 +327,7 @@ s32 sceSysconResume(void *arg0)
 // 0940
 s32 _sceSysconSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), void* param, s32 *result __attribute__((unused)))
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     switch (ev_id) {
     case 0x402:
         // 09B4
@@ -796,6 +806,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
 // 154C
 s32 sceSysconCmdExec(SceSysconPacket *packet, s32 unk)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (sceKernelIsIntrContext())
         return 0x80000030;
 
@@ -808,15 +819,19 @@ s32 sceSysconCmdExec(SceSysconPacket *packet, s32 unk)
     s32 ret = sceSysconCmdExecAsync(packet, unk, 0, 0);
     if (ret < 0)
         return ret;
+    dbg_puts("?\n");
     return sceSysconCmdSync(packet, 0);
 }
 
 // 1600
 s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(SceSysconPacket*, void*), void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 i;
-    if (g_4EB0.rebooted != 0)
+    if (g_4EB0.rebooted != 0) {
+        dbg_printf("ended %d\n", __LINE__);
         return 0x80250003;
+    }
     if ((flags & 0x100) == 0) {
         u32 hash = 0;
         // 1664
@@ -880,6 +895,7 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
         if (g_4EB0.curPacket != NULL || g_4EB0.inGpioIntr) {
             // 1800 dup
             sceKernelCpuResumeIntr(oldIntr);
+            dbg_printf("ended %d [%d, %d]\n", __LINE__, g_4EB0.curPacket != NULL, g_4EB0.inGpioIntr);
             return 0;
         }
         SceSysconPacket *new = g_4EB0.packetList[0];
@@ -906,6 +922,7 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
         if (new == NULL) {
             // 1800 dup
             sceKernelCpuResumeIntr(oldIntr);
+            dbg_printf("ended %d\n", __LINE__);
             return 0;
         }
         u32 timeDiff = 4;
@@ -921,12 +938,14 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
     }
     // 1800 dup
     sceKernelCpuResumeIntr(oldIntr);
+    dbg_printf("ended %d\n", __LINE__);
     return 0;
 }
 
 // 1890
 s32 sceSysconCmdCancel(SceSysconPacket *packet)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 oldIntr = sceKernelCpuSuspendIntr();
     u32 off = (packet->tx[0] >> 5) & 7;
     if ((packet->tx[0] & 0x80) != 0) {
@@ -982,6 +1001,7 @@ end:
 // 19B0
 s32 sceSysconCmdSync(SceSysconPacket *packet, s32 arg1)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (arg1 != 0) {
         // 1BAC
         if (arg1 != 1)
@@ -1062,6 +1082,7 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, s32 arg1)
 // 1C1C
 s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (ptr == NULL)
         return 0x80000103;
     SceSysconPacket packet;
@@ -1082,6 +1103,8 @@ s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
 // 1CB0
 s32 _sceSysconModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
+    dbg_init(1, FB_NONE, FAT_HARDWARE);
+    dbg_printf("Run %s\n", __FUNCTION__);
     sceSysconInit();
     return 0;
 }
@@ -1089,6 +1112,7 @@ s32 _sceSysconModuleStart(s32 argc __attribute__((unused)), void *argp __attribu
 // 1CD0
 s32 sceSyscon_driver_90EAEA2B(s32 arg0, s32 arg1)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     g_4EB0.packetStartDelayIntr = arg1;
     g_4EB0.packetStartDelay = arg0;
     return 0;
@@ -1097,6 +1121,7 @@ s32 sceSyscon_driver_90EAEA2B(s32 arg0, s32 arg1)
 // 1CE8
 s32 sceSyscon_driver_755CF72B(s32 *arg0, s32 *arg1)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (arg0 != NULL)
         *arg0 = g_4EB0.packetStartDelay;
     if (arg1 != NULL)
@@ -1107,6 +1132,7 @@ s32 sceSyscon_driver_755CF72B(s32 *arg0, s32 *arg1)
 // 1D10
 s32 sceSysconSuspend(void)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (g_4EB0.unk376 != 0) {
         // 1D44
         sceSyscon_driver_765775EB(0);
@@ -1119,6 +1145,7 @@ s32 sceSysconSuspend(void)
 // 1D54
 s32 sceSysconSetDebugHandlers(SceSysconDebugHandlers *handlers)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     g_4EB0.dbgHandlers = handlers;
     return 0;
 }
@@ -1126,6 +1153,7 @@ s32 sceSysconSetDebugHandlers(SceSysconDebugHandlers *handlers)
 // 1D64
 s32 sceSysconSetPollingMode(u32 pollingMode)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     g_4EB0.pollingMode = pollingMode;
     return 0;
 }
@@ -1133,6 +1161,7 @@ s32 sceSysconSetPollingMode(u32 pollingMode)
 // 1D74
 s32 sceSysconSetAffirmativeRertyMode(u32 mode)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     g_4EB0.retryMode = mode;
     return 0;
 }
@@ -1140,24 +1169,28 @@ s32 sceSysconSetAffirmativeRertyMode(u32 mode)
 // 1D84
 s32 _sceSysconGetBaryonVersion(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.baryonVersion;
 }
 
 // 1D90
 u64 _sceSysconGetBaryonTimeStamp(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.timeStamp;
 }
 
 // 1DA4
 s32 _sceSysconGetPommelVersion(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.pommelVersion;
 }
 
 // 1DB0
 s32 _sceSysconGetUsbPowerType(void)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     u16 type = g_4EB0.baryonVersion >> 16;
     if ((type & 0xF0) != 0 && (type & 0xF0) != 0x10 && ((type & 0xFF) < 32 || (type & 0xFF) >= 34))
         return 1;
@@ -1167,120 +1200,140 @@ s32 _sceSysconGetUsbPowerType(void)
 // 1DF4
 s32 sceSysconSetGSensorCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 10);
 }
 
 // 1E10
 s32 sceSysconSetLowBatteryCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 0);
 }
 
 // 1E2C
 s32 sceSysconSetPowerSwitchCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 1);
 }
 
 // 1E48
 s32 sceSysconSetAlarmCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 2);
 }
 
 // 1E64
 s32 sceSysconSetAcSupplyCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 3);
 }
 
 // 1E80
 s32 sceSysconSetAcSupply2Callback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 15);
 }
 
 // 1E9C
 s32 sceSysconSetHPConnectCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 4);
 }
 
 // 1EB8
 s32 sceSysconSetHRPowerCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 8);
 }
 
 // 1ED4
 s32 sceSysconSetHRWakeupCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 14);
 }
 
 // 1EF0
 s32 sceSysconSetWlanSwitchCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 5);
 }
 
 // 1F0C
 s32 sceSysconSetWlanPowerCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 9);
 }
 
 // 1F28
 s32 sceSysconSetBtSwitchCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 13);
 }
 
 // 1F44
 s32 sceSysconSetBtPowerCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 12);
 }
 
 // 1F60
 s32 sceSysconSetHoldSwitchCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 6);
 }
 
 // 1F7C
 s32 sceSysconSetUmdSwitchCallback(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 7);
 }
 
 // 1F98
 s32 sceSyscon_driver_374373A8(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 16);
 }
 
 // 1FB4
 s32 sceSyscon_driver_B761D385(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 17);
 }
 
 // 1FD0
 s32 sceSyscon_driver_26307D84(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 18);
 }
 
 // 1FEC
 s32 sceSyscon_driver_6C388E02(SceSysconFunc func, void *argp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconSetCallback(func, argp, 19);
 }
 
 // 2008
 s32 _sceSysconCommonWrite(u32 val, u32 cmd, u32 size)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = cmd;
     packet.tx[1] = size;
@@ -1294,54 +1347,63 @@ s32 _sceSysconCommonWrite(u32 val, u32 cmd, u32 size)
 // 205C
 u8 sceSysconGetBaryonStatus(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.baryonStatus;
 }
 
 // 2068
 u8 sceSysconGetBaryonStatus2(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.baryonStatus2;
 }
 
 // 2074
 u8 sceSysconIsFalling(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus & 0x80) ? 1 : 0;
 }
 
 // 2084
 u8 sceSysconIsLowBattery(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return ((g_4EB0.baryonStatus >> 5) & 1) | ((g_4EB0.baryonStatus2 >> 3) & 1);
 }
 
 // 20A4
 u8 sceSysconGetPowerSwitch(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus >> 4) & 1;
 }
 
 // 20B4
 u8 sceSysconIsAlarmed(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return ((g_4EB0.baryonStatus ^ 8) >> 3) & 1;
 }
 
 // 20C8
 u8 sceSysconIsAcSupplied(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.baryonStatus & 1;
 }
 
 // 20D8
 s8 sceSysconGetHPConnect(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.hpConnect;
 }
 
 // 20E4
 s8 sceSysconGetWlanSwitch(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (g_4EB0.wlanOverride < 0)
         return g_4EB0.wlanSwitch;
     return g_4EB0.wlanOverride;
@@ -1350,6 +1412,7 @@ s8 sceSysconGetWlanSwitch(void)
 // 2108
 s8 sceSyscon_driver_0B51E34D(s8 wlanSwitch)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s8 prev = g_4EB0.wlanOverride;
     g_4EB0.wlanOverride = wlanSwitch;
     return prev;
@@ -1358,6 +1421,7 @@ s8 sceSyscon_driver_0B51E34D(s8 wlanSwitch)
 // 211C
 s8 sceSysconGetBtSwitch(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (g_4EB0.btOverride < 0)
         return g_4EB0.btSwitch;
     return g_4EB0.btOverride;
@@ -1366,6 +1430,7 @@ s8 sceSysconGetBtSwitch(void)
 // 2140
 s8 sceSyscon_driver_BADF1260(s8 btSwitch)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s8 prev = g_4EB0.btOverride;
     g_4EB0.btOverride = btSwitch;
     return prev;
@@ -1374,144 +1439,168 @@ s8 sceSyscon_driver_BADF1260(s8 btSwitch)
 // 2154
 s8 sceSysconGetHoldSwitch(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.holdSwitch;
 }
 
 // 2160
 s8 sceSysconGetUmdSwitch(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.umdSwitch;
 }
 
 // 216C
 s8 sceSyscon_driver_248335CD(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.unk70;
 }
 
 // 2178
 s8 sceSyscon_driver_040982CD(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.unk71;
 }
 
 // 2184
 s8 sceSyscon_driver_97765E27(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.unk72;
 }
 
 // 2190
 u8 sceSysconGetHRPowerStatus(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus >> 2) & 1;
 }
 
 // 21A0
 u8 sceSysconGetHRWakeupStatus(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus2 >> 2) & 1;
 }
 
 // 21B0
 u8 sceSysconGetWlanPowerStatus(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus >> 1) & 1;
 }
 
 // 21C0
 u8 sceSysconGetBtPowerStatus(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus2 >> 1) & 1;
 }
 
 // 21D0
 u8 sceSyscon_driver_DF20C984(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return (g_4EB0.baryonStatus2 >> 4) & 1;
 }
 
 // 21E0
 s8 sceSysconGetLeptonPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.leptonPower;
 }
 
 // 21EC
 s8 sceSysconGetMsPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.msPower;
 }
 
 // 21F8
 s8 sceSysconGetWlanPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.wlanPower;
 }
 
 // 2204
 s8 sceSysconGetHddPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.hddPower;
 }
 
 // 2210
 s8 sceSysconGetDvePowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.dvePower;
 }
 
 // 221C
 s8 sceSysconGetBtPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.btPower;
 }
 
 // 2228
 s8 sceSysconGetUsbPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.usbPower;
 }
 
 // 2234
 s8 sceSysconGetTachyonVmePowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.tachyonVmePower;
 }
 
 // 2240
 s8 sceSysconGetTachyonAwPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.tachyonAwPower;
 }
 
 // 224C
 s8 sceSysconGetTachyonAvcPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.tachyonAvcPower;
 }
 
 // 2258
 s8 sceSysconGetLcdPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.lcdPower;
 }
 
 // 2264
 s8 sceSysconGetHRPowerCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.hrPower;
 }
 
 // 2270
 s8 sceSysconGetWlanLedCtrl(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return g_4EB0.wlanLed;
 }
 
 // 227C
 s32 _sceSysconSetCallback(SceSysconFunc func, void *argp, s32 cbId)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 oldIntr = sceKernelCpuSuspendIntr();
     g_4EB0.callbacks[cbId].func = func;
     g_4EB0.callbacks[cbId].argp = argp;
@@ -1535,7 +1624,7 @@ s32 _sceSysconPacketStart(SceSysconPacket *packet)
     while ((HW(0xBE58000C) & 4) != 0)
         HW(0xBE580008);
     // 235C
-    HW(0xBE580008);
+    HW(0xBE58000C);
     HW(0xBE580020) = 3;
     if ((packet->status & 0x40000) == 0) {
         // 23D8
@@ -1569,7 +1658,7 @@ s32 _sceSysconPacketEnd(SceSysconPacket *packet)
         packet->rx[1] = 0;
         // 2488
         for (i = 0; i < 16; i++)
-            ;
+            asm("\n"); /* Here be dragons. */
     }
     // 2490
     if ((HW(0xBE58000C) & 1) == 0) {
@@ -1603,22 +1692,26 @@ s32 _sceSysconPacketEnd(SceSysconPacket *packet)
     // 254C
     if (ret >= 0) {
         u32 hash = 0;
-        if (packet->rx[1] < 3)
+        if (packet->rx[1] < 3) {
+            dbg_printf("TOO SHORT\n");
             ret = -2;
+        }
         else if (packet->rx[1] < 16) {
-            // 2598
-            if (packet->rx[1] != 0) {
-                // 25A8
-                for (i = 0; i < packet->rx[1]; i++) {
-                    hash = (hash + packet->rx[i]) & 0xFF;
-                }
-            }
+            // 2598, 25A8
+            for (i = 0; i < packet->rx[1]; i++)
+                hash = (hash + packet->rx[i]) & 0xFF;
             // 25C4
-            if ((packet->rx[packet->rx[1]] ^ (~hash & 0xFF)) != 0)
+            if ((packet->rx[packet->rx[1]] ^ (~hash & 0xFF)) != 0) {
+                dbg_printf("INVALID HASH\n");
                 ret = -2;
-        } else
+            }
+        } else {
+            dbg_printf("TOO LONG\n");
             ret = -2;
+        }
     }
+    else
+        dbg_printf("FAIL\n");
     // 2578
     packet->status &= 0xFFFDFFFF;
     return ret;
@@ -1627,6 +1720,7 @@ s32 _sceSysconPacketEnd(SceSysconPacket *packet)
 // 25F0
 s32 sceSysconGetTimeStamp(s8 *timeStamp)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     if (timeStamp == NULL)
         return 0x80000103;
@@ -1643,6 +1737,7 @@ s32 sceSysconGetTimeStamp(s8 *timeStamp)
 // 267C
 s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     if ((size < 1 || size >= 3) && size != 4 && size != 8)
         return 0x80000104;
@@ -1661,6 +1756,7 @@ s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size)
 // 274C
 s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     if ((size < 1 || size >= 3) && size != 4 && size != 8)
         return 0x80000104;
@@ -1683,6 +1779,7 @@ s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size)
 // 282C
 s32 sceSysconSendSetParam(u32 id, void *param)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     if (((_sceSysconGetBaryonVersion() >> 16) & 0xFF) < 0x12 &&
       ((_sceSysconGetBaryonVersion() & 0xFF) != 1 ||
@@ -1708,6 +1805,7 @@ s32 sceSysconSendSetParam(u32 id, void *param)
 // 2944
 s32 sceSysconReceiveSetParam(u32 id, void *param)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     if (((_sceSysconGetBaryonVersion() >> 16) & 0xFF) < 0x12 &&
       ((_sceSysconGetBaryonVersion() & 0xFF) != 1 ||
@@ -1734,6 +1832,7 @@ s32 sceSysconReceiveSetParam(u32 id, void *param)
 // 2A40
 s32 sceSysconCtrlTachyonWDT(s32 wdt)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (wdt >= 0x80)
         return 0x800001FE;
     return _sceSysconCommonWrite(wdt == 0 ? 0 : wdt | 0x80, 0x31, 3);
@@ -1742,6 +1841,7 @@ s32 sceSysconCtrlTachyonWDT(s32 wdt)
 // 2A88
 s32 sceSysconResetDevice(u32 reset, u32 mode)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (reset == 1) {
         // 2B24
         if (mode != 1) {
@@ -1763,6 +1863,7 @@ s32 sceSysconResetDevice(u32 reset, u32 mode)
 // 2B40
 s32 sceSyscon_driver_12518439(u32 arg0)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (((_sceSysconGetBaryonVersion() >> 16) & 0xF0) >= 0x30) {
         // 2BC8
         *(s8*)(0x13FC0 + 0) = 0x35;
@@ -1785,6 +1886,7 @@ s32 sceSyscon_driver_12518439(u32 arg0)
 // 2BF4
 s32 sceSysconPowerSuspend(u32 arg0, u32 arg1)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     u32 set = 0;
     void *sm1 = sceKernelSm1ReferOperations();
     if (sm1 != NULL) {
@@ -1818,6 +1920,7 @@ s32 sceSysconPowerSuspend(u32 arg0, u32 arg1)
 // 2D08
 s32 sub_2D08(u32 addr, u32 arg1, u32 arg2)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     sceKernelCpuSuspendIntr();
     memcpy((void*)0x10000, sub_0000, (void*)_sceSysconModuleRebootBefore - (void*)sub_0000);
     sceKernelDcacheWritebackAll();
@@ -1830,6 +1933,7 @@ s32 sub_2D08(u32 addr, u32 arg1, u32 arg2)
 // 2D88
 void sceSysconNop(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0;
     packet.tx[1] = 2;
@@ -1839,42 +1943,49 @@ void sceSysconNop(void)
 // 2DB4
 s32 sceSysconGetBaryonVersion(s32 *baryonVersion)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(baryonVersion, 1);
 }
 
 // 2DD0
 s32 sceSysconGetGValue(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 2DDC
 s32 sceSysconGetPowerSupplyStatus(void *status)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(status, 0xB);
 }
 
 // 2DF8
 s32 sceSysconGetFallingDetectTime(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 2E04
 s32 sceSysconGetWakeUpFactor(void *factor)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(factor, 0xE);
 }
 
 // 2E20
 s32 sceSysconGetWakeUpReq(void *req)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(req, 0xF);
 }
 
 // 2E3C
 s32 sceSysconGetVideoCable(s32 *cable)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     u32 ver = _sceSysconGetBaryonVersion() >> 16;
     if ((ver & 0xF0) == 0 || (ver & 0xF0) == 0x10) {
         // 2E9C
@@ -1887,30 +1998,35 @@ s32 sceSysconGetVideoCable(s32 *cable)
 // 2EA4
 s32 sceSysconReadClock(s32 *clock)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(clock, 9);
 }
 
 // 2EC0
 s32 sceSysconWriteClock(s32 clock)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonWrite(clock, 0x20, 6);
 }
 
 // 2EE0
 s32 sceSysconReadAlarm(s32 *alarm)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(alarm, 0xA);
 }
 
 // 2EFC
 s32 sceSysconWriteAlarm(s32 alarm)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonWrite(alarm, 0x22, 6);
 }
 
 // 2F1C
 s32 sceSysconSetUSBStatus(u8 status)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x21;
     packet.tx[1] = 3;
@@ -1921,18 +2037,21 @@ s32 sceSysconSetUSBStatus(u8 status)
 // 2F58
 s32 sceSysconGetTachyonWDTStatus(s32 *status)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(status, 0xC);
 }
 
 // 2F74
 s32 sceSysconCtrlAnalogXYPolling(s8 polling)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonWrite(polling, 0x33, 3);
 }
 
 // 2F94
 s32 sceSysconCtrlHRPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 ret = _sceSysconCommonWrite(power, 0x34, 3);
     if (ret >= 0)
         g_4EB0.hrPower = power;
@@ -1942,6 +2061,7 @@ s32 sceSysconCtrlHRPower(s8 power)
 // 2FCC
 s32 sceSysconCtrlPower(u32 arg0, u32 arg1)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 ret = _sceSysconCommonWrite(((arg1 & 1) << 23) | (arg0 & 0x003FFFFF), 0x45, 5);
     if (ret >= 0)
         _sceSysconGetPommelType();
@@ -1951,6 +2071,7 @@ s32 sceSysconCtrlPower(u32 arg0, u32 arg1)
 // 301C
 s32 sceSysconCtrlLED(u32 arg0, u32 arg1)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     u8 himask, lomask;
     switch (arg0) {
     case 1:
@@ -1993,6 +2114,7 @@ s32 sceSysconCtrlLED(u32 arg0, u32 arg1)
 // 30F0
 s32 sceSysconCtrlDvePower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     u32 type = _sceSysconGetPommelType();
     if (type < 0x300)
         return 0x80000004;
@@ -2009,6 +2131,7 @@ s32 sceSysconCtrlDvePower(s8 power)
 // 315C
 s32 sceSyscon_driver_765775EB(s32 arg0)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (((g_4EB0.baryonVersion >> 16) & 0xFF) >= 0x30 &&
       ((g_4EB0.baryonVersion >> 16) & 0xFF) < 0x32) {
         // 3204
@@ -2031,6 +2154,7 @@ s32 sceSyscon_driver_765775EB(s32 arg0)
 // 3214
 s32 sceSysconCtrlCharge(u8 allow)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     u8 version = (_sceSysconGetBaryonVersion() >> 16) & 0xF0;
     if (version != 0 && version != 0x10) {
         // 3280
@@ -2046,6 +2170,7 @@ s32 sceSysconCtrlCharge(u8 allow)
 // 3290
 s32 sceSysconCtrlTachyonAvcPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 ret = sceSysconCtrlPower((_sceSysconGetPommelType() >= 0x300) ? 2 : 8, power);
     if (ret >= 0)
         g_4EB0.tachyonAvcPower = power;
@@ -2055,6 +2180,7 @@ s32 sceSysconCtrlTachyonAvcPower(s8 power)
 // 32D8
 s32 sub_32D8(void)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     u32 flag;
     packet.tx[0] = 0x4F;
@@ -2077,6 +2203,7 @@ s32 sub_32D8(void)
 // 3360
 s32 sub_3360(void)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     u32 flag;
     SceSysconPacket packet;
     packet.tx[0] = 0x4F;
@@ -2099,18 +2226,21 @@ s32 sub_3360(void)
 // 33E8
 s32 sceSysconGetPommelVersion(s32 *pommel)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(pommel, 0x40);
 }
 
 // 3404
 s32 sceSyscon_driver_FB148FB6(void *arg0)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(arg0, 0x41);
 }
 
 // 3420
 s32 sceSysconCtrlVoltage(s32 arg0, s32 arg1)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (_sceSysconGetPommelType() != 0x100 && arg0 >= 4 && arg0 < 6)
         return 0x80000004;
     // 3470
@@ -2120,30 +2250,35 @@ s32 sceSysconCtrlVoltage(s32 arg0, s32 arg1)
 // 3494
 s32 sceSysconGetGSensorVersion(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 34A0
 s32 sceSysconCtrlGSensor(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 34AC
 s32 sceSysconGetPowerStatus(s32 *status)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonRead(status, 0x46);
 }
 
 // 34C8
 s32 sceSysconWritePommelReg(u32 arg0, u32 arg1)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonWrite(((arg1 & 0xFFFF) << 8) | (arg0 & 0xFF), 0x48, 5);
 }
 
 // 34FC
 s32 sceSysconReadPommelReg(u8 reg, s32 *value)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x49;
     packet.tx[1] = 3;
@@ -2159,6 +2294,7 @@ s32 sceSysconReadPommelReg(u8 reg, s32 *value)
 // 3564
 s32 sceSysconGetPowerError(s32 *error)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (error != NULL)
         *error = 0;
     return 0;
@@ -2167,6 +2303,7 @@ s32 sceSysconGetPowerError(s32 *error)
 // 3574
 s32 sceSysconCtrlLeptonPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 ret = _sceSysconCommonWrite(power, 0x4B, 3);
     if (ret >= 0)
         g_4EB0.leptonPower = power;
@@ -2176,6 +2313,7 @@ s32 sceSysconCtrlLeptonPower(s8 power)
 // 35AC
 s32 sceSysconCtrlMsPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 ret = _sceSysconCommonWrite(power, 0x4C, 3);
     if (ret >= 0)
         g_4EB0.msPower = power;
@@ -2185,6 +2323,7 @@ s32 sceSysconCtrlMsPower(s8 power)
 // 35E4
 s32 sceSysconCtrlWlanPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 ret = _sceSysconCommonWrite(power, 0x4D, 3);
     if (ret >= 0) {
         g_4EB0.wlanPower = power;
@@ -2197,6 +2336,7 @@ s32 sceSysconCtrlWlanPower(s8 power)
 // 3658
 s32 sceSysconCtrlHddPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (_sceSysconGetPommelType() < 0x500)
         return 0x80000004;
     s32 ret = _sceSysconCommonWrite(power, 0x4A, 3);
@@ -2208,6 +2348,7 @@ s32 sceSysconCtrlHddPower(s8 power)
 // 36B4
 s32 sceSysconCtrlBtPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (g_4EB0.unk376 != 0)
         return 0;
     s32 ret = _sceSysconCommonWrite(power & 1, 0x53, 3);
@@ -2219,6 +2360,7 @@ s32 sceSysconCtrlBtPower(s8 power)
 // 3714
 s32 sceSysconCtrlUsbPower(s8 power)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     u8 version = _sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) == 0 || (version & 0xF0) == 0x10 || ((version & 0xFF) >= 0x20 && (version & 0xFF) < 0x22))
         return 0x80000004;
@@ -2231,18 +2373,21 @@ s32 sceSysconCtrlUsbPower(s8 power)
 // 379C
 s32 sceSysconPermitChargeBattery(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return sceSysconCtrlCharge(1);
 }
 
 // 37B8
 s32 sceSysconForbidChargeBattery(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return sceSysconCtrlCharge(0);
 }
 
 // 37D4
 s32 sceSysconCtrlTachyonVmePower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (_sceSysconGetPommelType() != 0x100)
         return 0x80000004;
     s32 ret = sceSysconCtrlPower(2, power);
@@ -2254,6 +2399,7 @@ s32 sceSysconCtrlTachyonVmePower(s8 power)
 // 3830
 s32 sceSysconCtrlTachyonAwPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (_sceSysconGetPommelType() != 0x100)
         return 0x80000004;
     s32 ret = sceSysconCtrlPower(4, power);
@@ -2265,6 +2411,7 @@ s32 sceSysconCtrlTachyonAwPower(s8 power)
 // 388C
 s32 sceSysconCtrlLcdPower(s8 power)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (_sceSysconGetPommelType() >= 0x300)
         return 0x80000004;
     s32 ret = sceSysconCtrlPower(0x80000, power);
@@ -2276,24 +2423,28 @@ s32 sceSysconCtrlLcdPower(s8 power)
 // 38E4
 s32 sceSysconGetGSensorCarib(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 38F0
 s32 sceSysconSetGSensorCarib(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 38FC
 s32 sceSysconWritePolestarReg(s8 reg, u32 val)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconCommonWrite(((val & 0xFFFF) << 8) | (reg & 0xFF), 0x4E, 5);
 }
 
 // 3930
 s32 sceSysconReadPolestarReg(s8 reg, s32 *val)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x4F;
     packet.tx[1] = 3;
@@ -2309,18 +2460,21 @@ s32 sceSysconReadPolestarReg(s8 reg, s32 *val)
 // 3998
 s32 sceSysconWriteGSensorReg(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 39A4
 s32 sceSysconReadGSensorReg(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return 0x80000004;
 }
 
 // 39B0
 s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x61;
     packet.tx[1] = 2;             
@@ -2339,6 +2493,7 @@ s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
 // 3A2C
 s32 sceSysconBatteryGetInfo(s32 *info)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x6D;
     packet.tx[1] = 2;
@@ -2357,6 +2512,7 @@ s32 sceSysconBatteryGetInfo(s32 *info)
 // 3AA8
 s32 sceSysconGetBattVolt(s32 *volt)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     u8 version =_sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) != 0x29 &&
       (version & 0xFF) != 0x2A &&
@@ -2375,6 +2531,7 @@ s32 sceSysconGetBattVolt(s32 *volt)
 // 3B34
 s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     u8 version = _sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) != 0x29 &&
       (version & 0xFF) != 0x2A &&
@@ -2397,6 +2554,7 @@ s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
 // 3BD8
 s32 sceSysconBatteryNop(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x60;
     packet.tx[1] = 2;
@@ -2406,54 +2564,63 @@ s32 sceSysconBatteryNop(void)
 // 3C10
 s32 sceSysconBatteryGetTemp(s32 *temp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x62, temp);
 }
 
 // 3C30
 s32 sceSysconBatteryGetVolt(s32 *volt)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x63, volt);
 }
 
 // 3C50
 s32 sceSysconBatteryGetElec(s32 *elec)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x64, elec);
 }
 
 // 3C70
 s32 sceSysconBatteryGetRCap(s32 *rcap)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x65, rcap);
 }
 
 // 3C90
 s32 sceSysconBatteryGetCap(s32 *cap)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x66, cap);
 }
 
 // 3CB0
 s32 sceSysconBatteryGetFullCap(s32 *cap)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x67, cap);
 }
 
 // 3CD0
 s32 sceSysconBatteryGetIFC(s32 *ifc)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x68, ifc);
 }
 
 // 3CF0
 s32 sceSysconBatteryGetLimitTime(s32 *time)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x69, time);
 }
 
 // 3D10
 s32 sceSysconBatteryGetStatus(s32 *status)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 stat;
     s32 ret = _sceSysconBatteryCommon(0x6A, &stat);
     if (ret < 0)
@@ -2466,48 +2633,56 @@ s32 sceSysconBatteryGetStatus(s32 *status)
 // 3D58
 s32 sceSysconBatteryGetCycle(s32 *cycle)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x6B, cycle);
 }
 
 // 3D78
 s32 sceSysconBatteryGetSerial(s32 *serial)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x6C, serial);
 }
 
 // 3D98
 s32 sceSysconBatteryGetTempAD(s32 *temp)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x6E, temp);
 }
 
 // 3DB8
 s32 sceSysconBatteryGetVoltAD(s32 *volt)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x6F, volt);
 }
 
 // 3DD8
 s32 sceSysconBatteryGetElecAD(s32 *elec)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x70, elec);
 }
 
 // 3DF8
 s32 sceSysconBatteryGetTotalElec(s32 *elec)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x71, elec);
 }
 
 // 3E18
 s32 sceSysconBatteryGetChargeTime(s32 *time)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     return _sceSysconBatteryCommon(0x72, time);
 }
 
 // 3E38
 s32 _sceSysconBatteryCommon(u32 cmd, s32 *ptr)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     u32 version = _sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) == 0x29 ||
      (version & 0xFF) == 0x2A ||
@@ -2542,6 +2717,7 @@ s32 _sceSysconBatteryCommon(u32 cmd, s32 *ptr)
 // 3F68
 s32 sceSysconCtrlTachyonVoltage(s32 voltage)
 {   
+    dbg_printf("Run %s\n", __FUNCTION__);
     s32 status;
     s32 ret = sceSysconGetPowerStatus(&status);
     if (ret < 0)
@@ -2585,6 +2761,7 @@ s32 sceSysconCtrlTachyonVoltage(s32 voltage)
 // 406C
 s32 sub_406C(s32 arg0)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     if (arg0 == 0) {
         // 4134
         if (g_4EB0.unk376 == 0)
@@ -2618,6 +2795,7 @@ s32 sub_406C(s32 arg0)
 // 4150
 s32 sub_4150(s32 arg0, s32 arg1, s32 arg2)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 0x29;
     packet.tx[1] = 7;
@@ -2637,6 +2815,7 @@ s32 sub_4150(s32 arg0, s32 arg1, s32 arg2)
 // 41C4
 s32 _sceSysconGetPommelType(void)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     u32 baryon = _sceSysconGetBaryonVersion();
     u8 flag = (u32)baryon >> 16;
     if ((flag & 0xF0) == 0) {
@@ -2697,6 +2876,7 @@ s32 _sceSysconGetPommelType(void)
 // 4474
 s32 sceSysconGetDigitalKey(s8 *key)
 {
+    dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     packet.tx[0] = 2;
     packet.tx[1] = 2;
