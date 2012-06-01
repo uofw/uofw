@@ -79,10 +79,8 @@ typedef struct {
     SceUID semaId; // 380
 } SceSyscon;
 
-s8 g_SysconEvName[] = "SceSyscon";
-
 // 4E10
-SceSysEventHandler g_SysconEv = { 64, g_SysconEvName, 0x00FFFF00, _sceSysconSysEventHandler, 0, 0, NULL, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+SceSysEventHandler g_SysconEv = { 64, (s8*)"SceSyscon", 0x00FFFF00, _sceSysconSysEventHandler, 0, 0, NULL, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
 SceSysconPacket g_4E50;
 

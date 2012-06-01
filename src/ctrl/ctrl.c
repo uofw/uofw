@@ -10,19 +10,19 @@
  *
  */
 
-#include "../../include/ctrl.h"
-#include "../../include/display.h"
-#include "../../include/modulemgr_init.h"
-#include "../../include/interruptman.h"
-#include "../../include/syscon.h"
-#include "../../include/sysmem_kdebug.h"
-#include "../../include/sysmem_kernel.h"
-#include "../../include/sysmem_sysclib.h"
-#include "../../include/sysmem_sysevent.h"
-#include "../../include/sysmem_suspend_kernel.h"
-#include "../../include/systimer.h"
-#include "../../include/threadman_kernel.h"
+#include <display.h>
+#include <modulemgr_init.h>
+#include <interruptman.h>
+#include <syscon.h>
+#include <sysmem_kdebug.h>
+#include <sysmem_kernel.h>
+#include <sysmem_sysclib.h>
+#include <sysmem_sysevent.h>
+#include <sysmem_suspend_kernel.h>
+#include <systimer.h>
+#include <threadman_kernel.h>
 
+#include <ctrl.h>
 
 /* common defines */
 
@@ -159,7 +159,7 @@ typedef struct {
     u8 unk_Byte_2; //20
     SceCtrlPadPollMode pollMode; //21
     short int suspendSamples; //22
-    u32 sysconTransfersLeft; //24
+    s32 sysconTransfersLeft; //24
     SceSysconPacket sysPacket[2]; //28 -- size of one array member is 96.
     SceCtrlInternalData userModeData; //220
     SceCtrlInternalData kernelModeData; //260
@@ -197,12 +197,12 @@ typedef struct {
     int unk_array3[2]; //780
 } SceCtrl; //size of SceCtrl: 788 (0x314)
 
-static int _sceCtrlSysEventHandler(int ev_id, char* ev_name, void* param, int* result); //0x00000364
+static s32 _sceCtrlSysEventHandler(s32 ev_id, s8* ev_name, void* param, s32* result); //0x00000364
 static SceUInt _sceCtrlDummyAlarm(void *common); //sub_00001DD8
 static int _sceCtrlVblankIntr(int subIntNm, void *arg); //sub_00000440
 static int _sceCtrlTimerIntr(int, int, int, int); //sub_00000528
-static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket); //sub_00000610;
-static int _sceCtrlSysconCmdIntr2(void); //sub_00001E4C
+static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp); //sub_00000610;
+static int _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp); //sub_00001E4C
 static int _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY); //sub_00000968
 static int _sceCtrlReadBuf(SceCtrlDataExt *pad, u8 reqBufReads, int arg3, u8 mode); //sub_00001E70
 
@@ -214,7 +214,7 @@ SceKernelDeci2Ops ctrlDeci2Ops = { 0x28, { (void *)sceCtrlGetSamplingMode, (void
                                            (void *)sceCtrlExtendInternalCtrlBuffers
                                          } }; //0x000027F8
 
-SceSysEventHandler ctrlSysEvent = { sizeof(SceSysEventHandler), "SceCtrl", 0x00FFFF00, _sceCtrlSysEventHandler, 0, 0, NULL,
+SceSysEventHandler ctrlSysEvent = { sizeof(SceSysEventHandler), (s8*)"SceCtrl", 0x00FFFF00, _sceCtrlSysEventHandler, 0, 0, NULL,
                                     { 0, 0, 0, 0, 0, 0, 0, 0, 0 } }; //0x00002850
 
 SceCtrlData g_2BB0[CTRL_INTERNAL_CONTROLLER_BUFFERS]; //0x00002BB0
@@ -241,7 +241,7 @@ int sceCtrlInit(void)
     ctrl.analogY = CTRL_ANALOG_PAD_DEFAULT_VALUE;
     ctrl.analogX = CTRL_ANALOG_PAD_DEFAULT_VALUE;
     ctrl.kernelModeData.sceCtrlBuf[0] = g_2FB0;
-    ctrl.sysconTransfersLeft = UINT_MAX;
+    ctrl.sysconTransfersLeft = -1;
 
     /* 
      * Create the event used for the ::_sceCtrlReadBuffer[...] functions 
@@ -1004,7 +1004,7 @@ SceCtrlPadButtonMaskMode sceCtrlGetButtonIntercept(u32 buttons)
 /* Subroutine sceCtrl_driver_F8346777 - Address 0x000017C4
  * Exported in sceCtrl_driver
  */
-int sceCtrlSetButtonIntercept(u32 buttons, SceCtrlPadButtonMaskMode buttonMaskMode) 
+SceCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 buttons, SceCtrlPadButtonMaskMode buttonMaskMode) 
 {
     int suspendFlag;
     int prevBtnMaskMode;    
@@ -1156,8 +1156,8 @@ int sceCtrlUpdateCableTypeReq(void)
  * 
  * @return 0 on success, otherwise less than 0 to indicate unsuccessful handling of the event request.
  */
-static int _sceCtrlSysEventHandler(int ev_id, char *ev_name __attribute__((unused)), void *param __attribute__((unused)), 
-                                   int *result __attribute__((unused))) 
+static s32 _sceCtrlSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), void *param __attribute__((unused)), 
+                                   s32 *result __attribute__((unused))) 
 {
     int sysconStatus;
 
@@ -1188,7 +1188,7 @@ static int _sceCtrlSysEventHandler(int ev_id, char *ev_name __attribute__((unuse
     else {
         if (ev_id == 0x1000C) { //0x000003BC
             sceCtrlResume();
-            ctrl.sysconTransfersLeft = UINT_MAX;
+            ctrl.sysconTransfersLeft = -1;
         }
         return SCE_ERROR_OK;
     }
@@ -1264,12 +1264,12 @@ static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __
             
             /* Specify the requested controller device input data. */
             if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == SCE_CTRL_INPUT_DIGITAL_ONLY) {
-                ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;
+                ctrl.sysPacket[0].tx[0] = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;
             }
             else {
-               ctrl.sysPacket[0].tx_cmd = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
+               ctrl.sysPacket[0].tx[0] = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
             }
-            ctrl.sysPacket[0].tx_len = 2;
+            ctrl.sysPacket[0].tx[1] = 2;
             /*
              * Fire the controller data request to SYSCON and use
              * _sceCtrlSysconCmdIntr1() to apply the transfered 
@@ -1343,7 +1343,7 @@ static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __
             if (ctrl.samplingMode[USER_MODE] != SCE_CTRL_INPUT_DIGITAL_ONLY) {
                 sysconReqCtrlData = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
             }
-            ctrl.sysPacket[0].tx_cmd = sysconReqCtrlData;
+            ctrl.sysPacket[0].tx[0] = sysconReqCtrlData;
 
             /*
              * Fire the controller data request to SYSCON and use
@@ -1382,7 +1382,7 @@ static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __
  *
  * @return 0.
  */
-static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket) 
+static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attribute__((unused)))
 {
     u32 pureButtons;
     int suspendFlag;
@@ -1418,42 +1418,42 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket)
     //TODO: Reverse of sceSysconCmdExecAsync to get structure members!
     else {
         tmpButtons = ctrl.pureButtons; //0x00000674 & 0x000008A8
-        if (sysPacket->tx_cmd != 2 && sysPacket->tx_cmd != 6) { //...0x00000670
+        if (sysPacket->tx[0] != 2 && sysPacket->tx[0] != 6) { //...0x00000670
             nButtons = tmpButtons;
-            if (sysPacket->tx_cmd >= 7 && sysPacket->tx_cmd <= 8) { //0x000008A4
-                nButtons = (((sysPacket->rx_data[3] & 3) << 28) 
-                          | ((sysPacket->rx_data[2] & 0xBF) << 20)
-                          | ((sysPacket->rx_data[1] & 0xF0) << 12)
-                          | ((sysPacket->rx_data[0] & 0xFF) << 8)
-                          | ((sysPacket->rx_data[1] & 6) << 7)
-                          | ((sysPacket->rx_data[0] & 0xF) << 4)
-                          | (sysPacket->rx_data[1] & 9)) 
+            if (sysPacket->tx[0] >= 7 && sysPacket->tx[0] <= 8) { //0x000008A4
+                nButtons = (((sysPacket->rx[6] & 3) << 28) 
+                          | ((sysPacket->rx[5] & 0xBF) << 20)
+                          | ((sysPacket->rx[4] & 0xF0) << 12)
+                          | ((sysPacket->rx[3] & 0xFF) << 8)
+                          | ((sysPacket->rx[4] & 6) << 7)
+                          | ((sysPacket->rx[3] & 0xF) << 4)
+                          | (sysPacket->rx[4] & 9)) 
                     ^ 0x20F7F3F9; //0x00000914
             }
         }
         else {
-            nButtons = ((((sysPacket->rx_data[1] & 0xF0) << 12) // 0x00000678...
-                       | ((sysPacket->rx_data[0] & 0xF0) << 8)
-                       | ((sysPacket->rx_data[1] & 0x6) << 7)
-                       | ((sysPacket->rx_data[0] & 0xF) << 4)
-                       | (sysPacket->rx_data[1] & 0x9)) 
+            nButtons = ((((sysPacket->rx[4] & 0xF0) << 12) // 0x00000678...
+                       | ((sysPacket->rx[3] & 0xF0) << 8)
+                       | ((sysPacket->rx[4] & 0x6) << 7)
+                       | ((sysPacket->rx[3] & 0xF) << 4)
+                       | (sysPacket->rx[4] & 0x9)) 
                     ^ 0x7F3F9) 
                     | (ctrl.pureButtons & 0xFFF00000); //0x000006C8
         }
         ctrl.pureButtons = nButtons; //0x000006D8
 
         //analogPadValues passed from hw-Regs via syscon to ctrl
-        if (sysPacket->tx_cmd == 3) { //0x000006D4
-            analogY = sysPacket->rx_data[1]; //0x00000890
-            analogX = sysPacket->rx_data[0]; //0x00000898
+        if (sysPacket->tx[0] == 3) { //0x000006D4
+            analogY = sysPacket->rx[4]; //0x00000890
+            analogX = sysPacket->rx[3]; //0x00000898
         }
-        else if (sysPacket->tx_cmd == 6) { //0x000006E0
-            analogY = sysPacket->rx_data[3]; //0x00000884
-            analogX = sysPacket->rx_data[2]; //0x0000088C
+        else if (sysPacket->tx[0] == 6) { //0x000006E0
+            analogY = sysPacket->rx[6]; //0x00000884
+            analogX = sysPacket->rx[5]; //0x0000088C
         }
-        else if (sysPacket->tx_cmd == 8) {
-            analogY = sysPacket->rx_data[5]; //0x000006EC
-            analogX = sysPacket->rx_data[4]; //0x0000088C
+        else if (sysPacket->tx[0] == 8) {
+            analogY = sysPacket->rx[8]; //0x000006EC
+            analogX = sysPacket->rx[7]; //0x0000088C
         }
         else {
             analogY = ctrl.analogY; //0x000006F0
@@ -1463,7 +1463,7 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket)
         ctrl.analogY = analogY; //0x00000708
         _sceCtrlUpdateButtons(nButtons, analogX, analogY); //0x0000070C
 
-        if (sysPacket->tx_data[6] == 0) { //0x00000718
+        if (sysPacket->tx[8] == 0) { //0x00000718
             int unk1, unk2;
             tmpButtons ^= nButtons; //0x0000072C
             if ((nButtons & 0x20000000) == 0) { //0x00000728
@@ -1500,9 +1500,9 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket)
 
         if (sampling != ctrl.unk_Byte_1 && ctrl.sysconBusyIntr2 == 0) { //0x000007E0 & 0x000007EC
             ctrl.sysconBusyIntr2 = 1; //0x00000834
-            ctrl.sysPacket[1].tx_cmd = 51; //0x0000082C & 0x00000840
-            ctrl.sysPacket[1].tx_len = 3; //0x00000830 & 0x0000084C
-            ctrl.sysPacket[1].tx_data[0] = sampling; //0x00000858
+            ctrl.sysPacket[1].tx[0] = 51; //0x0000082C & 0x00000840
+            ctrl.sysPacket[1].tx[1] = 3; //0x00000830 & 0x0000084C
+            ctrl.sysPacket[1].tx[2] = sampling; //0x00000858
 
             res = sceSysconCmdExecAsync(&ctrl.sysPacket[1], 0, _sceCtrlSysconCmdIntr2, 0); //0x00000854
             if (res < 0) { //0x0000085C
@@ -1517,10 +1517,10 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket)
 }
 
 /* sub_00001E4C */
-static int _sceCtrlSysconCmdIntr2(void) 
+static int _sceCtrlSysconCmdIntr2(SceSysconPacket *packet __attribute__((unused)), void *argp __attribute__((unused)))
 {   
     ctrl.unk_Byte_0 = 0; //0x00001E5C
-    ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx_data[0] & 0x1; //0x00001E64
+    ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx[2] & 0x1; //0x00001E64
     ctrl.sysconBusyIntr2 = 0; //0x00001E6C
 
     return SCE_ERROR_OK;
