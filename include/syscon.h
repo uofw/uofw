@@ -8,6 +8,15 @@
 #define SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER    7
 #define SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER  8
 
+#define PSP_SYSCON_TX_CMD (0)
+#define PSP_SYSCON_TX_LEN (1)
+#define PSP_SYSCON_TX_DATA(i) (2 + i)
+
+#define PSP_SYSCON_RX_STATUS (0)
+#define PSP_SYSCON_RX_LEN (1)
+#define PSP_SYSCON_RX_RESPONSE (2)
+#define PSP_SYSCON_RX_DATA(i) (3 + i)
+
 typedef struct SceSysconPacket {
     /** Next packet in the list. */
     struct SceSysconPacket *next;

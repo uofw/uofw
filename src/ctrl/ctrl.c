@@ -1264,12 +1264,12 @@ static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __
             
             /* Specify the requested controller device input data. */
             if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == SCE_CTRL_INPUT_DIGITAL_ONLY) {
-                ctrl.sysPacket[0].tx[0] = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;
+                ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;
             }
             else {
-               ctrl.sysPacket[0].tx[0] = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
+               ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
             }
-            ctrl.sysPacket[0].tx[1] = 2;
+            ctrl.sysPacket[0].tx[PSP_SYSCON_TX_LEN] = 2;
             /*
              * Fire the controller data request to SYSCON and use
              * _sceCtrlSysconCmdIntr1() to apply the transfered 
@@ -1343,7 +1343,7 @@ static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __
             if (ctrl.samplingMode[USER_MODE] != SCE_CTRL_INPUT_DIGITAL_ONLY) {
                 sysconReqCtrlData = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
             }
-            ctrl.sysPacket[0].tx[0] = sysconReqCtrlData;
+            ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = sysconReqCtrlData;
 
             /*
              * Fire the controller data request to SYSCON and use
@@ -1418,42 +1418,42 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
     //TODO: Reverse of sceSysconCmdExecAsync to get structure members!
     else {
         tmpButtons = ctrl.pureButtons; //0x00000674 & 0x000008A8
-        if (sysPacket->tx[0] != 2 && sysPacket->tx[0] != 6) { //...0x00000670
+        if (sysPacket->tx[PSP_SYSCON_TX_CMD] != 2 && sysPacket->tx[PSP_SYSCON_TX_CMD] != 6) { //...0x00000670
             nButtons = tmpButtons;
-            if (sysPacket->tx[0] >= 7 && sysPacket->tx[0] <= 8) { //0x000008A4
-                nButtons = (((sysPacket->rx[6] & 3) << 28) 
-                          | ((sysPacket->rx[5] & 0xBF) << 20)
-                          | ((sysPacket->rx[4] & 0xF0) << 12)
-                          | ((sysPacket->rx[3] & 0xFF) << 8)
-                          | ((sysPacket->rx[4] & 6) << 7)
-                          | ((sysPacket->rx[3] & 0xF) << 4)
-                          | (sysPacket->rx[4] & 9)) 
+            if (sysPacket->tx[PSP_SYSCON_TX_CMD] >= 7 && sysPacket->tx[PSP_SYSCON_TX_CMD] <= 8) { //0x000008A4
+                nButtons = (((sysPacket->rx[PSP_SYSCON_RX_DATA(3)] & 3) << 28) 
+                          | ((sysPacket->rx[PSP_SYSCON_RX_DATA(2)] & 0xBF) << 20)
+                          | ((sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0xF0) << 12)
+                          | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xFF) << 8)
+                          | ((sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 6) << 7)
+                          | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xF) << 4)
+                          | (sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 9)) 
                     ^ 0x20F7F3F9; //0x00000914
             }
         }
         else {
-            nButtons = ((((sysPacket->rx[4] & 0xF0) << 12) // 0x00000678...
-                       | ((sysPacket->rx[3] & 0xF0) << 8)
-                       | ((sysPacket->rx[4] & 0x6) << 7)
-                       | ((sysPacket->rx[3] & 0xF) << 4)
-                       | (sysPacket->rx[4] & 0x9)) 
+            nButtons = ((((sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0xF0) << 12) // 0x00000678...
+                       | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xF0) << 8)
+                       | ((sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0x6) << 7)
+                       | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xF) << 4)
+                       | (sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0x9)) 
                     ^ 0x7F3F9) 
                     | (ctrl.pureButtons & 0xFFF00000); //0x000006C8
         }
         ctrl.pureButtons = nButtons; //0x000006D8
 
         //analogPadValues passed from hw-Regs via syscon to ctrl
-        if (sysPacket->tx[0] == 3) { //0x000006D4
-            analogY = sysPacket->rx[4]; //0x00000890
-            analogX = sysPacket->rx[3]; //0x00000898
+        if (sysPacket->tx[PSP_SYSCON_TX_CMD] == 3) { //0x000006D4
+            analogY = sysPacket->rx[PSP_SYSCON_RX_DATA(1)]; //0x00000890
+            analogX = sysPacket->rx[PSP_SYSCON_RX_DATA(0)]; //0x00000898
         }
-        else if (sysPacket->tx[0] == 6) { //0x000006E0
-            analogY = sysPacket->rx[6]; //0x00000884
-            analogX = sysPacket->rx[5]; //0x0000088C
+        else if (sysPacket->tx[PSP_SYSCON_TX_CMD] == 6) { //0x000006E0
+            analogY = sysPacket->rx[PSP_SYSCON_RX_DATA(3)]; //0x00000884
+            analogX = sysPacket->rx[PSP_SYSCON_RX_DATA(2)]; //0x0000088C
         }
-        else if (sysPacket->tx[0] == 8) {
-            analogY = sysPacket->rx[8]; //0x000006EC
-            analogX = sysPacket->rx[7]; //0x0000088C
+        else if (sysPacket->tx[PSP_SYSCON_TX_CMD] == 8) {
+            analogY = sysPacket->rx[PSP_SYSCON_RX_DATA(5)]; //0x000006EC
+            analogX = sysPacket->rx[PSP_SYSCON_RX_DATA(4)]; //0x0000088C
         }
         else {
             analogY = ctrl.analogY; //0x000006F0
@@ -1500,9 +1500,9 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
 
         if (sampling != ctrl.unk_Byte_1 && ctrl.sysconBusyIntr2 == 0) { //0x000007E0 & 0x000007EC
             ctrl.sysconBusyIntr2 = 1; //0x00000834
-            ctrl.sysPacket[1].tx[0] = 51; //0x0000082C & 0x00000840
-            ctrl.sysPacket[1].tx[1] = 3; //0x00000830 & 0x0000084C
-            ctrl.sysPacket[1].tx[2] = sampling; //0x00000858
+            ctrl.sysPacket[1].tx[PSP_SYSCON_TX_CMD] = 51; //0x0000082C & 0x00000840
+            ctrl.sysPacket[1].tx[PSP_SYSCON_TX_LEN] = 3; //0x00000830 & 0x0000084C
+            ctrl.sysPacket[1].tx[PSP_SYSCON_TX_DATA(0)] = sampling; //0x00000858
 
             res = sceSysconCmdExecAsync(&ctrl.sysPacket[1], 0, _sceCtrlSysconCmdIntr2, 0); //0x00000854
             if (res < 0) { //0x0000085C
@@ -1520,7 +1520,7 @@ static int _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
 static int _sceCtrlSysconCmdIntr2(SceSysconPacket *packet __attribute__((unused)), void *argp __attribute__((unused)))
 {   
     ctrl.unk_Byte_0 = 0; //0x00001E5C
-    ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx[2] & 0x1; //0x00001E64
+    ctrl.unk_Byte_1 = ctrl.sysPacket[1].tx[PSP_SYSCON_TX_DATA(0)] & 0x1; //0x00001E64
     ctrl.sysconBusyIntr2 = 0; //0x00001E6C
 
     return SCE_ERROR_OK;
