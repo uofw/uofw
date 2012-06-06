@@ -29,7 +29,7 @@ case 'A':
 
 2) Breaking long lines:
 
-Make sure to not write code lines longer than 120 characters. If neccessary, break lines exceeding the 120
+Make sure to not write code lines longer than 120 characters. If necessary, break lines exceeding the 120
 characters limit like below:
 
 SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD |
@@ -54,7 +54,7 @@ if (condition) {
 }
 
 This applies to all non-function code blocks (if, switch, for, while). 
-Futhermore it is used when using typdef or array/structure initialization.
+Furthermore, it is used when using typedef or array/structure initialization.
 
 However, don't put braces where only one branch exists with just one single 
 statement.
@@ -100,7 +100,7 @@ Space policy:
 Put a space after these keywords: if, switch, case, do, while, for, return.
 
 switch (number) {
-case 1: // I think we don't need the double-indentation here; I would put the "case" at the same indentation level than the switch, I think Linux uses that
+case 1:
     doThis();
     break;
 case 2:
@@ -126,7 +126,7 @@ or after unary operators like &, *, !, ~.
 Furthermore, no spaces around structure member operators (. and ->).
 
 The sizeof compile-time unary operator is special. Use a space after it only when
-taking the size of an object, don't use a space (but parantheses!) when taking
+taking the size of an object, don't use a space (but parentheses!) when taking
 the size of a data type.
 
 sizeof object; -> (sizeof variable;)
@@ -193,7 +193,7 @@ u8 i;
 
 Another common example is the use of temporary variables. Just name them "tmp",
 this is clearly understandable and does its job. Don't try making the program
-harder to understand than neccessary.
+harder to understand than necessary.
 
 If you encounter a local variable and you don't know what it represents, name 
 it "unk". If there are more unknown variables within one function, name them
@@ -211,7 +211,7 @@ the file.
 For global variables, use descriptive names. Here, the variables' names
 matter and not primarily the name length.
 In order to clearly distinguish global variables from local variables
-(especially helpfull in large functions), use a "g_" prefix for global's.
+(especially helpful in large functions), use a "g_" prefix for global's.
 
 /* global mutexId */
 s32 g_MutexId;
@@ -336,7 +336,7 @@ typedef struct {
 } Point;
 
 In the module's .c file(s), use "/*" instead of "/**" and only add
-parameter desription if the purpose of the parameters is unclear without
+parameter description if the purpose of the parameters is unclear without
 additional description.
 
 /*
@@ -371,7 +371,7 @@ Use "//" for temporary comments such as "//TODO: " or address comments like
 sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
 
 Make sure to use enough address comments to be able to fix every line in in your
-reversed code file file fastly and easily. Keep a local copy of your reversed code files
+reversed code file fast and easily. Keep a local copy of your reversed code files
 with included address comments and, optionally, TODO-comments, and upload a file version 
 WITHOUT address-, TODO-comments to the uOFW svn, as soon as your module fully works.
 
