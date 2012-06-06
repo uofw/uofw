@@ -16,91 +16,93 @@
  * @{
  */
 
-#define PSP_SYSCON_CMD_NOP                      0x00
-#define PSP_SYSCON_CMD_GET_BARYON               0x01
-#define PSP_SYSCON_CMD_GET_DIGITAL_KEY          0x02
+#define PSP_SYSCON_CMD_NOP                           0x00
+#define PSP_SYSCON_CMD_GET_BARYON                    0x01
+#define PSP_SYSCON_CMD_GET_DIGITAL_KEY               0x02
+#define PSP_SYSCON_CMD_GET_ANALOG                    0x03
 
-#define PSP_SYSCON_CMD_GET_ONLY_DIGITAL_DATA    0x07
-#define PSP_SYSCON_CMD_GET_ANALOG_DIGITAL_DATA  0x08
-#define PSP_SYSCON_CMD_READ_CLOCK               0x09
-#define PSP_SYSCON_CMD_READ_ALARM               0x0A
-#define PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS  0x0B
-#define PSP_SYSCON_CMD_GET_TACHYON_WDT_STATUS   0x0C
-#define PSP_SYSCON_CMD_GET_BATT_VOLT            0x0D
-#define PSP_SYSCON_CMD_GET_WAKE_UP_FACTOR       0x0E
-#define PSP_SYSCON_CMD_GET_WAKE_UP_REQ          0x0F
-#define PSP_SYSCON_CMD_NONE                     0x10
-#define PSP_SYSCON_CMD_GET_TIMESTAMP            0x11
-#define PSP_SYSCON_CMD_GET_VIDEO_CABLE          0x12
+#define PSP_SYSCON_CMD_GET_DIGITAL_KEY_ANALOG        0x06
+#define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY        0x07
+#define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG 0x08
+#define PSP_SYSCON_CMD_READ_CLOCK                    0x09
+#define PSP_SYSCON_CMD_READ_ALARM                    0x0A
+#define PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS       0x0B
+#define PSP_SYSCON_CMD_GET_TACHYON_WDT_STATUS        0x0C
+#define PSP_SYSCON_CMD_GET_BATT_VOLT                 0x0D
+#define PSP_SYSCON_CMD_GET_WAKE_UP_FACTOR            0x0E
+#define PSP_SYSCON_CMD_GET_WAKE_UP_REQ               0x0F
+#define PSP_SYSCON_CMD_GET_STATUS2                   0x10
+#define PSP_SYSCON_CMD_GET_TIMESTAMP                 0x11
+#define PSP_SYSCON_CMD_GET_VIDEO_CABLE               0x12
 
-#define PSP_SYSCON_CMD_WRITE_CLOCK              0x20
-#define PSP_SYSCON_CMD_SET_USB_STATUS           0x21
-#define PSP_SYSCON_CMD_WRITE_ALARM              0x22
-#define PSP_SYSCON_CMD_WRITE_SCRATCHPAD         0x23
-#define PSP_SYSCON_CMD_READ_SCRATCHPAD          0x24
-#define PSP_SYSCON_CMD_SEND_SETPARAM            0x25
-#define PSP_SYSCON_CMD_RECEIVE_SETPARAM         0x26
+#define PSP_SYSCON_CMD_WRITE_CLOCK                   0x20
+#define PSP_SYSCON_CMD_SET_USB_STATUS                0x21
+#define PSP_SYSCON_CMD_WRITE_ALARM                   0x22
+#define PSP_SYSCON_CMD_WRITE_SCRATCHPAD              0x23
+#define PSP_SYSCON_CMD_READ_SCRATCHPAD               0x24
+#define PSP_SYSCON_CMD_SEND_SETPARAM                 0x25
+#define PSP_SYSCON_CMD_RECEIVE_SETPARAM              0x26
 
-#define PSP_SYSCON_CMD_CTRL_BT_POWER_UNK1       0x29
-#define PSP_SYSCON_CMD_CTRL_BT_POWER_UNK2       0x2A
+#define PSP_SYSCON_CMD_CTRL_BT_POWER_UNK1            0x29
+#define PSP_SYSCON_CMD_CTRL_BT_POWER_UNK2            0x2A
 
-#define PSP_SYSCON_CMD_CTRL_TACHYON_WDT         0x31
-#define PSP_SYSCON_CMD_RESET_DEVICE             0x32
-#define PSP_SYSCON_CMD_CTRL_ANALOG_XY_POLLING   0x33
-#define PSP_SYSCON_CMD_CTRL_HR_POWER            0x34
+#define PSP_SYSCON_CMD_CTRL_TACHYON_WDT              0x31
+#define PSP_SYSCON_CMD_RESET_DEVICE                  0x32
+#define PSP_SYSCON_CMD_CTRL_ANALOG_XY_POLLING        0x33
+#define PSP_SYSCON_CMD_CTRL_HR_POWER                 0x34
 
-#define PSP_SYSCON_CMD_GET_BATT_VOLT_AD         0x37
+#define PSP_SYSCON_CMD_GET_BATT_VOLT_AD              0x37
 
-#define PSP_SYSCON_CMD_GET_POMMEL_VERSION       0x40
-#define PSP_SYSCON_CMD_GET_POLESTAR_VERSION     0x41
-#define PSP_SYSCON_CMD_CTRL_VOLTAGE             0x42
+#define PSP_SYSCON_CMD_GET_POMMEL_VERSION            0x40
+#define PSP_SYSCON_CMD_GET_POLESTAR_VERSION          0x41
+#define PSP_SYSCON_CMD_CTRL_VOLTAGE                  0x42
 
-#define PSP_SYSCON_CMD_CTRL_POWER               0x45
-#define PSP_SYSCON_CMD_GET_POWER_STATUS         0x46
-#define PSP_SYSCON_CMD_CTRL_LED                 0x47
-#define PSP_SYSCON_CMD_WRITE_POMMEL_REG         0x48
-#define PSP_SYSCON_CMD_READ_POMMEL_REG          0x49
-#define PSP_SYSCON_CMD_CTRL_HDD_POWER           0x4A
-#define PSP_SYSCON_CMD_CTRL_LEPTON_POWER        0x4B
-#define PSP_SYSCON_CMD_CTRL_MS_POWER            0x4C
-#define PSP_SYSCON_CMD_CTRL_WLAN_POWER          0x4D
-#define PSP_SYSCON_CMD_WRITE_POLESTAR_REG       0x4E
-#define PSP_SYSCON_CMD_READ_POLESTAR_REG        0x4F
+#define PSP_SYSCON_CMD_CTRL_POWER                    0x45
+#define PSP_SYSCON_CMD_GET_POWER_STATUS              0x46
+#define PSP_SYSCON_CMD_CTRL_LED                      0x47
+#define PSP_SYSCON_CMD_WRITE_POMMEL_REG              0x48
+#define PSP_SYSCON_CMD_READ_POMMEL_REG               0x49
+#define PSP_SYSCON_CMD_CTRL_HDD_POWER                0x4A
+#define PSP_SYSCON_CMD_CTRL_LEPTON_POWER             0x4B
+#define PSP_SYSCON_CMD_CTRL_MS_POWER                 0x4C
+#define PSP_SYSCON_CMD_CTRL_WLAN_POWER               0x4D
+#define PSP_SYSCON_CMD_WRITE_POLESTAR_REG            0x4E
+#define PSP_SYSCON_CMD_READ_POLESTAR_REG             0x4F
 
-#define PSP_SYSCON_CMD_CTRL_DVE_POWER           0x52
-#define PSP_SYSCON_CMD_CTRL_BT_POWER            0x53
+#define PSP_SYSCON_CMD_CTRL_DVE_POWER                0x52
+#define PSP_SYSCON_CMD_CTRL_BT_POWER                 0x53
 
-#define PSP_SYSCON_CMD_CTRL_USB_POWER           0x55
-#define PSP_SYSCON_CMD_CTRL_CHARGE              0x56
+#define PSP_SYSCON_CMD_CTRL_USB_POWER                0x55
+#define PSP_SYSCON_CMD_CTRL_CHARGE                   0x56
 
-#define PSP_SYSCON_CMD_BATTERY_NOP              0x60
-#define PSP_SYSCON_CMD_BATTERY_GET_STATUS_CAP   0x61
-#define PSP_SYSCON_CMD_BATTERY_GET_TEMP         0x62
-#define PSP_SYSCON_CMD_BATTERY_GET_VOLT         0x63
-#define PSP_SYSCON_CMD_BATTERY_GET_ELEC         0x64
-#define PSP_SYSCON_CMD_BATTERY_GET_RCAP         0x65
-#define PSP_SYSCON_CMD_BATTERY_GET_CAP          0x66
-#define PSP_SYSCON_CMD_BATTERY_GET_FULL_CAP     0x67
-#define PSP_SYSCON_CMD_BATTERY_GET_IFC          0x68
-#define PSP_SYSCON_CMD_BATTERY_GET_LIMIT_TIME   0x69
-#define PSP_SYSCON_CMD_BATTERY_GET_STATUS       0x6A
-#define PSP_SYSCON_CMD_BATTERY_GET_CYCLE        0x6B
-#define PSP_SYSCON_CMD_BATTERY_GET_SERIAL       0x6C
-#define PSP_SYSCON_CMD_BATTERY_GET_INFO         0x6D
-#define PSP_SYSCON_CMD_BATTERY_GET_TEMP_AD      0x6E
-#define PSP_SYSCON_CMD_BATTERY_GET_VOLT_AD      0x6F
-#define PSP_SYSCON_CMD_BATTERY_GET_ELEC_AD      0x70
-#define PSP_SYSCON_CMD_BATTERY_GET_TOTAL_ELEC   0x71
-#define PSP_SYSCON_CMD_BATTERY_GET_CHARGE_TIME  0x72
+#define PSP_SYSCON_CMD_BATTERY_NOP                   0x60
+#define PSP_SYSCON_CMD_BATTERY_GET_STATUS_CAP        0x61
+#define PSP_SYSCON_CMD_BATTERY_GET_TEMP              0x62
+#define PSP_SYSCON_CMD_BATTERY_GET_VOLT              0x63
+#define PSP_SYSCON_CMD_BATTERY_GET_ELEC              0x64
+#define PSP_SYSCON_CMD_BATTERY_GET_RCAP              0x65
+#define PSP_SYSCON_CMD_BATTERY_GET_CAP               0x66
+#define PSP_SYSCON_CMD_BATTERY_GET_FULL_CAP          0x67
+#define PSP_SYSCON_CMD_BATTERY_GET_IFC               0x68
+#define PSP_SYSCON_CMD_BATTERY_GET_LIMIT_TIME        0x69
+#define PSP_SYSCON_CMD_BATTERY_GET_STATUS            0x6A
+#define PSP_SYSCON_CMD_BATTERY_GET_CYCLE             0x6B
+#define PSP_SYSCON_CMD_BATTERY_GET_SERIAL            0x6C
+#define PSP_SYSCON_CMD_BATTERY_GET_INFO              0x6D
+#define PSP_SYSCON_CMD_BATTERY_GET_TEMP_AD           0x6E
+#define PSP_SYSCON_CMD_BATTERY_GET_VOLT_AD           0x6F
+#define PSP_SYSCON_CMD_BATTERY_GET_ELEC_AD           0x70
+#define PSP_SYSCON_CMD_BATTERY_GET_TOTAL_ELEC        0x71
+#define PSP_SYSCON_CMD_BATTERY_GET_CHARGE_TIME       0x72
 
 #define PSP_SYSCON_TX_CMD (0)
 #define PSP_SYSCON_TX_LEN (1)
-#define PSP_SYSCON_TX_DATA(i) (2 + i)
+#define PSP_SYSCON_TX_DATA(i) (2 + (i))
 
 #define PSP_SYSCON_RX_STATUS (0)
 #define PSP_SYSCON_RX_LEN (1)
 #define PSP_SYSCON_RX_RESPONSE (2)
-#define PSP_SYSCON_RX_DATA(i) (3 + i)
+#define PSP_SYSCON_RX_DATA(i) (3 + (i))
 
 /** A system controller packet, used to run a syscon command. */
 typedef struct SceSysconPacket {

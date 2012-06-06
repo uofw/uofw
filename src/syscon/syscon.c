@@ -28,6 +28,30 @@ typedef struct {
     void *argp;
 } SceSysconCallback;
 
+typedef enum {
+    SYSCON_CB_LOW_BATTERY,
+    SYSCON_CB_POWER_SWITCH,
+    SYSCON_CB_ALARM,
+    SYSCON_CB_AC_SUPPLY,
+    SYSCON_CB_HP_CONNECT,
+    SYSCON_CB_WLAN_SWITCH,
+    SYSCON_CB_HOLD_SWITCH,
+    SYSCON_CB_UMD_SWITCH,
+    SYSCON_CB_HR_POWER,
+    SYSCON_CB_WLAN_POWER,
+    SYSCON_CB_GSENSOR,
+    UNUSED,
+    SYSCON_CB_BT_POWER,
+    SYSCON_CB_BT_SWITCH,
+    SYSCON_CB_HR_WAKEUP,
+    SYSCON_CB_AC_SUPPLY2,
+    SYSCON_CB_HR_UNK16,
+    SYSCON_CB_HR_UNK17,
+    SYSCON_CB_UNK18,
+    SYSCON_CB_USB_UNK19,
+    SYSCON_CB_COUNT
+} SceSysconCallbacks;
+
 /* structure at 0x4EB0; size: 384 */
 typedef struct {
     SceSysconPacket *curPacket; // 0
@@ -37,8 +61,8 @@ typedef struct {
     u32 inGpioIntr; // 44
     u32 rebooted; // 48
     s32 packetOff; // 52
-    u32 packetStartDelay; // 56
-    u32 packetStartDelayIntr; // 60
+    u32 packetStartTimeout; // 56
+    u32 packetStartTimeoutIntr; // 60
     s8 hpConnect; // 64
     s8 wlanSwitch; // 65
     s8 btSwitch; // 66
@@ -67,10 +91,11 @@ typedef struct {
     u8 baryonStatus; // 89
     u8 hr; // 90
     u8 baryonStatus2; // 91
-    SceSysconCallback callbacks[20]; // 92
+    SceSysconCallback callbacks[SYSCON_CB_COUNT]; // 92
     s32 baryonVersion; // 332
     s8 timeStampStr[16]; // 336
-    s32 unk352; // 352
+    /* Set to 1 if model is PSP 2k or newer. */
+    s32 newModel; // 352
     s32 pommelVersion; // 356
     u64 timeStamp; // 360
     s32 pollingMode; // 368
@@ -82,7 +107,8 @@ typedef struct {
 // 4E10
 SceSysEventHandler g_SysconEv = { 64, (s8*)"SceSyscon", 0x00FFFF00, _sceSysconSysEventHandler, 0, 0, NULL, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
-SceSysconPacket g_4E50;
+// 4E50
+SceSysconPacket g_GetStatus2Cmd;
 
 SceSyscon g_Syscon;
 
@@ -119,11 +145,11 @@ s32 sceSysconInit(void)
     HW(0xBE580014) = 0;
     HW(0xBE580024) = 0;
     memset(&g_Syscon, 0, 384);
-    memset(&g_4E50, 0, 96);
-    g_4E50.tx[PSP_SYSCON_TX_LEN] = 2;
-    g_4E50.tx[PSP_SYSCON_TX_CMD] = 0x10;
+    memset(&g_GetStatus2Cmd, 0, 96);
+    g_GetStatus2Cmd.tx[PSP_SYSCON_TX_LEN] = 2;
+    g_GetStatus2Cmd.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_STATUS2;
     g_Syscon.retryMode = 1;
-    g_Syscon.packetStartDelayIntr = 20000;
+    g_Syscon.packetStartTimeoutIntr = 20000;
     g_Syscon.btOverride = -1;
     g_Syscon.hpConnect = -1;
     g_Syscon.wlanSwitch = -1;
@@ -140,7 +166,7 @@ s32 sceSysconInit(void)
     g_Syscon.hrPower = -1;
     g_Syscon.wlanLed = -1;
     g_Syscon.wlanOverride = -1;
-    g_Syscon.packetStartDelay = 4000;
+    g_Syscon.packetStartTimeout = 4000;
     g_Syscon.inGpioIntr = 0;
     sceGpioPortClear(8); 
     g_Syscon.startTime = sceKernelGetSystemTimeLow();
@@ -199,7 +225,7 @@ s32 _sceSysconInitPowerStatus(void)
     while (sceSysconGetPowerStatus(&powerStatus) < 0)
         ;
     dbg_puts("2\n");
-    dbg_printf("baryon 0x%08x, pommel 0x%08x\n", g_Syscon.baryonVersion, g_4EB0.pommelVersion);
+    dbg_printf("baryon 0x%08x, pommel 0x%08x -> type 0x%08x\n", g_Syscon.baryonVersion, g_Syscon.pommelVersion, _sceSysconGetPommelType());
     u16 baryon = g_Syscon.baryonVersion >> 16;
     if ((baryon & 0xF0) == 0 || (baryon & 0xF0) == 0x10) {
         // 0670
@@ -217,7 +243,7 @@ s32 _sceSysconInitPowerStatus(void)
         // 06A8
         g_Syscon.tachyonAvcPower = (powerStatus >> 3) & 1;
         g_Syscon.lcdPower = (powerStatus >> 19) & 1;
-        g_Syscon.hrPower = (g_4EB0.hr >> 2) & 1;
+        g_Syscon.hrPower = (g_Syscon.hr >> 2) & 1;
         g_Syscon.unk73 = 0;
         g_Syscon.hddPower = 0;
         g_Syscon.dvePower = 0;
@@ -240,17 +266,17 @@ s32 _sceSysconInitPowerStatus(void)
         } else
             g_Syscon.usbPower = 0;
         // 05EC
-        g_Syscon.unk352 = 1;
-        sceSysconCmdExec(&g_4E50, 0);
+        g_Syscon.newModel = 1;
+        sceSysconCmdExec(&g_GetStatus2Cmd, 0);
         if (_sceSysconGetPommelType() >= 0x500) {
             // 0658
             g_Syscon.hddPower = (powerStatus >> 18) & 1;
         } else
             g_Syscon.hddPower = 0;
         // 0620
-        g_Syscon.unk73 = (g_4EB0.baryonStatus2 >> 4) & 1;
-        g_Syscon.btPower = (g_4EB0.baryonStatus2 >> 1) & 1;
-        g_Syscon.hrWakeupStatus = (g_4EB0.baryonStatus2 >> 2) & 1;
+        g_Syscon.unk73 = (g_Syscon.baryonStatus2 >> 4) & 1;
+        g_Syscon.btPower = (g_Syscon.baryonStatus2 >> 1) & 1;
+        g_Syscon.hrWakeupStatus = (g_Syscon.baryonStatus2 >> 2) & 1;
     }
     // 0640
     return 0;
@@ -316,9 +342,9 @@ s32 sceSysconResume(void *arg0)
     else
         g_Syscon.hddPower = 0;
     // 08F8
-    g_Syscon.btPower = (g_4EB0.baryonStatus2 >> 1) & 1;
-    g_Syscon.hrWakeupStatus = (g_4EB0.baryonStatus2 >> 2) & 1;
-    g_Syscon.unk73 = (g_4EB0.baryonStatus2 >> 4) & 1;
+    g_Syscon.btPower = (g_Syscon.baryonStatus2 >> 1) & 1;
+    g_Syscon.hrWakeupStatus = (g_Syscon.baryonStatus2 >> 2) & 1;
+    g_Syscon.unk73 = (g_Syscon.baryonStatus2 >> 4) & 1;
     return 0;
 }
 
@@ -332,7 +358,6 @@ s32 _sceSysconSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), vo
         if (sceSysconCmdSync(NULL, 1) != 0)
             return -1;
         break;
-
     case 0x4008:
         // 0984
         if (g_Syscon.unk376 != 0) {
@@ -342,17 +367,14 @@ s32 _sceSysconSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), vo
         // 0994
         sceKernelDisableSubIntr(4, 4);
         break;
-
     case 0x400F:
         // 0A00
         g_Syscon.pollingMode = 1;
         break;
-
     case 0x10008:
         // 09F0
         sceSysconResume(*(void**)(param + 4));
         break;
-
     case 0x1000F:
         g_Syscon.pollingMode = 0;
         break;
@@ -361,7 +383,11 @@ s32 _sceSysconSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), vo
 }
 
 // 0A10
-s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute__((unused)), void *argp __attribute__((unused))) // TODO: check
+/*
+ * This sub interrupt is probably ran at the end of the execution of a syscon packet.
+ * It first ends the last executed packet, checks the statuses which changed to run the appropriate callbacks, and runs, if needed, the next packet of the packet list.
+ */
+s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     s32 oldIntr = sceKernelCpuSuspendIntr();
     g_Syscon.inGpioIntr = 1;
@@ -386,13 +412,13 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         // 1524
         packet->status |= 0x800000;
     } else {
-        if (g_Syscon.unk352 != 0)
+        if (g_Syscon.newModel)
             endFlag = (endFlag & 0xFFFFFFDF) | (prev & 0x20);
         u8 flagDiff = prev ^ endFlag;
         // 0AC0
         g_Syscon.baryonStatus = endFlag;
         if ((flagDiff & 0x80) != 0) {
-            cb = &g_Syscon.callbacks[10];
+            cb = &g_Syscon.callbacks[SYSCON_CB_GSENSOR];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func((endFlag >> 7) & 1, cb->argp);
@@ -400,10 +426,10 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
             }
         }
         // 0AF8
-        if (g_Syscon.unk352 == 0) {
+        if (!g_Syscon.newModel) {
             // 14E4
             if (((flagDiff | endFlag) & 0x20) != 0) {
-                cb = &g_Syscon.callbacks[0];
+                cb = &g_Syscon.callbacks[SYSCON_CB_LOW_BATTERY];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func((endFlag >> 5) & 1, cb->argp);
@@ -411,11 +437,11 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 }
             }
         }
-        else if ((g_Syscon.hr & 0x20) != 0 && g_4EB0.pollingMode == 0 && packet->tx[PSP_SYSCON_TX_CMD] != 0x10)
+        else if ((g_Syscon.hr & 0x20) != 0 && g_Syscon.pollingMode == 0 && packet->tx[PSP_SYSCON_TX_CMD] != PSP_SYSCON_CMD_GET_STATUS2)
             unkEnable = 1;
         // 0B38
         if ((flagDiff & 0x10) != 0) {
-            cb = &g_Syscon.callbacks[1];
+            cb = &g_Syscon.callbacks[SYSCON_CB_POWER_SWITCH];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func((endFlag >> 4) & 1, cb->argp);
@@ -425,7 +451,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         // (0B70)
         // 0B74
         if ((flagDiff & 8) != 0) {
-            cb = &g_Syscon.callbacks[2];
+            cb = &g_Syscon.callbacks[SYSCON_CB_ALARM];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func(((endFlag ^ 8) >> 3) & 1, cb->argp);
@@ -434,14 +460,14 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         }
         // 0BB4
         if ((flagDiff & 1) != 0) {
-            cb = &g_Syscon.callbacks[3];
+            cb = &g_Syscon.callbacks[SYSCON_CB_AC_SUPPLY];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func(endFlag & 1, cb->argp);
                 pspSetGp(oldGp);
             }
             // 0BF0
-            cb = &g_Syscon.callbacks[15];
+            cb = &g_Syscon.callbacks[SYSCON_CB_AC_SUPPLY2];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func(endFlag & 1, cb->argp);
@@ -450,7 +476,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         }
         // 0C24
         if ((flagDiff & 2) != 0) {
-            cb = &g_Syscon.callbacks[9];
+            cb = &g_Syscon.callbacks[SYSCON_CB_WLAN_POWER];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func((endFlag >> 1) & 1, cb->argp);
@@ -459,7 +485,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         }
         // 0C60
         if ((flagDiff & 4) != 0) {
-            cb = &g_Syscon.callbacks[8];
+            cb = &g_Syscon.callbacks[SYSCON_CB_HR_POWER];
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
                 cb->func((endFlag >> 2) & 1, cb->argp);
@@ -469,11 +495,11 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         // (0C98)
         // 0C9C
         switch (packet->tx[PSP_SYSCON_TX_CMD]) {
-        case 16:
+        case PSP_SYSCON_CMD_GET_STATUS2:
             // 0CC8
             g_Syscon.baryonStatus2 = endFlag;
             if (((g_Syscon.baryonStatus2 ^ packet->rx[PSP_SYSCON_RX_DATA(0)]) & 2) != 0) {
-                cb = &g_Syscon.callbacks[12];
+                cb = &g_Syscon.callbacks[SYSCON_CB_BT_POWER];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func((endFlag >> 1) & 1, cb->argp);
@@ -482,7 +508,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
             }
             // 0D10
             if ((flagDiff & 4) != 0) {
-                cb = &g_Syscon.callbacks[14];
+                cb = &g_Syscon.callbacks[SYSCON_CB_HR_WAKEUP];
                 if (cb != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func((endFlag >> 2) & 1, cb->argp);
@@ -497,7 +523,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                     enable = 1;
                 }
                 // 0D80
-                cb = &g_Syscon.callbacks[0];
+                cb = &g_Syscon.callbacks[SYSCON_CB_LOW_BATTERY];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func(enable, cb->argp);
@@ -506,7 +532,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
             }
             // 0DB0
             if ((flagDiff & 0x10) != 0) {
-                cb = &g_Syscon.callbacks[19];
+                cb = &g_Syscon.callbacks[SYSCON_CB_USB_UNK19];
                 // 0DC8 dup
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
@@ -516,14 +542,16 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 }
             }
             break;
-
-        case 2: case 6: case 7: case 8: {
+        case PSP_SYSCON_CMD_GET_DIGITAL_KEY:
+        case PSP_SYSCON_CMD_GET_DIGITAL_KEY_ANALOG:
+        case PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY:
+        case PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG: {
             // 1144
             s8 prev = g_Syscon.hpConnect;
             u8 newState = packet->rx[PSP_SYSCON_RX_DATA(1)] >> 7;
             g_Syscon.hpConnect = newState;
             if (prev == -1 || prev != newState) {
-                cb = &g_Syscon.callbacks[4];
+                cb = &g_Syscon.callbacks[SYSCON_CB_HP_CONNECT];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func(newState, cb->argp);
@@ -538,7 +566,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 newState = g_Syscon.wlanOverride;
             g_Syscon.wlanSwitch = newState;
             if (oldState == -1 || oldState != newState) {
-                cb = &g_Syscon.callbacks[5];
+                cb = &g_Syscon.callbacks[SYSCON_CB_WLAN_SWITCH];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func(newState, cb->argp);
@@ -553,7 +581,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 newState = g_Syscon.btOverride;
             g_Syscon.btSwitch = newState;
             if (oldState == -1 || oldState != newState) {
-                cb = &g_Syscon.callbacks[13];
+                cb = &g_Syscon.callbacks[SYSCON_CB_BT_SWITCH];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func(newState, cb->argp);
@@ -561,12 +589,12 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 }
             }
             // (1278)
-            newState = packet->rx[PSP_SYSCON_RX_DATA(1)];
+            newState = ((packet->rx[PSP_SYSCON_RX_DATA(1)] ^ 0x20) >> 5) & 1;
             // 127C
             oldState = g_Syscon.holdSwitch;
             g_Syscon.holdSwitch = newState;
-            if (oldState == -1 || oldState != (((newState ^ 0x20) >> 5) & 1)) {
-                cb = &g_Syscon.callbacks[6];
+            if (oldState == -1 || oldState != newState) {
+                cb = &g_Syscon.callbacks[SYSCON_CB_HOLD_SWITCH];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func(newState, cb->argp);
@@ -575,13 +603,14 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
             }
             // (12D8)
             // 12DC
-            if (packet->tx[PSP_SYSCON_TX_CMD] < 7 || packet->tx[PSP_SYSCON_TX_CMD] > 8)
+            if (packet->tx[PSP_SYSCON_TX_CMD] != PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY &&
+              packet->tx[PSP_SYSCON_TX_CMD] != PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG)
                 break;
             oldState = g_Syscon.umdSwitch;
             newState = (packet->rx[PSP_SYSCON_RX_DATA(2)] >> 4) & 1;
             g_Syscon.umdSwitch = newState;
             if (oldState == -1 || oldState != newState) {
-                cb = &g_Syscon.callbacks[7];
+                cb = &g_Syscon.callbacks[SYSCON_CB_UMD_SWITCH];
                 if (cb->func != NULL) {
                     s32 oldGp = pspSetGp(cb->gp);
                     cb->func(newState, cb->argp);
@@ -595,7 +624,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 newState = packet->rx[PSP_SYSCON_RX_DATA(2)] >> 7;
                 g_Syscon.unk70 = newState;
                 if (oldState == -1 || oldState != newState) {
-                    cb = &g_Syscon.callbacks[16];
+                    cb = &g_Syscon.callbacks[SYSCON_CB_HR_UNK16];
                     if (cb->func != NULL) {
                         s32 oldGp = pspSetGp(cb->gp);
                         cb->func(newState, cb->argp);
@@ -610,7 +639,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 newState = packet->rx[PSP_SYSCON_RX_DATA(3)] & 0x1;
                 g_Syscon.unk71 = newState;
                 if (oldState == -1 || oldState != newState) {
-                    cb = &g_Syscon.callbacks[17];
+                    cb = &g_Syscon.callbacks[SYSCON_CB_HR_UNK17];
                     if (cb->func != NULL) {
                         s32 oldGp = pspSetGp(cb->gp);
                         cb->func(newState, cb->argp);
@@ -625,7 +654,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 newState = ((packet->rx[PSP_SYSCON_RX_DATA(3)] ^ 2) >> 1) & 0x1;
                 g_Syscon.unk72 = newState;
                 if (oldState == -1 || oldState != newState) {
-                    cb = &g_Syscon.callbacks[18];
+                    cb = &g_Syscon.callbacks[SYSCON_CB_UNK18];
                     if (cb->func != NULL) {
                         s32 oldGp = pspSetGp(cb->gp);
                         // 0DE0 dup
@@ -636,24 +665,23 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
             }
         }
             break;
-
-        case 11:
+        case PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS:
             // 1474
-            if (g_Syscon.unk352 == 0)
+            if (!g_Syscon.newModel)
                 break;
             if ((packet->rx[PSP_SYSCON_RX_DATA(0)] & 0x10) == 0)
                 g_Syscon.baryonStatus &= 0xDF;
             else
                 g_Syscon.baryonStatus |= 0x20;
-            if ((((prev ^ g_Syscon.baryonStatus) | g_4EB0.baryonStatus) & 0x20) == 0)
+            if ((((prev ^ g_Syscon.baryonStatus) | g_Syscon.baryonStatus) & 0x20) == 0)
                 break;
             int enable = 0;
-            if ((g_Syscon.baryonStatus & 0x20) != 0 || (g_4EB0.baryonStatus2 & 8) != 0) {
+            if ((g_Syscon.baryonStatus & 0x20) != 0 || (g_Syscon.baryonStatus2 & 8) != 0) {
                 // 14D0
                 enable = 1;
             }
             // 14D8
-            cb = &g_Syscon.callbacks[0];
+            cb = &g_Syscon.callbacks[SYSCON_CB_LOW_BATTERY];
             // 0DC8 dup
             if (cb->func != NULL) {
                 s32 oldGp = pspSetGp(cb->gp);
@@ -662,7 +690,6 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
                 pspSetGp(oldGp);
             }
             break;
-
         default:
             break;
         }
@@ -739,12 +766,12 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         SceSysconPacket *cur = g_Syscon.packetList[0];
         if (cur == NULL) {
             // 1028
-            g_Syscon.packetList[4] = &g_4E50;
-            g_4E50.next = NULL;
-            g_Syscon.packetList[0] = &g_4E50;
+            g_Syscon.packetList[4] = &g_GetStatus2Cmd;
+            g_GetStatus2Cmd.next = NULL;
+            g_Syscon.packetList[0] = &g_GetStatus2Cmd;
         } else {
-            g_Syscon.packetList[0] = &g_4E50;
-            g_4E50.next = cur;
+            g_Syscon.packetList[0] = &g_GetStatus2Cmd;
+            g_GetStatus2Cmd.next = cur;
         }
         // 0EC0
     }
@@ -783,7 +810,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
         // 0ED4
         u32 diffTime = 4;
         if (g_Syscon.pollingMode != 0)
-            diffTime = g_Syscon.packetStartDelayIntr;
+            diffTime = g_Syscon.packetStartTimeoutIntr;
         // 0EE4
         while (diffTime >= sceKernelGetSystemTimeLow() - startTime)
             ;
@@ -818,13 +845,15 @@ s32 sceSysconCmdExec(SceSysconPacket *packet, u32 flags)
     if (ret < 0)
         return ret;
     dbg_puts("?\n");
-    return sceSysconCmdSync(packet, 0);
+    ret = sceSysconCmdSync(packet, 0);
+    dbg_puts("yo\n");
+    return ret;
 }
 
 // 1600
 s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(SceSysconPacket*, void*), void *argp)
 {
-    dbg_printf("Run %s\n", __FUNCTION__);
+    //dbg_printf("Run sceSysconCmdExecAsync(%08x [cmd %d], %08x, %08x, %08x)\n", packet, packet->tx[PSP_SYSCON_TX_CMD], flags, callback, argp);
     s32 i;
     if (g_Syscon.rebooted != 0) {
         dbg_printf("ended %d\n", __LINE__);
@@ -858,7 +887,7 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
     packet->argp = argp;
     if (off != 0) {
         // 1880
-        packet->delay = g_Syscon.packetStartDelayIntr;
+        packet->delay = g_Syscon.packetStartTimeoutIntr;
     }
     else
         packet->delay = 0;
@@ -890,10 +919,10 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
         // 17F8 dup
         _sceSysconPacketStart(packet);
     } else {
-        if (g_Syscon.curPacket != NULL || g_4EB0.inGpioIntr) {
+        if (g_Syscon.curPacket != NULL || g_Syscon.inGpioIntr) {
             // 1800 dup
             sceKernelCpuResumeIntr(oldIntr);
-            dbg_printf("ended %d [%d, %d]\n", __LINE__, g_Syscon.curPacket != NULL, g_4EB0.inGpioIntr);
+            //dbg_printf("ended %d [%d, %d]\n", __LINE__, g_Syscon.curPacket != NULL, g_Syscon.inGpioIntr);
             return 0;
         }
         SceSysconPacket *new = g_Syscon.packetList[0];
@@ -920,12 +949,12 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
         if (new == NULL) {
             // 1800 dup
             sceKernelCpuResumeIntr(oldIntr);
-            dbg_printf("ended %d\n", __LINE__);
+            //dbg_printf("ended %d\n", __LINE__);
             return 0;
         }
         u32 timeDiff = 4;
         if (g_Syscon.retryMode != 0)
-            timeDiff = g_Syscon.packetStartDelay;
+            timeDiff = g_Syscon.packetStartTimeout;
         // 17D4
         // 17D8
         while (timeDiff >= sceKernelGetSystemTimeLow() - g_Syscon.startTime)
@@ -936,7 +965,7 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
     }
     // 1800 dup
     sceKernelCpuResumeIntr(oldIntr);
-    dbg_printf("ended %d\n", __LINE__);
+    //dbg_printf("ended %d\n", __LINE__);
     return 0;
 }
 
@@ -963,7 +992,7 @@ s32 sceSysconCmdCancel(SceSysconPacket *packet)
                 goto end;
             if (prev == NULL) {
                 // 197C
-                off = ((cur->tx[PSP_SYSCON_TX_CMD] >> 5) & 7) * 4;
+                off = (cur->tx[PSP_SYSCON_TX_CMD] >> 5) & 7;
                 if ((cur->tx[PSP_SYSCON_TX_CMD] & 0x80) != 0) {
                     // 19A0
                     off = 0;
@@ -1108,22 +1137,22 @@ s32 _sceSysconModuleStart(s32 argc __attribute__((unused)), void *argp __attribu
 }
 
 // 1CD0
-s32 sceSyscon_driver_90EAEA2B(s32 arg0, s32 arg1)
+s32 sceSyscon_driver_90EAEA2B(u32 timeout, u32 intrTimeout)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    g_Syscon.packetStartDelayIntr = arg1;
-    g_Syscon.packetStartDelay = arg0;
+    g_Syscon.packetStartTimeoutIntr = intrTimeout;
+    g_Syscon.packetStartTimeout = timeout;
     return 0;
 }
 
 // 1CE8
-s32 sceSyscon_driver_755CF72B(s32 *arg0, s32 *arg1)
+s32 sceSyscon_driver_755CF72B(u32 *timeoutPtr, u32 *intrTimeoutPtr)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    if (arg0 != NULL)
-        *arg0 = g_Syscon.packetStartDelay;
-    if (arg1 != NULL)
-        *arg1 = g_Syscon.packetStartDelayIntr;
+    if (timeoutPtr != NULL)
+        *timeoutPtr = g_Syscon.packetStartTimeout;
+    if (intrTimeoutPtr != NULL)
+        *intrTimeoutPtr = g_Syscon.packetStartTimeoutIntr;
     return 0;
 }
 
@@ -1199,133 +1228,135 @@ s32 _sceSysconGetUsbPowerType(void)
 s32 sceSysconSetGSensorCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 10);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_GSENSOR);
 }
 
 // 1E10
 s32 sceSysconSetLowBatteryCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 0);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_LOW_BATTERY);
 }
 
 // 1E2C
 s32 sceSysconSetPowerSwitchCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 1);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_POWER_SWITCH);
 }
 
 // 1E48
 s32 sceSysconSetAlarmCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 2);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_ALARM);
 }
 
 // 1E64
 s32 sceSysconSetAcSupplyCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 3);
+    s32 ret = _sceSysconSetCallback(func, argp, SYSCON_CB_AC_SUPPLY);
+    dbg_printf("..end\n");
+    return ret;
 }
 
 // 1E80
 s32 sceSysconSetAcSupply2Callback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 15);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_AC_SUPPLY2);
 }
 
 // 1E9C
 s32 sceSysconSetHPConnectCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 4);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_HP_CONNECT);
 }
 
 // 1EB8
 s32 sceSysconSetHRPowerCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 8);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_HR_POWER);
 }
 
 // 1ED4
 s32 sceSysconSetHRWakeupCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 14);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_HR_WAKEUP);
 }
 
 // 1EF0
 s32 sceSysconSetWlanSwitchCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 5);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_WLAN_SWITCH);
 }
 
 // 1F0C
 s32 sceSysconSetWlanPowerCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 9);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_WLAN_POWER);
 }
 
 // 1F28
 s32 sceSysconSetBtSwitchCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 13);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_BT_SWITCH);
 }
 
 // 1F44
 s32 sceSysconSetBtPowerCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 12);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_BT_POWER);
 }
 
 // 1F60
 s32 sceSysconSetHoldSwitchCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 6);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_HOLD_SWITCH);
 }
 
 // 1F7C
 s32 sceSysconSetUmdSwitchCallback(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 7);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_UMD_SWITCH);
 }
 
 // 1F98
 s32 sceSyscon_driver_374373A8(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 16);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_HR_UNK16);
 }
 
 // 1FB4
 s32 sceSyscon_driver_B761D385(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 17);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_HR_UNK17);
 }
 
 // 1FD0
 s32 sceSyscon_driver_26307D84(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 18);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_UNK18);
 }
 
 // 1FEC
 s32 sceSyscon_driver_6C388E02(SceSysconFunc func, void *argp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconSetCallback(func, argp, 19);
+    return _sceSysconSetCallback(func, argp, SYSCON_CB_USB_UNK19);
 }
 
 // 2008
@@ -1366,8 +1397,8 @@ u8 sceSysconIsFalling(void)
 // 2084
 u8 sceSysconIsLowBattery(void)
 {
-    dbg_printf("Run %s\n", __FUNCTION__);
-    return ((g_Syscon.baryonStatus >> 5) & 1) | ((g_4EB0.baryonStatus2 >> 3) & 1);
+    dbg_printf("Run %s => %d\n", __FUNCTION__, ((g_Syscon.baryonStatus >> 5) & 1) | ((g_Syscon.baryonStatus2 >> 3) & 1));
+    return ((g_Syscon.baryonStatus >> 5) & 1) | ((g_Syscon.baryonStatus2 >> 3) & 1);
 }
 
 // 20A4
@@ -1387,7 +1418,14 @@ u8 sceSysconIsAlarmed(void)
 // 20C8
 u8 sceSysconIsAcSupplied(void)
 {
-    dbg_printf("Run %s\n", __FUNCTION__);
+    s32 retAddr;
+    asm("move %0, $ra" : "=r" (retAddr));
+    retAddr &= 0x3FFFFFFF;
+    dbg_printf(":|\n");
+    dbg_printf("%s\n", __FUNCTION__);
+    dbg_printf("%08x\n", g_Syscon.baryonStatus);
+    dbg_printf("%08x\n", retAddr);
+    //dbg_printf("Run %s => %08x => ret %08x\n"); // (%08x / %08x / %08x)\n", __FUNCTION__, g_Syscon.baryonStatus, retAddr, *(s32*)(retAddr), *(s32*)(retAddr + 4), *(s32*)(retAddr + 8));
     return g_Syscon.baryonStatus & 1;
 }
 
@@ -1722,7 +1760,7 @@ s32 sceSysconGetTimeStamp(s8 *timeStamp)
     SceSysconPacket packet;
     if (timeStamp == NULL)
         return 0x80000103;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x11;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_TIMESTAMP;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     s32 ret = sceSysconCmdExec(&packet, 0);
     if (ret < 0)
@@ -1744,7 +1782,7 @@ s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size)
         return 0x80000102;
     if (dst + size >= 33)
         return 0x80000102;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x23;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_WRITE_SCRATCHPAD;
     packet.tx[PSP_SYSCON_TX_LEN] = size + 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = (dst << 2) | ((size / 2) != 4 ? size / 2 : 3);
     memcpy(&packet.tx[PSP_SYSCON_TX_DATA(1)], src, size);
@@ -1764,7 +1802,7 @@ s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size)
         return 0x80000102;
     if (src + size > 32)
         return 0x80000102;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x24;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_SCRATCHPAD;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = (src << 2) | ((size >> 1) != 4) ? (size >> 1) : 3;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -1785,13 +1823,13 @@ s32 sceSysconSendSetParam(u32 id, void *param)
         // 28CC
         if (id != 0)
             return 0x80250011;
-        packet.tx[PSP_SYSCON_TX_CMD] = 0x25;
+        packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_SEND_SETPARAM;
         packet.tx[PSP_SYSCON_TX_LEN] = 10;
         memcpy(&packet.tx[PSP_SYSCON_TX_DATA(0)], param, 8);
     }
     else {
         // 2858
-        packet.tx[PSP_SYSCON_TX_CMD] = 0x25;
+        packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_SEND_SETPARAM;
         packet.tx[PSP_SYSCON_TX_LEN] = 11;
         memcpy(&packet.tx[PSP_SYSCON_TX_DATA(0)], param, 8);
         packet.tx[10] = id;
@@ -1811,11 +1849,11 @@ s32 sceSysconReceiveSetParam(u32 id, void *param)
         // 29E8
         if (id != 0)
             return 0x80250011;
-        packet.tx[PSP_SYSCON_TX_CMD] = 0x26;
+        packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_RECEIVE_SETPARAM;
         packet.tx[PSP_SYSCON_TX_LEN] = 2;
     } else {
         // 2970
-        packet.tx[PSP_SYSCON_TX_CMD] = 0x26;
+        packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_RECEIVE_SETPARAM;
         packet.tx[PSP_SYSCON_TX_LEN] = 3;
         packet.tx[PSP_SYSCON_TX_DATA(0)] = id;
     }
@@ -1833,7 +1871,7 @@ s32 sceSysconCtrlTachyonWDT(s32 wdt)
     dbg_printf("Run %s\n", __FUNCTION__);
     if (wdt >= 0x80)
         return 0x800001FE;
-    return _sceSysconCommonWrite(wdt == 0 ? 0 : wdt | 0x80, 0x31, 3);
+    return _sceSysconCommonWrite(wdt == 0 ? 0 : wdt | 0x80, PSP_SYSCON_CMD_CTRL_TACHYON_WDT, 3);
 }
 
 // 2A88
@@ -1850,7 +1888,7 @@ s32 sceSysconResetDevice(u32 reset, u32 mode)
     } else if (mode != 0)
         reset |= 0x80;
     // 2AB4
-    s32 ret = _sceSysconCommonWrite(reset, 0x32, 3);
+    s32 ret = _sceSysconCommonWrite(reset, PSP_SYSCON_CMD_RESET_DEVICE, 3);
     if (ret < 0)
         return ret;
     if (reset == 4 && mode == 0 && sceSysconGetWlanLedCtrl() == 1)
@@ -1933,7 +1971,7 @@ s32 sceSysconNop(void)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_NOP;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     return sceSysconCmdExec(&packet, 0);
 }
@@ -1942,7 +1980,7 @@ s32 sceSysconNop(void)
 s32 sceSysconGetBaryonVersion(s32 *baryonVersion)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(baryonVersion, 1);
+    return _sceSysconCommonRead(baryonVersion, PSP_SYSCON_CMD_GET_BARYON);
 }
 
 // 2DD0
@@ -1953,10 +1991,10 @@ s32 sceSysconGetGValue(void)
 }
 
 // 2DDC
-s32 sceSysconGetPowerSupplyStatus(void *status)
+s32 sceSysconGetPowerSupplyStatus(s32 *status)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(status, 0xB);
+    return _sceSysconCommonRead(status, PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS);
 }
 
 // 2DF8
@@ -1970,14 +2008,14 @@ s32 sceSysconGetFallingDetectTime(void)
 s32 sceSysconGetWakeUpFactor(void *factor)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(factor, 0xE);
+    return _sceSysconCommonRead(factor, PSP_SYSCON_CMD_GET_WAKE_UP_FACTOR);
 }
 
 // 2E20
 s32 sceSysconGetWakeUpReq(void *req)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(req, 0xF);
+    return _sceSysconCommonRead(req, PSP_SYSCON_CMD_GET_WAKE_UP_REQ);
 }
 
 // 2E3C
@@ -1990,35 +2028,37 @@ s32 sceSysconGetVideoCable(s32 *cable)
         *cable = 0;
         return 0x80000004;
     }
-    return _sceSysconCommonRead(cable, 0x12);
+    return _sceSysconCommonRead(cable, PSP_SYSCON_CMD_GET_VIDEO_CABLE);
 }
 
 // 2EA4
 s32 sceSysconReadClock(s32 *clock)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(clock, 9);
+    s32 ret = _sceSysconCommonRead(clock, PSP_SYSCON_CMD_READ_CLOCK);
+    dbg_printf("clk: %08x\n", *clock);
+    return ret;
 }
 
 // 2EC0
 s32 sceSysconWriteClock(s32 clock)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonWrite(clock, 0x20, 6);
+    return _sceSysconCommonWrite(clock, PSP_SYSCON_CMD_WRITE_CLOCK, 6);
 }
 
 // 2EE0
 s32 sceSysconReadAlarm(s32 *alarm)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(alarm, 0xA);
+    return _sceSysconCommonRead(alarm, PSP_SYSCON_CMD_READ_ALARM);
 }
 
 // 2EFC
 s32 sceSysconWriteAlarm(s32 alarm)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonWrite(alarm, 0x22, 6);
+    return _sceSysconCommonWrite(alarm, PSP_SYSCON_CMD_WRITE_ALARM, 6);
 }
 
 // 2F1C
@@ -2026,7 +2066,7 @@ s32 sceSysconSetUSBStatus(u8 status)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x21;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_SET_USB_STATUS;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = status;
     return sceSysconCmdExec(&packet, (status & 3) == 0);
@@ -2036,21 +2076,21 @@ s32 sceSysconSetUSBStatus(u8 status)
 s32 sceSysconGetTachyonWDTStatus(s32 *status)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(status, 0xC);
+    return _sceSysconCommonRead(status, PSP_SYSCON_CMD_GET_TACHYON_WDT_STATUS);
 }
 
 // 2F74
 s32 sceSysconCtrlAnalogXYPolling(s8 polling)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonWrite(polling, 0x33, 3);
+    return _sceSysconCommonWrite(polling, PSP_SYSCON_CMD_CTRL_ANALOG_XY_POLLING, 3);
 }
 
 // 2F94
 s32 sceSysconCtrlHRPower(s8 power)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    s32 ret = _sceSysconCommonWrite(power, 0x34, 3);
+    s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_HR_POWER, 3);
     if (ret >= 0)
         g_Syscon.hrPower = power;
     return ret;
@@ -2060,7 +2100,7 @@ s32 sceSysconCtrlHRPower(s8 power)
 s32 sceSysconCtrlPower(u32 arg0, u32 arg1)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    s32 ret = _sceSysconCommonWrite(((arg1 & 1) << 23) | (arg0 & 0x003FFFFF), 0x45, 5);
+    s32 ret = _sceSysconCommonWrite(((arg1 & 1) << 23) | (arg0 & 0x003FFFFF), PSP_SYSCON_CMD_CTRL_POWER, 5);
     if (ret >= 0)
         _sceSysconGetPommelType();
     return ret;
@@ -2077,22 +2117,18 @@ s32 sceSysconCtrlLED(u32 led, u32 set)
         ledMask = 0x80;
         g_Syscon.wlanLed = set;
         break;
-
     case 0:
         ledMask = 0x40;
         break;
-
     case 2:
         // 30D8
         ledMask = 0x20;
         break;
-
     case 3:
         ledMask = 0x10;
         if (_sceSysconGetPommelType() < 0x300)
             return 0x80000004;
         break;
-
     default:
         return 0x80000102;
     }
@@ -2106,7 +2142,7 @@ s32 sceSysconCtrlLED(u32 led, u32 set)
             setMask = 1;
     }
     // 3074
-    return _sceSysconCommonWrite(ledMask | setMask, 0x47, 3);
+    return _sceSysconCommonWrite(ledMask | setMask, PSP_SYSCON_CMD_CTRL_LED, 3);
 }
 
 // 30F0
@@ -2118,7 +2154,7 @@ s32 sceSysconCtrlDvePower(s8 power)
         return 0x80000004;
     if (type >= 0x301) {
         // 3140
-        s32 ret = _sceSysconCommonWrite(power, 0x52, 3);
+        s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_DVE_POWER, 3);
         if (ret >= 0)
             g_Syscon.dvePower = power;
         return ret;
@@ -2143,7 +2179,7 @@ s32 sceSyscon_driver_765775EB(s32 arg0)
         return 0x80250005;
     // (319C)
     // 31A0
-    s32 ret = _sceSysconCommonWrite((arg0 & 1) | 0x80, 0x53, 3);
+    s32 ret = _sceSysconCommonWrite((arg0 & 1) | 0x80, PSP_SYSCON_CMD_CTRL_BT_POWER, 3);
     if (ret >= 0)
         g_Syscon.unk376 = arg0;
     return ret;
@@ -2156,7 +2192,7 @@ s32 sceSysconCtrlCharge(u8 allow)
     u8 version = (_sceSysconGetBaryonVersion() >> 16) & 0xF0;
     if (version != 0 && version != 0x10) {
         // 3280
-        return _sceSysconCommonWrite(allow, 0x56, 3);
+        return _sceSysconCommonWrite(allow, PSP_SYSCON_CMD_CTRL_CHARGE, 3);
     }
     if (!allow) {          
         // 3270            
@@ -2181,7 +2217,7 @@ s32 sub_32D8(void)
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
     u32 flag;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x4F;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_POLESTAR_REG;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = 2;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -2193,7 +2229,7 @@ s32 sub_32D8(void)
     // 332C
     if (ret >= 0) {
         flag &= 0xFDFF;         
-        ret = _sceSysconCommonWrite((flag << 8) | 2, 0x4E, 5);
+        ret = _sceSysconCommonWrite((flag << 8) | 2, PSP_SYSCON_CMD_WRITE_POLESTAR_REG, 5);
     }
     return ret;
 }
@@ -2204,7 +2240,7 @@ s32 sub_3360(void)
     dbg_printf("Run %s\n", __FUNCTION__);
     u32 flag;
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x4F;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_POLESTAR_REG;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = 2;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -2216,7 +2252,7 @@ s32 sub_3360(void)
     // 33B4       
     if (ret >= 0) {
         flag |= 0x200;                
-        ret = _sceSysconCommonWrite(((flag & 0xFFFF) << 8) | 2, 0x4E, 5);
+        ret = _sceSysconCommonWrite(((flag & 0xFFFF) << 8) | 2, PSP_SYSCON_CMD_WRITE_POLESTAR_REG, 5);
     }
     return ret;
 }
@@ -2225,14 +2261,14 @@ s32 sub_3360(void)
 s32 sceSysconGetPommelVersion(s32 *pommel)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(pommel, 0x40);
+    return _sceSysconCommonRead(pommel, PSP_SYSCON_CMD_GET_POMMEL_VERSION);
 }
 
 // 3404
 s32 sceSysconGetPolestarVersion(s32 *polestar)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(polestar, 0x41);
+    return _sceSysconCommonRead(polestar, PSP_SYSCON_CMD_GET_POLESTAR_VERSION);
 }
 
 // 3420
@@ -2242,7 +2278,7 @@ s32 sceSysconCtrlVoltage(s32 arg0, s32 arg1)
     if (_sceSysconGetPommelType() != 0x100 && arg0 >= 4 && arg0 < 6)
         return 0x80000004;
     // 3470
-    return _sceSysconCommonWrite(((arg1 & 0xFFFF) << 8) | (arg0 & 0xFF), 0x42, 5);
+    return _sceSysconCommonWrite(((arg1 & 0xFFFF) << 8) | (arg0 & 0xFF), PSP_SYSCON_CMD_CTRL_VOLTAGE, 5);
 }
 
 // 3494
@@ -2263,22 +2299,22 @@ s32 sceSysconCtrlGSensor(void)
 s32 sceSysconGetPowerStatus(s32 *status)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(status, 0x46);
+    return _sceSysconCommonRead(status, PSP_SYSCON_CMD_GET_POWER_STATUS);
 }
 
 // 34C8
-s32 sceSysconWritePommelReg(u8 reg, u16 value)
+s32 sceSysconWritePommelReg(u8 reg, s16 value)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonWrite(((value & 0xFFFF) << 8) | (reg & 0xFF), 0x48, 5);
+    return _sceSysconCommonWrite(((value & 0xFFFF) << 8) | (reg & 0xFF), PSP_SYSCON_CMD_WRITE_POMMEL_REG, 5);
 }
 
 // 34FC
-s32 sceSysconReadPommelReg(u8 reg, s32 *value)
+s32 sceSysconReadPommelReg(u8 reg, s16 *value)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x49;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_POMMEL_REG;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = reg;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -2302,7 +2338,7 @@ s32 sceSysconGetPowerError(s32 *error)
 s32 sceSysconCtrlLeptonPower(s8 power)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    s32 ret = _sceSysconCommonWrite(power, 0x4B, 3);
+    s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_LEPTON_POWER, 3);
     if (ret >= 0)
         g_Syscon.leptonPower = power;
     return ret;
@@ -2312,7 +2348,7 @@ s32 sceSysconCtrlLeptonPower(s8 power)
 s32 sceSysconCtrlMsPower(s8 power)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    s32 ret = _sceSysconCommonWrite(power, 0x4C, 3);
+    s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_MS_POWER, 3);
     if (ret >= 0)
         g_Syscon.msPower = power;
     return ret;
@@ -2322,7 +2358,7 @@ s32 sceSysconCtrlMsPower(s8 power)
 s32 sceSysconCtrlWlanPower(s8 power)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    s32 ret = _sceSysconCommonWrite(power, 0x4D, 3);
+    s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_WLAN_POWER, 3);
     if (ret >= 0) {
         g_Syscon.wlanPower = power;
         if (power != 0 && sceSysconGetWlanLedCtrl())
@@ -2337,7 +2373,7 @@ s32 sceSysconCtrlHddPower(s8 power)
     dbg_printf("Run %s\n", __FUNCTION__);
     if (_sceSysconGetPommelType() < 0x500)
         return 0x80000004;
-    s32 ret = _sceSysconCommonWrite(power, 0x4A, 3);
+    s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_HDD_POWER, 3);
     if (ret >= 0)
         g_Syscon.hddPower = power;
     return ret;
@@ -2349,7 +2385,7 @@ s32 sceSysconCtrlBtPower(s8 power)
     dbg_printf("Run %s\n", __FUNCTION__);
     if (g_Syscon.unk376 != 0)
         return 0;
-    s32 ret = _sceSysconCommonWrite(power & 1, 0x53, 3);
+    s32 ret = _sceSysconCommonWrite(power & 1, PSP_SYSCON_CMD_CTRL_BT_POWER, 3);
     if (ret >= 0)
         g_Syscon.btPower = power;
     return ret;
@@ -2362,7 +2398,7 @@ s32 sceSysconCtrlUsbPower(s8 power)
     u8 version = _sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) == 0 || (version & 0xF0) == 0x10 || ((version & 0xFF) >= 0x20 && (version & 0xFF) < 0x22))
         return 0x80000004;
-    s32 ret = _sceSysconCommonWrite(power, 0x55, 3);
+    s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_USB_POWER, 3);
     if (ret >= 0)
         g_Syscon.usbPower = power;
     return ret;
@@ -2436,7 +2472,7 @@ s32 sceSysconSetGSensorCarib(void)
 s32 sceSysconWritePolestarReg(u8 reg, s16 val)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonWrite(((val & 0xFFFF) << 8) | (reg & 0xFF), 0x4E, 5);
+    return _sceSysconCommonWrite(((val & 0xFFFF) << 8) | (reg & 0xFF), PSP_SYSCON_CMD_WRITE_POLESTAR_REG, 5);
 }
 
 // 3930
@@ -2444,7 +2480,7 @@ s32 sceSysconReadPolestarReg(u8 reg, s16 *val)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x4F;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_POLESTAR_REG;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = reg;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -2474,7 +2510,7 @@ s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
 {   
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x61;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_BATTERY_GET_STATUS_CAP;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;             
     s32 ret = sceSysconCmdExec(&packet, 0);
     if (ret < 0)
@@ -2493,7 +2529,7 @@ s32 sceSysconBatteryGetInfo(s32 *info)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x6D;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_BATTERY_GET_INFO;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     s32 ret = sceSysconCmdExec(&packet, 0);
     if (ret < 0)
@@ -2519,7 +2555,7 @@ s32 sceSysconGetBattVolt(s32 *volt)
         return 0x80000004;
     // 3AF8
     s32 val;
-    s32 ret = _sceSysconCommonRead(&val, 0xD);
+    s32 ret = _sceSysconCommonRead(&val, PSP_SYSCON_CMD_GET_BATT_VOLT);
     if (ret < 0)
         return ret;
     *volt = val * 50;
@@ -2538,7 +2574,7 @@ s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
         return 0x80000004;
     // 3B84
     s32 val;
-    s32 ret = _sceSysconCommonRead(&val, 0x37);
+    s32 ret = _sceSysconCommonRead(&val, PSP_SYSCON_CMD_GET_BATT_VOLT_AD);
     if (ret < 0)
         return ret;
     if (volt1 != NULL)
@@ -2554,7 +2590,7 @@ s32 sceSysconBatteryNop(void)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x60;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_BATTERY_NOP;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     return pspMin(sceSysconCmdExec(&packet, 0), 0);
 }
@@ -2563,56 +2599,56 @@ s32 sceSysconBatteryNop(void)
 s32 sceSysconBatteryGetTemp(s32 *temp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x62, temp);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_TEMP, temp);
 }
 
 // 3C30
 s32 sceSysconBatteryGetVolt(s32 *volt)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x63, volt);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_VOLT, volt);
 }
 
 // 3C50
 s32 sceSysconBatteryGetElec(s32 *elec)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x64, elec);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_ELEC, elec);
 }
 
 // 3C70
 s32 sceSysconBatteryGetRCap(s32 *rcap)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x65, rcap);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_RCAP, rcap);
 }
 
 // 3C90
 s32 sceSysconBatteryGetCap(s32 *cap)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x66, cap);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_CAP, cap);
 }
 
 // 3CB0
 s32 sceSysconBatteryGetFullCap(s32 *cap)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x67, cap);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_FULL_CAP, cap);
 }
 
 // 3CD0
 s32 sceSysconBatteryGetIFC(s32 *ifc)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x68, ifc);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_IFC, ifc);
 }
 
 // 3CF0
 s32 sceSysconBatteryGetLimitTime(s32 *time)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x69, time);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_LIMIT_TIME, time);
 }
 
 // 3D10
@@ -2620,7 +2656,7 @@ s32 sceSysconBatteryGetStatus(s32 *status)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     s32 stat;
-    s32 ret = _sceSysconBatteryCommon(0x6A, &stat);
+    s32 ret = _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_STATUS, &stat);
     if (ret < 0)
         return ret;
     if (status != NULL)
@@ -2632,49 +2668,49 @@ s32 sceSysconBatteryGetStatus(s32 *status)
 s32 sceSysconBatteryGetCycle(s32 *cycle)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x6B, cycle);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_CYCLE, cycle);
 }
 
 // 3D78
 s32 sceSysconBatteryGetSerial(s32 *serial)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x6C, serial);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_SERIAL, serial);
 }
 
 // 3D98
 s32 sceSysconBatteryGetTempAD(s32 *temp)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x6E, temp);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_TEMP_AD, temp);
 }
 
 // 3DB8
 s32 sceSysconBatteryGetVoltAD(s32 *volt)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x6F, volt);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_VOLT_AD, volt);
 }
 
 // 3DD8
 s32 sceSysconBatteryGetElecAD(s32 *elec)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x70, elec);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_ELEC_AD, elec);
 }
 
 // 3DF8
 s32 sceSysconBatteryGetTotalElec(s32 *elec)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x71, elec);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_TOTAL_ELEC, elec);
 }
 
 // 3E18
 s32 sceSysconBatteryGetChargeTime(s32 *time)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconBatteryCommon(0x72, time);
+    return _sceSysconBatteryCommon(PSP_SYSCON_CMD_BATTERY_GET_CHARGE_TIME, time);
 }
 
 // 3E38
@@ -2722,8 +2758,7 @@ s32 sceSysconCtrlTachyonVoltage(s32 voltage)
         return ret;
     s32 mask = 0;
     u8 ver = (_sceSysconGetBaryonVersion() >> 16) & 0xF0;
-    if (ver != 0 && ver != 0x10)
-    {  
+    if (ver != 0 && ver != 0x10) {
         // 4058
         if ((status & 2) == 0)
             mask = 2;
@@ -2775,7 +2810,7 @@ s32 sub_406C(s32 arg0)
     }
     // 40CC
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x2A;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_CTRL_BT_POWER_UNK2;
     packet.tx[PSP_SYSCON_TX_LEN] = 4;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = 1;
     packet.tx[PSP_SYSCON_TX_DATA(1)] = arg0;
@@ -2795,7 +2830,7 @@ s32 sub_4150(s32 arg0, s32 arg1, s32 arg2)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 0x29;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_CTRL_BT_POWER_UNK1;
     packet.tx[PSP_SYSCON_TX_LEN] = 7;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = 21;
     packet.tx[PSP_SYSCON_TX_DATA(1)] = 1;
@@ -2876,7 +2911,7 @@ s32 sceSysconGetDigitalKey(s8 *key)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
     SceSysconPacket packet;
-    packet.tx[PSP_SYSCON_TX_CMD] = 2;
+    packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_DIGITAL_KEY;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     s32 ret = sceSysconCmdExec(&packet, 0);
     if (ret < 0)
