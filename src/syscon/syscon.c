@@ -790,7 +790,7 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
             if (cur != NULL) {
                 // 0FDC
                 if ((cur->status & 0x40000) != 0 &&
-                  startTime - cur->time >= cur->delay &&
+                  startTime - cur->time < cur->delay &&
                   g_Syscon.retryMode == 0 &&
                   g_Syscon.pollingMode == 0)
                     cur = NULL;
@@ -841,6 +841,7 @@ s32 sceSysconCmdExec(SceSysconPacket *packet, u32 flags)
     if (g_Syscon.pollingMode != 0 && pspMfic() != 0)
         return 0x80000031;
     // 15BC
+    dbg_printf("xx\n");
     s32 ret = sceSysconCmdExecAsync(packet, flags, NULL, NULL);
     if (ret < 0)
         return ret;
@@ -862,7 +863,7 @@ s32 sceSysconCmdExecAsync(SceSysconPacket *packet, u32 flags, s32 (*callback)(Sc
     if ((flags & 0x100) == 0) {
         u32 hash = 0;
         // 1664
-        for (i = 0; i < packet->tx[13]; i++)
+        for (i = 0; i < packet->tx[PSP_SYSCON_TX_LEN]; i++)
             hash += packet->tx[i];
         // 167C
         packet->tx[i] = ~hash;
@@ -1114,16 +1115,22 @@ s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
         return 0x80000103;
     SceSysconPacket packet;
     s32 buf[4];
+    dbg_printf("a\n");
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     packet.tx[PSP_SYSCON_TX_CMD] = cmd;
+    dbg_printf("b\n");
     s32 ret = sceSysconCmdExec(&packet, 0);
+    dbg_printf("c\n");
     if (ret < 0)
         return ret;
     if (packet.rx[PSP_SYSCON_RX_LEN] < 4 || packet.rx[PSP_SYSCON_RX_LEN] >= 8)
         return 0x80250001;
+    dbg_printf("d\n");
     buf[0] = 0;
     memcpy(buf, &packet.rx[PSP_SYSCON_RX_DATA(0)], packet.rx[PSP_SYSCON_RX_LEN] - 3);
+    dbg_printf("e\n");
     *ptr = buf[0];
+    dbg_printf("f\n");
     return 0;
 }
 
@@ -1196,7 +1203,10 @@ s32 sceSysconSetAffirmativeRertyMode(u32 mode)
 // 1D84
 s32 _sceSysconGetBaryonVersion(void)
 {
-    dbg_printf("Run %s\n", __FUNCTION__);
+    s32 retAddr;
+    asm("move %0, $ra" : "=r" (retAddr));
+    retAddr &= 0x3FFFFFFF;
+    dbg_printf("Run %s => return %08x\n", __FUNCTION__, retAddr);
     return g_Syscon.baryonVersion;
 }
 
@@ -1259,6 +1269,7 @@ s32 sceSysconSetAcSupplyCallback(SceSysconFunc func, void *argp)
     s32 ret = _sceSysconSetCallback(func, argp, SYSCON_CB_AC_SUPPLY);
     dbg_printf("..end\n");
     return ret;
+    //return _sceSysconSetCallback(func, argp, SYSCON_CB_AC_SUPPLY);
 }
 
 // 1E80
@@ -1418,14 +1429,13 @@ u8 sceSysconIsAlarmed(void)
 // 20C8
 u8 sceSysconIsAcSupplied(void)
 {
-    s32 retAddr;
-    asm("move %0, $ra" : "=r" (retAddr));
-    retAddr &= 0x3FFFFFFF;
-    dbg_printf(":|\n");
-    dbg_printf("%s\n", __FUNCTION__);
-    dbg_printf("%08x\n", g_Syscon.baryonStatus);
-    dbg_printf("%08x\n", retAddr);
-    //dbg_printf("Run %s => %08x => ret %08x\n"); // (%08x / %08x / %08x)\n", __FUNCTION__, g_Syscon.baryonStatus, retAddr, *(s32*)(retAddr), *(s32*)(retAddr + 4), *(s32*)(retAddr + 8));
+    //s32 retAddr;
+    //asm("move %0, $ra" : "=r" (retAddr));
+    //retAddr &= 0x3FFFFFFF;
+    //dbg_printf(":|\n");
+    //dbg_printf("%s\n", __FUNCTION__);
+    //dbg_printf("%08x\n", g_Syscon.baryonStatus);
+    //dbg_printf("%08x\n", retAddr);
     return g_Syscon.baryonStatus & 1;
 }
 
@@ -1832,7 +1842,7 @@ s32 sceSysconSendSetParam(u32 id, void *param)
         packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_SEND_SETPARAM;
         packet.tx[PSP_SYSCON_TX_LEN] = 11;
         memcpy(&packet.tx[PSP_SYSCON_TX_DATA(0)], param, 8);
-        packet.tx[10] = id;
+        packet.tx[PSP_SYSCON_TX_DATA(8)] = id;
     }
     // 288C
     return pspMin(sceSysconCmdExec(&packet, 0), 0);
@@ -1994,7 +2004,9 @@ s32 sceSysconGetGValue(void)
 s32 sceSysconGetPowerSupplyStatus(s32 *status)
 {
     dbg_printf("Run %s\n", __FUNCTION__);
-    return _sceSysconCommonRead(status, PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS);
+    s32 ret = _sceSysconCommonRead(status, PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS);
+    dbg_printf("done\n");
+    return ret;
 }
 
 // 2DF8
@@ -2859,7 +2871,7 @@ s32 _sceSysconGetPommelType(void)
     }
     // 4208
     if ((flag & 0xF0) == 0x10)
-        return 512;
+        return 0x200;
     if (((flag & 0xFF) >= 0x20 && (flag & 0xFF) < 0x22) ||
       (((((flag & 0xF0) == 0x20 && (flag & 0xFF) >= 0x22) || (flag & 0xF0) == 0x30 || (flag & 0xF0) == 0x40) &&
       ((flag & 0xF0) == 0x20 && (flag & 0xFF) >= 0x22 && (flag & 0xFF) < 0x26)) ||
