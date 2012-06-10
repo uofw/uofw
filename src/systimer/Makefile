@@ -6,7 +6,5 @@ OBJS = systimer.o
 
 LIBS = -lInterruptManager -lInterruptManagerForKernel -lsceSuspendForKernel
 
-DEBUG = 1
-
 include ../../lib/build.mak
 
