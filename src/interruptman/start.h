@@ -3,19 +3,13 @@
 */
 
 void sub_0000();
-void sub_0038();
-void InterruptManagerForKernel_551097F2();
-int sceKernelIsIntrContext();
+void intrExcepHandler(void);
 void SaveThreadContext();
-int sceKernelCallUserIntrHandler(int, int, int, int, int, int);
 void sub_0864();
 int sub_091C();
-void sub_0924();
-void InterruptManagerForKernel_A6978B70();
-void InterruptManagerForKernel_1373F20E();
+void intrExcepHandler2(void);
 void sub_0CC0();
-int sceKernelGetSyscallRA();
-void sub_0CF8();
+void syscallExcepHandler(void);
 void loc_00000DDC();
 void sub_0EC0();
 void sub_0ECC();
@@ -36,9 +30,9 @@ void sub_1050(int*);
 void sub_1080(int*);
 void sub_10A8(int*);
 
-int mod_0400;
-int mod_0468;
-int mod_0DC4;
-int mod_0E48;
-int mod_0E50;
+s32 mod_0400;
+s32 mod_0468;
+s32 mod_0DC4;
+s32 mod_0E48;
+s32 mod_0E50;
 

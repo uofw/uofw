@@ -18,6 +18,13 @@ typedef struct  {
     void *stub_end;
 } SceModuleInfo;
 
+typedef struct {
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    u32 unk12;
+} SceThreadParameter;
+
 extern char _gp[];
 
 /* Module attributes. */
@@ -71,4 +78,10 @@ enum SceModuleInfoAttr {
       __lib_ent_top, __lib_ent_bottom,                              \
       __lib_stub_top, __lib_stub_bottom                             \
     }
+
+#define SCE_MODULE_START_THREAD_PARAMETER(unk1, unk2, unk3, unk4) \
+    const SceThreadParameter module_start_thread_parameter = { unk1, unk2, unk3, unk4 };
+
+#define SCE_MODULE_STOP_THREAD_PARAMETER(unk1, unk2, unk3, unk4) \
+    const SceThreadParameter module_stop_thread_parameter = { unk1, unk2, unk3, unk4 };
 

@@ -26,7 +26,7 @@ typedef struct
     char unk22;
     char numChan; // 23
     u16 sampleSize; // 24
-    short codec; // 26
+    u16 codec; // 26
     u32 dataOff; // 28
     u32 curOff; // 32
     u32 dataEnd; // 36
@@ -69,7 +69,9 @@ typedef struct
     u32 dataSize; // 16
     u32 unk20, unk24, unk28;
     u32 unk32;
-    u32 unk36, unk40, unk44;
+    u32 unk36;
+    s32 unk40;
+    s32 unk44;
 } SceAA3File;
 
 int setHalfwayBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info);

@@ -1,0 +1,35 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_VAR_HASH(module_start_thread_parameter)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(Kernel_Library, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_HASH(sceKernelCpuSuspendIntr)
+PSP_EXPORT_FUNC_HASH(sceKernelUnlockLwMutex)
+PSP_EXPORT_FUNC_HASH(sceKernelMemcpy)
+PSP_EXPORT_FUNC_HASH(sceKernelLockLwMutexCB)
+PSP_EXPORT_FUNC_HASH(sceKernelGetThreadId)
+PSP_EXPORT_FUNC_HASH(sceKernelTryLockLwMutex_600)
+PSP_EXPORT_FUNC_NID(Kernel_Library_3AD10D4D, 0x3AD10D4D)
+PSP_EXPORT_FUNC_HASH(sceKernelCpuResumeIntrWithSync)
+PSP_EXPORT_FUNC_HASH(sceKernelIsCpuIntrSuspended)
+PSP_EXPORT_FUNC_HASH(sceKernelCpuResumeIntr)
+PSP_EXPORT_FUNC_HASH(sceKernelMemset)
+PSP_EXPORT_FUNC_HASH(sceKernelIsCpuIntrEnable)
+PSP_EXPORT_FUNC_HASH(sceKernelLockLwMutex)
+PSP_EXPORT_FUNC_HASH(sceKernelReferLwMutexStatus)
+PSP_EXPORT_FUNC_HASH(sceKernelCheckThreadStack)
+PSP_EXPORT_FUNC_HASH(sceKernelTryLockLwMutex)
+PSP_EXPORT_FUNC_NID(Kernel_Library_FA835CDE, 0xFA835CDE)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceGe_lazy, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceGe_lazy_31129B95, 0x31129B95)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

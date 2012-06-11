@@ -30,10 +30,10 @@ loc_0024:
     nop # ?
 
 ##
-# sub_0038
+# intrExcepHandler
 ##
-    .globl sub_0038
-sub_0038:
+    .globl intrExcepHandler
+intrExcepHandler:
     nop
     nop
     cfc0 $v0, $13
@@ -91,8 +91,8 @@ loc_00F8:
     move  $k1, $sp
     bnez  $gp, loc_0138
     sw    $a3, 92($sp)
-    lui   $sp, %hi(unkTab)
-    addiu $sp, $sp, %lo(unkTab)
+    lui   $sp, %hi(g_syscCtx)
+    addiu $sp, $sp, %lo(g_syscCtx)
     cache 0x18, 0($sp)
     lui   $a3, %hi(intInfo)
     addiu $a2, $a3, 32
@@ -146,7 +146,7 @@ loc_019C:
 
     sh    $0, 36($k1)
     or    $ra, $ra, $v1
-    beqz  $ra, InterruptManagerForKernel_551097F2
+    beqz  $ra, _InterruptManagerForKernel_551097F2
     move  $a0, $k1
     j     loc_00000978
     sw    $k1, 12($sp)
@@ -178,8 +178,8 @@ loc_0218:
     addiu $sp, $sp, -320
 
 loc_022C:
-    lui   $v0, %hi(wut)
-    addiu $v0, $v0, %lo(wut)
+    lui   $v0, %hi(g_stackMiddle)
+    addiu $v0, $v0, %lo(g_stackMiddle)
     sltu  $v0, $sp, $v0
     beqz  $v0, loc_0050
     ins   $sp, $0, 0, 6
@@ -319,7 +319,7 @@ loc_03A4:
 mod_0400:
     jal   sub_091C
     li    $k1, 3
-    beqz  $v0, InterruptManagerForKernel_551097F2
+    beqz  $v0, _InterruptManagerForKernel_551097F2
     lw    $a0, 12($sp)
     lb    $v0, 36($a0)
     bnez  $v0, loc_0444
@@ -351,12 +351,12 @@ mod_0468:
     jal   sub_091C
 
     move  $a1, $0
-    j     InterruptManagerForKernel_551097F2
+    j     _InterruptManagerForKernel_551097F2
     move  $a0, $v0
 
 loc_0478:
     lb    $a2, 37($a0)
-    beqz  $a2, InterruptManagerForKernel_551097F2
+    beqz  $a2, _InterruptManagerForKernel_551097F2
     mfc0  $k0, $12
     ins   $k0, $a2, 29, 1
     mtc0  $k0, $12
@@ -394,6 +394,7 @@ loc_0478:
     lwc1  $30, 312($a0)
     lwc1  $31, 316($a0)
 
+_InterruptManagerForKernel_551097F2:
     .globl InterruptManagerForKernel_551097F2
 InterruptManagerForKernel_551097F2:
     lw    $sp, 180($a0)
@@ -691,8 +692,8 @@ sub_091C:
     jr    $ra
     move  $v0, $0
 
-    .globl sub_0924
-sub_0924:
+    .globl intrExcepHandler2
+intrExcepHandler2:
     nop
     nop
     cfc0       $v1, $25
@@ -719,8 +720,8 @@ loc_0000095C:
 
 loc_00000978:
     move       $sp, $k1
-    lui        $v1, %hi(sub_0038)
-    lw         $v1, %lo(sub_0038)($v1)
+    lui        $v1, %hi(intrExcepHandler)
+    lw         $v1, %lo(intrExcepHandler)($v1)
     lui        $at, %hi(intInfo+108)
     sw         $v1, %lo(intInfo+108)($at)
     sll        $v0, $gp, 3
@@ -964,12 +965,13 @@ InterruptManagerForKernel_1373F20E:
     nop
     nop
 
+_sub_0CC0:
     .globl sub_0CC0
 sub_0CC0:
     cfc0       $v0, $0
     mtc0       $v0, $14
-    lui        $v0, %hi(sub_0CF8)
-    lw         $v0, %lo(sub_0CF8)
+    lui        $v0, %hi(syscallExcepHandler)
+    lw         $v0, %lo(syscallExcepHandler)
     jr         $v0
     nop
 
@@ -986,12 +988,8 @@ loc_00000CF0:
     jr         $ra
     nop
 
-##
-# sub_0CF8
-##
-
-    .globl sub_0CF8
-sub_0CF8:
+    .globl syscallExcepHandler
+syscallExcepHandler:
     nop
     nop
     cfc0       $v0, $0
@@ -1002,9 +1000,9 @@ sub_0CF8:
     beqz       $at, loc_00000D34
     ctc0       $t7, $23
     bltz       $v1, loc_00000E98
-    lui        $t4, %hi(cbMap + 0x20000010)
+    lui        $t4, %hi(g_syscallTable + 0x20000010)
     addu       $t4, $t4, $t7
-    lw         $t7, %lo(cbMap+16)($t4)
+    lw         $t7, %lo(g_syscallTable + 0x10)($t4)
     jr         $t7
     mtc0       $v0, $14
 
@@ -1017,7 +1015,7 @@ loc_00000D40:
     lw         $t5, 4($t4)
     mtc0       $v0, $14
     lw         $t6, 8($t4)
-    beqz       $t5, sub_0CC0
+    beqz       $t5, _sub_0CC0
     subu       $t5, $t7, $t5
     sltu       $at, $t5, $t6
     beqzl      $at, loc_00000D40

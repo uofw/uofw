@@ -1431,9 +1431,9 @@ s32 sceSysconBatteryGetChargeTime(s32 *time);
 s32 sceSysconCtrlTachyonVoltage(s32 voltage);
 
 /**
- * Get the digital key (?).
+ * Get the pressed user keys.
  *
- * @param key Pointer to a 2-byte buffer where the digital key will be stored.
+ * @param key Pointer to a 2-byte buffer where the pressed user keys will be stored.
  *
  * @return 0 on success.
  */

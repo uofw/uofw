@@ -1,6 +1,16 @@
-#include "common.h"
+#include <common.h>
 
-#include "libatrac3plus_int.h"
+#include <avcodec_audiocodec.h>
+#include <usersystemlib_kernel.h>
+
+#include "libatrac3plus.h"
+
+SCE_MODULE_INFO("sceATRAC3plus_Library", SCE_MODULE_SINGLE_LOAD | SCE_MODULE_SINGLE_START, 1, 5);
+SCE_MODULE_BOOTSTART("sceAtracStartEntry");
+SCE_MODULE_STOP("sceAtracEndEntry");
+SCE_SDK_VERSION(0x06060010);
+SCE_MODULE_START_THREAD_PARAMETER(3, 0x20, 0x0400, 0);
+SCE_MODULE_STOP_THREAD_PARAMETER(3, 0x20, 0x0400, 0);
 
 // 3F80
 int g_edramAddr = -1;
@@ -78,7 +88,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         return 0;
     }
     g_edramAddr = -1;
-    return sceAudiocodecReleaseEDRAM(&g_atracIds[0]);
+    return sceAudiocodecReleaseEDRAM(&g_atracIds[0].codec);
 }
 
 int sceAtracGetAtracID(u32 codecType)
@@ -453,6 +463,7 @@ int sceAtracSetLoopNum(int atracID, int loopNum)
     return 0;
 }
 
+int __attribute__((alias("sceAtracGetBufferInfoForResetting"))) sceAtracGetBufferInfoForReseting(int atracID, u32 sample, SceBufferInfo *bufferInfo);
 int sceAtracGetBufferInfoForResetting(int atracID, u32 sample, SceBufferInfo *bufferInfo)
 {
     if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
@@ -710,12 +721,12 @@ int allocEdram(void)
     if (ret < 0)
         return ret;
     g_needMemAT3plus = (g_atracIds[0].codec.neededMem + 0x3F) & 0xFFFFFFC0;
-    ret = sceAudiocodecCheckNeedMem(&g_atracIds[0].info, 0x1001);
+    ret = sceAudiocodecCheckNeedMem(&g_atracIds[0].codec, 0x1001);
     if (ret < 0)
         return ret;
     g_needMemAT3 = (g_atracIds[0].codec.neededMem + 0x3F) & 0xFFFFFFC0;
     g_atracIds[0].codec.neededMem = 0x19000;
-    ret = sceAudiocodecGetEDRAM(&g_atracIds[0].info, 0x1001);
+    ret = sceAudiocodecGetEDRAM(&g_atracIds[0].codec, 0x1001);
     if (ret < 0)
         return ret;
     g_edramAddr = g_atracIds[0].codec.edramAddr;
@@ -905,9 +916,9 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
         int inc = cksize + (cksize & 1);
         if (readWaveData(in, &curOff, 4) == WAVE_MAGIC)
             break;
-        if (size < curOff + cksize)
+        if (size < curOff + inc)
             return 0x80630011;
-        curOff += cksize;
+        curOff += inc;
     }
     // 1EAC
     if (curOff + 8 >= size) {
@@ -994,7 +1005,7 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
 
             case WAVE_CHUNK_ID_FMT:
                 // 1F64
-                if (fmt != 0x80630006)
+                if (fmt != (s32)0x80630006)
                     return 0x80630006;
                 if (cksize < 32)
                     return 0x80630006;
@@ -1029,7 +1040,7 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
                 }
                 else
                 {
-                    if (fmtCode != 0xFFFE) {
+                    if (fmtCode != (s16)0xFFFE) {
                         // 20B8
                         return 0x80630006;
                     }
@@ -1315,7 +1326,7 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
             return 0;
         }
         // 2784
-        unk;
+        unk--;
     }
     return 0x80630001;
 }
@@ -1364,7 +1375,7 @@ int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
     int *cur = (int*)&g_3E88[0];
     int *curSp = sp;
     int *end = (int*)&g_3E88[28];
-    if ((int)g_3E88 & 3 == 0)
+    if (((int)g_3E88 & 3) == 0)
     {
         // 2918
         do
@@ -1634,7 +1645,7 @@ int sub_2DF8(SceAtracIdInfo *info)
         return ret;
     u32 ret2 = getSecondBufPos(info, info->loopEnd);
     u32 sum = info->curOff + info->streamDataByte;
-    if (sum >= ret2 + 1 && (sum - (ret2 + 1)) / (ret2 - getOffFromSample(info, info->loopStart) + 1) >= info->loopNum) // 2E78
+    if (sum >= ret2 + 1 && (s32)(sum - (ret2 + 1)) / (s32)(ret2 - getOffFromSample(info, info->loopStart) + 1) >= info->loopNum) // 2E78
         ret = -3;
     // 2E58
     return ret;
@@ -1642,7 +1653,7 @@ int sub_2DF8(SceAtracIdInfo *info)
 
 int sub_2EA4(SceAtracIdInfo *info)
 {
-    int ret = getSecondBufPos(info, info->loopEnd);
+    u32 ret = getSecondBufPos(info, info->loopEnd);
     u32 sum = info->curOff + info->streamDataByte;
     u32 sum2 = sum - ret - 1;
     int count;
@@ -2006,7 +2017,7 @@ int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer)
     aa3->unk44 = sub_3AA0(buffer, &curOff, readByte);
     if (aa3->unk44 == -1)
         return 0x80631003;
-    if (sub_3AA0(buffer, &curOff, readByte) != 0xFFFF)
+    if (sub_3AA0(buffer, &curOff, readByte) != -1)
         return 0x80631003;
     curOff += 24;
     aa3->unk6 = *(u8*)(buffer + curOff);

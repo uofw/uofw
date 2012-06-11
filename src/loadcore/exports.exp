@@ -1,0 +1,48 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_bootstart)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(LoadCoreForKernel, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceKernelDeleteModule, 0x001B57BB)
+PSP_EXPORT_FUNC_NID(sceKernelUnlinkLibraryEntries, 0x0295CFCE)
+PSP_EXPORT_FUNC_NID(sceKernelMaskLibraryEntries, 0x1915737F)
+PSP_EXPORT_FUNC_NID(sceKernelLoadCoreLock, 0x1999032F)
+PSP_EXPORT_FUNC_NID(sceKernelLoadExecutableObject, 0x1C394885)
+PSP_EXPORT_FUNC_NID(sceKernelCreateModule, 0x2C44F793)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterLibraryForUser, 0x2C60CCB8)
+PSP_EXPORT_FUNC_NID(sceKernelGetModuleIdListForKernel, 0x37E6F41B)
+PSP_EXPORT_FUNC_NID(sceKernelGetModuleListWithAlloc, 0x3FE631F0)
+PSP_EXPORT_FUNC_NID(sceKernelFindModuleByUID, 0x40972E6E)
+PSP_EXPORT_FUNC_NID(sceKernelGetModuleGPByAddressForKernel, 0x410084F9)
+PSP_EXPORT_FUNC_NID(sceKernelProbeExecutableObject, 0x41D10899)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterLibrary, 0x48AF96A9)
+PSP_EXPORT_FUNC_NID(sceKernelLoadModuleBootLoadCore, 0x493EE781)
+PSP_EXPORT_FUNC_NID(sceKernelCanReleaseLibrary, 0x538129F8)
+PSP_EXPORT_FUNC_NID(sceKernelSegmentChecksum, 0x5FDDB07A)
+PSP_EXPORT_FUNC_NID(sceKernelQueryLoadCoreCB, 0x696594C8)
+PSP_EXPORT_FUNC_NID(sceKernelLinkLibraryEntriesForUser, 0x6ECFFFBA)
+PSP_EXPORT_FUNC_NID(sceKernelCreateAssignModule, 0x84D5C971)
+PSP_EXPORT_FUNC_NID(sceKernelLinkLibraryEntries, 0x8EAE9534)
+PSP_EXPORT_FUNC_NID(sceKernelLinkLibraryEntriesWithModule, 0xA481E30E)
+PSP_EXPORT_FUNC_NID(sceKernelReleaseModule, 0xB17F5075)
+PSP_EXPORT_FUNC_NID(sceKernelLoadRebootBin, 0xB27CC244)
+PSP_EXPORT_FUNC_NID(sceKernelLoadCoreUnlock, 0xB6C037EA)
+PSP_EXPORT_FUNC_NID(sceKernelFindModuleByAddress, 0xBC99C625)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterModule, 0xBF2E388C)
+PSP_EXPORT_FUNC_NID(sceKernelLoadCoreMode, 0xC8FF5EE5)
+PSP_EXPORT_FUNC_NID(sceKernelReleaseLibrary, 0xCB636A90)
+PSP_EXPORT_FUNC_NID(sceKernelGetModuleFromUID, 0xCD26E0CA)
+PSP_EXPORT_FUNC_NID(sceKernelCheckExecFile, 0xD3353EC4)
+PSP_EXPORT_FUNC_NID(sceKernelAssignModule, 0xF3DD4808)
+PSP_EXPORT_FUNC_NID(sceKernelFindModuleByName, 0xF6B1BF0F)
+PSP_EXPORT_FUNC_NID(sceKernelSetBootCallbackLevel, 0xF976EF41)
+PSP_EXPORT_FUNC_NID(sceKernelCheckPspConfig, 0xFC47F93A)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS
+

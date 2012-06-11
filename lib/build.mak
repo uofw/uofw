@@ -4,7 +4,7 @@
 include ../../lib/common.mak
 
 PSPSDK = $(shell psp-config --pspsdk-path)
-CFLAGS := -I../../include -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -Werror -fno-builtin-bcopy -fno-builtin-bzero -fno-builtin-strchr -nostdlib -I$(PSPSDK)/include
+CFLAGS := -I../../include -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -Werror -fno-builtin-bcopy -fno-builtin-bzero -fno-builtin-strchr -fno-builtin-printf -fno-builtin-puts -fno-builtin-putchar -nostdlib -I$(PSPSDK)/include
 CFLAGS_S := -I../../include/common
 LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx -L$(PSPSDK)/lib
 

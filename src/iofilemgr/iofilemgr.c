@@ -2228,13 +2228,13 @@ int sceIoReadAsync(SceUID fd, void *data, SceSize size)
     return do_read(fd, data, size, 1);
 }
 
-int sceIoWrite(SceUID fd, void *data, SceSize size)
+int sceIoWrite(SceUID fd, const void *data, SceSize size)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     return do_write(fd, data, size, 0);
 }
 
-int sceIoWriteAsync(SceUID fd, void *data, SceSize size)
+int sceIoWriteAsync(SceUID fd, const void *data, SceSize size)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     return do_write(fd, data, size, 1);

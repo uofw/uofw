@@ -6,38 +6,48 @@
 
 typedef struct
 {
-    int unk0;
-    int unk4;
-    int err; // 8
-    int edramAddr; // 12
-    int neededMem; // 16
-    int unk20;
+    s32 unk0;
+    s32 unk4;
+    s32 err; // 8
+    s32 edramAddr; // 12
+    s32 neededMem; // 16
+    s32 unk20;
     void *inBuf; // 24
-    int unk28;
+    s32 unk28;
     void *outBuf; // 32
-    int unk36;
-    char unk40;
-    char unk41;
-    char unk42;
-    char unk43;
-    char unk44;
-    char unk45;
-    char unk46;
-    char unk47;
-    int unk48;
-    int unk52;
-    int unk56;
-    int unk60;
-    int unk64;
-    int unk68;
-    int unk72;
-    int unk76;
-    int unk80;
-    int unk84;
-    int unk88;
-    int unk92;
-    int unk96;
-    int unk100;
+    s32 unk36;
+    s8 unk40;
+    s8 unk41;
+    s8 unk42;
+    s8 unk43;
+    s8 unk44;
+    s8 unk45;
+    s8 unk46;
+    s8 unk47;
+    s32 unk48;
+    s32 unk52;
+    s32 unk56;
+    s32 unk60;
+    s32 unk64;
+    s32 unk68;
+    s32 unk72;
+    s32 unk76;
+    s32 unk80;
+    s32 unk84;
+    s32 unk88;
+    s32 unk92;
+    s32 unk96;
+    s32 unk100;
     void *allocMem; // 104
 } SceAudiocodecCodec;
+
+s32 sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, s32 codec);
+s32 sceAudiocodecInit(SceAudiocodecCodec *info, s32 codec);
+s32 sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, s32 codec);
+s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec);
+s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec);
+s32 sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, s32 codec, s32 *sizeOut);
+s32 sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, s32 codec);
+s32 sceAudiocodecReleaseEDRAM(SceAudiocodecCodec *info);
+
 
