@@ -32,7 +32,6 @@ u64 __udivdi3(u64 arg01, u64 arg23);
 u64 __umoddi3(u64 arg01, u64 arg23);
 const void *memchr(const void *s, int c, int n);
 int memcmp(const void *s1, const void *s2, int n);
-void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 void *memcpy(void *dst, const void *src, u32 n);
 void *memmove(void *dst, const void *src, int n);
 int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args);

@@ -22,10 +22,8 @@
 #define	CTRL_H
 
 /** The callback function used by ::sceCtrlSetSpecialButtonCallback. */
-typedef void (*SceCtrlCb)(int currBtns, int lastBtns, void *opt);
+typedef void (*SceCtrlCb)(u32 currBtns, u32 lastBtns, void *opt);
 
-/** Type definition for improved style. */
-typedef u8   SceCtrlPadInputMode;
 /** Type definition for improved style. */
 typedef u8   SceCtrlPadPollMode;
 /** Type definition for improved style. */
@@ -64,21 +62,21 @@ typedef struct {
     /** Reserved. Values are normally set to 0. */
     u8 rsrv[6]; //10
     /** Unknown. */
-    int unk1; //16
+    s32 unk1; //16
     /** Unknown. */
-    int unk2; //20
+    s32 unk2; //20
     /** Unknown. */
-    int unk3; //24
+    s32 unk3; //24
     /** Unknown. */
-    int unk4; //28
+    s32 unk4; //28
     /** Unknown. */
-    int unk5; //32
+    s32 unk5; //32
     /** Unknown. */
-    int unk6; //36
+    s32 unk6; //36
     /** Unknown. */
-    int unk7; //40
+    s32 unk7; //40
     /** Unknown. */
-    int unk8; //44
+    s32 unk8; //44
 } SceCtrlDataExt; //Size of SceCtrlDataExt: 48
 
 /** Status attributes of a button. Each structure member represents an active button
@@ -96,15 +94,15 @@ typedef struct {
 } SceCtrlLatch; //Size of SceCtrlLatch: 16
 
 /** Custom function name. */
-int sceCtrl_5A36B1C2(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferPositiveExt")));       
+s32 sceCtrl_5A36B1C2(s32 arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferPositiveExt")));       
 /** Custom function name. */
-int sceCtrl_239A6BA7(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferNegativeExt")));  
+s32 sceCtrl_239A6BA7(s32 arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlPeekBufferNegativeExt")));  
 /** Custom function name. */
-int sceCtrl_1098030B(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferPositiveExt"))); 
+s32 sceCtrl_1098030B(s32 arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferPositiveExt"))); 
 /** Custom function name. */
-int sceCtrl_7C3675AB(int arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferNegativeExt"))); 
+s32 sceCtrl_7C3675AB(s32 arg1, SceCtrlDataExt *pad, u8 reqBufReads)__attribute__((alias("sceCtrlReadBufferNegativeExt"))); 
 /** Custom function name. */
-int sceCtrl_driver_E467BEC8(u8 mode, int arg2, int arg3)__attribute__((alias("sceCtrlExtendInternalCtrlBuffers")));
+s32 sceCtrl_driver_E467BEC8(u8 mode, s32 arg2, s32 arg3)__attribute__((alias("sceCtrlExtendInternalCtrlBuffers")));
 
 /**
  * Enumeration for the digital controller buttons.
@@ -160,7 +158,7 @@ enum sceCtrlPadButtons {
 };
 
 /** Controller input modes. */
-enum sceCtrlPadInputMode {
+enum SceCtrlPadInputMode {
     /** Digital input only. No recognizing of analog input. */
     SCE_CTRL_INPUT_DIGITAL_ONLY = 0,         
     /** Recognizing of both digital and analog input. */
@@ -192,21 +190,21 @@ enum sceCtrlPadButtonMaskMode {
  * 
  * @return 0 on success, otherwise < 0.
  */
-int sceCtrlInit(void);
+s32 sceCtrlInit(void);
 
 /**
  * Terminate the controller device. Unbind the controller driver from the controller device.
  * 
  * @return 0.
  */
-int sceCtrlEnd(void);
+s32 sceCtrlEnd(void);
 
 /**
  * Suspend the controller driver and put the controller device into a low-power state.
  * 
  * @return 0.
  */
-int sceCtrlSuspend(void);
+s32 sceCtrlSuspend(void);
 
 /**
  * Resume the controller driver after and bring the controller device 
@@ -214,7 +212,7 @@ int sceCtrlSuspend(void);
  * 
  * @return 0.
  */
-int sceCtrlResume(void);
+s32 sceCtrlResume(void);
 
 /**
  * Enable/disable controller device input.
@@ -224,25 +222,25 @@ int sceCtrlResume(void);
  * 
  * @return 0.
  */
-int sceCtrlSetPollingMode(SceCtrlPadPollMode pollMode);
+s32 sceCtrlSetPollingMode(SceCtrlPadPollMode pollMode);
 
 /**
  * Get the current controller device input mode.
  * 
- * @param mode Receiving the current controller mode. One of ::sceCtrlPadInputMode.
+ * @param mode Receiving the current controller mode. One of ::SceCtrlPadInputMode.
  * 
  * @return 0.
  */
-SceCtrlPadInputMode sceCtrlGetSamplingMode(SceCtrlPadInputMode *mode);
+u32 sceCtrlGetSamplingMode(u8 *mode);
 
 /**
  * Set the controller device input mode.
  * 
- * @param mode The new controller input mode. One of ::sceCtrlPadInputMode.
+ * @param mode The new controller input mode. One of ::SceCtrlPadInputMode.
  * 
  * @return The previous input mode on success, otherwise less than 0.
  */
-int sceCtrlSetSamplingMode(SceCtrlPadInputMode mode);
+s32 sceCtrlSetSamplingMode(u8 mode);
 
 /**
  * Get the current cycle specifying the update frequency of the internal controller data buffers.
@@ -251,7 +249,7 @@ int sceCtrlSetSamplingMode(SceCtrlPadInputMode mode);
  * 
  * @return 0.
  */
-int sceCtrlGetSamplingCycle(u32 *cycle);
+s32 sceCtrlGetSamplingCycle(u32 *cycle);
 
 /**
  * Set the update frequency of the internal controller buffer. Default update frequency is the VBlank-Interrupt (60 times/sec).
@@ -264,7 +262,7 @@ int sceCtrlGetSamplingCycle(u32 *cycle);
  * 
  * @return The previous cycle on success, otherwise less than 0.
  */
-int sceCtrlSetSamplingCycle(u32 cycle);
+s32 sceCtrlSetSamplingCycle(u32 cycle);
 
 /**
  * Get the idle threshold values.
@@ -274,7 +272,7 @@ int sceCtrlSetSamplingCycle(u32 cycle);
  *
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack);
+s32 sceCtrlGetIdleCancelThreshold(s32 *idleReset, s32 *idleBack);
 
 /**
  * Set analog threshold relating to the idle timer.
@@ -288,14 +286,14 @@ int sceCtrlGetIdleCancelThreshold(int *idleReset, int *idleBack);
  *
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlSetIdleCancelThreshold(int idlereset, int idleback);
+s32 sceCtrlSetIdleCancelThreshold(s32 idlereset, s32 idleback);
 
 /**
  * Get the number of VBlanks for which will be waited when terminating the controller library.
  * 
  * @return The number of VBlanks.
  */
-short int sceCtrlGetSuspendingExtraSamples(void);
+s16 sceCtrlGetSuspendingExtraSamples(void);
 
 /**
  * Set a number of VBlanks for which will be waited when terminating the controller library.
@@ -304,11 +302,11 @@ short int sceCtrlGetSuspendingExtraSamples(void);
  * 
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlSetSuspendingExtraSamples(short int suspendSamples);
+s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
 
 typedef struct _ctrlUnkStruct {
-    int unk1;
-    int (*func)(int);
+    s32 unk1;
+    s32 (*func)(int);
 } ctrlUnkStruct;
 
 /**
@@ -322,7 +320,7 @@ typedef struct _ctrlUnkStruct {
  * 
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3);
+s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, s32 arg3);
 
 /**
  * Read the current internal latch buffer. The following button states are delivered:
@@ -349,7 +347,7 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3);
  * @endcode
  * 
  */
-int sceCtrlPeekLatch(SceCtrlLatch *latch);
+s32 sceCtrlPeekLatch(SceCtrlLatch *latch);
 
 /**
  * Read the current internal latch buffer and reset the buffer afterwards. The following button states are delivered:
@@ -361,7 +359,7 @@ int sceCtrlPeekLatch(SceCtrlLatch *latch);
  * 
  * @return The amount of reads of the internal latch buffer without being reseted (typically 1) on success, otherwise less than 0.
  */
-int sceCtrlReadLatch(SceCtrlLatch *latch);
+s32 sceCtrlReadLatch(SceCtrlLatch *latch);
 
 /**
  * Read the current internal controller buffer. Does not wait for the next VBlank.
@@ -388,7 +386,7 @@ int sceCtrlReadLatch(SceCtrlLatch *latch);
  * }
  * @endcode
  */
-int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads);
+s32 sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads);
 
 /**
  * Read the current internal SceCtrlData buffer. Does not wait for the next VBlank.
@@ -417,7 +415,7 @@ int sceCtrlPeekBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * }
  * @endcode
  */
-int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads);
+s32 sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads);
 
 /**
  * Read the current internal SceCtrlData buffer. By default, the internal controller buffer will be read after every VSYNC period (60 times/sec).
@@ -429,7 +427,7 @@ int sceCtrlPeekBufferNegative(SceCtrlData *pad, u8 reqBufReads);
  * 
  * @return The amount of read internal controller buffers on success, otherwise less than 0.
  */
-int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
+s32 sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
 
 /**
  * Read the current internal SceCtrlData buffer. By default, the internal controller buffer will be read after every VSYNC period (60 times/sec).
@@ -443,7 +441,7 @@ int sceCtrlReadBufferPositive(SceCtrlData *pad, u8 reqBufReads);
  * 
  * @return The amount of read internal controller buffers on success, otherwise less than 0.
  */
-int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads);
+s32 sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads);
 
 /**
  * Extended ::sceCtrlPeekBufferPositive. See description for more info.
@@ -455,7 +453,7 @@ int sceCtrlReadBufferNegative(SceCtrlData *pad, u8 reqBufReads);
  * 
  * @return The amount of read internal controller buffers on success, otherwise less than 0.
  */
-int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
+s32 sceCtrlPeekBufferPositiveExt(s32 arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
 /**
  * Extended ::sceCtrlPeekBufferNegative. See description for more info. 
@@ -467,7 +465,7 @@ int sceCtrlPeekBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * 
  * @return The amount of read internal controller buffers, otherwise less than 0.
  */
-int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
+s32 sceCtrlPeekBufferNegativeExt(s32 arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
 /**
  * Extended ::sceCtrlReadBufferPositive. See description for more info.
@@ -479,7 +477,7 @@ int sceCtrlPeekBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * 
  * @return The amount of read internal controller buffers, otherwise less than 0.
  */
-int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
+s32 sceCtrlReadBufferPositiveExt(s32 arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
 /**
  * Extended ::sceCtrlReadBufferNegative. See description for more info.
@@ -491,7 +489,7 @@ int sceCtrlReadBufferPositiveExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * 
  * @return The amount of read internal controller buffers, otherwise less than 0.
  */
-int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
+s32 sceCtrlReadBufferNegativeExt(s32 arg1, SceCtrlDataExt *padExt, u8 reqBufReads);
 
 /**
  * Clear a rapid-fire-button slot.
@@ -500,7 +498,7 @@ int sceCtrlReadBufferNegativeExt(int arg1, SceCtrlDataExt *padExt, u8 reqBufRead
  * 
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlClearRapidFire(u8 slot);
+s32 sceCtrlClearRapidFire(u8 slot);
 
 /**
  * Set a pressed/un-pressed period for a button.
@@ -542,7 +540,7 @@ int sceCtrlClearRapidFire(u8 slot);
  * @endcode
  * 
  */
-int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, u8 reqBtnOnTime, u8 reqBtnOffTime);
+s32 sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u32 reqBtn, u8 reqBtnEventOnTime, u8 reqBtnOnTime, u8 reqBtnOffTime);
 
 /**
  * Emulate values for the analog pad's X- and Y-axis.
@@ -554,7 +552,7 @@ int sceCtrlSetRapidFire(u8 slot, u32 pressedBtnRange, u32 reqBtnsEventTrigger, u
  * 
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates);
+s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates);
 
 /**
  * Emulate buttons for the digital pad.
@@ -568,7 +566,7 @@ int sceCtrlSetAnalogEmulation(u8 slot, u8 aXEmu, u8 aYEmu, u32 bufUpdates);
  * 
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates);
+s32 sceCtrlSetButtonEmulation(u8 slot, u32 uModeBtnEmu, u32 kModeBtnEmu, u32 bufUpdates);
 
 /**
  * Get the button mask mode of one or more bitwise OR'ed PSP buttons.
@@ -630,12 +628,12 @@ SceCtrlPadButtonMaskMode sceCtrlSetButtonIntercept(u32 buttons, SceCtrlPadButton
  * 
  * @param slot The slot used to register the callback (0-3).
  * @param btnMask Bitwise OR'ed button values which will be checked for being pressed. One or more buttons of ::sceCtrlPadButtons.
- * @param cbFunc Pointer to the callback function (int currBtns, int lastBtns, void *opt), which handles button input effects.
+ * @param cbFunc Pointer to the callback function (s32 currBtns, s32 lastBtns, void *opt), which handles button input effects.
  * @param opt Optional user argument. Passed to the callback function as its third argument.
  * 
  * @return 0 on success, otherwise less than 0.
  */
-int sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cbFunc, void *opt);
+s32 sceCtrlSetSpecialButtonCallback(u32 slot, u32 btnMask, SceCtrlCb cbFunc, void *opt);
 
 #endif	/* CTRL_H */
 

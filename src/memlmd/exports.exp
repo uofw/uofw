@@ -1,0 +1,36 @@
+# Define the exports for the prx
+PSP_BEGIN_EXPORTS
+
+# These four lines are mandatory (although you can add other functions like module_stop)
+# syslib is a psynonym for the single mandatory export.
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_reboot_before)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(memlmd, 0x0011, 0x0009)
+PSP_EXPORT_FUNC_NID(memlmd_2AE425D2, 0x2AE425D2)
+PSP_EXPORT_FUNC_NID(memlmd_2F3D7E2D, 0x2F3D7E2D)
+PSP_EXPORT_FUNC_NID(memlmd_6192F715, 0x6192F715)
+PSP_EXPORT_FUNC_NID(memlmd_76B7E315, 0x76B7E315)
+PSP_EXPORT_FUNC_NID(memlmd_9D36A439, 0x9D36A439)
+PSP_EXPORT_FUNC_NID(memlmd_CF03556B, 0xCF03556B)
+PSP_EXPORT_FUNC_NID(memlmd_EA94592C, 0xEA94592C)
+PSP_EXPORT_FUNC_NID(memlmd_EF73E85B, 0xEF73E85B)
+PSP_EXPORT_FUNC_NID(memlmd_F26A33C3, 0xF26A33C3)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(semaphore2, 0x0011, 0x0001)
+# 0x00EEC06A
+PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopy)
+# 0x4C537C72                
+PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopyWithRange)
+# 0x77E97079   
+PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopyByPollingWithRange)
+# 0x8EEB7BF2
+PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopyByPolling)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

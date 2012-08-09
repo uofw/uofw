@@ -344,7 +344,7 @@ additional description.
  * 
  * Returns the sum of a and b.
  */
-static s32 sum(s23 a, s32 b);
+static s32 sum(s32 a, s32 b);
 
 Here, everything about the parameters a and b is obvious, so there is no need for 
 explaining them.
