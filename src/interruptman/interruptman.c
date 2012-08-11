@@ -23,8 +23,8 @@ SceLibraryEntryTable intrEntry = {
     },
     .attribute = 0x4000,
     .len = 4,
-    .vstubcount = 9,
-    .stubcount = 0,
+    .vstubcount = 0,
+    .stubcount = 9,
     .entryTable = (void*)(s32[]) {
         0x5CB5A78B,
         0x7860E0DC,
