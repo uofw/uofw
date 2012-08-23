@@ -1,4 +1,4 @@
-#include "common.h"
+#include <common_imp.h>
 
 typedef struct {
     u32 count;
@@ -485,7 +485,7 @@ int sceKernelGzipDecompress(u8 *dest, u32 destSize, const u8 *src, u32 *unk)
         return 0x80020001;
     if (src[2] != 8)
         return 0x80000004;
-    int ret = UtilsForKernel_E8DB3CE6(dest, destSize, buf, &unkPtr);
+    int ret = sceKernelDeflateDecompress(dest, destSize, buf, &unkPtr);
     if (ret < 0)
         return ret;
     memcpy(unkBuf, unkPtr, 8);

@@ -2,7 +2,14 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+/**
+ * @author artart78
+ * @version 6.60
+ *
+ * The codec.prx module RE'ing.
+ */
+
+#include "common_header.h"
 
 int sceCodecOutputEnable(int arg0, int arg1);
 int sceCodecSetOutputVolume(int reg);

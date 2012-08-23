@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 enum SceInterrupts {
     SCE_GPIO_INT = 4,

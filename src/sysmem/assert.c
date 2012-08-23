@@ -1,4 +1,4 @@
-#include "common.h"
+#include <common_imp.h>
 
 // 143FC
 void (*g_assertHandler)(int);

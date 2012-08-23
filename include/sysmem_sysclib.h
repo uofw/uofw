@@ -4,7 +4,7 @@
 
 #include <stdarg.h>
 
-#include "common.h"
+#include "common_header.h"
 
 #define CTYPE_DOWNCASE_LETTER 0x01
 #define CTYPE_UPCASE_LETTER   0x02

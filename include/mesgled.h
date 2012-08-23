@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 int sceWmd_driver_7A0E484C(void *data, int inSize, int *outSize);
 

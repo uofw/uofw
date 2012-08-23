@@ -12,7 +12,7 @@
 
 /* TODO: Reverse the sceDdrdb_driver library functions in openpsid.prx.*/
 
-#include "common.h"
+#include <common_imp.h>
 
 #include "openpsid_ddrdb.h"
 

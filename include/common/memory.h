@@ -2,8 +2,8 @@
    See the file COPYING for copying permission.
 */
 
-#ifndef COMMON_H
-# error "Only include common.h!"
+#ifndef COMMON_INCLUDED
+# error "Only include common_imp.h or common_header.h!"
 #endif
 
 #define UCACHED(ptr) (void*)((u32)(void*)(ptr) & 0x1FFFFFFF)
@@ -14,4 +14,5 @@
 #define UPALIGN64(v) (((v) + 0x3F) & 0xFFFFFFC0)
 
 #define HW(addr) (*(vs32*)(addr))
+#define HWPTR(addr) ((vs32*)(addr))
 

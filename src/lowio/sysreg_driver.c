@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include <common_imp.h>
 
 int sub_01B8(int flag, int enable)
 {

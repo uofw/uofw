@@ -2,8 +2,8 @@
    See the file COPYING for copying permission.
 */
 
-#ifndef COMMON_H
-# error "Only include common.h!"
+#ifndef COMMON_INCLUDED
+# error "Only include common_imp.h or common_header.h!"
 #endif
 
 typedef enum

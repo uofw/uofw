@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 #define SCE_MEMORY_PARTITION_KERNEL  1
 

@@ -2,10 +2,14 @@
    See the file COPYING for copying permission.
 */
 
-#ifndef COMMON_H
-#define COMMON_H
+/* Common file for module implementations */
 
-#include "types.h"
+#ifndef COMMON_IMP_H
+#define COMMON_IMP_H
+
+#define COMMON_INCLUDED
+
+#include "common/types.h"
 
 #include "common/cop0.h"
 #include "common/debug.h"

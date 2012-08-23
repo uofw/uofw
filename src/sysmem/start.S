@@ -424,7 +424,7 @@ sceSuspendForKernel_B2C9640B:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_79D1C3FA:
+sceKernelDcacheWritebackAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000714
@@ -489,7 +489,7 @@ loc_00000714:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_B435DEC5:
+sceKernelDcacheWritebackInvalidateAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000784
@@ -525,7 +525,7 @@ loc_00000784:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForKernel_864A9D72:
+sceKernelDcacheInvalidateAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000804
@@ -565,7 +565,7 @@ loc_00000804:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_3EE30821:
+sceKernelDcacheWritebackRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_000008F0
@@ -648,7 +648,7 @@ loc_000008F0:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_34B9FA9E:
+sceKernelDcacheWritebackInvalidateRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_000009EC
@@ -914,7 +914,7 @@ loc_00000C28:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_80001C4C:
+sceKernelDcacheProbe:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000CD0
@@ -954,7 +954,7 @@ loc_00000CD0:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_16641D70:
+sceKernelDcacheReadTagForUser:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x10, 0($a0)
@@ -970,7 +970,7 @@ UtilsForUser_16641D70:
     jr $ra
     nop 
 
-UtilsForKernel_16641D70:
+sceKernelDcacheReadTag:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x10, 0($a0)
@@ -990,7 +990,7 @@ UtilsForKernel_16641D70:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_77DFF087:
+sceKernelDcacheProbeRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000E50
@@ -1080,7 +1080,7 @@ loc_00000E50:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForUser_920F104A:
+sceKernelIcacheInvalidateAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000EE8
@@ -1211,7 +1211,7 @@ loc_00000FF8:
     lui $t0, 0xA000
     or $ra, $t0, $ra
 
-UtilsForUser_4FD31C9D:
+sceKernelIcacheProbe:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00001098
@@ -2234,7 +2234,7 @@ loc_00001DA0:
     nop 
     nop 
 
-UtilsForUser_37FB5C42:
+sceKernelGetGPI:
     lui $v0, %hi(g_13B40)
     lw $v0, %lo(g_13B40)($v0)
     beqz $v0, loc_00001DD8
@@ -2246,7 +2246,7 @@ loc_00001DD8:
     jr $ra
     move $v0, $zr
 
-UtilsForUser_6AD345D7:
+sceKernelSetGPO:
     lui $v0, %hi(g_13B48)
     lw $v0, %lo(g_13B48)($v0)
     beqz $v0, loc_00001DD8
@@ -2257,7 +2257,7 @@ UtilsForUser_6AD345D7:
     jr $v0
     and $a0, $a0, $v1
 
-UtilsForKernel_AF3616C0:
+sceKernelGetGPO:
     lui $v0, %hi(g_13B48)
     lw $v0, %lo(g_13B48)($v0)
     beqz $v0, loc_00001DD8
@@ -2265,7 +2265,7 @@ UtilsForKernel_AF3616C0:
     jr $v0
     move $a1, $zr
 
-UtilsForKernel_193D4036:
+sceKernelSetGPIMask:
     lui $t0, %hi(g_13B44)
     nor $t1, $zr, $a0
     lw $v0, %lo(g_13B44)($t0)
@@ -2274,7 +2274,7 @@ UtilsForKernel_193D4036:
     jr $ra
     sw $v0, %lo(g_13B44)($t0)
 
-UtilsForKernel_95035FEF:
+sceKernelSetGPOMask:
     lui $t0, %hi(g_13B4C)
     nor $t1, $zr, $a0
     lw $v0, %lo(g_13B4C)($t0)
@@ -2294,7 +2294,7 @@ UtilsForKernel_95035FEF:
     nop 
     nop 
 
-UtilsForUser_6231A71D:
+sceKernelSetPTRIG:
     lui $v0, %hi(g_13B84)
     lw $v0, %lo(g_13B84)($v0)
     beqz $v0, loc_00001E9C
@@ -2307,7 +2307,7 @@ loc_00001E9C:
     jr $ra
     move $v0, $zr
 
-UtilsForUser_39F49610:
+sceKernelGetPTRIG:
     lui $v0, %hi(g_13B80)
     lw $v0, %lo(g_13B80)($v0)
     beqz $v0, loc_00001E9C
@@ -2315,12 +2315,12 @@ UtilsForUser_39F49610:
     jr $v0
     nop 
 
-UtilsForKernel_136F2419:
+sceKernelSetPTRIGMask:
     lui $v0, %hi(g_13B88)
     jr $ra
     sw $a0, %lo(g_13B88)($v0)
 
-UtilsForUser_87E81561:
+sceKernelPutUserLog:
     lui $v0, %hi(g_13BC0)
     lw $v0, %lo(g_13BC0)($v0)
     beqz $v0, loc_00001EE0
@@ -2332,12 +2332,12 @@ loc_00001EE0:
     jr $ra
     move $v0, $zr
 
-UtilsForKernel_92282A47:
+sceKernelRegisterUserLogHandler:
     lui $v0, %hi(g_13BC0)
     jr $ra
     sw $a0, %lo(g_13BC0)($v0)
 
-UtilsForKernel_E8DB3CE6:
+sceKernelDeflateDecompress:
     addiu $sp, $sp, -1344
     sw $s4, 1228($sp)
     addu $a1, $a0, $a1

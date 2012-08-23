@@ -5,7 +5,7 @@
 #ifndef SYSMEM_USER_H
 #define	SYSMEM_USER_H
 
-#include "common.h"
+#include "common_header.h"
 
 #ifdef	__cplusplus
 extern "C" {

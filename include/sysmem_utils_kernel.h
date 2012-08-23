@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 int UtilsForKernel_6C6887EE(void *outBuf, int outSize, void *inBuf, void **end);
 void sceKernelDcacheInvalidateAll(void);

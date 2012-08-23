@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 typedef int SceSysTimerId;
 typedef int (*SceSysTimerCb)(int, int, int, int);

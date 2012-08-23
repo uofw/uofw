@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include <common_imp.h>
 
 static int g_0000C820;
 static int g_0000C83C;

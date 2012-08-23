@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 s32 sceSysregTopResetEnable(void);
 s32 sceSysregScResetEnable(void);

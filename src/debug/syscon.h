@@ -1,7 +1,7 @@
 #ifndef __SYSCON_H__
 #define __SYSCON_H__ 
 
-#include "common.h"
+#include <common_imp.h>
 
 /*
 	CMD 07,08 : CTRL data

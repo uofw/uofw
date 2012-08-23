@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include <common.h>
+#include <common_imp.h>
 
 #include <interruptman.h>
 #include <lowio_gpio.h>

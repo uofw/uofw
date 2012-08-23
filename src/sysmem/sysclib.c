@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "common.h"
+#include <common_imp.h>
 
 #include "sysclib.h"
 
@@ -874,6 +874,21 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
         // DAA4
         fmt++;
     }
+}
+
+char *rindex(const char *s, char c)
+{
+    const char *cur = s;
+    if (s == NULL)
+        return NULL;
+    while (*(cur++) != '\0')
+        ;
+    // E22C
+    do
+        if (*(--cur) == c)
+            return cur;
+    while (s < cur);
+    return 0;
 }
 
 int sprintf(char *str, const char *format, ...)

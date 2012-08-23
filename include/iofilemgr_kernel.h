@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 #define SCE_O_RDONLY    0x0001
 #define SCE_O_WRONLY    0x0002

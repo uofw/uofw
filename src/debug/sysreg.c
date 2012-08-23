@@ -2,7 +2,7 @@
 	PSP IPL SYSREG Driver
 ****************************************************************************/
 
-#include <common.h>
+#include <common_imp.h>
 
 #define REG32(ADDR) (*(vu32*)(ADDR))
 #define SYNC() asm(" sync; nop"::)

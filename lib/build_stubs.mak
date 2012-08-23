@@ -3,5 +3,5 @@
 
 include ../../lib/common.mak
 
-CFLAGS=-O2 -G0 -Wall -I../../include
+CFLAGS=-O2 -G0 -Wall -I../../include/common
 

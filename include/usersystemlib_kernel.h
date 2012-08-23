@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 s32 sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(s32 intr);

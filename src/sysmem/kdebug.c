@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "common.h"
+#include <common_imp.h>
 
 // 13BC4
 int (*g_kprintfHandler)(short*, const char*, va_list, int) = kprnt;
@@ -9,7 +9,7 @@ void *g_kprintfParam = (void*)g_kprintfDefaultParam; // TODO: determine the size
 // 13BCC
 int g_putcharByBootloader = 1;
 // 13BD0
-int (*g_dbgEcho)();
+int g_dbgEcho = 1;
 
 // 14410
 u32 g_dipsLo;
@@ -637,7 +637,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
     }
 }
 
-int KprintfForUser(const char *fmt, ...)
+int KprintfForUser(const char *fmt, ...) __attribute__((alias("sceKernelPrintf")))
 {
     va_list ap;
     int oldK1 = pspShiftK1();
@@ -745,14 +745,14 @@ int sceKernelRegisterDebugRead(int (*func)())
     return 0;
 }
 
-int (*sceKernelDebugEcho(void))()
+int sceKernelDebugEcho(void)
 {
     return g_dbgEcho;
 }
 
-int (*sceKernelDebugEchoSet(int (*func)()))()
+int sceKernelDebugEchoSet(int echo)
 {
-    g_dbgEcho = func;
-    return func;
+    g_dbgEcho = echo;
+    return echo;
 }
 

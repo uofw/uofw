@@ -53,7 +53,7 @@ Makefile.exp: $(PRX_EXPORTS)
 exp: Makefile.exp
 	make -f Makefile.exp
 
-exp-clean:
+exp-clean: Makefile.exp
 	make -f Makefile.exp clean
 	-$(RM) Makefile.exp
 

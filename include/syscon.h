@@ -9,7 +9,7 @@
  * The syscon.prx module RE'ing.
  */
 
-#include "common.h"
+#include "common_header.h"
 
 /** @defgroup Syscon Syscon Module
  *

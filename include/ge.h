@@ -9,7 +9,7 @@
  * The ge.prx module RE'ing.
  */
 
-#include "common.h"
+#include "common_header.h"
 
 /** @defgroup GE sceGE_Manager Module
  *

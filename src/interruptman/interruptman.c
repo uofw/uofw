@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include <common.h>
+#include <common_imp.h>
 
 #include <exceptionman.h>
 #include <loadcore.h>
@@ -509,10 +509,10 @@ void InterruptManagerForKernel_E790EAED(s32 (*arg0)(), s32 (*arg1)())
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 oldIc = sceKernelCpuSuspendIntr();
-    *(s32*)(&mod_0468) = 0x0C000000 + (((s32)arg1 >> 2) & 0x3FFFFFF);
+    mod_0468 = 0x0C000000 + (((s32)arg1 >> 2) & 0x3FFFFFF);
     pspCache(0x1A, &mod_0468);
     pspCache(0x08, &mod_0468);
-    *(s32*)(&mod_0400) = 0x0C000000 + (((s32)arg0 >> 2) & 0x3FFFFFF);
+    mod_0400 = 0x0C000000 + (((s32)arg0 >> 2) & 0x3FFFFFF);
     pspCache(0x1A, &mod_0400);
     pspCache(0x08, &mod_0400);
     sceKernelCpuResumeIntr(oldIc);
@@ -1247,11 +1247,11 @@ void InterruptManagerForKernel_E526B767(s32 arg)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     if (arg == 0)
-        *(s32*)(&mod_0E48) = 0x42000018; // eret
+        mod_0E48 = 0x42000018; // eret
     // 30F0
     if (arg == 1) {
         // 3104
-        *(s32*)(&mod_0E50) = 0x00005821; // t3 = 0
+        mod_0E50 = 0x00005821; // t3 = 0
     }
 }
 

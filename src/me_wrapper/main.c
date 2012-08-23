@@ -7,7 +7,7 @@
 
 #include <stdarg.h>
 
-#include "common.h"
+#include <common_imp.h>
 
 #include "avcodec_audiocodec.h"
 #include "interruptman.h"

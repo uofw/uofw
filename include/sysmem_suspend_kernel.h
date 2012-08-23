@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include "common_header.h"
 
 /** The PSP SDK defines this as PSP_POWER_TICK_ALL. Cancels all timers. */
 #define SCE_KERNEL_POWER_TICK_DEFAULT           0 

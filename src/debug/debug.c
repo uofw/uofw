@@ -10,7 +10,7 @@
 #define DEBUG_FILE "uofw/log.txt"
 #define IO_DEBUG_FILE "ms0:/" DEBUG_FILE
 
-#include <common.h>
+#include <common_imp.h>
 
 #include <display.h>
 #include <iofilemgr_kernel.h>

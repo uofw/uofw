@@ -2,7 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-#include "common.h"
+#include <common_imp.h>
 
 #include "excep.h"
 #include "exceptionman.h"

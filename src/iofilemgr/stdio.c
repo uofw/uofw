@@ -4,7 +4,7 @@
 
 #include <stdarg.h>
 
-#include "common.h"
+#include <common_imp.h>
 
 #include "sysmem_kdebug.h"
 #include "sysmem_kernel.h"
