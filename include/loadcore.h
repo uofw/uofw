@@ -133,7 +133,9 @@ typedef struct {
  * Represents a imported function stub.
  */
 typedef union {
+    /** User/User or Kernel/Kernel function stub. */
     DirectCall dc;
+    /** Kernel/User function stub. */
     Syscall sc;
 } SceStub;
 
@@ -483,6 +485,10 @@ typedef struct {
     u32 unk124;
 } SceLoadCoreBootInfo; //size = 128
 
+/**
+ * This structure represents executable file information used to load
+ * the file.
+ */
 typedef struct {
     /** Unknown. */
     u32 unk0;

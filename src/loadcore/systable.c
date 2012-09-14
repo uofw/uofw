@@ -77,7 +77,7 @@ static SceSysCallEntryTable initialSysEntTable[SYSCALL_ENTRY_TABLES]; //0x000080
  * address of the function "UndefSyscall", which simply returns an 
  * error, marking a slot as currently being unused.
  * 
- * In addition, the internal SyscallEntryTable stack is initialized
+ * In addition, the internal SyscallEntryTable linked list is initialized
  * and g_pSysEntControl is set to the top member of it.
  * 
  * @param seed Used to set the start address of the system call table.
@@ -110,10 +110,6 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    for (i = 0; i < TOP_SYSCALL_ENTRY_TABLE; i++)
         initialSysEntTable[i + 1].next = &initialSysEntTable[i];
    
-   /* 
-    * Set g_pFreeSysEnt to point to the top object of the 
-    * SYSCALL Entry table stack. 
-    */
    g_pFreeSysEnt = &initialSysEntTable[TOP_SYSCALL_ENTRY_TABLE]; //0x0000040C 
    if (g_pFreeSysEnt == NULL) { //0x00000410
        g_pSysEntControl = (SceSysCallEntryTable *)sceKernelAllocHeapMemory(g_loadCoreHeap(), sizeof(SceSysCallEntryTable)); //0x00000498 & 0x000004A4
@@ -141,14 +137,13 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
 
 //sub_000004B4
 /*
- * Allocate a system-call-entry-table for a resident library
- * exporting its functions via the SYSCALL_EXPORT technique.
- * In order to allocate such a table, we start at the object 
- * pointed to by g_pSysEntControl (normally the top member of 
- * the initialSysEntTable stack).  We scroll through that data 
- * structure until we find an object which is not already 
- * being used and which is big enough to hold the amount of 
- * exported functions.  
+ * Allocate a system-call-entry-table for a resident library exporting 
+ * its functions via the SYSCALL_EXPORT technique.  In order to allocate 
+ * such a table, we start at the object pointed to by g_pSysEntControl 
+ * (normally the top member of the initialSysEntTable linked list).  
+ * We scroll through that data structure until we find an object which 
+ * is not already being used and which is big enough to hold the amount 
+ * of exported functions.  
  * 
  * @param numEntry The amount of exported functions of a
  *                 resident library.
@@ -231,7 +226,7 @@ s32 AllocSysTable(u16 numEntries)
  * Free a system-call-entry-table of a resident library.  In order
  * to free such a table, we start at the object pointed to by 
  * g_pSysEntControl (normally the top member of the initialSysEntTable 
- * stack).  We scroll through that data structure until the location 
+ * linked list).  We scroll through that data structure until the location 
  * of the to-be-freed table is found and integrate it properly into 
  * the list again, merging it with another free neighbor table if
  * needed.
