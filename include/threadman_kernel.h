@@ -2,13 +2,14 @@
    See the file COPYING for copying permission.
 */
 
-#include "common_header.h"
+#ifndef THREADMAN_KERNEL_H
+#define	THREADMAN_KERNEL_H
 
-#define SCE_MEMORY_PARTITION_KERNEL  1
+#include "common_header.h"
 
 /* Threads */
 
-typedef int (*SceKernelThreadEntry)(SceSize args, void *argp);
+typedef s32 (*SceKernelThreadEntry)(SceSize args, void *argp);
 
 typedef struct
 {
@@ -225,4 +226,6 @@ typedef struct {
 } SceKernelFplInfo;
 
 int sceKernelReferFplStatus(SceUID uid, SceKernelFplInfo *info);
+
+#endif /* THREADMAN_KERNEL_H */
 

@@ -23,10 +23,10 @@ enum SceSysMemBlockType {
     SCE_KERNEL_SMEM_Addr = 2
 };
 
-SceUID sceKernelAllocPartitionMemory(SceUID partitionid, const s8 *name, s32 type, SceSize size, void *addr);
+SceUID sceKernelAllocPartitionMemory(SceUID partitionid, const char *name, s32 type, SceSize size, void *addr);
 s32 sceKernelFreePartitionMemory(SceUID uid);
 
-s32 sceKernelGetBlockHeadAddr(SceUID uid);
+void *sceKernelGetBlockHeadAddr(SceUID uid);
 
 
 #ifdef	__cplusplus

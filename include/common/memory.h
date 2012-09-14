@@ -12,7 +12,3 @@
 
 #define UPALIGN256(v) (((v) + 0xFF) & 0xFFFFFF00)
 #define UPALIGN64(v) (((v) + 0x3F) & 0xFFFFFFC0)
-
-#define HW(addr) (*(vs32*)(addr))
-#define HWPTR(addr) ((vs32*)(addr))
-

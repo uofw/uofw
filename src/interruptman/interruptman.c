@@ -3,9 +3,7 @@
 */
 
 #include <common_imp.h>
-
 #include <exceptionman.h>
-#include <loadcore.h>
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
 
@@ -15,7 +13,7 @@
 #include "interruptman.h"
 #include "start.h"
 
-SceLibraryEntryTable intrEntry = {
+SceResidentLibraryEntryTable intrEntry = {
     .libName = (s8*)"InterruptManager",
     .version = {
         0x11,
@@ -23,8 +21,8 @@ SceLibraryEntryTable intrEntry = {
     },
     .attribute = 0x4000,
     .len = 4,
-    .vstubcount = 0,
-    .stubcount = 9,
+    .vStubCount = 0,
+    .stubCount = 9,
     .entryTable = (void*)(s32[]) {
         0x5CB5A78B,
         0x7860E0DC,
@@ -51,8 +49,8 @@ SceLibraryEntryTable intrEntry = {
 };
 
 // 0x3458
-SCE_MODULE_INFO("sceInterruptManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                       | SCE_MODULE_SINGLE_START, 1, 9);
+SCE_MODULE_INFO("sceInterruptManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD | 
+                                       SCE_MODULE_SINGLE_START, 1, 9);
 SCE_MODULE_BOOTSTART("IntrManInit");
 SCE_MODULE_REBOOT_BEFORE("IntrManTerminate");
 SCE_SDK_VERSION(SDK_VERSION);
@@ -1001,7 +999,7 @@ void AllLevelInterruptDisable(s32 intrNum)
 }
 
 // 55D18836
-s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)())
+s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, s32 (*syscall)(void))
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 oldIntr = sceKernelCpuSuspendIntr();

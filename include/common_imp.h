@@ -14,6 +14,7 @@
 #include "common/cop0.h"
 #include "common/debug.h"
 #include "common/errors.h"
+#include "common/hardware.h"
 #include "common/inline.h"
 #include "common/memory.h"
 #include "common/module.h"

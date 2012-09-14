@@ -7,7 +7,7 @@
 typedef struct {
     s32 size;
     s8 *name;
-    s32 type_mask;
+    s32 typeMask;
     s32 (*handler)(s32 ev_id, s8* ev_name, void* param, s32* result);
     s32 gp;
     s32 busy;

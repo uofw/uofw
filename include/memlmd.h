@@ -9,6 +9,8 @@
 #ifndef MEMLMD_H
 #define	MEMLMD_H
 
+#include "common_header.h"
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -32,6 +34,15 @@ s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 *newsize);
  * 
  * @return ??.
  */
+s32 memlmd_2AE425D2(u32 unk);
+
+/**	
+ * Checks the param against a magic value (unknown usage)
+ * 
+ * @param unk Unknown param.
+ * 
+ * @return ??.
+ */
 s32 memlmd_9D36A439(u32 unk);
 
 /**	
@@ -44,7 +55,7 @@ s32 memlmd_9D36A439(u32 unk);
  * 
  * @return 0 on success.
  */
-s32 memlmd_F26A33C3(u32 unk, u8 *hashAddr);
+s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr);
 
 /**	
  * Decrypts a module. Synced mode.
@@ -56,6 +67,17 @@ s32 memlmd_F26A33C3(u32 unk, u8 *hashAddr);
  * @return 0 on success.
  */
 s32 memlmd_CF03556B(u8 *prx, u32 size, u32 *newsize);
+
+/**	
+ * Unsign a module. Asynced mode.
+ * 
+ * 
+ * @param addr PRX buffer.
+ * @param size Size of the PRX buffer.
+ * 
+ * @return 0 on success.
+ */
+s32 memlmd_6192F715(u8 *addr, u32 size);
 
 /**	
  * Enables the bus of KIRK chip if possibile

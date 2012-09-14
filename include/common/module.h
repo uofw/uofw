@@ -6,35 +6,74 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
+#define SCE_MODULE_NAME_LEN         (27)
+
 typedef struct  {
-    u16 modattribute;
-    u8 modversion[2];
-    s8 modname[27];
+    u16 modAttribute;
+    u8 modVersion[2];
+    char modName[SCE_MODULE_NAME_LEN];
     s8 terminal;
-    void *gp_value;
-    void *ent_top;
-    void *ent_end;
-    void *stub_top;
-    void *stub_end;
+    void *gpValue;
+    void *entTop;
+    void *entEnd;
+    void *stubTop;
+    void *stubEnd;
 } SceModuleInfo;
 
+/* 
+ * Entry thread structure - an entry thread is used for executing the 
+ * module entry functions. 
+ */
 typedef struct {
-    u32 unk0;
-    u32 unk4;
-    u32 unk8;
-    u32 unk12;
-} SceThreadParameter;
+    /* The number of entry thread parameters, typically 3. */
+    u32 numParams;
+    /* The initial priority of the entry thread. */
+    u32 initPriority;
+    /* The stack size of the entry thread. */
+    u32 stackSize;
+    /* The attributes of the entry thread. */
+    u32 attr;  
+} SceModuleEntryThread;
 
 extern char _gp[];
 
-/* Module attributes. */
-enum SceModuleInfoAttr {
-    SCE_MODULE_USER         = 0,
-    SCE_MODULE_NO_STOP      = 0x0001,
-    SCE_MODULE_SINGLE_LOAD  = 0x0002,
-    SCE_MODULE_SINGLE_START = 0x0004,
-    SCE_MODULE_VSH          = 0x0800,
-    SCE_MODULE_KERNEL       = 0x1000,
+/** 
+ * Module type attributes. 
+ */
+enum SceModuleAttribute {
+    /** Resident module - stays in memory. You cannot unload such a module. */
+    SCE_MODULE_ATTR_CANT_STOP        = 0x0001,
+    /** 
+     * Only one instance of the module (one version) can be loaded into the system. If you want to load another 
+     * version of that module, you have to delete the loaded version first.
+     */
+    SCE_MODULE_ATTR_EXCLUSIVE_LOAD   = 0x0002,
+    /** 
+     * Only one instance of the module (one version) can be started. If you want to start another 
+     * version of that module, you have to stop the currently running version first.
+     */
+    SCE_MODULE_ATTR_EXCLUSIVE_START  = 0x0004,
+};
+
+/** 
+ * Module Privilege Levels - These levels define the permissions a 
+ * module can have.
+ */
+enum SceModulePrivilegeLevel {
+    /** Lowest permission. */
+    SCE_MODULE_USER                 = 0x0000,
+    /** POPS/Demo. */
+    SCE_MODULE_MS                   = 0x0200,
+    /** Module Gamesharing. */
+    SCE_MODULE_USB_WLAN             = 0x0400,
+    SCE_MODULE_APP                  = 0x0600,
+    SCE_MODULE_VSH                  = 0x0800,
+    /** Highest permission. */
+    SCE_MODULE_KERNEL               = 0x1000,
+    /** The module uses KIRK's memlmd resident library. */
+    SCE_MODULE_KIRK_MEMLMD_LIB      = 0x2000,
+    /** The module uses KIRK's semaphore resident library. */
+    SCE_MODULE_KIRK_SEMAPHORE_LIB   = 0x4000,
 };
 
 #define SDK_VERSION                     0x06060010
@@ -79,9 +118,9 @@ enum SceModuleInfoAttr {
       __lib_stub_top, __lib_stub_bottom                             \
     }
 
-#define SCE_MODULE_START_THREAD_PARAMETER(unk1, unk2, unk3, unk4) \
-    const SceThreadParameter module_start_thread_parameter = { unk1, unk2, unk3, unk4 };
+#define SCE_MODULE_START_THREAD_PARAMETER(numParams, initPriority, stackSize, attr) \
+    const SceModuleEntryThread module_start_thread_parameter = { numParams, initPriority, stackSize, attr };
 
-#define SCE_MODULE_STOP_THREAD_PARAMETER(unk1, unk2, unk3, unk4) \
-    const SceThreadParameter module_stop_thread_parameter = { unk1, unk2, unk3, unk4 };
+#define SCE_MODULE_STOP_THREAD_PARAMETER(numParams, initPriority, stackSize, attr) \
+    const SceModuleEntryThread module_stop_thread_parameter = { numParams, initPriority, stackSize, attr };
 

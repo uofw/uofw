@@ -3,6 +3,7 @@
 */
 
 #include "common_header.h"
+#include "loadcore.h"
 
 enum SceInterrupts {
     SCE_GPIO_INT = 4,
@@ -105,17 +106,6 @@ typedef struct {
     void *cb;
 } SceIntrHandler;
 
-typedef struct SceSyscallTable {
-    struct SceSyscallTable *next;
-    s32 seed;
-    /** Size of the structure (including the syscalls array). */
-    s32 tableSize;
-    /** Size of the syscalls array. */
-    s32 funcTableSize;
-    /** Variable-size array containing a list of syscalls. */
-    void (*syscalls[])(void);
-} SceSyscallTable;
-
 typedef s32 (*MonitorCb)(s32 intrNum, s32 subIntrNum, s32, s32, s32, s32, s8);
 
 s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, SceIntrHandler *handler);
@@ -138,7 +128,7 @@ s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *arg2);
 s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 arg2);
 s32 sceKernelIsSubInterruptOccured(s32 intrNum, s32 subIntrNum);
 s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out);
-s32 sceKernelSetPrimarySyscallHandler(s32 arg0, void (*arg1)());
+s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, s32 (*syscall)(void));
 void sceKernelCpuEnableIntr();
 s32 InterruptManagerForKernel_6FCBA912(s32 set);
 s32 sceKernelClearIntrLogging(s32 intrNum);
