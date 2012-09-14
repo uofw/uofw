@@ -92,7 +92,7 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    s32 status;
    SceSyscallTable *sysCallTable;
      
-   sysCallTable = sceKernelAllocHeapMemory(loadCoreHeap(), SYSCALL_TABLE_SIZE); 
+   sysCallTable = sceKernelAllocHeapMemory(g_loadCoreHeap(), SYSCALL_TABLE_SIZE); 
    if (sysCallTable == NULL)
        return SCE_ERROR_KERNEL_ERROR;
 
@@ -116,7 +116,7 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
     */
    g_pFreeSysEnt = &initialSysEntTable[TOP_SYSCALL_ENTRY_TABLE]; //0x0000040C 
    if (g_pFreeSysEnt == NULL) { //0x00000410
-       g_pSysEntControl = (SceSysCallEntryTable *)sceKernelAllocHeapMemory(loadCoreHeap(), sizeof(SceSysCallEntryTable)); //0x00000498 & 0x000004A4
+       g_pSysEntControl = (SceSysCallEntryTable *)sceKernelAllocHeapMemory(g_loadCoreHeap(), sizeof(SceSysCallEntryTable)); //0x00000498 & 0x000004A4
    }
    else {
        g_pSysEntControl = g_pFreeSysEnt; //0x00000420
@@ -132,7 +132,7 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    
    status = sceKernelRegisterSystemCallTable(sysCallTable); //0x0000043C
    if (status != SCE_ERROR_OK) { //0x00000444
-       sceKernelFreeHeapMemory(loadCoreHeap(), sysCallTable); //0x00000478 & 0x00000484
+       sceKernelFreeHeapMemory(g_loadCoreHeap(), sysCallTable); //0x00000478 & 0x00000484
        return status;
    }
    *syscallTable = sysCallTable;
@@ -195,7 +195,7 @@ s32 AllocSysTable(u16 numEntries)
           */
          if (sysTableEntry->numEntries > numEntries) { //0x000004FC
              if (g_pFreeSysEnt == NULL) {
-                 newSysTableEntry = (SceSysCallEntryTable *)sceKernelAllocHeapMemory(loadCoreHeap(), sizeof(SceSysCallEntryTable));
+                 newSysTableEntry = (SceSysCallEntryTable *)sceKernelAllocHeapMemory(g_loadCoreHeap(), sizeof(SceSysCallEntryTable));
              }
              else {
                  newSysTableEntry = g_pFreeSysEnt; //0x00000544
@@ -278,7 +278,7 @@ SceSysCallEntryTable *FreeSysTable(u32 sysTableEntryAddr)
             curSysTableEntry = prevSysTableEntry; //0x00000690             
         } 
         else {
-            sceKernelFreeHeapMemory(loadCoreHeap(), curSysTableEntry); //0x00000730
+            sceKernelFreeHeapMemory(g_loadCoreHeap(), curSysTableEntry); //0x00000730
             curSysTableEntry = prevSysTableEntry;
         }
     }
@@ -303,7 +303,7 @@ SceSysCallEntryTable *FreeSysTable(u32 sysTableEntryAddr)
         g_pFreeSysEnt = nextSysTableEntry;   
     }
     else {
-        sceKernelFreeHeapMemory(loadCoreHeap(), nextSysTableEntry); //0x0000070C
+        sceKernelFreeHeapMemory(g_loadCoreHeap(), nextSysTableEntry); //0x0000070C
     }
     return curSysTableEntry;
 }

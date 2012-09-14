@@ -67,8 +67,8 @@
 #define CTRL_HARDWARE_IO_BUTTONS            0x3B0E0000
 
 
-SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                         | SCE_MODULE_SINGLE_START, 1, 1);
+SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                         | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 SCE_MODULE_BOOTSTART("CtrlInit");
 SCE_MODULE_REBOOT_BEFORE("CtrlRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
@@ -197,7 +197,7 @@ typedef struct {
     int unk_array3[2]; //780
 } SceCtrl; //size of SceCtrl: 788 (0x314)
 
-static s32 _sceCtrlSysEventHandler(s32 ev_id, s8* ev_name, void* param, s32* result); //0x00000364
+static s32 _sceCtrlSysEventHandler(s32 ev_id, char* ev_name, void* param, s32* result); //0x00000364
 static SceUInt _sceCtrlDummyAlarm(void *common); //sub_00001DD8
 static int _sceCtrlVblankIntr(int subIntNm, void *arg); //sub_00000440
 static int _sceCtrlTimerIntr(int, int, int, int); //sub_00000528
@@ -214,7 +214,7 @@ SceKernelDeci2Ops ctrlDeci2Ops = { 0x28, { (void *)sceCtrlGetSamplingMode, (void
                                            (void *)sceCtrlExtendInternalCtrlBuffers
                                          } }; //0x000027F8
 
-SceSysEventHandler ctrlSysEvent = { sizeof(SceSysEventHandler), (s8*)"SceCtrl", 0x00FFFF00, _sceCtrlSysEventHandler, 0, 0, NULL,
+SceSysEventHandler ctrlSysEvent = { sizeof(SceSysEventHandler), "SceCtrl", 0x00FFFF00, _sceCtrlSysEventHandler, 0, 0, NULL,
                                     { 0, 0, 0, 0, 0, 0, 0, 0, 0 } }; //0x00002850
 
 SceCtrlData g_2BB0[CTRL_INTERNAL_CONTROLLER_BUFFERS]; //0x00002BB0
@@ -664,7 +664,7 @@ int sceCtrlExtendInternalCtrlBuffers(u8 mode, ctrlUnkStruct *arg2, int arg3)
         return SCE_ERROR_INVALID_VALUE;
     
     if (ctrl.unk_array2[mode - 1] == NULL) { //0x00001238 & 0x00001254
-        poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_MEMORY_PARTITION_KERNEL, 0, 
+        poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
                                                 2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
@@ -1156,7 +1156,7 @@ int sceCtrlUpdateCableTypeReq(void)
  * 
  * @return 0 on success, otherwise less than 0 to indicate unsuccessful handling of the event request.
  */
-static s32 _sceCtrlSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), void *param __attribute__((unused)), 
+static s32 _sceCtrlSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void *param __attribute__((unused)), 
                                    s32 *result __attribute__((unused))) 
 {
     int sysconStatus;
@@ -1263,12 +1263,10 @@ static int _sceCtrlVblankIntr(int subIntNm __attribute__((unused)), void *arg __
             ctrl.sysconBusy = TRUE;     
             
             /* Specify the requested controller device input data. */
-            if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == SCE_CTRL_INPUT_DIGITAL_ONLY) {
-                ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;
-            }
-            else {
-               ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
-            }
+            if ((ctrl.samplingMode[USER_MODE] | ctrl.samplingMode[KERNEL_MODE]) == SCE_CTRL_INPUT_DIGITAL_ONLY)
+                ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY;
+            else
+                ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG;
             ctrl.sysPacket[0].tx[PSP_SYSCON_TX_LEN] = 2;
             /*
              * Fire the controller data request to SYSCON and use
@@ -1331,7 +1329,7 @@ static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __
     int suspendFlag;
     int sysconStatus;    
 
-    sysconReqCtrlData = SYSCON_CTRL_ONLY_DIGITAL_DATA_TRANSFER;  
+    sysconReqCtrlData = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY;
     /* Disable all interrupts and thread dispatches. */
     suspendFlag = sceKernelCpuSuspendIntr();
 
@@ -1340,9 +1338,8 @@ static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __
             ctrl.sysconBusy = TRUE;
 
             /* Specify the requested controller device input data. */
-            if (ctrl.samplingMode[USER_MODE] != SCE_CTRL_INPUT_DIGITAL_ONLY) {
-                sysconReqCtrlData = SYSCON_CTRL_ANALOG_DIGITAL_DATA_TRANSFER;
-            }
+            if (ctrl.samplingMode[USER_MODE] != SCE_CTRL_INPUT_DIGITAL_ONLY)
+                sysconReqCtrlData = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG;
             ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = sysconReqCtrlData;
 
             /*

@@ -34,6 +34,7 @@
 #include <modulemgr.h>
 #include <sysmem_kdebug.h>
 #include <sysmem_utils_kernel.h>
+
 #include "cache.h"
 #include "clibUtils.h"
 #include "hash.h"
@@ -280,7 +281,7 @@ static SceStubLibrary g_LoadCoreLibStubs[STUB_LIBRARY_CONTROL_BLOCKS]; //0x00008
  */
 static SceStubLibrary *g_FreeLibStub; //0x000080E4
 
-static s32 g_ToolBreakMode; //0x000083C4
+s32 g_ToolBreakMode; //0x000083C4
 
 /* Pointer to a memory clear function executed in StopLoadCore(). */
 static void (*g_MemClearFun)(void *, u32); //0x000083C0
@@ -1713,7 +1714,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
              if (g_ToolBreakMode != 0 && sceKernelDipsw(21) == 1) //0x00002CB0 & 0x00002CF4                
                  g_ToolBreakMode = 0;
                     
-             sceKernelSetPrimarySyscallHandler(SCE_PRIMARY_SYSCALL_HANDLER_SYSCALL_ID, sceLoadCorePrimarySyscallHandler); //0x00002CBC
+             sceKernelSetPrimarySyscallHandler(SCE_PRIMARY_SYSCALL_HANDLER_SYSCALL_ID, (void*)sceLoadCorePrimarySyscallHandler); //0x00002CBC
              sceKernelSetGetLengthFunction(NULL);
              sceKernelSetPrepareGetLengthFunction(NULL);
              sceKernelSetSetMaskFunction(NULL);

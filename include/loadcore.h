@@ -678,13 +678,13 @@ typedef struct SceSyscallTable {
     /** Pointer to the next SystemCall table. */
     struct SceSyscallTable *next;
     /** Partly defines the location of the system call table. */
-    u32 seed;
+    s32 seed;
     /** Size of the structure (including the syscalls array). */
-    SceSize funcTableSize;
+    s32 funcTableSize;
     /** Size of the syscalls array. */
-    SceSize tableSize;
+    s32 tableSize;
     /** Variable-size array containing a list of syscalls. */
-    void (*syscalls[])(void);
+    void (*syscalls[])();
 } SceSyscallTable;
 
 /** 

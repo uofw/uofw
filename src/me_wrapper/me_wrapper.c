@@ -25,8 +25,8 @@
 
 #include "me_wrapper.h"
 
-SCE_MODULE_INFO("sceMeCodecWrapper", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                     | SCE_MODULE_SINGLE_START, 1, 9); //I'm not sure if the versions are correct
+SCE_MODULE_INFO("sceMeCodecWrapper", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                     | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 9);
 SCE_SDK_VERSION(SDK_VERSION);
 
 int meStarted;
@@ -228,7 +228,7 @@ int module_start(int argc __attribute__((unused)), void *argp __attribute__((unu
 	{
 		SceSysmemPartitionInfo info;
 		info.size = sizeof(SceSysmemPartitionInfo);
-		if (sceKernelQueryMemoryPartitionInfo(4, &info) < 0 || info.startaddr != 0x88300000)
+		if (sceKernelQueryMemoryPartitionInfo(4, &info) < 0 || info.startAddr != 0x88300000)
 			sceKernelAllocPartitionMemory(1, "old ME partition", 2, 0x100000, (void*)0x88300000);
 	}
 	return 0;
@@ -1078,10 +1078,10 @@ __attribute__((noreturn)) void decompressAndRunMeImage(void *data)
 	    ;
 }
 
-int decrypt(void *data, int size)
+u32 decrypt(void *data, s32 size)
 {
-	int ret, newSize;
-	ret = sceWmd_driver_7A0E484C(data, size, &newSize);
+	u32 newSize;
+	s32 ret = sceWmd_driver_7A0E484C(data, size, &newSize);
 	if (ret < 0) {
 		return ret;
 	}

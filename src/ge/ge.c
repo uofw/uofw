@@ -16,8 +16,8 @@
 
 #include "ge.h"
 
-SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                 | SCE_MODULE_SINGLE_START, 1, 11);
+SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                 | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_MODULE_BOOTSTART("_sceGeModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceGeModuleRebootBefore");
 SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
@@ -32,7 +32,7 @@ int _sceGeSetRegRadr1(int arg0);
 int _sceGeSetRegRadr2(int arg0);
 int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3);
 int _sceGeInterrupt(int arg0, int arg1, int arg2);
-s32 _sceGeSysEventHandler(s32 ev_id, s8 *ev_name, void *param, s32 *result);
+s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
 int _sceGeModuleStart();
 int _sceGeModuleRebootPhase(int unk);
 int _sceGeModuleRebootBefore();
@@ -183,7 +183,7 @@ int stopCmd[] = { 0x0F000000, 0x0C000000 };
 
 // 6840
 SceSysEventHandler g_GeSysEv =
-    { 64, (s8*)"SceGe", 0x00FFFF00, _sceGeSysEventHandler, 0, 0, NULL, {0, 0, 0, 0,
+    { 64, "SceGe", 0x00FFFF00, _sceGeSysEventHandler, 0, 0, NULL, {0, 0, 0, 0,
                                                                    0, 0, 0, 0,
                                                                    0}
 };
@@ -1199,7 +1199,7 @@ _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
     return -1;
 }
 
-s32 _sceGeSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), void *param, s32 *result __attribute__((unused)))
+s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void *param, s32 *result __attribute__((unused)))
 {
     dbg_printf("Ran %s\n", __FUNCTION__);
     switch (ev_id) {

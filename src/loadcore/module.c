@@ -292,7 +292,7 @@ s32 sceKernelGetModuleIdListForKernel(SceUID *modIdList, u32 size, u32 *modCount
  */
 SceSysmemUIDControlBlock *ModuleServiceInit(void)
 {
-    return sceKernelCreateUIDType(MODULE_UID_TYPE_NAME, sizeof(SceModule), ModuleFuncs, 0, &g_ModuleType);
+    return sceKernelCreateUIDtype(MODULE_UID_TYPE_NAME, sizeof(SceModule), ModuleFuncs, 0, &g_ModuleType);
 }
 
 /*Subroutine LoadCoreForKernel_CD26E0CA - Address 0x00006D68 */
@@ -554,8 +554,9 @@ static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
                       ver = *(u32 *)curEntryTable->entryTable[curEntryTable->stubCount * 2 + curEntryTable->stubCount + i];
                       if (ver > SDK_VERSION) //0x000073A0
                           return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+                      *fileDevKitVersion = ver;
+                      return SCE_ERROR_OK;
                   }
-                  *fileDevKitVersion = ver;
                   break;
              } 
          }

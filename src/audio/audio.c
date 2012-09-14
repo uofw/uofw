@@ -23,8 +23,8 @@ asm(".set noat"); // needed for AUDIO_SET_BUSY()
 /* Sets the audio controller busy state. */
 #define AUDIO_SET_BUSY(busy) asm("lui $at, 0xBE00; sw %0, 0($at)" : : "r" (busy))
 
-SCE_MODULE_INFO("sceAudio_Driver", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                   | SCE_MODULE_SINGLE_START, 1, 13);
+SCE_MODULE_INFO("sceAudio_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                   | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 13);
 SCE_MODULE_BOOTSTART("sceAudioInit");
 SCE_MODULE_REBOOT_BEFORE("sceAudioEnd");
 SCE_MODULE_STOP("sceAudioEnd");
@@ -94,7 +94,7 @@ void audioHwInit();
 int audioOutputDmaCb(int unused, int arg1);
 int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *buf);
 int audioIntrHandler();
-s32 audioEventHandler(s32 ev_id, s8* ev_name __attribute__((unused)), void* param, s32* result);
+s32 audioEventHandler(s32 ev_id, char* ev_name __attribute__((unused)), void* param, s32* result);
 int audioSRCOutput(int vol, void *buf);
 int audioSRCOutputDmaCb(int arg0, int arg1);
 int audioInputSetup();
@@ -104,7 +104,7 @@ int audioInputThread();
 int audioInputDmaCb(int arg0, int arg1);
 
 SceAudio g_audio;
-SceSysEventHandler g_audioEvent = {0x40, (s8*)"SceAudio", 0x00FFFF00, audioEventHandler, 0, 0, NULL, {0, 0, 0, 0, 0, 0, 0, 0, 0}};
+SceSysEventHandler g_audioEvent = {0x40, "SceAudio", 0x00FFFF00, audioEventHandler, 0, 0, NULL, {0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
 // 0000
 /*
@@ -1101,7 +1101,7 @@ void audioHwInit()
  *
  * Returns 0.
  */
-s32 audioEventHandler(s32 ev_id, s8* ev_name __attribute__((unused)), void* param __attribute__((unused)), s32* result __attribute__((unused)))
+s32 audioEventHandler(s32 ev_id, char* ev_name __attribute__((unused)), void* param __attribute__((unused)), s32* result __attribute__((unused)))
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     switch (ev_id)

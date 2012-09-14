@@ -1,6 +1,6 @@
 void sub_0000(s32, s32, s32);
 s32 _sceSysconInitPowerStatus(void);
-s32 _sceSysconSysEventHandler(s32 ev_id, s8 *ev_name, void* param, s32 *result);
+s32 _sceSysconSysEventHandler(s32 ev_id, char *ev_name, void* param, s32 *result);
 s32 _sceSysconGpioIntr(s32 subIntr, s32 args, void *argp);
 s32 _sceSysconCommonRead(s32 *ptr, s32 cmd);
 s32 _sceSysconGetPommelVersion(void);

@@ -10,8 +10,8 @@
 #include "iofilemgr_kernel.h"
 #include "iofilemgr_stdio.h"
 
-SCE_MODULE_INFO("sceIOFileManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                    | SCE_MODULE_SINGLE_START, 1, 7);
+SCE_MODULE_INFO("sceIOFileManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                    | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 7);
 SCE_MODULE_BOOTSTART("IoFileMgrInit");
 SCE_MODULE_REBOOT_BEFORE("IoFileMgrRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
@@ -108,7 +108,7 @@ SceIoDrvFuncs _nullcon_function =
 SceIoDrv _dummycon_driver = { "dummy_drv_iofile", 0, 0x00000800, "DUMMY_DRV", &_nullcon_function };
 
 int iob_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, int funcid, va_list ap);
-int iob_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, int funcid, void *arg1, va_list ap);
+int iob_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, int funcid, va_list ap);
 
 // 6A90
 SceSysmemUIDLookupFunc IobFuncs[] =
@@ -3196,17 +3196,17 @@ int _nulldev_write(SceIoIob *iob __attribute__((unused)), const char *data, int 
     return len;
 }
 
-int iob_do_initialize(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
+int iob_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, int funcid, va_list ap)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    sceKernelCallUIDObjCommonFunction(cb, funcid, arg1, arg2, arg3, arg4, arg5, arg6);
+    sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcid, ap);
     return cb->UID;
 }
 
-int iob_do_delete(SceSysmemUIDControlBlock *cb, int funcid, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6)
+int iob_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, int funcid, va_list ap)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    sceKernelCallUIDObjCommonFunction(cb, funcid, arg1, arg2, arg3, arg4, arg5, arg6);
+    sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcid, ap);
     return 0;
 }
 

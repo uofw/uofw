@@ -2,10 +2,9 @@
 # See the file COPYING for copying permission.
 
 TARGET = loadcore
-OBJS =  cache.o clibUtils.o hash.o interruptController.o loadcore.o loadelf.o module.o systable.o
+OBJS = cache.o clibUtils.o hash.o interruptController.o loadcore.o loadcore_asm.o loadelf.o module.o systable.o
 
-LIBS = -lSysMemForKernel -lsceSuspendForKernel -lsceSysEventForKernel -lKDebugForKernel -lInterruptManagerForKernel \
-      -lSysclibForKernel -lThreadManForKernel -lSysTimerForKernel -lInitForKernel -lsceDisplay_driver -lsceSyscon_driver
+LIBS = -lSysMemForKernel -lKDebugForKernel -lUtilsForKernel -lInterruptManagerForKernel -lmemlmd -lsceMesgLed_driver
 
 include ../../lib/build.mak
 

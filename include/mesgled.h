@@ -8,7 +8,7 @@ s32 sceWmd_driver_7A0E484C(void *data, u32 inSize, u32 *outSize);
 
 s32 sceMesgLed_driver_9E3C79D9(u8 *modBuf, u32 arg1, u32 *buf);
 
-s32 sceMesgLed_driver_5CEA61FE(u8 *buf, u32 size, u32 *newSize);
+s32 sceMesgLed_driver_5C3A61FE(u8 *buf, u32 size, u32 *newSize);
 s32 sceMesgLed_driver_2CB700EC(u8 *buf, u32 size, u32 *newSize);
 s32 sceMesgLed_driver_337D0DD3(u8 *buf, u32 size, u32 *newSize);
 s32 sceMesgLed_driver_4EAB9850(u8 *buf, u32 size, u32 *newSize);

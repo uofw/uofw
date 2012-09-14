@@ -17,7 +17,8 @@
 
 #include "syscon.h"
 
-SCE_MODULE_INFO("sceSYSCON_Driver", SCE_MODULE_KERNEL | SCE_MODULE_SINGLE_START | SCE_MODULE_SINGLE_LOAD | SCE_MODULE_NO_STOP, 1, 11);
+SCE_MODULE_INFO("sceSYSCON_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                  | SCE_MODULE_ATTR_CANT_STOP, 1, 11);
 SCE_MODULE_BOOTSTART("_sceSysconModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceSysconModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
@@ -103,7 +104,7 @@ typedef struct {
     SceUID semaId;
 } SceSyscon;
 
-SceSysEventHandler g_SysconEv = { 64, (s8*)"SceSyscon", 0x00FFFF00, _sceSysconSysEventHandler, 0, 0, NULL, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+SceSysEventHandler g_SysconEv = { 64, "SceSyscon", 0x00FFFF00, _sceSysconSysEventHandler, 0, 0, NULL, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
 SceSysconPacket g_GetStatus2Cmd;
 
@@ -303,7 +304,7 @@ s32 sceSysconResume(void *arg0)
     return 0;
 }
 
-s32 _sceSysconSysEventHandler(s32 ev_id, s8 *ev_name __attribute__((unused)), void* param, s32 *result __attribute__((unused)))
+s32 _sceSysconSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void* param, s32 *result __attribute__((unused)))
 {   
     switch (ev_id) {
     case 0x402:

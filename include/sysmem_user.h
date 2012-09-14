@@ -7,24 +7,11 @@
 
 #include "common_header.h"
 
+#include "sysmem_common.h"
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
-
-enum SceSysMemPartitionId {
-    SCE_KERNEL_UNKNOWN_PARTITION = 0,
-    SCE_KERNEL_PRIMARY_KERNEL_PARTITION = 1,
-    SCE_KERNEL_PRIMARY_USER_PARTITION = 2,
-};
-
-enum SceSysMemBlockType {
-    SCE_KERNEL_SMEM_Low = 0,
-    SCE_KERNEL_SMEM_High = 1,
-    SCE_KERNEL_SMEM_Addr = 2
-};
-
-SceUID sceKernelAllocPartitionMemory(SceUID partitionid, const char *name, s32 type, SceSize size, void *addr);
-s32 sceKernelFreePartitionMemory(SceUID uid);
 
 void *sceKernelGetBlockHeadAddr(SceUID uid);
 

@@ -14,7 +14,7 @@
 #include "start.h"
 
 SceResidentLibraryEntryTable intrEntry = {
-    .libName = (s8*)"InterruptManager",
+    .libName = "InterruptManager",
     .version = {
         0x11,
         0
@@ -49,8 +49,8 @@ SceResidentLibraryEntryTable intrEntry = {
 };
 
 // 0x3458
-SCE_MODULE_INFO("sceInterruptManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD | 
-                                       SCE_MODULE_SINGLE_START, 1, 9);
+SCE_MODULE_INFO("sceInterruptManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD |
+                                       SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 9);
 SCE_MODULE_BOOTSTART("IntrManInit");
 SCE_MODULE_REBOOT_BEFORE("IntrManTerminate");
 SCE_SDK_VERSION(SDK_VERSION);
@@ -223,7 +223,7 @@ s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, 
         arg1 = 2;
     intr->v48 = (intr->v48 & 0xFFFFFCFF) | ((unk2 << 8) & 0x300);
     intr->handler = arg1 | (s32)func;
-    intr->gp = sceKernelGetModuleGPByAddressForKernel(func);
+    intr->gp = sceKernelGetModuleGPByAddressForKernel((u32)func);
     intr->arg = arg3;
     *(s8*)&intr->v48 = 0;
     if (handler != NULL)
@@ -616,7 +616,7 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
     }
     subIntr->handler = (s32)handler;
     // 1F78
-    subIntr->gp = sceKernelGetModuleGPByAddressForKernel(handler);
+    subIntr->gp = sceKernelGetModuleGPByAddressForKernel((u32)handler);
     *(s8*)&subIntr->v48 = 0;
     subIntr->arg = (s32)arg;
     subIntr->v48 = (subIntr->v48 & 0xFFFF7FFF) | (intr->v48 & 0x00008000) | 0x80000300;
@@ -999,7 +999,7 @@ void AllLevelInterruptDisable(s32 intrNum)
 }
 
 // 55D18836
-s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, s32 (*syscall)(void))
+s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)())
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 oldIntr = sceKernelCpuSuspendIntr();

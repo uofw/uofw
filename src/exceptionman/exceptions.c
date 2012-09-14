@@ -20,8 +20,8 @@ typedef struct
     SceExceptionHandler pool[32];
 } SceExceptions;
 
-SCE_MODULE_INFO("sceExceptionManager", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD 
-                                       | SCE_MODULE_SINGLE_START, 1, 3);
+SCE_MODULE_INFO("sceExceptionManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
+                                       | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 3);
 SCE_MODULE_BOOTSTART("ExcepManInit");
 SCE_SDK_VERSION(SDK_VERSION);
 

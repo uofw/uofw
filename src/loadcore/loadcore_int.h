@@ -29,7 +29,7 @@
 #define IS_KERNEL_ADDR(addr)                ((s32)addr < 0)
     
 
-extern s32 (*loadCoreHeap)(void);
+extern s32 (*g_loadCoreHeap)(void);
 extern s32 (*g_getLengthFunc)(u8 *file, u32 size, u32 *newSize);
 extern s32 (*g_prepareGetLengthFunc)(u8 *buf, u32 size);
 extern s32 (*g_setMaskFunc)(u32 unk1, vs32 *addr);

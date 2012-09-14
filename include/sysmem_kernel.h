@@ -2,8 +2,14 @@
    See the file COPYING for copying permission.
 */
 
+#ifndef SYSMEM_KERNEL_H
+#define SYSMEM_KERNEL_H
+
 #include <stdarg.h>
+
 #include "common_header.h"
+
+#include "sysmem_common.h"
 #include "loadcore.h"
 
 typedef struct {
@@ -63,7 +69,7 @@ typedef struct {
     int (*func)();
 } SceSysmemUIDLookupFunc;
 
-SceSysmemUIDControlBlock *sceKernelCreateUIDType(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, SceSysmemUIDControlBlock **type);
+SceSysmemUIDControlBlock *sceKernelCreateUIDtype(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, SceSysmemUIDControlBlock **type);
 SceUID sceKernelCreateUID(SceSysmemUIDControlBlock *type, const char *name, short attr, SceSysmemUIDControlBlock **block);
 int sceKernelDeleteUID(SceUID uid);
 int sceKernelRenameUID(SceUID uid, const char *name);
@@ -90,4 +96,6 @@ void *sceKernelMemset(void *buf, int c, u32 size);
 
 int sceKernelGetCompiledSdkVersion(void);
 int sceKernelGetModel(void);
+
+#endif
 

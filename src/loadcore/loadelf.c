@@ -1205,7 +1205,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
             } else if (memlmd_2AE425D2(subType) == 0) //0x00005A30 & 0x00005A10
                     return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
-        if (sceMesgLed_driver_5CEA61FE(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_5C3A61FE(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         execInfo->isDecrypted = TRUE;

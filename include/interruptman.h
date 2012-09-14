@@ -128,7 +128,7 @@ s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *arg2);
 s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 arg2);
 s32 sceKernelIsSubInterruptOccured(s32 intrNum, s32 subIntrNum);
 s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out);
-s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, s32 (*syscall)(void));
+s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)());
 void sceKernelCpuEnableIntr();
 s32 InterruptManagerForKernel_6FCBA912(s32 set);
 s32 sceKernelClearIntrLogging(s32 intrNum);

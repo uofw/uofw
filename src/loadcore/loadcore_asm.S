@@ -1,9 +1,9 @@
 # Copyright (C) 2011, 2012 The uOFW team
 # See the file COPYING for copying permission.
 
+#include "../../include/common/common.S"
+
     .text
-    .set noat
-    .set noreorder
 
     .globl loadCoreClearMem
     .globl sceLoadCorePrimarySyscallHandler
@@ -23,11 +23,11 @@ loadCoreClearMem:
     move       $v0, $a0 # origAddr = baseAddr
 	addu       $t0, $a0, $a1
 	addiu      $t0, $t0, -4 # maxWordAddr = (baseAddr + size) - 0x4
-loop1:		; Refs: 0x00000010 
+loop1:		# Refs: 0x00000010 
 	sw         $zr, 0($a0) # do { *baseAddr = 0; } 
 	bne        $t0, $a0, loop1 # while (baseAddr++ != maxWordAddr);
 	addiu      $a0, $a0, 4
-loop2:		; Refs: 0x0000001C 
+loop2:		# Refs: 0x0000001C 
 	sw         $zr, 0($v0) # do { *origAddr = 0; }
 	bne        $t0, $v0, loop2 # while (origAddr++ != maxWordAddr);
 	addiu      $v0, $v0, 4
