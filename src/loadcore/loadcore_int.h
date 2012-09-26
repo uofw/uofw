@@ -26,7 +26,7 @@
  * memory. In two's complement, a value with the sign-bit set is always
  * a negative number.
  */
-#define IS_KERNEL_ADDR(addr)                ((s32)addr < 0)
+#define IS_KERNEL_ADDR(addr)                ((s32)(addr) < 0)
     
 
 extern s32 (*g_loadCoreHeap)(void);

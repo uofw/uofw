@@ -2,11 +2,6 @@
    See the file COPYING for copying permission.
 */
 
-/** 
- * loadcore.h
- *
- */
-
 #ifndef LOADCORE_H
 #define	LOADCORE_H
 
@@ -26,10 +21,10 @@
 /** The module is not a resident one, meaning it won't stay in memory and act as a resident library. */
 #define SCE_KERNEL_NO_RESIDENT                  (1)
 
-/** The length of the old resident library format (without the members unk16 - uk19). */
+/** The length of the old resident library entry table format (without the members unk16 - uk19). */
 #define LIBRARY_ENTRY_TABLE_OLD_LEN             (4)
 
-/** The length of the new resident library format (including the members unk16 - unk19). */
+/** The length of the new resident library entry table format (including the members unk16 - unk19). */
 #define LIBRARY_ENTRY_TABLE_NEW_LEN             (5)
 
 /** The length of the old stub library entry table format (without the member unk24). */
@@ -38,7 +33,7 @@
 /** The length of the new stub library entry table format (including the member unk24). */
 #define STUB_LIBRARY_ENTRY_TABLE_NEW_LEN        (7)
 
-/** The possible amount of libraries with different hash values. */
+/** The possible number of libraries with different hash values. */
 #define LOADCORE_LIB_HASH_TABLE_SIZE            (128)
 
 /** 
@@ -82,10 +77,10 @@ enum SceExecFileElfType {
 };
 
 /** 
- * Resident/Stub library attributes. Several members can be bitwise OR'ed together. Every library needs to have at 
- * least one of those attributes. Resident library can have the members SCE_LIB_AUTO_EXPORT, SCE_LIB_WEAK_EXPORT,
- * (SCE_LIB_NOLINK_EXPORT), SCE_LIB_SYSCALL_EXPORT and SCE_LIB_IS_SYSLIB. Stub libraries can have SCE_LIB_NO_SPECIAL_ATTR
- * or SCE_LIB_WEAK_IMPORT.
+ * Resident/Stub library attributes. Several members can be bitwise OR'ed together. Every library 
+ * needs to have at least one of those attributes. Resident libraries can have the members 
+ * SCE_LIB_AUTO_EXPORT, SCE_LIB_WEAK_EXPORT, (SCE_LIB_NOLINK_EXPORT), SCE_LIB_SYSCALL_EXPORT and 
+ * SCE_LIB_IS_SYSLIB. Stub libraries can have SCE_LIB_NO_SPECIAL_ATTR or SCE_LIB_WEAK_IMPORT.
  */
 enum SceLibAttr {
     /** The library has no special attributes. */
@@ -108,8 +103,8 @@ enum SceLibAttr {
 typedef s32 (*SceKernelBootCallbackFunction)(s32 count, s32 arg, void *opt);
 
 /** 
- * Represents a function stub belonging to same privilege-level linked
- * libraries, i.e. a kernel resident library linked with kernel stub library. 
+ * This structure represents a function stub belonging to same privilege-level linked libraries, 
+ * i.e. a kernel resident library linked with a kernel stub library. 
  */
 typedef struct {
     /** The call to the imported function via a MIPS ASM Jump instruction. */
@@ -119,8 +114,8 @@ typedef struct {
 } DirectCall;
 
 /** 
- * Represents a function stub belonging to different privilege-level linked
- * libraries, i.e. a kernel resident library linked with a user stub library. 
+ * This structure represents a function stub belonging to different privilege-level linked libraries, 
+ * i.e. a kernel resident library linked with a user stub library. 
  */
 typedef struct {
     /** The return instruction from the stub. Typically a JR $ra command. */
@@ -130,7 +125,7 @@ typedef struct {
 } Syscall;
 
 /**
- * Represents a imported function stub.
+ * This structure represents an imported function stub.
  */
 typedef union {
     /** User/User or Kernel/Kernel function stub. */
@@ -140,7 +135,7 @@ typedef union {
 } SceStub;
 
 /**
- * Represents an imported variable stub.
+ * This structure represents an imported variable stub.
  */
 typedef struct {
     u32 *addr;
@@ -149,24 +144,24 @@ typedef struct {
 } SceVariableStub;
 
 /**
- * The SceResidentLibraryEntryTable is used to record the functions a resident library provides to other modules. This 
- * entry table is used to register a resident library to the system. A module can register multiple libraries and 
- * multiple libraries with the same name can be in use simultaneously .
+ * This structure is used to record the functions a resident library provides to other modules. 
+ * This entry table is used to register a resident library to the system. A module can register 
+ * multiple libraries and multiple libraries with the same name can be in use simultaneously .
  */
 typedef struct {
     /** The name of the library. */
     const char *libName; //0
     /** 
-     * The version of the library. It consists of a 'major' and 'minor' field. If you want to register another version
-     * of an already registered resident library, make sure that the new library has a higher version than all its 
-     * currently registered versions.
+     * The version of the library. It consists of a 'major' and 'minor' field. If you want to 
+     * register another version of an already registered resident library, make sure that the new 
+     * library has a higher version than all its currently registered versions.
      */
     u8   version[2]; //4
     /** The library's attributes. One or more of ::SceLibAttr. */
-    u16  attribute; //6
+    s16  attribute; //6
     /** 
-     * The length of this entry table in 32-Bit words. Set this to "LIBRARY_ENTRY_TABLE_NEW_LEN". Use this member when 
-     * you want to iterate through a list of entry tables (size = len * 4).
+     * The length of this entry table in 32-Bit words. Set this to "LIBRARY_ENTRY_TABLE_NEW_LEN". 
+     * Use this member when you want to iterate through a list of entry tables (size = len * 4).
      */
     u8   len; //8
     /** The number of exported variables by the resident library. */
@@ -174,9 +169,9 @@ typedef struct {
     /** The number of exported functions by the resident library. */
     u16   stubCount; //10
     /** 
-     * Pointer to an array of NIDs, followed by an array of function- and variable pointers. Each function-/variable
-     * pointer must have a NID value. These arrays are used to correctly perform linking between a resident library
-     * and its corresponding stub libraries.
+     * Pointer to an array of NIDs, followed by an array of function- and variable pointers. Each 
+     * function-/variable pointer must have a NID value. These arrays are used to correctly perform 
+     * linking between a resident library and its corresponding stub libraries.
      */
     u32 *entryTable; //12
     /** Unknown. */
@@ -188,24 +183,24 @@ typedef struct {
 } SceResidentLibraryEntryTable;
 
 /**
- * The SceStubLibraryEntryTable represents the imports, provided by a resident library, that a given module is using. A
- * module can have multiple stub libraries.
+ * This structure represents the imports, provided by a resident library, that a given module is using. 
+ * A module can have multiple stub libraries.
  */
 typedef struct {
     /** The name of the library. */
 	const char *libName;  //0
     /** 
-     * The version of the library. It consists of a 'major' and 'minor' field. The version of a stub library shouldn't
-     * be higher than the version(s) of the corresponding resident library/libraries. Linking won't be performed in 
-     * such a case.
+     * The version of the library. It consists of a 'major' and 'minor' field. The version of a stub 
+     * library shouldn't be higher than the version(s) of the corresponding resident library/libraries. 
+     * Linking won't be performed in such a case.
      */
 	u8 version[2]; //4
-    /** The library's atributes. Can be set to either SCE_LIB_NO_SPECIAL_ATTR or SCE_LIB_WEAK_IMPORT. */
+    /** The library's attributes. Can be set to either SCE_LIB_NO_SPECIAL_ATTR or SCE_LIB_WEAK_IMPORT. */
 	u16 attribute; //6
     /**
-     * The length of this entry table in 32-Bit words. Set this to either "STUB_LIBRARY_ENTRY_TABLE_OLD_LEN" or 
-     * "STUB_LIBRARY_ENTRY_TABLE_NEW_LEN". Use this member when  you want to iterate through a list of entry tables 
-     * (size = len * 4).
+     * The length of this entry table in 32-Bit words. Set this to either "STUB_LIBRARY_ENTRY_TABLE_OLD_LEN" 
+     * or "STUB_LIBRARY_ENTRY_TABLE_NEW_LEN". Use this member when  you want to iterate through a 
+     * list of entry tables (size = len * 4).
      */ 
 	u8 len; //8
     /** The number of imported variables by the stub library. */
@@ -223,7 +218,7 @@ typedef struct {
 } SceStubLibraryEntryTable;
 
 /**
- * Represent a boot callback belonging to a module.
+ * This structure represents a boot callback belonging to a module.
  */
 typedef struct {
     /** The boot callback function. */
@@ -233,38 +228,36 @@ typedef struct {
 } SceBootCallback;
 
 /**
- * Represent a stub library control block. This control block is used to manage a stub library entry table internal.
+ * This structure represents a stub library control block. This control block is used to manage a 
+ * stub library entry table internal.
  */
 typedef struct SceStubLibrary {
     /** Unknown. */
     u32 unk0; //0
     /** 
-     * A linked list of stub libraries belonging to the same group, i.e. 
-     * the same resident library.
+     * A linked list of stub libraries belonging to the same group, i.e. the same resident library.
      */
     struct SceStubLibrary *next; //4
     /** The name of the library. */
     const char *libName; //8
     /** 
-     * The version of the library. This member is set by the corresponding 
-     * stub library entry table. 
+     * The version of the library. This member is set by the corresponding stub library entry table. 
      */
     u8 version[2]; //12
     /** 
-     * The library's attributes. This member is set by the corresponding 
-     * stub library entry table. 
+     * The library's attributes. This member is set by the corresponding stub library entry table. 
      */
     u16 attribute; //14
     /** The length of the corresponding stub library entry table in 32-Bit words. */
     u8 stubEntryTableLen; //16
     /** 
-     * The number of imported variables by the stub library. This member 
-     * is set by the corresponding stub library entry table. 
+     * The number of imported variables by the stub library. This member is set by the corresponding 
+     * stub library entry table. 
      */
     u8 vStubCount; //17
     /** 
-     * The number of imported functions by the stub library. This member 
-     * is set by the corresponding stub library entry table.
+     * The number of imported functions by the stub library. This member is set by the corresponding 
+     * stub library entry table.
      */
     u16 stubCount; //18
     /** Pointer to an array of NIDs identifying the imported functions/variables.*/
@@ -278,11 +271,10 @@ typedef struct SceStubLibrary {
     /** Pointer to the corresponding stub library entry table. */
     SceStubLibraryEntryTable *libStubTable; //36
     /** 
-     * The current status of a stub library (control block) in memory. One of
-     * ::SceStubLibraryStatus.
+     * The current status of a stub library (control block) in memory. One of ::SceStubLibraryStatus.
      */
     u32 status; //40
-    /** Indicates whether the stub library lives in user land or not. */
+    /** Indicates whether the stub library lives in User land or Kernel land. */
     u32 isUserLib; //44
     /** The name of the library. */
     char *libName2; //48
@@ -291,8 +283,8 @@ typedef struct SceStubLibrary {
 } SceStubLibrary; //size = 56
 
 /**
- * Represent a resident library control block. This control block is used to manage a resident library entry table 
- * registered to the system.
+ * This structure represents a resident library control block. This control block is used to manage 
+ * a resident library entry table registered to the system.
  */
 typedef struct SceResidentLibrary {
     /** Pointer to the next resident library with the same hash value. */
@@ -300,23 +292,22 @@ typedef struct SceResidentLibrary {
     /** Pointer to the corresponding entry table used to register this library. */
     SceResidentLibraryEntryTable *libEntryTable; //4
     /** 
-     * The version of the library. This member is set by the corresponding 
-     * resident library entry table. 
+     * The version of the library. This member is set by the corresponding resident library entry 
+     * table. 
      */
     u8 version[2]; //8
     /** 
-     * The library's attributes. This member is set by the corresponding 
-     * resident library entry table. 
+     * The library's attributes. This member is set by the corresponding resident library entry table. 
      */
     u16  attribute; //10
     /** 
-     * The number of exported functions by the resident library. This member 
-     * is set by the corresponding resident library entry table.
+     * The number of exported functions by the resident library. This member is set by the 
+     * corresponding resident library entry table.
      */
     u16 stubCount; //12
     /** 
-     * The number of exported variables by the resident library. This member 
-     * is set by the corresponding resident library entry table. 
+     * The number of exported variables by the resident library. This member is set by the 
+     * corresponding resident library entry table. 
      */
     u16 vStubCount; //14
     /** 
@@ -335,10 +326,9 @@ typedef struct SceResidentLibrary {
     /** Unknown. */
     u32 unk28; //28
     /** 
-     * Pointer to the resident library's array of NIDs, exported subroutine/variable  
-     * entries.  Every subroutine/variable entry has a corresponding NID used to identify
-     * it.  The NID array comes first, followed by pointers to the exported functions and
-     * variables.
+     * Pointer to the resident library's array of NIDs, exported subroutine/variable entries. 
+     * Every subroutine/variable entry has a corresponding NID used to identify it. The NID array 
+     * comes first, followed by pointers to the exported functions and variables.
      */
     u32 *entryTable; //32
     /** A pointer to the first export entry (either a subroutine or variable). */
@@ -353,7 +343,7 @@ typedef struct SceResidentLibrary {
     SceStubLibrary *stubLibs; //52
     /** The address of the system call table block belonging to the resident library. */
     u32 sysTableEntry; //56
-    /** Indicates whether the resident library lives in user land or not. */
+    /** Indicates whether the resident library lives in User land or Kernel land. */
     u32 isUserLib; //60
     /** Unknown. */
     u32 unk64; //64 
@@ -362,19 +352,18 @@ typedef struct SceResidentLibrary {
     /** Indicates whether the library's name is located in the heap or not. */
     u32 libNameInHeap; //72
     /**
-     * The entry index into Loadcore's system call table for an exported 
-     * function of the resident library.
+     * The entry index into Loadcore's system call table for an exported function of the resident 
+     * library.
      */
     u16 sysTableEntryStartIndex; //76
     /** 
-     * Extra export entries in the system call table entry belonging to
-     * the resident library. 
+     * Extra export entries in the system call table entry belonging to the resident library. 
      */
     u16 extraExportEntries; //78
 } SceResidentLibrary; //size = 80
 
 /** 
- * Loadcore Protection Information
+ * This structure represents Protection Information
  */
 typedef struct {
     /** Start address of the protected info. */
@@ -394,8 +383,8 @@ typedef struct {
 } SceLoadCoreProtectInfo;
 
 /**
- * This structure is used to boot system modules during the initialization of Loadcore. It represents a module object
- * with all the necessary information needed to boot it.
+ * This structure is used to boot system modules during the initialization of Loadcore. It represents
+ * a module object with all the necessary information needed to boot it.
  */
 typedef struct {
     /** The full path (including filename) of the module. */
@@ -419,7 +408,12 @@ typedef struct {
  * Loadcore Boot Information - Used to boot the system via Loadcore.
  */
 typedef struct { 
+    /** 
+     * Pointer to a memory block which will be cleared in case the system initialization via 
+     * Loadcore fails.
+     */
     void *memBase; // 0
+    /** The size of the memory block to clear. */
     u32 memSize; // 4
     /** Number of modules already loaded during boot process. */
     u32 loadedModules; // 8
@@ -486,8 +480,7 @@ typedef struct {
 } SceLoadCoreBootInfo; //size = 128
 
 /**
- * This structure represents executable file information used to load
- * the file.
+ * This structure represents executable file information used to load the file.
  */
 typedef struct {
     /** Unknown. */
@@ -510,11 +503,17 @@ typedef struct {
     u32 elfType; //32 
     /** The start address of the TEXT segment of the executable in memory. */
     void *topAddr; //36
-    /** * The entry address of the module. It is the offset from the start of the TEXT segment to the program's entry point. */
+    /**
+     * The entry address of the module. It is the offset from the start of the TEXT segment to the 
+     * program's entry point. 
+     */
     u32 entryAddr; //40
     /** Unknown. */
     u32 unk44;
-    /** The size of the largest module segment. Should normally be "textSize", but technically can be any other segment. */
+    /** 
+     * The size of the largest module segment. Should normally be "textSize", but technically can 
+     * be any other segment. 
+     */
     SceSize largestSegSize; //48
     /** The size of the TEXT segment. */
     SceSize textSize; //52
@@ -524,9 +523,15 @@ typedef struct {
     SceSize bssSize; //60
     /** The memory partition of the executable. */
     u32 partitionId; //64
-    /** Indicates whether the executable is a kernel module or not. Set to 1 for kernel module, 0 for user module. */
+    /** 
+     * Indicates whether the executable is a kernel module or not. Set to 1 for kernel module, 
+     * 0 for user module. 
+     */
     u32 isKernelMod; //68
-    /** Indicates whether the executable is decrypted or not. Set to 1 if it is successfully decrypted, 0 for encrypted. */
+    /** 
+     * Indicates whether the executable is decrypted or not. Set to 1 if it is successfully decrypted, 
+     * 0 for encrypted. 
+     */
     u32 isDecrypted; //72
     /** The offset from the start address of the TEXT segment to the SceModuleInfo section. */
     u32 moduleInfoOffset; //76
@@ -543,8 +548,9 @@ typedef struct {
     /** Indicates whether the module is decompressed or not. Set to 1 for decompressed, otherwise 0. */
     u32 isDecompressed; //96
     /** 
-     * Indicates whether the module was signChecked or not. Set to 1 for signChecked, otherwise 0. A signed module
-     * has a "mangled" executable header, in other words, the "~PSP" signature can't be seen. 
+     * Indicates whether the module was signChecked or not. Set to 1 for signChecked, otherwise 0. 
+     * A signed module has a "mangled" executable header, in other words, the "~PSP" signature can't 
+     * be seen. 
      */
     u32 isSignChecked; //100
     /** Unknown. */
@@ -569,7 +575,7 @@ typedef struct {
     u32 segmentAddr[SCE_KERNEL_MAX_MODULE_SEGMENT]; //136
     /** An array containing the size of each segment. */
     u32 segmentSize[SCE_KERNEL_MAX_MODULE_SEGMENT]; //152
-    /** The ID of the ELF memory block conatining the TEXT, DATA and BSS segment. */
+    /** The ID of the ELF memory block containing the TEXT, DATA and BSS segment. */
     SceUID memBlockId; //168
     /** An array containing the alignment information of each segment. */
     u32 segmentAlign[SCE_KERNEL_MAX_MODULE_SEGMENT]; //172
@@ -584,15 +590,18 @@ typedef struct SceModule {
     /** The attributes of a module. One or more of ::SceModuleAttribute and ::SceModulePrivilegeLevel. */
 	u16 attribute; //4
     /** 
-     * The version of the module. Consists of a major and minor part. There can be several modules loaded with the same
-     *  name and version.
+     * The version of the module. Consists of a major and minor part. There can be several modules 
+     * loaded with the same name and version.
      */
 	u8 version[2]; //6
     /** The module's name. There can be several modules loaded with the same name. */
 	char modName[SCE_MODULE_NAME_LEN]; //8
     /** Unknown. */
 	u8 terminal; //35
-    /** The status of the module. Contains information whether the module has been started, stopped, is a user module,... */
+    /** 
+     * The status of the module. Contains information whether the module has been started, stopped, 
+     * is a user module, etc.
+     */
 	u16 status; //36
     /** Reserved. */
 	u16 padding; //38
@@ -616,17 +625,35 @@ typedef struct SceModule {
 	void *stubTop; //72
     /** The size of all stub library entry tables of the module. */
 	SceSize stubSize; //76
-    /** A pointer to the (required) module's start entry function. This function is executed during the module's startup. */
+    /** 
+     * A pointer to the (required) module's start entry function. This function is executed during 
+     * the module's startup. 
+     */
 	SceKernelThreadEntry moduleStart; //80
-    /** A pointer to the (required) module's stop entry function. This function is executed during the module's startup. */
+    /** 
+     * A pointer to the (required) module's stop entry function. This function is executed during 
+     * the module's startup. 
+     */
 	SceKernelThreadEntry moduleStop; //84
-    /** A pointer to a module's Bootstart entry function. This function is probably executed after a reboot. */
+    /** 
+     * A pointer to a module's Bootstart entry function. This function is probably executed after 
+     * a reboot. 
+     */
 	SceKernelThreadEntry moduleBootstart; //88
-    /** A pointer to a module's rebootBefore entry function. This function is probably executed before a reboot. */
+    /** 
+     * A pointer to a module's rebootBefore entry function. This function is probably executed 
+     * before a reboot. 
+     */
 	SceKernelThreadEntry moduleRebootBefore; //92
-    /** A pointer to a module's rebootPhase entry function. This function is probably executed during a reboot. */
+    /** 
+     * A pointer to a module's rebootPhase entry function. This function is probably executed 
+     * during a reboot. 
+     */
 	SceKernelThreadEntry moduleRebootPhase; //96
-    /** The entry address of the module. It is the offset from the start of the TEXT segment to the program's entry point. */
+    /** 
+     * The entry address of the module. It is the offset from the start of the TEXT segment to the 
+     * program's entry point. 
+     */
 	u32 entryAddr; //100
     /** Contains the offset from the start of the TEXT segment of the program's GP register value. */
 	u32 gpValue; //104
@@ -677,8 +704,8 @@ typedef struct SceModule {
 } SceModule; //size = 228
 
 /**
- * This structure represents a system call table. Such a table takes care
- * of the exported system calls registered to the system.
+ * This structure represents a system call table. Such a table takes care of the exported system 
+ * calls registered to the system.
  */
 typedef struct SceSyscallTable {
     /** Pointer to the next SystemCall table. */
@@ -694,13 +721,14 @@ typedef struct SceSyscallTable {
 } SceSyscallTable;
 
 /** 
- * This structure represents a LoadCore Control Block.
+ * This structure represents a Loadcore Control Block. It is used keep track of important system
+ * information, such as maintaining the list of loaded modules or registered libraries.
  */
 typedef struct {
     /** 
-     * An array of linked lists of registered resident libraries. The slot 
-     * used for a library is computed by a hash algorithm. Libraries with
-     * the same hash are stored in the array slot connected via a linked list.
+     * An array of linked lists of registered resident libraries. The slot used for a library is 
+     * computed by a hash algorithm. Libraries with the same hash are stored in the array slot 
+     * connected via a linked list.
      */
     SceResidentLibrary *registeredLibs[LOADCORE_LIB_HASH_TABLE_SIZE]; //0
     /** Pointer to Loadcore's system call table object. */
@@ -732,11 +760,11 @@ typedef struct {
 
 
 /**
- * Register a resident library's entry table in the system. A resident module can register any number of resident 
- * libraries. Note that this function is only meant to register kernel mode resident libraries. In order to register
- * user mode libraries, use sceKernelRegisterLibraryForUser().
+ * Register a resident library's entry table in the system. A resident module can register any 
+ * number of resident libraries. Note that this function is only meant to register kernel mode 
+ * resident libraries. In order to register user mode libraries, use sceKernelRegisterLibraryForUser().
  * 
- * @param lib Pointer to the resident library's entry table.
+ * @param libEntryTable Pointer to the resident library's entry table.
  * 
  * @return 0 on success.
  */
@@ -746,7 +774,8 @@ s32 sceKernelRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable);
  * Check if a resident library can be released. This check returns "true" when all corresponding stub
  * libraries at the time of the check have one the following status:
  *      a) unlinked
- *      b) have the the attribute SCE_LIB_WEAK_IMPORT (they can exist without the resident library being registered).
+ *      b) have the the attribute SCE_LIB_WEAK_IMPORT (they can exist without the resident library 
+ *         being registered).
  * 
  * @param libEntryTable Pointer to the resident library's entry table.
  * 
@@ -755,12 +784,12 @@ s32 sceKernelRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable);
 s32 sceKernelCanReleaseLibrary(SceResidentLibraryEntryTable *libEntryTable);
 
 /**
- * Link kernel mode stub libraries with the corresponding registered resident libraries. Note that this function
- * assumes that the resident libraries linked with reside in kernel memory. Linking with user mode resident libraries 
- * will result in failure.
+ * Link kernel mode stub libraries with the corresponding registered resident libraries. Note that 
+ * this function assumes that the resident libraries linked with reside in kernel memory. Linking 
+ * with user mode resident libraries will result in failure.
  * 
- * @param libStubTable Pointer to a stub library's entry table. If you want to link an array of entry tables, make
- *                     libStubTable a pointer to the first element of that array.
+ * @param libStubTable Pointer to a stub library's entry table. If you want to link an array of 
+ *                     entry tables, make libStubTable a pointer to the first element of that array.
  * @param size         The number of entry tables to link.
  * 
  * @return 0 on success.
@@ -770,24 +799,25 @@ s32 sceKernelLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size
 /**
  * Unlink stub libraries from their corresponding registered resident libraries. 
  * 
- * @param libStubTable Pointer to a stub library's entry table. If you want to unlink an array of entry tables, make
- *                     libStubTable a pointer to the first element of that array.
+ * @param libStubTable Pointer to a stub library's entry table. If you want to unlink an array of 
+ *                     entry tables, make libStubTable a pointer to the first element of that array.
  * @param size The number of entry tables to unlink.
  * @return 
  */
 s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
 
 /**
- * Load a module. This function is used to boot modules during the start of Loadcore. In order for a module to be loaded,
- * it has to be a kernel module.
+ * Load a module. This function is used to boot modules during the start of Loadcore. In order for 
+ * a module to be loaded, it has to be a kernel module.
  * 
- * @param bootModInfo Pointer to module information (including the file content of the module, its size,...) used to
- *                    boot the module.
- * @param execInfo Pointer an allocated execInfo structure used to handle load-checks against the program module.
- *                 Furthermore, it collects various information about the module, such as its elfType, its segments
- *                 (.text, .data, .bss), the locations of its exported functions.
- * @param modMemId The memory id of the allocated kernelPRX memory block used for the program module sections. The 
- *                 memory block specified by the ID holds the .text segment of the module. 
+ * @param bootModInfo Pointer to module information (including the file content of the module, 
+ *                    its size,...) used to boot the module.
+ * @param execInfo Pointer an allocated execInfo structure used to handle load-checks against the 
+ *                 program module.
+ *                 Furthermore, it collects various information about the module, such as its elfType, 
+ *                 its segments (.text, .data, .bss), the locations of its exported functions.
+ * @param modMemId The memory id of the allocated kernelPRX memory block used for the program module 
+ *                 sections. The memory block specified by the ID holds the .text segment of the module. 
  * 
  * @return 0 on success.
  */
@@ -797,7 +827,8 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
 /**
  * Save interrupts state and disable all interrupts.
  * 
- * @return The current state of the interrupt controller. Use sceKernelLoadCoreUnlock() to return to that state.
+ * @return The current state of the interrupt controller. Use sceKernelLoadCoreUnlock() to return 
+ *         to that state.
  */
 s32 sceKernelLoadCoreLock(void);
 
@@ -809,23 +840,24 @@ s32 sceKernelLoadCoreLock(void);
 void sceKernelLoadCoreUnlock(s32 intrState);
 
 /**
- * Register a user mode resident library's entry table in the system. A resident module can register any number of 
- * resident libraries. In order to register kernel mode libraries, use sceKernelRegisterLibrary().
+ * Register a user mode resident library's entry table in the system. A resident module can register 
+ * any number of resident libraries. In order to register kernel mode libraries, use 
+ * sceKernelRegisterLibrary().
  * 
  * Restrictions on user mode resident libraries:
  *    1) The resident library has to live in user memory.
  *    2) Functions cannot be exported via the SYSCALL technique.
  *    3) The resident library cannot be linked with stub libraries living in kernel memory.
  * 
- * @param lib Pointer to the resident library's entry table.
+ * @param libEntryTable Pointer to the resident library's entry table.
  * 
  * @return 0 on success.
  */
 s32 sceKernelRegisterLibraryForUser(SceResidentLibraryEntryTable *libEntryTable);
 
 /**
- * Delete a registered resident library from the system. Deletion cannot be performed if there are loaded modules using
- * the resident library. These modules must be deleted first.
+ * Delete a registered resident library from the system. Deletion cannot be performed if there are 
+ * loaded modules using the resident library. These modules must be deleted first.
  * 
  * @param libEntryTable Pointer to the resident library's entry table.
  * 
@@ -835,8 +867,8 @@ s32 sceKernelReleaseLibrary(SceResidentLibraryEntryTable *libEntryTable);
 
 /**
  * 
- * @param libStubTable Pointer to a stub library's entry table. If you want to link an array of entry tables, make
- *                     libStubTable a pointer to the first element of that array.
+ * @param libStubTable Pointer to a stub library's entry table. If you want to link an array of entry 
+ *                     tables, make libStubTable a pointer to the first element of that array.
  * @param size The number of entry tables to link.
  * 
  * @return 0 on success.
@@ -845,9 +877,10 @@ s32 sceKernelLinkLibraryEntriesForUser(SceStubLibraryEntryTable *libStubTable, u
 
 /**
  * 
- * @param mod Pointer to a module. Should not be NULL. The module seems not to be used for anything useful.
- * @param libStubTable Pointer to a stub library's entry table. If you want to link an array of entry tables, make
- *                     libStubTable a pointer to the first element of that array.
+ * @param mod Pointer to a module. Should not be NULL. The module seems not to be used for anything 
+ *            useful.
+ * @param libStubTable Pointer to a stub library's entry table. If you want to link an array of 
+ *                     entry tables, make libStubTable a pointer to the first element of that array.
  * @param size The number of entry tables to link.
  * 
  * @return 0 on success.
@@ -862,8 +895,8 @@ s32 sceKernelLinkLibraryEntriesWithModule(SceModule *mod, SceStubLibraryEntryTab
 u32 sceKernelMaskLibraryEntries(void);
 
 /**
- * Get Loadcore's control block. The block takes care of the registered libraries, the unlinked stub libraries living in
- * memory and the currently loaded modules.
+ * Get Loadcore's control block. The block takes care of the registered libraries, the unlinked 
+ * stub libraries living in memory and the currently loaded modules.
  * 
  * @return A pointer to Loadcore's internal control block.
  */
@@ -872,13 +905,15 @@ SceLoadCore *sceKernelQueryLoadCoreCB(void);
 /**
  * Set a boot callback.  Call this function during a module boot process.
  * 
- * @param bootCBFunc The boot callback function to execute once the important system modules (up to init.prx) have been
- *                   booted.
- * @param flag
+ * @param bootCBFunc The boot callback function to execute once the important system modules 
+ *                   (up to init.prx) have been booted.
+ * @param flag Defines the execute order of the callbacks. Pass 0 for earliest execution, 3 for latest.
+ *             1 and 2 are between these two.
  * @param bootCallback The boot callback list used to store the boot callback function into. 
  * 
- * @return 0 for directly executing the boot callback function. 1 indicates boot callback function was enqueued into
- *          other existing boot callbacks and will be called after init.prx got booted. 
+ * @return 0 for directly executing the boot callback function. 1 indicates boot callback function 
+ *           was enqueued into other existing boot callbacks and will be called after init.prx got 
+ *           booted. 
  */
 s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, SceBootCallback *bootCallback);
 
@@ -900,7 +935,8 @@ u32 sceKernelLoadCoreMode(void);
 s32 sceKernelCheckPspConfig(u8 *file, u32 size);
 
 /**
- * Decrypt and load a reboot file used to boot the system. Reboot.bin is only used for kernel reboots (warm reboots only).
+ * Decrypt and load a reboot file used to boot the system. Reboot.bin is only used for kernel reboots 
+ * (warm reboots only).
  * 
  * @param file The reboot file to use (i.e. reboot.bin).
  * @param size The size of the file
@@ -919,9 +955,9 @@ s32 sceKernelLoadRebootBin(u8 *file, u32 size);
 s32 sceKernelSegmentChecksum(SceModule *mod);
 
 /**
- * Check an executable file. This contains scanning its ELF header and ~PSP header (if it has one) and filling the 
- * execInfo structure with basic information, like the ELF type, segment information, the size of the executable. The 
- * file is also uncompressed, if it was compressed before.
+ * Check an executable file. This contains scanning its ELF header and ~PSP header (if it has one) 
+ * and filling the execInfo structure with basic information, like the ELF type, segment information, 
+ * the size of the executable. The file is also uncompressed, if it was compressed before.
  * 
  * @param buf Pointer to the file's contents.
  * @param execInfo Pointer to the executionInfo belonging to that executable.
@@ -931,8 +967,9 @@ s32 sceKernelSegmentChecksum(SceModule *mod);
 s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo);
 
 /**
- * Probe an executable file. This contains calculating the sizes for the three segments TEXT, DATA and BSS, filling
- * the execInfo structure with information about the location and sizes of the resident/stub library entry tables.
+ * Probe an executable file. This contains calculating the sizes for the three segments TEXT, DATA 
+ * and BSS, filling the execInfo structure with information about the location and sizes of the 
+ * resident/stub library entry tables.
  * Furthermore, it is checked whether the executable has valid API type or not.
  * 
  * @param buf Pointer to the file's contents.
@@ -943,9 +980,9 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo);
 s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo);
 
 /**
- * Load an executable file. This contains allocating s memory block containing the three segments TEXT, DATA and BSS
- * (in case executable consists of only these three sections). Furthermore, relocating the executable file if needed
- * is also taken care off.
+ * Load an executable file. This contains allocating s memory block containing the three segments 
+ * TEXT, DATA and BSS (in case the executable consists of only these three sections). 
+ * Furthermore, relocation of the executable file, if needed, is also taken care off.
  * 
  * @param buf Pointer to the file's contents.
  * @param execInfo Pointer to the executionInfo belonging to that executable.
@@ -955,19 +992,21 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo);
 s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo);
 
 /**
- * Allocate memory for a new SceModule structure and fill it with default values. This function is called during the
- * loading process of a module.
+ * Allocate memory for a new SceModule structure and fill it with default values. This function is 
+ * called during the loading process of a module.
  * 
  * @return A pointer to the allocated SceModule structure on success, otherwise NULL.
  */
 SceModule *sceKernelCreateModule(void);
 
 /**
- * Assign a module and check if it can be loaded, is a valid module and copy the moduleInfo section of the 
- * execution file over to the SceModule structure.
+ * Assign a module and check if it can be loaded, is a valid module and copy the moduleInfo section 
+ * of the execution file over to the SceModule structure.
  * 
- * @param mod The module to receive the mdouleInfo section data based on the provided execution file information.
- * @param execFileInfo The execution file information used to copy over the moduleInfo section for the specified module.
+ * @param mod The module to receive the moduleInfo section data based on the provided execution file 
+ *            information.
+ * @param execFileInfo The execution file information used to copy over the moduleInfo section for 
+ *        the specified module.
  * 
  * @return 0 on success.
  */
@@ -988,8 +1027,8 @@ s32 sceKernelReleaseModule(SceModule *mod);
  * @param modIdList Pointer to a SceUID array which will receive the UIDs of the loaded modules.
  * @param size Size of modIdList. Specifies the number of entries that can be stored into modIdList.
  * @param modCount A pointer which will receive the total number of loaded modules.
- * @param userModsOnly Set to 1 to only receive UIDs from user mode modules. Set to 0 to receive UIDs from all 
- *                     loaded modules.
+ * @param userModsOnly Set to 1 to only receive UIDs from user mode modules. Set to 0 to receive UIDs 
+ *                     from all loaded modules.
  * 
  * @return 0 on success.
  */
@@ -1014,10 +1053,11 @@ SceModule *sceKernelGetModuleFromUID(SceUID uid);
 s32 sceKernelDeleteModule(SceModule *mod);
 
 /**
- * Create and assign a module. It provides the same result as a sceKernelCreateModule() call followed by a
- * sceKernelAssignModule() call.
+ * Create and assign a module. It provides the same result as a sceKernelCreateModule() call 
+ * followed by a sceKernelAssignModule() call.
  * 
- * @param execFileInfo The execution file information used to copy over the moduleInfo section for the specified module.
+ * @param execFileInfo The execution file information used to copy over the moduleInfo section for 
+ * the specified module.
  * 
  * @return Pointer to the created SceModule structure on success, otherwise NULL.
  */
@@ -1033,10 +1073,10 @@ SceModule *sceKernelCreateAssignModule(SceLoadCoreExecFileInfo *execFileInfo);
 s32 sceKernelRegisterModule(SceModule *mod);
 
 /**
- * Find a loaded module by its name. If more than one module with the same name is loaded, return the module which was
- * loaded last.
+ * Find a loaded module by its name. If more than one module with the same name is loaded, return 
+ * the module which was loaded last.
  * 
- * @param name The name of a module to find. 
+ * @param name The name of the module to find. 
  * 
  * @return Pointer to the found SceModule structure on success, otherwise NULL.
  */
@@ -1045,7 +1085,8 @@ SceModule *sceKernelFindModuleByName(const char *name);
 /**
  * Find a loaded module containing the specified address.
  * 
- * @param addr Memory address belonging to a module, i.e. the address of a function/global variable within a module.
+ * @param addr Memory address belonging to the module, i.e. the address of a function/global variable 
+ *             within the module.
  * 
  * @return Pointer to the found SceModule structure on success, otherwise NULL.
  */
@@ -1054,7 +1095,8 @@ SceModule *sceKernelFindModuleByAddress(u32 addr);
 /**
  * Get the global pointer value of a module.
  * 
- * @param addr Memory address belonging to a module, i.e. the address of a function/global variable within a module.
+ * @param addr Memory address belonging to the module, i.e. the address of a function/global variable 
+ *             within the module.
  * 
  * @return The global pointer value (greater than 0) of the found module on success.
  */
@@ -1063,7 +1105,7 @@ s32 sceKernelGetModuleGPByAddressForKernel(u32 addr);
 /**
  * Find a loaded module by its UID.
  * 
- * @param uid The UID of a module to find.
+ * @param uid The UID of the module to find.
  * 
  * @return Pointer to the found SceModule structure on success, otherwise NULL.
  */
@@ -1074,7 +1116,8 @@ SceModule *sceKernelFindModuleByUID(SceUID uid);
  * 
  * @param modCount A pointer which will receive the total number of loaded modules.
  * 
- * @return The UID of the allocated array containing UIDs of the loaded modules on success. It should be greater than 0.
+ * @return The UID of the allocated array containing UIDs of the loaded modules on success. It should 
+ *        be greater than 0.
  */
 SceUID sceKernelGetModuleListWithAlloc(u32 *modCount);
 

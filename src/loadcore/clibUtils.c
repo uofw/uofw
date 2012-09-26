@@ -98,10 +98,10 @@ static void *wmemcpy(u32 *dest, const u32 *src, u32 n)
     tmpDest = dest;
     /* 4-byte alignment check. */
     if (n & 0xC) {
-        while ((((void *)dest) + (n & 0xC)) != tmpDest)
+        while (((void *)dest + (n & 0xC)) != tmpDest)
                *tmpDest++ = *src++;
         
-        if ((((void *)dest) + n) == tmpDest)
+        if (((void *)dest + n) == tmpDest)
             return dest;
     }
     /* 16-byte alignment. */

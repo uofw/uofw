@@ -4,6 +4,12 @@
 
 #include "common_header.h"
 
+enum SceSysEventTypes {
+    SCE_SUSPEND_EVENTS = 0x0000FF00,
+    SCE_RESUME_EVENTS = 0x00FF0000,
+    SCE_SPEED_CHANGE_EVENTS = 0x01000000
+};
+
 typedef struct {
     s32 size;
     char *name;

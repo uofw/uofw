@@ -33,7 +33,7 @@
 #define SYSCALL_TABLE_DEFAULT_ENTRIES           (4096)
 
 #define SYSCALL_ENTRY_TABLES                    (60)
-#define TOP_SYSCALL_ENTRY_TABLE                 SYSCALL_ENTRY_TABLES - 1
+#define TOP_SYSCALL_ENTRY_TABLE                 (SYSCALL_ENTRY_TABLES - 1)
 
 /* 
  * Pointer to the next free SyscallEntryTable object in the
@@ -90,7 +90,7 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
 {
    u32 i;
    s32 status;
-   SceSyscallTable *sysCallTable;
+   SceSyscallTable *sysCallTable;  
      
    sysCallTable = sceKernelAllocHeapMemory(g_loadCoreHeap(), SYSCALL_TABLE_SIZE); 
    if (sysCallTable == NULL)

@@ -16,6 +16,42 @@
 #define SCE_O_NOWAIT    0x8000
 #define SCE_O_UNKNOWN0  0x04000000
 
+/** user read/write/execute permission. */
+#define SCE_STM_RWXU		00700
+/** user read permission. */
+#define SCE_STM_RUSR		00400
+/** user write permission. */
+#define SCE_STM_WUSR		00200
+/** user execute permission. */
+#define SCE_STM_XUSR		00100
+
+/** group read/write/execute permission. */
+#define SCE_STM_RWXG		00070
+/** group read permission. */
+#define SCE_STM_RGRP		00040
+/** group write permission. */
+#define SCE_STM_WGRP		00020
+/** group execute permission. */
+#define SCE_STM_XGRP		00010
+
+/** other read/write/execute permission. */
+#define SCE_STM_RWXO		00007
+/** other read permission. */
+#define SCE_STM_ROTH		00004
+/** other write permission. */
+#define SCE_STM_WOTH		00002
+/** other execute permission. */
+#define SCE_STM_XOTH		00001
+
+/** user/group/other - read/write/execute. */
+#define SCE_STM_RWXUGO	(SCE_STM_RWXU|SCE_STM_RWXG|SCE_STM_RWXO)
+/** user/group/other - read. */
+#define SCE_STM_RUGO	(SCE_STM_RUSR|SCE_STM_RGRP|SCE_STM_ROTH)
+/** user/group/other - write. */
+#define SCE_STM_WUGO	(SCE_STM_WUSR|SCE_STM_WGRP|SCE_STM_WOTH)
+/** user/group/other - execute. */
+#define SCE_STM_XUGO	(SCE_STM_XUSR|SCE_STM_XGRP|SCE_STM_XOTH)
+
 #define SCE_SEEK_SET    0
 #define SCE_SEEK_CUR    1
 #define SCE_SEEK_END    2

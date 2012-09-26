@@ -19,8 +19,7 @@ typedef struct SceSysCallEntryTable {
    u16 inUse; //4
    /* The number of exported functions belonging to that entry. */
    u16 numEntries; //6
-   /* 
-    * The location of the first exported function in the "syscalls" 
+   /* The location of the first exported function in the "syscalls" 
     * array of the system call table this entry belongs to. 
     */
    u32 startAddr; // 8

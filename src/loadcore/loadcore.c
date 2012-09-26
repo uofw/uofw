@@ -53,6 +53,8 @@ SCE_MODULE_INFO("sceLoaderCore", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERNEL 
 SCE_MODULE_BOOTSTART("loadCoreInit");
 SCE_SDK_VERSION(SDK_VERSION);
 
+#define SVALALIGN4(v)                           ((s32)((((u32)((s32)(v) >> 31)) >> 30) + (v)) >> 2)
+
 #define INIT_MODULE_NAME                        "sceInit"
 #define MEMLMD_MODULE_NAME                      "memlmd"
 
@@ -85,8 +87,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Indicates that the specified system call is not linked. */
 #define SYSCALL_NOT_LINKED                      (0x0000054C)
 
-#define MAKE_KERNEL_ADDRESS(addr)               (addr | 0x80000000)
-#define MAKE_USER_ADDRESS(addr)                 (addr & 0x7FFFFFFF)
+#define MAKE_KERNEL_ADDRESS(addr)               ((addr) | 0x80000000)
+#define MAKE_USER_ADDRESS(addr)                 ((addr) & 0x7FFFFFFF)
 
 #define MAKE_SYSCALL(n)                         (0x03FFFFFF & (((u32)(n) << 6) | 0x0000000C))
 #define MAKE_JUMP(f)                            (0x08000000 | ((u32)(f)  & 0x0FFFFFFC)) 
@@ -287,7 +289,7 @@ s32 g_ToolBreakMode; //0x000083C4
 static void (*g_MemClearFun)(void *, u32); //0x000083C0
 /* The start address of the memory block to clear. */
 static void *g_MemBase; //0x000083C8
-/* The size of the particular memory block. */
+/* The size of the particular memory block to clear. */
 static u32 g_MemSize; //0x000083CD
 
 s32 (*g_getLengthFunc)(u8 *file, u32 size, u32 *newSize); //0x000083D0
@@ -491,7 +493,7 @@ static SceResidentLibrary *NewLibEntCB(void)
  * the linked list.
  */
 static SceResidentLibrary *FreeLibEntCB(SceResidentLibrary *libEntry)
-{   
+{      
     if (libEntry->libNameInHeap) {
         sceKernelFreeHeapMemory(g_loadCoreHeap(), libEntry->libName); 
         libEntry->libNameInHeap = FALSE;
@@ -510,7 +512,7 @@ static SceResidentLibrary *FreeLibEntCB(SceResidentLibrary *libEntry)
 /* Initialize Loadcore's stub library control block linked list. */
 static u32 LibStubTableInit(void) 
 {
-    u32 i;
+    u32 i;   
     
     g_LoadCoreLibStubs[0].next = NULL;    
     for (i = 0; i < TOP_STUB_LIBRARY_CONTROL_BLOCK; i++)    
@@ -551,7 +553,7 @@ static SceStubLibrary *NewLibStubCB(void)
  * linked list.
  */
 static SceStubLibrary *FreeLibStubCB(SceStubLibrary *stubLib)
-{
+{  
     if (stubLib->libNameInHeap == TRUE) { //0x000002A8
         sceKernelFreeHeapMemory(g_loadCoreHeap(), stubLib->libName2); //0x0000031C       
         stubLib->libNameInHeap = FALSE;
@@ -568,7 +570,7 @@ static SceStubLibrary *FreeLibStubCB(SceStubLibrary *stubLib)
 
 //sub_0000074C
 static s32 aLinkVariableStub(SceResidentLibrary *libEntry, SceStubLibraryEntryTable *stubLibEntryTable, u32 isUserLib)
-{
+{   
     return aLinkVariableStub_sub(libEntry, stubLibEntryTable, VARIABLE_STUB_LINK, isUserLib);
 }
 
@@ -712,7 +714,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     s32 linkLibsRes;
     SceModule *mod = NULL;
     SceLoadCoreBootInfo *bootInfo = NULL;
-    SysMemThreadConfig *sysMemThreadConfig = NULL;   
+    SysMemThreadConfig *sysMemThreadConfig = NULL;         
     
     bootInfo = ((SceLoadCoreBootInfo **)argp)[0];
     sysMemThreadConfig = ((SysMemThreadConfig **)argp)[1]; //0x00000B38
@@ -739,7 +741,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     g_loadCore.bootCallBacks = NULL;
     
     LibEntTableInit();
-    LibStubTableInit();
+    LibStubTableInit();   
     
     if (sysMemThreadConfig->GetLengthFunction != NULL) //0x00000BB4
         sceKernelSetGetLengthFunction(sysMemThreadConfig->GetLengthFunction); //0x00000E98
@@ -760,7 +762,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     for (i = 0; i < sysMemThreadConfig->userLibStart; i++) { //0x00000BF0 & 0x00000BFC - 0x00000C24
          if (sceKernelRegisterLibrary(sysMemThreadConfig->exportLib[i]) != SCE_ERROR_OK)
              StopLoadCore();
-    }
+    } 
     status = sceKernelRegisterLibrary(&loadCoreKernelLib); //0x00000C2C
     if (status != SCE_ERROR_OK) //0x00000C34
         StopLoadCore();
@@ -773,7 +775,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     g_UpdateCacheDataAll = UpdateCacheDataAllDynamic; //0x00000D20
     g_loadCoreHeap = LoadCoreHeapDynamic; //0x00000D24
     g_UpdateCacheRange = UpdateCacheRangeDynamic; //0x00000D28
-    g_UpdateCacheRangeData = UpdateCacheRangeDataDynamic; //0x00000D30
+    g_UpdateCacheRangeData = UpdateCacheRangeDataDynamic; //0x00000D30   
     
     ModuleServiceInit(); //0x00000D2C
     
@@ -785,7 +787,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     mod = sceKernelCreateAssignModule(sysMemThreadConfig->loadCoreExecInfo); //0x00000D64
     sceKernelRegisterModule(mod); //0x00000D70
     mod->segmentChecksum = sceKernelSegmentChecksum(mod); //0x00000D78 & 0x00000D84   
-    mod->status = (mod->status & ~0xF) | MCB_STATUS_STARTED ; //0x00000D80 & 0x00000D8C - 0x00000D94   
+    mod->status = (mod->status & ~0xF) | MCB_STATUS_STARTED ; //0x00000D80 & 0x00000D8C - 0x00000D94 
     
     SysBoot(bootInfo, sysMemThreadConfig); //0x00000D98
     return linkLibsRes;
@@ -811,7 +813,7 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
     u8 counter;
     u8 unk2;
     s32 i;
-    s32 unk6, unk7, unk8, unk9, unk10, unk11, unk12, unk14;
+    s32 unk6, unk7, unk8, unk9, unk10, unk11, unk12, unk14;    
     
     if (nidSearchOption == FUNCTION_NID_SEARCH) { //0x00000EB0
         endNidPos = lib->stubCount; //0x00000FD0
@@ -939,6 +941,8 @@ s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u
 {
     void *curStubLibEntryTable;
     
+    dbg_printf("Called %s\n", __FUNCTION__);
+    
     for (curStubLibEntryTable = stubLibEntryTable; curStubLibEntryTable < ((void *)stubLibEntryTable) + size; 
        curStubLibEntryTable += ((SceStubLibraryEntryTable *)curStubLibEntryTable)->len * sizeof(u32))
          UnLinkLibraryEntry(curStubLibEntryTable);
@@ -1056,7 +1060,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     u32 loadedMods;
     s32 i, j;
     u32 size;
-   
+    
     /* 
      * Disallow interrupts, set processor mode to kernel mode, set
      * exception level to 0.
@@ -1092,13 +1096,10 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
         if (memBlockId < 0) //0x00001760
             StopLoadCore();
        
-        loadCoreBootModuleInfo = (SceLoadCoreBootModuleInfo *) sceKernelGetBlockHeadAddr(memBlockId); //0x00001768
-       
-        //if loadCoreBootInfo->numMods is negative, add 3 to it.
-        //((u32)((s32)loadCoreBootInfo->numMods) >> 31) >> 30 + loadCoreBootInfo->numMods;
+        loadCoreBootModuleInfo = (SceLoadCoreBootModuleInfo *)sceKernelGetBlockHeadAddr(memBlockId); //0x00001768
        
         //0x00001790 - 0x000017A8
-        for (i = loadCoreBootInfo->numModules - 1; i >= 0; i--)
+        for (i = SVALALIGN4(loadCoreBootInfo->numModules) - 1; i >= 0; i--)
              loadCoreBootModuleInfo[i] = loadCoreBootInfo->modules[i];
        
         loadCoreBootInfo->modules = loadCoreBootModuleInfo; //0x000017AC
@@ -1144,7 +1145,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
           *         module. 
           */
          for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-            curExportTable = ((void *)curExportTable) + curExportTable->len * sizeof(u32)) {
+            curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
               if (curExportTable->attribute & SCE_LIB_AUTO_EXPORT) {              
                   if (sceKernelRegisterLibrary(curExportTable) < SCE_ERROR_OK) //0x0000216C
                       StopLoadCore(); //0x0000217C   
@@ -1185,7 +1186,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
              exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x00001F30 - 0x00001F3C         
              //0x00001F44 & 0x00001F60 - 0x00001F78
              for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-                curExportTable = ((void *)curExportTable) + curExportTable->len * sizeof(u32)) {
+                curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
                   if (curExportTable->attribute & SCE_LIB_AUTO_EXPORT) {                
                       intrState = loadCoreCpuSuspendIntr(); //0x00001F80
                    
@@ -1214,7 +1215,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
             //0x000018C4 - 0x00001904
             exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x000018C4 - 0x000018D0
             for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-               curExportTable = ((void *)curExportTable) + curExportTable->len * sizeof(u32)) {
+               curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
                  if ((curExportTable->attribute & SCE_LIB_IS_SYSLIB) == SCE_LIB_IS_SYSLIB)
                      ProcessModuleExportEnt(mod, curExportTable); //0x00001F14
             }           
@@ -1243,7 +1244,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
                 
                 exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x00001C98 - 0x00001CA4
                 for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-                   curExportTable = ((void *)curExportTable) + curExportTable->len * sizeof(u32)) {
+                   curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
                      if ((curExportTable->attribute & SCE_LIB_AUTO_EXPORT) == SCE_LIB_AUTO_EXPORT) { //0x00001CBC
                           intrState = loadCoreCpuSuspendIntr(); //0x00001D28
                           
@@ -1330,32 +1331,32 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     }   
 }
 
-/* Subroutine LoadCoreForKernel_1999032F - Address 0x000024C0  */
+//Subroutine LoadCoreForKernel_1999032F - Address 0x000024C0
 s32 sceKernelLoadCoreLock(void)
 {
     return loadCoreCpuSuspendIntr();
 }
 
-/* Subroutine LoadCoreForKernel_B6C037EA - Address 0x000024DC */
+//Subroutine LoadCoreForKernel_B6C037EA - Address 0x000024DC
 void sceKernelLoadCoreUnlock(s32 intrState)
 {
     loadCoreCpuResumeIntr(intrState);
 }
 
-/* Subroutine LoadCoreForKernel_2C60CCB8 - Address 0x000024F8 */
+//Subroutine LoadCoreForKernel_2C60CCB8 - Address 0x000024F8
 s32 sceKernelRegisterLibraryForUser(SceResidentLibraryEntryTable *libEntryTable)
 {
     return doRegisterLibrary(libEntryTable, LIB_PRIVILEGE_LEVEL_USER);
 }
 
-/* Subroutine LoadCoreForKernel_CB636A90 - Address 0x00002514  */
+//Subroutine LoadCoreForKernel_CB636A90 - Address 0x00002514
 s32 sceKernelReleaseLibrary(SceResidentLibraryEntryTable *libEntryTable)
 {    
     s32 intrState;
     s32 status;
     SceResidentLibrary *lib;
     SceResidentLibrary **prevLibSlotPtr;
-      
+    
     intrState = loadCoreCpuSuspendIntr();
     
     /* NOTE: FoundLibrary can return a NULL pointer, thus checking should be added. */
@@ -1371,31 +1372,31 @@ s32 sceKernelReleaseLibrary(SceResidentLibraryEntryTable *libEntryTable)
     return SCE_ERROR_OK;  
 }
 
-/* Subroutine LoadCoreForKernel_6ECFFFBA - Address 0x00002584  */
+//Subroutine LoadCoreForKernel_6ECFFFBA - Address 0x00002584
 s32 sceKernelLinkLibraryEntriesForUser(SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
 {
     return doLinkLibraryEntries(stubLibEntryTable, size, LIB_PRIVILEGE_LEVEL_USER, 0);
 }
 
-/* Subroutine LoadCoreForKernel_A481E30E - Address 0x000025A4  */
+//Subroutine LoadCoreForKernel_A481E30E - Address 0x000025A4
 s32 sceKernelLinkLibraryEntriesWithModule(SceModule *mod, SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
 {
     return doLinkLibraryEntries(stubLibEntryTable, size, LIB_PRIVILEGE_LEVEL_USER, mod->countRegVal);
 }
 
-/* Subroutine LoadCoreForKernel_1915737F - Address 0x000025CC  */
+//Subroutine LoadCoreForKernel_1915737F - Address 0x000025CC
 u32 sceKernelMaskLibraryEntries(void)
 {
     return SCE_ERROR_OK;
 }
 
-/* Subroutine LoadCoreForKernel_696594C8 - Address 0x000025D4 */
+//Subroutine LoadCoreForKernel_696594C8 - Address 0x000025D4
 SceLoadCore *sceKernelQueryLoadCoreCB(void)
 {
     return &g_loadCore;
 }
 
-/* Subroutine LoadCoreForKernel_F976EF41 - Address 0x000025E0 */
+//Subroutine LoadCoreForKernel_F976EF41 - Address 0x000025E0
 s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, SceBootCallback *bootCallback)
 {
     if (g_loadCore.bootCallBacks != NULL) { //0x00002614
@@ -1413,19 +1414,19 @@ s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 
     return SCE_ERROR_OK;   
 }
 
-/* Subroutine LoadCoreForKernel_C8FF5EE5 - Address 0x00002670  */
+//Subroutine LoadCoreForKernel_C8FF5EE5 - Address 0x00002670
 u32 sceKernelLoadCoreMode(void)
 {
     return SCE_ERROR_OK;
 }
 
-/* Sub_00002678 */
+//sub_00002678
 static void LoadCoreHeapStatic(void)
 {
     StopLoadCore();
 }
 
-/* Sub_00002718*/
+//sub_00002718
 static s32 LoadCoreHeapDynamic(void)
 {
     if (g_loadCore.loadCoreHeapId <= 0)
@@ -1434,7 +1435,7 @@ static s32 LoadCoreHeapDynamic(void)
     return g_loadCore.loadCoreHeapId;
 }
 
-/* Sub_00002768 */
+//sub_00002768 
 static void UpdateCacheAllStatic(void)
 {
     sceKernelIcacheClearAll(); //0x00002770 - sub_0000748C
@@ -1442,46 +1443,46 @@ static void UpdateCacheAllStatic(void)
     
 }
 
-/* Sub_0000278C */
+//sub_0000278C
 static void UpdateCacheAllDynamic(void)
 {
     sceKernelIcacheInvalidateAll(); //0x00002794
     sceKernelDcacheWritebackInvalidateAll(); //0x0000279C
 }
 
-/* Sub_000027B0 */
+//sub_000027B0
 static void UpdateCacheDataAllStatic(void)
 {
     sceKernelDcacheWBinvAll(); //0x000027B8 - sub_0000744C
 }
 
-/* Sub_000027CC */
+//sub_000027CC
 static void UpdateCacheDataAllDynamic(void)
 {
     sceKernelDcacheWritebackInvalidateAll(); //0x000027D4
 }
 
-/* Sub_000027E8 */
+//sub_000027E8
 static void UpdateCacheRangeStatic(const void *addr __attribute__((unused)), u32 size __attribute__((unused)))
 {
     sceKernelIcacheClearAll(); //0x000027F0 - sub_0000748C
     sceKernelDcacheWBinvAll(); //0x000027F8 - sub_0000744C
 }
 
-/* Sub_0000280C */
+//sub_0000280C
 static void UpdateCacheRangeDynamic(const void *addr, u32 size)
 {
     sceKernelIcacheInvalidateRange(addr, size); //0x00002820
     sceKernelDcacheWritebackInvalidateRange(addr, size); //0x0000282C
 }
 
-/* Sub_00002848 */
+//sub_00002848
 static void UpdateCacheRangeDataStatic(const void *addr __attribute__((unused)), u32 size __attribute__((unused)))
 {
     sceKernelDcacheWBinvAll(); //0x00002850 - sub_0000744C
 }
 
-/* Sub_00002864 */
+//sub_00002864
 static void UpdateCacheRangeDataDynamic(const void *addr, u32 size) 
 {
     sceKernelDcacheWritebackInvalidateRange(addr, size);
@@ -1739,7 +1740,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
     return SCE_ERROR_OK;
 }
 
-/* Subroutine sub_00002DDC - Address 0x00002DDC */
+//Subroutine sub_00002DDC - Address 0x00002DDC
 /*
  * Delete a registered resident library from the system. 
  * The corresponding stub libraries' table entries with the
@@ -1825,7 +1826,7 @@ static s32 ReleaseLibEntCB(SceResidentLibrary *lib, SceResidentLibrary **prevLib
     return SCE_ERROR_OK;
 }
 
-/* sub_00002FCC */
+//sub_00002FCC
 /* Find a registered resident library.  This functions returns
  * the address of a member of loadCore's linked-list of registered 
  * resident libraries.  The address is
@@ -2024,7 +2025,7 @@ static s32 UnLinkLibraryEntry(SceStubLibraryEntryTable *stubLibEntryTable)
     return SCE_ERROR_OK;         
 }
 
-/* Subroutine sub_00003410 - Address 0x00003410 */
+//sub_00003410
 /*
  * Update module export entries via an entry table of a resident library.
  * 
@@ -2081,7 +2082,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     return SCE_ERROR_OK;
 }
 
-/* sub_000039B4 */
+//sub_000039B4
 /*
  * Link function/variable stubs of a stub library with the
  * corresponding exports of a registered resident library.
@@ -2144,7 +2145,7 @@ static s32 aLinkClient(SceStubLibrary *stubLib, SceResidentLibrary *lib)
     return SCE_ERROR_OK;
 }
 
-/* sub_00003BB8 */
+//sub_00003BB8
 /*
  * Dynamically link a stub library with its corresponding registered
  * resident library.  A stub library has to meet a few conditions in
@@ -2176,7 +2177,7 @@ static s32 aLinkLibEntries(SceStubLibrary *stubLib)
     s32 status;
     SceResidentLibrary *curLib;
     SceStubLibrary *curStubLib;
-
+    
     status = SCE_ERROR_KERNEL_LIBRARY_NOT_FOUND;
     
     i = getCyclicPolynomialHash(stubLib->libName, LOADCORE_CYCLIC_POLYNOMIAL_HASH_RADIAX, 
@@ -2239,7 +2240,7 @@ static s32 aLinkLibEntries(SceStubLibrary *stubLib)
     return status;
 }
 
-/* Subroutine LoadCoreForKernel_FC47F93A - Address 0x00003D90 */
+//Subroutine LoadCoreForKernel_FC47F93A - Address 0x00003D90
 s32 sceKernelCheckPspConfig(u8 *file, u32 size) 
 {
     s32 status;
@@ -2278,7 +2279,7 @@ s32 sceKernelCheckPspConfig(u8 *file, u32 size)
     return newSize;
 }
 
-/* Subroutine sub_00003E80 - Address 0x00003E80 */
+//Subroutine sub_00003E80 - Address 0x00003E80
 s32 CheckLatestSubType(u8 *file)
 {
     u32 subType;
@@ -2295,7 +2296,7 @@ s32 CheckLatestSubType(u8 *file)
     return status;
 }
 
-/* Subroutine LoadCoreForKernel_B27CC244 - Address 0x00003EE8 */
+//Subroutine LoadCoreForKernel_B27CC244 - Address 0x00003EE8
 s32 sceKernelLoadRebootBin(u8 *file, u32 size) 
 {
     u32 newSize;
@@ -2484,27 +2485,27 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
     return SCE_ERROR_OK;                        
 }
 
-/* sub_0000562C */
+//sub_0000562C
 static u32 sceKernelSetGetLengthFunction(s32 (*funcPtr)(u8 *file, u32 size, u32 *newSize))
 {
     g_getLengthFunc = funcPtr;
     return SCE_ERROR_OK;
 }
-/* sub_0000563C */
+//sub_0000563C
 static u32 sceKernelSetPrepareGetLengthFunction(s32 (*funcPtr)(u8 *buf, u32 size))
 {
     g_prepareGetLengthFunc = funcPtr;
     return SCE_ERROR_OK;
 }
 
-/* sub_0000564C  */
+//sub_0000564C
 static u32 sceKernelSetSetMaskFunction(s32 (*funcPtr)(u32 unk1, vs32 *addr))
 {
     g_setMaskFunc = funcPtr;
     return SCE_ERROR_OK;
 }
 
-/* sub_0000565C */
+//sub_0000565C
 static u32 sceKernelSetCompareSubType(s32 (*funcPtr)(u32 tag))
 {
    g_compareSubType = funcPtr;
@@ -2517,7 +2518,7 @@ static u32 sceKernelSetCompareLatestSubType(u32 (*funcPtr)(u32 tag))
     return SCE_ERROR_OK;
 }
 
-/* LoadCoreForKernel_5FDDB07A - Address 0x0000567C */
+//LoadCoreForKernel_5FDDB07A - Address 0x0000567C
 s32 sceKernelSegmentChecksum(SceModule *mod)
 {
     u32 i;

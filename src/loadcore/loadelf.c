@@ -58,7 +58,7 @@ static s32 CheckElfSectionPRX(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *ex
 static s32 CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehdr *elfHeader2, Elf32_Phdr *progHeader);
 static s32 CheckTick(u8 *modBuf);
 
-/* LoadCoreForKernel_D3353EC4 - Address 0x00003FAC */
+//LoadCoreForKernel_D3353EC4 - Address 0x00003FAC
 s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo) 
 {
     SceHeader *sceHeader = NULL;
@@ -238,7 +238,7 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     return SCE_ERROR_OK; 
 }
 
-/* LoadCoreForKernel_41D10899 */
+//LoadCoreForKernel_41D10899
 s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
 {
     SceHeader *sceHeader = NULL;
@@ -249,7 +249,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     u32 tmpModAttr;
     s32 status;
     u8 isPrx;
-       
+    
     size = 0;
     execInfo->textSize = 0; //0x000043F0
     execInfo->dataSize = 0;
@@ -527,7 +527,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;   
 }
 
-/* Subroutine LoadCoreForKernel_1C394885 - Address 0x00004908 */
+//Subroutine LoadCoreForKernel_1C394885 - Address 0x00004908
 s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo) 
 {
     SceHeader *sceHeader = NULL;
@@ -723,7 +723,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     return SCE_ERROR_OK;
 }
 
-/* Subroutine sub_00004E70 - Address 0x00004E70 */
+//Subroutine sub_00004E70 - Address 0x00004E70
 static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *relocData, u32 relocSize) 
 {
     u32 type;
@@ -747,7 +747,7 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
     
     u32 offset;
     u32 addend;
-    u32 nBits;       
+    u32 nBits; 
     
     offset = 0; //0x00004EAC
     addend = 0; //0x00004EB4
@@ -902,7 +902,7 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
     return SCE_ERROR_OK;   
 }
 
-/* Subroutine sub_00005280 - Address 0x00005280 */
+//Subroutine sub_00005280 - Address 0x00005280
 static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Rel *relocInfo, u32 fileSize)
 {
     u32 daddr, daddr2;
@@ -999,7 +999,7 @@ static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Re
     return SCE_ERROR_OK;
 }
 
-/* sub_000056B8 */
+//sub_000056B8
 static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo, 
                          u32 *newSize) 
 {   
@@ -1010,7 +1010,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
     u32 subType;
     u8 *tag;
     u32 i;
-
+    
     checkCompAttr = FALSE;
     
     /* Permit decryption modes dependent on the module/API type. */
@@ -1391,7 +1391,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 }
 
-/* sub_00006324 */
+//sub_00006324
 /*
  * Get the lowest start address of the file's segments (it will be used 
  * to set the entry address for the executable).  Also compute the largest
@@ -1420,7 +1420,7 @@ static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execI
     execInfo->largestSegSize = maxSegEnd - (u32)execInfo->topAddr;
 }
 
-/* sub_000063C0 */
+//sub_000063C0
 /*
  * Verify loadable program segments and update the object file's 
  * section data.  A plain ELF file on the PSP does not contain any 
@@ -1434,7 +1434,7 @@ static s32 CheckElfSection(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *execI
     Elf32_Phdr *progHeader;
     u32 i;
     
-    //0x000063C4 - //0x000063D8
+    //0x000063C4 - 0x000063D8
     if ((s32)elfHeader->e_phoff <= 0 || (s32)(((u32)elfHeader + elfHeader->e_phoff) ^ (u32)elfHeader) <= 0 || 
       ((s32)elfHeader + elfHeader->e_phoff) <= 0)    
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
@@ -1461,7 +1461,7 @@ static s32 CheckElfSection(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *execI
 }
 
 
-/* Subroutine sub_00006468 - Address 0x00006468 */
+//Subroutine sub_00006468 - Address 0x00006468
 /*
  * Check the sections of a PRX module and add their sizes to the 
  * module segments which are TEXT, DATA and BSS.  Each of these 
@@ -1535,7 +1535,7 @@ static s32 CheckElfSectionPRX(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *ex
     return SCE_ERROR_OK;  
 }
 
-/* sub_000066E4 */
+//sub_000066E4
 /*
  * Count the loadable segments of an object file.  A segment can 
  * contain several sections (such as .text, .data, .rodata, .bss).  
@@ -1567,7 +1567,7 @@ static s32 CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehd
     return SCE_ERROR_OK;
 }
 
-/* Subroutine sub_000067B8 - Address 0x000067B8 */
+//Subroutine sub_000067B8 - Address 0x000067B8
 static s32 CheckTick(u8 *modBuf)
 {
     s32 status;

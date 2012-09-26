@@ -12,3 +12,4 @@
 
 #define UPALIGN256(v) (((v) + 0xFF) & 0xFFFFFF00)
 #define UPALIGN64(v) (((v) + 0x3F) & 0xFFFFFFC0)
+#define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)   
