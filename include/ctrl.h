@@ -4,7 +4,7 @@
 
 #include "common_header.h"
 
-/** @defgroup Controller Controller module
+/** @defgroup Controller Controller Module
  *
  * @{	
  */
