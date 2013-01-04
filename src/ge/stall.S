@@ -20,10 +20,10 @@ sceGeListUpdateStallAddr:
     mtic  $0,  $0
     lbu   $t1, 8($v0)
     lui   $t3, 0xBD40
-    lui   $t9, %hi(g_logHandler)
+    lui   $t9, %hi(g_GeLogHandler)
     xori  $t2, $t1, 0x2
     bnez  $t2, not_running
-    lw    $t9, %lo(g_logHandler)($t9) # logging function
+    lw    $t9, %lo(g_GeLogHandler)($t9) # logging function
 
     ## when dl->unk8 == 2: store stall address at 0xBD40010C and change dl->stall
     sw    $t0, 268($t3) # store stall address at 0xBD40010C
