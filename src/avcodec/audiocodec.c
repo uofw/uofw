@@ -1,6 +1,3 @@
-// valid for 0x08......, 0x48......, 0x88...... and 0xA8...... addresses
-#define IS_MAIN_MEMORY(addr) (((0x00220202 >> (((int)addr >> 27) & 0x1F)) & 1) != 0)
-
 // retValues
 int g_retValues[] = { 0x807F00FC, 0x807F00FD, 0x80000002, 0x807F00FF, 0x807F0001 };
 
@@ -21,7 +18,7 @@ short g_freqs[][4] = {
 
 int sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, int codec)
 {
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -47,7 +44,7 @@ int sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, int codec)
 
 int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
 {   
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -64,7 +61,7 @@ int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
         info->unk56 = 9999;
     }
     // 0264
-    if (IS_MAIN_MEMORY(info->edramAddr))
+    if (ADDR_IS_RAM(info->edramAddr))
         // 02BC
         sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
     }
@@ -84,7 +81,7 @@ int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
 
 int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
 {
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -101,7 +98,7 @@ int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
         info->unk56 = 9999;
     }
     // 0394
-    if (IS_MAIN_MEMORY(info->edramAddr))
+    if (ADDR_IS_RAM(info->edramAddr))
         // 03EC
         sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
     }
@@ -121,7 +118,7 @@ int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
 
 int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
 {
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -173,7 +170,7 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
 
 int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
 {
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -226,7 +223,7 @@ int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
 
 int sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, int codec, int *sizeOut)
 {   
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
@@ -251,7 +248,7 @@ int sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, int codec, int *si
 
 int sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, int codec)
 {
-    if (!IS_MAIN_MEMORY(info))
+    if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x80000004;
