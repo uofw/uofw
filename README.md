@@ -6,7 +6,8 @@ Project page: http://uofw.psnpt.com/
 Doxygen documentation: http://uofw.psnpt.com/sdkdoc/  
 For more information: http://dev.psnpt.com/redmine/projects/uofw/wiki  
 
-= Getting started =
+Getting started
+---------------
 
 In order to contribute to uOFW, you need advanced knowledge in MIPS ASM and C. Some good MIPS ASM  
 online resources can be found at: 
@@ -21,7 +22,8 @@ following excellent guide about reverse engineering for the PSP:
 http://psnpt.com/joomla/index.php/articles/39-tutorials  
 
 
-= Additional Information =
+Additional Information
+----------------------
 
 While you reverse-engineer parts of the PSP's kernel, you may will find yourself in a position
 where you would like to know more about how Operating Systems work in general. We suggest to check
@@ -29,18 +31,23 @@ out the following webpage: http://wiki.osdev.org/Expanded_Main_Page
 
 If you are looking for more PSP-related resources, you should consider checking out the following links
 below:
-   - http://lan.st/archive/index.php/t-151.html (IdStorage)
-   - http://lan.st/archive/index.php/t-3013.html (General PSP questions)
-   - http://lan.st/archive/index.php/t-372.html (Motherboard investigation)
+
+    - [LAN.st - IDStorage](http://lan.st/archive/index.php/t-151.html)
+    - [LAN.st - General PSP questions](http://lan.st/archive/index.php/t-3013.html)
+    - [LAN.st - PSP Motherboard information](http://lan.st/archive/index.php/t-372.html)
+
+    - [Yet Another laystation Portable Documentation](http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz)
+    - [PSP Module Tutorial](http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf)
    
-   - https://www.youtube.com/watch?v=INdUZk4NFIA (24C3 - TyRaNiD on early PSP hacking + Pandorra)
+    - [24C3 - TyRaNiD on early PSP hacking + Pandorra hack](https://www.youtube.com/watch?v=INdUZk4NFIA)
 
-Other resource websites are 
-   - http://wololo.net
-   - http://ps2dev.org
+Other websites are: 
+    - http://wololo.net
+    - http://ps2dev.org
 
 
-= Contact =
+Contact
+-------
 
 You can stay in touch with us and discuss project-related topics with us via the following ways:
     - via IRC on the FreeNode server (irc.freenode.net) (join the channel #uofw).
