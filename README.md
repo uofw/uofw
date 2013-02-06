@@ -21,6 +21,8 @@ The next step is to improve your reverse engineering skills (if needed). We sugg
 following excellent guide about reverse engineering for the PSP:  
 http://psnpt.com/joomla/index.php/articles/39-tutorials  
 
+If you have questions, don't hesitate to ask us!
+
 
 Additional Information
 ----------------------
@@ -32,14 +34,14 @@ out the following webpage: http://wiki.osdev.org/Expanded_Main_Page
 If you are looking for more PSP-related resources, you should consider checking out the following links
 below:
 
-    - LAN.st - IDStorage: http://lan.st/archive/index.php/t-151.html
-    - LAN.st - General PSP questions: http://lan.st/archive/index.php/t-3013.html
-    - LAN.st - PSP Motherboard information: http://lan.st/archive/index.php/t-372.html
+    - http://lan.st/archive/index.php/t-151.html (LAN.st - IdStorage)
+    - http://lan.st/archive/index.php/t-3013.html (LAN.st - General PSP questions)
+    - http://lan.st/archive/index.php/t-372.html (LAN.st - PSP Motherboard information)
 
-    - Yet Another laystation Portable Documentation: http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz
-    - PSP Module Tutorial: http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf
+    - http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz (Yet Another laystation Portable Documentation)
+    - http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf (PSP Module Tutorial)
    
-    - 24C3 - TyRaNiD on early PSP hacking + Pandorra hack: https://www.youtube.com/watch?v=INdUZk4NFIA
+    - https://www.youtube.com/watch?v=INdUZk4NFIA (24C3 - TyRaNiD on early PSP hacking + Pandorra hack)
 
 Other websites are: 
     - http://wololo.net
