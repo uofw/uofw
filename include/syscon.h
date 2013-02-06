@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -103,6 +103,21 @@
 #define PSP_SYSCON_RX_LEN (1)
 #define PSP_SYSCON_RX_RESPONSE (2)
 #define PSP_SYSCON_RX_DATA(i) (3 + (i))
+
+/** 
+ * PSP Hardware LEDs which can be turned ON/OFF 
+ * via ::sceSysconCtrlLED(). 
+ */
+enum PspSysconLeds {
+    /** Memory-Stick LED. */
+    PSP_SYSCON_LED_MS,
+    /** W-LAN LED. */
+    PSP_SYSCON_LED_WLAN,
+    /** Power LED. */
+    PSP_SYSCON_LED_POWER,
+    /** Bluetooth LED.*/
+    PSP_SYSCON_LED_BT
+};
 
 /** A system controller packet, used to run a syscon command. */
 typedef struct SceSysconPacket {
@@ -966,7 +981,7 @@ s32 sceSysconCtrlPower(u32 arg0, u32 arg1);
 /**
  * Turn a LED on or off.
  *
- * @param led The LED id (0, 1, 2 or 3).
+ * @param led The LED id, one of ::PspSysconLeds.
  * @param set Set this value to 1 if you want the LED to turn on, or 0 if you want it to turn off.
  *
  * @return 0 on success.

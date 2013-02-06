@@ -227,5 +227,7 @@ typedef struct {
 
 int sceKernelReferFplStatus(SceUID uid, SceKernelFplInfo *info);
 
+s64 sceKernelGetSystemTimeWide(void);
+
 #endif /* THREADMAN_KERNEL_H */
 

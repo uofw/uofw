@@ -1,613 +1,581 @@
-/* Copyright (C) 2011, 2012 The uOFW team    
+/* Copyright (C) 2011, 2012, 2013 The uOFW team    
    See the file COPYING for copying permission.
 */
 
-#define LED_MODE_OFF   0 
-#define LED_MODE_ON    1 
-#define LED_MODE_TIMED 2 
-#define LED_MODE_DELAY 3 
+/*
+ * uOFW/trunk/src/led/led.c
+ * 
+ * sceLED_Service - a driver for the PSP's hardware LEDs.
+ * 
+ * The LED driver's main function is to supply users with a precise
+ * functionality of changing LED states.  It provides functions to 
+ * turn a LED ON/OFF, to setup a blink event for LEDs as well as to
+ * register 4 LED functions which can be manually  executed.  In contrast,
+ * SYSCON's sceSysconCtrlLed() function only allows the user to turn a LED
+ * ON/OFF.
+ * 
+ * These are the following LEDs which states are controlled by this driver:
+ *      - the PSP's W-LAN LED
+ *      - the PSP's Memory-Stick LED
+ *      - the PSP's Bluetooth LED (only for the PSP_GO and similar
+ *                                 PSP hardware models.)
+ * 
+ * LED state interaction is done every VBlank interrupt, thus approximately
+ * 60 times per second.
+ * 
+ */
 
-#define LED_TYPE_MS   0 
-#define LED_TYPE_WLAN 1 
-#define LED_TYPE_BT   2
+#include <common_imp.h>
+#include <interruptman.h>
+#include <led.h>
+#include <lowio_gpio.h>
+#include <syscon.h>
+#include <sysmem_kernel.h>
+#include <sysmem_sysclib.h>
+#include <sysmem_sysevent.h>
 
-#define LED_GPIO_PORT_MS 0x40
-#define LED_GPIO_PORT_WLAN 0x40
-#define LED_GPIO_PORT_BT 0x01000000
+SCE_MODULE_INFO("sceLED_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | 
+                                  SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 8);
+SCE_MODULE_BOOTSTART("_sceLedModuleStart");
+SCE_MODULE_REBOOT_BEFORE("_sceLedModuleRebootBefore");
+SCE_SDK_VERSION(SDK_VERSION);
 
-PspSysEventHandler g_LedSysEv = //0E10
-{
-    sizeof(PspSysEventHandler),
-    "SceLed",
-    0x00FFFF00,
-    _sceLedSysEventHandler
+#define FALSE           (0)
+
+/* Highest possible LED mode. */
+#define LED_MODE_MAX    (3)
+
+#define LED_CONFIG_SLOTS (4)
+
+/* 
+ * Non GO-PSP models have two internal LED classes, 
+ * W-LAN LED and Memory-Stick LED.
+ */
+#define NUM_LED_NON_GO_MODEL    (2)
+/* 
+ * GO-PSP models have three internal LED classes, 
+ * W-LAN LED, Memory-Stick LED and Bluetooth LED.
+ */
+#define NUM_LED_GO_MODEL        (3)
+
+/* LED display modes. */
+enum SceLedDisplayModes {
+    /* 
+     * The specific LED is on when the corresponding 
+     * hardware element is active. 
+     */
+    LED_ON_ACTIVITY_ON = 0,
+    /* 
+     * The specific LED is on when the corresponding 
+     * hardware element is inactive. 
+     */
+    LED_ON_ACTIVITY_OFF = 1,
 };
 
-typedef struct 
-{ 
-  int unk0; 
-  int oncnt; 
-  int offcnt; 
-  int endcnt; 
-  int endstat; 
-}SceLedParam; 
+typedef struct {
+    /* The address of a LED configuration command package. */
+    u32 customLedCmd;
+    /* The number of executions of a registered LED configuration command. */
+    u32 numExecs;
+} SceLedControlCmd;
 
-typedef struct 
-{
+typedef struct {
+    /* The GPIO port belonging to the specific LED. */
     u8  gpioPort;
-    u8  unk1;
-    u8  unk2;
-    u8  unk3;
-    int unk4;
-    int unk8;
-    int unk12;
-    int unk16;
-    int unk20;
-    int unk24;
-    int unk28;
-    int unk32;
-    SceLedParam    *unk36;
-    int unk40;
-    int unk44;
-    int unk48;
-    int unk52;
-    int unk56;
-    int unk60;
-    int unk64;
-    int unk68;
-    int unk72;
-    int unk76;
-}SceLED;
+    /* The display mode of an LED. One of ::SceLedDisplayModes. */
+    u8  displayMode;
+    /* The LED ID. One of ::PspSysconLeds. */
+    u8  ledId;
+    /* Reserved. */
+    u8  padding;
+    /* The activity mode of a LED. */
+    s32 activityMode;
+    /* The blink time interval of a LED. */
+    s32 blinkInterval;
+    /* The "on" time of a LED during a blink period. */
+    s32 onTime;
+    /* The "off" time of a LED during a blink period. */
+    s32 offTime;
+    /* 
+     * The duration of a blink period. After the blink period, 
+     * the endBlinkState is applied to the specified LED. 
+     */
+    s32 blinkTime;
+    /* The end mode of an LED after the blink time interval. 1 = ON, 0 = OFF. */
+    s32 endBlinkState;
+    /** The current LED mode. One of ::SceLedModes. */
+    s32 curLedMode;
+    /* Unknown. */
+    s32 unk32;
+    /* The current LED configuration command. */
+    SceLedConfiguration *config;
+    /* The current saved LED configuration command. */
+    SceLedConfiguration *savedConfig;
+    /* The index into the registered LED configurations. */
+    s32 index;
+    /* The LED configuration slots. */
+    SceLedControlCmd controlCmds[LED_CONFIG_SLOTS];
+} SceLed;
 
+static s32 _sceLedSysEventHandler(s32 eventId, char *eventName __attribute__((unused)), void *param, 
+                                  s32 *result __attribute__((unused)));
+static s32 _sceLedVblankInterrupt(s32 subIntNm __attribute__((unused)), void *arg __attribute__((unused)));
+static u32 _sceLedSeqExec(SceLed *led);
+static u32 _sceLedSuspend(s32 arg0);
+static u32 _sceLedResume(s32 arg0);
 
-SceLED leds[3]; //E50
-int g_00000F40;
+SceSysEventHandler g_LedSysEv = {
+    .size = sizeof(SceSysEventHandler),
+    .name = "SceLed",
+    .typeMask = SCE_SUSPEND_EVENTS | SCE_RESUME_EVENTS,
+    .handler = _sceLedSysEventHandler,
+    .gp = 0,
+    .busy = FALSE,
+    .next = NULL,
+    .reserved = {
+        [0] = 0,
+        [1] = 0,
+        [2] = 0,
+        [3] = 0,
+        [4] = 0,
+        [5] = 0,
+        [6] = 0,
+        [7] = 0,
+        [8] = 0,
+    }
+};
 
-int sceLedInit(void)
+SceLed g_Led[NUM_LED_GO_MODEL];
+u32 g_iMaxLeds;
+
+u32 sceLedInit(void)
 {    
-    int i;
-    memset(&leds, 0, 0xF0);
-    g_00000F40 = 2;
-    leds[LED_TYPE_MS].gpioPort = 6;
-    leds[LED_TYPE_MS].unk2 = 0;
-    leds[LED_TYPE_WLAN].gpioPort = 7;
-    leds[LED_TYPE_WLAN].unk2 = 1;
+    u32 i;
+    s32 model;
+    u8 btStatus;
+    s32 gpioPort;
+    u32 val;
     
-    int model = sceKernelGetModel();
-    if((model - 1 < 2) || model == 4)
-    {
-        leds[LED_TYPE_WLAN].unk1 = 1;
+    memset(&g_Led, 0, sizeof g_Led);
+    g_iMaxLeds = NUM_LED_NON_GO_MODEL;
+    
+    g_Led[PSP_LED_TYPE_MS].gpioPort = SCE_GPIO_PORT_MODE_MS;
+    g_Led[PSP_LED_TYPE_MS].ledId = PSP_SYSCON_LED_MS;
+    g_Led[PSP_LED_TYPE_WLAN].gpioPort = SCE_GPIO_PORT_MODE_WLAN;
+    g_Led[PSP_LED_TYPE_WLAN].ledId = PSP_SYSCON_LED_WLAN;
+    
+    model = sceKernelGetModel();  
+    if (model == PSP_2000 || model == PSP_3000 || model == PSP_GO)
+        g_Led[PSP_LED_TYPE_WLAN].displayMode = LED_ON_ACTIVITY_OFF;
+    
+    if (model == PSP_GO || model == 5 || model == 7 || model == 9) {
+        g_Led[PSP_LED_TYPE_BT].gpioPort = SCE_GPIO_PORT_MODE_BT;
+        g_Led[PSP_LED_TYPE_BT].ledId = PSP_SYSCON_LED_BT;
+        if (model == PSP_GO)
+            g_Led[PSP_LED_TYPE_BT].displayMode = LED_ON_ACTIVITY_OFF;
+        
+        g_iMaxLeds = NUM_LED_GO_MODEL;
     }
-    if(((model - 4) < 2) || model == 7 || model == 9)
-    {
-        //loc_0000022C
-        leds[LED_TYPE_BT].gpioPort = 24;
-        leds[LED_TYPE_BT].unk2 = 3;
-        if(model == 4)
-            leds[LED_TYPE_BT].unk1 = 1;
-        g_00000F40 = 3;
-    }
-
-    if(g_00000F40 >= 0)
-    {
-        for(i = 0; i < g_00000F40; i++)
-        {
-            //loc_000000D4
-            if(sceGpioGetPortMode(leds[i].gpioPort) == 2)
-            {
-                //loc_00000210
-                sceGpioSetPortMode(leds[i].gpioPort, 0);
-                if(leds[i].unk1 == 0)
-                {
-                    //loc_000001AC
-                    sceGpioPortClear(1 << leds[i].gpioPort);
-                    continue;
-                }
+    
+    for (i = 0; i < g_iMaxLeds; i++) {
+        if (sceGpioGetPortMode(g_Led[i].gpioPort) == 2) {
+            sceGpioSetPortMode(g_Led[i].gpioPort, 0);
+            if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+                sceGpioPortClear(1 << g_Led[i].gpioPort);
+                continue;
             }
-            else if(i == LED_TYPE_BT)
-            {
-                //loc_000001BC
-                int gpioPort = sceGpioPortRead();
-                int btStatus = sceSysconGetBtPowerStatus();
+        }
+        else if (i == PSP_LED_TYPE_BT) {
+            gpioPort = sceGpioPortRead();
+            btStatus = sceSysconGetBtPowerStatus();      
+            val = ((gpioPort >> (g_Led[i].gpioPort & 0x1F)) & 0x1) ^ g_Led[i].displayMode;
+            val = (btStatus == 0) ? 0 : val;
                 
-                if(((btStatus == 0) ? 0 : (((gpioPort >> leds[i].gpioPort) & 1) ^ leds[i].unk1)) != 0)
-                {
-                    //loc_000001FC
-                    sceLedSetMode(2, 1, 0);
-                    continue;
-                }
-                else
-                {
-                    if(leds[i].unk1 == 0)
-                    {
-                        //loc_000001AC
-                         sceGpioPortClear(1 << leds[i].gpioPort); //since i is 2 then this is 160, but I wanted it to be uniform
-                         continue;
-                    }
-                }
+            if (val != 0) {
+                sceLedSetMode(PSP_LED_TYPE_BT, LED_MODE_ON, NULL);
+                continue;
             }
-            else
-            {
-                if(leds[i].unk1 == 0)
-                {
-                    //loc_000001AC
-                    sceGpioPortClear(1 << leds[i].gpioPort);
-                    continue;                    
-                }
+            else if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+                sceGpioPortClear(1 << g_Led[i].gpioPort);
+                continue;
             }
-            
-            //loc_000000F8
-            /*
-             * turn on memory card the first time around, WLAN the second time around
-             * and bluetooth the third time around
-             */
-            sceGpioPortSet(1 << leds[i].gpioPort);
-            //loc_00000104
         }
+        else if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+            sceGpioPortClear(1 << g_Led[i].gpioPort);
+            continue;                    
+        }           
+        /*
+         * Enable the following LEDs:
+         *      1) the Memory-Stick LED
+         *      2) the W-LAN LED
+         *      3) the Bluetooth LED
+         */       
+        sceGpioPortSet(1 << g_Led[i].gpioPort);
     }
     
-    if(g_00000F40 >= 0)
-    {
-        for(i = 0; i < g_00000F40; i++)
-        {
-            sceSysconCtrlLED(leds[i].unk2, 1);
-        }
-    }
+    /* Turn ON all PSP hardware LEDs. */
+    for (i = 0; i < g_iMaxLeds; i++)
+        sceSysconCtrlLED(g_Led[i].ledId, LED_MODE_ON);
     
-    sceKernelRegisterSubIntrHandler(PSP_VBLANK_INT, 25, _sceLedVblankInterrupt, NULL);
-    sceKernelEnableSubIntr(PSP_VBLANK_INT, 25);
-    sceKernelRegisterSysEventHandler(g_LedSysEv);
+    sceKernelRegisterSubIntrHandler(SCE_VBLANK_INT, 0x19, _sceLedVblankInterrupt, NULL);
+    sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x19);
+    sceKernelRegisterSysEventHandler(&g_LedSysEv);
     
-    return 0;
+    return SCE_ERROR_OK;
 }
 
-int sceLedEnd()
+u32 sceLedEnd(void)
 {
-    int i;
-    sceKernelUnregisterSysEventHandler(g_LedSysEv);
-    sceKernelReleaseSubIntrHandler(PSP_VBLANK_INT, 25);
+    u32  i;
     
-    if(g_00000F40 <= 0)
-    {
-        return 0;
-    }
+    sceKernelUnregisterSysEventHandler(&g_LedSysEv);
+    sceKernelReleaseSubIntrHandler(SCE_VBLANK_INT, 0x19);  
     
-    for(i = 0; i < g_00000F40; i++)
-    {
-        if(i == LED_TYPE_BT)
-        {
-            //loc_00000324
-            if(leds[i].unk4 == 1)
-            {
-                //loc_000002D4
+    /* Disable the PSP hardware LEDs. */
+    for (i = 0; i < g_iMaxLeds; i++) {
+        if (i == PSP_LED_TYPE_BT) {
+            if (g_Led[i].activityMode == LED_MODE_ON)
+                continue;
+            else if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+                sceGpioPortClear(1 << g_Led[i].gpioPort);
                 continue;
             }
-            else if(leds[i].unk1 == 0)
-            {
-                //loc_00000348
-                sceGpioPortClear(1 << leds[i].gpioPort);
-                continue;
-            }
-        }
-        else if(leds[i].unk1 == 0)
-        {
-            sceGpioPortClear(1 << leds[i].gpioPort);
+        } else if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+            sceGpioPortClear(1 << g_Led[i].gpioPort);
             continue;
-        }
-        
-        //loc_000002CC
-        sceGpioPortSet(1 << leds[i].gpioPort);
+        }       
+        sceGpioPortSet(1 << g_Led[i].gpioPort);
     }
-    
-    return 0;
+    return SCE_ERROR_OK;
 }
 
-//0350
-int _sceLedSysEventHandler(int ev_id, char *ev_name, void *param, int *result)
+/*
+ * Suspend/resume the LED library according to hardware commands.
+ */
+static s32 _sceLedSysEventHandler(s32 eventId, char *eventName __attribute__((unused)), void *param, 
+                                  s32 *result __attribute__((unused)))
 {
-    if(ev_id == 0x400A)
-    {
-        //loc_000003A0
-        _sceLedSuspend(param[1] == 2);
-    }
-    else if(ev_id == 0x100000)
-    {
-        //loc_00000378
-        _sceLedResume(param[1][1] == 0x80000000);
-    }
+    u32 *ptr = NULL;
     
-    return 0;
+    if (eventId == 0x400A) {
+        if (((u32 *)param)[1] == 1)
+            _sceLedSuspend(1);
+        else
+            _sceLedSuspend(0);
+    } else if (eventId == 0x100000) {
+        ptr = (u32 *)((u32 *)param)[1];
+        if (ptr[1] == 0x80000000)
+            _sceLedResume(1);
+        else
+            _sceLedResume(0);
+    }
+    return SCE_ERROR_OK;
 }
 
-//03C4
-int _sceLedVblankInterrupt()
+/*
+ * This function is called every VBlank interrupt, approximately 60 times per second.
+ * It is responsible for handling a LED blink event as well as for executing a custom
+ * list of LED state functions.
+ */
+static s32 _sceLedVblankInterrupt(s32 subIntNm __attribute__((unused)), void *arg __attribute__((unused)))
 {
-    int i;
-    
-    if(g_00000F40 < 0)
-    {
-        return -1;
+    u32 i;
+      
+    for (i = 0; i < g_iMaxLeds; i++) {
+        if (g_Led[i].activityMode == LED_MODE_SELECTIVE_EXEC) 
+            _sceLedSeqExec(&g_Led[i]);
     }
-    
-    for(i = 0; i < g_00000F40; i++)
-    {
-        if(leds[i].unk4 == 3)
-        {
-            //loc_000004F8
-            _sceLedSeqExec(leds[i]);
-        }
-    }
-    
-    for(i = 0; i < g_00000F40; i++)
-    {
-        int unk8 = leds[i].unk8;
-        
-        if(leds[i].unk20 < 0)
-        {
-            //loc_000004CC
-            if(leds[i].unk20 == 0)
-            {
-                leds[i].unk8 = 0;
-                leds[i].unk12 = 0;
-                if(leds[i].unk24 != 0)
-                {
-                    leds[i].unk16 = 0;
-                    leds[i].unk12 = 1;
-                }
+    for (i = 0; i < g_iMaxLeds; i++) {      
+       if (g_Led[i].blinkTime <= 0) {
+           /* Finish a LED blink event. */
+            if (g_Led[i].blinkTime == 0) {
+                g_Led[i].blinkInterval = 0;
+                g_Led[i].onTime = 0;
+                g_Led[i].offTime = 0;
+                
+                /* Set the LED endBlinkState. */
+                if (g_Led[i].endBlinkState != LED_MODE_OFF)
+                    g_Led[i].onTime = 1;
                 else
-                {
-                    leds[i].unk16 = 1;
-                }
+                    g_Led[i].offTime = 1;
             }
-        }
-        else
-        {
-            leds[i].unk20--;
-        }
+       } else {
+           g_Led[i].blinkTime--;
+       }       
         
-        if(((unk8 + 1) + ((leds[i].unk12) + (leds[i].unk16))) != 0)
-        {
-            leds[i].unk8++;
-        }
-        else
-        {
-            leds[i].unk8 = 0;
-        }
-        
-        if((leds[i].unk8 < leds[i].unk12) == leds[i].unk1)
-        {
-            //loc_000004BC
-            sceGpioPortClear(1 << leds[i].gpioPort);
-        }
-        else
-        {
-            sceGpioPortSet(1 << leds[i].gpioPort);
-        }
-    }
-    
+       /* Count the LED blink interval time. */
+       if ((g_Led[i].blinkInterval + 1) < (g_Led[i].onTime + g_Led[i].offTime))
+           g_Led[i].blinkInterval++;
+       else
+           g_Led[i].blinkInterval = 0;
+          
+       /* 
+        * Set the LEC status depending on the current blink event part(LED ON/OFF) 
+        * and the LEDs display mode.
+        */
+       if (((g_Led[i].blinkInterval < g_Led[i].onTime) && (g_Led[i].displayMode == LED_ON_ACTIVITY_OFF)) 
+               || ((g_Led[i].blinkInterval >= g_Led[i].onTime) && (g_Led[i].displayMode == LED_ON_ACTIVITY_ON)))
+           /* Disable a LED. */
+           sceGpioPortClear(1 << g_Led[i].gpioPort);
+       else
+           /* Enable a LED. */
+          sceGpioPortSet(1 << g_Led[i].gpioPort);
+         
+    } 
     return -1;
 }
 
-/* By artart78 */
-int _sceLedSeqExec(SceLED *led)
+/*
+ * Execute registered LED configuration commands in sequence.
+ */
+static u32 _sceLedSeqExec(SceLed *led)
 {
-    if (led->unk32 > 0)
-    {
-        if (--led->unk32 > 0)
-            return 0;
-    }
-    // 0528
-    char *ptr = led->unk36;
-    while (ptr != NULL)
-    {
-        char cmd = *(ptr++);
-        if (cmd < 0)
-        {
-            // 0690
+    u8 cmd;
+    
+    if (led->unk32 > 0 && --led->unk32 > 0)
+        return SCE_ERROR_OK;
+
+    u8 *ptr = (u8 *)led->config;
+    while (ptr != NULL) {
+        cmd = *ptr++;
+        if ((s8)cmd < 0) {
             led->unk32 = cmd & 0x7F;
-            led->unk36 = ptr;
-            return 0;
+            led->config = (SceLedConfiguration *)ptr;
+            return SCE_ERROR_OK;
         }
-        switch (cmd)
-        {
-            case 0:
-                // 0580
-                led->unk36 = 0;
-                return 0;
-    
-            case 1:
-                // 056C
-                led->unk40 = ptr;
-                break;
-    
-            case 2:
-                // 0588
-                ptr = led->unk40;
-                break;
-    
-            case 3:
-                // 0590
-                if (led->unk44 >= 4) {
-                    led->unk36 = NULL;
-                    return 0;
-                }
-                *(int*)(led + 52 + led->unk44 * 8) = *ptr;
-                *(int*)(led + 48 + led->unk44 * 8) = (++ptr);
-                led->unk44++;
-                break;
-    
-            case 4:
-                // 05D0
-                if (led->unk44 <= 0) {
-                    led->unk36 = 0;
-                    return 0;
-                }
-                *(int*)(led + 44 + led->unk44 * 8)--;
-                if (*(int*)(led + 44 + led->unk44 * 8) <= 0)
-                {
-                    // 0610
-                    led->unk44--;
-                }
-                else
-                    ptr = *(int*)(led + 48 + led->unk44 * 8);
-                break;
-    
-            case 16:
-                // 0620
-                led->unk12 = 1;
-                led->unk28 = 1;
-                led->unk16 = 0;
-                break;
-    
-            case 17:
-                // 0634
-                led->unk16 = 1;
-                led->unk28 = 0;
-                led->unk12 = 0;
-                break;
-    
-            case 18:
-                // 0648
-                if (led->unk28 == 1)
-                {
-                    led->unk12 = 1;
-                    // 0664
-                    led->unk28 = 0;
-                    led->unk16 = 0;
-                }
-                else
-                {
-                    led->unk16 = 1;
-                    led->unk28 = 1;
-                    led->unk12 = 0;
-                }
-                break;
-    
-            case 19:
-                // 066C
-                led->unk28 = 2;
-                led->unk12 = *(ptr++);
-                led->unk16 = *ptr;
-                break;
-    
-            default:
-                // 0618
-                ptr = NULL;
-                break;
-        }
-        
-        // 0570
+        switch(cmd) {
+        case 0:
+            led->config = NULL;
+            return SCE_ERROR_OK;
+        case LED_CMD_SAVE_CMD:
+            led->savedConfig = (SceLedConfiguration *)ptr;
+            break;   
+        case LED_CMD_EXECUTE_SAVED_CMD:
+            ptr = (u8 *)led->savedConfig;
+            break;
+        case LED_CMD_REGISTER_CMD:
+            if (led->index >= LED_CONFIG_SLOTS) {
+                led->config = NULL;
+                return SCE_ERROR_OK;
+            }           
+            led->controlCmds[led->index].numExecs = *ptr++;
+            led->controlCmds[led->index].customLedCmd = (u32)ptr;
+            led->index++;   
+            break;   
+        case LED_CMD_EXECUTE_CMD:
+            if (led->index <= 0) {
+                led->config = NULL;
+                return SCE_ERROR_OK;
+            }           
+            led->controlCmds[led->index - 1].numExecs--;
+            if (led->controlCmds[led->index - 1].numExecs <= 0)
+                led->index--;
+            else {
+                ptr = (u8 *)led->controlCmds[led->index - 1].customLedCmd;
+            }
+            break;
+        case LED_CMD_TURN_LED_ON:
+            led->onTime = 1;
+            led->curLedMode = LED_MODE_ON;
+            led->offTime = 0;
+            break;   
+        case LED_CMD_TURN_LED_OFF:
+            led->offTime = 1;
+            led->curLedMode = LED_MODE_OFF;
+            led->onTime = 0;
+            break;
+        case LED_CMD_SWITCH_LED_STATE:
+            if (led->curLedMode == LED_MODE_ON) {
+                led->onTime = 1;
+                led->curLedMode = LED_MODE_OFF;
+                led->offTime = 0;
+            } else {
+                led->offTime = 1;
+                led->curLedMode = LED_MODE_ON;
+                led->onTime = 0;
+            }
+            break;   
+        case LED_CMD_BLINK_LED:          
+            led->curLedMode = LED_MODE_BLINK;
+            led->onTime = *ptr++;
+            led->offTime = *ptr++;
+            break;   
+        default:
+            led->config = NULL;
+            return SCE_ERROR_OK;
+        }       
     }
-    led->unk36 = ptr;
-    return 0;
+    led->config = (SceLedConfiguration *)ptr;
+    return SCE_ERROR_OK;
 }
 
-int sceLedSetMode(int led_type, int mode, SceLedParam *param)
+s32 sceLedSetMode(s32 led, s32 mode, SceLedConfiguration *config)
 {
-    if(led_type < 0 || led_type >= g_00000F40)
-        return 0x80000102;
+    s32 oldMode;
     
-    if(mode >= 4)
-        return 0x80000107;
+    if (led < 0 || led >= (s32)g_iMaxLeds)
+        return SCE_ERROR_INVALID_INDEX;
     
-    leds[led_type].unk20 = -1;
-    leds[led_type].unk36 = NULL;
-    int old_mode = leds[led_type].unk4;
-    leds[led_type].unk4 = mode;
+    if (mode < 0 || mode > LED_MODE_MAX)
+        return SCE_ERROR_INVALID_MODE;
     
-    if(mode == LED_MODE_ON)
-    {
-        //loc_00000790
-        leds[led_type].unk12 = mode;
-        leds[led_type].unk16 = 0;
-        leds[led_type].unk8 = 0;
-    }
-    else if(mode == LED_MODE_OFF)
-    {
-        //loc_00000778
-        leds[led_type].unk16 = 1;
-        leds[led_type].unk8 = 0;
-        leds[led_type].unk12 = 0;
-    }
-    else if(mode == LED_MODE_TIMED)
-    {
-        //loc_0000074C
-        if(old_mode != mode)
-            leds[led_type].unk8 = 0;
-            
-        leds[led_type].unk12 = param.oncnt;
-        leds[led_type].unk16 = param.offcnt;
-        leds[led_type].unk20 = param.endcnt;
-        leds[led_type].unk24 = param.endstat;
-    }
-    else if(mode == LED_MODE_DELAY)
-    {
-        //loc_0000072C
-        if(old_mode != mode)
-            leds[led_type].unk28 = old_mode;
+    g_Led[led].blinkTime = -1;
+    g_Led[led].config = NULL;
+    oldMode = g_Led[led].activityMode;
+    g_Led[led].activityMode = mode;
+    
+    /* Turn a LED ON. */
+    if (mode == LED_MODE_ON) {
+        g_Led[led].onTime = 1;
+        g_Led[led].offTime = 0;
+        g_Led[led].blinkInterval = 0;
+    } else if (mode == LED_MODE_OFF) {
+        if (mode != LED_MODE_OFF)
+            return SCE_ERROR_OK;
         
-        leds[led_type].unk32 = 1;
-        leds[led_type].unk36 = &param;
-        leds[led_type].unk44 = 0;
-        leds[led_type].unk8 = 0;
-        leds[led_type].unk40 = 0;
-    }
-    
-    return 0;
+        /* Turn a LED OFF. */
+        g_Led[led].offTime = 1;
+        g_Led[led].blinkInterval = 0;
+        g_Led[led].onTime = 0;
+    } else if (mode == LED_MODE_BLINK) {
+        if (oldMode != mode)
+            g_Led[led].blinkInterval = 0;
+            
+        //NOTE: This is uOFW's own code, Sony forgot the null-pointer check
+        //      in the original module.
+        if (config == NULL)
+            return SCE_ERROR_INVALID_POINTER;
+        
+        /* Setup a LED blink event. */
+        g_Led[led].onTime = config->onTime;
+        g_Led[led].offTime = config->offTime;
+        g_Led[led].blinkTime = config->blinkTime;
+        g_Led[led].endBlinkState = config->endBlinkState;
+    } else if (mode == LED_MODE_SELECTIVE_EXEC) {
+        if (oldMode != mode)
+            g_Led[led].curLedMode = oldMode;
+        
+        g_Led[led].unk32 = 1;
+        g_Led[led].config = config;
+        //g_Led[led].index = 0; // <-- Sony code which does not make much sense here.
+        g_Led[led].blinkInterval = 0;
+        g_Led[led].savedConfig = NULL;
+    }  
+    return SCE_ERROR_OK;
 }
 
-int module_start
+u32 _sceLedModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     sceLedInit();
-    return 0;
+    return SCE_ERROR_OK;
 }
 
-int module_reboot_before()
+u32 _sceLedModuleRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     sceLedEnd();
-    return 0;
+    return SCE_ERROR_OK;
 }
 
-int _sceLedSuspend(int arg0)
+/*
+ * Turn off all used LEDs and save their state. The LED states 
+ * can be restored using _sceLedResume.
+ */
+static u32 _sceLedSuspend(s32 mode)
 {
-    sceKernelDisableSubIntr(PSP_VBLANK_INT, 25);
+    u32 i;
+    s32 status;
     
-    if(arg0 == 0)
-    {
-        //loc_000008D8
-        sceGpioPortClear(LED_GPIO_PORT_MS);
-        sceGpioSetPortMode(6, 2);
-        int ret = sceSysconCtrlLED(1, 0);
+    sceKernelDisableSubIntr(SCE_VBLANK_INT, 0x19);
+    
+    if (mode == 0) {
+        sceGpioPortClear(SCE_GPIO_MASK_LED_MS);
+        sceGpioSetPortMode(SCE_GPIO_PORT_MODE_MS, 2);
+        sceSysconCtrlLED(PSP_SYSCON_LED_WLAN, LED_MODE_OFF);
         
-        if(ret == 0)
-        {
-            //loc_000009C4
-            sceGpioPortClear(LED_GPIO_PORT_WLAN);
-            sceGpioSetPortMode(6, 2);
-        }
-        else
-        {
-            if(leds[LED_TYPE_WLAN].unk1 == 1)
-            {
-                //loc_000009B0
-                sceGpioPortClear(1 << leds[LED_TYPE_WLAN].gpioPort);
-            }
+        status = sceSysconGetWlanPowerCtrl();       
+        if (status == 0) {
+            sceGpioPortClear(SCE_GPIO_MASK_LED_WLAN);
+            sceGpioSetPortMode(SCE_GPIO_PORT_MODE_MS, 2); //Note: Shouldn't it be SCE_GPIO_PORT_MODE_WLAN?
+        } else {
+            if (g_Led[PSP_LED_TYPE_WLAN].displayMode == LED_ON_ACTIVITY_OFF)
+                sceGpioPortClear(1 << g_Led[PSP_LED_TYPE_WLAN].gpioPort);
             else
-            {
-                sceGpioPortSet(1 << leds[LED_TYPE_WLAN].gpioPort);
-            }
+                sceGpioPortSet(1 << g_Led[PSP_LED_TYPE_WLAN].gpioPort);
         }
         
-        if(leds[LED_TYPE_BT].unk2 == 0)
-            return 0;
+        if (g_Led[PSP_LED_TYPE_BT].ledId == PSP_SYSCON_LED_MS)
+            return SCE_ERROR_OK;
             
-        sceSysconCtrlLED(3, 0);
+        sceSysconCtrlLED(PSP_SYSCON_LED_BT, LED_MODE_OFF);
         
-        if(sceSysconGetBtPowerCtrl() == 0)
-        {
-            //loc_00000994
-            sceGpioPortClear(LED_GPIO_PORT_BT);
-            sceGpioSetPortMode(24, 2);
-            
-            return 0;
+        status = sceSysconGetBtPowerCtrl();        
+        if (status == 0) {
+            sceGpioPortClear(SCE_GPIO_MASK_LED_BT);
+            sceGpioSetPortMode(SCE_GPIO_PORT_MODE_BT, 2);     
+            return SCE_ERROR_OK;
         }
         
-        if(leds[LED_TYPE_BT].unk1 == 1)
-        {
-            //loc_00000980
-            sceGpioPortClear(1 << leds[LED_TYPE_BT].gpioPort);
-        }
-        
-        sceGpioPortSet(1 << leds[LED_TYPE_BT].gpioPort);
-        return 0;
+        if (g_Led[PSP_LED_TYPE_BT].displayMode == LED_ON_ACTIVITY_OFF) {
+            sceGpioPortClear(1 << g_Led[PSP_LED_TYPE_BT].gpioPort);
+            return SCE_ERROR_OK;
+        }      
+        sceGpioPortSet(1 << g_Led[PSP_LED_TYPE_BT].gpioPort);
+        return SCE_ERROR_OK;
     }
-    else
-    {
-        int i;
-        if(g_00000F40 < 0)
-            return 0;
-            
-        for(i = 0; i < g_00000F40; i++)
-        {
-            s1 = leds;
-            v1 = leds;
-            if(i == LED_TYPE_BT)
-            {
-                //loc_000008AC
-                if(leds[i].unk4 == 1)
-                {
+    else {  
+        for (i = 0; i < g_iMaxLeds; i++) {
+            if (i == PSP_LED_TYPE_BT) {
+                if (g_Led[i].activityMode == LED_MODE_ON)
+                    continue;
+                
+                if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+                    sceGpioPortClear(1 << g_Led[i].gpioPort);
                     continue;
                 }
-                
-                if(leds[i].unk1 == 0)
-                {
-                    //loc_000008D0
-                    sceGpioPortClear(1 << leds[i].gpioPort);
-                    continue;
-                }
-            }
-            else
-            {
-                if(leds[i].unk1 == 0)
-                {
-                    //loc_00000898
-                    sceGpioPortClear(1 << leds[i].gpioPort);
-                    continue;
-                }
-            }
-
-            sceGpioPortSet(1 << leds[i].gpioPort);
-        }
-    }
-}
-
-int _sceLedResume(int arg0)
-{
-    int i;
-    if(g_00000F40 < 0)
-    {
-        sceKernelEnableSubIntr(PSP_VBLANK_INT, 25);
-    }
-    
-    s6 s1 = leds; //fp BT
-    
-    for(i = 0; i < g_00000F40; i++)
-    {
-        if(arg0 != 0)
-        {
-            if(i == LED_TYPE_BT)
-            {
-                //loc_00000AE0
-                int gpioPort = sceGpioPortRead();
-                int btStatus = sceSysconGetBtPowerStatus();
-                
-                if(((btStatus == 0) ? 0 : ((gpioPort >> leds[i].gpioPort) & 1) ^ leds[i].unk1) != 0)
-                {
-                    sceLedSetMode(2, 1, 0);
-                }
-                else
-                {
-                    sceLedSetMode(2, 0, 0);
-                }
-                
-                sceGpioSetPortMode(leds[i].gpioPort, 0);
-                sceSysconCtrlLED(leds[i].unk2, 1);
-                
+            } else if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON) {
+                sceGpioPortClear(1 << g_Led[i].gpioPort);
                 continue;
             }
+            sceGpioPortSet(1 << g_Led[i].gpioPort);
         }
-        
-        if(leds[i].unk1 == 0)
-        {
-            //loc_00000AD0
-            sceGpioPortClear(1 << leds[i].gpioPort);
-        }
-        else
-        {
-            sceGpioPortSet(1 << leds[i].gpioPort);
-        }
-        
-        sceGpioSetPortMode(leds[i].gpioPort, 0);
-        sceSysconCtrlLED(leds[i].unk2, 1);
     }
+    return SCE_ERROR_OK;
+}
+
+/*
+ * Recover the LED states before the LEDs were suspended.
+ */
+static u32 _sceLedResume(s32 arg0)
+{
+    u32 i;
+    u32 val;
+    s32 gpioPort;
+    u8 btStatus;
+    
+    for (i = 0; i < g_iMaxLeds; i++) {
+        if (arg0 != 0 && i == PSP_LED_TYPE_BT) { 
+            gpioPort = sceGpioPortRead();
+            btStatus = sceSysconGetBtPowerStatus();            
+            val = ((gpioPort >> (g_Led[i].gpioPort & 0x1F)) & 0x1) ^ g_Led[i].displayMode;
+            val = (btStatus == 0) ? 0 : val;
+                
+            if (val != 0)
+                sceLedSetMode(PSP_LED_TYPE_BT, LED_MODE_ON, NULL);
+            else
+                sceLedSetMode(PSP_LED_TYPE_BT, LED_MODE_OFF, NULL);
+                
+            sceGpioSetPortMode(g_Led[i].gpioPort, 0);
+            sceSysconCtrlLED(g_Led[i].ledId, LED_MODE_ON);          
+            continue;
+        }     
+        if (g_Led[i].displayMode == LED_ON_ACTIVITY_ON)
+            sceGpioPortClear(1 << g_Led[i].gpioPort);
+        else
+            sceGpioPortSet(1 << g_Led[i].gpioPort);
+        
+        sceGpioSetPortMode(g_Led[i].gpioPort, 0);
+        sceSysconCtrlLED(g_Led[i].ledId, LED_MODE_ON);
+    }
+    sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x19);
+    return SCE_ERROR_OK;
 }

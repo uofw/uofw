@@ -32,14 +32,14 @@ out the following webpage: http://wiki.osdev.org/Expanded_Main_Page
 If you are looking for more PSP-related resources, you should consider checking out the following links
 below:
 
-    - [LAN.st - IDStorage][1] 
-    - [LAN.st - General PSP questions][2] 
-    - [LAN.st - PSP Motherboard information][3] 
+    - LAN.st - IDStorage: http://lan.st/archive/index.php/t-151.html
+    - LAN.st - General PSP questions: http://lan.st/archive/index.php/t-3013.html
+    - LAN.st - PSP Motherboard information: http://lan.st/archive/index.php/t-372.html
 
-    - [Yet Another laystation Portable Documentation][4] 
-    - [PSP Module Tutorial][5] 
+    - Yet Another laystation Portable Documentation: http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz
+    - PSP Module Tutorial: http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf
    
-    - [24C3 - TyRaNiD on early PSP hacking + Pandorra hack][6] 
+    - 24C3 - TyRaNiD on early PSP hacking + Pandorra hack: https://www.youtube.com/watch?v=INdUZk4NFIA
 
 Other websites are: 
     - http://wololo.net
@@ -50,11 +50,5 @@ Contact
 -------
 
 You can stay in touch with us and discuss project-related topics with us via the following ways:
-    - via IRC on the FreeNode server (irc.freenode.net) (join the channel #uofw).
-
-    [1]: http://lan.st/archive/index.php/t-151.html
-    [2]: http://lan.st/archive/index.php/t-3013.html
-    [3]: http://lan.st/archive/index.php/t-372.html
-    [4]: http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz
-    [5]: http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf
-    [6]: https://www.youtube.com/watch?v=INdUZk4NFIA
+    - via IRC on the FreeNode server (irc.freenode.net) (join the channel #uofw)
+    - via e-mail

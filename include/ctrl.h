@@ -1,4 +1,4 @@
-/** Copyright (C) 2011, 2012 The uOFW team
+/** Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -12,12 +12,12 @@
 #ifndef CTRL_H
 #define	CTRL_H
 
-/** The callback function used by ::sceCtrlSetSpecialButtonCallback. */
+/** The callback function used by ::sceCtrlSetSpecialButtonCallback(). */
 typedef void (*SceKernelButtonCallbackFunction)(u32 curButtons, u32 lastButtons, void *opt);
 
 /** 
  * This structure is for obtaining button data (button/stick information) from the 
- * controller using ::sceCtrlPeekBufferPositive, ::sceCtrlReadBufferNegative and similar 
+ * controller using ::sceCtrlPeekBufferPositive(), ::sceCtrlReadBufferNegative() and similar 
  * functions.
  */
 typedef struct {
@@ -38,7 +38,7 @@ typedef struct {
 
 /** 
  * This structure is for obtaining button data (button/stick information) from the 
- * controller using ::sceCtrlPeekBufferPositiveExtra, ::sceCtrlReadBufferNegativeExtra
+ * controller using ::sceCtrlPeekBufferPositiveExtra(), ::sceCtrlReadBufferNegativeExtra()
  * and similar functions.
  */
 typedef struct {
@@ -75,7 +75,7 @@ typedef struct {
 
 /** 
  * This structure is for obtaining button status values from the controller using
- * ::sceCtrlPeekLatch and ::sceCtrlReadLatch. Each structure member contains button
+ * ::sceCtrlPeekLatch() and ::sceCtrlReadLatch(). Each structure member contains button
  * values of ::SceCtrlPadButtons.
  */
 typedef struct {
@@ -509,8 +509,8 @@ s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs);
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferPositive. See description for more info.
- * You need to call ::SceCtrlExtendInternalCtrlBuffers before use.
+ * Extended ::sceCtrlPeekBufferPositive(). See description for more info.
+ * You need to call ::SceCtrlExtendInternalCtrlBuffers() before use.
  * 
  * @param arg1 Pass 1 or 2.
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -523,8 +523,8 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
 s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferNegative. See description for more info. 
- * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
+ * Extended ::sceCtrlPeekBufferNegative(). See description for more info. 
+ * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
  * 
  * @param arg1 Unknown. Pass 1 or 2.
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -537,8 +537,8 @@ s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
 s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferPositive. See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
+ * Extended ::sceCtrlReadBufferPositive(). See description for more info.
+ * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
  * 
  * @param arg1 Pass 1 or 2.
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -551,8 +551,8 @@ s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
 s32 sceCtrlReadBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferNegative. See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers before use.
+ * Extended ::sceCtrlReadBufferNegative(). See description for more info.
+ * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
  * 
  * @param arg1 Pass 1 or 2.
  * @param data Pointer to controller data structure in which button information is stored. The obtained

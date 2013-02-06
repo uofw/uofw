@@ -1,9 +1,11 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
 /*
  * uOFW/trunk/src/ctrl/ctrl.c
+ * 
+ * sceController_Service - a driver the PSP's hardware buttons.
  * 
  * The controller libraries (controller and controller_driver) main 
  * function is to notify an application of information that is output
@@ -36,8 +38,8 @@
 
 SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | 
                                          SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
-SCE_MODULE_BOOTSTART("CtrlInit");
-SCE_MODULE_REBOOT_BEFORE("CtrlRebootBefore");
+SCE_MODULE_BOOTSTART("_sceCtrlModuleStart");
+SCE_MODULE_REBOOT_BEFORE("_sceCtrlModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
 #define USER_MODE                               (0)
@@ -2098,13 +2100,13 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
     return numReadIntBufs;
 }
 
-s32 CtrlInit(void) 
+s32 _sceCtrlModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
     sceCtrlInit();    
     return SCE_ERROR_OK;
 }
 
-s32 CtrlRebootBefore(void) 
+s32 _sceCtrlModuleRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
     sceCtrlEnd();   
     return SCE_ERROR_OK;

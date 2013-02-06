@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -95,6 +95,27 @@ void *sceKernelMemset32(void *buf, int c, int size);
 void *sceKernelMemset(void *buf, int c, u32 size);
 
 int sceKernelGetCompiledSdkVersion(void);
+
+/** PSP Hardware models. */
+enum ScePspHwModels {
+    /** PSP Fat (01g). */
+    PSP_1000 = 0,
+    /** PSP Slim (02g). */
+	PSP_2000 = 1,
+    /** PSP Brite (03g). */
+	PSP_3000 = 2,
+    /** PSP Brite (04g). */
+	PSP_4000 = 3,
+    /** PSP Go (05g). */
+	PSP_GO   = 4,
+    /** PSP Brite (07g). */
+	PSP_7000 = 6,
+    /** PSP Brite (09g). */
+	PSP_9000 = 8,
+    /** PSP Street E-1000 (11g). */
+    PSP_11000 = 10, 
+};
+
 int sceKernelGetModel(void);
 
 #endif
