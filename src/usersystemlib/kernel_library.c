@@ -260,12 +260,26 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
     return SCE_ERROR_OK;
 }
 
-s32 Kernel_Library_3AD10D4D(void)
+s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
 {
-    return SCE_ERROR_OK;
+    if (g_2bc0 == NULL) {
+        // 0x80020064
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    if (mutex->id < 0) {
+        // 0x800201CA
+        return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
+    }
+
+    if ((mutex->owner != 0) ^ (g_2bc0[48] != 0)) {
+        return 0;
+    }
+
+    return mutex->lockCount;
 }
 
-s32 sceKernelReferLwMutexStatus(SceMutex *mutex, u32 *addr)
+s32 sceKernelReferLwMutexStatus(SceLwMutex *mutex, u32 *addr)
 {
     // ThreadManForUser_4C145944
     return sceKernelReferLwMutexStatusByID(mutex->id, addr);
