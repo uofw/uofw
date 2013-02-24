@@ -74,7 +74,7 @@ s32 sceKernelCheckThreadStack(void)
 }
 
 // Kernel_Library_DC692EE3
-s32 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count)
+s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count)
 {
     // Kernel_Library_37431849
     if (sceKernelTryLockLwMutex_600(mutex, count) != SCE_ERROR_OK) {
@@ -87,7 +87,7 @@ s32 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count)
 
 // Kernel_Library_37431849
 // reference: http://linux.die.net/man/3/pthread_mutex_trylock
-s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
+s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 {
     u32 tmpCount;
     u32 tmpOwner;
@@ -125,7 +125,7 @@ s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 
     if (mutex->owner != 0) {
         // 0x800201CB
-        return SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
+        return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
     }
 
     if (mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
@@ -149,7 +149,7 @@ s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 
         if (tmpOwner != 0) {
             // 0x800201CB
-            return SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
+            return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
         }
 
         tmpOwner = g_2bc0[48];
