@@ -156,6 +156,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 
         /* end atomic RMW */
         /* if an atomic update as occured, %0 will be set to 1 */
+        asm __volatile__(
             "sc %0, (%1)"
             : "=r" (tmpOwner)
             : "r" (&mutex->owner)
@@ -177,8 +178,85 @@ s32 sceKernelLockLwMutex(void)
     return SCE_ERROR_OK;
 }
 
-s32 sceKernelUnlockLwMutex(void)
+// Kernel_Library_15B6446B
+// reference: http://linux.die.net/man/3/pthread_mutex_unlock
+s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
 {
+    u32 tmpCount;
+    u32 tmpOwner;
+
+    if (g_2bc0 == NULL) {
+        // 0x80020064
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    if (count <= 0) {
+        // 0x800201BD
+        return SCE_ERROR_KERNEL_ILLEGAL_COUNT;
+    }
+
+    if (mutex->id < 0) {
+        // 0x800201CA
+        return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
+    }
+
+    if (mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
+        tmpCount = 0;
+    } else {
+        tmpCount = count ^ 1;
+    }
+
+    if (tmpCount != 0) {
+        // 0x800201BD
+        return SCE_ERROR_KERNEL_ILLEGAL_COUNT;
+    }
+
+    if (mutex->owner != g_2bc0[48]) {
+        return SCE_ERROR_KERNEL_LWMUTEX_UNLOCKED;
+    }
+
+    tmpCount = mutex->lockCount;
+
+    if (mutex->lockCount - count > 0) {
+        mutex->lockCount -= count;
+        return SCE_ERROR_OK;
+    }
+
+    // loc_00000408
+
+    if (mutex->lockCount - count < 0) {
+        return SCE_ERROR_KERNEL_LWMUTEX_UNLOCK_UNDERFLOW;
+    }
+
+    mutex->lockCount = 0;
+
+    /* begin atomic RMW */
+    asm __volatile__(
+        "ll %0, (%1)"
+        : "=r" (tmpOwner)
+        : "r" (&mutex->unk3)
+    );
+
+    if (tmpOwner != 0) {
+        mutex->lockCount = tmpCount;
+        return ThreadManForUser_BEED3A47(mutex, count);
+    }
+
+    tmpOwner = 0;
+
+    /* end atomic RMW */
+    /* if an atomic update as occured, %0 will be set to 1 */
+    asm __volatile__(
+        "sc %0, (%1)"
+        : "=r" (tmpOwner)
+        : "r" (&mutex->owner)
+    );
+
+    if (tmpOwner == 0) {
+        mutex->lockCount = tmpCount;
+        return ThreadManForUser_BEED3A47(mutex, count);
+    }
+
     return SCE_ERROR_OK;
 }
 
