@@ -1,0 +1,11 @@
+# Copyright (C) 2011, 2012 The uOFW team
+# See the file COPYING for copying permission.
+
+TARGET = usersystemlib
+OBJS = kernel_library.o ge_lazy.o intr.o
+
+#DEBUG = 1
+
+LIBS =
+
+include ../../lib/build.mak
