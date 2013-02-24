@@ -265,9 +265,10 @@ s32 Kernel_Library_3AD10D4D(void)
     return SCE_ERROR_OK;
 }
 
-s32 sceKernelReferLwMutexStatus(void)
+s32 sceKernelReferLwMutexStatus(SceMutex *mutex, u32 *addr)
 {
-    return SCE_ERROR_OK;
+    // ThreadManForUser_4C145944
+    return sceKernelReferLwMutexStatusByID(mutex->id, addr);
 }
 
 s32 Kernel_Library_F1835CDE(void)

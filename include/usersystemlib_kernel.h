@@ -25,6 +25,7 @@ s32 sceKernelCheckThreadStack(void);
 s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count);
 s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count);
 s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count);
+s32 sceKernelReferLwMutexStatus(SceMutex *mutex, u32 *addr);
 
 void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 void *sceKernelMemset(void *dst, s32 val, u32 size);
