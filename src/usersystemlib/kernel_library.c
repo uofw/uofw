@@ -336,9 +336,47 @@ s32 sceKernelReferLwMutexStatus(SceLwMutex *mutex, u32 *addr)
     return sceKernelReferLwMutexStatusByID(mutex->id, addr);
 }
 
-s32 Kernel_Library_F1835CDE(void)
+// Kernel_Library_FA835CDE
+void *Kernel_Library_FA835CDE(s32 arg0)
 {
-    return SCE_ERROR_OK;
+    void *ptr;
+    s32 *k0;
+
+    // SceThread* ?
+    k0 = (s32*)pspGetK0();
+
+    if (k0 == NULL) {
+        return NULL;
+    }
+
+    if (!sceKernelIsCpuIntrEnable()) {
+        return NULL;
+    }
+
+    // SceThread.unk2 ?
+    if (k0[49] != 0) {
+        return NULL;
+    }
+
+    if (arg0 < 0) {
+        return NULL;
+    }
+
+    // range k0[16-31]
+    ptr = (void*)k0[((arg0 >> 3) & 0xF) + 16];
+
+    // this is why I think that a pointer is returned
+    if (ptr == NULL) { // loc_000004FC
+        s32 ret;
+
+        ret = ThreadManForUser_65F54FFB(arg0, &ptr, 0);
+
+        if (ret < 0) {
+            return NULL;
+        }
+    }
+
+    return ptr;
 }
 
 void *sceKernelMemcpy(void *dst, const void *src, u32 size)
