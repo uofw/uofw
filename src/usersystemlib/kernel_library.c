@@ -61,16 +61,21 @@ s32 sceKernelGetThreadId(void)
 // Kernel_Library_D13BDE95
 s32 sceKernelCheckThreadStack(void)
 {
-    u32 size;
+    u32 available;
 
-    size = pspGetSp() - g_sp; // 0x2BC0 + 200
-
-    if (g_2bc0 == NULL || size < 64) { // 0x2BC0
+    if (g_2bc0 == NULL) {
         // ThreadManForUser_D13BDE95
         return sceKernelCheckThreadStack();
     }
 
-    return size;
+    available = pspGetSp() - g_2bc0[50];
+
+    if (available < 64) {
+        // ThreadManForUser_D13BDE95
+        return sceKernelCheckThreadStack();
+    }
+
+    return available;
 }
 
 // Kernel_Library_DC692EE3
