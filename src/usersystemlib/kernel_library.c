@@ -90,7 +90,7 @@ s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count)
 s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 {
     u32 tmpCount;
-    u32 tmpOwner;
+    u32 tmpThid;
 
     if (g_2bc0 == NULL) {
         // 0x80020064
@@ -107,7 +107,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if (mutex->owner == g_2bc0[48]) { // loc_00000340
+    if (mutex->thid == g_2bc0[48]) { // loc_00000340
         if (!(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
             // 0x800201CF
             return SCE_ERROR_KERNEL_LWMUTEX_RECURSIVE_NOT_ALLOWED;
@@ -123,7 +123,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
         return SCE_ERROR_OK;
     }
 
-    if (mutex->owner != 0) {
+    if (mutex->thid != 0) {
         // 0x800201CB
         return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
     }
@@ -143,25 +143,25 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
         /* begin atomic RMW */
         asm __volatile__(
             "ll %0, (%1)"
-            : "=r" (tmpOwner)
-            : "r" (&mutex->owner)
+            : "=r" (tmpThid)
+            : "r" (&mutex->thid)
         );
 
-        if (tmpOwner != 0) {
+        if (tmpThid != 0) {
             // 0x800201CB
             return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
         }
 
-        tmpOwner = g_2bc0[48];
+        tmpThid = g_2bc0[48];
 
         /* end atomic RMW */
         /* if an atomic update as occured, %0 will be set to 1 */
         asm __volatile__(
             "sc %0, (%1)"
-            : "=r" (tmpOwner)
-            : "r" (&mutex->owner)
+            : "=r" (tmpThid)
+            : "r" (&mutex->thid)
         );
-    } while (tmpOwner == 0);
+    } while (tmpThid == 0);
 
     mutex->lockCount = count;
 
@@ -183,7 +183,7 @@ s32 sceKernelLockLwMutex(void)
 s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
 {
     u32 tmpCount;
-    u32 tmpOwner;
+    u32 tmpThid;
 
     if (g_2bc0 == NULL) {
         // 0x80020064
@@ -211,7 +211,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
         return SCE_ERROR_KERNEL_ILLEGAL_COUNT;
     }
 
-    if (mutex->owner != g_2bc0[48]) {
+    if (mutex->thid != g_2bc0[48]) {
         return SCE_ERROR_KERNEL_LWMUTEX_UNLOCKED;
     }
 
@@ -233,26 +233,26 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
     /* begin atomic RMW */
     asm __volatile__(
         "ll %0, (%1)"
-        : "=r" (tmpOwner)
+        : "=r" (tmpThid)
         : "r" (&mutex->unk3)
     );
 
-    if (tmpOwner != 0) {
+    if (tmpThid != 0) {
         mutex->lockCount = tmpCount;
         return ThreadManForUser_BEED3A47(mutex, count);
     }
 
-    tmpOwner = 0;
+    tmpThid = 0;
 
     /* end atomic RMW */
     /* if an atomic update as occured, %0 will be set to 1 */
     asm __volatile__(
         "sc %0, (%1)"
-        : "=r" (tmpOwner)
-        : "r" (&mutex->owner)
+        : "=r" (tmpThid)
+        : "r" (&mutex->thid)
     );
 
-    if (tmpOwner == 0) {
+    if (tmpThid == 0) {
         mutex->lockCount = tmpCount;
         return ThreadManForUser_BEED3A47(mutex, count);
     }
@@ -272,7 +272,7 @@ s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if ((mutex->owner != 0) ^ (g_2bc0[48] != 0)) {
+    if ((mutex->thid != 0) ^ (g_2bc0[48] != 0)) {
         return 0;
     }
 

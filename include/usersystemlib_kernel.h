@@ -8,7 +8,7 @@
 
 typedef struct {
 	s32 lockCount; // 0
-	u32 owner; // 4
+	u32 thid; // 4
 	u32 flags; // 8
 	u32 unk3; // 12
 	u32 id; // 16
