@@ -50,12 +50,12 @@ s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
 // Kernel_Library_293B45B8
 s32 sceKernelGetThreadId(void)
 {
-    if (g_2bc0 == NULL) { // 0x2BC0
+    if (g_2bc0 == NULL) {
         // 0x80020064
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    return g_thid; // 0x2BC0 + 192
+    return g_2bc0[48];
 }
 
 // Kernel_Library_D13BDE95
