@@ -12,6 +12,13 @@ SCE_MODULE_INFO("sceKernelLibrary",
     SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 SCE_MODULE_BOOTSTART("_UserSystemLibInit");
 
+typedef struct {
+    u32 unk0[48]; // 0
+    u32 id; // 192
+    u32 unk2; // 196
+    u32 frameSize; // 200
+} SceThread;
+
 // .rodata
 static const s32 g_userSpaceIntrStackSize = 0x2000; // b68
 
@@ -20,12 +27,9 @@ static s32 g_b80 = -1; // b80
 
 // .bss
 static u8 g_userSpaceIntrStack[0x2000]; // bc0
-static s32 *g_2bc0; // 2bc0
+static SceThread *g_thread; // 2bc0
 static u8 g_unk_2bc4[0x3C]; // 2bc4
-static u8 g_2c00[0x80]; // 2c00
-static s32 g_thid; // 2c80
-static u8 g_unk_2c84[4]; // 2c84
-static void *g_sp; // 2c88
+static u8 g_2c00[0x140]; // 2c00
 
 // module_start
 s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
@@ -34,7 +38,7 @@ s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
     sceKernelRegisterUserSpaceIntrStack(
         (s32)g_userSpaceIntrStack, // 0xBC0
         g_userSpaceIntrStackSize, // 0x2000
-        (s32)&g_2bc0 // 0x2BC0
+        (s32)&g_thread // 0x2BC0
     );
 
     // SysMemUserForUser_A6848DF8
@@ -50,12 +54,12 @@ s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
 // Kernel_Library_293B45B8
 s32 sceKernelGetThreadId(void)
 {
-    if (g_2bc0 == NULL) {
+    if (g_thread == NULL) {
         // 0x80020064
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    return g_2bc0[48];
+    return g_thread->id;
 }
 
 // Kernel_Library_D13BDE95
@@ -63,12 +67,12 @@ s32 sceKernelCheckThreadStack(void)
 {
     u32 available;
 
-    if (g_2bc0 == NULL) {
+    if (g_thread == NULL) {
         // ThreadManForUser_D13BDE95
         return sceKernelCheckThreadStack();
     }
 
-    available = pspGetSp() - g_2bc0[50];
+    available = pspGetSp() - g_thread->frameSize;
 
     if (available < 64) {
         // ThreadManForUser_D13BDE95
@@ -97,7 +101,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
     u32 tmpCount;
     u32 tmpThid;
 
-    if (g_2bc0 == NULL) {
+    if (g_thread == NULL) {
         // 0x80020064
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
@@ -112,7 +116,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if (mutex->thid == g_2bc0[48]) { // loc_00000340
+    if (mutex->thid == g_thread->id) { // loc_00000340
         if (!(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
             // 0x800201CF
             return SCE_ERROR_KERNEL_LWMUTEX_RECURSIVE_NOT_ALLOWED;
@@ -157,7 +161,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
             return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
         }
 
-        tmpThid = g_2bc0[48];
+        tmpThid = g_thread->id;
 
         /* end atomic RMW */
         /* if an atomic update as occured, %0 will be set to 1 */
@@ -190,7 +194,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
     u32 tmpCount;
     u32 tmpThid;
 
-    if (g_2bc0 == NULL) {
+    if (g_thread == NULL) {
         // 0x80020064
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
@@ -216,7 +220,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
         return SCE_ERROR_KERNEL_ILLEGAL_COUNT;
     }
 
-    if (mutex->thid != g_2bc0[48]) {
+    if (mutex->thid != g_thread->id) {
         return SCE_ERROR_KERNEL_LWMUTEX_UNLOCKED;
     }
 
@@ -267,7 +271,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
 
 s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
 {
-    if (g_2bc0 == NULL) {
+    if (g_thread == NULL) {
         // 0x80020064
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
@@ -277,7 +281,7 @@ s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if ((mutex->thid != 0) ^ (g_2bc0[48] != 0)) {
+    if ((mutex->thid != 0) ^ (g_thread->id != 0)) {
         return 0;
     }
 
