@@ -24,6 +24,8 @@ s32 sceKernelGetThreadId(void);
 s32 sceKernelCheckThreadStack(void);
 s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count);
 s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count);
+s64 sceKernelLockLwMutexCB(SceLwMutex *mutex, u32 count);
+s64 sceKernelLockLwMutex(SceLwMutex *mutex, u32 count);
 s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count);
 s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex);
 s32 sceKernelReferLwMutexStatus(SceMutex *mutex, u32 *addr);

@@ -177,14 +177,54 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
     return SCE_ERROR_OK;
 }
 
-s32 sceKernelLockLwMutexCB(void)
+// Kernel_Library_1FC64E09
+s64 sceKernelLockLwMutexCB(SceLwMutex *mutex, u32 count)
 {
-    return SCE_ERROR_OK;
+    s64 ret;
+
+    if (g_thread == NULL) {
+        // 0x80020064
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    if (!sceKernelIsCpuIntrEnable() || g_thread->unk2 != 0) {
+        // 0x800201A7
+        return SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
+    }
+
+    ret = sceKernelTryLockLwMutex_600(mutex, count);
+
+    /* mutex already locked, block until it is available */
+    if ((ret >> 32) != 0) {
+        return ThreadManForUser_31327F19(mutex, count);
+    }
+
+    return (s32)ret;
 }
 
-s32 sceKernelLockLwMutex(void)
+// Kernel_Library_BEA46419
+s64 sceKernelLockLwMutex(SceLwMutex *mutex, u32 count)
 {
-    return SCE_ERROR_OK;
+    s64 ret;
+
+    if (g_thread == NULL) {
+        // 0x80020064
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    if (!sceKernelIsCpuIntrEnable() || g_thread->unk2 != 0) {
+        // 0x800201A7
+        return SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
+    }
+
+    ret = sceKernelTryLockLwMutex_600(mutex, count);
+
+    /* mutex already locked, block until it is available */
+    if ((ret >> 32) != 0) {
+        return ThreadManForUser_7CFF8CF3(mutex, count);
+    }
+
+    return ret;
 }
 
 // Kernel_Library_15B6446B
@@ -269,6 +309,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
     return SCE_ERROR_OK;
 }
 
+// Kernel_Library_3AD10D4D
 s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
 {
     if (g_thread == NULL) {
@@ -288,6 +329,7 @@ s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
     return mutex->lockCount;
 }
 
+// Kernel_Library_C1734599
 s32 sceKernelReferLwMutexStatus(SceLwMutex *mutex, u32 *addr)
 {
     // ThreadManForUser_4C145944
