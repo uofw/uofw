@@ -280,7 +280,6 @@ int validate_header(unsigned char *data)
 int load_sections()
 {
 	int ret = 0;
-	int found_rel = 0;
 	unsigned int load_addr = 0xFFFFFFFF;
 
 	if(g_elfhead.iShnum > 0)
@@ -333,7 +332,6 @@ int load_sections()
 						&& (g_elfsections[g_elfsections[i].iInfo].iFlags & SHF_ALLOC))
 				{
 					g_elfsections[i].pRef = &g_elfsections[g_elfsections[i].iInfo];
-					found_rel = 1;
 				}
 			}
 
@@ -960,10 +958,8 @@ int fixup_variables(void)
     for (i = 0; i < numStub; i++)
     {       
         unsigned int stub_addr;
-        unsigned int stub_nid;
 
         stub_addr = LW(pText[0]);
-        stub_nid  = LW(pText[1]);
             
         struct PspModuleImport *pImport;
         u8     var_count;
