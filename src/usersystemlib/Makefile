@@ -2,7 +2,7 @@
 # See the file COPYING for copying permission.
 
 TARGET = usersystemlib
-OBJS = kernel_library.o ge_lazy.o intr.o
+OBJS = kernel_library.o intr.o
 
 #DEBUG = 1
 

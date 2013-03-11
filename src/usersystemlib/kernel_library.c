@@ -12,6 +12,7 @@ SCE_MODULE_INFO("sceKernelLibrary",
     SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 SCE_MODULE_BOOTSTART("_UserSystemLibInit");
 
+// see Kernel_Library_FA835CDE
 typedef struct {
     u32 unk0[48]; // 0
     u32 id; // 192
@@ -23,7 +24,12 @@ typedef struct {
 static const s32 g_userSpaceIntrStackSize = 0x2000; // b68
 
 // .data
-static s32 g_b80 = -1; // b80
+static SceGeLazy g_lazy = {
+    .dlId = -1; // b80
+    .stall = NULL; // b84
+    .count = 0; // b88
+    .max = 64; // b8c
+};
 
 // .bss
 static u8 g_userSpaceIntrStack[0x2000]; // bc0
@@ -44,11 +50,94 @@ s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
     // SysMemUserForUser_A6848DF8
     sceKernelSetUsersystemLibWork(
         g_2c00, // 0x2C00
-        0x140,
-        &g_b80 // 0xB80
+        sceGe_lazy_31129B95,
+        &g_lazy // 0xB80
     );
 
     return SCE_ERROR_OK;
+}
+
+s32 sceGe_lazy_31129B95(s32 dlId, void *stall)
+{
+    s32 tmp_dlId;
+    s32 ret;
+
+    if (dlId == g_lazy.dlId) {
+        g_lazy.stall = stall;
+
+        if (stall != NULL) {
+            g_lazy.count++;
+
+            if (g_lazy.count < g_lazy.max) {
+                return 0;
+            }
+        }
+    }
+
+    if (g_lazy.dlId < 0) {
+        goto loc_000001C0;
+    }
+
+    do {
+        /* begin atomic RMW */
+        asm __volatile__(
+            "ll %0, (%1)"
+            : "=r" (tmp_dlId)
+            : "r" (&g_lazy.dlId)
+        );
+
+        if (tmp_dlId != g_lazy.dlId) {
+            goto loc_000001C0;
+        }
+
+        tmp_dlId = -1;
+
+        /* end atomic RMW */
+        /* if an atomic update as occured, %0 will be set to 1 */
+        asm __volatile__(
+            "sc %0, (%1)"
+            : "=r" (tmp_dlId)
+            : "r" (&g_lazy.dlId)
+        );
+    } while (!tmp_dlId);
+
+    sub_00000208(g_lazy.dlId, g_lazy.stall);
+
+loc_000001C0:
+
+    ret = sub_00000208(dlId, stall);
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    do {
+        /* begin atomic RMW */
+        asm __volatile__(
+            "ll %0, (%1)"
+            : "=r" (tmp_dlId)
+            : "r" (&g_lazy.dlId)
+        );
+
+        if (tmp_dlId >= 0) {
+            return ret;
+        }
+
+        tmp_dlId = dlId;
+
+        /* end atomic RMW */
+        /* if an atomic update as occured, %0 will be set to 1 */
+        asm __volatile__(
+            "sc %0, (%1)"
+            : "=r" (tmp_dlId)
+            : "r" (&g_lazy.dlId)
+        );
+    } while (!tmp_dlId);
+
+    g_lazy.stall = stall;
+    g_lazy.count = 0;
+
+    return ret;
 }
 
 // Kernel_Library_293B45B8

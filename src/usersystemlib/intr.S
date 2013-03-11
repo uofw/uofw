@@ -108,16 +108,4 @@ sceKernelIsCpuIntrEnable:
 sub_00000208:
     jr          $ra
     syscall     0x0
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
     .end sub_00000208

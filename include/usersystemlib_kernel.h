@@ -20,6 +20,12 @@ void sceKernelCpuResumeIntrWithSync(s32 intr);
 s32 sceKernelIsCpuIntrSuspended(s32 intr);
 s32 sceKernelIsCpuIntrEnable(void);
 
+/* When patched by the GE module, syscall to sceGeListUpdateStallAddr */
+s32 sub_00000208(s32 dlId, void *stall)
+
+/* sceGeListUpdateStallAddr designed for 'Genso Suikoden I & II' */
+s32 sceGe_lazy_31129B95(s32 dlId, void *stall);
+
 s32 sceKernelGetThreadId(void);
 s32 sceKernelCheckThreadStack(void);
 s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count);
