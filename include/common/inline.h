@@ -48,3 +48,16 @@ static inline s32 pspMfic(void)
     return ret;
 }
 
+static inline s32 pspLl(s32 *ptr)
+{
+    s32 ret;
+    asm ("ll %0, (%1)" : "=r" (ret) : "r" (ptr));
+    return ret;
+}
+
+static inline s32 pspSc(s32 value, s32 *ptr)
+{
+    s32 ret = value;
+    asm ("sc %0, (%1)" : "=r" (ret) : "r" (ptr));
+    return ret;
+}
