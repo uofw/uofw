@@ -397,12 +397,27 @@ void *Kernel_Library_FA835CDE(s32 arg0)
     return ptr;
 }
 
+// FIXME: naive, not reversed!
 void *sceKernelMemcpy(void *dst, const void *src, u32 size)
 {
-    return NULL;
+    u8 *dst8 = (u8*)dst;
+    u8 *src8 = (u8*)src;
+
+    while (size--) {
+        *(dst8++) = *(src8++);
+    }
+    
+    return dst;
 }
 
+// FIXME: naive, not reversed!
 void *sceKernelMemset(void *dst, s32 val, u32 size)
 {
-    return NULL;
+    u8 *dst8 = (u8*)dst;
+
+    while (size--) {
+        *(dst8++) = (u8)val;
+    }
+
+    return dst;
 }
