@@ -72,6 +72,11 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define GE_VALID_ADDR(addr) ((int)(addr) >= 0 && \
          (ADDR_IS_SCRATCH(addr) || ADDR_IS_VRAM(addr) || ADDR_IS_RAM(addr)))
 
+#define MAKE_SYSCALL(n)            (0x03FFFFFF & (((u32)(n) << 6) | 0x0000000C))
+#define MAKE_JUMP(f)               (0x08000000 | ((u32)(f)  & 0x0FFFFFFC)) 
+#define JR_RA                      (0x03E00008)
+#define NOP                        (0)
+
 /******************************/
 
 int _sceGeReset();
@@ -120,7 +125,7 @@ typedef struct {
     int sdkVer;                 // 1060
     int patched;                // 1064
     int syscallId;
-    int *lazySyncData;
+    SceGeLazy *lazySyncData;
 } SceGeQueue;
 
 typedef struct {
@@ -143,7 +148,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    void *ptr;
+    u32 *ptr;
 } SadrUpdate;
 
 typedef struct {
@@ -402,8 +407,8 @@ int sceGeInit()
     sceSysregAwRegABusClockDisable();
     sceKernelRegisterSysEventHandler(&g_GeSysEv);
     _sceGeQueueInit();
-    void *str = (void *)sceKernelGetUsersystemLibWork();
-    if (*(int *)(str + 4) == 0) {
+    SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
+    if (libWork->cmdList == NULL) {
         // 05EC
         sceKernelSetInitCallback(_sceGeInitCallback3, 3, 0);
     } else
@@ -456,16 +461,14 @@ int sceGeEnd()
 }
 
 // 070C
-int
-_sceGeInitCallback3(int arg0 __attribute__ ((unused)), int arg1
-                    __attribute__ ((unused)), int arg2 __attribute__ ((unused)))
+int _sceGeInitCallback3(int arg0 __attribute__ ((unused)), int arg1 __attribute__ ((unused)), int arg2 __attribute__ ((unused)))
 {
-    void *str = (void *)sceKernelGetUsersystemLibWork();
-    void *uncached = UUNCACHED(*(int *)(str + 4));
-    if (*(int *)(str + 4) != 0) {
-        *(int *)(uncached + 0) = GE_MAKE_OP(SCE_GE_CMD_FINISH, 0);
-        *(int *)(uncached + 4) = GE_MAKE_OP(SCE_GE_CMD_END, 0);
-        g_cmdList = uncached;
+    SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
+    if (libWork->cmdList != NULL) {
+        s32 *uncachedDlist = UUNCACHED(libWork->cmdList);
+        uncachedDlist[0] = GE_MAKE_OP(SCE_GE_CMD_FINISH, 0);
+        uncachedDlist[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
+        g_cmdList = uncachedDlist;
         _sceGeQueueInitCallback();
     }
     return 0;
@@ -475,18 +478,18 @@ int _sceGeInitCallback4()
 {
     void *str = sceKernelGetGameInfo();
     if (str != NULL) {
-        int num = ((sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr) << 6) & 0x03FFFFC0) | 0xC;
+        u32 syscOp = MAKE_SYSCALL(sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr));
         int oldIntr = sceKernelCpuSuspendIntr();
         if (strcmp(str + 68, sadrupdate_bypass.name) == 0) {
-            void *ptr = sadrupdate_bypass.ptr;
-            if (*(int *)(ptr + 0) == 0x03E00008 && *(int *)(ptr + 4) == num) {
+            u32 *ptr = sadrupdate_bypass.ptr;
+            if (ptr[0] == JR_RA && ptr[1] == syscOp) {
                 // 0804
-                *(int *)(ptr + 4) = 0;
-                *(int *)(ptr + 0) = ((*(int *)(sceKernelGetUsersystemLibWork() + 8) >> 2) & 0x03FFFFFF) | 0x08000000;
+                ptr[0] = MAKE_JUMP(sceKernelGetUsersystemLibWork()->sceGeListUpdateStallAddr_lazy);
+                ptr[1] = NOP;
                 pspCache(0x1A, ptr + 0);
-                pspCache(0x1A, ptr + 4);
+                pspCache(0x1A, ptr + 1);
                 pspCache(0x08, ptr + 0);
-                pspCache(0x08, ptr + 4);
+                pspCache(0x08, ptr + 1);
             }
         }
         // 07DC
@@ -2857,13 +2860,13 @@ int sceGeDebugContinue(int arg0)
 
 int _sceGeQueueInitCallback()
 {
-    void *str = (void *)sceKernelGetUsersystemLibWork();
-    if (str != NULL) {
-        void *str2 = (void *)*(int *)(str + 8);
-        *(int *)(str2 + 204) = ((g_AwQueue.syscallId << 6) & 0x03FFFFC0) | 0xC;
-        pspCache(0x1A, str2 + 204);
-        pspCache(0x08, str2 + 204);
-        g_AwQueue.lazySyncData = (int *)*(int *)(str + 12);
+    SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
+    if (libWork != NULL) {
+        u32 *syscPtr = (void*)libWork->sceGeListUpdateStallAddr_lazy + 204; // TODO: replace with a difference of two functions from usersystemlib
+        *syscPtr = MAKE_SYSCALL(g_AwQueue.syscallId);
+        pspCache(0x1A, syscPtr);
+        pspCache(0x08, syscPtr);
+        g_AwQueue.lazySyncData = libWork->lazySyncData;
     }
     return 0;
 }
@@ -3117,11 +3120,11 @@ void _sceGeClearBp()
 
 void _sceGeListLazyFlush()
 {
-    int *ptr = g_AwQueue.lazySyncData;
-    if (ptr != NULL && ptr[0] >= 0) {
-        ptr[2] = 0;
-        sceGeListUpdateStallAddr(ptr[0], (void *)ptr[1]);
-        ptr[0] = -1;
+    SceGeLazy *lazy = g_AwQueue.lazySyncData;
+    if (lazy != NULL && lazy->dlId >= 0) {
+        lazy->max = 0;
+        sceGeListUpdateStallAddr(lazy->dlId, lazy->stall);
+        lazy->dlId = -1;
     }
 }
 

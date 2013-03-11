@@ -69,6 +69,20 @@ typedef struct {
     int (*func)();
 } SceSysmemUIDLookupFunc;
 
+typedef struct {
+    s32 dlId;
+    void *stall;
+    u32 count;
+    u32 max;
+} SceGeLazy;
+
+typedef struct {
+    u32 size;
+    s32 *cmdList;
+    s32 (*sceGeListUpdateStallAddr_lazy)(s32 dlId, void *stall);
+    SceGeLazy *lazySyncData;
+} SceKernelUsersystemLibWork;
+
 SceSysmemUIDControlBlock *sceKernelCreateUIDtype(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, SceSysmemUIDControlBlock **type);
 SceUID sceKernelCreateUID(SceSysmemUIDControlBlock *type, const char *name, short attr, SceSysmemUIDControlBlock **block);
 int sceKernelDeleteUID(SceUID uid);
@@ -83,7 +97,9 @@ int sceKernelFreeHeapMemory(SceUID heapid, void *block);
 int sceKernelDeleteHeap(SceUID heapid);
 SceSize sceKernelHeapTotalFreeSize(SceUID heapid);
 
-void *sceKernelGetUsersystemLibWork(void);
+SceKernelUsersystemLibWork *sceKernelGetUsersystemLibWork(void);
+s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_lazy)(s32, void*), SceGeLazy *lazy);
+
 void *sceKernelGetGameInfo(void);
 void *sceKernelGetAWeDramSaveAddr(void);
 int sceKernelGetMEeDramSaveAddr(void);
