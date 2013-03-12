@@ -35,7 +35,7 @@ static SceGeLazy g_lazy = {
 static u8 g_userSpaceIntrStack[0x2000]; // bc0
 static SceThread *g_thread; // 2bc0
 static u8 g_unk_2bc4[0x3C]; // 2bc4
-static u8 g_2c00[0x140]; // 2c00
+static u8 g_cmdList[0x1400]; // 2c00
 
 // module_start
 s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
@@ -49,7 +49,7 @@ s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
 
     // SysMemUserForUser_A6848DF8
     sceKernelSetUsersystemLibWork(
-        g_2c00, // 0x2C00
+        g_cmdList, // 0x2C00
         sceGe_lazy_31129B95,
         &g_lazy // 0xB80
     );
