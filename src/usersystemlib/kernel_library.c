@@ -9,13 +9,15 @@
 #include <sysmem_kernel.h>
 
 SCE_MODULE_INFO("sceKernelLibrary",
-    SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP |
-    SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
+    SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD |
+    SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 6);
+SCE_MODULE_START_THREAD_PARAMETER(3, 0x20, 0x400, 0);
 SCE_MODULE_BOOTSTART("_UserSystemLibInit");
+SCE_SDK_VERSION(SDK_VERSION);
 
 typedef struct {
     u32 unk0[48]; // 0
-    u32 id; // 192
+    s32 id; // 192
     u32 unk2; // 196
     u32 frameSize; // 200
 } SceThread;
@@ -35,7 +37,7 @@ static SceGeLazy g_lazy = {
 static u8 g_userSpaceIntrStack[0x2000]; // bc0
 static SceThread *g_thread; // 2bc0
 // 2bc4 size 0x3c (padding)
-static u8 g_cmdList[0x1400]; // 2c00
+static s32 g_cmdList[0x500]; // 2c00
 
 // module_start
 s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
@@ -319,13 +321,13 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
     if (pspLl(&mutex->unk3) != 0) {
         mutex->lockCount = tmpCount;
         // ThreadManForUser_BEED3A47
-        return sceKernelUnlockLwMutex(mutex, count);
+        return _sceKernelUnlockLwMutex(mutex, count);
     }
 
     if (pspSc(0, &mutex->thid) == 0) {
         mutex->lockCount = tmpCount;
         // ThreadManForUser_BEED3A47
-        return sceKernelUnlockLwMutex(mutex, count);
+        return _sceKernelUnlockLwMutex(mutex, count);
     }
 
     return SCE_ERROR_OK;

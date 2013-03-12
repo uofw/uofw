@@ -6,6 +6,6 @@ OBJS = kernel_library.o intr.o
 
 #DEBUG = 1
 
-LIBS =
+LIBS = -lSysMemUserForUser -lInterruptManager -lThreadManForUser
 
 include ../../lib/build.mak
