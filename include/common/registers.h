@@ -6,6 +6,13 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
+static inline int pspGetK0(void)
+{
+    int ret;
+    asm("move %0, $k0" : "=r" (ret));
+    return ret;
+}
+
 static inline int pspGetK1(void)
 {
     int ret;
