@@ -6,13 +6,13 @@
 
 #include <common_imp.h>
 #include <interruptman.h>
+#include <sysmem_kernel.h>
 
 SCE_MODULE_INFO("sceKernelLibrary",
     SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP |
     SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 SCE_MODULE_BOOTSTART("_UserSystemLibInit");
 
-// see Kernel_Library_FA835CDE
 typedef struct {
     u32 unk0[48]; // 0
     u32 id; // 192
@@ -25,20 +25,20 @@ static const s32 g_userSpaceIntrStackSize = 0x2000; // b68
 
 // .data
 static SceGeLazy g_lazy = {
-    .dlId = -1; // b80
-    .stall = NULL; // b84
-    .count = 0; // b88
-    .max = 64; // b8c
+    .dlId = -1, // b80
+    .stall = NULL, // b84
+    .count = 0, // b88
+    .max = 64 // b8c
 };
 
 // .bss
 static u8 g_userSpaceIntrStack[0x2000]; // bc0
 static SceThread *g_thread; // 2bc0
-static u8 g_unk_2bc4[0x3C]; // 2bc4
+// 2bc4 size 0x3c (padding)
 static u8 g_cmdList[0x1400]; // 2c00
 
 // module_start
-s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp)
+s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     // InterruptManager_EEE43F47
     sceKernelRegisterUserSpaceIntrStack(
@@ -117,9 +117,10 @@ s32 sceKernelGetThreadId(void)
 }
 
 // Kernel_Library_D13BDE95
+// FIXME: recursive call
 s32 sceKernelCheckThreadStack(void)
 {
-    u32 available;
+    s32 available;
 
     if (g_thread == NULL) {
         // ThreadManForUser_D13BDE95
@@ -137,7 +138,7 @@ s32 sceKernelCheckThreadStack(void)
 }
 
 // Kernel_Library_DC692EE3
-s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count)
+s32 sceKernelTryLockLwMutex(SceLwMutex *mutex, s32 count)
 {
     // Kernel_Library_37431849
     if (sceKernelTryLockLwMutex_600(mutex, count) != SCE_ERROR_OK) {
@@ -150,9 +151,9 @@ s64 sceKernelTryLockLwMutex(SceLwMutex *mutex, u32 count)
 
 // Kernel_Library_37431849
 // reference: http://linux.die.net/man/3/pthread_mutex_trylock
-s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
+s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, s32 count)
 {
-    u32 tmpCount;
+    s32 tmpCount;
 
     if (g_thread == NULL) {
         // 0x80020064
@@ -170,7 +171,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
     }
 
     if (mutex->thid == g_thread->id) { // loc_00000340
-        if (!(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
+        if (!(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE)) {
             // 0x800201CF
             return SCE_ERROR_KERNEL_LWMUTEX_RECURSIVE_NOT_ALLOWED;
         }
@@ -187,7 +188,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 
     if (mutex->thid != 0) {
         // 0x800201CB
-        return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
+        return SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
     }
 
     if (mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
@@ -204,7 +205,7 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
     do {
         if (pspLl(&mutex->thid) != 0) {
             // 0x800201CB
-            return (1 << 32) | SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
+            return SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
         }
     } while (!pspSc(g_thread->id, &mutex->thid));
 
@@ -214,9 +215,9 @@ s64 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, u32 count)
 }
 
 // Kernel_Library_1FC64E09
-s64 sceKernelLockLwMutexCB(SceLwMutex *mutex, u32 count)
+s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count)
 {
-    s64 ret;
+    s32 ret;
 
     if (g_thread == NULL) {
         // 0x80020064
@@ -231,17 +232,18 @@ s64 sceKernelLockLwMutexCB(SceLwMutex *mutex, u32 count)
     ret = sceKernelTryLockLwMutex_600(mutex, count);
 
     /* mutex already locked, block until it is available */
-    if ((ret >> 32) != 0) {
-        return ThreadManForUser_31327F19(mutex, count);
+    if ((u32)ret == SCE_ERROR_KERNEL_LWMUTEX_LOCKED) {
+        // ThreadManForUser_31327F19
+        return _sceKernelLockLwMutexCB(mutex, count);
     }
 
-    return (s32)ret;
+    return ret;
 }
 
 // Kernel_Library_BEA46419
-s64 sceKernelLockLwMutex(SceLwMutex *mutex, u32 count)
+s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count)
 {
-    s64 ret;
+    s32 ret;
 
     if (g_thread == NULL) {
         // 0x80020064
@@ -256,8 +258,9 @@ s64 sceKernelLockLwMutex(SceLwMutex *mutex, u32 count)
     ret = sceKernelTryLockLwMutex_600(mutex, count);
 
     /* mutex already locked, block until it is available */
-    if ((ret >> 32) != 0) {
-        return ThreadManForUser_7CFF8CF3(mutex, count);
+    if ((u32)ret == SCE_ERROR_KERNEL_LWMUTEX_LOCKED) {
+        // ThreadManForUser_7CFF8CF3
+        return _sceKernelLockLwMutex(mutex, count);
     }
 
     return ret;
@@ -265,9 +268,9 @@ s64 sceKernelLockLwMutex(SceLwMutex *mutex, u32 count)
 
 // Kernel_Library_15B6446B
 // reference: http://linux.die.net/man/3/pthread_mutex_unlock
-s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
+s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
 {
-    u32 tmpCount;
+    s32 tmpCount;
 
     if (g_thread == NULL) {
         // 0x80020064
@@ -316,12 +319,14 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, u32 count)
 
     if (pspLl(&mutex->unk3) != 0) {
         mutex->lockCount = tmpCount;
-        return ThreadManForUser_BEED3A47(mutex, count);
+        // ThreadManForUser_BEED3A47
+        return sceKernelUnlockLwMutex(mutex, count);
     }
 
     if (pspSc(0, &mutex->thid) == 0) {
         mutex->lockCount = tmpCount;
-        return ThreadManForUser_BEED3A47(mutex, count);
+        // ThreadManForUser_BEED3A47
+        return sceKernelUnlockLwMutex(mutex, count);
     }
 
     return SCE_ERROR_OK;
