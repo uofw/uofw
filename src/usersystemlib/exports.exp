@@ -23,7 +23,7 @@ PSP_EXPORT_FUNC_HASH(sceKernelMemset)
 PSP_EXPORT_FUNC_HASH(sceKernelIsCpuIntrEnable)
 PSP_EXPORT_FUNC_HASH(sceKernelLockLwMutex)
 PSP_EXPORT_FUNC_HASH(sceKernelReferLwMutexStatus)
-PSP_EXPORT_FUNC_HASH(sceKernelCheckThreadStack)
+PSP_EXPORT_FUNC_NID(_sceKernelCheckThreadStack, 0xD13BDE95) # avoid name collision with ThreadMan
 PSP_EXPORT_FUNC_HASH(sceKernelTryLockLwMutex)
 PSP_EXPORT_FUNC_NID(Kernel_Library_FA835CDE, 0xFA835CDE)
 PSP_EXPORT_END

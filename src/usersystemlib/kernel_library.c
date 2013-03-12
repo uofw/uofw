@@ -117,8 +117,7 @@ s32 sceKernelGetThreadId(void)
 }
 
 // Kernel_Library_D13BDE95
-// FIXME: recursive call
-s32 sceKernelCheckThreadStack(void)
+s32 _sceKernelCheckThreadStack(void)
 {
     s32 available;
 
