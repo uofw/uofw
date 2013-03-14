@@ -192,13 +192,7 @@ s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_LWMUTEX_LOCKED;
     }
 
-    if (mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
-        tmpCount = 0;
-    } else {
-        tmpCount = count ^ 1;
-    }
-
-    if (tmpCount != 0) {
+    if (count != 1 && !(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE)) {
         // 0x800201BD
         return SCE_ERROR_KERNEL_ILLEGAL_COUNT;
     }
@@ -288,13 +282,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if (mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE) {
-        tmpCount = 0;
-    } else {
-        tmpCount = count ^ 1;
-    }
-
-    if (tmpCount != 0) {
+    if (count != 1 && !(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE)) {
         // 0x800201BD
         return SCE_ERROR_KERNEL_ILLEGAL_COUNT;
     }
