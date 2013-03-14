@@ -30,7 +30,7 @@ static SceGeLazy g_lazy = {
     .dlId = -1, // b80
     .stall = NULL, // b84
     .count = 0, // b88
-    .max = 64 // b8c
+    .max = 100 // b8c
 };
 
 // .bss
@@ -52,7 +52,7 @@ s32 _UserSystemLibInit(SceSize argc __attribute__((unused)), void *argp __attrib
     // SysMemUserForUser_A6848DF8
     sceKernelSetUsersystemLibWork(
         g_cmdList, // 0x2C00
-        sceGe_lazy_31129B95,
+        sceGe_lazy_31129B95, // 0x140
         &g_lazy // 0xB80
     );
 
