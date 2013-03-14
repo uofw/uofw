@@ -346,7 +346,8 @@ s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if ((mutex->thid != 0) ^ (g_thread->id != 0)) {
+    if ((mutex->thid == 0 && g_thread->id != 0) ||
+        (mutex->thid != 0 && g_thread->id == 0)) {
         return 0;
     }
 
