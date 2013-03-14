@@ -155,8 +155,6 @@ s32 sceKernelTryLockLwMutex(SceLwMutex *mutex, s32 count)
 // reference: http://linux.die.net/man/3/pthread_mutex_trylock
 s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, s32 count)
 {
-    s32 tmpCount;
-
     if (g_thread == NULL) {
         // 0x80020064
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
@@ -394,7 +392,7 @@ void *Kernel_Library_FA835CDE(s32 arg0)
 }
 
 // FIXME: naive, not reversed!
-void *sceKernelMemcpy(void *dst, const void *src, u32 size)
+void *sceKernelMemcpy(void *dst, const void *src, SceSize size)
 {
     u8 *dst8 = (u8*)dst;
     u8 *src8 = (u8*)src;
@@ -407,7 +405,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 size)
 }
 
 // FIXME: naive, not reversed!
-void *sceKernelMemset(void *dst, s32 val, u32 size)
+void *sceKernelMemset(void *dst, s32 val, SceSize size)
 {
     u8 *dst8 = (u8*)dst;
 

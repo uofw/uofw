@@ -37,6 +37,6 @@ s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex);
 s32 sceKernelReferLwMutexStatus(SceLwMutex *mutex, u32 *addr);
 void *Kernel_Library_FA835CDE(s32 arg0);
 
-void *sceKernelMemcpy(void *dst, const void *src, u32 size);
-void *sceKernelMemset(void *dst, s32 val, u32 size);
+void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
+void *sceKernelMemset(void *dst, s32 val, SceSize size);
 
