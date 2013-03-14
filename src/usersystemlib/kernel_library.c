@@ -264,7 +264,7 @@ s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count)
 // reference: http://linux.die.net/man/3/pthread_mutex_unlock
 s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
 {
-    s32 tmpCount;
+    s32 prevCount;
 
     if (g_thread == NULL) {
         // 0x80020064
@@ -290,7 +290,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_LWMUTEX_UNLOCKED;
     }
 
-    tmpCount = mutex->lockCount;
+    prevCount = mutex->lockCount;
 
     if (mutex->lockCount - count > 0) {
         mutex->lockCount -= count;
@@ -306,13 +306,13 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
     mutex->lockCount = 0;
 
     if (pspLl(&mutex->unk3) != 0) {
-        mutex->lockCount = tmpCount;
+        mutex->lockCount = prevCount;
         // ThreadManForUser_BEED3A47
         return _sceKernelUnlockLwMutex(mutex, count);
     }
 
     if (pspSc(0, &mutex->thid) == 0) {
-        mutex->lockCount = tmpCount;
+        mutex->lockCount = prevCount;
         // ThreadManForUser_BEED3A47
         return _sceKernelUnlockLwMutex(mutex, count);
     }
