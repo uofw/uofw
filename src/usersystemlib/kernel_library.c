@@ -75,19 +75,20 @@ s32 sceGe_lazy_31129B95(s32 dlId, void *stall)
         }
     }
 
-    if (g_lazy.dlId < 0) {
-        goto loc_000001C0;
-    }
+    if (g_lazy.dlId >= 0) {
+        SceBool idErr = 0;
 
-    do {
-        if (pspLl(&g_lazy.dlId) != g_lazy.dlId) {
-            goto loc_000001C0;
+        do {
+            if (pspLl(&g_lazy.dlId) != g_lazy.dlId) {
+                idErr = 1;
+                break;
+            }
+        } while (!pspSc(-1, &g_lazy.dlId));
+
+        if (!idErr) {
+            sub_00000208(g_lazy.dlId, g_lazy.stall);
         }
-    } while (!pspSc(-1, &g_lazy.dlId));
-
-    sub_00000208(g_lazy.dlId, g_lazy.stall);
-
-loc_000001C0:
+    }
 
     ret = sub_00000208(dlId, stall);
 
