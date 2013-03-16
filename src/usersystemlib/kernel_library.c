@@ -7,6 +7,7 @@
 #include <common_imp.h>
 #include <interruptman.h>
 #include <sysmem_kernel.h>
+#include <threadman_user.h>
 
 SCE_MODULE_INFO("sceKernelLibrary",
     SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD |

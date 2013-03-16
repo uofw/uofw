@@ -2,17 +2,12 @@
    See the file COPYING for copying permission.
 */
 
+#ifndef USERSYSTEMLIB_KERNEL_H
+#define USERSYSTEMLIB_KERNEL_H
+
 #include "common_header.h"
 
-#define SCE_KERNEL_LWMUTEX_RECURSIVE	0x200
-
-typedef struct {
-	s32 lockCount; // 0
-	s32 thid; // 4
-	u32 flags; // 8
-	s32 unk3; // 12
-	s32 id; // 16
-} SceLwMutex;
+#include <threadman_user.h>
 
 s32 sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(s32 intr);
@@ -39,4 +34,6 @@ void *Kernel_Library_FA835CDE(s32 arg0);
 
 void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
 void *sceKernelMemset(void *dst, s32 val, SceSize size);
+
+#endif /* USERSYSTEMLIB_KERNEL_H */
 
