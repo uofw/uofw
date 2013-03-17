@@ -14,15 +14,14 @@ NOTE: We currently plan to move both the wiki and the documentation to Github an
 ## Getting started
 
 In order to contribute to uOFW, you need advanced knowledge in MIPS ASM and C. Some good MIPS ASM  
-online resources can be found [on the MIPS company page](http://www.mips.com/products/product-materials/processor/mips-architecture/)  
+online resources can be found [on the MIPS company page](http://www.mips.com/products/product-materials/processor/mips-architecture/).  
 MIPS ASM Instruction Set Reference: http://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf  
 
 In addition, there is a nice MIPS runtime simulator and debugger which can be found at:  
 http://courses.missouristate.edu/kenvollmar/mars/
 
-The next step is to improve your reverse engineering skills (if needed). We suggest reading [this  
-excellent guide](http://psnpt.com/joomla/index.php/articles/39-tutorials) about reverse engineering for 
-the PSP.   
+The next step is to improve your reverse engineering skills (if needed). We suggest reading [this  excellent guide]
+(http://psnpt.com/joomla/index.php/articles/39-tutorials) about reverse engineering for the PSP.   
 
 If you have questions, don't hesitate to ask us!
 
@@ -47,7 +46,7 @@ Currently, there are three sub-branches: [clockgen] (https://github.com/uofw/uof
 
 While you reverse-engineer parts of the PSP's kernel, you may will find yourself in a position
 where you would like to know more about how Operating Systems work in general. We suggest to check
-out [this webpage](http://wiki.osdev.org/Expanded_Main_Page)
+out [this webpage](http://wiki.osdev.org/Expanded_Main_Page).
 
 If you are looking for more PSP-related resources, you should consider checking out the following links
 below:
@@ -56,7 +55,7 @@ below:
 * [LAN.st - General PSP questions](http://lan.st/archive/index.php/t-3013.html)
 * [LAN.st - PSP Motherboard information](http://lan.st/archive/index.php/t-372.html)
 
-* [Yet Another laystation Portable Documentation](http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz)
+* [Yet Another Playstation Portable Documentation](http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz)
 * [PSP Module Tutorial](http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf)
 * [24C3 - TyRaNiD on early PSP hacking + Pandorra hack](https://www.youtube.com/watch?v=INdUZk4NFIA)
 
@@ -65,9 +64,8 @@ Other websites are:
 * http://ps2dev.org
 
 
-Contact
--------
+## Contact
 
 You can stay in touch with us and discuss project-related topics with us via the following ways:
-* via IRC on the FreeNode server (irc.freenode.net) (join the channel #uofw)
+* via IRC on the [FreeNode server](http://webchat.freenode.net/) (irc.freenode.net) (join the channel #uofw)
 * via e-mail
