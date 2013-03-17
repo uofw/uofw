@@ -99,13 +99,3 @@ sceKernelIsCpuIntrEnable:
     nop
     nop
     .end sceKernelIsCpuIntrEnable
-
-##
-# sub_00000208
-##
-
-    .ent sub_00000208
-sub_00000208:
-    jr          $ra
-    syscall     0x0
-    .end sub_00000208

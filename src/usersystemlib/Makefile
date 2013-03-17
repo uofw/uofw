@@ -2,7 +2,7 @@
 # See the file COPYING for copying permission.
 
 TARGET = usersystemlib
-OBJS = kernel_library.o intr.o
+OBJS = usersystemlib.o intr.o lazy.o thread.o lwmutex.o mem.o
 
 #DEBUG = 1
 
