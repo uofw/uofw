@@ -8,6 +8,8 @@ s32 sub_00000208(s32 dlId  __attribute__((unused)), void *stall  __attribute__((
 {
 	/* The syscall instruction is patched at runtime by ge.prx */
 	asm __volatile__ (
+		".set noat\n"
+    	".set noreorder\n"
 		"jr          $ra\n"
     	"syscall     0x0\n"
 	);
