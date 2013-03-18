@@ -2,7 +2,7 @@
 #include <pspkerneltypes.h>
 
 #define SCE_PSHEET_ERROR_SEMAID 0x80510108
-#define SCE_PSHEET_ERROR_ILLEGAL_ADDresultS 0x80510109
+#define SCE_PSHEET_ERROR_ILLEGAL_ADDRESS 0x80510109
 #define SCE_PSHEET_ERROR_P 0x80510111
 #define SCE_PSHEET_ERROR_P2 0x80510110
 #define SCE_PSHEET_ERROR_P3 0x80510102
@@ -51,31 +51,31 @@ int p19;				//0x00004804
 //scePsheet_driver_302AB4B8 = sceDRMInstallInit
 //sets up the initial DRM params.
 //returns 0 on success, 0x80510109 on failure
-int sceDRMInstallInit(int addresults, int size) {
-	int crntAddresults, crntSize, k1;
+int sceDRMInstallInit(int ADDRESS, int size) {
+	int crntADDRESS, crntSize, k1;
 	k1 = pspSdkGetK1();
 	pspSdkSetK1(k1 << 11);
-	crntAddresults = addresults;
+	crntADDRESS = ADDRESS;
 	crntSize = size;
 	sceKernelMemset(g_unkP, 0, 0x4D0);
 
-	//Standard illegal addresults check
-	if (((crntAddresults | crntSize | crntAddresults + crntSize) & k1) < 0)
+	//Standard illegal ADDRESS check
+	if (((crntADDRESS | crntSize | crntADDRESS + crntSize) & k1) < 0)
 			{
 		pspSdkSetK1(k1);
-		return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 	}
 
 	sub_01310(0, 1);
 	sub_01410(0);
-	buf[0] = addresults;
+	buf[0] = ADDRESS;
 	buf[1] = size;
 
-	if (((crntAddresults < 1) | (((0x0001FFFF < crntSize)) ^ 1)) != 0) {
+	if (((crntADDRESS < 1) | (((0x0001FFFF < crntSize)) ^ 1)) != 0) {
 		buf[0] = 0;
 		buf[1] = 0;
 		pspSdkSetK1(k1);
-		return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 	}
 
 	pspSdkSetK1(k1);
@@ -85,55 +85,55 @@ int sceDRMInstallInit(int addresults, int size) {
 //OK
 //scePsheet_driver_15355B0E = sceDRMInstallGetPkgInfo
 //determines what kind of package it is, based on hash comparison.
-int sceDRMInstallGetPkgInfo(int addresults, int size, int a2)
+int sceDRMInstallGetPkgInfo(int ADDRESS, int size, int a2)
 {
-	int crntAddresults, crntSize ,s2;
+	int crntADDRESS, crntSize ,s2;
 	SceUID s3;
 	int k1 = pspSdkGetK1();
-	crntAddresults = addresults;
+	crntADDRESS = ADDRESS;
 	crntSize = size;
 	s2 = a2;
 	if(!(buf == 0))
 		{
-		if((addresults < 1 | size < 1) != 0)
-			return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+		if((ADDRESS < 1 | size < 1) != 0)
+			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		if(a2 == 0)
-			return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		pspSdkSetK1(k1 << 11);
-		if(!(((k1<<11) & addresults) < 0))
+		if(!(((k1<<11) & ADDRESS) < 0))
 			{
 			if(!((((size+16) | size) & (k1 << 11)) < 0))
 				{
 				if(!(((a2+16) | a2 ) & (k1 << 11)) >= 0)
 					{
-					addresults = SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+					ADDRESS = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 					size = 0;
 					goto end;
 					}
 					sub_1410(0);
-					s3 = sub_14A8(addresults);
-					addresults = s3;
+					s3 = sub_14A8(ADDRESS);
+					ADDRESS = s3;
 					if(s3 < 0)
 						{
 						size = 0;
-						addresults = s3;
+						ADDRESS = s3;
 						goto end;
 						}
-					s3 = sub_72C(addresults, size, s2);
-					addresults = sceIoClose(s3);
+					s3 = sub_72C(ADDRESS, size, s2);
+					ADDRESS = sceIoClose(s3);
 					size = 0;
 					goto end;
 				}
-				addresults = SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+				ADDRESS = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 				size = 0;
 				goto end;
 			}
-			addresults = SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+			ADDRESS = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 			size = 0;
 			end:
 			sceKernelMemset(g_unkP, 0, 0x4D0);
 			pspSdkSetK1(k1);
-			return crntAddresults;
+			return crntADDRESS;
 			}
 	return SCE_PSHEET_ERROR_SEMAID;
 }
@@ -150,7 +150,7 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 	if(!(buf = 0))
 	{
 		if(file == NULL || size == 0 || a2 == NULL)
-			return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		k1 = pspSdkGetK1();
 		if(!(s2 < 0))
 		{
@@ -174,21 +174,21 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 							}
 						goto end;
 					}
-					s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+					s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 					goto end;
 				}
-				s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+				s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 				goto end;
 			}
 			pspSdkSetK1(k1 << 11);
-			s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+			s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 			end:
 			size = 0;
 			sceKernelMemset(g_unkP, 0, 0x4D0);
 			pspSdkSetK1(k1);
 			return s0;
 		}
-		return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 	}
 	return SCE_PSHEET_ERROR_SEMAID;
 }
@@ -267,7 +267,7 @@ if((((a0+8) | a0) & (k1 << 11)) >= 0)
 	return result;
 	}
 pspSdkSetK1(k1);
-return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 }
 
 //OK
@@ -497,7 +497,7 @@ if(!(result != 0))
 		KDebugForKernel_84F370BC("%s: %s(): error 0x%08X\n", "bbox_access.c", "open_and_mac_check", result);
 		return result;
 	}
-return SCE_PSHEET_ERROR_ILLEGAL_ADDresultS;
+return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 }
 
 //
