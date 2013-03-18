@@ -50,6 +50,13 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define SCE_POWER_ERROR_ACTIVATING_WLAN             (0x802B0300)
 
 typedef struct {
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    u32 unk12;
+} SceSysEventParam;
+
+typedef struct {
     s32 callbackId;
     s32 unk4;
     s32 powerStatus;
@@ -128,14 +135,12 @@ typedef struct {
     u32 unk48;
     u32 unk52;
     u32 unk56;
-    u16 unk60;
-    u16 unk62;
-    u16 unk64;
-    u16 unk66;
+    s16 tachyonVoltage;
+    s16 unk62;
+    u32 unk64;
     s16 unk68;
     s16 unk70;
-    s16 unk72;
-    s16 unk74;
+    s32 unk72;
     s16 unk76;
     s16 unk78;
     u32 unk80;
@@ -1828,9 +1833,9 @@ s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
         cpuFreq = g_PowerFreq.unk90; //0x0000373C
     
     sceClkcSetCpuFrequency((float)cpuFreq); //0x00003748
-    cpuFreq = sceClkcGetCpuFrequency(); //0x00003750
-    g_PowerFreq.clkcCpuFrequencyFloat = cpuFreq; //0x0000375C
-    g_PowerFreq.clkcCpuFrequencyInt = (s32)cpuFreq; //0x00003768
+    float cpuFreqFloat = sceClkcGetCpuFrequency(); //0x00003750
+    g_PowerFreq.clkcCpuFrequencyFloat = cpuFreqFloat; //0x0000375C
+    g_PowerFreq.clkcCpuFrequencyInt = (s32)cpuFreqFloat; //0x00003768
     
     sceKernelCpuResumeIntr(intrState); //0x00003764
     pspSetK1(oldK1); //0x0000376C
@@ -1866,9 +1871,9 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
     busFrequency = pspMax(busFrequency, pllClockFreq); //0x0000384C
     status = sceClkcSetBusFrequency((float)busFrequency); //0x00003854
     
-    busFrequency = sceClkcGetBusFrequency(); //0x0000385C
-    g_PowerFreq.clkcBusFrequencyFloat = busFrequency; //0x00003868
-    g_PowerFreq.clkcBusFrequencyInt = (s32)busFrequency; //0x00003870
+    float busFrequencyFloat = sceClkcGetBusFrequency(); //0x0000385C
+    g_PowerFreq.clkcBusFrequencyFloat = busFrequencyFloat; //0x00003868
+    g_PowerFreq.clkcBusFrequencyInt = (s32)busFrequencyFloat; //0x00003870
     
     scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); //0x0000386C & 0x00003874
     
@@ -1884,7 +1889,6 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
     u32 frequency; 
     u32 unk1;
     s32 status;
-    u32 wlanActivity;
     
     if ((pllFrequency < 19 || pllFrequency > 333) || cpuFrequency < 1) //0x000038A4 & 0x000038A8 & 0x000038BC & 0x000038E0
         return SCE_ERROR_INVALID_VALUE;
@@ -1963,7 +1967,93 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
         busFrequency = ((s32)((frequency >> 31) + frequency)) >> 31; //0x00003A60 - 0x00003A68
     
     scePowerLockForKernel(0); //0x00003A6C
-    if (g_PowerFreq.unk12 == unk1) { //0x00003A78
+    
+    SceSysEventParam sysEventParam;
+    if (g_PowerFreq.pllOutSelect != unk1) { //0x00003A78
+        sysEventParam.unk0 = 8;
+        sysEventParam.unk4 = frequency;
+        s32 result = 0;
+        SceSysEventHandler *sysEventHandler = NULL;
+        status = sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000000, "query", &sysEventParam, &result, 1, &sysEventHandler); //0x00003AAC
+        if (status < SCE_ERROR_OK) { //0x00003AB4
+            sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000001, "cancel", &sysEventParam, NULL, 0, NULL); //0x00003DE0
+            scePowerUnlockForKernel(0); //0x00003DE8
+            sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003DF4
+            pspSetK1(oldK1);
+            return status;
+        }
         
+        if (unk1 == 5 && g_PowerFreq.unk64 == 0) { //0x00003AC0 & 0x00003D88
+            if (g_PowerFreq.unk68 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68) //0x00003D94 & 0x00003DA0
+                sceSysconCtrlVoltage(3, g_PowerFreq.unk68); //0x00003DA8
+            g_PowerFreq.unk64 = 1; //0x00003DB4
+        }
+        if (unk1 >= 6 && g_PowerFreq.unk56 == 0 && g_PowerFreq.tachyonVoltage >= 0) { //0x00003AD0 & 0x00003AE0 & 0x00003AEC
+            sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonVoltage); //0x00003AF4
+            g_PowerFreq.unk56 = 1; //0x00003B00
+        }
+        if (unk1 == 5 && g_PowerFreq.unk72 == 0) { //0x00003B08 & 0x00003D50
+            if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) //0x00003D5C & 0x00003D68
+                sceDdr_driver_0BAAE4C5(); //0x00003D70 -- TODO: Check back for required arguments.
+            g_PowerFreq.unk72 = 1; //0x00003D84
+        }
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000002, "start", &sysEventParam, NULL, 0, NULL); //0x00003B30
+        sceDisplayWaitVblankStart(); //0x00003B38
+    
+        u32 intrState = sceKernelCpuSuspendIntr(); //0x00003B40
+    
+        sceClkcSetBusGear(511, 511); //0x00003B50
+        sceSysreg_driver_63E1EE9C(511, 511); //0x00003B5C
+    
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000010, "phase0", &sysEventParam, NULL, 0, NULL); //0x00003B84
+        if (g_PowerFreq.sm1Ops != NULL) { //0x00003B90
+            void (*func)(u32 unk1, u32 unk2) = (*func)(u32, u32)*(u32 *)(((void *)(g_PowerFreq.sm1Ops)) + 48);
+            func(unk1, -1); //0x00003B94 & 0x00003D3C
+        }
+        sceDdrChangePllClock(unk1); //0x00003B98
+    
+        float pllFrequency = sceSysregPllGetFrequency(); //0x00003BA0
+        g_PowerFreq.pllClockFrequencyFloat = pllFrequency(); //0x00003BAC
+        g_PowerFreq.pllClockFrequencyInt = (u32)pllFrequency; //0x00003BB8
+    
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000011, "phase1", &sysEventParam, NULL, 0, NULL); //0x00003BD4
+    
+        sceKernelCpuResumeIntr(intrState); //0x00003BDC
+        
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000020, "end", &sysEventParam, NULL, 0, NULL); //0x00003C04
+        
+        if (unk1 != 5 && g_PowerFreq.unk72 == 1) { //0x00003C10 & 0x00003C1C
+            if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk78 != g_PowerFreq.unk76) //0x00003D14 & 0x00003D20
+                sceDdr_driver_0BAAE4C5(); //0x00003D28 -- TODO: Check for arguments.
+            g_PowerFreq.unk72 = 0; //0x00003D34
+        }
+        if (unk1 >= 6 && g_PowerFreq.unk56 == 1 && g_PowerFreq.unk62 >= 0) { //0x00003C28 & 0x00003C3C & 0x00003CFC
+            sceSysconCtrlTachyonVoltage(g_PowerFreq.unk62); //0x00003D04
+            g_PowerFreq.unk56 = 0; //0x00003D10
+        }
+        if (unk1 != 5 && g_PowerFreq.unk64 == 1) { //0x00003C48 & 0x00003C58
+            if (g_PowerFreq.unk70 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68) //0x00003CD4 & 0x00003CE0
+                sceSysconCtrlVoltage(1, g_PowerFreq.unk70); //0x00003CE8
+            g_PowerFreq.unk64 = 0; //0x00003CF8
+        }
     }
+    s32 tmpFrequency = ((s32)((frequency >> 31) + frequency)) >> 1; //	0x00003C68
+    if (tmpFrequency == busFrequency) { //0x00003C6C
+        sceClkcSetBusGear(511, 511); //0x00003CA4
+            
+        float busFrequencyFloat = sceClkcGetBusFrequency(); //0x00003CAC
+        g_PowerFreq.clkcBusFrequencyFloat = busFrequencyFloat; //0x00003CB8
+        g_PowerFreq.clkcBusFrequencyInt = (u32)busFrequencyFloat; //0x00003CC0
+            
+        scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); //0x00003948
+    } else {
+        scePowerSetBusClockFrequency(busFrequency); //0x00003C74
+    }
+    scePowerSetCpuClockFrequency(cpuFrequency); //0x00003C7C
+        
+    scePowerUnlockForKernel(0); //0x00003C84
+    sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003C90
+    pspSetK1(oldK1); //0x00003C98
+    return SCE_ERROR_OK;
+        
 }
