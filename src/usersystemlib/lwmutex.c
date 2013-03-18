@@ -198,6 +198,9 @@ s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
+    /* Mutexes associated to the idle thread can only be manipulated from the idle thread.
+     * The idle thread also cannot manipulate mutexes associated with other threads.
+     */
     if ((mutex->thid == 0 && g_thread->id != 0) ||
         (mutex->thid != 0 && g_thread->id == 0)) {
         return 0;

@@ -10,7 +10,6 @@
     .global sceKernelCpuResumeIntrWithSync
     .global sceKernelIsCpuIntrSuspended
     .global sceKernelIsCpuIntrEnable
-    .global sub_00000208
 
 ##
 # Kernel_Library_092968F4
