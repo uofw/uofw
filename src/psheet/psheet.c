@@ -51,16 +51,16 @@ int p19;				//0x00004804
 //scePsheet_driver_302AB4B8 = sceDRMInstallInit
 //sets up the initial DRM params.
 //returns 0 on success, 0x80510109 on failure
-int sceDRMInstallInit(int ADDRESS, int size) {
-	int crntADDRESS, crntSize, k1;
+int sceDRMInstallInit(int address, int size) {
+	int crntAddress, crntSize, k1;
 	k1 = pspSdkGetK1();
 	pspSdkSetK1(k1 << 11);
-	crntADDRESS = ADDRESS;
+	crntAddress = address;
 	crntSize = size;
 	sceKernelMemset(g_unkP, 0, 0x4D0);
 
-	//Standard illegal ADDRESS check
-	if (((crntADDRESS | crntSize | crntADDRESS + crntSize) & k1) < 0)
+	//Standard illegal address check
+	if (((crntAddress | crntSize | crntAddress + crntSize) & k1) < 0)
 			{
 		pspSdkSetK1(k1);
 		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
@@ -68,10 +68,10 @@ int sceDRMInstallInit(int ADDRESS, int size) {
 
 	sub_01310(0, 1);
 	sub_01410(0);
-	buf[0] = ADDRESS;
+	buf[0] = address;
 	buf[1] = size;
 
-	if (((crntADDRESS < 1) | (((0x0001FFFF < crntSize)) ^ 1)) != 0) {
+	if (((crntAddress < 1) | (((0x0001FFFF < crntSize)) ^ 1)) != 0) {
 		buf[0] = 0;
 		buf[1] = 0;
 		pspSdkSetK1(k1);
@@ -85,55 +85,55 @@ int sceDRMInstallInit(int ADDRESS, int size) {
 //OK
 //scePsheet_driver_15355B0E = sceDRMInstallGetPkgInfo
 //determines what kind of package it is, based on hash comparison.
-int sceDRMInstallGetPkgInfo(int ADDRESS, int size, int a2)
+int sceDRMInstallGetPkgInfo(int address, int size, int a2)
 {
-	int crntADDRESS, crntSize ,s2;
+	int crntAddress, crntSize ,s2;
 	SceUID s3;
 	int k1 = pspSdkGetK1();
-	crntADDRESS = ADDRESS;
+	crntAddress = address;
 	crntSize = size;
 	s2 = a2;
 	if(!(buf == 0))
 		{
-		if((ADDRESS < 1 | size < 1) != 0)
+		if((address < 1 | size < 1) != 0)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		if(a2 == 0)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		pspSdkSetK1(k1 << 11);
-		if(!(((k1<<11) & ADDRESS) < 0))
+		if(!(((k1<<11) & address) < 0))
 			{
 			if(!((((size+16) | size) & (k1 << 11)) < 0))
 				{
 				if(!(((a2+16) | a2 ) & (k1 << 11)) >= 0)
 					{
-					ADDRESS = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
+					address = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 					size = 0;
 					goto end;
 					}
 					sub_1410(0);
-					s3 = sub_14A8(ADDRESS);
-					ADDRESS = s3;
+					s3 = sub_14A8(address);
+					address = s3;
 					if(s3 < 0)
 						{
 						size = 0;
-						ADDRESS = s3;
+						address = s3;
 						goto end;
 						}
-					s3 = sub_72C(ADDRESS, size, s2);
-					ADDRESS = sceIoClose(s3);
+					s3 = sub_72C(address, size, s2);
+					address = sceIoClose(s3);
 					size = 0;
 					goto end;
 				}
-				ADDRESS = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
+				address = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 				size = 0;
 				goto end;
 			}
-			ADDRESS = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
+			address = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 			size = 0;
 			end:
 			sceKernelMemset(g_unkP, 0, 0x4D0);
 			pspSdkSetK1(k1);
-			return crntADDRESS;
+			return crntAddress;
 			}
 	return SCE_PSHEET_ERROR_SEMAID;
 }
