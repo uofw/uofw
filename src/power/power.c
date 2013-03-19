@@ -130,12 +130,12 @@ typedef struct {
     u32 pllClockFrequencyFloat; //28
     u32 clkcCpuFrequencyFloat; //32
     u32 clkcBusFrequencyFloat; //36
-    u32 unk40;
-    u32 unk44;
-    u32 unk48;
-    u32 unk52;
+    u32 clkcCpuGearNumerator; //40
+    u32 clkcCpuGearDenominator; //44
+    u32 clkcBusGearNumerator; //48
+    u32 clkcBusGearDenominator; //52
     u32 unk56;
-    s16 tachyonVoltage;
+    s16 tachyonVoltage; //60
     s16 unk62;
     u32 unk64;
     s16 unk68;
@@ -143,8 +143,8 @@ typedef struct {
     s32 unk72;
     s16 unk76;
     s16 unk78;
-    u32 unk80;
-    u32 unk84;
+    u32 geEdramRefreshMode; //80
+    u32 oldGeEdramRefreshMode; //84
     u16 unk88;
     u16 unk90;
     u16 unk92;
@@ -1968,8 +1968,8 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
     
     scePowerLockForKernel(0); //0x00003A6C
     
-    SceSysEventParam sysEventParam;
     if (g_PowerFreq.pllOutSelect != unk1) { //0x00003A78
+        SceSysEventParam sysEventParam;
         sysEventParam.unk0 = 8;
         sysEventParam.unk4 = frequency;
         s32 result = 0;
@@ -2055,5 +2055,139 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
     sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003C90
     pspSetK1(oldK1); //0x00003C98
     return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_100A77A1 - Address 0x00003E64
+u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
+{
+    s32 intrState;
+    s64 res;
+    s32 resLow;
+    s32 sign;
+    s32 resHi;
+    
+    u32 unk1;
+    u32 unk2;
+    
+    intrState = sceKernelCpuSuspendIntr(); //0x00003E78
+    
+    res = 1; //0x00003E88
+    unk1 = 8;
+    unk2 = 6; //0x00003E84
+    if (geEdramRefreshMode == 1) { //0x00003E8C
+        if (g_PowerFreq.clkcBusFrequencyInt < 75) { //0x00003EA0
+            if (g_PowerFreq.clkcBusFrequencyInt < 50) { //0x00003F0C
+                if (g_PowerFreq.clkcBusFrequencyInt < 25) { //0x00003F40
+                    res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003F84
+                    unk2 = 1; //0x00003F90
+                    unk1 = 6; //0x00003F94
+                    
+                    resLow = (((s32)res) - 75) * (-1080021015); //0x00003FA0
+                    sign = (resLow >> 31); //0x00003FA4
+                    resHi = resLow + ((res >> 32) & 0xFFFFFFFF); //0x00003FAC
+                    resHi = (resHi >> 7); //0x00003FB4
+                } else { //0x00003F48
+                    res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003F4C
+                    unk2 = 2; //0x00003F58
+                    unk1 = 3;
+                    
+                    resLow = (((s32)res) - 75) * (-1080021015); //0x00003F68
+                    sign = (resLow >> 31); //0x00003F6C
+                    resHi = resLow + ((res >> 32) & 0xFFFFFFFF); //0x00003F74
+                    resHi = (resHi >> 8); //0x00003F78
+                }
+                res = resHi - sign; //0x00003F80
+            } else { //0x00003F14
+                res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003F18
+                unk2 = 3; //0x00003F1C
+                unk1 = 2;
+                    
+                resLow = ((s32)res) - 75; //0x00003F28
+                resHi = ((resLow >> 31) << 23) + resLow; //0x00003F34
+                res = (resHi >> 9); //0x00003F3C   
+            }
+        } else { //0x00003EA8
+            res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003EAC
+            unk1 = 1; //0x00003EB0
+                    
+            resLow = ((s32)res) - 75; //0x00003EB8
+            resHi = ((resLow >> 31) << 22) + resLow; //0x00003EC4
+            res = (resHi >> 10); //0x00003EC8
+        }
+        res = sceGeEdramSetRefreshParam(geEdramRefreshMode, res, unk1, unk2); //0x00003ECC
         
+        sceKernelCpuResumeIntr(intrState); //0x00003ED8
+        
+        if (res < SCE_ERROR_OK) //0x00003EE0
+            return res;
+        g_PowerFreq.geEdramRefreshMode = geEdramRefreshMode; //0x00003EEC
+        return SCE_ERROR_OK;
+    }
+}
+
+//Subroutine scePower_driver_C520F5DC - Address 0x00003FB8
+u32 scePowerGetGeEdramRefreshMode(void)
+{
+    return g_PowerFreq.geEdramRefreshMode;
+}
+
+//sub_00003FC4
+static u32 _scePowerFreqEnd(void)
+{
+    sceKernelDeleteMutex(g_PowerFreq.mutexId); //0x00003FD4
+    return SCE_ERROR_OK;
+}
+
+//sub_00003FEC
+static u32 sub_00003FEC(void)
+{
+   return sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); //0x00004000
+}
+
+//sub_00004014
+static u32 sub_00004014(void)
+{
+    return sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00004024
+}
+
+//sub_00004038
+static u32 _scePowerFreqRebootPhase(u32 arg0)
+{
+    switch (arg0) {
+    case 1: //0x00004044
+        sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00004080
+        return SCE_ERROR_OK;
+    case 2: //0x00004050
+        sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); //0x0000406C
+        return SCE_ERROR_OK;
+    default:
+        return SCE_ERROR_OK;
+    }
+}
+
+//sub_00004090
+static u32 _scePowerFreqSuspend(void)
+{
+    sceClkcGetCpuGear(&g_PowerFreq.clkcCpuGearNumerator, &g_PowerFreq.clkcCpuGearDenominator); //0x000040A8
+    sceClkcGetBusGear(&g_PowerFreq.clkcBusGearNumerator, &g_PowerFreq.clkcBusGearDenominator); //0x000040B4
+    
+    g_PowerFreq.oldGeEdramRefreshMode = g_PowerFreq.geEdramRefreshMode; //0x000040CC
+    scePowerSetGeEdramRefreshMode(g_PowerFreq.geEdramRefreshMode); //0x000040C8
+    return SCE_ERROR_OK;
+}
+
+//sub_000040E4
+static u32 _scePowerFreqResume(u32 arg0)
+{
+    switch (arg0) {
+    case 0: //0x000040F4
+        sceClkcSetCpuGear(g_PowerFreq.clkcCpuGearNumerator, g_PowerFreq.clkcCpuGearDenominator); //0x00004130
+        sceClkcSetBusGear(g_PowerFreq.clkcBusGearNumerator, g_PowerFreq.clkcBusGearDenominator); //0x0000413C
+        return SCE_ERROR_OK;
+    case 1: //0x00004100
+        scePowerSetGeEdramRefreshMode(g_PowerFreq.oldGeEdramRefreshMode); //0x0000411C
+        return SCE_ERROR_OK;
+    default:
+        return SCE_ERROR_OK;
+    }
 }
