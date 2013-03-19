@@ -8,7 +8,8 @@ Doxygen documentation: http://uofw.psnpt.com/sdkdoc/
 For more information: http://dev.psnpt.com/redmine/projects/uofw/wiki  
 
 NOTE: We currently plan to move both the wiki and the documentation to Github and shutdown the project page
-      instead. We'll keep you updated on this as progress is being made.
+      instead. We'll keep you updated on this as progress is being made. 
+      A first look at the new wiki can be taken [here](https://github.com/uofw/uofw/wiki).
 
 
 ## Getting started
