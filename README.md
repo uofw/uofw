@@ -64,8 +64,13 @@ Other websites are:
 * http://ps2dev.org
 
 
-## Contact
+## Questions or need help?
 
 You can stay in touch with us and discuss project-related topics with us via the following ways:
 * via IRC on the [FreeNode server](http://webchat.freenode.net/) (irc.freenode.net) (join the channel #uofw)
 * via e-mail
+
+
+## Copyright and License
+
+For copyright and license information, please check [this file](https://github.com/uofw/uofw/blob/master/COPYING)
