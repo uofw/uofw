@@ -1,13 +1,24 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
 #ifndef USERSYSTEMLIB_KERNEL_H
 #define USERSYSTEMLIB_KERNEL_H
 
-#include "common_header.h"
+/**
+ * @author geecko
+ * @version 6.60
+ *
+ * The usersystemlib.prx module RE'ing.
+ */
 
+#include <common_header.h>
 #include <threadman_user.h>
+
+/** @defgroup UsersystemLib UsersystemLib Module
+ *
+ * @{
+ */
 
 /* Interrupts */
 
@@ -218,5 +229,7 @@ void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
  * @return Value of dst.
  */
 void *sceKernelMemset(void *dst, s32 val, SceSize size);
+
+/** @} */
 
 #endif /* USERSYSTEMLIB_KERNEL_H */
