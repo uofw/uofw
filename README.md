@@ -39,7 +39,8 @@ contains unfinished, untested and undocumented code about the module it is named
 finished, documented code (that is, the module has been finished reverse-engineering) it will be merged into
 the 'master' branch.
 Currently, there are three sub-branches: [clockgen] (https://github.com/uofw/uofw/tree/clockgen), 
-[memlmd](https://github.com/uofw/uofw/tree/memlmd), [power](https://github.com/uofw/uofw/tree/power) 
+[memlmd](https://github.com/uofw/uofw/tree/memlmd), [power](https://github.com/uofw/uofw/tree/power), 
+[psheet](https://github.com/uofw/uofw/tree/psheet)
 
 
 ## Additional Information
@@ -73,4 +74,4 @@ You can stay in touch with us and discuss project-related topics with us via the
 
 ## Copyright and License
 
-For copyright and license information, please check [this file](https://github.com/uofw/uofw/blob/master/COPYING)
+For copyright and license information, please check [this file](https://github.com/uofw/uofw/blob/master/COPYING).
