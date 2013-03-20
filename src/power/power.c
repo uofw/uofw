@@ -2201,11 +2201,115 @@ s16 scePowerGetCurrentTachyonVoltage(void)
 }
 
 //Subroutine scePower_driver_BADA8332 - Address 0x00004170
-s32 scePowerGetTachyonVoltage(u32 *arg0, u32 *arg1)
+u32 scePowerGetTachyonVoltage(u32 *arg0, u32 *arg1)
 {
     if (arg0 != NULL)
         *arg0 = g_PowerFreq.tachyonVoltage;
     if (arg1 != NULL)
         *arg1 = g_PowerFreq.unk62;
+    
     return SCE_ERROR_OK;
 }
+
+//Subroutine scePower_driver_12F8302D - Address 0x00004198
+u32 scePowerSetTachyonVoltage(s32 arg0, s32 arg1)
+{
+    if (arg0 != -1) //0x0000419C
+        g_PowerFreq.tachyonVoltage = arg0;
+    if (arg1 != -1) //0x000041A8
+        g_PowerFreq.unk62 = arg1;
+    
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_9127E5B2 - Address 0x000041BC
+u32 scePowerGetCurrentDdrVoltage(void)
+{
+    if (g_PowerFreq.unk64 != 0) //0x000041C8
+        return g_PowerFreq.unk68;
+    return g_PowerFreq.unk70; //0x000041DC
+}
+
+//Subroutine scePower_driver_75906F9A - Address 0x000041E0 
+u32 scePowerGetDdrVoltage(s32 *arg0, s32 *arg1)
+{
+    if (arg0 != NULL) //0x000041E0
+        *arg0 = g_PowerFreq.unk68;
+    if (arg1 != NULL) //0x000041F0
+        *arg1 = g_PowerFreq.unk70;
+    
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_018AB235 - Address 0x00004208 
+u32 scePowerSetDdrVoltage(s32 arg0, s32 arg1)
+{
+    if (arg0 != -1) //0x0000420C
+        g_PowerFreq.unk68 = arg0;
+    if (arg1 != -1) //0x00004218
+        g_PowerFreq.unk70 = arg1;
+    
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_0655D7C3 - Address 0x0000422C 
+u32 scePowerGetCurrentDdrStrength()
+{
+    if (g_PowerFreq.unk72 != 0) //0x00004238
+        return g_PowerFreq.unk76;
+    return g_PowerFreq.unk78;
+}
+
+//Subroutine scePower_driver_16F965C9 - Address 0x00004250 
+u32 scePowerGetDdrStrength(s32 *arg0, s32 *arg1) 
+{
+    if (arg0 != NULL) //0x00004250
+        *arg0 = g_PowerFreq.unk76;
+    if (arg1 != NULL) //0x00004260
+        *arg1 = g_PowerFreq.unk78;
+    
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_D13377F7 - Address 0x00004278
+u32 scePowerSetDdrStrength(s32 arg0, s32 arg1)
+{
+    if (arg0 != -1) //0x0000427C
+        g_PowerFreq.unk76 = arg0;
+    if (arg1 != -1) //0x00004288
+        g_PowerFreq.unk78 = arg1;
+}
+
+//Subroutine scePower_driver_DF904CDE - Address 0x0000429C 
+u32 scePowerLimitScCpuClock(s32 lowerLimit, s32 upperLimit)
+{
+    if (lowerLimit != -1) //0x000042A0
+        g_PowerFreq.unk90 = lowerLimit;
+    if (upperLimit != -1) //0x000042AC
+        g_PowerFreq.unk92 = upperLimit;
+    
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_EEFB2ACF - Address 0x000042C0
+u32 scePowerLimitScBusClock(s32 lowerLimit, s32 upperLimit)
+{
+    if (lowerLimit != -1) //0x000042C4
+        g_PowerFreq.unk94 = lowerLimit;
+    if (upperLimit != -1) //0x000042D0
+        g_PowerFreq.unk96 = upperLimit;
+    
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_B7000C75 - Address 0x000042E4
+u32 scePowerLimitPllClock(s32 lowerLimit, s32 upperLimit)
+{
+    if (lowerLimit != -1) //0x000042E8
+        g_PowerFreq.unk98 = lowerLimit;
+    if (upperLimit != -1) //0x000042F4
+        g_PowerFreq.unk100 = upperLimit;
+    
+    return SCE_ERROR_OK;
+}
+
