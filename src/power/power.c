@@ -2191,3 +2191,21 @@ static u32 _scePowerFreqResume(u32 arg0)
         return SCE_ERROR_OK;
     }
 }
+
+//Subroutine scePower_driver_D7DD9D38 - Address 0x0000414C 
+s16 scePowerGetCurrentTachyonVoltage(void)
+{
+    if (g_PowerFreq.unk56 == 0) //0x00004158
+        return g_PowerFreq.unk62; //0x00004164
+    return g_PowerFreq.tachyonVoltage; //0x0000416C
+}
+
+//Subroutine scePower_driver_BADA8332 - Address 0x00004170
+s32 scePowerGetTachyonVoltage(u32 *arg0, u32 *arg1)
+{
+    if (arg0 != NULL)
+        *arg0 = g_PowerFreq.tachyonVoltage;
+    if (arg1 != NULL)
+        *arg1 = g_PowerFreq.unk62;
+    return SCE_ERROR_OK;
+}
