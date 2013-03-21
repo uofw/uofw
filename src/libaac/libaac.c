@@ -19,27 +19,28 @@ typedef struct {
     Unk1 unk128;
 } Unk0;
 
-static Unk0 *g_1750; // 1750
-static s32 g_n; // 1754
+static s32 g_poolId = -1; // 1740
+static Unk0 *g_pool; // 1750
+static s32 g_nbr; // 1754
 
 void sub_00000000(s32 idx)
 {
     Unk0 *p;
 
-    if (g_1750 == NULL) {
+    if (g_pool == NULL) {
         return;
     }
 
-    if (g_n == 0) {
+    if (g_nbr == 0) {
         return;
     }
 
-    // ((idx < g_n) ^ 1) | (idx >> 31)
-    if (idx < 0 || idx >= g_n) {
+    // ((idx < g_nbr) ^ 1) | (idx >> 31)
+    if (idx < 0 || idx >= g_nbr) {
         return;
     }
 
-    p = g_1750 + idx * SCE_AAC_MEM_SIZE;
+    p = g_pool + idx * SCE_AAC_MEM_SIZE;
 
     if (p == NULL) {
         return;
@@ -72,20 +73,20 @@ s32 sceAacEndEntry(void) {
     int p;
     s32 ret;
 
-    for (i=0, p=0; i<g_n; i++, p+=SCE_AAC_MEM_SIZE)
-        if (g_1750 == NULL) {
+    for (i=0, p=0; i<g_nbr; i++, p+=SCE_AAC_MEM_SIZE) {
+        if (g_pool == NULL) {
             break;
         }
 
-        if (g_n == 0) {
+        if (g_nbr == 0) {
             break;
         }
 
-        if (i<0 || i>=g_n) {
+        if (i<0 || i>=g_nbr) {
             break;
         }
 
-        if (g_1750 + p == NULL) {
+        if (g_pool + p == NULL) {
             continue;
         }
 
@@ -98,6 +99,52 @@ s32 sceAacEndEntry(void) {
 
     // sceAac_23D35CAE
     sceAacTermResource();
+
+    return SCE_ERROR_OK;
+}
+
+// sceAac_5CFFC57C
+s32 sceAacInitResource(s32 nbr)
+{
+    s32 size = nbr * SCE_AAC_MEM_SIZE;
+    s32 i;
+
+    if (g_pool != NULL) {
+        return 0x80691504; // SCE_AAC_ALREADY_INITIALIZED
+    }
+
+    g_poolId = sceKernelCreateFpl(
+        "SceLibAacResouce", // name with a typo
+        2, // PSP_MEMORY_PARTITION_USER
+        0, // attr
+        size, // size of pool
+        1, // one block
+        NULL // options
+    );
+
+    if (g_poolId < 0) {
+        return 0x80691501; // SCE_AAC_NOT_INITIALIZED
+    }
+
+    if (sceKernelAllocateFpl(g_poolId, &g_pool, NULL) < 0) {
+        sceKernelDeleteFpl(g_poolId);
+
+        g_poolId = -1;
+        g_pool = NULL;
+
+        return 0x80691501; // SCE_AAC_NOT_INITIALIZED
+    }
+
+    if (size <= 0) {
+        g_nbr = nbr;
+
+        return SCE_ERROR_OK;
+    }
+
+    // memset
+    for (i=0; i<size; i++) {
+        ((u8*)g_pool)[i] = 0;
+    }
 
     return SCE_ERROR_OK;
 }
