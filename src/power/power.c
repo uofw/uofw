@@ -1,7 +1,12 @@
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
 #include <common_imp.h>
 #include <syscon.h>
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
+#include <sysmem_sysevent.h>
 
 SCE_MODULE_INFO("scePower_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | 
                                     SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 13);
@@ -123,7 +128,7 @@ typedef struct {
     u32 mutexId; //0
     u32 sm1Ops; //4
     u32 pllOutSelect; //8
-    u32 unk12; //12
+    u32 pllUseMask; //12
     u32 pllClockFrequencyInt; //16
     u32 clkcCpuFrequencyInt; //20
     u32 clkcBusFrequencyInt; //24
@@ -146,14 +151,71 @@ typedef struct {
     u32 geEdramRefreshMode; //80
     u32 oldGeEdramRefreshMode; //84
     u16 unk88;
-    u16 unk90;
-    u16 unk92;
-    u16 unk94;
-    u16 unk96;
-    u16 unk98;
-    u16 unk100;
+    u16 scCpuClockLowerLimit; //90
+    u16 scCpuClockUpperLimit; //92
+    u16 scBusClockLowerLimit; //94
+    u16 scBusClockUpperLimit; //96
+    u16 pllClockLowerLimit; //98
+    u16 pllClockUpperLimit; //100
     u16 unk102;
 } ScePowerFrequency; //size: 104
+
+typedef struct {
+    u32 eventId; //0
+    u32 threadId; //4
+    u32 unk8;
+    u32 unk12;
+    u32 unk16;
+    u32 unk20;
+    u32 unk24;
+    u32 unk28;
+    u32 unk32;
+    u32 alarmId; //36
+    u32 unk40;
+    u32 unk44;
+    u32 unk48;
+    u32 unk52;
+    u32 unk56;
+    u32 unk60;
+    u32 unl64;
+    u32 unk68;
+    u32 unk72;
+    u32 unk76;
+    u32 unk80;
+    u32 unk84;
+    u32 unk88;
+    u32 unk92;
+    u32 unk96;
+    u32 unk100;
+    u32 unk100;
+    u32 unk104;
+    u32 unk108;
+    u32 unk112;
+    u32 unk116;
+    u32 unk120;
+    u32 unk124;
+    u32 unk128;
+    u32 unk132;
+    u32 unk136;
+    u32 unk140;
+    u32 unk144;
+    u32 unk148;
+    u32 unk152;
+    u32 unk156;
+    u32 unk160;
+    u32 unkl64;
+    u32 unk168;
+    u32 unk172;
+    u32 unk176;
+    u32 unk180;
+    u32 unk184;
+    u32 unk188;
+    u32 unk192;
+    u32 unk196;
+    u32 unk200;
+    u32 unk204;
+    u32 unk208;
+} ScePowerBattery; //size: 212
 
 typedef struct {
     u32 frequency;
@@ -209,6 +271,7 @@ ScePower g_Power; //0x00007080
 ScePowerSwitch g_PowerSwitch; //0x0000729C
 ScePowerIdle g_PowerIdle; //0x0000C400
 ScePowerFrequency g_PowerFreq; //0x0000C550
+ScePowerBattery g_Battery; //0x0000C5B8
 
 //scePower_driver_9CE06934 - Address 0x00000000
 s32 scePowerInit()
@@ -1518,8 +1581,7 @@ static void _scePowerPowerSwCallback(s32 enable, void *argp __attribute__((unuse
         sceKernelSetEventFlag(g_PowerSwitch.eventId, 1); //0x00002EFC
         sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x2); //0x00002F08
         _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWER_SWITCH, 0); //0x00002F14
-    }
-    else {
+    } else {
         sceKernelSetEventFlag(g_PowerSwitch.eventId, 2); //0x00002F38
         sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x1); //0x00002F44
         _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWER_SWITCH, 0, 0); //0x00002F4C
@@ -1758,12 +1820,12 @@ static u32 _scePowerFreqInit(void)
     memset(&g_PowerFreq, 0, sizeof g_PowerFreq); //0x0000355C
     
     g_PowerFreq.sm1Ops = sceKernelSm1ReferOperations(); //0x00003564
-    g_PowerFreq.unk94 = 24; //0x00003580
-    g_PowerFreq.unk98 = 1; //0x00003584
-    g_PowerFreq.unk100 = 333; //0x00003588
-    g_PowerFreq.unk90 = 1; //0x0000358C
-    g_PowerFreq.unk92 = 333; //0x00003590
-    g_PowerFreq.unk96 = 166; //0x00003598
+    g_PowerFreq.scBusClockLowerLimit = 24; //0x00003580
+    g_PowerFreq.pllClockLowerLimit = 1; //0x00003584
+    g_PowerFreq.pllClockUpperLimit = 333; //0x00003588
+    g_PowerFreq.scCpuClockLowerLimit = 1; //0x0000358C
+    g_PowerFreq.scCpuClockUpperLimit = 333; //0x00003590
+    g_PowerFreq.scBusClockUpperLimit = 166; //0x00003598
     
     pllFrequency = sceSysregPllGetFrequency();
     g_PowerFreq.pllClockFrequencyFloat = pllFrequency; //0x000035A0
@@ -1779,7 +1841,7 @@ static u32 _scePowerFreqInit(void)
     g_PowerFreq.clkcBusFrequencyFloat = clkcBusFrequency; //0x000035E4
     g_PowerFreq.clkcBusFrequencyInt = (s32)clkcBusFrequency; //0x000035DC
     
-    g_PowerFreq.unk12 = 0x3F3F; //0x000035D0
+    g_PowerFreq.pllUseMask = 0x3F3F; //0x000035D0
     
     if (g_PowerFreq.pllOutSelect == 5) { //0x000035E0
         g_PowerFreq.unk56 = 1; //0x000036B0
@@ -1827,10 +1889,10 @@ s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
     oldK1 = pspShiftK1(); //0x00003728
     intrState = sceKernelCpuSuspendIntr(); //0x00003724
     
-    if (cpuFrequency >= g_PowerFreq.unk90) //0x00003734
-        cpuFreq = pspMin(cpuFrequency, g_PowerFreq.unk92); //0x00003780
+    if (cpuFrequency >= g_PowerFreq.scCpuClockLowerLimit) //0x00003734
+        cpuFreq = pspMin(cpuFrequency, g_PowerFreq.scCpuClockUpperLimit); //0x00003780
     else 
-        cpuFreq = g_PowerFreq.unk90; //0x0000373C
+        cpuFreq = g_PowerFreq.scCpuClockLowerLimit; //0x0000373C
     
     sceClkcSetCpuFrequency((float)cpuFreq); //0x00003748
     float cpuFreqFloat = sceClkcGetCpuFrequency(); //0x00003750
@@ -1862,10 +1924,10 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
     if (userLevel < 4) //0x0000380C
         busFrequency = pllClockFreq; //0x00003820
     
-    if (busFrequency >= g_PowerFreq.unk94) //0x00003828
-        busFrequency = pspMin(busFrequency, g_PowerFreq.unk96); //0x00003894
+    if (busFrequency >= g_PowerFreq.scBusClockLowerLimit) //0x00003828
+        busFrequency = pspMin(busFrequency, g_PowerFreq.scBusClockUpperLimit); //0x00003894
     else 
-        busFrequency = g_PowerFreq.unk94; //0x00003830
+        busFrequency = g_PowerFreq.scBusClockLowerLimit; //0x00003830
     
     pllClockFreq = ((s32)(((u32)((s32)g_PowerFreq.pllClockFrequencyInt >> 31)) >> 30 + g_PowerFreq.pllClockFrequencyInt)) >> 2;
     busFrequency = pspMax(busFrequency, pllClockFreq); //0x0000384C
@@ -1902,16 +1964,16 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
     if (pllFrequency < (busFrequency * 2)) //0x00003918
         return SCE_ERROR_INVALID_VALUE;
     
-    if (pllFrequency >= g_PowerFreq.unk98) //0x00003968
-        frequency = pspMin(pllFrequency, g_PowerFreq.unk100); //loc_00003E5C
+    if (pllFrequency >= g_PowerFreq.pllClockLowerLimit) //0x00003968
+        frequency = pspMin(pllFrequency, g_PowerFreq.pllClockUpperLimit); //loc_00003E5C
     else 
-        frequency = g_PowerFreq.unk98; //0x00003970
+        frequency = g_PowerFreq.pllClockLowerLimit; //0x00003970
     
     //0x00003980 - 0x000039BC
     unk1 = -1; //0x00003984
     u32 i;
     for (i = 0; i < 12; i++) {
-        if (((g_pllSettings[i].unk4 << 1) & g_PowerFreq.unk12) == 0) //0x000039A0
+        if (((g_pllSettings[i].unk4 << 1) & g_PowerFreq.pllUseMask) == 0) //0x000039A0
             continue;
         
         if (g_pllSettings[i].frequency >= frequency) { //0x000039B0
@@ -1925,17 +1987,17 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
         unk1 = 5; //0x00003E50
     }
     
-    if (cpuFrequency >= g_PowerFreq.unk90) //0x000039D4
-        cpuFrequency = pspMin(cpuFrequency, g_PowerFreq.unk92); //0x00003E48
+    if (cpuFrequency >= g_PowerFreq.scCpuClockLowerLimit) //0x000039D4
+        cpuFrequency = pspMin(cpuFrequency, g_PowerFreq.scCpuClockUpperLimit); //0x00003E48
     else 
-        cpuFrequency = g_PowerFreq.unk90; //0x000039DC
+        cpuFrequency = g_PowerFreq.scCpuClockLowerLimit; //0x000039DC
     
     cpuFrequency = pspMin(cpuFrequency, frequency); //0x000039F0
     
-    if (busFrequency >= g_PowerFreq.unk94) //0x000039EC
-        busFrequency = pspMin(busFrequency, g_PowerFreq.unk96); //0x00003E40
+    if (busFrequency >= g_PowerFreq.scBusClockLowerLimit) //0x000039EC
+        busFrequency = pspMin(busFrequency, g_PowerFreq.scBusClockUpperLimit); //0x00003E40
     else 
-        busFrequency = g_PowerFreq.unk94; //0x000039F4
+        busFrequency = g_PowerFreq.scBusClockLowerLimit; //0x000039F4
     
     oldK1 = pspShiftK1(); //0x00003A10
     
@@ -2284,9 +2346,9 @@ u32 scePowerSetDdrStrength(s32 arg0, s32 arg1)
 u32 scePowerLimitScCpuClock(s32 lowerLimit, s32 upperLimit)
 {
     if (lowerLimit != -1) //0x000042A0
-        g_PowerFreq.unk90 = lowerLimit;
+        g_PowerFreq.scCpuClockLowerLimit = lowerLimit;
     if (upperLimit != -1) //0x000042AC
-        g_PowerFreq.unk92 = upperLimit;
+        g_PowerFreq.scCpuClockUpperLimit = upperLimit;
     
     return SCE_ERROR_OK;
 }
@@ -2295,9 +2357,9 @@ u32 scePowerLimitScCpuClock(s32 lowerLimit, s32 upperLimit)
 u32 scePowerLimitScBusClock(s32 lowerLimit, s32 upperLimit)
 {
     if (lowerLimit != -1) //0x000042C4
-        g_PowerFreq.unk94 = lowerLimit;
+        g_PowerFreq.scBusClockLowerLimit = lowerLimit;
     if (upperLimit != -1) //0x000042D0
-        g_PowerFreq.unk96 = upperLimit;
+        g_PowerFreq.scBusClockUpperLimit = upperLimit;
     
     return SCE_ERROR_OK;
 }
@@ -2306,10 +2368,113 @@ u32 scePowerLimitScBusClock(s32 lowerLimit, s32 upperLimit)
 u32 scePowerLimitPllClock(s32 lowerLimit, s32 upperLimit)
 {
     if (lowerLimit != -1) //0x000042E8
-        g_PowerFreq.unk98 = lowerLimit;
+        g_PowerFreq.pllClockLowerLimit = lowerLimit;
     if (upperLimit != -1) //0x000042F4
-        g_PowerFreq.unk100 = upperLimit;
+        g_PowerFreq.pllClockUpperLimit = upperLimit;
     
     return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_13D7CCE4 - Address 0x00004308
+u32 scePowerSetPllUseMask(u32 useMask)
+{
+    g_PowerFreq.pllUseMask = useMask;
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_FDB5BFE9 - Address 0x00004318 - Aliases: scePower_FEE03A2F, scePower_driver_FDB5BFE9
+u32 scePowerGetCpuClockFrequencyInt(void)
+{
+    return g_PowerFreq.clkcCpuFrequencyInt;
+}
+
+//Subroutine scePower_B1A52C83 - Address 0x00004324 - Aliases: scePower_driver_DC4395E2
+u32 scePowerGetCpuClockFrequencyFloat(void)
+{
+    return g_PowerFreq.clkcCpuFrequencyFloat;
+}
+
+//Subroutine scePower_478FE6F5 - Address 0x00004330 - Aliases: scePower_BD681969, scePower_driver_04711DFB
+u32 scePowerGetBusClockFrequencyInt(void)
+{
+    return g_PowerFreq.clkcBusFrequencyInt;
+}
+
+//Subroutine scePower_9BADB3EB - Address 0x0000433C - Aliases: scePower_driver_1FF8DA3B
+u32 scePowerGetBusClockFrequencyFloat(void) 
+{
+    return g_PowerFreq.clkcBusFrequencyFloat;
+}
+
+//Subroutine scePower_34F9C463 - Address 0x00004348 - Aliases: scePower_driver_67BD889B
+u32 scePowerGetPllClockFrequencyInt(void)
+{
+    return g_PowerFreq.pllClockFrequencyInt;
+}
+
+//Subroutine scePower_EA382A27 - Address 0x00004354 - Aliases: scePower_driver_BA8CBCBF
+u32 scePowerGetPllClockFrequencyFloat(void)
+{
+    return g_PowerFreq.pllClockFrequencyFloat;
+}
+
+//Subroutine scePower_737486F2 - Address 0x00004360
+s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
+{
+    if (g_PowerFreq.sm1Ops != NULL)
+        sceKernelDelayThread(60000000); //0x000043BC
+    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x0000439C
+}
+
+//Subroutine scePower_A4E93389 - Address 0x000043CC
+s32 scePowerSetClockFrequency280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
+{
+    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
+}
+
+//Subroutine scePower_545A7F3C - Address 0x000043E8
+s32 scePowerSetClockFrequency300(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
+{
+    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
+}
+
+//Subroutine scePower_EBD177D6 - Address 0x00004404 - Aliases: scePower_driver_EBD177D6
+s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
+{
+    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
+}
+
+//Subroutine scePower_469989AD - Address 0x00004420 - Aliases: scePower_driver_469989AD
+s32 scePower_469989AD(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
+{
+    if (sceKernelGetModel() != PSP_1000 || (sceKernelDipsw(11) == 1)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
+        scePowerSetExclusiveWlan(0); //0x00004488
+    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468
+}
+
+//Subroutine sub_00004498 - Address 0x00004498
+u32 _scePowerBatteryEnd(void)
+{
+    u32 outBits;
+    
+    if (g_Battery.alarmId <= 0) { //0x000044C0
+        sceKernelPollEventFlag(g_Battery.eventId, 0x200, 0x21, &outBits); //0x00004554
+        outBits = ((s32)outBits < 0) ? 0 : outBits; //0x00004564
+    } else {
+        sceKernelCancelAlarm(g_Battery.alarmId); //0x000044C8
+        outBits = 0x200; //0x000044D0
+        g_Battery.alarmId = -1;//0x000044DC
+    }
+    sceKernelClearEventFlag(g_Battery.eventId, ~0xF00); //0x000044E8
+    sceKernelSetEventFlag(g_Battery.eventId, 0x80000000); //0x000044F4 -- TODO: 0x80000000 == SCE_POWER_CALLBACKARG_POWER_SWITCH?
+    
+    if (outBits & 0x200) //0x00004504
+        sceSysconPermitChargeBattery(); //0x00004544
+    
+    sceKernelWaitThreadEnd(g_Battery.threadId, 0); //0x00004510
+    sceKernelDeleteThread(g_Battery.threadId); //0x00004518
+    sceKernelDeleteEventFlag(g_Battery.eventId); //0x00004524
+    
+    return SCE_ERROR_OK; 
 }
 
