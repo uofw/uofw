@@ -101,7 +101,7 @@ s32 sceKernelGetThreadId(void);
 s32 sceKernelCheckThreadStack(void);
 
 /**
- * Unknown. FIXME
+ * \fixme Unknown.
  *
  * @param arg0 Unknown.
  *
@@ -193,7 +193,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count);
 s32 Kernel_Library_3AD10D4D(SceLwMutex *mutex);
 
 /**
- * Refers the lightweight mutex's status. FIXME
+ * \fixme Refers the lightweight mutex's status.
  *
  * @param mutex Pointer to a lightweight mutex structure.
  * @param addr Unknown.
