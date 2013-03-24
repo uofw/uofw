@@ -74,8 +74,38 @@ void sub_00000000(s32 idx)
     p->unk128.unk36 = p->unk128.unk24 + p->unk128.unk28 * p->unk128.unk32 + 1600;
 }
 
-void sub_000000F8(void) {
+void sub_000000F8(s32 idx) {
+    Unk0 *p;
+    void *dst;
 
+    if (g_pool == NULL) {
+        return;
+    }
+
+    if (g_nbr == 0) {
+        return;
+    }
+
+    if (idx < 0 || idx >= g_nbr) {
+        return;
+    }
+
+    p = g_pool + idx * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return;
+    }
+
+    dst = p->unk128.unk24 - (p->unk128.unk24 + (p->unk128.unk28 << 1) - p->unk24);
+
+    // Kernel_Library_1839852A
+    sceKernelMemcpy(
+        dst,
+        p->unk24,
+        p->unk128.unk24 + (p->unk128.unk28 << 1) - p->unk24 + 1600
+    );
+
+    p->unk24 = dst;
 }
 
 // module_stop
