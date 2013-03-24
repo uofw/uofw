@@ -2,32 +2,24 @@ uOFW
 ====
 
 The unofficial Official FirmWare, a complete latest PSP firmware reverse engineering project.  
-
-Project page: http://uofw.psnpt.com/  
+ 
 Doxygen documentation: http://uofw.github.com/uofw/   
-For more information: http://dev.psnpt.com/redmine/projects/uofw/wiki  
-
-NOTE: We currently plan to move the wiki and shutdown the project page instead. We'll keep you updated  
-      on this as progress is being made.  
-      NEW: The documentation has now been moved to Github!
+For more information: https://github.com/uofw/uofw/wiki  
 
 
 ## Getting started
 
 In order to contribute to uOFW, you need advanced knowledge in MIPS ASM and C. Some good MIPS ASM  
-online resources can be found [on the MIPS company page](http://www.mips.com/products/product-materials/processor/mips-architecture/).  
+online resources can be found [on the official MIPS page](http://www.mips.com/products/product-materials/processor/mips-architecture/).  
 MIPS ASM Instruction Set Reference: http://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf  
 
 In addition, there is a nice MIPS runtime simulator and debugger which can be found at:  
 http://courses.missouristate.edu/kenvollmar/mars/
 
 The next step is to improve your reverse engineering skills (if needed). We suggest reading [this  excellent guide]
-(http://psnpt.com/joomla/index.php/articles/39-tutorials) about reverse engineering for the PSP. 
+(https://github.com/uofw/uofw/wiki/Reverse-engineering-tutorial) about reverse engineering for the PSP. 
 
-We are reverse engineering the PSP kernel version 6.60, please make sure you are working on modules of 
-this firmware version.
-
-If you have questions, don't hesitate to ask us!
+Make sure to check out [uOFW's wiki](https://github.com/uofw/uofw/wiki) for more information!
 
 
 ## Installation & Running
