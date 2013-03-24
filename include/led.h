@@ -1,5 +1,5 @@
 /* Copyright (C) 2011, 2012, 2013 The uOFW team
-   See the file COPYING for copying permission.
+   See the file COPYING for copying permission.\n
 */
 
 #ifndef LED_H
@@ -8,7 +8,7 @@
 #include "common_header.h"
 
 /** @defgroup LED LED Module
- *
+ *  Hardware LED managment.
  * @{	
  */
 
@@ -124,7 +124,7 @@ u32 sceLedEnd(void);
  * @param led The LED to set a mode for. One of ::ScePspLedTypes.
  * @param mode The mode to set for a LED. One of ::SceLedModes.
  * @param config Configuration settings for a LED. Is only used for the ::SceLedModes
- *               LED_MODE_BLINK and LED_MODE_DELAY.
+ *               LED_MODE_BLINK and LED_MODE_SELECTIVE_EXEC.
  * 
  * @return 0 on success.
  */
