@@ -3,18 +3,29 @@
 SCE_MODULE_STOP("sceAacEndEntry");
 
 typedef struct {
-    SceBool init;
-    u8 unk0[20];
+    SceBool used;
+    s32 unk4;
+    s32 unk8;
+    s32 unk12;
+    s32 unk16;
+    s32 unk20;
     s32 unk24;
     s32 unk28;
     s32 unk32;
     s32 unk36;
     s32 unk40;
+    s32 unk44;
+    s32 unk48;
+    s32 unk52;
+    s32 unk56;
+    s32 unk60;
+    s32 unk64;
 } Unk1;
 
 // size 1024 * 100
 typedef struct {
-    u8 unk0[24];
+    s32 unk0;
+    u8 unk0[20];
     s32 unk24;
     u8 unk28[100];
     Unk1 unk128;
@@ -173,13 +184,13 @@ s32 sceAacTermResource(void)
     for (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
         p = NULL;
 
-        if (g_pool != 0 && g_nbr != 0) {
+        if (g_pool != NULL && g_nbr != 0) {
             if (i>=0 && i<g_nbr) {
                 p = g_pool + offset;
             }
         }
 
-        if (p->unk128.init == 1) {
+        if (p->unk128.used) {
             return 0x80691502; // SCE_ERROR_AAC_NOT_TERMINATED
         }
     }
@@ -199,4 +210,104 @@ s32 sceAacTermResource(void)
     g_poolId = -1;
 
     return SCE_ERROR_OK;
+}
+
+s32 sceAacInit(s32 *arg0) {
+    s32 intr;
+    s32 i;
+    s32 offset;
+    Unk0 *p;
+    s32 id;
+    s32 ret;
+
+    if (arg0 == NULL) {
+        return 0x80691002;
+    }
+
+    if (arg0[4] == 0 || arg0[6] == 0) {
+        return 0x80691002;
+    }
+
+    if (arg0[1] < 0) {
+        return 0x80691003;
+    }
+
+    if (arg0[1] >= arg0[3]) {
+        if (arg0[3] != arg0[1]) {
+            return 0x80691003;
+        }
+
+        if ((u32)arg0[0] >= (u32)arg0[2]) {
+            return 0x80691003;
+        }
+    }
+
+    if (arg0[5] < 8192 || arg0[7] < 8192 || arg0[9] != 0) {
+        return 0x80691003;
+    }
+
+    if (g_pool == NULL || g_nbr == 0) {
+        return 0x80691503;
+    }
+
+    if (arg0[8] != 24000 && arg0[8] != 32000 && arg0[8] != 44100 && arg0[8] != 48000) {
+        return 0x80691003;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+    id = -1;
+
+    if (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
+        p = NULL;
+
+        if (g_pool != NULL && g_nbr != 0) {
+            if (i>=0 && i<g_nbr) {
+                p = g_pool + offset;
+            }
+        }
+
+        if (!p->unk128.used) {
+            p->unk128.used = 1;
+            id = i;
+            break;
+        }
+    }
+
+    sceKernelCpuResumeIntr(intr);
+
+    if (id < 0) {
+        return 0x80691201;
+    }
+
+    p->unk128.unk4 = -1;
+    p->unk128.unk12 = arg0[0];
+    p->unk128.unk20 = arg0[0];
+    p->unk128.unk8 = 0;
+    p->unk128.unk16 = arg0[2];
+    p->unk128.unk32 = 1;
+    p->unk128.unk28 = (arg0[5] - 1600 + ((arg0[5] - 1600) < 0)) >> 1; // wtf?
+    p->unk128.unk44 = arg0[2] - arg[0];
+    p->unk128.unk40 = 0;
+    p->unk128.unk56 = 0;
+    p->unk128.unk36 = arg0[4] + 1600;
+    p->unk128.unk52 = (arg0[7] + (arg0[7] < 0)) >> 1;
+    p->unk128.unk24 = arg0[4];
+    p->unk128.unk60 = 0;
+
+    p->unk0 = 2;
+
+    p->unk128.unk64 = arg0[8];
+    p->unk128.unk48 = arg0[6];
+
+    ret = sub_000012B8();
+    if (ret < 0) {
+        // sceAac_33B8C009
+        sceAacExit(id);
+
+        return ret;
+    }
+
+    p->unk0 = 3;
+
+    return id;
 }
