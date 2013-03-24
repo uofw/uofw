@@ -3,7 +3,7 @@
 SCE_MODULE_STOP("sceAacEndEntry");
 
 typedef struct {
-    SceBool used;
+    s32 init;
     s32 unk4;
     s32 unk8;
     s32 unk12;
@@ -19,15 +19,25 @@ typedef struct {
     s32 unk52;
     s32 unk56;
     s32 unk60;
-    s32 unk64;
+    s32 sampleRate; // 64
 } Unk1;
 
 // size 1024 * 100
 typedef struct {
     s32 unk0;
-    u8 unk0[20];
+    s32 unk4;
+    s32 unk8;
+    s32 unk12;
+    s32 unk16;
+    s32 unk20;
     s32 unk24;
-    u8 unk28[100];
+    s32 unk28;
+    s32 unk32;
+    s32 unk36;
+    s32 unk40;
+    s8 unk44;
+    s8 unk45;
+    u8 undef46[82];
     Unk1 unk128;
 } Unk0;
 
@@ -193,6 +203,7 @@ s32 sceAacInitResource(s32 nbr)
     return SCE_ERROR_OK;
 }
 
+// sceAac_23D35CAE
 s32 sceAacTermResource(void)
 {
     s32 i;
@@ -220,7 +231,7 @@ s32 sceAacTermResource(void)
             }
         }
 
-        if (p->unk128.used) {
+        if (p->unk128.init == 1) {
             return 0x80691502; // SCE_ERROR_AAC_NOT_TERMINATED
         }
     }
@@ -242,6 +253,7 @@ s32 sceAacTermResource(void)
     return SCE_ERROR_OK;
 }
 
+// sceAac_E0C89ACA
 s32 sceAacInit(s32 *arg0) {
     s32 intr;
     s32 i;
@@ -296,8 +308,8 @@ s32 sceAacInit(s32 *arg0) {
             }
         }
 
-        if (!p->unk128.used) {
-            p->unk128.used = 1;
+        if (p->unk128.init == 0) {
+            p->unk128.init = 1;
             id = i;
             break;
         }
@@ -326,7 +338,7 @@ s32 sceAacInit(s32 *arg0) {
 
     p->unk0 = 2;
 
-    p->unk128.unk64 = arg0[8];
+    p->unk128.sampleRate = arg0[8];
     p->unk128.unk48 = arg0[6];
 
     ret = sub_000012B8();
@@ -338,6 +350,70 @@ s32 sceAacInit(s32 *arg0) {
     }
 
     p->unk0 = 3;
+
+    return id;
+}
+
+// sceAac_E955E83A
+s32 sceAac_E955E83A(s32 *sampleRate) {
+    s32 intr;
+    s32 i;
+    s32 offset;
+    Unk0 *p;
+    s32 id;
+    s32 ret;
+
+    if (*sampleRate != 24000 && *sampleRate != 32000 &&
+        *sampleRate != 44100 && *sampleRate != 48000) {
+        return 0x80691003;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+    id = -1;
+
+    if (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
+        p = NULL;
+
+        if (g_pool != NULL && g_nbr != 0) {
+            if (i>=0 && i<g_nbr) {
+                p = g_pool + offset;
+            }
+        }
+
+        if (p->unk128.init == 0) {
+            p->unk128.init = 1;
+            id = i;
+            break;
+        }
+    }
+
+    sceKernelCpuResumeIntr(intr);
+
+    if (id < 0) {
+        return 0x80691201;
+    }
+
+    p->unk128.sampleRate = *sampleRate;
+    p->unk128.unk24 = 0;
+    p->unk128.unk48 = 0;
+    p->unk128.init = 2;
+    p->unk12 = p + 200;
+    p->unk16 = 0x18F20;
+    p->unk20 = 1;
+    p->unk40 = *sampleRate;
+    p->unk45 = 0;
+    p->unk44 = 0;
+
+    // sceAudiocodec_5B37EB1D
+    ret = sceAudiocodecInit(p, 0x1003);
+    if (ret < 0) {
+        // sceAac_33B8C009
+        sceAacExit(id);
+
+        return ret;
+    }
+
+    p->unk128.init = 3;
 
     return id;
 }
