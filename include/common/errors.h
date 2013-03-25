@@ -85,6 +85,10 @@
 #define SCE_ERROR_KERNEL_ERROR                                  0x80020001
 #define SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT        0x80020064
 #define SCE_ERROR_KERNEL_INTERRUPTS_ALREADY_DISABLED            0x80020066
+#define SCE_ERROR_KERNEL_NO_TIMER                               0x80020096
+#define SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID                       0x80020097
+#define SCE_ERROR_KERNEL_ILLEGAL_PRESCALE                       0x80020099
+#define SCE_ERROR_KERNEL_TIMER_BUSY                             0x8002009A
 #define SCE_ERROR_KERNEL_UNKNOWN_UID                            0x800200CB
 #define SCE_ERROR_KERNEL_UNMATCH_TYPE_UID                       0x800200CC
 #define SCE_ERROR_KERNEL_NOT_EXIST_ID                           0x800200CD

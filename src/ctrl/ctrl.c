@@ -328,7 +328,7 @@ typedef struct {
  */
 typedef struct {
     /* The timer ID used for the custom update interval. */
-    SceSysTimerId timerID;
+    s32 timerID;
     /* Signals the end of an update interval of the controller button data 
      * buffers.  Used in the context of sceCtrlReadBuffer* functions which 
      * need to wait for a finished update of the controller data buffers 
@@ -346,7 +346,7 @@ typedef struct {
      */
     u8 samplingMode[CTRL_SAMPLING_MODES];
     /* Unknown. */
-    u8 unk14;
+    u8 cableTypeReq;
     /* Unknown. */
     u8 unk15;
     /* The busy status of the SYSCON microcontroller for the first communication
@@ -461,7 +461,8 @@ static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName __attribute__((u
                                    s32 *result __attribute__((unused)));
 static SceUInt _sceCtrlDummyAlarm(void *common);
 static s32 _sceCtrlVblankIntr(s32 subIntNm, void *arg);
-static s32 _sceCtrlTimerIntr(s32, s32, s32, s32);
+static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __attribute__((unused)), 
+                             void *common __attribute__((unused)), s32 unused3 __attribute__((unused)));
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp);
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp);
 static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY);
@@ -531,7 +532,7 @@ s32 sceCtrlInit(void)
 {   
     s32 eventId;
     s32 appType;
-    SceSysTimerId timerId;
+    s32 timerId;
     u32 supportedUserButtons;
     void (*func)(SceKernelDeci2Ops *);
     s32 *retPtr;
@@ -558,11 +559,11 @@ s32 sceCtrlInit(void)
      * user.
      */
     timerId = sceSTimerAlloc();
-    if (timerId < 0)
+    if (timerId < SCE_ERROR_OK)
         return timerId;
 
     g_ctrl.timerID = timerId;
-    sceSTimerSetPrscl(timerId, 1, 0x30);
+    sceSTimerSetPrscl(timerId, 1, 48);
     
     g_ctrl.unk15 = -1;
     
@@ -592,7 +593,7 @@ s32 sceCtrlInit(void)
 
     pspModel = sceKernelGetModel();
     switch (pspModel) { 
-    case 4: case 5: case 7: case 9:
+    case PSP_GO: case 5: case 7: case 9:
         g_ctrl.idleResetAllSupportedButtons = CTRL_ALL_SUPPORTED_BUTTONS;
         break;
     default:
@@ -619,7 +620,7 @@ s32 sceCtrlInit(void)
 
 s32 sceCtrlEnd(void) 
 {
-    SceSysTimerId timerId;
+    s32 timerId;
     s32 sysconStatus;
 
     sceKernelUnregisterSysEventHandler(&g_ctrlSysEvent);
@@ -674,7 +675,7 @@ s32 sceCtrlResume(void)
     }
     else {
         sceSTimerStartCount(g_ctrl.timerID);
-        sceSTimerSetHandler(g_ctrl.timerID, g_ctrl.updateCycle, _sceCtrlTimerIntr, 0);
+        sceSTimerSetHandler(g_ctrl.timerID, g_ctrl.updateCycle, _sceCtrlTimerIntr, NULL);
     }
     return SCE_ERROR_OK;
 }
@@ -746,7 +747,7 @@ s32 sceCtrlSetSamplingCycle(u32 cycle)
         sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x13);
         g_ctrl.updateCycle = 0;
 
-        sceSTimerSetHandler(g_ctrl.timerID, 0, NULL, 0);
+        sceSTimerSetHandler(g_ctrl.timerID, 0, NULL, NULL);
         sceSTimerStopCount(g_ctrl.timerID);
     }
     else if (cycle < CTRL_BUFFER_UPDATE_MIN_CUSTOM_CYCLES || cycle > CTRL_BUFFER_UPDATE_MAX_CUSTOM_CYCLES) {
@@ -759,7 +760,7 @@ s32 sceCtrlSetSamplingCycle(u32 cycle)
         sdkVersion = sceKernelGetCompiledSdkVersion();
         
         cycle = (sdkVersion > CTRL_BUF_UPDATE_INCREASE_CYCLE_SDK_VER) ? cycle : cycle + 1;
-        sceSTimerSetHandler(g_ctrl.timerID, cycle, _sceCtrlTimerIntr, 0);
+        sceSTimerSetHandler(g_ctrl.timerID, cycle, _sceCtrlTimerIntr, NULL);
         sceKernelDisableSubIntr(SCE_VBLANK_INT, 0x13);
     }
     sceKernelCpuResumeIntr(intrState); 
@@ -1141,7 +1142,7 @@ u32 sceCtrl_driver_5886194C(s8 arg1)
 
 u32 sceCtrlUpdateCableTypeReq(void) 
 {   
-    g_ctrl.unk14 = 1;
+    g_ctrl.cableTypeReq = 1;
     return SCE_ERROR_OK;
 }
 
@@ -1296,8 +1297,8 @@ static s32 _sceCtrlVblankIntr(s32 subIntNm __attribute__((unused)), void *arg __
  *
  * Returns -1.
  */
-static int _sceCtrlTimerIntr(int unused0 __attribute__((unused)), int unused1 __attribute__((unused)), 
-                             int unused2 __attribute__((unused)), int unused3 __attribute__((unused))) 
+static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __attribute__((unused)), 
+                             void *common __attribute__((unused)), s32 unused3 __attribute__((unused))) 
 {
     u8 sysconCtrlCmd;
     s32 intrState;
@@ -1477,7 +1478,7 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
             }
         }
         sampling = (*(u16 *)g_ctrl.samplingMode) != 0;
-        sampling = (g_ctrl.unk14 != 0) ? (sampling | 2) : sampling;
+        sampling = (g_ctrl.cableTypeReq != 0) ? (sampling | 2) : sampling;
 
         if (sampling != g_ctrl.unk15 && (g_ctrl.sysconBusyIntr2 == FALSE)) {
             g_ctrl.sysconBusyIntr2 = TRUE;
@@ -1498,7 +1499,7 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
 
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet __attribute__((unused)), void *argp __attribute__((unused)))
 {   
-    g_ctrl.unk14 = 0;
+    g_ctrl.cableTypeReq = 0;
     g_ctrl.unk15 = g_ctrl.sysPacket[1].tx[PSP_SYSCON_TX_DATA(0)] & 0x1;
     g_ctrl.sysconBusyIntr2 = FALSE;
 
