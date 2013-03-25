@@ -498,15 +498,25 @@ s32 sceAacDecode(s32 idx, void** src)
         return 0;
     }
 
-    if (p->unk128.unk20 == p->unk128.unk16) {
-        if (p->unk128.unk44 > 0) {
-            goto loc_00000A48;
+    if ((p->unk128.unk20 == p->unk128.unk16 && p->unk128.unk44 > 0) ||
+        (p->unk128.unk40 >= 1536)) {
+        // sceAudiocodec_70A703F8
+        if (sceAudiocodecDecode(p, 0x1003) < 0) {
+            sub_000013B4(idx);
+
+            return 0x80691401;
         }
-    }
-    else {
-        if (p->unk128.unk40 >= 1536) {
-            goto loc_00000A48;
-        }
+
+        p->unk128.unk40 -= p->unk28;
+        p->unk24 += p->unk28;
+        p->unk128.unk44 -= p->unk28;
+        p->unk32 = p->unk128.unk56 + p->unk128.unk52 * (p->unk128.unk56 ^ 1);
+        p->unk128.unk60 += p->unk36;
+        p->unk128.unk56 ^= 1;
+
+        sub_000013B4(idx);
+
+        return p->unk36;
     }
 
     // Kernel_Library_A089ECA4
@@ -514,26 +524,6 @@ s32 sceAacDecode(s32 idx, void** src)
 
     p->unk128.unk56 ^= 1;
     p->unk32 = p->unk128.unk48 + p->unk128.unk52 * p->unk128.unk56;
- 
+
     return p->unk128.unk52;
-
-loc_00000A48:
-
-    // sceAudiocodec_70A703F8
-    if (sceAudiocodecDecode(p, 0x1003) < 0) {
-        sub_000013B4(idx);
-
-        return 0x80691401;
-    }
-
-    p->unk128.unk40 -= p->unk28;
-    p->unk24 += p->unk28;
-    p->unk128.unk44 -= p->unk28;
-    p->unk32 = p->unk128.unk56 + p->unk128.unk52 * (p->unk128.unk56 ^ 1);
-    p->unk128.unk60 += p->unk36;
-    p->unk128.unk56 ^= 1;
-
-    sub_000013B4(idx);
-
-    return p->unk36;
 }
