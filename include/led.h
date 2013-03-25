@@ -8,7 +8,7 @@
 #include "common_header.h"
 
 /** @defgroup LED LED Module
- *  Hardware LED managment.
+ *  Hardware LED management.
  * @{	
  */
 

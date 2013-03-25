@@ -1,5 +1,5 @@
 /** Copyright (C) 2011, 2012 The uOFW team
-   See the file COPYING for copying permission.
+   See the file COPYING for copying permission.\n
 */
 
 #ifndef LOADCORE_H
@@ -11,6 +11,7 @@
 #include "threadman_kernel.h"
 
 /** @defgroup Loadcore Loadcore Module
+ * Module loader and library import/export manager.
  *
  * @{	
  */
