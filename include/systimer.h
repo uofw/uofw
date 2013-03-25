@@ -4,6 +4,14 @@
 
 #include "common_header.h"
 
+/** @defgroup System Timer System Timer Module
+ *  Hardware timer management.
+ * @{	
+ */
+
+#ifndef SYSTIMER_H
+#define	SYSTIMER_H
+
 /**
  * The time-up handler used by ::sceSTimerSetHandler(). \n
  * When the hardware timer counter register matches the comparison value
@@ -115,4 +123,8 @@ s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSysTimerCb timeUpHandl
  * @return SCE_ERROR_OK on success.
  */
 s32 sceSTimerSetTMCY(s32 timerId, s32 arg1);
+
+#endif	/* SYSTIMER_H */
+
+/** @} */
 

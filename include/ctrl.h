@@ -5,7 +5,7 @@
 #include "common_header.h"
 
 /** @defgroup Controller Controller Module
- *
+ *  Controller (joystick) management.
  * @{	
  */
 
