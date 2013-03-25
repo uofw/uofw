@@ -201,8 +201,8 @@ static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSysTimer *timer,
     if (timer->cb == NULL)
         return -1;
     
-    s32 v1 = TIMER_GET_STATE(timer->hw->unk0);
-    s32 v2 = TIMER_GET_COUNT(timer->hw->unk0);
+    s32 v1 = TIMER_GET_STATE(timer->hw->timerData);
+    s32 v2 = TIMER_GET_COUNT(timer->hw->timerData);
     if (timer->unk12 != 0) {
         v1--;
         timer->count += timer->unk12;
@@ -444,8 +444,8 @@ s32 sceSTimerSetTMCY(s32 timerId, s32 arg1)
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    s32 val = TIMER_GET_COUNT(timer->hw->unk256);
-    s32 val2 = TIMER_GET_STATE(timer->hw->unk256);
+    s32 val = TIMER_GET_COUNT(timer->hw->data);
+    s32 val2 = TIMER_GET_STATE(timer->hw->data);
     timer->unk12 = val;
     timer->unk16 = val2;
     timer->count += val * (val2 - timer->unk16);
