@@ -254,7 +254,8 @@ s32 sceAacTermResource(void)
 }
 
 // sceAac_E0C89ACA
-s32 sceAacInit(s32 *arg0) {
+s32 sceAacInit(s32 *arg0)
+{
     s32 intr;
     s32 i;
     s32 offset;
@@ -355,7 +356,8 @@ s32 sceAacInit(s32 *arg0) {
 }
 
 // sceAac_E955E83A
-s32 sceAac_E955E83A(s32 *sampleRate) {
+s32 sceAac_E955E83A(s32 *sampleRate)
+{
     s32 intr;
     s32 i;
     s32 offset;
@@ -416,4 +418,42 @@ s32 sceAac_E955E83A(s32 *sampleRate) {
     p->unk128.init = 3;
 
     return id;
+}
+
+s32 sceAacExit(s32 idx)
+{
+    Unk0 *p;
+    s32 intr;
+
+    if (g_pool == NULL) {
+        return 0x80691503;
+    }
+
+    if (g_nbr == 0) {
+        return 0x80691503;
+    }
+
+    if (idx < 0 || idx >= g_nbr) {
+        return 0x80691503;
+    }
+
+    p = g_pool + idx * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (idx < 0 || idx >= g_nbr) { // again?
+        return 0x80691001;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+
+    if (p->unk128.init > 0) {
+        p->unk128.init = 0;
+    }
+
+    sceKernelCpuResumeIntr(intr);
+
+    return SCE_ERROR_OK;
 }
