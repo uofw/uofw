@@ -3,6 +3,19 @@
 SCE_MODULE_STOP("sceAacEndEntry");
 
 typedef struct {
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+    s32 unk12;
+    s32 unk16;
+    s32 unk20; // bufsize
+    s32 unk24;
+    s32 unk28; // bufsize
+    s32 sampleRate; // 32
+    s32 unk36;
+} SceAacInitArg;
+
+typedef struct {
     s32 init;
     s32 unk4;
     s32 unk8;
@@ -239,7 +252,7 @@ s32 sceAacTermResource(void)
 }
 
 // sceAac_E0C89ACA
-s32 sceAacInit(s32 *arg0)
+s32 sceAacInit(SceAacInitArg *arg)
 {
     s32 intr;
     s32 i;
@@ -248,29 +261,29 @@ s32 sceAacInit(s32 *arg0)
     s32 id;
     s32 ret;
 
-    if (arg0 == NULL) {
+    if (arg == NULL) {
         return 0x80691002;
     }
 
-    if (arg0[4] == 0 || arg0[6] == 0) {
+    if (arg->unk16 == 0 || arg->unk24 == 0) {
         return 0x80691002;
     }
 
-    if (arg0[1] < 0) {
+    if (arg->unk4 < 0) {
         return 0x80691003;
     }
 
-    if (arg0[1] >= arg0[3]) {
-        if (arg0[3] != arg0[1]) {
+    if (arg->unk4 >= arg->unk12) {
+        if (arg->unk12 != arg->unk4) {
             return 0x80691003;
         }
 
-        if ((u32)arg0[0] >= (u32)arg0[2]) {
+        if ((u32)arg->unk0 >= (u32)arg->unk8) {
             return 0x80691003;
         }
     }
 
-    if (arg0[5] < 8192 || arg0[7] < 8192 || arg0[9] != 0) {
+    if (arg->unk20 < 8192 || arg->unk28 < 8192 || arg->unk36 != 0) {
         return 0x80691003;
     }
 
@@ -278,7 +291,8 @@ s32 sceAacInit(s32 *arg0)
         return 0x80691503;
     }
 
-    if (arg0[8] != 24000 && arg0[8] != 32000 && arg0[8] != 44100 && arg0[8] != 48000) {
+    if (arg->sampleRate != 24000 && arg->sampleRate != 32000 &&
+        arg->sampleRate != 44100 && arg->sampleRate != 48000) {
         return 0x80691003;
     }
 
@@ -308,24 +322,24 @@ s32 sceAacInit(s32 *arg0)
     }
 
     p->info.unk4 = -1;
-    p->info.unk12 = arg0[0];
-    p->info.unk20 = arg0[0];
+    p->info.unk12 = arg->unk0;
+    p->info.unk20 = arg->unk0;
     p->info.unk8 = 0;
-    p->info.unk16 = arg0[2];
+    p->info.unk16 = arg->unk8;
     p->info.unk32 = 1;
-    p->info.unk28 = (arg0[5] - 1600 + ((arg0[5] - 1600) < 0)) >> 1; // wtf?
-    p->info.unk44 = arg0[2] - arg[0];
+    p->info.unk28 = (arg->unk20 - 1600 + ((arg->unk20 - 1600) < 0)) >> 1; // wtf?
+    p->info.unk44 = arg->unk8 - arg->unk0;
     p->info.unk40 = 0;
     p->info.unk56 = 0;
-    p->info.unk36 = arg0[4] + 1600;
-    p->info.unk52 = (arg0[7] + (arg0[7] < 0)) >> 1;
-    p->info.unk24 = arg0[4];
+    p->info.unk36 = arg->unk16 + 1600;
+    p->info.unk52 = (arg->unk28 + (arg->unk28 < 0)) >> 1;
+    p->info.unk24 = arg->unk16;
     p->info.unk60 = 0;
 
-    p->codec.SceAacId = 2;
+    p->info.init = 2;
 
-    p->info.sampleRate = arg0[8];
-    p->info.unk48 = arg0[6];
+    p->info.sampleRate = arg->sampleRate;
+    p->info.unk48 = arg->unk24;
 
     ret = sub_000012B8();
     if (ret < 0) {
@@ -335,7 +349,7 @@ s32 sceAacInit(s32 *arg0)
         return ret;
     }
 
-    p->codec.SceAacId = 3;
+    p->info.init = 3;
 
     return id;
 }
