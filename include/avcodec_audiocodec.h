@@ -16,10 +16,7 @@ typedef struct
     s32 unk28;
     void *outBuf; // 32
     s32 unk36;
-    s8 unk40;
-    s8 unk41;
-    s8 unk42;
-    s8 unk43;
+    s32 unk40;
     s8 unk44;
     s8 unk45;
     s8 unk46;

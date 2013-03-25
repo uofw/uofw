@@ -20,34 +20,20 @@ typedef struct {
     s32 unk56;
     s32 unk60;
     s32 sampleRate; // 64
-} Unk1;
+} SceAacIdInfo;
 
-// size 1024 * 100
 typedef struct {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unk12;
-    s32 unk16;
-    s32 unk20;
-    s32 unk24;
-    s32 unk28;
-    s32 unk32;
-    s32 unk36;
-    s32 unk40;
-    s8 unk44;
-    s8 unk45;
-    u8 undef46[82];
-    Unk1 unk128;
-} Unk0;
+    SceAudiocodecCodec codec __attribute__((aligned(256))); // size 128
+    SceAacIdInfo info __attribute__((aligned(128))); // size 128
+} SceAacId; // size 1024 * 100
 
 static s32 g_poolId = -1; // 1740
-static Unk0 *g_pool; // 1750
+static SceAacId *g_pool; // 1750
 static s32 g_nbr; // 1754
 
 void sub_00000000(s32 idx)
 {
-    Unk0 *p;
+    SceAacId *p;
 
     if (g_pool == NULL) {
         return;
@@ -68,24 +54,24 @@ void sub_00000000(s32 idx)
         return;
     }
 
-    if ((p->unk128.unk24 + 2 * p->unk128.unk28 - p->unk24 + 1600) < 1536) {
-        sub_000000F8(idx, p->unk128.unk32);
+    if ((p->info.unk24 + 2 * p->info.unk28 - p->codec.inBuf + 1600) < 1536) {
+        sub_000000F8(idx, p->info.unk32);
     }
 
-    if (p->unk128.unk28 < p->unk128.unk40) {
+    if (p->info.unk28 < p->info.unk40) {
         return;
     }
 
-    if (p->unk128.unk36 != (p->unk128.unk24 + p->unk128.unk28 * (p->unk128.unk32 + 1) + 1600) {
+    if (p->info.unk36 != (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600) {
         return;
     }
 
-    p->unk128.unk32 ^= 1;
-    p->unk128.unk36 = p->unk128.unk24 + p->unk128.unk28 * p->unk128.unk32 + 1600;
+    p->info.unk32 ^= 1;
+    p->info.unk36 = p->info.unk24 + p->info.unk28 * p->info.unk32 + 1600;
 }
 
 void sub_000000F8(s32 idx) {
-    Unk0 *p;
+    SceAacId *p;
     void *dst;
 
     if (g_pool == NULL) {
@@ -106,16 +92,16 @@ void sub_000000F8(s32 idx) {
         return;
     }
 
-    dst = p->unk128.unk24 - (p->unk128.unk24 + (p->unk128.unk28 << 1) - p->unk24);
+    dst = p->info.unk24 - (p->info.unk24 + (p->info.unk28 << 1) - p->codec.inBuf);
 
     // Kernel_Library_1839852A
     sceKernelMemcpy(
         dst,
-        p->unk24,
-        p->unk128.unk24 + (p->unk128.unk28 << 1) - p->unk24 + 1600
+        p->codec.inBuf,
+        p->info.unk24 + (p->info.unk28 << 1) - p->codec.inBuf + 1600
     );
 
-    p->unk24 = dst;
+    p->codec.inBuf = dst;
 }
 
 // module_stop
@@ -208,7 +194,7 @@ s32 sceAacTermResource(void)
 {
     s32 i;
     s32 offset;
-    Unk0 *p;
+    SceAacId *p;
 
     if (g_pool == NULL) {
         return SCE_ERROR_OK;
@@ -231,7 +217,7 @@ s32 sceAacTermResource(void)
             }
         }
 
-        if (p->unk128.init == 1) {
+        if (p->info.init == 1) {
             return 0x80691502; // SCE_ERROR_AAC_NOT_TERMINATED
         }
     }
@@ -259,7 +245,7 @@ s32 sceAacInit(s32 *arg0)
     s32 intr;
     s32 i;
     s32 offset;
-    Unk0 *p;
+    SceAacId *p;
     s32 id;
     s32 ret;
 
@@ -309,8 +295,8 @@ s32 sceAacInit(s32 *arg0)
             }
         }
 
-        if (p->unk128.init == 0) {
-            p->unk128.init = 1;
+        if (p->info.init == 0) {
+            p->info.init = 1;
             id = i;
             break;
         }
@@ -322,25 +308,25 @@ s32 sceAacInit(s32 *arg0)
         return 0x80691201;
     }
 
-    p->unk128.unk4 = -1;
-    p->unk128.unk12 = arg0[0];
-    p->unk128.unk20 = arg0[0];
-    p->unk128.unk8 = 0;
-    p->unk128.unk16 = arg0[2];
-    p->unk128.unk32 = 1;
-    p->unk128.unk28 = (arg0[5] - 1600 + ((arg0[5] - 1600) < 0)) >> 1; // wtf?
-    p->unk128.unk44 = arg0[2] - arg[0];
-    p->unk128.unk40 = 0;
-    p->unk128.unk56 = 0;
-    p->unk128.unk36 = arg0[4] + 1600;
-    p->unk128.unk52 = (arg0[7] + (arg0[7] < 0)) >> 1;
-    p->unk128.unk24 = arg0[4];
-    p->unk128.unk60 = 0;
+    p->info.unk4 = -1;
+    p->info.unk12 = arg0[0];
+    p->info.unk20 = arg0[0];
+    p->info.unk8 = 0;
+    p->info.unk16 = arg0[2];
+    p->info.unk32 = 1;
+    p->info.unk28 = (arg0[5] - 1600 + ((arg0[5] - 1600) < 0)) >> 1; // wtf?
+    p->info.unk44 = arg0[2] - arg[0];
+    p->info.unk40 = 0;
+    p->info.unk56 = 0;
+    p->info.unk36 = arg0[4] + 1600;
+    p->info.unk52 = (arg0[7] + (arg0[7] < 0)) >> 1;
+    p->info.unk24 = arg0[4];
+    p->info.unk60 = 0;
 
-    p->unk0 = 2;
+    p->codec.SceAacId = 2;
 
-    p->unk128.sampleRate = arg0[8];
-    p->unk128.unk48 = arg0[6];
+    p->info.sampleRate = arg0[8];
+    p->info.unk48 = arg0[6];
 
     ret = sub_000012B8();
     if (ret < 0) {
@@ -350,7 +336,7 @@ s32 sceAacInit(s32 *arg0)
         return ret;
     }
 
-    p->unk0 = 3;
+    p->codec.SceAacId = 3;
 
     return id;
 }
@@ -361,7 +347,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     s32 intr;
     s32 i;
     s32 offset;
-    Unk0 *p;
+    SceAacId *p;
     s32 id;
     s32 ret;
 
@@ -382,8 +368,8 @@ s32 sceAac_E955E83A(s32 *sampleRate)
             }
         }
 
-        if (p->unk128.init == 0) {
-            p->unk128.init = 1;
+        if (p->info.init == 0) {
+            p->info.init = 1;
             id = i;
             break;
         }
@@ -395,16 +381,16 @@ s32 sceAac_E955E83A(s32 *sampleRate)
         return 0x80691201;
     }
 
-    p->unk128.sampleRate = *sampleRate;
-    p->unk128.unk24 = 0;
-    p->unk128.unk48 = 0;
-    p->unk128.init = 2;
-    p->unk12 = p + 200;
-    p->unk16 = 0x18F20;
-    p->unk20 = 1;
-    p->unk40 = *sampleRate;
-    p->unk45 = 0;
-    p->unk44 = 0;
+    p->info.sampleRate = *sampleRate;
+    p->info.unk24 = 0;
+    p->info.unk48 = 0;
+    p->info.init = 2;
+    p->codec.edramAddr = p + 200;
+    p->codec.neededMem = 0x18F20;
+    p->codec.unk20 = 1;
+    p->codec.unk40 = *sampleRate;
+    p->codec.unk45 = 0;
+    p->codec.unk44 = 0;
 
     // sceAudiocodec_5B37EB1D
     ret = sceAudiocodecInit(p, 0x1003);
@@ -415,14 +401,14 @@ s32 sceAac_E955E83A(s32 *sampleRate)
         return ret;
     }
 
-    p->unk128.init = 3;
+    p->info.init = 3;
 
     return id;
 }
 
 s32 sceAacExit(s32 idx)
 {
-    Unk0 *p;
+    SceAacId *p;
     s32 intr;
 
     if (g_pool == NULL || g_nbr == 0) {
@@ -445,8 +431,8 @@ s32 sceAacExit(s32 idx)
 
     intr = sceKernelCpuSuspendIntr();
 
-    if (p->unk128.init > 0) {
-        p->unk128.init = 0;
+    if (p->info.init > 0) {
+        p->info.init = 0;
     }
 
     sceKernelCpuResumeIntr(intr);
@@ -456,7 +442,7 @@ s32 sceAacExit(s32 idx)
 
 s32 sceAacDecode(s32 idx, void** src)
 {
-    Unk0 *p;
+    SceAacId *p;
 
     if (idx < 0 || idx >= g_nbr) {
         return 0x80691001;
@@ -476,30 +462,30 @@ s32 sceAacDecode(s32 idx, void** src)
         return 0x80691503;
     }
 
-    if (p->unk128.init < 3) {
+    if (p->info.init < 3) {
         return 0x80691103;
     }
 
     if (src == NULL) {
-        src = p->unk128.unk8;
+        src = p->info.unk8;
     }
     else {
-        *src = p->unk32;
-        src = p->unk128.unk8;
+        *src = p->codec.outBuf;
+        src = p->info.unk8;
     }
 
     if (src != NULL) {
         // Kernel_Library_A089ECA4
-        sceKernelMemset(p->unk32, 0, p->unk128.unk52);
+        sceKernelMemset(p->codec.outBuf, 0, p->info.unk52);
 
-        p->unk128.unk56 ^= 1;
-        p->unk32 = p->unk128.unk48 + p->unk128.unk52 * p->unk128.unk56;
+        p->info.unk56 ^= 1;
+        p->codec.outBuf = p->info.unk48 + p->info.unk52 * p->info.unk56;
 
         return 0;
     }
 
-    if ((p->unk128.unk20 == p->unk128.unk16 && p->unk128.unk44 > 0) ||
-        (p->unk128.unk40 >= 1536)) {
+    if ((p->info.unk20 == p->info.unk16 && p->info.unk44 > 0) ||
+        (p->info.unk40 >= 1536)) {
         // sceAudiocodec_70A703F8
         if (sceAudiocodecDecode(p, 0x1003) < 0) {
             sub_000013B4(idx);
@@ -507,23 +493,23 @@ s32 sceAacDecode(s32 idx, void** src)
             return 0x80691401;
         }
 
-        p->unk128.unk40 -= p->unk28;
-        p->unk24 += p->unk28;
-        p->unk128.unk44 -= p->unk28;
-        p->unk32 = p->unk128.unk56 + p->unk128.unk52 * (p->unk128.unk56 ^ 1);
-        p->unk128.unk60 += p->unk36;
-        p->unk128.unk56 ^= 1;
+        p->info.unk40 -= p->codec.unk28;
+        p->codec.inBuf += p->codec.unk28;
+        p->info.unk44 -= p->codec.unk28;
+        p->codec.outBuf = p->info.unk56 + p->info.unk52 * (p->info.unk56 ^ 1);
+        p->info.unk60 += p->codec.unk36;
+        p->info.unk56 ^= 1;
 
         sub_000013B4(idx);
 
-        return p->unk36;
+        return p->codec.unk36;
     }
 
     // Kernel_Library_A089ECA4
-    sceKernelMemset(p->unk32, 0, p->unk128.unk52);
+    sceKernelMemset(p->codec.outBuf, 0, p->info.unk52);
 
-    p->unk128.unk56 ^= 1;
-    p->unk32 = p->unk128.unk48 + p->unk128.unk52 * p->unk128.unk56;
+    p->info.unk56 ^= 1;
+    p->codec.outBuf = p->info.unk48 + p->info.unk52 * p->info.unk56;
 
-    return p->unk128.unk52;
+    return p->info.unk52;
 }
