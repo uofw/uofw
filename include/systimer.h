@@ -4,7 +4,7 @@
 
 #include "common_header.h"
 
-/** @defgroup System Timer System Timer Module
+/** @defgroup SystemTimer System Timer Module
  *  Hardware timer management.
  * @{	
  */
