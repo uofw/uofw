@@ -425,11 +425,7 @@ s32 sceAacExit(s32 idx)
     Unk0 *p;
     s32 intr;
 
-    if (g_pool == NULL) {
-        return 0x80691503;
-    }
-
-    if (g_nbr == 0) {
+    if (g_pool == NULL || g_nbr == 0) {
         return 0x80691503;
     }
 
@@ -456,4 +452,88 @@ s32 sceAacExit(s32 idx)
     sceKernelCpuResumeIntr(intr);
 
     return SCE_ERROR_OK;
+}
+
+s32 sceAacDecode(s32 idx, void** src)
+{
+    Unk0 *p;
+
+    if (idx < 0 || idx >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0) {
+        return 0x80691503;
+    }
+
+    if (idx < 0) { // again?
+        return 0x80691503;
+    }
+
+    p = g_pool + idx * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->unk128.init < 3) {
+        return 0x80691103;
+    }
+
+    if (src == NULL) {
+        src = p->unk128.unk8;
+    }
+    else {
+        *src = p->unk32;
+        src = p->unk128.unk8;
+    }
+
+    if (src != NULL) {
+        // Kernel_Library_A089ECA4
+        sceKernelMemset(p->unk32, 0, p->unk128.unk52);
+
+        p->unk128.unk56 ^= 1;
+        p->unk32 = p->unk128.unk48 + p->unk128.unk52 * p->unk128.unk56;
+
+        return 0;
+    }
+
+    if (p->unk128.unk20 == p->unk128.unk16) {
+        if (p->unk128.unk44 > 0) {
+            goto loc_00000A48;
+        }
+    }
+    else {
+        if (p->unk128.unk40 >= 1536) {
+            goto loc_00000A48;
+        }
+    }
+
+    // Kernel_Library_A089ECA4
+    sceKernelMemset(p->unk32, 0, p->unk128.unk52);
+
+    p->unk128.unk56 ^= 1;
+    p->unk32 = p->unk128.unk48 + p->unk128.unk52 * p->unk128.unk56;
+ 
+    return p->unk128.unk52;
+
+loc_00000A48:
+
+    // sceAudiocodec_70A703F8
+    if (sceAudiocodecDecode(p, 0x1003) < 0) {
+        sub_000013B4(idx);
+
+        return 0x80691401;
+    }
+
+    p->unk128.unk40 -= p->unk28;
+    p->unk24 += p->unk28;
+    p->unk128.unk44 -= p->unk28;
+    p->unk32 = p->unk128.unk56 + p->unk128.unk52 * (p->unk128.unk56 ^ 1);
+    p->unk128.unk60 += p->unk36;
+    p->unk128.unk56 ^= 1;
+
+    sub_000013B4(idx);
+
+    return p->unk36;
 }
