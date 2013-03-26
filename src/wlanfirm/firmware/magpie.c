@@ -2,7 +2,7 @@
 #define __wlanfirm__
 
 /*
- * MagPie firmware for 01g
+ * Magpie firmware for 01g
  *
  * Extracted from wlanfirm_01g.prx.
  * Offset 2344 (160 + 0x888)

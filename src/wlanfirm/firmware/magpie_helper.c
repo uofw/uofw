@@ -2,7 +2,7 @@
 #define __wlanfirmHelper__
 
 /*
- * MagPie helper firmware for 01g
+ * Magpie helper firmware for 01g
  *
  * Extracted from wlanfirm_01g.prx.
  * Offset 492 (160 + 0x14C)
