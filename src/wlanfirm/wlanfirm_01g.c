@@ -8,17 +8,24 @@
 #include "firmware/magpie.c"
 #include "firmware/magpie_helper.c"
 
-int g_14C = 0xEA000003; // TODO: unsure
-int g_888 = 1;
-
-void module_start()
+s32 module_start()
 {
-	u16 var;
-	sceIdStorageLookup(0x45,0,&var,2);
-	if((var[0] & 0xF000) != 0)
+	u16 key45;
+
+	// sceIdStorage_driver_6FE062D1
+	sceIdStorageLookup(0x45, 0, &key45, sizeof(u16));
+
+	if((key45 & 0xF000) != 0)
 	{
 	    return 1;
 	}
-	sceWlanDrv_driver_1747351B(&g_14C,0x73C,&g_888,0x15480);
+
+	sceWlanDrv_driver_1747351B(
+		wlanfirmHelper, // 0x14C
+		wlanfirmHelperSize, // 1852
+		wlanfirm, // 0x888
+		wlanfirmSize, // 87168
+	);
+
 	return 0;
 }
