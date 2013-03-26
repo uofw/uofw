@@ -1,0 +1,32 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_reboot_before)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceIdStorage_driver, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_HASH(sceIdStorageCreateLeaf)
+PSP_EXPORT_FUNC_HASH(sceIdStorageWriteLeaf)
+PSP_EXPORT_FUNC_HASH(sceIdStorageDeleteLeaf)
+PSP_EXPORT_FUNC_HASH(sceIdStorageEnd)
+PSP_EXPORT_FUNC_HASH(sceIdStorageIsReadOnly)
+PSP_EXPORT_FUNC_HASH(sceIdStorageEnumId)
+PSP_EXPORT_FUNC_HASH(sceIdStorageGetFreeLeaves)
+PSP_EXPORT_FUNC_HASH(sceIdStorageFlush)
+PSP_EXPORT_FUNC_HASH(sceIdStorageUpdate)
+PSP_EXPORT_FUNC_HASH(sceIdStorageLookup)
+PSP_EXPORT_FUNC_HASH(sceIdStorageFormat)
+PSP_EXPORT_FUNC_HASH(sceIdStorageCreateAtomicLeaves)
+PSP_EXPORT_FUNC_HASH(sceIdStorageInit)
+PSP_EXPORT_FUNC_HASH(sceIdStorageIsDirty)
+PSP_EXPORT_FUNC_HASH(sceIdStorageReadLeaf)
+PSP_EXPORT_FUNC_HASH(sceIdStorageGetLeafSize)
+PSP_EXPORT_FUNC_HASH(sceIdStorageUnformat)
+PSP_EXPORT_FUNC_HASH(sceIdStorageIsFormatted)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS
