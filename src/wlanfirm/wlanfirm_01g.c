@@ -5,6 +5,9 @@
 #include <pspidstorage.h>
 #include <pspsdk.h>
 
+#include "firmware/magpie.c"
+#include "firmware/magpie_helper.c"
+
 int g_14C = 0xEA000003; // TODO: unsure
 int g_888 = 1;
 
