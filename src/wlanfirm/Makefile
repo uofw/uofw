@@ -1,8 +1,8 @@
 # Copyright (C) 2011, 2012, 2013 The uOFW team
 # See the file COPYING for copying permission.
 
-TARGET = wlanfirm_01g.prx
-OBJS = wlanfirm_01g.o
+TARGET = wlanfirm_02g.prx
+OBJS = wlanfirm.o
 
 #DEBUG = 1
 

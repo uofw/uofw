@@ -8,12 +8,15 @@
 #include "firmware/magpie.c"
 #include "firmware/magpie_helper.c"
 
+#define PSP_MODEL_2G
+
 void sceWlanDrv_driver_90E5530F(void*, s32, void*, s32);
 
 s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     u16 key45;
 
+#ifdef PSP_MODEL_1G
     // sceIdStorage_driver_6FE062D1
     sceIdStorageLookup(0x45, 0, &key45, sizeof(u16));
 
@@ -21,12 +24,22 @@ s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__(
     {
         return 1;
     }
+#else
+    // sceIdStorage_driver_6FE062D1
+    if (sceIdStorageLookup(0x45, 0, &key45, sizeof(u16)) < 0) {
+        return 1;
+    }
+
+    if ((key45 & 0xF000) != 0x1000) {
+        return 1;
+    }
+#endif
 
     sceWlanDrv_driver_90E5530F(
-        g_wlanfirmHelper, // 0x14C
-        g_wlanfirmHelperSize, // 1852
-        g_wlanfirm, // 0x888
-        g_wlanfirmSize // 87168
+        g_wlanfirmHelper,
+        g_wlanfirmHelperSize,
+        g_wlanfirm,
+        g_wlanfirmSize
     );
 
     return 0;
