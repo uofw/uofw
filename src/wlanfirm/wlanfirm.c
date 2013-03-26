@@ -25,7 +25,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #endif
 
 // TODO proper headers
-s32 sceIdStorage_driver_6FE062D1(u16, u32, void*, u32);
+s32 sceIdStorageLookup(u16, u32, void*, u32);
 void sceWlanDrv_driver_90E5530F(void*, s32, void*, s32);
 
 s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
@@ -33,15 +33,15 @@ s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__(
     u16 key45;
 
 #ifdef PSP_MODEL_1G
-    // sceIdStorageLookup
-    sceIdStorage_driver_6FE062D1(0x45, 0, &key45, sizeof(u16));
+    // sceIdStorage_driver_6FE062D1
+    sceIdStorageLookup(0x45, 0, &key45, sizeof(u16));
 
     if ((key45 & 0xF000) != 0) {
         return 1;
     }
 #else
-    // sceIdStorageLookup
-    if (sceIdStorage_driver_6FE062D1(0x45, 0, &key45, sizeof(u16)) < 0) {
+    // sceIdStorage_driver_6FE062D1
+    if (sceIdStorageLookup(0x45, 0, &key45, sizeof(u16)) < 0) {
         return 1;
     }
 
