@@ -4,7 +4,7 @@ uOFW
 The unofficial Official FirmWare, a complete latest PSP firmware reverse engineering project.  
  
 Doxygen documentation: http://uofw.github.com/uofw/   
-Module status list: https://github.com/uofw/uofw/wiki/Current-Modules-Status
+Module status list: https://github.com/uofw/uofw/wiki/Current-Modules-Status   
 For more information: https://github.com/uofw/uofw/wiki  
 
 
@@ -40,10 +40,7 @@ Then there are sub-branches which are aimed to each represent a module currently
 contains unfinished, untested and undocumented code about the module it is named after. Once such a branch contains
 finished, documented code (that is, the module has been finished reverse-engineering) it will be merged into
 the 'master' branch.
-Currently, there are five sub-branches: [clockgen] (https://github.com/uofw/uofw/tree/clockgen), 
-[libaac](https://github.com/uofw/uofw/tree/libaac), [memlmd](https://github.com/uofw/uofw/tree/memlmd), 
-[power](https://github.com/uofw/uofw/tree/power), [psheet](https://github.com/uofw/uofw/tree/psheet)
-
+Current branches are listed on [the branches page](https://github.com/uofw/uofw/branches).
 
 ## Additional Information
 
