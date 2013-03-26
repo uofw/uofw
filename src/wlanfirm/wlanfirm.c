@@ -1,14 +1,19 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
 #include <pspidstorage.h>
 #include <pspsdk.h>
 
-#include "firmware/magpie.c"
-#include "firmware/magpie_helper.c"
-
 #define PSP_MODEL_2G
+
+#ifdef PSP_MODEL_1G
+    #include "firmware/magpie.c"
+    #include "firmware/magpie_helper.c"
+#else
+    #include "firmware/voyager.c"
+    #include "firmware/voyager_helper.c"
+#endif
 
 void sceWlanDrv_driver_90E5530F(void*, s32, void*, s32);
 
