@@ -4,8 +4,6 @@
 
 #include <common_imp.h>
 
-#define PSP_MODEL_2G
-
 SCE_MODULE_INFO(
 #ifdef PSP_MODEL_1G
     "sceWlanFirmMagpie_driver",
@@ -38,8 +36,7 @@ s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__(
     // sceIdStorageLookup
     sceIdStorage_driver_6FE062D1(0x45, 0, &key45, sizeof(u16));
 
-    if ((key45 & 0xF000) != 0)
-    {
+    if ((key45 & 0xF000) != 0) {
         return 1;
     }
 #else
