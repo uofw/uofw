@@ -8,6 +8,8 @@
 #include "firmware/magpie.c"
 #include "firmware/magpie_helper.c"
 
+void sceWlanDrv_driver_90E5530F(void*, s32, void*, s32);
+
 s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     u16 key45;
@@ -20,11 +22,11 @@ s32 module_start(SceSize argc __attribute__((unused)), void *argp __attribute__(
         return 1;
     }
 
-    sceWlanDrv_driver_1747351B(
-        wlanfirmHelper, // 0x14C
-        wlanfirmHelperSize, // 1852
-        wlanfirm, // 0x888
-        wlanfirmSize, // 87168
+    sceWlanDrv_driver_90E5530F(
+        g_wlanfirmHelper, // 0x14C
+        g_wlanfirmHelperSize, // 1852
+        g_wlanfirm, // 0x888
+        g_wlanfirmSize // 87168
     );
 
     return 0;
