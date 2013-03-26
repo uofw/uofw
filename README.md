@@ -4,6 +4,7 @@ uOFW
 The unofficial Official FirmWare, a complete latest PSP firmware reverse engineering project.  
  
 Doxygen documentation: http://uofw.github.com/uofw/   
+Module status list: https://github.com/uofw/uofw/wiki/Current-Modules-Status
 For more information: https://github.com/uofw/uofw/wiki  
 
 
