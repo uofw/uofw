@@ -25,7 +25,7 @@ typedef struct {
     s32 unk24;
     s32 unk28;
     s32 unk32;
-    s32 unk36;
+    u32 unk36;
     s32 unk40;
     s32 unk44;
     s32 unk48;
@@ -419,6 +419,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     return id;
 }
 
+// sceAac_33B8C009
 s32 sceAacExit(s32 id)
 {
     SceAacId *p;
@@ -453,6 +454,7 @@ s32 sceAacExit(s32 id)
     return SCE_ERROR_OK;
 }
 
+// sceAac_7E4CFEE4
 s32 sceAacDecode(s32 id, void** src)
 {
     SceAacId *p;
@@ -527,6 +529,7 @@ s32 sceAacDecode(s32 id, void** src)
     return p->info.unk52;
 }
 
+// sceAac_FA01FCB6
 s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
 {
     SceAacId *p;
@@ -565,4 +568,34 @@ s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
     *arg4 = p->codec.unk36;
 
     return SCE_ERROR_OK;
+}
+
+// sceAac_D7C51541
+s32 sceAacCheckStreamDataNeeded(s32 id)
+{
+    SceAacId *p;
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 2) {
+        return 0x80691102;
+    }
+
+    if (p->info.unk20 == p->info.unk16) {
+        return 0;
+    }
+
+    return (p->info.unk36 < (p->info.unk42 + p->info.unk28 * (p->info.unk32 + 1) + 1600));
 }
