@@ -57,6 +57,8 @@ std::map<std::string, Instruction> instructions =
     {"blezl", {"R0 l0", "%R0 <= 0"}},
     {"bltz", {"R0 l0", "%R0 < 0"}},
     {"bltzl", {"R0 l0", "%R0 < 0"}},
+    {"bgtz", {"R0 l0", "%R0 > 0"}},
+    {"bgtzl", {"R0 l0", "%R0 > 0"}},
 
     {"jal", {"f0", "v0, v1 = %f0"}},
     {"jr", {"x0", "%x0"}},
