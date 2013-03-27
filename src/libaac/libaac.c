@@ -17,20 +17,20 @@ typedef struct {
 
 typedef struct {
     s32 init;
-    s32 unk4;
-    s32 unk8;
+    s32 unk4; // id
+    s32 *unk8; // ptr to data src
     s32 unk12;
-    s32 unk16;
-    s32 unk20;
-    s32 unk24;
+    s32 unk16; // stream end offset
+    s32 unk20; // bytes read
+    s32 *unk24; // ptr to data src
     s32 unk28;
     s32 unk32;
     u32 unk36;
-    s32 unk40;
+    s32 unk40; // bytes to decode
     s32 unk44;
-    s32 unk48;
-    s32 unk52;
-    s32 unk56;
+    s32 *unk48; // bufDec
+    s32 unk52; // bufDecSize
+    s32 unk56; // even
     s32 unk60;
     s32 sampleRate; // 64
 } SceAacIdInfo;
@@ -324,7 +324,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.unk4 = -1;
     p->info.unk12 = arg->unk0;
     p->info.unk20 = arg->unk0;
-    p->info.unk8 = 0;
+    p->info.unk8 = NULL;
     p->info.unk16 = arg->unk8;
     p->info.unk32 = 1;
     p->info.unk28 = (arg->unk20 - 1600 + ((arg->unk20 - 1600) < 0)) >> 1; // wtf?
@@ -396,7 +396,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
 
     p->info.sampleRate = *sampleRate;
     p->info.unk24 = 0;
-    p->info.unk48 = 0;
+    p->info.unk48 = NULL;
     p->info.init = 2;
     p->codec.edramAddr = p + 200;
     p->codec.neededMem = 0x18F20;
@@ -650,6 +650,48 @@ s32 sceAacGetInfoToAddStreamData(s32 id, s32 *arg1, s32 *arg2, s32 *arg3)
             *arg2 = (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600) - p->info.unk36;
         }
     }
+
+    return SCE_ERROR_OK;
+}
+
+// sceAac_AC6DCBE3
+s32 sceAacNotifyAddStreamData(s32 id, s32 size)
+{
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 2) {
+        return 0x80691102;
+    }
+
+    if (size < 0 &&
+        (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600 - p->info.unk36) < size) {
+        return 0x80691003;
+    }
+
+    if ((p->info.unk16 - p->info.unk20) < size) {
+        p->info.unk20 = p->info.unk16;
+        p->info.unk40 += p->info.unk16 - p->info.unk20;
+        p->info.unk36 += p->info.unk16 - p->info.unk20;
+    }
+    else {
+        p->info.unk40 += size;
+        p->info.unk20 += size;
+        p->info.unk36 += size;
+    }
+
+    sub_00000000(id);
 
     return SCE_ERROR_OK;
 }
