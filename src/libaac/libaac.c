@@ -406,7 +406,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     p->codec.unk44 = 0;
 
     // sceAudiocodec_5B37EB1D
-    ret = sceAudiocodecInit(p, 0x1003);
+    ret = sceAudiocodecInit(&p->codec, 0x1003);
     if (ret < 0) {
         // sceAac_33B8C009
         sceAacExit(id);
@@ -500,7 +500,7 @@ s32 sceAacDecode(s32 id, void** src)
     if ((p->info.unk20 == p->info.unk16 && p->info.unk44 > 0) ||
         (p->info.unk40 >= 1536)) {
         // sceAudiocodec_70A703F8
-        if (sceAudiocodecDecode(p, 0x1003) < 0) {
+        if (sceAudiocodecDecode(&p->codec, 0x1003) < 0) {
             sub_000013B4(id);
 
             return 0x80691401;
@@ -525,4 +525,44 @@ s32 sceAacDecode(s32 id, void** src)
     p->codec.outBuf = p->info.unk48 + p->info.unk52 * p->info.unk56;
 
     return p->info.unk52;
+}
+
+s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
+{
+    SceAacId *p;
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 3) {
+        return 0x80691103;
+    }
+
+    if (arg1 == NULL || arg3 == NULL) {
+        return 0x80691002;
+    }
+
+    p->codec.inBuf = arg1;
+    p->codec.outBuf = arg3;
+
+    // sceAudiocodec_70A703F8
+    if (sceAudiocodecDecode(&p->codec, 0x1003) != 0) {
+        return 0x80691401;
+    }
+
+    *arg2 = p->codec.unk28;
+    *arg4 = p->codec.unk36;
+
+    return SCE_ERROR_OK;
 }
