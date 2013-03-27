@@ -599,3 +599,57 @@ s32 sceAacCheckStreamDataNeeded(s32 id)
 
     return (p->info.unk36 < (p->info.unk42 + p->info.unk28 * (p->info.unk32 + 1) + 1600));
 }
+
+// sceAac_02098C69
+s32 sceAacGetInfoToAddStreamData(s32 id, s32 *arg1, s32 *arg2, s32 *arg3)
+{
+    SceAacId *p;
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 2) {
+        return 0x80691102;
+    }
+
+    // sceAac_D7C51541
+    if (!sceAacCheckStreamDataNeeded(id)) {
+        if (arg3 != NULL) {
+            *arg3 = 0;
+        }
+
+        if (arg1 != NULL) {
+            *arg1 = 0;
+        }
+
+        if (arg2 != NULL) {
+            *arg2 = 0;
+        }
+    }
+    else {
+        if (arg3 != NULL) {
+            *arg3 = p->info.unk20;
+        }
+
+        if (arg1 != NULL) {
+            *arg1 = p->info.unk36;
+        }
+
+        if (arg2 != NULL) {
+            *arg2 = (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600) - p->info.unk36;
+        }
+    }
+
+    return SCE_ERROR_OK;
+}
