@@ -1,8 +1,26 @@
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
+#include <common_imp.h>
+#include <avcodec_audiocodec.h>
+#include <usersystemlib_kernel.h>
+
 #define SCE_AAC_MEM_SIZE (1024 * 100) // 0x19000
 #define SCE_AAC_DATA_SIZE (0x18F20)
 
+SCE_MODULE_INFO(
+    "sceAac_Library",
+    SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START,
+    1, 1
+);
 SCE_MODULE_BOOTSTART("sceAacStartEntry");
 SCE_MODULE_STOP("sceAacEndEntry");
+
+void sub_00000000(s32);
+void sub_000000F8(s32);
+s32 sub_000012B8(s32);
+void sub_000013B4(s32);
 
 typedef struct {
     s32 unk0;
