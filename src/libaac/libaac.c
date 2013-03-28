@@ -17,7 +17,7 @@ typedef struct {
 
 typedef struct {
     s32 init;
-    s32 unk4; // id
+    s32 loopNum; // 4
     s32 *unk8; // ptr to data src
     s32 unk12;
     s32 unk16; // stream end offset
@@ -321,7 +321,7 @@ s32 sceAacInit(SceAacInitArg *arg)
         return 0x80691201;
     }
 
-    p->info.unk4 = -1;
+    p->info.loopNum = -1;
     p->info.unk12 = arg->unk0;
     p->info.unk20 = arg->unk0;
     p->info.unk8 = NULL;
@@ -733,6 +733,38 @@ s32 sceAacResetPlayPosition(s32 id)
     p->info.unk40 = 0;
     p->info.unk60 = 0;
     p->info.unk32 = 1;
+
+    return SCE_ERROR_OK;
+}
+
+s32 sceAacSetLoopNum(s32 id, s32 loopNum)
+{
+    SceAacId *p;
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 2) {
+        return 0x80691102;
+    }
+
+    if (loopNum < 0) {
+        p->info.loopNum = -1;
+    }
+    else {
+        p->info.loopNum = loopNum;
+    }
 
     return SCE_ERROR_OK;
 }
