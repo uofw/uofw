@@ -834,3 +834,29 @@ s32 sceAacGetSumDecodedSample(s32 id)
 
     return p->info.sumDecodedSample >> 2;
 }
+
+// sceAac_523347D9
+s32 sceAacGetLoopNum(s32 id)
+{
+    SceAacId *p;
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 2) {
+        return 0x80691102;
+    }
+
+    return p->info.loopNum;
+}
