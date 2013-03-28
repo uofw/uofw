@@ -34,13 +34,13 @@ typedef struct {
     s32 unk12;
     s32 unk16; // stream end offset
     s32 unk20; // bytes read
-    s32 *unk24; // ptr to data src
+    void *unk24; // ptr to data src
     s32 unk28;
     s32 unk32;
-    s32 *unk36;
+    void *unk36;
     s32 unk40; // bytes to decode
     s32 unk44;
-    s32 *unk48; // bufDec
+    void *unk48; // bufDec
     s32 unk52; // bufDecSize
     s32 unk56; // even
     u32 sumDecodedSample; // 60
@@ -60,6 +60,8 @@ static s32 g_nbr; // 1754
 
 void sub_00000000(s32 id)
 {
+    dbg_printf("sub_00000000(id=%d)\n", id);
+
     SceAacId *p;
 
     if (g_pool == NULL) {
@@ -97,6 +99,8 @@ void sub_00000000(s32 id)
 }
 
 void sub_000000F8(s32 id) {
+    dbg_printf("sub_000000F8(id=%d)\n", id);
+
     SceAacId *p;
     void *dst;
 
@@ -133,6 +137,8 @@ void sub_000000F8(s32 id) {
 // module_stop
 // sceAac_61AA42C9
 s32 sceAacEndEntry(void) {
+    dbg_printf("sceAacEndEntry()\n");
+
     s32 i;
     s32 p;
     s32 ret;
@@ -170,6 +176,8 @@ s32 sceAacEndEntry(void) {
 // sceAac_5CFFC57C
 s32 sceAacInitResource(s32 nbr)
 {
+    dbg_printf("sceAacInitResource(nbr=%d)\n", nbr);
+
     s32 size;
     s32 i;
 
@@ -218,6 +226,8 @@ s32 sceAacInitResource(s32 nbr)
 // sceAac_23D35CAE
 s32 sceAacTermResource(void)
 {
+    dbg_printf("sceAacTermResource()\n");
+
     s32 i;
     s32 offset;
     SceAacId *p;
@@ -268,6 +278,8 @@ s32 sceAacTermResource(void)
 // sceAac_E0C89ACA
 s32 sceAacInit(SceAacInitArg *arg)
 {
+    dbg_printf("sceAacInit(arg=%p)\n", arg);
+
     s32 intr;
     s32 i;
     s32 offset;
@@ -371,6 +383,8 @@ s32 sceAacInit(SceAacInitArg *arg)
 // sceAac_E955E83A
 s32 sceAac_E955E83A(s32 *sampleRate)
 {
+    dbg_printf("sceAac_E955E83A(sampleRate=%p)\n", sampleRate);
+
     s32 intr;
     s32 i;
     s32 offset;
@@ -412,7 +426,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     p->info.unk24 = 0;
     p->info.unk48 = NULL;
     p->info.init = 2;
-    p->codec.edramAddr = p + 200;
+    p->codec.edramAddr = &p->data;
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
     p->codec.unk20 = 1;
     p->codec.sampleRate = *sampleRate;
@@ -436,6 +450,8 @@ s32 sceAac_E955E83A(s32 *sampleRate)
 // sceAac_33B8C009
 s32 sceAacExit(s32 id)
 {
+    dbg_printf("sceAacExit(id=%d)\n", id);
+
     SceAacId *p;
     s32 intr;
 
@@ -471,6 +487,8 @@ s32 sceAacExit(s32 id)
 // sceAac_7E4CFEE4
 s32 sceAacDecode(s32 id, void** src)
 {
+    dbg_printf("sceAacDecode(id=%d, src=%p)\n", id, src);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -542,6 +560,8 @@ s32 sceAacDecode(s32 id, void** src)
 // sceAac_FA01FCB6
 s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
 {
+    dbg_printf("sceAac_FA01FCB6(id=%d, arg1=%p, arg2=%p, arg3=%p, arg4=%p)\n", id, arg1, arg2, arg3, arg4);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -583,6 +603,8 @@ s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
 // sceAac_D7C51541
 s32 sceAacCheckStreamDataNeeded(s32 id)
 {
+    dbg_printf("sceAacCheckStreamDataNeeded(id=%d)\n", id);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -613,6 +635,8 @@ s32 sceAacCheckStreamDataNeeded(s32 id)
 // sceAac_02098C69
 s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
 {
+    dbg_printf("sceAacGetInfoToAddStreamData(id=%d, arg1=%p, arg2=%p, arg3=%p)\n", id, arg1, arg2, arg3);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -667,6 +691,8 @@ s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
 // sceAac_AC6DCBE3
 s32 sceAacNotifyAddStreamData(s32 id, s32 size)
 {
+    dbg_printf("sceAacNotifyAddStreamData(id=%d, size=%d)\n", id, size);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -711,6 +737,8 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
 // sceAac_D2DA2BBA
 s32 sceAacResetPlayPosition(s32 id)
 {
+    dbg_printf("sceAacResetPlayPosition(id=%d)\n", id);
+
     SceAacId *p;
 
     if (g_pool == NULL || g_nbr == 0) {
@@ -751,6 +779,8 @@ s32 sceAacResetPlayPosition(s32 id)
 // sceAac_BBDD6403
 s32 sceAacSetLoopNum(s32 id, s32 loopNum)
 {
+    dbg_printf("sceAacSetLoopNum(id=%d, loopNum=%d)\n", id, loopNum);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -784,6 +814,8 @@ s32 sceAacSetLoopNum(s32 id, s32 loopNum)
 // sceAac_6DC7758A
 s32 sceAacGetMaxOutputSample(s32 id)
 {
+    dbg_printf("sceAacGetMaxOutputSample(id=%d)\n", id);
+
     SceAacId *p;
     s32 ret;
     u32 maxOutputSample;
@@ -818,6 +850,8 @@ s32 sceAacGetMaxOutputSample(s32 id)
 // sceAac_506BF66C
 s32 sceAacGetSumDecodedSample(s32 id)
 {
+    dbg_printf("sceAacGetSumDecodedSample(id=%d)\n", id);
+
     SceAacId *p;
 
     if (g_pool == NULL || g_nbr == 0) {
@@ -848,6 +882,8 @@ s32 sceAacGetSumDecodedSample(s32 id)
 // sceAac_523347D9
 s32 sceAacGetLoopNum(s32 id)
 {
+    dbg_printf("sceAacGetLoopNum(id=%d)\n", id);
+
     SceAacId *p;
 
     if (id < 0 || id >= g_nbr) {
@@ -875,11 +911,16 @@ s32 sceAacGetLoopNum(s32 id)
 // sceAac_6C05813B
 s32 sceAacStartEntry(void)
 {
+    dbg_init(1, FB_HARDWARE, FAT_NONE);
+    dbg_printf("sceAacStartEntry()\n");
+
     return SCE_ERROR_OK;
 }
 
 s32 sub_000012B8(s32 id)
 {
+    dbg_printf("sub_000012B8(id=%d)\n", id);
+
     SceAacId *p;
     s32 ret;
 
@@ -923,6 +964,8 @@ s32 sub_000012B8(s32 id)
 
 void sub_000013B4(s32 id)
 {
+    dbg_printf("sub_000013B4(id=%d)\n", id);
+
     SceAacId *p;
 
     if (g_pool == NULL || g_nbr == 0) {
