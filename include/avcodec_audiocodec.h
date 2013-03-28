@@ -9,7 +9,7 @@ typedef struct
     s32 unk0;
     s32 unk4;
     s32 err; // 8
-    s32 edramAddr; // 12
+    void *edramAddr; // 12
     s32 neededMem; // 16
     s32 unk20;
     void *inBuf; // 24

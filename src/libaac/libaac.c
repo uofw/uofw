@@ -6,6 +6,7 @@
 #include <libaac.h>
 #include <avcodec_audiocodec.h>
 #include <usersystemlib_kernel.h>
+#include <threadman_kernel.h>
 
 #define SCE_AAC_MEM_SIZE (1024 * 100) // 0x19000
 #define SCE_AAC_DATA_SIZE (0x18F20)
@@ -26,14 +27,14 @@ void sub_000013B4(s32);
 typedef struct {
     s32 init;
     s32 loopNum; // 4
-    s32 *unk8; // ptr to data src
+    s32 reset; // 8
     s32 unk12;
     s32 unk16; // stream end offset
     s32 unk20; // bytes read
     s32 *unk24; // ptr to data src
     s32 unk28;
     s32 unk32;
-    u32 unk36;
+    s32 *unk36;
     s32 unk40; // bytes to decode
     s32 unk44;
     s32 *unk48; // bufDec
@@ -76,15 +77,15 @@ void sub_00000000(s32 id)
         return;
     }
 
-    if ((p->info.unk24 + 2 * p->info.unk28 - p->codec.inBuf + 1600) < 1536) {
-        sub_000000F8(id, p->info.unk32);
+    if (((u32)p->info.unk24 + 2 * p->info.unk28 - (u32)p->codec.inBuf + 1600) < 1536) {
+        sub_000000F8(id);
     }
 
     if (p->info.unk28 < p->info.unk40) {
         return;
     }
 
-    if (p->info.unk36 != (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600) {
+    if (p->info.unk36 != (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600)) {
         return;
     }
 
@@ -114,13 +115,13 @@ void sub_000000F8(s32 id) {
         return;
     }
 
-    dst = p->info.unk24 - (p->info.unk24 + (p->info.unk28 << 1) - p->codec.inBuf);
+    dst = p->info.unk24 - ((u32)p->info.unk24 + (p->info.unk28 << 1) - (u32)p->codec.inBuf);
 
     // Kernel_Library_1839852A
     sceKernelMemcpy(
         dst,
         p->codec.inBuf,
-        p->info.unk24 + (p->info.unk28 << 1) - p->codec.inBuf + 1600
+        (SceSize)((u32)p->info.unk24 + (p->info.unk28 << 1) - (u32)p->codec.inBuf + 1600)
     );
 
     p->codec.inBuf = dst;
@@ -188,7 +189,7 @@ s32 sceAacInitResource(s32 nbr)
         return 0x80691501; // SCE_ERROR_AAC_NOT_INITIALIZED
     }
 
-    if (sceKernelAllocateFpl(g_poolId, &g_pool, NULL) < 0) {
+    if (sceKernelAllocateFpl(g_poolId, (void**)&g_pool, NULL) < 0) {
         sceKernelDeleteFpl(g_poolId);
 
         g_poolId = -1;
@@ -309,7 +310,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     intr = sceKernelCpuSuspendIntr();
     id = -1;
 
-    if (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
+    for (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
         p = NULL;
 
         if (g_pool != NULL && g_nbr != 0) {
@@ -334,7 +335,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.loopNum = -1;
     p->info.unk12 = arg->unk0;
     p->info.unk20 = arg->unk0;
-    p->info.unk8 = NULL;
+    p->info.reset = 0;
     p->info.unk16 = arg->unk8;
     p->info.unk32 = 1;
     p->info.unk28 = (arg->unk20 - 1600 + ((arg->unk20 - 1600) < 0)) >> 1; // wtf?
@@ -382,7 +383,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     intr = sceKernelCpuSuspendIntr();
     id = -1;
 
-    if (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
+    for (i=0, offset=0; i<g_nbr; i++, offset+=SCE_AAC_MEM_SIZE) {
         p = NULL;
 
         if (g_pool != NULL && g_nbr != 0) {
@@ -491,15 +492,11 @@ s32 sceAacDecode(s32 id, void** src)
         return 0x80691103;
     }
 
-    if (src == NULL) {
-        src = p->info.unk8;
-    }
-    else {
+    if (src != NULL) {
         *src = p->codec.outBuf;
-        src = p->info.unk8;
     }
 
-    if (src != NULL) {
+    if (p->info.reset) {
         // Kernel_Library_A089ECA4
         sceKernelMemset(p->codec.outBuf, 0, p->info.unk52);
 
@@ -521,7 +518,7 @@ s32 sceAacDecode(s32 id, void** src)
         p->info.unk40 -= p->codec.readSample;
         p->codec.inBuf += p->codec.readSample;
         p->info.unk44 -= p->codec.readSample;
-        p->codec.outBuf = p->info.unk56 + p->info.unk52 * (p->info.unk56 ^ 1);
+        p->codec.outBuf = (void*)(p->info.unk56 + p->info.unk52 * (p->info.unk56 ^ 1));
         p->info.sumDecodedSample += p->codec.decodedSample;
         p->info.unk56 ^= 1;
 
@@ -607,11 +604,11 @@ s32 sceAacCheckStreamDataNeeded(s32 id)
         return 0;
     }
 
-    return (p->info.unk36 < (p->info.unk42 + p->info.unk28 * (p->info.unk32 + 1) + 1600));
+    return (p->info.unk36 < (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600));
 }
 
 // sceAac_02098C69
-s32 sceAacGetInfoToAddStreamData(s32 id, s32 *arg1, s32 *arg2, s32 *arg3)
+s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
 {
     SceAacId *p;
 
@@ -736,10 +733,10 @@ s32 sceAacResetPlayPosition(s32 id)
         return 0x80691103;
     }
 
-    p->inBuf = p->info.unk24 + 1600;
+    p->codec.inBuf = p->info.unk24 + 1600;
     p->info.unk44 = p->info.unk16 - p->info.unk12;
     p->info.unk36 = p->info.unk24 + 1600;
-    p->info.unk8 = NULL;
+    p->info.reset = 0;
     p->info.unk20 = p->info.unk12;
     p->info.unk40 = 0;
     p->info.sumDecodedSample = 0;
@@ -807,7 +804,7 @@ s32 sceAacGetMaxOutputSample(s32 id)
     }
 
     // sceAudiocodec_59176A0F
-    ret = sceAudiocodecAlcExtendParameter(&p->codec, 0x1003, &(s32*)maxOutputSample);
+    ret = sceAudiocodecAlcExtendParameter(&p->codec, 0x1003, (s32*)&maxOutputSample);
     if (ret < 0) {
         return ret;
     }
@@ -941,7 +938,7 @@ void sub_000013B4(s32 id)
 
     if (p->info.unk20 == p->info.unk16 && p->info.unk44 <= 0) {
         if (p->info.loopNum > 0) {
-            p->info.unk8 = 1;
+            p->info.reset = 1;
         }
         else {
             p->info.loopNum--;

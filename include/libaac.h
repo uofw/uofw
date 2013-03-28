@@ -12,9 +12,9 @@ typedef struct {
     s32 unk4;
     s32 unk8;
     s32 unk12;
-    s32 unk16;
+    s32 *unk16;
     s32 unk20; // bufsize
-    s32 unk24;
+    s32 *unk24;
     s32 unk28; // bufsize
     s32 sampleRate; // 32
     s32 unk36;
@@ -29,7 +29,7 @@ s32 sceAacExit(s32 id);
 s32 sceAacDecode(s32 id, void** src);
 s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4);
 s32 sceAacCheckStreamDataNeeded(s32 id);
-s32 sceAacGetInfoToAddStreamData(s32 id, s32 *arg1, s32 *arg2, s32 *arg3);
+s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3);
 s32 sceAacNotifyAddStreamData(s32 id, s32 size);
 s32 sceAacResetPlayPosition(s32 id);
 s32 sceAacSetLoopNum(s32 id, s32 loopNum);
