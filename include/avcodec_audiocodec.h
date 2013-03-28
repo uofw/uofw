@@ -13,9 +13,9 @@ typedef struct
     s32 neededMem; // 16
     s32 unk20;
     void *inBuf; // 24
-    s32 unk28;
+    s32 readSample; // 28
     void *outBuf; // 32
-    s32 unk36;
+    s32 decodedSample; // 36
     s32 unk40;
     s8 unk44;
     s8 unk45;

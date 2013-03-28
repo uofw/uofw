@@ -31,7 +31,7 @@ typedef struct {
     s32 *unk48; // bufDec
     s32 unk52; // bufDecSize
     s32 unk56; // even
-    s32 unk60;
+    u32 sumDecodedSample; // 60
     s32 sampleRate; // 64
 } SceAacIdInfo;
 
@@ -334,7 +334,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.unk36 = arg->unk16 + 1600;
     p->info.unk52 = (arg->unk28 + (arg->unk28 < 0)) >> 1;
     p->info.unk24 = arg->unk16;
-    p->info.unk60 = 0;
+    p->info.sumDecodedSample = 0;
 
     p->info.init = 2;
 
@@ -508,16 +508,16 @@ s32 sceAacDecode(s32 id, void** src)
             return 0x80691401;
         }
 
-        p->info.unk40 -= p->codec.unk28;
-        p->codec.inBuf += p->codec.unk28;
-        p->info.unk44 -= p->codec.unk28;
+        p->info.unk40 -= p->codec.readSample;
+        p->codec.inBuf += p->codec.readSample;
+        p->info.unk44 -= p->codec.readSample;
         p->codec.outBuf = p->info.unk56 + p->info.unk52 * (p->info.unk56 ^ 1);
-        p->info.unk60 += p->codec.unk36;
+        p->info.sumDecodedSample += p->codec.decodedSample;
         p->info.unk56 ^= 1;
 
         sub_000013B4(id);
 
-        return p->codec.unk36;
+        return p->codec.decodedSample;
     }
 
     // Kernel_Library_A089ECA4
@@ -564,8 +564,8 @@ s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
         return 0x80691401;
     }
 
-    *arg2 = p->codec.unk28;
-    *arg4 = p->codec.unk36;
+    *arg2 = p->codec.readSample;
+    *arg4 = p->codec.decodedSample;
 
     return SCE_ERROR_OK;
 }
@@ -732,7 +732,7 @@ s32 sceAacResetPlayPosition(s32 id)
     p->info.unk8 = NULL;
     p->info.unk20 = p->info.unk12;
     p->info.unk40 = 0;
-    p->info.unk60 = 0;
+    p->info.sumDecodedSample = 0;
     p->info.unk32 = 1;
 
     return SCE_ERROR_OK;
@@ -776,7 +776,7 @@ s32 sceAacGetMaxOutputSample(s32 id)
 {
     SceAacId *p;
     s32 ret;
-    s32 size;
+    u32 maxOutputSample;
 
     if (id < 0 || id >= g_nbr) {
         return 0x80691001;
@@ -797,10 +797,40 @@ s32 sceAacGetMaxOutputSample(s32 id)
     }
 
     // sceAudiocodec_59176A0F
-    ret = sceAudiocodecAlcExtendParameter(&p->codec, 0x1003, &size);
+    ret = sceAudiocodecAlcExtendParameter(&p->codec, 0x1003, &(s32*)maxOutputSample);
     if (ret < 0) {
         return ret;
     }
 
-    return (u32)size >> 2;
+    return maxOutputSample >> 2;
+}
+
+// sceAac_506BF66C
+s32 sceAacGetSumDecodedSample(s32 id)
+{
+    SceAacId *p;
+
+    if (g_pool == NULL || g_nbr == 0) {
+        return 0x80691503;
+    }
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (p->info.init < 2) {
+        return 0x80691102;
+    }
+
+    return p->info.sumDecodedSample >> 2;
 }
