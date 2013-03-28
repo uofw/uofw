@@ -16,7 +16,7 @@ typedef struct
     s32 readSample; // 28
     void *outBuf; // 32
     s32 decodedSample; // 36
-    s32 unk40;
+    s32 sampleRate; // 40
     s8 unk44;
     s8 unk45;
     s8 unk46;

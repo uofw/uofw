@@ -1,4 +1,5 @@
 #define SCE_AAC_MEM_SIZE (1024 * 100) // 0x19000
+#define SCE_AAC_DATA_SIZE (0x18F20)
 
 SCE_MODULE_BOOTSTART("sceAacStartEntry");
 SCE_MODULE_STOP("sceAacEndEntry");
@@ -34,11 +35,13 @@ typedef struct {
     s32 unk56; // even
     u32 sumDecodedSample; // 60
     s32 sampleRate; // 64
-} SceAacIdInfo;
+    u8 padding[8];
+} SceAacIdInfo; // size 72
 
 typedef struct {
-    SceAudiocodecCodec codec __attribute__((aligned(256))); // size 128
-    SceAacIdInfo info __attribute__((aligned(128))); // size 128
+    SceAudiocodecCodec codec; // 0
+    SceAacIdInfo info __attribute__((aligned(128))); // 128
+    u8 data[SCE_AAC_DATA_SIZE]; // 200
 } SceAacId; // size 1024 * 100
 
 static s32 g_poolId = -1; // 1740
@@ -342,7 +345,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.sampleRate = arg->sampleRate;
     p->info.unk48 = arg->unk24;
 
-    ret = sub_000012B8();
+    ret = sub_000012B8(id);
     if (ret < 0) {
         // sceAac_33B8C009
         sceAacExit(id);
@@ -400,9 +403,9 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     p->info.unk48 = NULL;
     p->info.init = 2;
     p->codec.edramAddr = p + 200;
-    p->codec.neededMem = 0x18F20;
+    p->codec.neededMem = SCE_AAC_DATA_SIZE;
     p->codec.unk20 = 1;
-    p->codec.unk40 = *sampleRate;
+    p->codec.sampleRate = *sampleRate;
     p->codec.unk45 = 0;
     p->codec.unk44 = 0;
 
@@ -866,5 +869,48 @@ s32 sceAacGetLoopNum(s32 id)
 // sceAac_6C05813B
 s32 sceAacStartEntry(void)
 {
+    return SCE_ERROR_OK;
+}
+
+s32 sub_000012B8(s32 id)
+{
+    SceAacId *p;
+    s32 ret;
+
+    if (g_pool == NULL || g_nbr == 0) {
+        return 0x80691503;
+    }
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    p->codec.neededMem = SCE_AAC_DATA_SIZE;
+    p->codec.unk20 = 1;
+    p->codec.edramAddr = p->data;
+    p->codec.sampleRate = p->info.sampleRate;
+    p->codec.unk45 = 0;
+    p->codec.unk44 = 0;
+
+    ret = sceAudiocodecInit(&p->codec, 0x1003);
+    if (ret < 0) {
+        return ret;
+    }
+
+    p->codec.inBuf = p->info.unk24 + 1600;
+    p->codec.outBuf = p->info.unk48 + p->info.unk52 * p->info.unk56;
+
+    // sceAudiocodec_8ACA11D5
+    ret = sceAudiocodecGetInfo(&p->codec, 0x1003);
+    if (ret < 0) {
+        return ret;
+    }
+
     return SCE_ERROR_OK;
 }
