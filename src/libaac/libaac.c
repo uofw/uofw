@@ -1,5 +1,6 @@
 #define SCE_AAC_MEM_SIZE (1024 * 100) // 0x19000
 
+SCE_MODULE_BOOTSTART("sceAacStartEntry");
 SCE_MODULE_STOP("sceAacEndEntry");
 
 typedef struct {
@@ -859,4 +860,11 @@ s32 sceAacGetLoopNum(s32 id)
     }
 
     return p->info.loopNum;
+}
+
+// module_start
+// sceAac_6C05813B
+s32 sceAacStartEntry(void)
+{
+    return SCE_ERROR_OK;
 }
