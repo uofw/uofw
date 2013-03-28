@@ -914,3 +914,35 @@ s32 sub_000012B8(s32 id)
 
     return SCE_ERROR_OK;
 }
+
+void sub_000013B4(s32 id)
+{
+    SceAacId *p;
+
+    if (g_pool == NULL || g_nbr == 0) {
+        return;
+    }
+
+    if (id < 0 || id >= g_nbr) {
+        return;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return;
+    }
+
+    if (p->info.unk20 == p->info.unk16 && p->info.unk44 <= 0) {
+        if (p->info.loopNum > 0) {
+            p->info.unk8 = 1;
+        }
+        else {
+            p->info.loopNum--;
+
+            sceAacResetPlayPosition(id);
+        }
+    }
+
+    sub_00000000(id);
+}
