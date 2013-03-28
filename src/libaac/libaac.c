@@ -3,6 +3,7 @@
 */
 
 #include <common_imp.h>
+#include <libaac.h>
 #include <avcodec_audiocodec.h>
 #include <usersystemlib_kernel.h>
 
@@ -21,19 +22,6 @@ void sub_00000000(s32);
 void sub_000000F8(s32);
 s32 sub_000012B8(s32);
 void sub_000013B4(s32);
-
-typedef struct {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unk12;
-    s32 unk16;
-    s32 unk20; // bufsize
-    s32 unk24;
-    s32 unk28; // bufsize
-    s32 sampleRate; // 32
-    s32 unk36;
-} SceAacInitArg;
 
 typedef struct {
     s32 init;
