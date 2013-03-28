@@ -698,6 +698,7 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
     return SCE_ERROR_OK;
 }
 
+// sceAac_D2DA2BBA
 s32 sceAacResetPlayPosition(s32 id)
 {
     SceAacId *p;
@@ -737,6 +738,7 @@ s32 sceAacResetPlayPosition(s32 id)
     return SCE_ERROR_OK;
 }
 
+// sceAac_BBDD6403
 s32 sceAacSetLoopNum(s32 id, s32 loopNum)
 {
     SceAacId *p;
@@ -767,4 +769,38 @@ s32 sceAacSetLoopNum(s32 id, s32 loopNum)
     }
 
     return SCE_ERROR_OK;
+}
+
+// sceAac_6DC7758A
+s32 sceAacGetMaxOutputSample(s32 id)
+{
+    SceAacId *p;
+    s32 ret;
+    s32 size;
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (g_pool == NULL || g_nbr == 0 || id < 0) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (p == NULL) {
+        return 0x80691503;
+    }
+
+    if (p->info.init < 3) {
+        return 0x80691103;
+    }
+
+    // sceAudiocodec_59176A0F
+    ret = sceAudiocodecAlcExtendParameter(&p->codec, 0x1003, &size);
+    if (ret < 0) {
+        return ret;
+    }
+
+    return (u32)size >> 2;
 }
