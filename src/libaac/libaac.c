@@ -657,6 +657,8 @@ s32 sceAacGetInfoToAddStreamData(s32 id, s32 *arg1, s32 *arg2, s32 *arg3)
 // sceAac_AC6DCBE3
 s32 sceAacNotifyAddStreamData(s32 id, s32 size)
 {
+    SceAacId *p;
+
     if (id < 0 || id >= g_nbr) {
         return 0x80691001;
     }
@@ -692,6 +694,45 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
     }
 
     sub_00000000(id);
+
+    return SCE_ERROR_OK;
+}
+
+s32 sceAacResetPlayPosition(s32 id)
+{
+    SceAacId *p;
+
+    if (g_pool == NULL || g_nbr == 0) {
+        return 0x80691503;
+    }
+
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691503;
+    }
+
+    p = g_pool + id * SCE_AAC_MEM_SIZE;
+
+    if (g_pool == NULL) {
+        return 0x80691503;
+    }
+
+    /* Never reached? */
+    if (id < 0 || id >= g_nbr) {
+        return 0x80691001;
+    }
+
+    if (p->info.init < 3) {
+        return 0x80691103;
+    }
+
+    p->inBuf = p->info.unk24 + 1600;
+    p->info.unk44 = p->info.unk16 - p->info.unk12;
+    p->info.unk36 = p->info.unk24 + 1600;
+    p->info.unk8 = NULL;
+    p->info.unk20 = p->info.unk12;
+    p->info.unk40 = 0;
+    p->info.unk60 = 0;
+    p->info.unk32 = 1;
 
     return SCE_ERROR_OK;
 }
