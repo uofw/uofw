@@ -2,10 +2,10 @@
 # See the file COPYING for copying permission.
 
 TARGET = libaac
-OBJS = libaac
+OBJS = libaac.o
 
 #DEBUG = 1
 
-LIBS = -lKernel_Library -lThreadManForUser -lsceAudioCodec
+LIBS = -lKernel_Library -lThreadManForUser -lsceAudiocodec
 
 include ../../lib/build.mak
