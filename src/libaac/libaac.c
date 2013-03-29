@@ -291,25 +291,25 @@ s32 sceAacInit(SceAacInitArg *arg)
         return 0x80691002;
     }
 
-    if (arg->unk16 == 0 || arg->unk24 == 0) {
+    if (arg->encBuf == NULL || arg->decBuf == NULL) {
         return 0x80691002;
     }
 
-    if (arg->unk4 < 0) {
+    if (arg->start < 0) {
         return 0x80691003;
     }
 
-    if (arg->unk4 >= arg->unk12) {
-        if (arg->unk12 != arg->unk4) {
+    if (arg->start >= arg->end) {
+        if (arg->end != arg->start) {
             return 0x80691003;
         }
 
-        if ((u32)arg->unk0 >= (u32)arg->unk8) {
+        if ((u32)arg->streamStart >= (u32)arg->streamEnd) {
             return 0x80691003;
         }
     }
 
-    if (arg->unk20 < 8192 || arg->unk28 < 8192 || arg->unk36 != 0) {
+    if (arg->encSize < 8192 || arg->decSize < 8192 || arg->zero != 0) {
         return 0x80691003;
     }
 
@@ -348,24 +348,24 @@ s32 sceAacInit(SceAacInitArg *arg)
     }
 
     p->info.loopNum = -1;
-    p->info.streamStart = arg->unk0;
-    p->info.streamCur = arg->unk0;
+    p->info.streamStart = arg->streamStart;
+    p->info.streamCur = arg->streamStart;
     p->info.reset = 0;
-    p->info.streamEnd = arg->unk8;
+    p->info.streamEnd = arg->streamEnd;
     p->info.unk32 = 1;
-    p->info.unk28 = (arg->unk20 - 1600 + ((arg->unk20 - 1600) < 0)) >> 1; // wtf?
-    p->info.unk44 = arg->unk8 - arg->unk0;
+    p->info.unk28 = (arg->encSize - 1600 + ((arg->encSize - 1600) < 0)) >> 1; // wtf?
+    p->info.unk44 = arg->streamEnd - arg->streamStart;
     p->info.unk40 = 0;
     p->info.curChannel = 0;
-    p->info.unk36 = arg->unk16 + 1600;
-    p->info.decSize = (arg->unk28 + (arg->unk28 < 0)) >> 1;
-    p->info.unk24 = arg->unk16;
+    p->info.unk36 = arg->encBuf + 1600;
+    p->info.decSize = (arg->decSize + (arg->decSize < 0)) >> 1;
+    p->info.unk24 = arg->encBuf;
     p->info.sumDecodedSample = 0;
 
     p->info.state = 2;
 
     p->info.sampleRate = arg->sampleRate;
-    p->info.decBuf = arg->unk24;
+    p->info.decBuf = arg->decBuf;
 
     ret = sub_000012B8(id);
     if (ret < 0) {
@@ -428,7 +428,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     p->info.state = 2;
     p->codec.edramAddr = &p->data;
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
-    p->codec.streamCur = 1;
+    p->codec.unk20 = 1;
     p->codec.sampleRate = *sampleRate;
     p->codec.unk45 = 0;
     p->codec.unk44 = 0;
@@ -943,7 +943,7 @@ s32 sub_000012B8(s32 id)
     }
 
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
-    p->codec.streamCur = 1;
+    p->codec.unk20 = 1;
     p->codec.edramAddr = p->data;
     p->codec.sampleRate = p->info.sampleRate;
     p->codec.unk45 = 0;

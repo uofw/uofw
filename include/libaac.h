@@ -8,16 +8,16 @@
 #include <common_header.h>
 
 typedef struct {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unk12;
-    s32 *unk16;
-    s32 unk20; // bufsize
-    s32 *unk24;
-    s32 unk28; // bufsize
+    s32 streamStart; // 0
+    s32 start; // 4
+    s32 streamEnd; // 8
+    s32 end; // 12
+    void *encBuf; // 16
+    s32 encSize; // 20
+    void *decBuf; // 24
+    s32 decSize; // 28
     s32 sampleRate; // 32
-    s32 unk36;
+    s32 zero; // 36
 } SceAacInitArg;
 
 s32 sceAacEndEntry(void);
