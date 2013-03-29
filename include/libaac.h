@@ -36,6 +36,6 @@ s32 sceAacSetLoopNum(s32 id, s32 loopNum);
 s32 sceAacGetMaxOutputSample(s32 id);
 s32 sceAacGetSumDecodedSample(s32 id);
 s32 sceAacGetLoopNum(s32 id);
-s32 sceAacStartEntry(void);
+s32 sceAacStartEntry(SceSize argc, void *argp);
 
 #endif /* LIBAAC_H */
