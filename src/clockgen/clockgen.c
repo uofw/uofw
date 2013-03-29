@@ -2,13 +2,22 @@
    See the file COPYING for copying permission.
 */
 
+#include "clockgen_int.h"
+
+#include <sysmem_sysevent.h>
+#include <threadman_kernel.h>
+
 SCE_MODULE_INFO("sceClockgen_Driver", 0x1007, 1, 9);
-SCE_MODULE_START("_sceClockgenModuleStart");
+SCE_MODULE_BOOTSTART("_sceClockgenModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceClockgenModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
 #define LEPTON_CLOCK    (1 << 4) //8
 #define AUDIO_CLOCK     (1 << 5) //16
+
+s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
+s32 sceI2cMasterTransmit(u32, u8 *, s32);
+s32 sceI2cSetClock(s32, s32);
 
 //0x000008F0
 typedef struct {
@@ -21,13 +30,13 @@ typedef struct {
 ClockGenContext g_Cy27040 = {
     -1,
     0,
-    0,
-    {0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0},
+    0
 };
 
 //0x00000900
-PspSysEventHandler g_ClockGenSysEv = {
-    sizeof(PspSysEventHandler),
+SceSysEventHandler g_ClockGenSysEv = {
+    sizeof(SceSysEventHandler),
     "SceClockgen",
     0x00FFFF00,
     _sceClockgenSysEventHandler,
@@ -90,10 +99,10 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 }
 
 //0x000000F8
-s32 sceClockgenSetSpectrumSpreading(u32 arg) //sceClockgen_driver_C9AF3102
+s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
 {
-    u32 reg_value;
-    u32 ret_value;
+    u32 reg_value = 0; // FIXME
+    u32 ret_value = 0; // FIXME
     s32 res;
 
     if (arg < 0) {
@@ -176,7 +185,7 @@ s32 sceClockgenSetSpectrumSpreading(u32 arg) //sceClockgen_driver_C9AF3102
 
     g_Cy27040.registers[2] = reg_value | (g_Cy27040.registers[2] & 0xFFFFFFF8);
     res = _cy27040_write_register(2, g_Cy27040.registers[2]);
-    sceKernelUnlockMutex(g_Cy27040.mutex, 1, 0);
+    sceKernelUnlockMutex(g_Cy27040.mutex, 1);
 
     if (res < 0) {
         return res;
@@ -186,7 +195,7 @@ s32 sceClockgenSetSpectrumSpreading(u32 arg) //sceClockgen_driver_C9AF3102
 }
 
 //0x000002B4
-s32 _sceClockgenModuleStart(SceSize args, void *argp)
+s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     s32 mutexId;
 
@@ -196,7 +205,7 @@ s32 _sceClockgenModuleStart(SceSize args, void *argp)
     //ThreadManForKernel_B7D098C6
     mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, 0);
 
-    if (mutexid >= 0) {
+    if (mutexId >= 0) {
         g_Cy27040.mutex = mutexId;
 
         //sceSysEventForKernel_CD9E4BB5
@@ -210,7 +219,7 @@ s32 _sceClockgenModuleStart(SceSize args, void *argp)
 }
 
 //0x00000320
-s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp)
+s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     u32 reg5;
     u32 reg2;
@@ -218,7 +227,7 @@ s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp)
     reg5 = g_Cy27040.registers[5];
     reg2 = g_Cy27040.registers[2];
 
-    if ((reg2 & 7) != (reg5 & 7) {
+    if ((reg2 & 7) != (reg5 & 7)) {
         _cy27040_write_register(2, (reg2 & ~7) | (reg5 & 7));
     }
 
@@ -322,7 +331,11 @@ s32 sceClockgenLeptonClkDisable() //sceClockgen_driver_DBE5F283
 }
 
 //0x0000053C
-s32 _sceClockgenSysEventHandler(s32 ev_id, s8 *ev_name, void *param, s32 *result)
+s32 _sceClockgenSysEventHandler( // FIXME
+    s32 ev_id,
+    char *ev_name __attribute__((unused)),
+    void *param __attribute__((unused)),
+    s32 *result __attribute__((unused)))
 {
     if (ev_id == 0x10000) {
         //ThreadManForKernel_0DDCD2C9
@@ -345,17 +358,20 @@ s32 _sceClockgenSysEventHandler(s32 ev_id, s8 *ev_name, void *param, s32 *result
 
         return SCE_ERROR_OK;
     }
+
+    return SCE_ERROR_OK;
 }
 
 //0x000005DC
-s32 _sceClockgenSetControl1(s32 bus, s32 mode) {
+s32 _sceClockgenSetControl1(s32 bus, s32 mode)
+{
     s32 ret;
     s32 ret2;
     s32 val;
     s32 val2;
 
     //ThreadManForKernel_B011B11F
-    ret = sceKernelLockMutex(g_Cy27040.mutex, 1);
+    ret = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
 
     if (ret < 0) {
         return ret;
