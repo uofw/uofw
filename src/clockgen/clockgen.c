@@ -32,15 +32,15 @@ PspSysEventHandler g_ClockGenSysEv = {
     0x00FFFF00,
     _sceClockgenSysEventHandler,
     0,
-    0, 
-    NULL, 
+    0,
+    NULL,
     {0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
 //0x00000000
 s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 {
-    if (g_Cy27040.protocol != 0) {    
+    if (g_Cy27040.protocol != 0) {
         s32 s0;
 
         for (s0 = 0; s0 < 3; s0++) {
@@ -68,18 +68,18 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
         s32 s0;
 
         table[0] = 0;
-    
+
         //sceI2c_driver_47BDEAAA
         ret = sceI2cMasterTransmitReceive(210, table, 1, 210, back, 16);
-        
+
         if (ret < 0) {
             return ret;
         }
-        
+
         if (back[0] == 0) {
             return SCE_ERROR_OK;
         }
-        
+
         for (s0 = 0; (s0 < 3) || (s0 < back[0]); s0++) {
             g_Cy27040.registers[s0 + 0] = back[s0];
             g_Cy27040.registers[s0 + 3] = back[s0];
@@ -95,7 +95,7 @@ s32 sceClockgenSetSpectrumSpreading(u32 arg) //sceClockgen_driver_C9AF3102
     u32 reg_value;
     u32 ret_value;
     s32 res;
-    
+
     if (arg < 0) {
         reg_value = g_Cy27040.registers[5] & 0x7;
         ret_value = arg;
@@ -167,7 +167,7 @@ s32 sceClockgenSetSpectrumSpreading(u32 arg) //sceClockgen_driver_C9AF3102
             return 0x80000004;
         }
     }
-    
+
     res = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
 
     if (res < 0) {
