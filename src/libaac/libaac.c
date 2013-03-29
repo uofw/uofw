@@ -39,7 +39,7 @@ typedef struct {
     s32 unk32;
     void *unk36;
     s32 unk40; // bytes to decode
-    s32 unk44;
+    s32 streamRemaining;
     void *decBuf; // 48
     s32 decSize; // 52
     s32 curChannel; // 56
@@ -354,7 +354,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.streamEnd = arg->streamEnd;
     p->info.unk32 = 1;
     p->info.unk28 = (arg->encSize - 1600 + ((arg->encSize - 1600) < 0)) >> 1; // wtf?
-    p->info.unk44 = arg->streamEnd - arg->streamStart;
+    p->streamRemaining = arg->streamEnd - arg->streamStart;
     p->info.unk40 = 0;
     p->info.curChannel = 0;
     p->info.unk36 = arg->encBuf + 1600;
@@ -527,7 +527,7 @@ s32 sceAacDecode(s32 id, void** src)
         return 0;
     }
 
-    if ((p->info.streamCur == p->info.streamEnd && p->info.unk44 > 0) ||
+    if ((p->info.streamCur == p->info.streamEnd && p->streamRemaining > 0) ||
         (p->info.unk40 >= 1536)) {
         // sceAudiocodec_70A703F8
         if (sceAudiocodecDecode(&p->codec, 0x1003) < 0) {
@@ -538,7 +538,7 @@ s32 sceAacDecode(s32 id, void** src)
 
         p->info.unk40 -= p->codec.readSample;
         p->codec.inBuf += p->codec.readSample;
-        p->info.unk44 -= p->codec.readSample;
+        p->streamRemaining -= p->codec.readSample;
 
         p->codec.outBuf = p->info.decBuf + p->info.decSize * !p->info.curChannel;
         p->info.sumDecodedSample += p->codec.decodedSample;
@@ -695,7 +695,7 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
     dbg_printf("sceAacNotifyAddStreamData(id=%d, size=%d)\n", id, size);
 
     SceAacId *p;
-    s32 step;
+    s32 remaining;
 
     if (id < 0 || id >= g_nbr) {
         return 0x80691001;
@@ -720,12 +720,12 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
         return 0x80691003;
     }
 
-    step = p->info.streamEnd - p->info.streamCur;
+    remaining = p->info.streamEnd - p->info.streamCur;
 
-    if (step < size) {
+    if (remaining < size) {
         p->info.streamCur = p->info.streamEnd;
-        p->info.unk40 += step;
-        p->info.unk36 += step;
+        p->info.unk40 += remaining;
+        p->info.unk36 += remaining;
     }
     else {
         p->info.unk40 += size;
@@ -769,7 +769,7 @@ s32 sceAacResetPlayPosition(s32 id)
     }
 
     p->codec.inBuf = p->info.unk24 + 1600;
-    p->info.unk44 = p->info.streamEnd - p->info.streamStart;
+    p->streamRemaining = p->info.streamEnd - p->info.streamStart;
     p->info.unk36 = p->info.unk24 + 1600;
     p->info.reset = 0;
     p->info.streamCur = p->info.streamStart;
@@ -986,7 +986,7 @@ void sub_000013B4(s32 id)
         return;
     }
 
-    if (p->info.streamCur == p->info.streamEnd && p->info.unk44 <= 0) {
+    if (p->info.streamCur == p->info.streamEnd && p->streamRemaining <= 0) {
         if (p->info.loopNum > 0) {
             p->info.reset = 1;
         }
