@@ -23,7 +23,7 @@ s32 sceI2cSetClock(s32, s32);
 typedef struct {
     s32 mutex;        //0
     u32 protocol;     //4
-    s8 registers[6];  //8
+    s8 reg[6];        //8
     u16 padding;      //E
 } ClockGenContext;
 
@@ -65,8 +65,8 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
                 return ret;
             }
 
-            g_Cy27040.registers[i + 0] = back[0];
-            g_Cy27040.registers[i + 3] = back[0];
+            g_Cy27040.reg[i + 0] = back[0];
+            g_Cy27040.reg[i + 3] = back[0];
         }
     }
     else {
@@ -84,8 +84,8 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
         }
 
         for (i = 0; (i < 3) && (i < back[0]); i++) {
-            g_Cy27040.registers[i + 0] = back[i + 1];
-            g_Cy27040.registers[i + 3] = back[i + 1];
+            g_Cy27040.reg[i + 0] = back[i + 1];
+            g_Cy27040.reg[i + 3] = back[i + 1];
         }
     }
 
@@ -95,73 +95,73 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 //0x000000F8
 s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
 {
-    u32 reg_value = 0; // FIXME
-    u32 ret_value = 0; // FIXME
+    u32 reg_value;
+    u32 ret_value;
     s32 res;
 
     if (arg < 0) {
-        reg_value = g_Cy27040.registers[5] & 0x7;
+        reg_value = g_Cy27040.reg[5] & 0x7;
         ret_value = arg;
 
-        if ((g_Cy27040.registers[2] & 0x7) == reg_value) {
+        if ((g_Cy27040.reg[2] & 0x7) == reg_value) {
             return ret_value;
         }
     }
     else {
-        switch(g_Cy27040.registers[0] & 0xF) {
+        switch(g_Cy27040.reg[0] & 0xF) {
         case 0x8:
         case 0xF:
         case 0x7:
         case 0x3:
         case 0x9:
         case 0xA:
-            if ((arg >= 0) && (arg < 2)) {
+            if (arg < 2) {
                 reg_value = 0;
                 ret_value = 0;
             }
-            else if ((arg >= 0) && (arg < 7)) {
+            else if (arg < 7) {
                 reg_value = 1;
                 ret_value = 5;
             }
-            else if ((arg >= 7) && (arg < 15)) {
+            else if (arg < 15) {
                 reg_value = 2;
                 ret_value = 10;
             }
-            else if ((arg >= 15) && (arg < 25)) {
+            else if (arg < 25) {
                 reg_value = 4;
                 ret_value = 20;
             }
-            else if (arg >= 25) {
+            else {
                 reg_value = 6;
                 ret_value = 30;
             }
             break;
         case 0x4:
-            if ((arg >= 0) && (arg < 2)) {
+            if (arg < 2) {
                 reg_value = 0;
                 ret_value = 0;
             }
-            else if ((arg >= 2) && (arg < 7)) {
+            else if (arg < 7) {
                 reg_value = 1;
                 ret_value = 5;
             }
-            else if ((arg >= 7) && (arg < 12)) {
+            else if (arg < 12) {
                 reg_value = 2;
                 ret_value = 10;
             }
-            else if ((arg >= 12) && (arg < 17)) {
+            else if (arg < 17) {
                 reg_value = 3;
                 ret_value = 15;
             }
-            else if ((arg >= 17) && (arg < 22)) {
+            else if (arg < 22) {
                 reg_value = 4;
                 ret_value = 20;
             }
-            else if ((arg >= 22) && (arg < 27)) {
+            else if (arg < 27) {
                 reg_value = 5;
                 ret_value = 25;
             }
-            else if (arg >= 27) {
+            else {
                 reg_value = 6;
                 ret_value = 30;
             }
@@ -172,15 +172,14 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
     }
 
     res = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
-
     if (res < 0) {
         return res;
     }
 
-    g_Cy27040.registers[2] = reg_value | (g_Cy27040.registers[2] & 0xFFFFFFF8);
-    res = _cy27040_write_register(2, g_Cy27040.registers[2]);
-    sceKernelUnlockMutex(g_Cy27040.mutex, 1);
+    g_Cy27040.reg[2] = (reg_value & 7) | (g_Cy27040.reg[2] & ~7);
+    res = _cy27040_write_register(2, g_Cy27040.reg[2]);
 
+    sceKernelUnlockMutex(g_Cy27040.mutex, 1);
     if (res < 0) {
         return res;
     }
@@ -218,8 +217,8 @@ s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *a
     u32 reg5;
     u32 reg2;
 
-    reg5 = g_Cy27040.registers[5];
-    reg2 = g_Cy27040.registers[2];
+    reg5 = g_Cy27040.reg[5];
+    reg2 = g_Cy27040.reg[2];
 
     if ((reg2 & 7) != (reg5 & 7)) {
         _cy27040_write_register(2, (reg2 & ~7) | (reg5 & 7));
@@ -274,14 +273,14 @@ void sceClockgenSetProtocol(u32 prot) //sceClockgen_driver_3F6B7C6B
 //0x00000448
 s32 sceClockgenGetRevision() //sceClockgen_driver_CE36529C
 {
-    return g_Cy27040.registers[0];
+    return g_Cy27040.reg[0];
 }
 
 //0x00000454
 s32 sceClockgenGetRegValue(u32 idx) //sceClockgen_driver_0FD28D8B
 {
     if (idx >= 3) {
-        return g_Cy27040.registers[idx];
+        return g_Cy27040.reg[idx];
     }
 
     return 0x80000102;
@@ -343,10 +342,10 @@ s32 _sceClockgenSysEventHandler( // FIXME
     }
 
     if (ev_id == 0x100000) {
-        g_Cy27040.registers[1] &= 0xFFFFFFF7;
+        g_Cy27040.reg[1] &= 0xFFFFFFF7;
 
-        _cy27040_write_register(1, g_Cy27040.registers[1] & 0xF7);
-        _cy27040_write_register(2, g_Cy27040.registers[2]);
+        _cy27040_write_register(1, g_Cy27040.reg[1] & 0xF7);
+        _cy27040_write_register(2, g_Cy27040.reg[2]);
 
         sceKernelUnlockMutex(g_Cy27040.mutex, 1);
 
@@ -371,9 +370,9 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
         return ret;
     }
 
-    ret2 = g_Cy27040.registers[1] & bus;
-    val = g_Cy27040.registers[1] | bus;
-    val2 = g_Cy27040.registers[1] & ~bus;
+    ret2 = g_Cy27040.reg[1] & bus;
+    val = g_Cy27040.reg[1] | bus;
+    val2 = g_Cy27040.reg[1] & ~bus;
 
     if (ret2 > 0) {
         ret = ret2;
@@ -383,8 +382,8 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
         val2 = val & 0xFF;
     }
 
-    if (val2 != g_Cy27040.registers[1]) {
-        g_Cy27040.registers[1] = val2;
+    if (val2 != g_Cy27040.reg[1]) {
+        g_Cy27040.reg[1] = val2;
 
         _cy27040_write_register(1, val2);
     }
