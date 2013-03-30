@@ -23,7 +23,7 @@ s32 sceI2cSetClock(s32, s32);
 typedef struct {
     s32 mutex;        //0
     u32 protocol;     //4
-    u8 registers[6];  //8
+    s8 registers[6];  //8
     u16 padding;      //E
 } ClockGenContext;
 
@@ -49,15 +49,14 @@ SceSysEventHandler g_ClockGenSysEv = {
 //0x00000000
 s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 {
+    u8 table[16];
+    u8 back[16];
+    s32 ret;
+    s32 i;
+
     if (g_Cy27040.protocol != 0) {
-        s32 s0;
-
-        for (s0 = 0; s0 < 3; s0++) {
-            u8 table[16];
-            u8 back[16];
-            s32 ret;
-
-            table[0] = s0 - 128;
+        for (i = 0; i < 3; i++) {
+            table[0] = i - 128;
 
             //sceI2c_driver_47BDEAAA
             ret = sceI2cMasterTransmitReceive(210, table, 1, 210, back, 1);
@@ -66,16 +65,11 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
                 return ret;
             }
 
-            g_Cy27040.registers[s0 + 0] = back[0];
-            g_Cy27040.registers[s0 + 3] = back[0];
+            g_Cy27040.registers[i + 0] = back[0];
+            g_Cy27040.registers[i + 3] = back[0];
         }
     }
     else {
-        u8 table[16];
-        u8 back[16];
-        s32 ret;
-        s32 s0;
-
         table[0] = 0;
 
         //sceI2c_driver_47BDEAAA
@@ -89,9 +83,9 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
             return SCE_ERROR_OK;
         }
 
-        for (s0 = 0; (s0 < 3) || (s0 < back[0]); s0++) {
-            g_Cy27040.registers[s0 + 0] = back[s0];
-            g_Cy27040.registers[s0 + 3] = back[s0];
+        for (i = 0; (i < 3) && (i < back[0]); i++) {
+            g_Cy27040.registers[i + 0] = back[i + 1];
+            g_Cy27040.registers[i + 3] = back[i + 1];
         }
     }
 
