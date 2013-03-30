@@ -271,9 +271,11 @@ s32 sceClockgenEnd() //sceClockgen_driver_36F9B49D
 }
 
 //0x00000438
-void sceClockgenSetProtocol(u32 prot) //sceClockgen_driver_3F6B7C6B
+s32 sceClockgenSetProtocol(u32 prot) //sceClockgen_driver_3F6B7C6B
 {
     g_Cy27040.protocol = prot;
+
+    return SCE_ERROR_OK;
 }
 
 //0x00000448

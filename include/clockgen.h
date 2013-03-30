@@ -11,7 +11,7 @@ s32 sceClockgenSetup();
 s32 sceClockgenSetSpectrumSpreading(s32 arg);
 s32 sceClockgenInit();
 s32 sceClockgenEnd();
-void sceClockgenSetProtocol(u32 prot);
+s32 sceClockgenSetProtocol(u32 prot);
 s32 sceClockgenGetRevision();
 s32 sceClockgenGetRegValue(u32 idx);
 s32 sceClockgenAudioClkSetFreq(u32 freq);
