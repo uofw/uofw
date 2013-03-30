@@ -12,8 +12,9 @@ SCE_MODULE_BOOTSTART("_sceClockgenModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceClockgenModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define LEPTON_CLOCK    (1 << 3) //8
-#define AUDIO_CLOCK     (1 << 4) //16
+#define CLOCK_AUDIO_FREQ (1)
+#define CLOCK_LEPTON     (8)
+#define CLOCK_AUDIO      (16)
 
 s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
 s32 sceI2cMasterTransmit(u32, u8 *, s32);
@@ -298,10 +299,10 @@ s32 sceClockgenGetRegValue(u32 idx) //sceClockgen_driver_0FD28D8B
 s32 sceClockgenAudioClkSetFreq(u32 freq) //sceClockgen_driver_DAB6E612
 {
     if (freq == 44100) {
-        return _sceClockgenSetControl1(1, 0);
+        return _sceClockgenSetControl1(CLOCK_AUDIO_FREQ, 0);
     }
     else if (freq == 48000) {
-        return _sceClockgenSetControl1(1, 1);
+        return _sceClockgenSetControl1(CLOCK_AUDIO_FREQ, 1);
     }
 
     return 0x800001FE;
@@ -310,25 +311,25 @@ s32 sceClockgenAudioClkSetFreq(u32 freq) //sceClockgen_driver_DAB6E612
 //0x000004BC
 s32 sceClockgenAudioClkEnable() //sceClockgen_driver_A1D23B2C
 {
-    return _sceClockgenSetControl1(AUDIO_CLOCK, 1);
+    return _sceClockgenSetControl1(CLOCK_AUDIO, 1);
 }
 
 //0x000004DC
 s32 sceClockgenAudioClkDisable() //sceClockgen_driver_DED4C698
 {
-    return _sceClockgenSetControl1(AUDIO_CLOCK, 0);
+    return _sceClockgenSetControl1(CLOCK_AUDIO, 0);
 }
 
 //0x000004FC
 s32 sceClockgenLeptonClkEnable()  //sceClockgen_driver_7FF82F6F
 {
-    return _sceClockgenSetControl1(LEPTON_CLOCK, 1);
+    return _sceClockgenSetControl1(CLOCK_LEPTON, 1);
 }
 
 //0x0000051C
 s32 sceClockgenLeptonClkDisable() //sceClockgen_driver_DBE5F283
 {
-    return _sceClockgenSetControl1(LEPTON_CLOCK, 0);
+    return _sceClockgenSetControl1(CLOCK_LEPTON, 0);
 }
 
 //0x0000053C
@@ -350,7 +351,7 @@ s32 _sceClockgenSysEventHandler(
     }
 
     if (ev_id == 0x100000) {
-        g_Cy27040.reg[1] &= ~8;
+        g_Cy27040.reg[1] &= ~CLOCK_LEPTON;
 
         _cy27040_write_register(1, g_Cy27040.reg[1] & 0xF7);
         _cy27040_write_register(2, g_Cy27040.reg[2]);
@@ -377,12 +378,12 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
     reg1 = g_Cy27040.reg[1];
     ret = (reg1 & bus) > 0;
 
-    if (mode) {
-        reg1 |= bus;
-        reg1 &= 0xFF;
+    if (!mode) {
+        reg1 &= ~bus;
     }
     else {
-        reg1 &= ~bus;
+        reg1 |= bus;
+        reg1 &= 0xFF;
     }
 
     if (reg1 != g_Cy27040.reg[1]) {
@@ -406,7 +407,7 @@ s32 _cy27040_write_register(u8 idx, u8 val)
     table[0] = idx - 128;
     table[1] = val;
 
-    if (idx < 3) {
+    if (idx >= 3) {
         return 0x80000102;
     }
 
