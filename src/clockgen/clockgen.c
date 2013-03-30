@@ -365,9 +365,7 @@ s32 _sceClockgenSysEventHandler(
 s32 _sceClockgenSetControl1(s32 bus, s32 mode)
 {
     s32 ret;
-    s32 ret2;
-    s32 val;
-    s32 val2;
+    s32 reg1;
 
     //ThreadManForKernel_B011B11F
     ret = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
@@ -376,22 +374,21 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
         return ret;
     }
 
-    ret2 = g_Cy27040.reg[1] & bus;
-    val = g_Cy27040.reg[1] | bus;
-    val2 = g_Cy27040.reg[1] & ~bus;
+    reg1 = g_Cy27040.reg[1];
+    ret = (reg1 & bus) > 0;
 
-    if (ret2 > 0) {
-        ret = ret2;
+    if (mode) {
+        reg1 |= bus;
+        reg1 &= 0xFF;
+    }
+    else {
+        reg1 &= ~bus;
     }
 
-    if (mode != 0) {
-        val2 = val & 0xFF;
-    }
+    if (reg1 != g_Cy27040.reg[1]) {
+        g_Cy27040.reg[1] = reg1;
 
-    if (val2 != g_Cy27040.reg[1]) {
-        g_Cy27040.reg[1] = val2;
-
-        _cy27040_write_register(1, val2);
+        _cy27040_write_register(1, reg1);
     }
 
     //ThreadManForKernel_6B30100F
