@@ -12,8 +12,8 @@ SCE_MODULE_BOOTSTART("_sceClockgenModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceClockgenModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define LEPTON_CLOCK    (1 << 4) //8
-#define AUDIO_CLOCK     (1 << 5) //16
+#define LEPTON_CLOCK    (1 << 3) //8
+#define AUDIO_CLOCK     (1 << 4) //16
 
 s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
 s32 sceI2cMasterTransmit(u32, u8 *, s32);
