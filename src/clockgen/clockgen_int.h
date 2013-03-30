@@ -9,4 +9,4 @@ s32 _sceClockgenModuleStart(SceSize args, void *argp);
 s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp);
 s32 _sceClockgenSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
 s32 _sceClockgenSetControl1(s32 bus, s32 mode);
-s32 _cy27040_write_register(u8 regid, u8 val);
+s32 _cy27040_write_register(u8 idx, u8 val);

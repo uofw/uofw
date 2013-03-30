@@ -398,24 +398,24 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
 }
 
 //0x00000680
-s32 _cy27040_write_register(u8 regid, u8 val)
+s32 _cy27040_write_register(u8 idx, u8 val)
 {
     u8 table[16];
+    s32 ret;
 
-    table[0] = regid - 128;
+    table[0] = idx - 128;
     table[1] = val;
 
-    if (regid < 3) {
-        s32 ret;
-
-        //sceI2c_driver_8CBD8CCF
-        ret = sceI2cMasterTransmit(210, table, 2);
-
-        // SCE_ERROR_OK?
-        if (ret < 0) {
-            return ret;
-        }
+    if (idx < 3) {
+        return 0x80000102;
     }
 
-    return 0x80000102;
+    //sceI2c_driver_8CBD8CCF
+    ret = sceI2cMasterTransmit(210, table, 2);
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    return SCE_ERROR_OK;
 }
