@@ -9,7 +9,7 @@
 
 s32 sceClockgenSetup();
 s32 sceClockgenSetSpectrumSpreading(s32 arg);
-void sceClockgenInit();
+s32 sceClockgenInit();
 void sceClockgenEnd();
 void sceClockgenSetProtocol(u32 prot);
 s32 sceClockgenGetRevision();

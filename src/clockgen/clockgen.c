@@ -238,18 +238,22 @@ s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *a
 }
 
 //0x00000398
-void sceClockgenInit()
+s32 sceClockgenInit() //sceClockgen_driver_29160F5D
 {
     s32 mutexId;
 
     sceI2cSetClock(4, 4);
     mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, 0);
 
-    if (mutexId >= 0) {
-        g_Cy27040.mutex = mutexId;
-
-        sceKernelRegisterSysEventHandler(&g_ClockGenSysEv);
+    if (mutexId < 0) {
+        return mutexId;
     }
+
+    g_Cy27040.mutex = mutexId;
+
+    sceKernelRegisterSysEventHandler(&g_ClockGenSysEv);
+
+    return SCE_ERROR_OK;
 }
 
 //0x000003EC
