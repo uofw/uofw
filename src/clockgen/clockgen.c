@@ -332,7 +332,7 @@ s32 sceClockgenLeptonClkDisable() //sceClockgen_driver_DBE5F283
 }
 
 //0x0000053C
-s32 _sceClockgenSysEventHandler( // FIXME
+s32 _sceClockgenSysEventHandler(
     s32 ev_id,
     char *ev_name __attribute__((unused)),
     void *param __attribute__((unused)),
@@ -350,14 +350,12 @@ s32 _sceClockgenSysEventHandler( // FIXME
     }
 
     if (ev_id == 0x100000) {
-        g_Cy27040.reg[1] &= 0xFFFFFFF7;
+        g_Cy27040.reg[1] &= ~8;
 
         _cy27040_write_register(1, g_Cy27040.reg[1] & 0xF7);
         _cy27040_write_register(2, g_Cy27040.reg[2]);
 
         sceKernelUnlockMutex(g_Cy27040.mutex, 1);
-
-        return SCE_ERROR_OK;
     }
 
     return SCE_ERROR_OK;
