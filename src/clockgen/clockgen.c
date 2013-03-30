@@ -257,7 +257,7 @@ s32 sceClockgenInit() //sceClockgen_driver_29160F5D
 }
 
 //0x000003EC
-void sceClockgenEnd() //sceClockgen_driver_36F9B49D
+s32 sceClockgenEnd() //sceClockgen_driver_36F9B49D
 {
     if (g_Cy27040.mutex >= 0) {
         sceKernelDeleteMutex(g_Cy27040.mutex);
@@ -266,6 +266,8 @@ void sceClockgenEnd() //sceClockgen_driver_36F9B49D
     }
 
     sceKernelUnregisterSysEventHandler(&g_ClockGenSysEv);
+
+    return SCE_ERROR_OK;
 }
 
 //0x00000438
