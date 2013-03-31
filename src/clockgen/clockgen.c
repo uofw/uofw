@@ -2,6 +2,24 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uOFW/trunk/src/clockgen/clockgen.c
+ *
+ * sceClockgen_Driver - a driver for the PSP's CY27040 clock generator.
+ *
+ * The clockgen driver main function is to supply users with a simple way
+ * to enable/disable audio and lepton (a DSP managing the UMD reader).
+ *
+ * The CY27040 clock generator is managed using three hardware registers:
+ *       reg0: revision
+ *       reg1: clock control (audio state, lepton state)
+ *       reg2: spread-spectrum setting
+ * Their current state is stored in ClockgenContext.curReg.
+ * Also, their initial state is stored in ClockgenContext.oldReg.
+ * These three registers are accessed through the PSP's I2C bus.
+ *
+ */
+
 #include "clockgen_int.h"
 
 #include <sysmem_sysevent.h>
@@ -17,28 +35,46 @@ SCE_MODULE_BOOTSTART("_sceClockgenModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceClockgenModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
+/* The Cy27040's slave address used to communicate through the I2C bus */
 #define PSP_CY27040_I2C_ADDR        (0xD2)
+
+/* Retrieve all registers command. */
 #define PSP_CY27040_CMD_ALL_REGS    (0)
+/* Retrieve a register command. */
 #define PSP_CY27040_CMD_REG(i)      ((i) - 128)
+
+/* reg0: revision */
 #define PSP_CY27040_REG_REVISION    (0)
+/* reg1: clock control */
 #define PSP_CY27040_REG_CLOCK       (1)
+/* reg2: spread-spectrum control */
 #define PSP_CY27040_REG_SS          (2)
+/* Registers count */
 #define PSP_CY27040_REG_COUNT       (3)
 
+/* In reg1, used to manage the audio frequency */
 #define PSP_CLOCK_AUDIO_FREQ    (1)
+/* In reg1, used to enable/disable the lepton DSP */
 #define PSP_CLOCK_LEPTON        (8)
+/* In reg1, used to enable/disable audio */
 #define PSP_CLOCK_AUDIO         (16)
 
+// TODO: move it to lowio_i2c.h
 s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
 s32 sceI2cMasterTransmit(u32, u8 *, s32);
 s32 sceI2cSetClock(s32, s32);
 
 //0x000008F0
 typedef struct {
-    s32 mutex;
-    u32 protocol;
+    /* The mutex id */
+    SceUID mutex;
+    /* Current protocol mode */
+    SceBool protocol;
+    /* Current state of registers */
     s8 curReg[PSP_CY27040_REG_COUNT];
+    /* Initial state of registers */
     s8 oldReg[PSP_CY27040_REG_COUNT];
+    /* Padding */
     u16 padding;
 } ClockgenContext;
 
@@ -69,9 +105,18 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
     s32 ret;
     s32 i;
 
+    /*
+     * Retrieve the state of the hardware registers and
+     * store them in curReg and oldReg.
+     */
+
     if (g_Cy27040.protocol != 0) {
+        /* One register at a time */
+
         for (i = 0; i < PSP_CY27040_REG_COUNT; i++) {
             trsm[0] = PSP_CY27040_CMD_REG(i);
+
+            /* Send and receive data through the I2C bus. */
 
             //sceI2c_driver_47BDEAAA
             ret = sceI2cMasterTransmitReceive(
@@ -88,7 +133,11 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
         }
     }
     else {
+        /* All registers in a single command */
+
         trsm[0] = PSP_CY27040_CMD_ALL_REGS;
+
+        /* Send and receive data through the I2C bus. */
 
         //sceI2c_driver_47BDEAAA
         ret = sceI2cMasterTransmitReceive(
@@ -117,6 +166,8 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
     s32 res;
 
     if (arg < 0) {
+        /* Invalid argument, try to restore the initial spread-spectrum state. */
+
         regSS = g_Cy27040.oldReg[PSP_CY27040_REG_SS] & 0x7;
         ret = arg;
 
@@ -125,6 +176,8 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
         }
     }
     else {
+        /* Choose a value according to the Cy27040 revision. */
+
         switch(g_Cy27040.curReg[PSP_CY27040_REG_REVISION] & 0xF) {
         case 0x8:
         case 0xF:
@@ -188,6 +241,8 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
         }
     }
 
+    /* Try to update the spread-spectrum register. */
+
     res = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
     if (res < 0) {
         return res;
@@ -207,20 +262,7 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
 //0x000002B4
 s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    s32 mutexId;
-
-    //sceI2c_driver_62C7E1E4
-    sceI2cSetClock(4, 4);
-
-    //ThreadManForKernel_B7D098C6
-    mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, 0);
-
-    if (mutexId >= 0) {
-        g_Cy27040.mutex = mutexId;
-
-        //sceSysEventForKernel_CD9E4BB5
-        sceKernelRegisterSysEventHandler(&g_ClockGenSysEv);
-    }
+    sceClockgenInit();
 
     g_Cy27040.protocol = 1;
     sceClockgenSetup();
@@ -237,19 +279,13 @@ s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *a
     oldRegSS = g_Cy27040.oldReg[PSP_CY27040_REG_SS];
     curRegSS = g_Cy27040.curReg[PSP_CY27040_REG_SS];
 
+    /* Spread-spectrum mode changed since its initial state, restore it */
+
     if ((curRegSS & 7) != (oldRegSS & 7)) {
         _cy27040_write_register(PSP_CY27040_REG_SS, (curRegSS & ~7) | (oldRegSS & 7));
     }
 
-    if (g_Cy27040.mutex >= 0) {
-        //ThreadManForKernel_F8170FBE
-        sceKernelDeleteMutex(g_Cy27040.mutex);
-
-        g_Cy27040.mutex = -1;
-    }
-
-    //sceSysEventForKernel_D7D3FDCD
-    sceKernelUnregisterSysEventHandler(&g_ClockGenSysEv);
+    sceClockgenEnd();
 
     return SCE_ERROR_OK;
 }
@@ -259,7 +295,14 @@ s32 sceClockgenInit() //sceClockgen_driver_29160F5D
 {
     s32 mutexId;
 
+    /* Set the I2C bus speed */
+
+    //sceI2c_driver_62C7E1E4
     sceI2cSetClock(4, 4);
+
+    /* Create the mutex and register the sysevent handler */
+
+    //ThreadManForKernel_B7D098C6
     mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, 0);
 
     if (mutexId < 0) {
@@ -276,6 +319,8 @@ s32 sceClockgenInit() //sceClockgen_driver_29160F5D
 //0x000003EC
 s32 sceClockgenEnd() //sceClockgen_driver_36F9B49D
 {
+    /* Delete the mutex and unregister the sysevent handler */
+
     if (g_Cy27040.mutex >= 0) {
         sceKernelDeleteMutex(g_Cy27040.mutex);
 
@@ -314,6 +359,8 @@ s32 sceClockgenGetRegValue(u32 idx) //sceClockgen_driver_0FD28D8B
 //0x0000047C
 s32 sceClockgenAudioClkSetFreq(u32 freq) //sceClockgen_driver_DAB6E612
 {
+    /* Lower sample rates are supported because they are divisible by these */
+
     if (freq == 44100) {
         return _sceClockgenSetControl1(PSP_CLOCK_AUDIO_FREQ, 0);
     }
@@ -356,6 +403,8 @@ s32 _sceClockgenSysEventHandler(
     s32 *result __attribute__((unused)))
 {
     if (ev_id == 0x10000) {
+        /* Sleep event? Spread-spectrum and clock control are blocked. */
+
         //ThreadManForKernel_0DDCD2C9
         sceKernelTryLockMutex(g_Cy27040.mutex, 1);
 
@@ -363,10 +412,14 @@ s32 _sceClockgenSysEventHandler(
     }
 
     if (ev_id < 0x10000) {
+        /* Unknown event. May be used for debugging. */
+
         return SCE_ERROR_OK;
     }
 
     if (ev_id == 0x100000) {
+        /* Resume event? Lepton is disabled. Other settings are restored and controls are unblocked. */
+
         g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] &= ~PSP_CLOCK_LEPTON;
 
         _cy27040_write_register(PSP_CY27040_REG_CLOCK, g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] & 0xF7);
@@ -395,12 +448,18 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
     ret = (regClk & bus) > 0;
 
     if (!mode) {
+        /* Force bit zero */
+
         regClk &= ~bus;
     }
     else {
+        /* Force bit one */
+
         regClk |= bus;
         regClk &= 0xFF;
     }
+
+    /* Register has changed, update it. */
 
     if (regClk != g_Cy27040.curReg[PSP_CY27040_REG_CLOCK]) {
         g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] = regClk;
@@ -420,12 +479,16 @@ s32 _cy27040_write_register(u8 idx, u8 val)
     u8 trsm[16];
     s32 ret;
 
+    /* First byte: command, second byte: value */
+
     trsm[0] = PSP_CY27040_CMD_REG(idx);
     trsm[1] = val;
 
     if (idx >= PSP_CY27040_REG_COUNT) {
         return SCE_ERROR_INVALID_INDEX;
     }
+
+    /* Send data through the I2C bus. */
 
     //sceI2c_driver_8CBD8CCF
     ret = sceI2cMasterTransmit(
