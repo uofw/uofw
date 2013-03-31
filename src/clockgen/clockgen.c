@@ -422,7 +422,7 @@ s32 _sceClockgenSysEventHandler(
 
         g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] &= ~PSP_CLOCK_LEPTON;
 
-        _cy27040_write_register(PSP_CY27040_REG_CLOCK, g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] & 0xF7);
+        _cy27040_write_register(PSP_CY27040_REG_CLOCK, g_Cy27040.curReg[PSP_CY27040_REG_CLOCK]);
         _cy27040_write_register(PSP_CY27040_REG_SS, g_Cy27040.curReg[PSP_CY27040_REG_SS]);
 
         sceKernelUnlockMutex(g_Cy27040.mutex, 1);
@@ -456,7 +456,6 @@ s32 _sceClockgenSetControl1(s32 bus, SceBool mode)
         /* Force bit one */
 
         regClk |= bus;
-        regClk &= 0xFF;
     }
 
     /* Register has changed, update it. */
