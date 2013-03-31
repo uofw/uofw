@@ -7,14 +7,27 @@
 #include <sysmem_sysevent.h>
 #include <threadman_kernel.h>
 
-SCE_MODULE_INFO("sceClockgen_Driver", 0x1007, 1, 9);
+SCE_MODULE_INFO(
+    "sceClockgen_Driver",
+    SCE_MODULE_KERNEL |
+    SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START,
+    1, 9
+);
 SCE_MODULE_BOOTSTART("_sceClockgenModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceClockgenModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define CLOCK_AUDIO_FREQ (1)
-#define CLOCK_LEPTON     (8)
-#define CLOCK_AUDIO      (16)
+#define PSP_CY27040_I2C_ADDR        (0xD2)
+#define PSP_CY27040_CMD_ALL_REGS    (0)
+#define PSP_CY27040_CMD_REG(i)      ((i) - 128)
+#define PSP_CY27040_REG_REVISION    (0)
+#define PSP_CY27040_REG_CLOCK       (1)
+#define PSP_CY27040_REG_SS          (2)
+#define PSP_CY27040_REG_COUNT       (3)
+
+#define PSP_CLOCK_AUDIO_FREQ    (1)
+#define PSP_CLOCK_LEPTON        (8)
+#define PSP_CLOCK_AUDIO         (16)
 
 s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
 s32 sceI2cMasterTransmit(u32, u8 *, s32);
@@ -22,71 +35,74 @@ s32 sceI2cSetClock(s32, s32);
 
 //0x000008F0
 typedef struct {
-    s32 mutex;        //0
-    u32 protocol;     //4
-    s8 reg[6];        //8
-    u16 padding;      //E
-} ClockGenContext;
+    s32 mutex;
+    u32 protocol;
+    s8 curReg[PSP_CY27040_REG_COUNT];
+    s8 oldReg[PSP_CY27040_REG_COUNT];
+    u16 padding;
+} ClockgenContext;
 
-ClockGenContext g_Cy27040 = {
-    -1,
-    0,
-    {0, 0, 0, 0, 0, 0},
-    0
+ClockgenContext g_Cy27040 = {
+    .mutex = -1,
+    .protocol = 0,
+    .curReg = {0},
+    .oldReg = {0}
 };
 
 //0x00000900
 SceSysEventHandler g_ClockGenSysEv = {
-    sizeof(SceSysEventHandler),
-    "SceClockgen",
-    0x00FFFF00,
-    _sceClockgenSysEventHandler,
-    0,
-    0,
-    NULL,
-    {0, 0, 0, 0, 0, 0, 0, 0, 0}
+    .size = sizeof(SceSysEventHandler),
+    .name = "SceClockgen",
+    .typeMask = 0x00FFFF00,
+    .handler = _sceClockgenSysEventHandler,
+    .gp = 0,
+    .busy = 0,
+    .next = NULL,
+    .reserved = {0}
 };
 
 //0x00000000
 s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 {
-    u8 table[16];
-    u8 back[16];
+    u8 trsm[16];
+    u8 recv[16];
     s32 ret;
     s32 i;
 
     if (g_Cy27040.protocol != 0) {
-        for (i = 0; i < 3; i++) {
-            table[0] = i - 128;
+        for (i = 0; i < PSP_CY27040_REG_COUNT; i++) {
+            trsm[0] = PSP_CY27040_CMD_REG(i);
 
             //sceI2c_driver_47BDEAAA
-            ret = sceI2cMasterTransmitReceive(210, table, 1, 210, back, 1);
+            ret = sceI2cMasterTransmitReceive(
+                PSP_CY27040_I2C_ADDR, trsm, 1,
+                PSP_CY27040_I2C_ADDR, recv, 1
+            );
 
             if (ret < 0) {
                 return ret;
             }
 
-            g_Cy27040.reg[i + 0] = back[0];
-            g_Cy27040.reg[i + 3] = back[0];
+            g_Cy27040.curReg[i] = recv[0];
+            g_Cy27040.oldReg[i] = recv[0];
         }
     }
     else {
-        table[0] = 0;
+        trsm[0] = PSP_CY27040_CMD_ALL_REGS;
 
         //sceI2c_driver_47BDEAAA
-        ret = sceI2cMasterTransmitReceive(210, table, 1, 210, back, 16);
+        ret = sceI2cMasterTransmitReceive(
+            PSP_CY27040_I2C_ADDR, trsm, 1,
+            PSP_CY27040_I2C_ADDR, recv, 16
+        );
 
         if (ret < 0) {
             return ret;
         }
 
-        if (back[0] == 0) {
-            return SCE_ERROR_OK;
-        }
-
-        for (i = 0; (i < 3) && (i < back[0]); i++) {
-            g_Cy27040.reg[i + 0] = back[i + 1];
-            g_Cy27040.reg[i + 3] = back[i + 1];
+        for (i = 0; (i < PSP_CY27040_REG_COUNT) && (i < recv[0]); i++) {
+            g_Cy27040.curReg[i] = recv[i + 1];
+            g_Cy27040.oldReg[i] = recv[i + 1];
         }
     }
 
@@ -96,20 +112,20 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 //0x000000F8
 s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
 {
-    u32 reg_value;
-    u32 ret_value;
+    s32 regSS;
+    s32 ret;
     s32 res;
 
     if (arg < 0) {
-        reg_value = g_Cy27040.reg[5] & 0x7;
-        ret_value = arg;
+        regSS = g_Cy27040.oldReg[PSP_CY27040_REG_SS] & 0x7;
+        ret = arg;
 
-        if ((g_Cy27040.reg[2] & 0x7) == reg_value) {
-            return ret_value;
+        if (regSS == (g_Cy27040.curReg[PSP_CY27040_REG_SS] & 0x7)) {
+            return ret;
         }
     }
     else {
-        switch(g_Cy27040.reg[0] & 0xF) {
+        switch(g_Cy27040.curReg[PSP_CY27040_REG_REVISION] & 0xF) {
         case 0x8:
         case 0xF:
         case 0x7:
@@ -117,58 +133,58 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
         case 0x9:
         case 0xA:
             if (arg < 2) {
-                reg_value = 0;
-                ret_value = 0;
+                regSS = 0;
+                ret = 0;
             }
             else if (arg < 7) {
-                reg_value = 1;
-                ret_value = 5;
+                regSS = 1;
+                ret = 5;
             }
             else if (arg < 15) {
-                reg_value = 2;
-                ret_value = 10;
+                regSS = 2;
+                ret = 10;
             }
             else if (arg < 25) {
-                reg_value = 4;
-                ret_value = 20;
+                regSS = 4;
+                ret = 20;
             }
             else {
-                reg_value = 6;
-                ret_value = 30;
+                regSS = 6;
+                ret = 30;
             }
             break;
         case 0x4:
             if (arg < 2) {
-                reg_value = 0;
-                ret_value = 0;
+                regSS = 0;
+                ret = 0;
             }
             else if (arg < 7) {
-                reg_value = 1;
-                ret_value = 5;
+                regSS = 1;
+                ret = 5;
             }
             else if (arg < 12) {
-                reg_value = 2;
-                ret_value = 10;
+                regSS = 2;
+                ret = 10;
             }
             else if (arg < 17) {
-                reg_value = 3;
-                ret_value = 15;
+                regSS = 3;
+                ret = 15;
             }
             else if (arg < 22) {
-                reg_value = 4;
-                ret_value = 20;
+                regSS = 4;
+                ret = 20;
             }
             else if (arg < 27) {
-                reg_value = 5;
-                ret_value = 25;
+                regSS = 5;
+                ret = 25;
             }
             else {
-                reg_value = 6;
-                ret_value = 30;
+                regSS = 6;
+                ret = 30;
             }
             break;
         default:
-            return 0x80000004;
+            return SCE_ERROR_NOT_SUPPORTED;
         }
     }
 
@@ -177,15 +193,15 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
         return res;
     }
 
-    g_Cy27040.reg[2] = (reg_value & 7) | (g_Cy27040.reg[2] & ~7);
-    res = _cy27040_write_register(2, g_Cy27040.reg[2]);
+    g_Cy27040.curReg[PSP_CY27040_REG_SS] = (regSS & 7) | (g_Cy27040.curReg[PSP_CY27040_REG_SS] & ~7);
+    res = _cy27040_write_register(PSP_CY27040_REG_SS, g_Cy27040.curReg[PSP_CY27040_REG_SS]);
 
     sceKernelUnlockMutex(g_Cy27040.mutex, 1);
     if (res < 0) {
         return res;
     }
 
-    return ret_value;
+    return ret;
 }
 
 //0x000002B4
@@ -215,14 +231,14 @@ s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __a
 //0x00000320
 s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    u32 reg5;
-    u32 reg2;
+    s32 oldRegSS;
+    s32 curRegSS;
 
-    reg5 = g_Cy27040.reg[5];
-    reg2 = g_Cy27040.reg[2];
+    oldRegSS = g_Cy27040.oldReg[PSP_CY27040_REG_SS];
+    curRegSS = g_Cy27040.curReg[PSP_CY27040_REG_SS];
 
-    if ((reg2 & 7) != (reg5 & 7)) {
-        _cy27040_write_register(2, (reg2 & ~7) | (reg5 & 7));
+    if ((curRegSS & 7) != (oldRegSS & 7)) {
+        _cy27040_write_register(PSP_CY27040_REG_SS, (curRegSS & ~7) | (oldRegSS & 7));
     }
 
     if (g_Cy27040.mutex >= 0) {
@@ -282,54 +298,54 @@ s32 sceClockgenSetProtocol(u32 prot) //sceClockgen_driver_3F6B7C6B
 //0x00000448
 s32 sceClockgenGetRevision() //sceClockgen_driver_CE36529C
 {
-    return g_Cy27040.reg[0];
+    return g_Cy27040.curReg[PSP_CY27040_REG_REVISION];
 }
 
 //0x00000454
 s32 sceClockgenGetRegValue(u32 idx) //sceClockgen_driver_0FD28D8B
 {
-    if (idx >= 3) {
-        return 0x80000102;
+    if (idx >= PSP_CY27040_REG_COUNT) {
+        return SCE_ERROR_INVALID_INDEX;
     }
 
-    return g_Cy27040.reg[idx];
+    return g_Cy27040.curReg[idx];
 }
 
 //0x0000047C
 s32 sceClockgenAudioClkSetFreq(u32 freq) //sceClockgen_driver_DAB6E612
 {
     if (freq == 44100) {
-        return _sceClockgenSetControl1(CLOCK_AUDIO_FREQ, 0);
+        return _sceClockgenSetControl1(PSP_CLOCK_AUDIO_FREQ, 0);
     }
     else if (freq == 48000) {
-        return _sceClockgenSetControl1(CLOCK_AUDIO_FREQ, 1);
+        return _sceClockgenSetControl1(PSP_CLOCK_AUDIO_FREQ, 1);
     }
 
-    return 0x800001FE;
+    return SCE_ERROR_INVALID_VALUE;
 }
 
 //0x000004BC
 s32 sceClockgenAudioClkEnable() //sceClockgen_driver_A1D23B2C
 {
-    return _sceClockgenSetControl1(CLOCK_AUDIO, 1);
+    return _sceClockgenSetControl1(PSP_CLOCK_AUDIO, 1);
 }
 
 //0x000004DC
 s32 sceClockgenAudioClkDisable() //sceClockgen_driver_DED4C698
 {
-    return _sceClockgenSetControl1(CLOCK_AUDIO, 0);
+    return _sceClockgenSetControl1(PSP_CLOCK_AUDIO, 0);
 }
 
 //0x000004FC
 s32 sceClockgenLeptonClkEnable()  //sceClockgen_driver_7FF82F6F
 {
-    return _sceClockgenSetControl1(CLOCK_LEPTON, 1);
+    return _sceClockgenSetControl1(PSP_CLOCK_LEPTON, 1);
 }
 
 //0x0000051C
 s32 sceClockgenLeptonClkDisable() //sceClockgen_driver_DBE5F283
 {
-    return _sceClockgenSetControl1(CLOCK_LEPTON, 0);
+    return _sceClockgenSetControl1(PSP_CLOCK_LEPTON, 0);
 }
 
 //0x0000053C
@@ -346,15 +362,15 @@ s32 _sceClockgenSysEventHandler(
         return SCE_ERROR_OK;
     }
 
-    if ((0x10000 < ev_id) == 0) {
+    if (ev_id < 0x10000) {
         return SCE_ERROR_OK;
     }
 
     if (ev_id == 0x100000) {
-        g_Cy27040.reg[1] &= ~CLOCK_LEPTON;
+        g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] &= ~PSP_CLOCK_LEPTON;
 
-        _cy27040_write_register(1, g_Cy27040.reg[1] & 0xF7);
-        _cy27040_write_register(2, g_Cy27040.reg[2]);
+        _cy27040_write_register(PSP_CY27040_REG_CLOCK, g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] & 0xF7);
+        _cy27040_write_register(PSP_CY27040_REG_SS, g_Cy27040.curReg[PSP_CY27040_REG_SS]);
 
         sceKernelUnlockMutex(g_Cy27040.mutex, 1);
     }
@@ -366,7 +382,7 @@ s32 _sceClockgenSysEventHandler(
 s32 _sceClockgenSetControl1(s32 bus, s32 mode)
 {
     s32 ret;
-    s32 reg1;
+    s32 regClk;
 
     //ThreadManForKernel_B011B11F
     ret = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
@@ -375,21 +391,21 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
         return ret;
     }
 
-    reg1 = g_Cy27040.reg[1];
-    ret = (reg1 & bus) > 0;
+    regClk = g_Cy27040.curReg[PSP_CY27040_REG_CLOCK];
+    ret = (regClk & bus) > 0;
 
     if (!mode) {
-        reg1 &= ~bus;
+        regClk &= ~bus;
     }
     else {
-        reg1 |= bus;
-        reg1 &= 0xFF;
+        regClk |= bus;
+        regClk &= 0xFF;
     }
 
-    if (reg1 != g_Cy27040.reg[1]) {
-        g_Cy27040.reg[1] = reg1;
+    if (regClk != g_Cy27040.curReg[PSP_CY27040_REG_CLOCK]) {
+        g_Cy27040.curReg[PSP_CY27040_REG_CLOCK] = regClk;
 
-        _cy27040_write_register(1, reg1);
+        _cy27040_write_register(PSP_CY27040_REG_CLOCK, regClk);
     }
 
     //ThreadManForKernel_6B30100F
@@ -401,18 +417,20 @@ s32 _sceClockgenSetControl1(s32 bus, s32 mode)
 //0x00000680
 s32 _cy27040_write_register(u8 idx, u8 val)
 {
-    u8 table[16];
+    u8 trsm[16];
     s32 ret;
 
-    table[0] = idx - 128;
-    table[1] = val;
+    trsm[0] = PSP_CY27040_CMD_REG(idx);
+    trsm[1] = val;
 
-    if (idx >= 3) {
-        return 0x80000102;
+    if (idx >= PSP_CY27040_REG_COUNT) {
+        return SCE_ERROR_INVALID_INDEX;
     }
 
     //sceI2c_driver_8CBD8CCF
-    ret = sceI2cMasterTransmit(210, table, 2);
+    ret = sceI2cMasterTransmit(
+        PSP_CY27040_I2C_ADDR, trsm, 2
+    );
 
     if (ret < 0) {
         return ret;
