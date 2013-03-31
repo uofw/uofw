@@ -159,17 +159,17 @@ s32 sceClockgenSetup() //sceClockgen_driver_50F22765
 }
 
 //0x000000F8
-s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
+s32 sceClockgenSetSpectrumSpreading(s32 mode) //sceClockgen_driver_C9AF3102
 {
     s32 regSS;
     s32 ret;
     s32 res;
 
-    if (arg < 0) {
+    if (mode < 0) {
         /* Invalid argument, try to restore the initial spread-spectrum state. */
 
         regSS = g_Cy27040.oldReg[PSP_CY27040_REG_SS] & 0x7;
-        ret = arg;
+        ret = mode;
 
         if (regSS == (g_Cy27040.curReg[PSP_CY27040_REG_SS] & 0x7)) {
             return ret;
@@ -185,19 +185,19 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
         case 0x3:
         case 0x9:
         case 0xA:
-            if (arg < 2) {
+            if (mode < 2) {
                 regSS = 0;
                 ret = 0;
             }
-            else if (arg < 7) {
+            else if (mode < 7) {
                 regSS = 1;
                 ret = 5;
             }
-            else if (arg < 15) {
+            else if (mode < 15) {
                 regSS = 2;
                 ret = 10;
             }
-            else if (arg < 25) {
+            else if (mode < 25) {
                 regSS = 4;
                 ret = 20;
             }
@@ -207,27 +207,27 @@ s32 sceClockgenSetSpectrumSpreading(s32 arg) //sceClockgen_driver_C9AF3102
             }
             break;
         case 0x4:
-            if (arg < 2) {
+            if (mode < 2) {
                 regSS = 0;
                 ret = 0;
             }
-            else if (arg < 7) {
+            else if (mode < 7) {
                 regSS = 1;
                 ret = 5;
             }
-            else if (arg < 12) {
+            else if (mode < 12) {
                 regSS = 2;
                 ret = 10;
             }
-            else if (arg < 17) {
+            else if (mode < 17) {
                 regSS = 3;
                 ret = 15;
             }
-            else if (arg < 22) {
+            else if (mode < 22) {
                 regSS = 4;
                 ret = 20;
             }
-            else if (arg < 27) {
+            else if (mode < 27) {
                 regSS = 5;
                 ret = 25;
             }
@@ -432,7 +432,7 @@ s32 _sceClockgenSysEventHandler(
 }
 
 //0x000005DC
-s32 _sceClockgenSetControl1(s32 bus, s32 mode)
+s32 _sceClockgenSetControl1(s32 bus, SceBool mode)
 {
     s32 ret;
     s32 regClk;
