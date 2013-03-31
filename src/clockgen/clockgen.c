@@ -288,7 +288,7 @@ s32 sceClockgenGetRevision() //sceClockgen_driver_CE36529C
 //0x00000454
 s32 sceClockgenGetRegValue(u32 idx) //sceClockgen_driver_0FD28D8B
 {
-    if (idx < 3) {
+    if (idx >= 3) {
         return 0x80000102;
     }
 
