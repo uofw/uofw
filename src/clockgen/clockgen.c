@@ -24,6 +24,7 @@
 
 #include <sysmem_sysevent.h>
 #include <threadman_kernel.h>
+#include <lowio_i2c.h>
 
 SCE_MODULE_INFO(
     "sceClockgen_Driver",
@@ -58,11 +59,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define PSP_CLOCK_LEPTON        (8)
 /* In reg1, used to enable/disable audio */
 #define PSP_CLOCK_AUDIO         (16)
-
-// TODO: move it to lowio_i2c.h
-s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
-s32 sceI2cMasterTransmit(u32, u8 *, s32);
-s32 sceI2cSetClock(s32, s32);
 
 //0x000008F0
 typedef struct {

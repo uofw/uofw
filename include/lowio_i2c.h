@@ -2,5 +2,6 @@
    See the file COPYING for copying permission.
 */
 
-int sceI2cMasterTransmit(int reg, void *buf, int bufSize);
-
+s32 sceI2cMasterTransmitReceive(u32, u8 *, s32, u32, u8 *, s32);
+s32 sceI2cMasterTransmit(u32, u8 *, s32);
+s32 sceI2cSetClock(s32, s32);
