@@ -68,7 +68,7 @@ Other websites are:
 
 You can stay in touch with us and discuss project-related topics with us via the following ways:
 * via IRC on the [FreeNode server](http://webchat.freenode.net/) (irc.freenode.net) (join the channel #uofw)
-* via e-mail
+* via e-mail at the team's common email address uofwteam@gmail.com
 
 
 ## Copyright and License
