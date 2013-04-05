@@ -9,7 +9,7 @@
 
 #include "common_header.h"
 
-#include "sysmem_common.h"
+#include "sysmem_user.h"
 #include "loadcore.h"
 
 typedef struct {

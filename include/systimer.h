@@ -27,7 +27,7 @@
  * @param common Pass the common argument specified in ::sceSTimerSetHandler().
  * @param unk Unknown.
  * 
- * Typically return -1.
+ * Typically returns -1. 
  */
 typedef s32 (*SceSysTimerCb)(s32 timerId, s32 count, void *common, s32 unk);
 
@@ -87,11 +87,11 @@ s32 sceSTimerStopCount(s32 timerId);
 
 /**
  * Set the prescale of a hardware timer. It can be only set on timers which are in the "not in use" state.\n
- * The input signal is divided into the resulting ratio. The ratio has to be greater than 1/11.
+ * The input signal is divided into the resulting ratio. The ratio has to be less than 1/11.
  * 
  * @param timerId The ID of the timer to set the prescale.
  * @param numerator The numerator of the prescale. Must not be 0.
- * @param denominator The denumerator of the prescale. Must not be 0.
+ * @param denominator The denominator of the prescale. Must not be 0.
  * 
  * @return SCE_ERROR_OK on success.
  */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -10,10 +10,6 @@
 #include <sysmem_kernel.h>
 #include <sysmem_user.h>
 #include "systable.h"
-    
-#define FALSE                               (0)
-
-#define TRUE                                (1)
     
 #define LOADCORE_ERROR                      (-1)
 

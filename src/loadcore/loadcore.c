@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -28,6 +28,7 @@
  * 
  */
 
+#include <init.h>
 #include <interruptman.h>
 #include <loadcore.h>
 #include <memlmd.h>
@@ -55,13 +56,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define SVALALIGN4(v)                           ((s32)((((u32)((s32)(v) >> 31)) >> 30) + (v)) >> 2)
 
-#define INIT_MODULE_NAME                        "sceInit"
-#define MEMLMD_MODULE_NAME                      "memlmd"
-
 #define LOADCORE_CYCLIC_POLYNOMIAL_HASH_RADIAX  (5)
 
-#define RAM_TYPE_32_MB                          (1)
-#define RAM_TYPE_64_MB                          (2)
 #define RAM_SIZE_32_MB                          (0x2000000)
 
 #define LOADCORE_HEAP_SIZE                      (4096)
@@ -71,9 +67,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define STUB_LIBRARY_CONTROL_BLOCKS             (90)
 #define TOP_STUB_LIBRARY_CONTROL_BLOCK          (STUB_LIBRARY_CONTROL_BLOCKS - 1)
-
-#define LIBRARY_VERSION_MINOR                   (0)
-#define LIBRARY_VERSION_MAJOR                   (1)
 
 #define LOADCORE_LIBRARY_NAME                   "LoadCoreForKernel"
 #define LOADCORE_EXPORTED_FUNCTIONS             (34)
@@ -281,6 +274,8 @@ static SceStubLibrary g_LoadCoreLibStubs[STUB_LIBRARY_CONTROL_BLOCKS]; //0x00008
  * When freeing a currently used control block g_FreeLibStub is set to 
  * point to that specific control block.
  */
+
+s32 g_SyscallIntrRegSave[7]; //0x000080C0
 static SceStubLibrary *g_FreeLibStub; //0x000080E4
 
 s32 g_ToolBreakMode; //0x000083C4
@@ -496,7 +491,7 @@ static SceResidentLibrary *FreeLibEntCB(SceResidentLibrary *libEntry)
 {      
     if (libEntry->libNameInHeap) {
         sceKernelFreeHeapMemory(g_loadCoreHeap(), libEntry->libName); 
-        libEntry->libNameInHeap = FALSE;
+        libEntry->libNameInHeap = SCE_FALSE;
     }       
     if (libEntry >= &g_LoadCoreLibEntries[0] && libEntry <= &g_LoadCoreLibEntries[TOP_RESIDENT_LIBRARY_CONTROL_BLOCK]) { //0x00000170 & 0x0000017C    
         libEntry->next = g_FreeLibEnt;
@@ -554,9 +549,9 @@ static SceStubLibrary *NewLibStubCB(void)
  */
 static SceStubLibrary *FreeLibStubCB(SceStubLibrary *stubLib)
 {  
-    if (stubLib->libNameInHeap == TRUE) { //0x000002A8
+    if (stubLib->libNameInHeap == SCE_TRUE) { //0x000002A8
         sceKernelFreeHeapMemory(g_loadCoreHeap(), stubLib->libName2); //0x0000031C       
-        stubLib->libNameInHeap = FALSE;
+        stubLib->libNameInHeap = SCE_FALSE;
     }           
     if (stubLib >= &g_LoadCoreLibStubs[0] && stubLib <= &g_LoadCoreLibStubs[TOP_STUB_LIBRARY_CONTROL_BLOCK]) { //0x000002C0 & 0x000002CC
         stubLib->next = g_FreeLibStub;
@@ -731,7 +726,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     g_loadCore.sysCallTableSeed = seedPart1 + 0x2000;
     g_loadCore.secModId = SECONDARY_MODULE_ID_START_VALUE;
     g_loadCore.loadCoreHeapId = LOADCORE_ERROR;
-    g_loadCore.linkedLoadCoreStubs = FALSE;
+    g_loadCore.linkedLoadCoreStubs = SCE_FALSE;
     g_loadCore.sysCallTable = NULL;
     g_loadCore.unk520 = 0;
     g_loadCore.unLinkedStubLibs = NULL;
@@ -769,7 +764,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
 
     linkLibsRes = sceKernelLinkLibraryEntries(sysMemThreadConfig->loadCoreImportTables, 
                                               sysMemThreadConfig->loadCoreImportTablesSize); //0x00000CD0
-    g_loadCore.linkedLoadCoreStubs = TRUE;
+    g_loadCore.linkedLoadCoreStubs = SCE_TRUE;
     
     g_UpdateCacheAll = UpdateCacheAllDynamic; //0x00000D1C
     g_UpdateCacheDataAll = UpdateCacheDataAllDynamic; //0x00000D20
@@ -967,7 +962,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     tmpBlockId = 0;
     
     execInfo->apiType = 0x50; //0x000011DC
-    execInfo->isSignChecked = TRUE;
+    execInfo->isSignChecked = SCE_TRUE;
     execInfo->topAddr = NULL;
     execInfo->modeAttribute = 0;
     
@@ -996,10 +991,10 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     //0x0000126C - 0x00001290
     switch (execInfo->elfType) {
     case SCE_EXEC_FILE_TYPE_PRX: case SCE_EXEC_FILE_TYPE_PRX_2:
-        isPrx = TRUE; //jumps to 0x00001298
+        isPrx = SCE_TRUE; //jumps to 0x00001298
         break;
     default: 
-        isPrx = FALSE;
+        isPrx = SCE_FALSE;
         break;
     }  
     if (!isPrx)
@@ -1861,7 +1856,7 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
 {
     u32 i;
     s32 status;
-    u32 dupStubLib; /* TRUE = stub library duplicated */
+    u32 dupStubLib; /* SCE_TRUE = stub library duplicated */
     void *curStubTable;
     void *stubTableMemRange;
     SceStubLibrary *stubLib;
@@ -1905,15 +1900,15 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
           * stub libraries.  If this is true, we free the current stub library's
           * instance.  Otherwise, it is added to the linked-list.
           */
-         dupStubLib = FALSE;
+         dupStubLib = SCE_FALSE;
          for (curUnlinkedStubLib = g_loadCore.unLinkedStubLibs; curUnlinkedStubLib; 
             curUnlinkedStubLib = curUnlinkedStubLib->next) {              
               if (curUnlinkedStubLib->libStubTable == stubLib->libStubTable) { //0x00003194
                   FreeLibStubCB(stubLib); //0x00003204
-                  dupStubLib = TRUE; //0x0000320C
+                  dupStubLib = SCE_TRUE; //0x0000320C
               }
          }
-         if (dupStubLib == FALSE) {
+         if (dupStubLib == SCE_FALSE) {
              stubLib->next = g_loadCore.unLinkedStubLibs; //0x000031B4
              g_loadCore.unLinkedStubLibs = stubLib; //0x000031BC
              
@@ -1976,18 +1971,18 @@ static s32 UnLinkLibraryEntry(SceStubLibraryEntryTable *stubLibEntryTable)
                   curLib->stubLibs = curStubLib->next; //0x0000340C
               }
               else {
-                  stubLibUnlinked = FALSE;
+                  stubLibUnlinked = SCE_FALSE;
                   //0x0000338C - 0x000033AC
                   for (curStubLib2 = firstStubLib->next, prevStubLib = firstStubLib; curStubLib2; 
                      prevStubLib = curStubLib2, curStubLib2 = curStubLib2->next) {
                        if (curStubLib2 == curStubLib) { //0x0000339C
                            prevStubLib->next = curStubLib->next; //0x000033BC
                            curStubLib->next = NULL; //0x000033C0
-                           stubLibUnlinked = TRUE;
+                           stubLibUnlinked = SCE_TRUE;
                            break;
                        }
                   }
-                  if (stubLibUnlinked == FALSE)
+                  if (stubLibUnlinked == SCE_FALSE)
                       return SCE_ERROR_KERNEL_ERROR; //0x000033B4
               }
               curStubLib->status &= ~(STUB_LIBRARY_LINKED | STUB_LIBRARY_EXCLUSIVE_LINK | 0x4); //0x000033CC
@@ -2398,7 +2393,7 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
      */
     if (IS_KERNEL_ADDR(libEntryTable->libName)) { //0x00003794
         lib->libName = (char *)libEntryTable->libName; //0x0000379C
-        lib->libNameInHeap = FALSE;
+        lib->libNameInHeap = SCE_FALSE;
         lib->sysTableEntryStartIndex = 0;     
         return SCE_ERROR_OK;
     }
@@ -2409,7 +2404,7 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
         return SCE_ERROR_KERNEL_ERROR;
 
     memcpy(lib->libName, libEntryTable->libName, len + 1); //0x000037F4
-    lib->libNameInHeap = TRUE;
+    lib->libNameInHeap = SCE_TRUE;
     lib->sysTableEntryStartIndex = 0;
 
     return SCE_ERROR_OK;
@@ -2470,7 +2465,7 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
      */
     if (IS_KERNEL_ADDR(stubLibEntryTable->libName)) {        
         stubLib->libName2 = (char *)stubLibEntryTable->libName; //0x00003930
-        stubLib->libNameInHeap = FALSE;
+        stubLib->libNameInHeap = SCE_FALSE;
         return SCE_ERROR_OK;
     }
     
@@ -2481,7 +2476,7 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
         return LOADCORE_ERROR;
             
     memcpy(stubLib->libName2, stubLibEntryTable->libName, len + 1);
-    stubLib->libNameInHeap = TRUE;
+    stubLib->libNameInHeap = SCE_TRUE;
     return SCE_ERROR_OK;                        
 }
 

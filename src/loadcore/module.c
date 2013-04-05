@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -34,9 +34,6 @@
 
 #define UID_MODULE_DO_INITIALIZE                (0xD310D2D9)
 #define UID_MODULE_DO_DELETE                    (0x87089863)
-
-#define MODULE_VERSION_MINOR                    (0)
-#define MODULE_VERSION_MAJOR                    (1)
 
 #define MODULE_TEMPORARY_UID_NAME               "SceModuleTmp"
 #define MODULE_UID_TYPE_NAME                    "SceModule"

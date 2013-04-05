@@ -1,4 +1,4 @@
-# Copyright (C) 2011, 2012 The uOFW team
+# Copyright (C) 2011, 2012, 2013 The uOFW team
 # See the file COPYING for copying permission.
 
 #include "../../include/common/common.S"
@@ -9,6 +9,7 @@
     .globl sceLoadCorePrimarySyscallHandler
 
     .global g_ToolBreakMode
+    .global g_SyscallIntrRegSave
 
 ##
 # sub_00000000
@@ -41,11 +42,11 @@ loop2:		# Refs: 0x0000001C
     .ent sceLoadCorePrimarySyscallHandler
 sceLoadCorePrimarySyscallHandler:
     lui        $v0, %hi(g_ToolBreakMode)    
-	lw         $v0, %lo(g_ToolBreakMode)($v0) # Data ref 0x000083C4 
-	beq        $zr, $v0, error # if (g_ToolBreakMode == 0) 
+	lw         $v0, %lo(g_ToolBreakMode)($v0) 
+	beq        $zr, $v0, error # if (g_ToolBreakMode == 0) goto error;
 	nop        
-	lui        $v0, 0x1
-	addiu      $v0, $v0, -32576 # Data ref 0x000080C0
+	lui        $v0, %hi(g_SyscallIntrRegSave)
+	addiu      $v0, $v0, %lo(g_SyscallIntrRegSave)
 	cfc0       $v1, $16 # Get currentTCB
 	sw         $v0, 0($v1) # and save it
 	cfc0       $v1, $2 # Get COP 0's Status register

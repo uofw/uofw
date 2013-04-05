@@ -17,7 +17,7 @@
  *
  * @return SCE_ERROR_OK, otherwise <0 on error.
  */
-s32 sceClockgenSetup();
+s32 sceClockgenSetup(void);
 
 /**
  * Sets the spectrum spreading mode.
@@ -35,16 +35,16 @@ s32 sceClockgenSetSpectrumSpreading(s32 mode);
  *
  * @return SCE_ERROR_OK, otherwise <0 on error.
  */
-s32 sceClockgenInit();
+s32 sceClockgenInit(void);
 
 /**
- * Deinits the module.
+ * Terminates the module.
  *
  * Deletes the mutex and unregisters the sysevent handler.
  *
  * @return SCE_ERROR_OK.
  */
-s32 sceClockgenEnd();
+s32 sceClockgenEnd(void);
 
 /**
  * Sets the protocol.
@@ -63,7 +63,7 @@ s32 sceClockgenSetProtocol(u32 prot);
  *
  * @return Likely 3, 4, 7, 8, 9, 10 or 15. Another value may indicate that you work at SCE.
  */
-s32 sceClockgenGetRevision();
+s32 sceClockgenGetRevision(void);
 
 /**
  * Gets the CY27040 hardware register value as stored in memory.
@@ -88,28 +88,28 @@ s32 sceClockgenAudioClkSetFreq(u32 freq);
  *
  * @return SCE_ERROR_OK, otherwise <0.
  */
-s32 sceClockgenAudioClkEnable();
+s32 sceClockgenAudioClkEnable(void);
 
 /**
  * Disables the audio clock.
  *
  * @return SCE_ERROR_OK, otherwise <0.
  */
-s32 sceClockgenAudioClkDisable();
+s32 sceClockgenAudioClkDisable(void);
 
 /**
  * Enables the lepton clock (managing the UMD reader).
  *
  * @return SCE_ERROR_OK, otherwise <0.
  */
-s32 sceClockgenLeptonClkEnable();
+s32 sceClockgenLeptonClkEnable(void);
 
 /**
  * Disables the lepton clock (managing the UMD reader).
  *
  * @return SCE_ERROR_OK, otherwise <0.
  */
-s32 sceClockgenLeptonClkDisable();
+s32 sceClockgenLeptonClkDisable(void);
 
 /** @} */
 

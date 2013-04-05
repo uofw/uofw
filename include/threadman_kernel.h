@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -16,6 +16,11 @@ typedef struct
     SceSize     size;
     SceUID      stackMpid;
 } SceKernelThreadOptParam;
+
+/* thread priority */
+#define SCE_KERNEL_USER_HIGHEST_PRIORITY        16
+#define SCE_KERNEL_MODULE_INIT_PRIORITY         32
+#define SCE_KERNEL_USER_LOWEST_PRIORITY         111
 
 SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, int initPriority,
                              int stackSize, SceUInt attr, SceKernelThreadOptParam *option);

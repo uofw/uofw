@@ -1,4 +1,4 @@
-/** Copyright (C) 2011, 2012 The uOFW team
+/** Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.\n
 */
 
@@ -21,6 +21,15 @@
 
 /** The module is not a resident one, meaning it won't stay in memory and act as a resident library. */
 #define SCE_KERNEL_NO_RESIDENT                  (1)
+
+/** Library number category minor. */
+#define LIBRARY_VERSION_MINOR                   (0)
+
+/** Library number category major. */
+#define LIBRARY_VERSION_MAJOR                   (1)
+
+/** Current number category size for libraries. */
+#define LIBRARY_VERSION_NUMBER_CATEGORY_SIZE    (2)
 
 /** The length of the old resident library entry table format (without the members unk16 - uk19). */
 #define LIBRARY_ENTRY_TABLE_OLD_LEN             (4)
@@ -157,7 +166,7 @@ typedef struct {
      * register another version of an already registered resident library, make sure that the new 
      * library has a higher version than all its currently registered versions.
      */
-    u8   version[2]; //4
+    u8   version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //4
     /** The library's attributes. One or more of ::SceLibAttr. */
     s16  attribute; //6
     /** 
@@ -195,7 +204,7 @@ typedef struct {
      * library shouldn't be higher than the version(s) of the corresponding resident library/libraries. 
      * Linking won't be performed in such a case.
      */
-	u8 version[2]; //4
+	u8 version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //4
     /** The library's attributes. Can be set to either SCE_LIB_NO_SPECIAL_ATTR or SCE_LIB_WEAK_IMPORT. */
 	u16 attribute; //6
     /**
@@ -244,7 +253,7 @@ typedef struct SceStubLibrary {
     /** 
      * The version of the library. This member is set by the corresponding stub library entry table. 
      */
-    u8 version[2]; //12
+    u8 version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //12
     /** 
      * The library's attributes. This member is set by the corresponding stub library entry table. 
      */
@@ -296,7 +305,7 @@ typedef struct SceResidentLibrary {
      * The version of the library. This member is set by the corresponding resident library entry 
      * table. 
      */
-    u8 version[2]; //8
+    u8 version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //8
     /** 
      * The library's attributes. This member is set by the corresponding resident library entry table. 
      */
@@ -399,7 +408,7 @@ typedef struct {
     /** Attributes. */
     u32 attr; //16
     /** Unknown. */
-    s32 unk_20; //20
+    s32 unk20; //20
     /** The size of the arguments passed to the module's entry function? */
     u32 argSize; //24
     SceUID argPartId; //28
@@ -594,7 +603,7 @@ typedef struct SceModule {
      * The version of the module. Consists of a major and minor part. There can be several modules 
      * loaded with the same name and version.
      */
-	u8 version[2]; //6
+	u8 version[MODULE_VERSION_NUMBER_CATEGORY_SIZE]; //6
     /** The module's name. There can be several modules loaded with the same name. */
 	char modName[SCE_MODULE_NAME_LEN]; //8
     /** Unknown. */

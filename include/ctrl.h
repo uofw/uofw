@@ -96,7 +96,7 @@ typedef struct {
     /** Unknown. */
     s32 unk1;
     /** Unknown. */
-    s32 (*func)(int);
+    s32 (*func)(s32);
 } SceCtrlUnkStruct;
 
 /**

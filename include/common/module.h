@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -6,17 +6,48 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
-#define SCE_MODULE_NAME_LEN         (27)
+/** The maximum length of a module name. */
+#define SCE_MODULE_NAME_LEN                     (27)
 
+/** SceModuleInfo.modVersion */
+#define MODULE_VERSION_MINOR                    (0)
+#define MODULE_VERSION_MAJOR                    (1)
+#define MODULE_VERSION_NUMBER_CATEGORY_SIZE     (2) /* current number category size */
+
+/** Module Info section data. */
 typedef struct  {
+    /** 
+     * The attributes of a module. Bitwise OR'ed values from ::SceModuleAttribute 
+     * and ::SceModulePrivilegeLevel. 
+     */
     u16 modAttribute;
-    u8 modVersion[2];
+    /** The module version. Contains two number categories, minor, major. */
+    u8 modVersion[MODULE_VERSION_NUMBER_CATEGORY_SIZE];
+    /** The name of the module. */
     char modName[SCE_MODULE_NAME_LEN];
+    /** Unknown. */
     s8 terminal;
+    /** The global pointer of the module. */
     void *gpValue;
+    /** 
+     * Pointer to the first resident library entry table of the module. 
+     * This section is known as ".lib.ent". 
+     */
     void *entTop;
+    /** 
+     * Pointer to the last line of the ,lib.ent section. This line is always 0 and 
+     * is known as ".lib.ent.btm". 
+     */
     void *entEnd;
+    /** 
+     * Pointer to the first stub library entry table of the module. 
+     * This section is known as "lib.stub". 
+     */
     void *stubTop;
+    /** 
+     * Pointer to the last line of the lib.stub section. This line is always 0 and 
+     * is known as ".lib.stub.btm". 
+     */
     void *stubEnd;
 } SceModuleInfo;
 
@@ -66,7 +97,9 @@ enum SceModulePrivilegeLevel {
     SCE_MODULE_MS                   = 0x0200,
     /** Module Gamesharing. */
     SCE_MODULE_USB_WLAN             = 0x0400,
+    /** Application module. */
     SCE_MODULE_APP                  = 0x0600,
+    /** VSH module. */
     SCE_MODULE_VSH                  = 0x0800,
     /** Highest permission. */
     SCE_MODULE_KERNEL               = 0x1000,
@@ -76,6 +109,9 @@ enum SceModulePrivilegeLevel {
     SCE_MODULE_KIRK_SEMAPHORE_LIB   = 0x4000,
 };
 
+#define SCE_MODINFO_SECTION_NAME        ".rodata.sceModuleInfo"
+
+/** Release X.Y.Z -> 0xXXYYZZZZ */
 #define SDK_VERSION                     0x06060010
 #define SCE_SDK_VERSION(ver)            const int module_sdk_version = ver
 
@@ -86,7 +122,7 @@ enum SceModulePrivilegeLevel {
 #define SCE_MODULE_REBOOT_PHASE(name)   int module_reboot_phase(void) __attribute__((alias(name)))
 #define SCE_MODULE_STOP(name)           int module_stop(void) __attribute__((alias(name)))
 
-#define SCE_MODULE_INFO(name, attributes, major_version, minor_version) \
+#define SCE_MODULE_INFO(name, attributes, majorVersion, minorVersion) \
     __asm__ (                                                       \
     "    .set push\n"                                               \
     "    .section .lib.ent.top, \"a\", @progbits\n"                 \
@@ -111,9 +147,9 @@ enum SceModulePrivilegeLevel {
     extern char __lib_ent_top[], __lib_ent_bottom[];                \
     extern char __lib_stub_top[], __lib_stub_bottom[];              \
     const SceModuleInfo module_info                                 \
-        __attribute__((section(".rodata.sceModuleInfo"),            \
+        __attribute__((section(SCE_MODINFO_SECTION_NAME),            \
                    aligned(16), unused)) = {                        \
-      attributes, { minor_version, major_version }, name, 0, _gp,   \
+      attributes, { minorVersion, majorVersion }, name, 0, _gp,   \
       __lib_ent_top, __lib_ent_bottom,                              \
       __lib_stub_top, __lib_stub_bottom                             \
     }

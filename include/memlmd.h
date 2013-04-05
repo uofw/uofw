@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -10,10 +10,9 @@
 #define	MEMLMD_H
 
 #include "common_header.h"
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
+    
+/** The internal name of the MEMLMD module. */
+#define MEMLMD_MODULE_NAME          "memlmd"
 
 /**	
  * Decrypts a module. Asynced mode.
@@ -85,11 +84,6 @@ s32 memlmd_6192F715(u8 *addr, u32 size);
  * @return 0 on success.
  */
 s32 memlmd_2F3D7E2D(void);
-
-
-#ifdef	__cplusplus
-}
-#endif
 
 #endif	/* MEMLMD_H */
 

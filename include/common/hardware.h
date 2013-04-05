@@ -9,6 +9,8 @@
 #define HW(addr) (*(vs32 *)(addr))
 #define HWPTR(addr) ((vs32 *)(addr))
 
+#define RAM_TYPE_32_MB      (1)
+#define RAM_TYPE_64_MB      (2)
 #define HW_RAM_SIZE         0xBC100040
 
 #define HW_TIMER_0          0xBC500000
