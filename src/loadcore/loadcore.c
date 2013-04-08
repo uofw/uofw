@@ -1305,22 +1305,23 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
              g_loadCore.bootCallBacks = NULL; //0x00001A5C
         
          //0x00001A60 & 0x00001A78 - 0x00001A90
-         for (j = 0; g_loadCore.bootCallBacks[j].bootCBFunc != NULL; j++) {  
-              if (((s32)(g_loadCore.bootCallBacks[j].bootCBFunc) & 3) == i) { //0x00001A7C                   
-                  bootCbFunc = (SceKernelBootCallbackFunction)(((u32)g_loadCore.bootCallBacks[j].bootCBFunc) & ~0x3); //0x00001B18
+         for (j = 0; bootCallbacks[j].bootCBFunc != NULL; j++) {  
+              if (((s32)(bootCallbacks[j].bootCBFunc) & 3) == i) { //0x00001A7C                   
+                  bootCbFunc = (SceKernelBootCallbackFunction)(((u32)bootCallbacks[j].bootCBFunc) & ~0x3); //0x00001B18
                   if (i == 3) //0x00001B1C 
-                      bootCbFunc((s32)(((void *)g_loadCore.bootCallBacks) + 2), 1, NULL); //0x00001A80 & 0x00001B44    
+                      bootCbFunc((s32)(((void *)&bootCallbacks[j]) + 2), 1, NULL); //0x00001A80 & 0x00001B44    
                   else
-                      bootCbFunc((s32)g_loadCore.bootCallBacks, 1, NULL); //0x00001B34              
+                      bootCbFunc((s32)bootCallbacks, 1, NULL); //0x00001B34              
               }
          }
          if (i == 2) { //0x00001A94
              //0x00001AE0 & 00001AF0 - 0x00001B14
-             for (; j > 0; j--) {
-                  if (((u32)g_loadCore.bootCallBacks[j].bootCBFunc & 3) == 3) //0x00001B00
+             while (j > 0) {
+                 j--; //0x00001AF0
+                  if (((u32)bootCallbacks[j].bootCBFunc & 3) == 3) //0x00001B00
                       break;
                  
-                  g_loadCore.bootCallBacks[j].bootCBFunc = NULL; //0x00001B0C
+                  bootCallbacks[j].bootCBFunc = NULL; //0x00001B0C
              }
         }
     }   
