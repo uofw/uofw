@@ -1,9 +1,9 @@
-# Copyright (C) 2011, 2012 The uOFW team
+# Copyright (C) 2011, 2012, 2013 The uOFW team
 # See the file COPYING for copying permission.
 
+#include "../../include/common_asm.h"
+
     .text
-    .set noat
-    .set noreorder
 
     .global loadCoreCpuSuspendIntr
     .global loadCoreCpuResumeIntr
@@ -15,8 +15,8 @@
 
     .ent loadCoreCpuSuspendIntr
 loadCoreCpuSuspendIntr:
-    mfic       $v0, $0
-	mtic       $zero, $0
+    mfic       $v0, INTR_CTRL_STATE
+	mtic       $zero, INTR_CTRL_STATE
 	beqz       $v0, loc_000076A4
 	nop        
 	nop        
@@ -35,7 +35,7 @@ loc_000076A4:
 
     .ent loadCoreCpuResumeIntr
 loadCoreCpuResumeIntr:
-    mtic       $a0, $0
+    mtic       $a0, INTR_CTRL_STATE
 	nop        
 	nop        
 	nop        

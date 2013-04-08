@@ -3,7 +3,7 @@
 */
 
 #ifndef COMMON_INCLUDED
-# error "Only include common_imp.h or common_header.h!"
+# error "Only include common_asm.h, common_imp.h or common_header.h!"
 #endif
 
 #define SCE_ERROR_OK                                            0x0
