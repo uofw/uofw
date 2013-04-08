@@ -1,8 +1,14 @@
+                        uOFW PSP kernel coding style
+
 This document is about the preferred uOFW coding style. Please stick to the style
-presented in this guide to make working on uOFW as a team easier.
+presented in this guide to make working on uOFW as a team easier as far as possible. 
+We know that coding style is very personal and we don't say you have to completely
+follow it, however, your own used coding style for uOFW should not differ too much
+from this one.
 Thank you.
 
-1) Indentation:
+
+                        Chapter 1: Indentation
 
 Indentations are 4 bytes wide. The reason behind this is to visibly show
 where a block starts and where it ends.
@@ -27,13 +33,14 @@ case 'A':
     break;
 }
 
-2) Breaking long lines:
 
-Make sure to not write code lines longer than 120 characters. If necessary, break lines exceeding the 120
-characters limit like below:
+                        Chapter 2: Breaking long lines
 
-SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_NO_STOP | SCE_MODULE_SINGLE_LOAD |
-                                         SCE_MODULE_SINGLE_START, 1, 1);
+Make sure to not write code lines longer than 120 characters. If necessary, 
+break lines exceeding the 120 characters limit like below:
+
+SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD 
+                                         | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 
 This applies to functions as well.
 
@@ -44,7 +51,7 @@ if (a == 1 ||
     doSomething();
 
 
-3) Placing Braces and Spaces:
+                        Chapter 3: Placing Braces and Spaces
 
 Put the opening brace last on the line, and put the closing brace first, thusly:
 
@@ -95,7 +102,7 @@ void function(void)
     doSomethingCool();
 }
 
-Space policy:
+                        Space policy:
 
 Put a space after these keywords: if, switch, case, do, while, for, return.
 
@@ -142,7 +149,8 @@ When declaring a pointer to a function, this way suffices:
 
 s32 (*funcPtr)(void);
 
-4) Type using:
+
+                        Chapter 4: Type using
 
 Don't use type's like (unsigned) short, (unsigned) int as their size is NOT
 the same on all machines.
@@ -159,6 +167,11 @@ s8 project[] = "uOFW";
 
 Also use these data types for casts, when necessary.
 
+Use the appropriate type for a variable, i.e. if you have a boolean variable, 
+use "SceBool" and not "u32". Another example: Use "SceSize" for variables holding
+sizes of a file, a memory block, etc. You can find a list of possible types in
+"/include/common/types.h".
+
 When declaring a structure type using a typedef, do it this way:
 
 typedef struct {
@@ -174,13 +187,15 @@ typedef struct _Point {
     s32 y;
 } Point;
 
-Except if defining the structure itself is needed, in example if the structure references itself.
-In that case, use:
+Except if defining the structure itself is needed, in example if the structure 
+references itself. In that case, use:
+
 typedef struct Point {
     struct Point *next;
 } Point;
 
-5) Naming:
+
+                        Chapter 5: Naming
 
 Use simple, short names, easy to understand. For local variables, it is even okay
 to use a variable name consisting of only one letter:
@@ -213,40 +228,41 @@ matter and not primarily the name length.
 In order to clearly distinguish global variables from local variables
 (especially helpful in large functions), use a "g_" prefix for global's.
 
-/* global mutexId */
+/* global mutex id */
 s32 g_MutexId;
 
 Don't use underscores in variable names, except for the "g_" prefix for globals. 
 Instead, use capital letters.
 
 /* Bad */
-u32 is_uofw_cool;
+SceBool is_uofw_cool;
 
 /* Good */
-u32 isUofwCool = 1; /* Indeed. */
+SceBool isUofwCool = SCE_TRUE; /* Indeed. */
 
-6) Don't use magic numbers!
+
+                        Chapter 6: Magic numbers
 
 Using magic numbers is bad, as only the author of the C file in which they occur
 will know (for a little while) what they express.
 Instead, use a #define statement or an enumeration to give numbers a meaningful name.
 
-The approach is to give hardware important #defines a "PSP_" prefix and general #defines shared with
-other files a "SCE_" prefix, as in "SCE_MODULE_KERNEL".
+The approach is to give hardware important #defines a "PSP_" prefix and general 
+#defines shared with other files a "SCE_" prefix, as in "SCE_MODULE_KERNEL".
 
 Hardware-important example #define from ctrl.c:
 
 /* This is bad, what SYSCON transmit command does 7 represent? */
-g_Ctrl.sysPacket[0].tx_cmd = 7;
+g_ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = 7;
 
 Thus, we have the following #define in syscon.h:
 #define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY    7
 
 /* Aha, "7" stands for a data tranfer of all digital buttons (no analog pad data). */
-ctrl.sysPacket[0].tx_cmd = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY;
+g_ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY;
 
 The same goes for return codes. uOFW's error file is located in 
-/uOFW/trunk/include/common/error.h. Use the defined errors instead of magic numbers.
+"/include/common/error.h." Use the defined errors instead of magic numbers.
 
 A similar approach for for/while-loops:
 
@@ -255,7 +271,7 @@ u32 g_Array[10];
 
 u32 i;
 for (i = 0; i < 10; i++)
-     g_Array[i] = 0;
+    g_Array[i] = 0;
 
 /* Good code */
 #define ARRAY_SIZE 10
@@ -264,10 +280,10 @@ u32 g_Array[ARRAY_SIZE];
 
 u32 i;
 for (i = 0; i < ARRAY_SIZE; i++)
-     g_Array[i] = 0;
+    g_Array[i] = 0;
 
 
-7) Structure initialization:
+                        Chapter 7: Structure initialization
 
 Assume we have the following structure:
 
@@ -291,24 +307,26 @@ Use the sizeof operator when a structure has a 'size' field to be filled with th
 structure size (sizeof(structureType);)
 
 
-8) Accessing hardware registers:
+                        Chapter 8: Accessing hardware registers
 
 Hardware registers are stored in memory starting at 0xBC000000 and are _special_
 compared to global variables. They have to be written synchronously, which means
 you have to tell the compiler that it can't invert two hardware operations.
 
-If you want to load from/store to a hardware register, use the HW(addr) macro.
+If you want to load from/store to a hardware register, use the HW(addr) macro. 
+You can find this macro, and other useful define's, in "/include/common/hardware.h".
 
-u32 hwRegTmp;
+u32 oldRamSize;
 
-hwRegTmp = HW(0xBC000000);
-HW(0xBC000000) = 1;
+oldRamSize = HW(HW_RAM_SIZE);
+HW(HW_RAM_SIZE) = RAM_TYPE_64_MB;
 
 
-9) Comments:
+                        Chapter 9: Comments
 
 All exported functions of a module and important data structures as well as
-#defines shared among .c files have to be put into a header file used as a module documentation.
+#defines shared among .c files have to be put into a header file used as a module 
+documentation.
 
 Exported functions are commented like this:
 
@@ -350,7 +368,7 @@ Here, everything about the parameters a and b is obvious, so there is no need fo
 explaining them.
 Also note that we use "Returns..." instead of "@return" for header functions.
 
-Comments inside of functions:
+                        Comments inside of functions:
 
 When necessary, comment hard-to-understand code parts, explaining WHAT the code is doing.
 The reader of the .c file probably knows a lot less than you (as you reversed the module) 
@@ -368,26 +386,31 @@ Longer comments differ from short comments:
  */
 
 Use "//" for temporary comments such as "//TODO: " or address comments like 
-sceKernelCpuResumeIntr(suspendFlag); //0x000020A8
+sceKernelCpuResumeIntr(intrState); //0x000020A8
 
 Make sure to use enough address comments to be able to fix every line in in your
 reversed code file fast and easily. Keep a local copy of your reversed code files
 with included address comments and, optionally, TODO-comments, and upload a file version 
-WITHOUT address-, TODO-comments to the uOFW svn, as soon as your module fully works.
+WITHOUT address-, TODO-comments to the uOFW repositiory, as soon as your module fully works.
 
-10) Switches:
+
+                        Chapter 10: Switches
 
 Put a break at the end of each "case" and at the end of the "default".
 Don't skip lines between the different labels ("case"s and "default"s).
 In example:
+
+#define UOFW_IS_COOL            1
+#define UOFW_IS_VERY_COOL       2
+
 switch (type) {
-case 1:
-    do1();
+case UOFW_IS_COOL:
+    MakeUofwVeryCool();
     break;
-case 2:
-    do2();
+case UOFW_IS_VERY_COOL:
+    MakeUofwSuperAwesome();
     break;
 default:
-    doDefault();
+    SetUofwIsHappy();
     break;
 }
