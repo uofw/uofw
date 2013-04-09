@@ -1263,9 +1263,11 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     }  
     //0x00001978 - 0x000019B8
     for (i = 0; i < loadCoreBootInfo->numProtects; i++) {
-         if (((loadCoreBootInfo->protects[i].attr & 0xFFFF) == 0x200) && (loadCoreBootInfo->protects[i].attr & 0x10000)) { //0x000019A8 & 0x00001C6C
+         if ((GET_PROTECT_INFO_TYPE(loadCoreBootInfo->protects[i].attr) == 0x200) 
+                 && (GET_PROTECT_INFO_STATUS(loadCoreBootInfo->protects[i].attr) & SCE_PROTECT_INFO_STATUS_IS_ALLOCATED)) { //0x000019A8 & 0x00001C6C
              sceKernelFreePartitionMemory(loadCoreBootInfo->protects[i].partId); //0x00001C74
-             loadCoreBootInfo->protects[i].attr &= ~0x10000; //0x00001C84
+             loadCoreBootInfo->protects[i].attr = REMOVE_PROTECT_INFO_STATUS(SCE_PROTECT_INFO_STATUS_IS_ALLOCATED, 
+                                                                             loadCoreBootInfo->protects[i].attr); //0x00001C84
          }
     }
     sceKernelSetGetLengthFunction(NULL); //0x000019BC
@@ -2299,7 +2301,7 @@ s32 sceKernelLoadRebootBin(u8 *file, u32 size)
     s32 status;
     SceSysmemPartitionInfo partInfo;   
     
-    partInfo.size = 16; //0x00003F10
+    partInfo.size = sizeof(SceSysmemPartitionInfo); //0x00003F10
     status = sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, &partInfo); //0x00003F0C
     if (status < SCE_ERROR_OK)
         return LOADCORE_ERROR; //0x00003F14

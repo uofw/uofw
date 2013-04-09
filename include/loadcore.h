@@ -46,6 +46,62 @@
 /** The possible number of libraries with different hash values. */
 #define LOADCORE_LIB_HASH_TABLE_SIZE            (128)
 
+/* The protected information block is allocated. */
+#define SCE_PROTECT_INFO_STATE_IS_ALLOCATED     (1 << 0)
+
+/* Indicates the type of the protected information block is a file name. */
+#define SCE_PROTECT_INFO_TYPE_FILE_NAME         (0x2)
+
+/* Indicates the type of the protected information block is a VSH param. */
+#define SCE_PROTECT_INFO_TYPE_VSH_PARAM         (0x4)
+
+/* Indicates the type of the protected information block is a disc image. */
+#define SCE_PROTECT_INFO_TYPE_DISC_IMAGE        (0x40)
+
+/* Indicates the type of the protected information block is a user param. */
+#define SCE_PROTECT_INFO_TYPE_USER_PARAM        (0x100)
+
+/* Indicates the type of the protected information block is a param.sfo. */
+#define SCE_PROTECT_INFO_TYPE_PARAM_SFO         (0x400)
+
+/** 
+ * Get the state of a protected information block. 
+ * 
+ * @param attr SceLoadCoreProtectInfo.attr
+ */
+#define GET_PROTECT_INFO_STATE(attr)            ((u32)(attr) >> 16)
+
+/** 
+ * Set a new state of a protected information block. 
+ * 
+ * @param state The new state to set.
+ * @param src SceLoadCoreProtectInfo.attr
+ */
+#define SET_PROTECT_INFO_STATE(state, src)      (((state) << 16) | (src))
+
+/** 
+ * Remove a state entry of a protected information block. 
+ * 
+ * @param state The state entry to remove.
+ * @param src SceLoadCoreProtectInfo.attr
+ */
+#define REMOVE_PROTECT_INFO_STATE(state, src)   ((~((state) << 16)) & (src))
+
+/**
+ * Get the type of a protected information block. 
+ * 
+ * @param attr SceLoadCoreProtectInfo.attr
+ */
+#define GET_PROTECT_INFO_TYPE(attr)             ((attr) & 0xFFFF)
+
+/**
+ * Set the type of a protected information block.
+ * 
+ * @param type The new type to set.
+ * @param src SceLoadCoreProtectInfo.attr
+ */
+#define SET_PROTECT_INFO_TYPE(type, src)        (((type) & 0xFFFF) | (src))
+
 /** 
  * Executable File Attributes.
  */
@@ -380,7 +436,18 @@ typedef struct {
     u32 addr;
     /** The size of the protected info. */
     u32 size; // 4
-    /** The attributes of the protected info. */
+    /**
+     *   31         16 15        0\n
+     *  +-------------+-----------+\n
+     *  |  S T A T E  |  T Y P E  |\n
+     *  +-------------+-----------+\n
+     * 
+     * Bits 31 - 16:
+     *      The current state of the protected information.
+     * 
+     * Bits 15 - 0:
+     *      The type of the protected information.
+     */
     u32 attr; // 8
     /** The partition ID of the protected info block. */
     SceUID partId; // 12
