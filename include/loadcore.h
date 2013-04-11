@@ -46,22 +46,22 @@
 /** The possible number of libraries with different hash values. */
 #define LOADCORE_LIB_HASH_TABLE_SIZE            (128)
 
-/* The protected information block is allocated. */
+/** The protected information block is allocated. */
 #define SCE_PROTECT_INFO_STATE_IS_ALLOCATED     (1 << 0)
 
-/* Indicates the type of the protected information block is a file name. */
+/** Indicates the type of the protected information block is a file name. */
 #define SCE_PROTECT_INFO_TYPE_FILE_NAME         (0x2)
 
-/* Indicates the type of the protected information block is a VSH param. */
+/** Indicates the type of the protected information block is a VSH param. */
 #define SCE_PROTECT_INFO_TYPE_VSH_PARAM         (0x4)
 
-/* Indicates the type of the protected information block is a disc image. */
+/** Indicates the type of the protected information block is a disc image. */
 #define SCE_PROTECT_INFO_TYPE_DISC_IMAGE        (0x40)
 
-/* Indicates the type of the protected information block is a user param. */
+/** Indicates the type of the protected information block is a user param. */
 #define SCE_PROTECT_INFO_TYPE_USER_PARAM        (0x100)
 
-/* Indicates the type of the protected information block is a param.sfo. */
+/** Indicates the type of the protected information block is a param.sfo. */
 #define SCE_PROTECT_INFO_TYPE_PARAM_SFO         (0x400)
 
 /** 
