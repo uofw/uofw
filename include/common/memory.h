@@ -28,10 +28,10 @@
 
 #define REBOOT_BASE                     0x88600000  /* K0 segment (cached) */
 
-#define UCACHED(ptr) (void *)((u32)(void *)(ptr) & 0x1FFFFFFF) /* KU0 - cached. */
-#define KCACHED(ptr) (void *)((u32)(void *)(ptr) | K0_BASE) /* K0 - cached */
-#define KUNCACHED(ptr) (void *)(K1_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF)) /* K1 - uncached */
-#define UUNCACHED(ptr) (void *)(KU1_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF)) /* KU1 - uncached */
+#define UCACHED(ptr)    (void *)((u32)(void *)(ptr) & 0x1FFFFFFF)                /* KU0 - cached. */
+#define KCACHED(ptr)    (void *)(K0_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))    /* K0 - cached */
+#define KUNCACHED(ptr)  (void *)(K1_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))    /* K1 - uncached */
+#define UUNCACHED(ptr)  (void *)(KU1_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))   /* KU1 - uncached */
 
 /* Alignment */
 #define UPALIGN256(v) (((v) + 0xFF) & 0xFFFFFF00)
