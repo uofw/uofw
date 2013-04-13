@@ -17,6 +17,7 @@
 #include <threadman_kernel.h>
 
 #include <loadexec_kernel.h>
+#include <loadexec_user.h>
 
 #include "loadexec_int.h"
 #include "reboot.h"
