@@ -15,9 +15,17 @@ void *sceKernelDeci2pReferOperations();
 void *sceKernelSm1ReferOperations();
 
 void Kprintf(const char *format, ...);
-int sceKernelDipsw(int);
+
+int sceKernelDipsw(u32 reg);
+u32 sceKernelDipswAll();
+u32 sceKernelDipswLow32();
+u32 sceKernelDipswHigh32();
+int sceKernelDipswSet(u32 reg);
+int sceKernelDipswClear(u32 reg);
+int sceKernelDipswCpTime(void);
 
 int sceKernelIsToolMode(void);
+int sceKernelIsDVDMode(void);
 
 int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugRead(SceUID fd, const void *data, SceSize size);

@@ -6,7 +6,7 @@ OBJS = kl4e.o loadexec.o
 
 #DEBUG = 1
 
-LIBS =
+LIBS = -lSysMemForKernel -lsceSuspendForKernel -lKDebugForKernel -lLoadCoreForKernel -lInterruptManagerForKernel -lSysclibForKernel -lThreadManForKernel -lIoFileMgrForKernel -lModuleMgrForKernel -lInitForKernel -lUtilsForKernel
 
 include ../../lib/build.mak
 

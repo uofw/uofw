@@ -1,5 +1,6 @@
-#include "common.S"
+#include "common_asm.h"
 
+    .globl decodeKL4E
 decodeKL4E:
     addiu      $sp, $sp, -2680
     sw         $s2, 2664($sp)

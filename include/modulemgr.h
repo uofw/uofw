@@ -26,6 +26,10 @@ enum ModuleMgrMcbStatus {
 	MCB_STATUS_UNLOADED = 8
 };
 
+s32 ModuleMgrForKernel_C3DDABEF(SceUID, void *, void *);
+s32 sceKernelRebootBeforeForUser(void *);
+s32 sceKernelRebootPhaseForKernel(s32, void *, s32, s32);
+s32 sceKernelRebootBeforeForKernel(void *, s32, s32, s32);
 
 #endif	/* MODULEMGR_H */
 

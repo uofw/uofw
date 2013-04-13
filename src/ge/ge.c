@@ -476,11 +476,11 @@ int _sceGeInitCallback3(int arg0 __attribute__ ((unused)), int arg1 __attribute_
 
 int _sceGeInitCallback4()
 {
-    void *str = sceKernelGetGameInfo();
-    if (str != NULL) {
+    SceKernelGameInfo *info = sceKernelGetGameInfo();
+    if (info != NULL) {
         u32 syscOp = MAKE_SYSCALL(sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr));
         int oldIntr = sceKernelCpuSuspendIntr();
-        if (strcmp(str + 68, sadrupdate_bypass.name) == 0) {
+        if (strcmp(info->name, sadrupdate_bypass.name) == 0) {
             u32 *ptr = sadrupdate_bypass.ptr;
             if (ptr[0] == JR_RA && ptr[1] == syscOp) {
                 // 0804
@@ -1476,9 +1476,9 @@ int _sceGeQueueInit()
     g_AwQueue.listEvFlagIds[0] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.listEvFlagIds[1] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.syscallId = sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr);
-    void *gameInfo = sceKernelGetGameInfo();
+    SceKernelGameInfo *info = sceKernelGetGameInfo();
     g_AwQueue.patched = 0;
-    if (gameInfo != NULL && strcmp(gameInfo + 68, "ULJM05127") == 0)
+    if (info != NULL && strcmp(info->str, "ULJM05127") == 0)
         g_AwQueue.patched = 1;
     return 0;
 }

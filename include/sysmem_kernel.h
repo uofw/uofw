@@ -91,6 +91,25 @@ int sceKernelGetUIDcontrolBlock(SceUID uid, SceSysmemUIDControlBlock **block);
 s32 sceKernelGetUIDcontrolBlockWithType(SceUID uid, SceSysmemUIDControlBlock* type, SceSysmemUIDControlBlock** block);
 void sceKernelCallUIDObjCommonFunction(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, va_list ap);
 
+typedef struct {
+    u32 size;
+    u32 unk4;
+    u32 unk8;
+    u32 unk12;
+    u32 unk16;
+    u32 unk20;
+    u32 unk24;
+    u32 unk28;
+    u32 unk32;
+    u32 unk36;
+    void *unk40;
+    u32 unk44;
+    u32 unk48;
+    u32 unk52;
+} SceKernelSysmemBlockInfo;
+
+s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceKernelSysmemBlockInfo *info);
+
 SceUID sceKernelCreateHeap(SceUID partitionid, SceSize size, int unk, const char *name);
 void *sceKernelAllocHeapMemory(SceUID heapid, SceSize size);
 int sceKernelFreeHeapMemory(SceUID heapid, void *block);
@@ -99,6 +118,64 @@ SceSize sceKernelHeapTotalFreeSize(SceUID heapid);
 
 SceKernelUsersystemLibWork *sceKernelGetUsersystemLibWork(void);
 s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_lazy)(s32, void*), SceGeLazy *lazy);
+
+typedef struct {
+    u32 size;
+    u32 unk4;
+    u32 unk8;
+    u32 unk12;
+    u32 unk16;
+    u32 unk20;
+    u32 unk24;
+    u32 unk28;
+    u32 unk32;
+    u32 unk36;
+    u32 unk40;
+    u32 unk44;
+    u32 unk48;
+    u32 unk52;
+    u32 unk56;
+    u32 unk60;
+    u32 unk64;
+    char name[4]; // size unsure: it's longer than this
+    u32 unk72;
+    u32 unk76;
+    u32 unk80;
+    u32 unk84;
+    u32 unk88;
+    u32 unk92;
+    u32 unk96;
+    u32 unk100;
+    u32 unk104;
+    u32 unk108;
+    u32 unk112;
+    u32 unk116;
+    u32 unk120;
+    u32 unk124;
+    u32 unk128;
+    u32 unk132;
+    u32 unk136;
+    u32 unk140;
+    u32 unk144;
+    u32 unk148;
+    u32 unk152;
+    u32 unk156;
+    u32 unk160;
+    u32 unk164;
+    u32 unk168;
+    u32 unk172;
+    u32 unk176;
+    u32 unk180;
+    u32 unk184;
+    u32 unk188;
+    u32 unk192;
+    u32 unk196;
+    u32 unk200;
+    u32 unk204;
+    u32 unk208;
+    u32 unk212;
+    u32 unk216;
+} SceKernelGameInfo;
 
 void *sceKernelGetGameInfo(void);
 void *sceKernelGetAWeDramSaveAddr(void);
@@ -133,6 +210,18 @@ enum ScePspHwModels {
 };
 
 int sceKernelGetModel(void);
+
+int sceKernelGetAllowReplaceUmd(int *);
+
+int sceKernelSetRebootKernel(void *);
+
+int sceKernelSetSystemStatus(u32);
+
+int sceKernelGetInitialRandomValue(void);
+
+int sceKernelSetDdrMemoryProtection(int, int, int);
+
+int sceKernelSysMemRealMemorySize(void);
 
 #endif
 

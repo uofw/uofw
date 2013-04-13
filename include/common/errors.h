@@ -83,6 +83,7 @@
 #define SCE_ERROR_ERRNO_NO_CACHE                                0x8001B005
 
 #define SCE_ERROR_KERNEL_ERROR                                  0x80020001
+#define SCE_ERROR_KERNEL_NOT_IMPLEMENTED                        0x80020002
 #define SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT        0x80020064
 #define SCE_ERROR_KERNEL_INTERRUPTS_ALREADY_DISABLED            0x80020066
 #define SCE_ERROR_KERNEL_NO_TIMER                               0x80020096

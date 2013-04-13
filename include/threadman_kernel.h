@@ -7,6 +7,8 @@
 
 #include "common_header.h"
 
+#include "threadman_user.h"
+
 /* Threads */
 
 typedef s32 (*SceKernelThreadEntry)(SceSize args, void *argp);
@@ -33,6 +35,10 @@ int sceKernelChangeThreadPriority(SceUID thid, int priority);
 int sceKernelGetThreadCurrentPriority(void);
 int sceKernelGetThreadId(void);
 int sceKernelIsUserModeThread(void);
+int sceKernelWaitThreadEnd(SceUID thid, SceUInt *timeout);
+int sceKernelWaitThreadEndCB(SceUID thid, SceUInt *timeout);
+int sceKernelReleaseWaitThread(SceUID thid);
+int sceKernelSuspendAllUserThreads(void);
 
 unsigned int sceKernelGetSystemTimeLow(void);
 int sceKernelGetUserLevel(void);
@@ -177,7 +183,20 @@ int sceKernelCancelAlarm(SceUID alarmid);
 int sceKernelReferAlarmStatus(SceUID alarmid, SceKernelAlarmInfo *info);
 
 /* Callbacks */
+typedef s32 (*SceKernelCallbackFunction)(s32 arg1, s32 arg2, void *arg);
+
+typedef struct {
+    SceSize size;
+    char name[32];
+    SceUID threadId;
+    SceKernelCallbackFunction callback;
+    void *common;
+    s32 notifyCount;
+    s32 notifyArg;
+} SceKernelCallbackInfo;
+
 int sceKernelNotifyCallback(SceUID cb, int arg2);
+int sceKernelReferCallbackStatus(SceUID cb, SceKernelCallbackInfo *status);
 
 /* VPL Functions */
 

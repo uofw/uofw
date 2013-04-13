@@ -22,3 +22,5 @@ int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest);
 
 int sceKernelGzipDecompress(u8 *dest, u32 destSize, const u8 *src, u32 *unk);
 
+int UtilsForKernel_39FFB756(int);
+
