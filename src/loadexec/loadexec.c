@@ -1077,7 +1077,7 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
 {
     s32 oldK1 = pspShiftK1();
     if (sceKernelIsIntrContext() == 0) {
-        if (pspK1IsUserMode()) {
+        if (!pspK1IsUserMode()) {
             s32 iocmd, devcmd;
             // 23EC
             if (sceKernelGetUserLevel() != 4) {
@@ -1329,7 +1329,7 @@ s32 runExecFromThread(u32 args __attribute__((unused)), RunExecParams *opt) // 2
 
     opt->npDrmArg = &npDrmArg;
 
-    memcpy(&npDrmArg.vshParam, opt->vshParam, sizeof opt->vshParam);
+    memcpy(&npDrmArg.vshParam, opt->vshParam, sizeof *opt->vshParam);
     opt->opt4 = &npDrmArg.vshParam;
 
     if (npDrmArg.vshParam.key != NULL) {
