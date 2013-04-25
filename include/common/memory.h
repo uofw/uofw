@@ -26,7 +26,14 @@
 #define SCE_SCRATCHPAD_ADDR_K0          0x80010000  /* K0 segment (cached) */
 #define SCE_SCRATCHPAD_SIZE				0x00004000	/* 16 KB */
 
-#define REBOOT_BASE                     0x88600000  /* K0 segment (cached) */
+#define REBOOT_BASE_ADDR_K0             0x88600000  /* K0 segment (cached) */
+
+/* Userspace memory base address and size */
+#define SCE_USERSPACE_ADDR_KU0          0x08800000  /* KU segment 0 (cached) */
+#define SCE_USERSPACE_ADDR_KU1          0x48800000  /* KU segment 1 (uncached) */
+#define SCE_USERSPACE_ADDR_K0           0x88800000  /* K0 segment (cached) */
+#define SCE_USERSPACE_ADDR_K1           0xA8800000  /* K1 segment (uncached) */
+#define SCE_USERSPACE_SIZE              0x01800000  /* 24 MB */
 
 #define UCACHED(ptr)    (void *)((u32)(void *)(ptr) & 0x1FFFFFFF)                /* KU0 - cached. */
 #define KCACHED(ptr)    (void *)(K0_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))    /* K0 - cached */
@@ -34,6 +41,7 @@
 #define UUNCACHED(ptr)  (void *)(KU1_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))   /* KU1 - uncached */
 
 /* Alignment */
-#define UPALIGN256(v) (((v) + 0xFF) & 0xFFFFFF00)
-#define UPALIGN64(v) (((v) + 0x3F) & 0xFFFFFFC0)
+#define UPALIGN256(v)   (((v) + 0xFF) & 0xFFFFFF00)
+#define UPALIGN64(v)    (((v) + 0x3F) & 0xFFFFFFC0)
+#define UPALIGN16(v)    (((v) + 0xF) & 0xFFFFFFF0)
 #define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)   

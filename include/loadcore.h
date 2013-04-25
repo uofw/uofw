@@ -166,7 +166,7 @@ enum SceLibAttr {
 };
 
 /** Boot Callback function. */
-typedef s32 (*SceKernelBootCallbackFunction)(s32 count, s32 arg, void *opt);
+typedef s32 (*SceKernelBootCallbackFunction)(void *data, s32 arg, void *opt);
 
 /** 
  * This structure represents a function stub belonging to same privilege-level linked libraries, 
@@ -435,7 +435,7 @@ typedef struct {
     /** Start address of the protected info. */
     u32 addr;
     /** The size of the protected info. */
-    u32 size; // 4
+    SceSize size; // 4
     /**
      *   31         16 15        0\n
      *  +-------------+-----------+\n
@@ -469,15 +469,16 @@ typedef struct {
     /** The buffer with the entire file content. */
     u8 *modBuf; //4
     /** The size of the module. */
-    u32 modSize; //8
+    SceSize modSize; //8
     /** Unknown. */
     s32 unk12; //12
     /** Attributes. */
     u32 attr; //16
     /** Unknown. */
-    s32 unk20; //20
+    s32 bootData; //20
     /** The size of the arguments passed to the module's entry function? */
     u32 argSize; //24
+    /** The partition ID of the arguments passed to the module's entry function? */
     SceUID argPartId; //28
 } SceLoadCoreBootModuleInfo;
 
@@ -515,11 +516,11 @@ typedef struct {
      /** Unknown. */
     s32 unk44;
      /** Unknown. */
-    s32 unk48;
+    s32 buildVersion;
      /** Unknown. */
     s32 unk52;
     /** The path/name of a boot configuration file. */
-    u8 *configFile; // 56
+    char *configFile; // 56
     /** Unknown. */
     s32 unk60;
     /** Unknown. */

@@ -137,7 +137,7 @@ typedef struct {
     u32 unk56;
     u32 unk60;
     u32 unk64;
-    char name[4]; // size unsure: it's longer than this
+    char *gameId; // size unsure: it's longer than this
     u32 unk72;
     u32 unk76;
     u32 unk80;
@@ -177,7 +177,7 @@ typedef struct {
     u32 unk216;
 } SceKernelGameInfo;
 
-void *sceKernelGetGameInfo(void);
+SceKernelGameInfo *sceKernelGetGameInfo(void);
 void *sceKernelGetAWeDramSaveAddr(void);
 int sceKernelGetMEeDramSaveAddr(void);
 int sceKernelGetMEeDramSaveSize(void);
@@ -186,6 +186,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 void *sceKernelMemmove(void *dst, const void *src, u32 n);
 void *sceKernelMemset32(void *buf, int c, int size);
 void *sceKernelMemset(void *buf, int c, u32 size);
+void *sceKernelMemmoveWithFill(void *dst, const void *src, SceSize size, int c);
 
 int sceKernelGetCompiledSdkVersion(void);
 
@@ -211,17 +212,30 @@ enum ScePspHwModels {
 
 int sceKernelGetModel(void);
 
+s32 sceKernelQueryMemoryInfo(u32 addr, SceUID *partitionId, SceUID *blockId);
+
+s32 sceKernelFillFreeBlock(SceUID partitionId, u32 c);
+
+void sceKernelMemoryExtendSize(void);
+void sceKernelMemoryShrinkSize(void);
+
 int sceKernelGetAllowReplaceUmd(int *);
 
 int sceKernelSetRebootKernel(void *);
 
-int sceKernelSetSystemStatus(u32);
+int sceKernelGetSystemStatus(void);
+void sceKernelSetSystemStatus(s32 status);
+int sceKernelSetDNAS(int dnas);
+
+int SysMemForKernel_BFE08689(void *buf);
 
 int sceKernelGetInitialRandomValue(void);
 
 int sceKernelSetDdrMemoryProtection(int, int, int);
 
 int sceKernelSysMemRealMemorySize(void);
+
+int SysMemForKernel_40B744A4(int);
 
 #endif
 

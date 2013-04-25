@@ -25,6 +25,7 @@ int sceKernelDipswClear(u32 reg);
 int sceKernelDipswCpTime(void);
 
 int sceKernelIsToolMode(void);
+int sceKernelIsDevelopmentToolMode(void);
 int sceKernelIsDVDMode(void);
 
 int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);

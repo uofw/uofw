@@ -6,9 +6,10 @@
 
 enum SceApplicationType {
     SCE_INIT_APPLICATION_VSH        = 0x100,      
-    SCE_INIT_APPLICATION_UPDATER    = 0x110, /* Might be incorrect. */
+    SCE_INIT_APPLICATION_UPDATER    = 0x110,
     SCE_INIT_APPLICATION_GAME       = 0x200,
     SCE_INIT_APPLICATION_POPS       = 0x300,
+    SCE_INIT_APPLICATION_APP        = 0x400,
 };
 
 enum SceInitApiType {

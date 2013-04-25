@@ -13,8 +13,7 @@
 
 typedef s32 (*SceKernelThreadEntry)(SceSize args, void *argp);
 
-typedef struct
-{
+typedef struct {
     SceSize     size;
     SceUID      stackMpid;
 } SceKernelThreadOptParam;
@@ -43,8 +42,7 @@ int sceKernelSuspendAllUserThreads(void);
 unsigned int sceKernelGetSystemTimeLow(void);
 int sceKernelGetUserLevel(void);
 
-typedef enum
-{
+typedef enum {
     SCE_KERNEL_TMID_Thread = 1,
     SCE_KERNEL_TMID_Semaphore = 2,
     SCE_KERNEL_TMID_EventFlag = 3,
@@ -74,8 +72,7 @@ int sceKernelDeleteMutex(int);
 
 /* Event flags */
 
-enum SceEventFlagWaitTypes
-{
+enum SceEventFlagWaitTypes {
     /** Wait for all bits in the pattern to be set */
     SCE_EVENT_WAITAND = 0,
     /** Wait for one or more bits in the pattern to be set */
@@ -84,8 +81,7 @@ enum SceEventFlagWaitTypes
     SCE_EVENT_WAITCLEAR = 0x20
 };
 
-typedef struct
-{
+typedef struct {
     SceSize     size;
     char        name[32];
     SceUInt     attr;
@@ -119,13 +115,13 @@ int sceKernelTryReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int
 int sceKernelCancelMsgPipe(SceUID uid, int *psend, int *precv);
 
 typedef struct {
-        SceSize size;
-        char    name[32];
-        SceUInt attr;
-        int     bufSize;
-        int     freeSize;
-        int     numSendWaitThreads;
-        int     numReceiveWaitThreads;
+    SceSize size;
+    char    name[32];
+    SceUInt attr;
+    int     bufSize;
+    int     freeSize;
+    int     numSendWaitThreads;
+    int     numReceiveWaitThreads;
 } SceKernelMppInfo;
  
 int sceKernelReferMsgPipeStatus(SceUID uid, SceKernelMppInfo *info);
@@ -136,8 +132,7 @@ typedef struct {
     SceSize     size;
 } SceKernelSemaOptParam;
 
-typedef struct
-{
+typedef struct {
     SceSize     size;
     char        name[32];
     SceUInt     attr;
