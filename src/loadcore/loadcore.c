@@ -1264,9 +1264,9 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     //0x00001978 - 0x000019B8
     for (i = 0; i < loadCoreBootInfo->numProtects; i++) {
          if ((GET_PROTECT_INFO_TYPE(loadCoreBootInfo->protects[i].attr) == 0x200) 
-                 && (GET_PROTECT_INFO_STATUS(loadCoreBootInfo->protects[i].attr) & SCE_PROTECT_INFO_STATUS_IS_ALLOCATED)) { //0x000019A8 & 0x00001C6C
+                 && (GET_PROTECT_INFO_STATE(loadCoreBootInfo->protects[i].attr) & SCE_PROTECT_INFO_STATE_IS_ALLOCATED)) { //0x000019A8 & 0x00001C6C
              sceKernelFreePartitionMemory(loadCoreBootInfo->protects[i].partId); //0x00001C74
-             loadCoreBootInfo->protects[i].attr = REMOVE_PROTECT_INFO_STATUS(SCE_PROTECT_INFO_STATUS_IS_ALLOCATED, 
+             loadCoreBootInfo->protects[i].attr = REMOVE_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, 
                                                                              loadCoreBootInfo->protects[i].attr); //0x00001C84
          }
     }
@@ -1311,9 +1311,9 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
              if (((s32)(bootCallbacks[j].bootCBFunc) & 3) == i) { //0x00001A7C                   
                  bootCbFunc = (SceKernelBootCallbackFunction)(((u32)bootCallbacks[j].bootCBFunc) & ~0x3); //0x00001B18
                  if (i == 3) //0x00001B1C 
-                     bootCbFunc((s32)(((void *)&bootCallbacks[j]) + 2), 1, NULL); //0x00001A80 & 0x00001B44    
+                     bootCbFunc(((void *)&bootCallbacks[j]) + 2, 1, NULL); //0x00001A80 & 0x00001B44    
                  else
-                     bootCbFunc((s32)bootCallbacks, 1, NULL); //0x00001B34              
+                     bootCbFunc(bootCallbacks, 1, NULL); //0x00001B34              
              }
          }
          if (i == 2) { //0x00001A94
@@ -2284,7 +2284,7 @@ s32 CheckLatestSubType(u8 *file)
     s32 status;
     u8 *tag;
     
-    tag = (u8 *)&((PspHeader *)file)->tag;    
+    tag = (u8 *)&((PspHeader *)file)->tag; 
     subType = tag[0] << 24 | tag[1] << 16 | tag[2] << 8 | tag[3]; //0x00003E90 - 0x00003EB8   
     if (g_compareLatestSubType == NULL) //0x00003EC4
         status = memlmd_9D36A439(subType); //0x00003ED8
