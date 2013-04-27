@@ -93,8 +93,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define SECONDARY_MODULE_ID_START_VALUE         (0x10001)
 
-#define SCE_BOOT_CALLBACK_FUNCTION_QUEUED       (1)
-
 #define SCE_PRIMARY_SYSCALL_HANDLER_SYSCALL_ID  (0x15)
 
 
@@ -1395,19 +1393,19 @@ SceLoadCore *sceKernelQueryLoadCoreCB(void)
 }
 
 //Subroutine LoadCoreForKernel_F976EF41 - Address 0x000025E0
-s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, SceBootCallback *bootCallback)
+s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *status)
 {
     if (g_loadCore.bootCallBacks != NULL) { //0x00002614
         g_loadCore.bootCallBacks->bootCBFunc = bootCBFunc + (flag & 3); //0x00002650
         g_loadCore.bootCallBacks->gp = sceKernelGetModuleGPByAddressForKernel((u32)bootCBFunc); //0x0000264C & 0x00002658
-        g_loadCore.bootCallBacks = &g_loadCore.bootCallBacks[1]; //0x00002664
+        g_loadCore.bootCallBacks += 1; //0x00002664
         g_loadCore.bootCallBacks->bootCBFunc = NULL; //0x0000266C
         
         return SCE_BOOT_CALLBACK_FUNCTION_QUEUED;
     }    
-    bootCBFunc(1, 0, NULL); //0x0000261C     
-    if (bootCallback != NULL) //0x00002624
-        bootCallback->bootCBFunc = bootCBFunc + (flag & 3); //0x0000262C
+    s32 result = bootCBFunc(1, 0, NULL); //0x0000261C     
+    if (status != NULL) //0x00002624
+        *status = result; //0x0000262C
      
     return SCE_ERROR_OK;   
 }

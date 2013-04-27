@@ -46,6 +46,9 @@
 /** The possible number of libraries with different hash values. */
 #define LOADCORE_LIB_HASH_TABLE_SIZE            (128)
 
+/** Indicates that a boot callback function was added to the internal boot callback queue. */
+#define SCE_BOOT_CALLBACK_FUNCTION_QUEUED       (1)
+
 /** The protected information block is allocated. */
 #define SCE_PROTECT_INFO_STATE_IS_ALLOCATED     (1 << 0)
 
@@ -993,13 +996,13 @@ SceLoadCore *sceKernelQueryLoadCoreCB(void);
  *                   (up to init.prx) have been booted.
  * @param flag Defines the execute order of the callbacks. Pass 0 for earliest execution, 3 for latest.
  *             1 and 2 are between these two.
- * @param bootCallback The boot callback list used to store the boot callback function into. 
+ * @param status The returned status of bootCBFunc in case it was executed directly.
  * 
  * @return 0 for directly executing the boot callback function. 1 indicates boot callback function 
  *           was enqueued into other existing boot callbacks and will be called after init.prx got 
  *           booted. 
  */
-s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, SceBootCallback *bootCallback);
+s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *status);
 
 /**
  * Does nothing but a simple return, probably a debug function.
