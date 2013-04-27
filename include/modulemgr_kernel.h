@@ -8,8 +8,15 @@
 #include "common_header.h"
 #include "modulemgr_options.h"
 
+typedef struct {
+    SceSize size; //0
+    s32 unk4; //4
+    SceOff fileOffset; //8
+    u8 keyData[16]; //16  -- TODO: Confirm
+} SceNpDrm;
+
 s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags, SceKernelLMOption *option);
-s32 sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *file, SceOff fileOffset, s32 buf[4], s32 flags, SceKernelLMOption *option);
+s32 sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *file, SceOff fileOffset, u8 keyData[16], s32 flags, SceKernelLMOption *option);
 s32 sceKernelLoadModuleForLoadExecVSHDisc(const char *file, s32 flags, SceKernelLMOption *option);
 s32 sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *file, s32 flags, SceKernelLMOption *option);
 s32 sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *file, s32 flags, SceKernelLMOption *option);

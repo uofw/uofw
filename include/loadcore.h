@@ -58,6 +58,9 @@
 /** Indicates the type of the protected information block is a disc image. */
 #define SCE_PROTECT_INFO_TYPE_DISC_IMAGE        (0x40)
 
+/** Indicates protected information block belongs to a NPDRM package. */
+#define SCE_PROTECT_INFO_TYPE_NPDRM_DATA        (0x80)
+
 /** Indicates the type of the protected information block is a user param. */
 #define SCE_PROTECT_INFO_TYPE_USER_PARAM        (0x100)
 
@@ -474,7 +477,10 @@ typedef struct {
     s32 unk12; //12
     /** Attributes. */
     u32 attr; //16
-    /** Unknown. */
+    /** 
+     * Contains the API type of the module prior to the allocation of memory for the module. 
+     * Once memory is allocated, ::bootData contains the ID of that memory partition.
+     */
     s32 bootData; //20
     /** The size of the arguments passed to the module's entry function? */
     u32 argSize; //24

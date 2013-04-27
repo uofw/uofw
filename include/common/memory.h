@@ -35,6 +35,8 @@
 #define SCE_USERSPACE_ADDR_K1           0xA8800000  /* K1 segment (uncached) */
 #define SCE_USERSPACE_SIZE              0x01800000  /* 24 MB */
 
+#define SCE_USERSPACE_GAME_ADDR_K0      0x88900000  /* K0 segment (chached) */
+
 #define UCACHED(ptr)    (void *)((u32)(void *)(ptr) & 0x1FFFFFFF)                /* KU0 - cached. */
 #define KCACHED(ptr)    (void *)(K0_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))    /* K0 - cached */
 #define KUNCACHED(ptr)  (void *)(K1_BASE | ((u32)(void *)(ptr) & 0x1FFFFFFF))    /* K1 - uncached */
