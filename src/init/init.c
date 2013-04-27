@@ -59,7 +59,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 SceInit *g_init;
 
 /* Pointer to a memory clear function executed in StopInit(). */
-void (*g_MemClearFun)(void *, SceSize);
+void (*g_MemClearFunc)(void *, SceSize);
 /* The start address of the memory block to clear. */
 void *g_MemBase;
 /* The size of the particular memory block to clear. */
@@ -619,8 +619,8 @@ static void StopInit(const char *str __attribute__((unused)), s32 line __attribu
     
     memset((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE);
     memcpy((void *)HWPTR(HW_RESET_VECTOR), initClearMem, INIT_CLEAR_MEM_SIZE);
-    g_MemClearFun = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR);
-    g_MemClearFun(g_MemBase, g_MemSize);
+    g_MemClearFunc = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR);
+    g_MemClearFunc(g_MemBase, g_MemSize);
     
     sceKernelCpuResumeIntr(intrState);
     
