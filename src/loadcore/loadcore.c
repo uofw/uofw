@@ -3,7 +3,7 @@
 */
 
 /*
- * uOFW/trunk/src/loadcore/loadcore.c
+ * uofw/src/loadcore/loadcore.c
  * 
  * Loadcore - Basic API for the Module Manager and File Loader of the 
  * Program Loader.
@@ -2543,7 +2543,7 @@ static __inline__ void StopLoadCore(void)
     hwRamType |= (g_MemSize > RAM_SIZE_32_MB) ? RAM_TYPE_64_MB : RAM_TYPE_32_MB; //0x00001598          
     HW(HW_RAM_SIZE) = hwRamType; //0x000015B4
             
-    sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, 0x1000); //0x000015B8
+    sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE); //0x000015B8
     memcpy((void *)HWPTR(HW_RESET_VECTOR), loadCoreClearMem, 0x28); //0x000015D4
     g_MemClearFun = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR); //0x000015F0
     g_MemClearFun(g_MemBase, g_MemSize); //0x000015EC
