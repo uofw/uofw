@@ -3,7 +3,7 @@
 */
 
 /**
- * uofw/src/init/int.c
+ * uofw/src/init/init.c
  * 
  * Init is responsible for loading the rest of the PSP kernel modules
  * listed in the PSP boot configuration file (as of now: /kd/pspbtcnf.txt) 
@@ -88,18 +88,19 @@ static void InitCBInit(SceLoadCoreBootInfo *bootInfo)
     
     g_init->applicationType = SCE_INIT_APPLICATION_VSH;
     g_init->numPowerLocks = 1;
-    g_npDrmData.fileOffset = -1;
     g_init->apiType = 0;
-    g_init->paramSfoSize = 0;
     g_init->lptSummary = 0;
-    g_init->unk124 = NULL;
-    g_npDrmData.size = sizeof(SceNpDrm);
     g_init->fileModAddr = NULL;
     g_init->discModAddr = NULL;
     g_init->paramSfoBase = NULL;
+    g_init->paramSfoSize = 0;
     g_init->bootCallbacks1 = NULL;
-    g_init->unk116 = NULL;
+    g_init->curBootCallback1 = NULL;
     g_init->bootCallbacks2 = NULL;
+    g_init->curBootCallback2 = NULL;
+    
+    g_npDrmData.size = sizeof(SceNpDrm);
+    g_npDrmData.fileOffset = -1;
     
     u32 i;
     for (i = 0; i < sizeof g_npDrmData.keyData; i++)
@@ -659,13 +660,13 @@ static void InitThreadEntry(SceSize args, void *argp)
     SceBootCallback *tmpBootCb = (SceBootCallback *)UPALIGN16((u32)bootCallbacks);
     tmpBootCb->bootCBFunc = NULL;
     g_init->bootCallbacks1 = tmpBootCb;
-    g_init->unk116 = tmpBootCb;
+    g_init->curBootCallback1 = tmpBootCb;
     
     SceBootCallback bootCallbacks2[bootInfo->numModules];
     tmpBootCb = (SceBootCallback *)UPALIGN16((u32)bootCallbacks2);
     tmpBootCb->bootCBFunc = NULL;
     g_init->bootCallbacks2 = tmpBootCb;
-    g_init->unk124 = tmpBootCb;
+    g_init->curBootCallback2 = tmpBootCb;
     
     g_init->lptSummary = bootInfo->unk76;
     
