@@ -232,6 +232,7 @@ s32 sceKernelReleaseModule(SceModule *mod)
 {
     u32 intrState;
     SceModule *curMod = NULL;
+    SceModule *prevMod = NULL;
    
     if (mod == NULL) 
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
@@ -239,17 +240,18 @@ s32 sceKernelReleaseModule(SceModule *mod)
     intrState = loadCoreCpuSuspendIntr(); //0x00006BDC
     
     //0x00006BF0 - 0x00006C0C
-    for (curMod = g_loadCore.registeredMods; curMod; curMod = curMod->next) {
-         if (curMod == mod) { //0x00006C00        
-             curMod = curMod->next; //0x00006C34
+    for (prevMod = curMod = g_loadCore.registeredMods; curMod; curMod = prevMod->next) {
+        if (curMod == mod) { //0x00006C00        
+            prevMod->next = curMod->next; //0x00006C34
              
-             if (curMod == NULL) 
-                 g_loadCore.lastRegMod = curMod;
+            if (curMod->next == NULL) 
+                g_loadCore.lastRegMod = prevMod;
                 
-             loadCoreCpuResumeIntr(intrState);
-             g_loadCore.regModCount--;
-             return SCE_ERROR_OK;
-        }       
+            loadCoreCpuResumeIntr(intrState);
+            g_loadCore.regModCount--;
+            return SCE_ERROR_OK;
+        }
+        prevMod = curMod; //0x00006C10
     }
     loadCoreCpuResumeIntr(intrState);
     return SCE_ERROR_KERNEL_ERROR;
