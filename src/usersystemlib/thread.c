@@ -25,7 +25,7 @@ s32 _sceKernelCheckThreadStack(void)
         return sceKernelCheckThreadStack();
     }
 
-    available = pspGetSp() - g_thread->frameSize;
+    available = pspGetSp() - g_thread->stackBottom;
 
     if (available < 64) {
         // ThreadManForUser_D13BDE95

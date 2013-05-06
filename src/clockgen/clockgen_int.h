@@ -12,7 +12,7 @@
  *
  * @return SCE_ERROR_OK.
  */
-s32 _sceClockgenModuleStart(SceSize args, void *argp);
+static s32 _sceClockgenModuleStart(SceSize args, void *argp);
 
 /**
  * Deinits the module.
@@ -21,7 +21,7 @@ s32 _sceClockgenModuleStart(SceSize args, void *argp);
  *
  * @return SCE_ERROR_OK.
  */
-s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp);
+static s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp);
 
 /**
  * Event handler function.
@@ -30,7 +30,7 @@ s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp);
  *
  * @return SCE_ERROR_OK.
  */
-s32 _sceClockgenSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
+static s32 _sceClockgenSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
 
 /**
  * Changes the mode of a clock controller.
@@ -40,7 +40,7 @@ s32 _sceClockgenSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *resu
  *
  * @return SCE_ERROR_OK, otherwise <0 on error.
  */
-s32 _sceClockgenSetControl1(s32 bus, SceBool mode);
+static s32 _sceClockgenSetControl1(s32 bus, SceBool mode);
 
 /**
  * Writes to a CY27040 hardware register.
@@ -50,4 +50,4 @@ s32 _sceClockgenSetControl1(s32 bus, SceBool mode);
  *
  * @return SCE_ERROR_OK, otherwise <0 on error.
  */
-s32 _cy27040_write_register(u8 idx, u8 val);
+static s32 _cy27040_write_register(u8 idx, u8 val);

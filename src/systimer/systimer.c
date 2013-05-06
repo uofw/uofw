@@ -487,8 +487,8 @@ s32 sceSTimerSetTMCY(s32 timerId, s32 arg1)
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    s32 val = TIMER_GET_COUNT(timer->hw->data);
-    s32 val2 = TIMER_GET_MODE(timer->hw->data);
+    s32 val = TIMER_GET_COUNT(timer->hw->nowData);
+    s32 val2 = TIMER_GET_MODE(timer->hw->nowData);
     timer->unk12 = val;
     timer->unk16 = val2;
     timer->count += val * (val2 - timer->unk16);

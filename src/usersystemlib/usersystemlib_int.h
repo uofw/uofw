@@ -11,7 +11,7 @@ typedef struct {
     u32 unk0[48]; // 0
     s32 id; // 192
     u32 unk2; // 196
-    u32 frameSize; // 200
+    u32 stackBottom; // 200
 } SceThread;
 
 extern SceGeLazy g_lazy;
