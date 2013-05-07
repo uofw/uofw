@@ -3,8 +3,10 @@
 
 TARGET = loadexec
 OBJS = kl4e.o loadexec.o
+PATCH_OBJS = patch.o
 
-#DEBUG = 1
+DEBUG = 0
+INSTALLER = 1
 
 LIBS = -lSysMemForKernel -lsceSuspendForKernel -lKDebugForKernel -lLoadCoreForKernel -lInterruptManagerForKernel -lSysclibForKernel -lThreadManForKernel -lIoFileMgrForKernel -lModuleMgrForKernel -lInitForKernel -lUtilsForKernel
 

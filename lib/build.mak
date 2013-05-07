@@ -16,9 +16,13 @@ PRX_EXPORTS = exports.exp
 EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
 EXPORT_C=$(PRX_EXPORTS:.exp=.c)
 
-ifdef DEBUG
+ifeq ($(DEBUG),1)
 CFLAGS += -DDEBUG
 LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
+endif
+ifeq ($(INSTALLER),1)
+CFLAGS += -DINSTALLER
+OBJS := $(PATCH_OBJS) $(OBJS)
 endif
 
 MODULE_STUBS=$(foreach mod,$(MODULES), $($(mod)_STUBS))

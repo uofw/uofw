@@ -74,10 +74,10 @@ fi
 cd $dir
 
 if [ ! -f $prxtmp1 ]; then
-    prxtool -w ../$1 > $prxtmp1
+    prxtool -w $1 > $prxtmp1
 fi
 if [ ! -f $prxtmp2 ]; then
-    prxtool -w ../$2 > $prxtmp2
+    prxtool -w $2 > $prxtmp2
 fi
 
 list1=`genlist $prxtmp1`

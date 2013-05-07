@@ -32,7 +32,7 @@ typedef struct
 typedef struct
 {
     void *argp; // 0
-    s32 args; // 4
+    u32 args; // 4
     SceKernelRebootArgType type; // 8
     s32 unk12;
     s32 unk16;

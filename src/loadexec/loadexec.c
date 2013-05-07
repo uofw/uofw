@@ -22,6 +22,10 @@
 #include "loadexec_int.h"
 #include "reboot.h"
 
+#ifdef INSTALLER
+# include "patch.h"
+#endif
+
 SCE_MODULE_INFO("sceLoadExec", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERNEL
         | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_CANT_STOP, 1, 15);
 SCE_MODULE_BOOTSTART("LoadExecInit");
@@ -115,7 +119,7 @@ void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHPara
     if (opt->extArgs == 0) {
         // b28
         if (sceKernelGetChunk(4) > 0) {
-            hwOpt->args[hwOpt->curArgs].argp = InitForKernel_D83A9BD7(&hwOpt->args[hwOpt->curArgs].args);
+            hwOpt->args[hwOpt->curArgs].argp = sceKernelInitParamSfo(&hwOpt->args[hwOpt->curArgs].args);
             hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_EXT;
             hwOpt->curArgs++;
         }
@@ -637,16 +641,20 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
+#ifndef INSTALLER
     if (pspK1IsUserMode()) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
+#endif
 
     // 16B0
+#ifndef INSTALLER
     if (sceKernelGetUserLevel() != 4) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
+#endif
     s32 ret = checkVSHParam(opt);
     if (ret < 0) {
         pspSetK1(oldK1);
@@ -1077,13 +1085,19 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
 {
     s32 oldK1 = pspShiftK1();
     if (sceKernelIsIntrContext() == 0) {
+#ifndef INSTALLER
         if (!pspK1IsUserMode()) {
+#else
+        if (1) {
+#endif
             s32 iocmd, devcmd;
             // 23EC
+#ifndef INSTALLER
             if (sceKernelGetUserLevel() != 4) {
                 pspSetK1(oldK1);
                 return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
             }
+#endif
             if (file == NULL) {
                 pspSetK1(oldK1);
                 return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -1668,7 +1682,11 @@ s32 runReboot(RunExecParams *opt)
     if (opt->apiType == SCE_INIT_APITYPE_DEBUG)
         return ret;
     sceKernelMemset((void*)0x88600000, 0, 0x200000);
+#ifndef INSTALLER
     ret = decodeKL4E((void*)0x88600000, 0x200000, (void*)g_reboot + 4, 0);
+#else
+	ret = (*decodeKL4EPtr)((void*)0x88600000, 0x200000, (void*)g_reboot + 4, 0);
+#endif
     if (ret < 0) {
         // 2DD0
         sceKernelCpuSuspendIntr();
@@ -1684,7 +1702,11 @@ s32 runReboot(RunExecParams *opt)
     UtilsForKernel_39FFB756(0);
     Kprintf("***** reboot start *****\n");
     Kprintf("\n\n\n");
+#ifndef INSTALLER
     s32 (*reboot)(SceKernelRebootParam *, SceKernelLoadExecVSHParam *, s32, s32) = (void*)0x88600000;
+#else
+    s32 (*reboot)(SceKernelRebootParam *, SceKernelLoadExecVSHParam *, s32, s32) = (void*)0x88FC0000;
+#endif
     reboot(hwOpt, opt->vshParam, opt->apiType, rand);
     return ret;
 }
