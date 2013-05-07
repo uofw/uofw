@@ -3,6 +3,10 @@
 
 TARGET = init
 OBJS = init_asm.o libcUtils.o gamePatching.o init.o
+PATCH_OBJS = patch.o
+
+DEBUG = 0
+INSTALLER = 1
 
 LIBS = -lSysMemForKernel -lsceSuspendForKernel -lKDebugForKernel -lInterruptManagerForKernel \
        -lSysclibForKernel -lThreadManForKernel -lInitForKernel -lStdioForKernel -lIoFileMgrForUser \

@@ -137,9 +137,8 @@ typedef struct {
     u32 unk56;
     u32 unk60;
     u32 unk64;
-    char *gameId; // size unsure: it's longer than this
-    u32 unk72;
-    u32 unk76;
+    char gameId[10];
+    u16 unk78;
     u32 unk80;
     u32 unk84;
     u32 unk88;

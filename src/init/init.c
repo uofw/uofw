@@ -905,6 +905,11 @@ static void InitThreadEntry(SceSize args, void *argp)
     sceKernelStopUnloadSelfModuleWithStatusKernel(1, 0, NULL, NULL, NULL);
 }
 
+#ifdef INSTALLER
+/* Reference to patch.S (needed because when patching init, SystemControl only has access to its bootstart's address)*/
+asm(".word init_patch\n");
+#endif
+
 /* Setup the boot process of the rest of the PSP kernel modules. */
 s32 InitInit(SceSize argc __attribute__((unused)), void *argp)
 {
