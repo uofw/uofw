@@ -1,9 +1,4 @@
-# Copyright (C) 2011, 2012 The uOFW team
-# See the file COPYING for copying permission.
-
-    .text
-    .set noat
-    .set noreorder
+#include "common_asm.h"
 
     .globl sub_0000
 sub_0000:
@@ -19,9 +14,6 @@ sub_0000:
     # get threadman exception vector?
     .globl ExceptionManagerForKernel_96D47F7E
 ExceptionManagerForKernel_96D47F7E:
-    #lui $a0, %hi(_79454858)
-    #jal dbg_printf
-    #addiu $a0, %lo(_79454858)
     lui        $v0, %hi(sub_0070)
     jr         $ra
     addiu      $v0, $v0, %lo(sub_0070)
@@ -48,7 +40,7 @@ sub_0040:
     .globl syscallHandler
 syscallHandler:
     j          syscallHandler
-    ctc0       $v1, $0
+    ctc0       $v1, $zr
 
 sub_0070:
     ctc0       $v0, $4
@@ -63,7 +55,7 @@ sub_0070:
     mfc0       $v1, $14
 
 loc_00000098:
-    ctc0       $v1, $0
+    ctc0       $v1, $zr
 
 loc_0000009C:
     lui        $v1, %hi(ExcepManCB)
@@ -78,7 +70,7 @@ loc_0000009C:
 loc_000000BC:
     lw         $v1, 0($v1)
     lw         $v0, 0($v1)
-    sw         $0, 0($v1)
+    sw         $zr, 0($v1)
     sync       
     cfc0       $v1, $25
     lw         $v1, 8($v1)
@@ -110,7 +102,7 @@ execNmiHandler:
 sub_0120:
     ctc0       $v0, $6
     mfc0       $v0, $22
-    bne        $0, $v0, FUCK#ExceptionManagerForKernel_79454858
+    bne        $zr, $v0, foo
     nop        
 
     .globl sub_0130
@@ -131,13 +123,9 @@ sub_0140:
     nop        
     nop        
 
-# At 0x00000160 
-FUCK:
     .globl ExceptionManagerForKernel_79454858
 ExceptionManagerForKernel_79454858:
-    #lui $a0, %hi(_79454858)
-    #jal dbg_printf
-    #addiu $a0, %lo(_79454858)
+foo:
     li         $v0, 92
     b          loc_0000009C
     nop        
@@ -160,10 +148,10 @@ nmiInit:
     ori        $v1, $v1, 0xFFFF
     sw         $v1, 4($v0)
     lui        $v1, %hi(g_0D40)
-    sw         $0, %lo(g_0D40)($v1)
+    sw         $zr, %lo(g_0D40)($v1)
     lui        $v1, %hi(g_0D44)
     jr         $ra
-    sw         $0, %lo(g_0D44)($v1)
+    sw         $zr, %lo(g_0D44)($v1)
 
     # 01A4
     .globl nmiHandler
@@ -176,7 +164,7 @@ nmiHandler:
     addi       $v0, $v0, 1
     sw         $v0, %lo(g_0D40)($v1)
     lui        $v0, %hi(g_0D44)
-    sw         $0, %lo(g_0D44)($v0)
+    sw         $zr, %lo(g_0D44)($v0)
     move       $v0, $sp
     lui        $sp, %hi(g_stackCtx)
     addiu      $sp, $sp, %lo(g_stackCtx)
@@ -215,7 +203,7 @@ nmiHandler:
     sw         $v1, 132($sp)
     lui        $v0, 0xBC10
     lw         $s0, 0($v0)
-    move       $s1, $0
+    move       $s1, $zr
     lui        $v0, 0xFFFF
     ori        $v0, $v0, 0xFFFF
     and        $v0, $v0, $s0
@@ -291,10 +279,10 @@ loc_000002F0:
 loc_00000368:
     lw         $a2, 0($v0)
     ext        $a1, $a2, 31, 1
-    ins        $a2, $0, 0, 31
+    ins        $a2, $zr, 0, 31
 
 loc_00000374:
-    cfc0       $a3, $0
+    cfc0       $a3, $zr
     cfc0       $t0, $1
     cfc0       $v0, $18
     sll        $v1, $s2, 2
@@ -312,7 +300,7 @@ loc_00000374:
 loc_000003AC:
     beqz       $s1, loc_000003C4
     lui        $k0, 0xA7F8
-    lw         $0, 0($k0)
+    lw         $zr, 0($k0)
     lui        $k0, 0xA7F0
     sw         $s1, 32($k0)
     sync       
@@ -360,7 +348,7 @@ loc_000003D4:
     lw         $at, 4($sp)
     lw         $sp, 116($sp)
     lui        $v0, %hi(g_0D40)
-    sw         $0, %lo(g_0D40)($v0)
+    sw         $zr, %lo(g_0D40)($v0)
     cfc0       $v1, $19
     lui        $v0, 0xFFBF
     ori        $v0, $v0, 0xFFFF
@@ -398,16 +386,4 @@ loc_000004DC:
 
 loc_000004E0:
     break      0x20000
-
-        .rdata
-        .align  2
-        .type   _96D47F7E, @object
-        .size   _96D47F7E, 10
-_96D47F7E:
-        .ascii  "hey 96D4\00A\000"
-        .align  2
-        .type   _79454858, @object
-        .size   _79454858, 10
-_79454858:
-        .ascii  "hey 7945\00A\000"
 
