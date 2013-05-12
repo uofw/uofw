@@ -502,6 +502,7 @@ SceUID sceIoDopen(const char *dirname)
     if (path != NULL)
         free_pathbuf(path);
     pspSetK1(oldK1);
+    dbg_printf("-> dopen returned %d\n", ret);
     return ret;
 }
 
@@ -706,7 +707,7 @@ int sceIoRename(const char *oldname, const char *newname)
 
 int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("%s(dev = %s, cmd = %08x)\n", __FUNCTION__, dev, cmd);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(dev) || !pspK1DynBufOk(indata, inlen) || !pspK1DynBufOk(outdata, outlen))
     {
@@ -728,27 +729,8 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
 
 int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2)
 {
-    return 0;
     dbg_init(0, FB_NONE, FAT_NONE);
-    //dbg_printf("Calling %s\n", __FUNCTION__);
-    //dbg_printf("Calling %s\n", __FUNCTION__);
-    //dbg_printf("Calling %s\n", __FUNCTION__);
-    //dbg_init(0, FB_NONE, FAT_NOINIT);
-    //return -1;
-    //return 0;
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
-    dbg_puts("hey\n");
+    dbg_printf("sceIoAssign(%s, %s, %s, ...)\n", dev, blockDev, fs);
     char outDev[32];
     char blkAliasName[32];
     char fsAliasName[32];
@@ -759,12 +741,14 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     {
         // 1FE8
         pspSetK1(oldK1);
+    	dbg_init(0, FB_NONE, FAT_NOINIT);
         return 0x800200D3;
     }
     if (dev == NULL || (blockDev == NULL && fs != NULL))
     {
         // 1F44
         pspSetK1(oldK1);
+    	dbg_init(0, FB_NONE, FAT_NOINIT);
         return 0x80020321;
     }
     if (blockDev == NULL && fs == NULL)
@@ -773,6 +757,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     {
         // 1FD8
         pspSetK1(oldK1);
+    	dbg_init(0, FB_NONE, FAT_NOINIT);
         return 0x80020326;
     }
     if (fs != NULL && (~mode >> 31) != 0)
@@ -814,6 +799,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     {
         // 1F44
         pspSetK1(oldK1);
+    	dbg_init(0, FB_NONE, FAT_NOINIT);
         return 0x80020321;
     }
     if (blkAlias != NULL)
@@ -824,6 +810,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     {
         // 1F34
         pspSetK1(oldK1);
+    	dbg_init(0, FB_NONE, FAT_NOINIT);
         return 0x80020320;
     }
     newAlias->attr = attr;
@@ -854,11 +841,14 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
         goto err_invalid_device;
 
     // 1CEC
-    do
+    for (;;)
     {
         if (colon == blockDev)
             break;
-    } while ((look_ctype_table(*(colon--)) & 4) == 0);
+        if ((look_ctype_table(*colon) & 4) != 0)
+        	break;
+        colon--;
+    }
     // 1D0C
     strncpy(newAlias->fs, blockDev, colon - blockDev);
     newAlias->fs[colon - blockDev] = '\0';
@@ -931,11 +921,13 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     err:
     free_alias_tbl(newAlias);
     pspSetK1(oldK1);
+    dbg_init(0, FB_NONE, FAT_NOINIT);
     return ret;
 
     err_invalid_device:
     free_alias_tbl(newAlias);
     pspSetK1(oldK1);
+    dbg_init(0, FB_NONE, FAT_NOINIT);
     return 0x80020321;
 }
 
@@ -995,11 +987,13 @@ int sceIoUnassign(const char *dev)
     free_alias_tbl(alias);
     free_iob(iob);
     pspSetK1(oldK1);
+    dbg_printf("-> unassign ok\n");
     return 0;
 
     error:
     free_iob(iob);
     pspSetK1(oldK1);
+    dbg_printf("-> error\n");
     return ret;
 }
 
@@ -1346,8 +1340,6 @@ int sceIoAddDrv(SceIoDrv *drv)
 
 int sceIoDelDrv(const char *drv)
 {
-    //if (drv[0] == 'l' && drv[1] == 'f' && drv[2] == 'l')
-        //dbg_init(1, FB_HARDWARE, FAT_NONE);
     dbg_printf("sceIoDelDrv(%s)\n", drv);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv)) {
@@ -1972,10 +1964,18 @@ int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNameP
     // 38A0
     int oldIntr = sceKernelCpuSuspendIntr();
     SceIoAlias *curAlias = g_aliasList;
+  	dbg_printf("== listing all aliases ==\n");
+  	while (curAlias != NULL) {
+	  	dbg_printf("alias %s fs %s\n", curAlias->alias, curAlias->fs);
+	  	curAlias = curAlias->next;
+	}
+	dbg_printf("== end ==\n");
+	curAlias = g_aliasList;
     SceIoAlias *alias = NULL;
     // 38BC
     while (curAlias != NULL)
     {
+    	dbg_printf(". alias %s, fs %s\n", curAlias->alias, curAlias->fs);
         if (curAlias->dev != NULL && strcmp_bs(drive, curAlias->alias) == 0) { // 396C
             alias = curAlias;
             break;
@@ -2202,7 +2202,9 @@ SceUID sceIoOpen(const char *file, int flags, SceMode mode)
     int ret;
     if (pspK1IsUserMode() && (ret = sceKernelGetSyscallRA()) != 0)
         retAddr = ret;
-    return do_open(file, flags, mode, 0, retAddr, oldK1);
+    ret = do_open(file, flags, mode, 0, retAddr, oldK1);
+    dbg_printf("-> open returned %d\n", ret);
+    return ret;
 }
 
 SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode)
@@ -2213,12 +2215,14 @@ SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode)
     int ret;
     if (pspK1IsUserMode() && (ret = sceKernelGetSyscallRA()) != 0)
         retAddr = ret;
-    return do_open(file, flags, mode, 1, retAddr, oldK1);
+    ret = do_open(file, flags, mode, 1, retAddr, oldK1);
+    dbg_printf("-> open returned %d\n", ret);
+    return ret;
 }
 
 int sceIoRead(SceUID fd, void *data, SceSize size)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s(%d, ...)\n", __FUNCTION__, fd);
     return do_read(fd, data, size, 0);
 }
 
@@ -2242,7 +2246,7 @@ int sceIoWriteAsync(SceUID fd, const void *data, SceSize size)
 
 SceOff sceIoLseek(SceUID fd, SceOff offset, int whence)
 {
-    dbg_printf("Calling %s\n", __FUNCTION__);
+    dbg_printf("Calling %s(%d, ...)\n", __FUNCTION__, fd);
     return do_lseek(fd, offset, whence, 0);
 }
 

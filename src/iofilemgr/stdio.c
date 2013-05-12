@@ -169,6 +169,7 @@ int stdoutReset(int flags, SceMode mode)
 void printf_char(void *ctx, int ch)
 {   
     dbg_printf("Calling %s\n", __FUNCTION__);
+    if (ch < 0x200) dbg_printf("print %c\n", ch);
     if (ch == 0x200) {
         *(short*)(ctx + 2) = 0;
         return;
