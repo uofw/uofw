@@ -399,6 +399,18 @@ int sceKernelUtilsMt19937Init(SceKernelUtilsMt19937Context *ctx, u32 seed)
     return 0;
 }
 
+u32 sceKernelUtilsMt19937UInt(SceKernelUtilsMt19937Context *ctx)
+{
+    int ret;
+    int oldK1 = pspShiftK1();
+    if (!pspK1PtrOk(ctx))
+        ret = 0x800200D3;
+    else
+        ret = sub_1CF0(ctx);
+    pspSetK1(oldK1);
+    return ret;
+}
+
 typedef clock_t (*ClockHandler)(void);
 typedef time_t (*TimeHandler)(time_t *t);
 typedef int (*GettimeofdayHandler)(struct timeval *tp, struct timezone *tzp);
