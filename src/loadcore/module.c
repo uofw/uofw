@@ -52,9 +52,9 @@
 /* ifhandle.prx' module name since SDK version 3.70. */
 #define MODULE_IFHANDLE_NAME_NEW                "sceNetInterface_Service"
 
-static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                    va_list ap);
-static SceUID module_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                va_list ap);
 static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion);
 static void updateUIDName(SceModule *mod);
@@ -66,13 +66,13 @@ static void updateUIDName(SceModule *mod);
  * and the last function called in the delete process of a
  * module.
  */
-static SceSysmemUIDLookupFunc ModuleFuncs[] = { 
+static SceSysmemUidLookupFunc ModuleFuncs[] = { 
     { .id = UID_MODULE_DO_INITIALIZE, .func = module_do_initialize },
     { .id = UID_MODULE_DO_DELETE,     .func = module_do_delete },
     { .id = 0,                        .func = NULL }
 };
 
-static SceSysmemUIDControlBlock *g_ModuleType; //0x00008404
+static SceSysmemUidCB *g_ModuleType; //0x00008404
 
 //Subroutine LoadCoreForKernel_2C44F793 - Address 0x00006844
 /*
@@ -85,7 +85,7 @@ SceModule *sceKernelCreateModule(void)
     s32 status;
     s32 intrState;    
     SceModule *mod;
-    SceSysmemUIDControlBlock *cb = NULL;
+    SceSysmemUidCB *cb = NULL;
     
     intrState = loadCoreCpuSuspendIntr();
     
@@ -106,7 +106,7 @@ SceModule *sceKernelCreateModule(void)
         return NULL;
     }
     //0x000068D0 - 0x0000689C
-    mod->modId = cb->UID; //0x000068A0
+    mod->modId = cb->uid; //0x000068A0
     mod->moduleStartThreadPriority = LOADCORE_ERROR;
 	mod->moduleStartThreadStacksize = LOADCORE_ERROR;
 	mod->moduleStartThreadAttr = LOADCORE_ERROR;
@@ -289,7 +289,7 @@ s32 sceKernelGetModuleIdListForKernel(SceUID *modIdList, u32 size, u32 *modCount
  * their unique UID list.
  * 
  */
-SceSysmemUIDControlBlock *ModuleServiceInit(void)
+s32 ModuleServiceInit(void)
 {
     return sceKernelCreateUIDtype(MODULE_UID_TYPE_NAME, sizeof(SceModule), ModuleFuncs, 0, &g_ModuleType);
 }
@@ -300,7 +300,7 @@ SceModule *sceKernelGetModuleFromUID(SceUID uid)
     u32 intrState; 
     u32 intrState2;   
     SceModule *mod = NULL;
-    SceSysmemUIDControlBlock *block = NULL;
+    SceSysmemUidCB *block = NULL;
     
     intrState = loadCoreCpuSuspendIntr(); //0x00006D80
     
@@ -468,7 +468,7 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
      * array with the UIDs of the loaded modules.
      */
     blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, MODULE_LIST_MEM_BLOCK_NAME, 
-                                            SCE_KERNEL_SMEM_High, g_loadCore.regModCount << 2, NULL); //0x000071CC
+                                            SCE_KERNEL_SMEM_High, g_loadCore.regModCount << 2, 0); //0x000071CC
     if (blockId > 0) { //0x000071CC
         modIdList = sceKernelGetBlockHeadAddr(blockId);
         for (i = 0, curMod = g_loadCore.registeredMods; curMod; curMod = curMod->next, i++)
@@ -483,7 +483,7 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
  * Register the created UIDControlBlock for a new module in the
  * linked-list of the UID type of "module" objects?
  */
-static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                    va_list ap)
 {
     SceModule *mod;
@@ -492,7 +492,7 @@ static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDCon
     
     mod = (SceModule *)((u32 *)cb + g_ModuleType->size);
     
-    mod->modId = cb->UID; //0x0000725C
+    mod->modId = cb->uid; //0x0000725C
     mod->entryAddr = LOADCORE_ERROR; //0x00007260
     mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
     mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
@@ -514,7 +514,7 @@ static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDCon
     mod->entTop = (void *)LOADCORE_ERROR; //0x000072B0
     mod->stubTop = (void *)LOADCORE_ERROR; //0x000072B4
     
-    return cb->UID;  
+    return cb->uid;
 }
 
 //sub_000072C0
@@ -522,11 +522,11 @@ static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDCon
  * Unlink a UIDControlBlock belonging to an unloaded module
  * from the linked-list of the UID type of "module" objects?
  */
-static SceUID module_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap);
-    return cb->UID;
+    return cb->uid;
 }
 
 //sub_000072E8

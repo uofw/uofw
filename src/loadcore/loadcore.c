@@ -702,6 +702,7 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
 s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp) 
 {
     s32 i;
+    for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
     s32 seedPart1;
     s32 status;    
     s32 linkLibsRes;
@@ -972,7 +973,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     
     if (execInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED) { //0x00001208
         blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, LOADCORE_GZIP_BUFFER_NAME, 
-                                                SCE_KERNEL_SMEM_High, execInfo->decSize, NULL); //0x00001224
+                                                SCE_KERNEL_SMEM_High, execInfo->decSize, 0); //0x00001224
         tmpBlockId = blockId;
         execInfo->topAddr = sceKernelGetBlockHeadAddr(blockId); //0x00001230        
         status = sceKernelCheckExecFile(bootModInfo->modBuf, execInfo); //0x00001240
@@ -1000,7 +1001,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     
     if ((execInfo->modInfoAttribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_KERNEL) { //0x000012A4
         blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, LOADCORE_KERNEL_PRX_BUFFER_NAME, 
-                                                SCE_KERNEL_SMEM_Low, execInfo->largestSegSize, NULL); //0x0000134C
+                                                SCE_KERNEL_SMEM_Low, execInfo->largestSegSize, 0); //0x0000134C
         //TODO: Add NULL-pointer check, Sony forgot it.
         *modMemId = blockId;
         execInfo->topAddr = sceKernelGetBlockHeadAddr(blockId); //0x00001360
@@ -1067,7 +1068,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
      * by the System Memory Manager module.
      */
     memBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceLoadCoreBootInfo", 
-                                               SCE_KERNEL_SMEM_High, sizeof(SceLoadCoreBootInfo), NULL);
+                                               SCE_KERNEL_SMEM_High, sizeof(SceLoadCoreBootInfo), 0);
     if (memBlockId < 0) //0x00001704
         StopLoadCore(); 
     
@@ -1085,7 +1086,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     if (loadCoreBootInfo->numModules > 0) { //0x0000173C
         size = loadCoreBootInfo->numModules * sizeof(SceLoadCoreBootModuleInfo);
         memBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceLoadCoreBootModuleInfo", 
-                                                   SCE_KERNEL_SMEM_High, size, NULL); //0x00001758
+                                                   SCE_KERNEL_SMEM_High, size, 0); //0x00001758
         if (memBlockId < 0) //0x00001760
             StopLoadCore();
        
@@ -1108,7 +1109,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     if (loadCoreBootInfo->numProtects != 0) { //0x000017B4
         size = loadCoreBootInfo->numProtects * sizeof(SceLoadCoreProtectInfo); //0x00002290
         memBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceLoadCoreProtectInfo", 
-                                                   SCE_KERNEL_SMEM_High, size, NULL); //0x000022AC
+                                                   SCE_KERNEL_SMEM_High, size, 0); //0x000022AC
         if (memBlockId < 0) //0x000022B4
             StopLoadCore();
       

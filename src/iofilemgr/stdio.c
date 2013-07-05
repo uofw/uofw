@@ -641,10 +641,10 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     }
     if (sceKernelGetThreadmanIdType(id) == 7)
         return 0x800200D2;
-    SceSysmemUIDControlBlock *blk;
+    SceSysmemUidCB *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return 0x800200D1;
-    if (pspK1IsUserMode() && (blk->parent->attribute & 2) != 0)
+    if (pspK1IsUserMode() && (blk->PARENT0->attr & 2) != 0)
         return 0x800200D1;
     SceKernelMppInfo mpp;
     mpp.size = 56;

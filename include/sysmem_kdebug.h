@@ -32,3 +32,6 @@ int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugRead(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugEcho(void);
 
+void sceKernelRegisterAssertHandler(void (*func)(int));
+void sceKernelAssert(int test, int lvl);
+

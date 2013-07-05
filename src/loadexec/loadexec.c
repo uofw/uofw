@@ -101,11 +101,11 @@ void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHPara
     if (opt->vshmainArgs == 0) {
         SceUID blkId = sceKernelGetChunk(0);
         if (blkId > 0) {
-            SceKernelSysmemBlockInfo info;
+            SceSysmemMemoryBlockInfo info;
             info.size = 56;
             sceKernelQueryMemoryBlockInfo(blkId, &info);
-            hwOpt->args[hwOpt->curArgs].argp = info.unk40;
-            hwOpt->args[hwOpt->curArgs].args = info.unk44;
+            hwOpt->args[hwOpt->curArgs].argp = (void *)info.addr;
+            hwOpt->args[hwOpt->curArgs].args = info.memSize;
             hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_VSHMAIN;
             hwOpt->curArgs++;
         }
@@ -131,7 +131,7 @@ void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHPara
     }
 
     SceKernelGameInfo *info = sceKernelGetGameInfo();
-    if (info->unk4 != 0) {
+    if (info->flags != 0) {
         hwOpt->args[hwOpt->curArgs].argp = info;
         hwOpt->args[hwOpt->curArgs].args = sizeof *info;
         hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_GAMEINFO;
@@ -1418,7 +1418,7 @@ void copyVSHParam(SceKernelLoadExecVSHParam *dstOpt, u32 flags, SceKernelLoadExe
 s32 runReboot(RunExecParams *opt)
 {
     SceKernelRebootArgType argType = SCE_KERNEL_REBOOT_ARGTYPE_NONE;
-    SceKernelSysmemBlockInfo blkInfo;
+    SceSysmemMemoryBlockInfo blkInfo;
     switch (opt->apiType) {
     case SCE_INIT_APITYPE_DEBUG:
 
@@ -1514,7 +1514,7 @@ s32 runReboot(RunExecParams *opt)
             if (id > 0) {
                 blkInfo.size = 56;
                 sceKernelQueryMemoryBlockInfo(id, &blkInfo);
-                opt->vshParam->vshmainArgp = blkInfo.unk40;
+                opt->vshParam->vshmainArgp = (void *)blkInfo.addr;
             }
         }
     }
@@ -1625,8 +1625,8 @@ s32 runReboot(RunExecParams *opt)
             if (id > 0) {
                 blkInfo.size = 56;
                 sceKernelQueryMemoryBlockInfo(id, &blkInfo);
-                hwOpt->args[hwOpt->curArgs].argp = blkInfo.unk40;
-                hwOpt->args[hwOpt->curArgs].args = blkInfo.unk44;
+                hwOpt->args[hwOpt->curArgs].argp = (void *)blkInfo.addr;
+                hwOpt->args[hwOpt->curArgs].args = blkInfo.memSize;
                 hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_DEFAULT;
                 hwOpt->unk40 = hwOpt->curArgs;
                 hwOpt->curArgs++;

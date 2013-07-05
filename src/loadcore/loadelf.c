@@ -630,7 +630,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
             /* Ensure 256-Byte alignment of the ELF block. */         
             size = UPALIGN256(size) - (execInfo->segmentAddr[0] & 0xFFFFFF00); //0x00004DD8 & 0x00004DE0 & 0x00004DEC
             blockId = sceKernelAllocPartitionMemory(execInfo->partitionId, ELF_MEMORY_BLOCK_NAME, SCE_KERNEL_SMEM_Addr, 
-                                                    size, (void *)(execInfo->segmentAddr[0] & 0xFFFFFF00)); //0x00004DF4
+                                                    size, execInfo->segmentAddr[0] & 0xFFFFFF00); //0x00004DF4
             
             execInfo->memBlockId = blockId; //0x00004DFC
             if (blockId < 0)

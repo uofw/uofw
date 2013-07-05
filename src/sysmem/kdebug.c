@@ -41,7 +41,7 @@ int DipswInit(u32 lo, u32 hi, int cpTime)
 }
 
 int sceKernelDipsw(u32 reg)
-{   
+{
     if (reg >= 64)
         return 0x80020001;
     if (reg >= 32) {
@@ -94,13 +94,13 @@ int sceKernelIsDevelopmentToolMode()
 }
 
 int sceKernelIsUMDMode()
-{   
+{
     SetIsDvdMode();
     return (g_dvdMode == 0);
 }
 
 int sceKernelIsDVDMode()
-{   
+{
     SetIsDvdMode();
     return g_dvdMode;
 }
@@ -124,7 +124,7 @@ void *sceKernelSm1ReferOperations()
 }
 
 int DipswSet(int reg, int val)
-{   
+{
     int oldK1 = pspShiftK1();
     if (reg < 0 || reg >= 64)
     {
@@ -177,7 +177,7 @@ int DipswSet(int reg, int val)
 }
 
 void SetIsDvdMode(void)
-{   
+{
     if (g_checkedDvdMode != 0)
         return;
     g_checkedDvdMode = 1;
@@ -243,17 +243,17 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     if (sign == '\0')
                         sign = ' ';
                     continue;
-            
+
                 case '\0':
                     // 0FF94 dup
                     func(arg0, 513);
                     return numChars;
-            
+
                 case '#':
                     // 0FFD8
                     attr |= 8;
                     continue;
-            
+
                 case '*':
                     // 0FFE0
                     argWidth = va_arg(ap, int);
@@ -262,17 +262,17 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         attr |= 0x10;
                     }
                     continue;
-            
+
                 case '-':
                     // 0FFF8
                     attr |= 0x10;
                     continue;
-            
+
                 case '+':
                     // 10000
                     sign = '+';
                     continue;
-            
+
                 case '.':
                     // 1000C
                     fmt++;
@@ -294,12 +294,12 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     // 10068
                     strSize = pspMax(val, -1);
                     continue;
-            
+
                 case '0':
                     // 10080
                     attr |= 0x20;
                     continue;
-            
+
                 case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
                     // 10088
                     int val = 0;
@@ -315,7 +315,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     argWidth = val;
                 }
                     continue;
-            
+
                 case 'D':
                     // 100D8
                     attr |= 1;
@@ -345,12 +345,12 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     }
                     // 10108
                     goto print_num1;
-            
+
                 case 'L':
                     // 104B4
                     attr |= 2;
                     continue;
-            
+
                 case 'O':
                     attr |= 1;
                 case 'o':
@@ -369,7 +369,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         base = 8;
                     }
                     goto print_base;
-            
+
                 case 'U':
                     // 10514
                     attr |= 1;
@@ -389,7 +389,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         base = 10;
                     }
                     goto print_base;
-            
+
                 case 'X':
                     // 10558
                     hexNumChars = g_upHexChars;
@@ -416,7 +416,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         }
                     }
                     goto print_base;
-            
+
                 case 'c':
                     // 105D8
                     curStr = str;
@@ -424,12 +424,12 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     sign = '\0';
                     *str = (u8)va_arg(ap, int);
                     goto print_str;
-            
+
                 case 'h':
                     // 105F8
                     attr |= 0x4;
                     continue;
-            
+
                 case 'l':
                     // 10600
                     if ((attr & 1) == 0)
@@ -437,7 +437,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     else
                         attr = (attr & 0xFFFFFFFE) | 2;
                     continue;
-            
+
                 case 'n':
                     // 10614
                     if ((attr & 1) == 0)
@@ -470,14 +470,14 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         *ptr = numChars;
                     }
                     break;
-            
+
                 case 'p':
                     // 106A8
                     curArg = va_arg(ap, int);
                     base = 16;
                     // 105A8 dup
                     goto print_base;
-            
+
                 case 's': {
                     // 106C0
                     char *s = va_arg(ap, char*);
@@ -510,7 +510,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     sign = '\0';
                 }
                     goto print_str;
-            
+
                 default:
                     // 10754
                     func(arg0, *fmt);
@@ -576,7 +576,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 // 101E8
                 // 101EC
                 stringLen = &str[21] - curStr;
-                
+
                 print_str:
                 // 101F4
                 strSize = stringLen;
@@ -709,7 +709,7 @@ int _CheckDebugHandler(void *ptr, u32 size)
     }
     // 109D0
     if ((void*)g_kprintfHandler < ptr || (void*)g_kprintfHandler >= ptr + size)
-    {   
+    {
         g_kprintfHandler = NULL;
         // 109E4
         return 0x80020001;

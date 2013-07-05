@@ -21,7 +21,7 @@ void sceKernelAssert(int test, int lvl)
     }
     void (*assertFunc)(int) = g_assertHandler;
     if (assertFunc == NULL)
-    {  
+    {
         // CFFC
         Kprintf("There is no assert handler, stop\n");
         for (;;) // D004

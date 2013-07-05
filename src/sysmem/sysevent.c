@@ -111,7 +111,7 @@ int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler)
     // CAA4
     resumeIntr(oldIntr2);
     if (cur == NULL)
-    {   
+    {
         handler->busy = 0;
         // CAE0
         handler->gp = pspGetGp();

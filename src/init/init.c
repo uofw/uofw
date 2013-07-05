@@ -329,7 +329,7 @@ static s32 CleanupPhase2(SceLoadCoreBootInfo *bootInfo)
 static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
 {
     SceUID partId;
-    SceKernelSysmemBlockInfo blkInfo;
+    SceSysmemMemoryBlockInfo blkInfo;
     
     s32 i;
     for (i = 0; i < bootInfo->numProtects; i++) {
@@ -338,7 +338,7 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
         case SCE_PROTECT_INFO_TYPE_FILE_NAME:
             if (protectInfo->size != 0) { //0x000009AC
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitFileName", 
-                        SCE_KERNEL_SMEM_High, protectInfo->size, NULL);
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
                 if (partId > 0) {
                     void *addr = sceKernelGetBlockHeadAddr(partId);
                     memmove(addr, (void *)protectInfo->addr, protectInfo->size);
@@ -354,11 +354,11 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
         case SCE_PROTECT_INFO_TYPE_VSH_PARAM: 
             if (protectInfo->size != 0) {
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitVSHParam", 
-                        SCE_KERNEL_SMEM_High, protectInfo->size, NULL);
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
                 if (partId > 0) {
-                    blkInfo.size = sizeof(SceKernelSysmemBlockInfo);
+                    blkInfo.size = sizeof blkInfo;
                     sceKernelQueryMemoryBlockInfo(partId, &blkInfo);
-                    void *addr = blkInfo.unk40;
+                    void *addr = (void *)blkInfo.addr;
                     memmove(addr, (void *)protectInfo->addr, protectInfo->size);
                     
                     protectInfo->addr = (u32)addr;
@@ -366,7 +366,7 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
                     protectInfo->partId = partId;
                     
                     *(u32 *)(addr + 4) = 32;
-                    *(u32 *)(addr + 0) = blkInfo.unk44;
+                    *(u32 *)(addr + 0) = blkInfo.memSize;
                     *(s32 *)(addr + 24) = 0;
                     *(s32 *)(addr + 20) = 0;
                     sceKernelRegisterChunk(0, partId);
@@ -376,7 +376,7 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
         case SCE_PROTECT_INFO_TYPE_DISC_IMAGE:
             if (protectInfo->size != 0) {
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitDiscImage", 
-                        SCE_KERNEL_SMEM_High, protectInfo->size, NULL);
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
                 if (partId > 0) {
                     void *addr = sceKernelGetBlockHeadAddr(partId);
                     memmove(addr, (void *)protectInfo->addr, protectInfo->size);
@@ -397,7 +397,7 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
         case SCE_PROTECT_INFO_TYPE_USER_PARAM:
             if (protectInfo->size != 0) {
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitUserParam", 
-                        SCE_KERNEL_SMEM_High, protectInfo->size, NULL);
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
                 if (partId > 0) {
                     void *addr = sceKernelGetBlockHeadAddr(partId);
                     memmove(addr, (void *)protectInfo->addr, protectInfo->size);
@@ -411,7 +411,7 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
         case SCE_PROTECT_INFO_TYPE_PARAM_SFO:
             if (protectInfo->size != 0) { //0x00000B24
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitParamsfo", 
-                        SCE_KERNEL_SMEM_High, protectInfo->size, NULL);
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
                 if (partId > 0) { //0x00000B40
                     void *addr = sceKernelGetBlockHeadAddr(partId);
                     memmove(addr, (void *)protectInfo->addr, protectInfo->size);
@@ -430,14 +430,14 @@ static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
     }
     if (sceKernelGetChunk(0) < SCE_ERROR_OK) {
         partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitVSHParam", 
-                SCE_KERNEL_SMEM_High, 32, NULL);
+                SCE_KERNEL_SMEM_High, 32, 0);
         if (partId > 0) {
-            blkInfo.size = sizeof(SceKernelSysmemBlockInfo);
+            blkInfo.size = sizeof blkInfo;
             sceKernelQueryMemoryBlockInfo(partId, &blkInfo);
             
-            void *addr = blkInfo.unk40;
+            void *addr = (void *)blkInfo.addr;
             *(s32 *)(addr + 4) = 32;
-            *(s32 *)(addr + 0) = blkInfo.unk44;
+            *(s32 *)(addr + 0) = blkInfo.memSize;
             *(s32 *)(addr + 24) = 0;
             *(s32 *)(addr + 8) = 0;
             *(s32 *)(addr + 12) = 0;
@@ -780,7 +780,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                 mod->bootData = 0;
             else {
                 SceUID partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_USER_PARTITION, "backup area", 1, 
-                        mod->modSize, NULL);
+                        mod->modSize, 0);
                 void *addr = sceKernelGetBlockHeadAddr(partId);
                 sceKernelMemmoveWithFill(addr, mod->modBuf, mod->modSize, 0);
                 mod->bootData = partId;

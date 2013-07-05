@@ -36,159 +36,6 @@ typedef struct {
     SceResidentLibraryEntryTable *exportEntryTables[]; //108 
 } SysMemThreadConfig;
 
-typedef struct {
-    SceSize size;
-    u32 startAddr;
-    u32 memSize;
-    u32 attr;
-} SceSysmemPartitionInfo;
-
-s32 sceKernelQueryMemoryPartitionInfo(u32 pid, SceSysmemPartitionInfo *info);
-
-typedef struct {   
-    int id;
-    int (*func)(void *, int, int funcid, void *args);
-} SceSysmemUIDLookupFunction;
-
-typedef struct SceSysmemUIDControlBlock {   
-    struct SceSysmemUIDControlBlock *parent; // 0
-    struct SceSysmemUIDControlBlock *nextChild; // 4
-    struct SceSysmemUIDControlBlock *type; // 8
-    SceUID UID; // 12
-    char *name; // 16
-    unsigned char unk; // 20
-    unsigned char size; // size in words
-    short attribute; // 22
-    struct SceSysmemUIDControlBlock *nextEntry; // 24
-    struct SceSysmemUIDControlBlock *inherited; // 28
-    SceSysmemUIDLookupFunction *func_table; // 32
-} __attribute__((packed)) SceSysmemUIDControlBlock;
-
-typedef struct {   
-    int id;
-    int (*func)();
-} SceSysmemUIDLookupFunc;
-
-typedef struct {
-    s32 dlId;
-    void *stall;
-    u32 count;
-    u32 max;
-} SceGeLazy;
-
-typedef struct {
-    u32 size;
-    s32 *cmdList;
-    s32 (*sceGeListUpdateStallAddr_lazy)(s32 dlId, void *stall);
-    SceGeLazy *lazySyncData;
-} SceKernelUsersystemLibWork;
-
-SceSysmemUIDControlBlock *sceKernelCreateUIDtype(const char *name, int attr, SceSysmemUIDLookupFunc *funcs, int unk, SceSysmemUIDControlBlock **type);
-SceUID sceKernelCreateUID(SceSysmemUIDControlBlock *type, const char *name, short attr, SceSysmemUIDControlBlock **block);
-int sceKernelDeleteUID(SceUID uid);
-int sceKernelRenameUID(SceUID uid, const char *name);
-int sceKernelGetUIDcontrolBlock(SceUID uid, SceSysmemUIDControlBlock **block);
-s32 sceKernelGetUIDcontrolBlockWithType(SceUID uid, SceSysmemUIDControlBlock* type, SceSysmemUIDControlBlock** block);
-void sceKernelCallUIDObjCommonFunction(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, va_list ap);
-
-typedef struct {
-    u32 size;
-    u32 unk4;
-    u32 unk8;
-    u32 unk12;
-    u32 unk16;
-    u32 unk20;
-    u32 unk24;
-    u32 unk28;
-    u32 unk32;
-    u32 unk36;
-    void *unk40;
-    u32 unk44;
-    u32 unk48;
-    u32 unk52;
-} SceKernelSysmemBlockInfo;
-
-s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceKernelSysmemBlockInfo *info);
-
-SceUID sceKernelCreateHeap(SceUID partitionid, SceSize size, int unk, const char *name);
-void *sceKernelAllocHeapMemory(SceUID heapid, SceSize size);
-int sceKernelFreeHeapMemory(SceUID heapid, void *block);
-int sceKernelDeleteHeap(SceUID heapid);
-SceSize sceKernelHeapTotalFreeSize(SceUID heapid);
-
-SceKernelUsersystemLibWork *sceKernelGetUsersystemLibWork(void);
-s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_lazy)(s32, void*), SceGeLazy *lazy);
-
-typedef struct {
-    u32 size;
-    u32 unk4;
-    u32 unk8;
-    u32 unk12;
-    u32 unk16;
-    u32 unk20;
-    u32 unk24;
-    u32 unk28;
-    u32 unk32;
-    u32 unk36;
-    u32 unk40;
-    u32 unk44;
-    u32 unk48;
-    u32 unk52;
-    u32 unk56;
-    u32 unk60;
-    u32 unk64;
-    char gameId[10];
-    u16 unk78;
-    u32 unk80;
-    u32 unk84;
-    u32 unk88;
-    u32 unk92;
-    u32 unk96;
-    u32 unk100;
-    u32 unk104;
-    u32 unk108;
-    u32 unk112;
-    u32 unk116;
-    u32 unk120;
-    u32 unk124;
-    u32 unk128;
-    u32 unk132;
-    u32 unk136;
-    u32 unk140;
-    u32 unk144;
-    u32 unk148;
-    u32 unk152;
-    u32 unk156;
-    u32 unk160;
-    u32 unk164;
-    u32 unk168;
-    u32 unk172;
-    u32 unk176;
-    u32 unk180;
-    u32 unk184;
-    u32 unk188;
-    u32 unk192;
-    u32 unk196;
-    u32 unk200;
-    u32 unk204;
-    u32 unk208;
-    u32 unk212;
-    u32 unk216;
-} SceKernelGameInfo;
-
-SceKernelGameInfo *sceKernelGetGameInfo(void);
-void *sceKernelGetAWeDramSaveAddr(void);
-int sceKernelGetMEeDramSaveAddr(void);
-int sceKernelGetMEeDramSaveSize(void);
-
-void *sceKernelMemcpy(void *dst, const void *src, u32 n);
-void *sceKernelMemmove(void *dst, const void *src, u32 n);
-void *sceKernelMemset32(void *buf, int c, int size);
-void *sceKernelMemset(void *buf, int c, u32 size);
-void *sceKernelMemmoveWithFill(void *dst, const void *src, SceSize size, int c);
-
-int sceKernelGetCompiledSdkVersion(void);
-
 /** PSP Hardware models. */
 enum ScePspHwModels {
     /** PSP Fat (01g). */
@@ -209,32 +56,322 @@ enum ScePspHwModels {
     PSP_11000 = 10, 
 };
 
-int sceKernelGetModel(void);
+/* 
+ * Misc
+ */
 
-s32 sceKernelQueryMemoryInfo(u32 addr, SceUID *partitionId, SceUID *blockId);
+typedef struct {
+    u32 size; // 0
+    u32 flags; // 4
+    char str8[16]; // 8
+    char str24[11]; // 24
+    // padding?
+    int unk36;
+    char qtgp2[8]; // 40
+    char qtgp3[16]; // 48
+    u32 allowReplaceUmd; // 64
+    char gameId[14]; // 68
+    // padding?
+    u32 unk84; // 84
+    char str88[8]; // 88
+    u32 umdCacheOn; // 96
+    u32 sdkVersion; // 100
+    u32 compilerVersion; // 104
+    u32 dnas; // 108
+    u32 unk112; // 112
+    char str116[64]; // 116
+    char str180[11]; // 180
+    // padding?
+    char str196[8]; // 196
+    char unk204[8]; // 204
+    int unk212; // 212
+    int unk216; // 216
+} SceKernelGameInfo;
 
-s32 sceKernelFillFreeBlock(SceUID partitionId, u32 c);
+s32 SysMemForKernel_807179E7(char *gameId, int arg1, char *arg2, char *arg3, int arg4, int arg5, char *arg6);
+s32 sceKernelCopyGameInfo(SceKernelGameInfo *info);
+s32 SysMemForKernel_F3BDB718(char *arg0);
+s32 sceKernelGetQTGP2(char *qtgp2);
+s32 sceKernelSetQTGP2(char *qtgp2);
+s32 sceKernelGetQTGP3(char *qtgp3);
+s32 sceKernelSetQTGP3(char *qtgp3);
+s32 sceKernelGetAllowReplaceUmd(u32 *allow);
+s32 sceKernelSetAllowReplaceUmd(u32 allow);
+s32 sceKernelSetUmdCacheOn(u32 umdCacheOn);
+s32 SysMemForKernel_40B744A4(u32 unk112);
+s32 SysMemForKernel_BFE08689(char *str116);
+s32 SysMemForKernel_2A8B8B2D(char *unk204);
+SceKernelGameInfo *sceKernelGetGameInfo(void);
+u32 sceKernelGetCompiledSdkVersion(void);
+s32 sceKernelSetCompiledSdkVersion100(u32 ver);
+s32 sceKernelSetCompiledSdkVersion370(u32 ver);
+s32 sceKernelSetCompiledSdkVersion380_390(u32 ver);
+s32 sceKernelSetCompiledSdkVersion395(u32 ver);
+s32 sceKernelSetCompiledSdkVersion410_420(u32 ver);
+s32 sceKernelSetCompiledSdkVersion500_550(u32 ver);
+s32 sceKernelSetCompiledSdkVersion570(u32 ver);
+s32 sceKernelSetCompiledSdkVersion600_620(u32 ver);
+s32 sceKernelSetCompiledSdkVersion630_650(u32 ver);
+s32 sceKernelSetCompiledSdkVersion660(u32 ver);
+s32 sceKernelGetCompilerVersion(void);
+s32 sceKernelSetCompilerVersion(s32 version);
+s32 sceKernelGetDNAS(void);
+s32 sceKernelSetDNAS(s32 dnas);
+s32 sceKernelGetInitialRandomValue(void);
+s32 SysMemForKernel_A0A9185A(void);
+u32 SysMemForKernel_13EE28DA(u32 flag);
+u32 sceKernelGetModel(void);
+s32 sceKernelSetRebootKernel(s32 (*rebootKernel)());
+s32 sceKernelRebootKernel(void *arg);
+s32 sceKernelRegisterGetIdFunc(void *func);
+s32 sceKernelGetId();
 
+/*
+ * Debugging (disabled in release)
+ */
+s32 sceKernelApiEvaluationInit();
+s32 sceKernelRegisterApiEvaluation();
+s32 sceKernelApiEvaliationAddData();
+s32 sceKernelApiEvaluationReport();
+s32 sceKernelSetGcovFunction();
+s32 sceKernelCallGcovFunction();
+s32 sceKernelSetGprofFunction();
+s32 sceKernelCallGprofFunction();
+int sceKernelCheckDebugHandler();
+s32 SysMemForKernel_7FF2F35A(char *arg);
+s32 SysMemForKernel_A03CB480(char *arg);
+
+/*
+ * Heap
+ */
+
+typedef struct SceSysmemLowheapBlock {
+    struct SceSysmemLowheapBlock *next;
+    u32 count;
+} SceSysmemLowheapBlock;
+
+typedef struct SceSysmemHeapBlock {
+    struct SceSysmemHeapBlock *next, *prev; // 0, 4
+    // followed by lowheap
+} SceSysmemHeapBlock;
+
+SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name);
+
+typedef struct {
+    u32 size; // 0
+    char name[32]; // 4
+    int perm; // 36
+    int attr; // 40
+    int heapSize; // 44
+    int totalsize; // 48
+    int totalfreesize; // 52
+    int maxfreesize; // 56
+    int numheaps; // 60
+    void *heaps[];
+} SceSysmemHeapInfo;
+
+int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info);
+
+typedef struct SceSysmemLowheapInfoBlock {
+    SceSysmemLowheapBlock *block;
+    u32 offset;
+} SceSysmemLowheapInfoBlock;
+
+typedef struct {
+    u32 size; // 0
+    u32 heapSize; // 4
+    u32 unkSize1; // 8
+    u32 unkSize2; // 12
+    u32 maxSize; // 16
+    u32 blockCount; // 20
+    SceSysmemLowheapInfoBlock infoBlocks[];
+} SceSysmemLowheapInfo; // size: 24
+
+s32 sceKernelQueryLowheapInfo(SceSysmemHeapBlock *block, SceSysmemLowheapInfo *info);
+int sceKernelDeleteHeap(SceUID id);
+
+typedef struct {
+    u32 size; // structure size (probably)
+    u32 addr;
+} SceSysmemHeapAllocOption;
+
+void *sceKernelAllocHeapMemoryWithOption(SceUID id, int size, SceSysmemHeapAllocOption *opt);
+void *sceKernelAllocHeapMemory(SceUID id, int size);
+s32 sceKernelFreeHeapMemory(SceUID id, void *addr);
+s32 sceKernelHeapTotalFreeSize(SceUID id);
+
+/*
+ * Main
+ */
+s32 sceKernelGetSysMemoryInfo(s32 mpid, s32 arg1, s32 arg2);
+s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount);
+s32 sceKernelSysMemRealMemorySize(void);
+s32 sceKernelSysMemMemSize(void);
+s32 sceKernelSysMemMaxFreeMemSize(void);
+int sceKernelDeci2pRegisterOperations(void *op);
+void *sceKernelDeci2pReferOperations(void);
+s32 sceKernelGetMEeDramSaveAddr(void);
+s32 sceKernelGetAWeDramSaveAddr(void);
+s32 sceKernelGetMEeDramSaveSize(void);
+s32 sceKernelGetAWeDramSaveSize(void);
+s32 sceKernelDevkitVersion(void);
+s32 sceKernelGetSystemStatus(void);
+s32 sceKernelSetSystemStatus(s32 newStatus);
+
+typedef struct {
+    s32 dlId;
+    void *stall;
+    u32 count;
+    u32 max;
+} SceGeLazy;
+
+typedef struct {
+    u32 size;
+    s32 *cmdList;
+    s32 (*sceGeListUpdateStallAddr_lazy)(s32 dlId, void *stall);
+    SceGeLazy *lazySyncData;
+} SceKernelUsersystemLibWork;
+
+s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_lazy)(s32, void*), SceGeLazy *lazy);
+SceKernelUsersystemLibWork *sceKernelGetUsersystemLibWork(void);
+
+/*
+ * Memory Block
+ */
+
+typedef struct {
+    s32 size; // Structure size
+} SceSysmemMemoryBlockAllocOption;
+
+SceUID sceKernelAllocMemoryBlock(const char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt);
+s32 sceKernelFreeMemoryBlock(SceUID id);
+s32 sceKernelGetMemoryBlockAddr(SceUID id, u32 *addrPtr);
+
+/*
+ * Memory Main
+ */
+
+typedef struct {
+    u32 size; // 0
+    char name[32]; // 4
+    u32 attr; // 36
+    u32 addr; // 40
+    u32 memSize; // 44
+    u32 sizeLocked; // 48
+    u32 used; // 52
+} SceSysmemMemoryBlockInfo;
+
+s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift);
+s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2);
+s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
+s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *memoryBlockId);
+s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr);
+s32 sceKernelSizeLockMemoryBlock(SceUID id);
+s32 sceKernelFreePartitionMemory(SceUID id);
+s32 sceKernelFreePartitionMemoryForUser(SceUID id);
+s32 sceKernelQueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId);
+void *sceKernelGetBlockHeadAddr(SceUID id);
+u32 SysMemForKernel_CC31DEAD(SceUID id);
+void *sceKernelGetBlockHeadAddrForUser(SceUID id);
+int memset(void *s, int c, int n);
+void *sceKernelMemset(void *src, s8 c, u32 size);
+void *sceKernelMemset32(void *src, s32 c, u32 size);
+void *sceKernelMemmove(void *dst, void *src, u32 size);
+void *sceKernelMemmoveWithFill(void *dst, void *src, u32 size, s32 fill);
+
+/*
+ * Memory Operations
+ */
 void sceKernelMemoryExtendSize(void);
 void sceKernelMemoryShrinkSize(void);
+u32 sceKernelMemoryOpenSize(void);
+void sceKernelMemoryCloseSize(u32 state);
+s32 sceKernelSetDdrMemoryProtection(u32 addr, u32 size, u32 set);
 
-int sceKernelGetAllowReplaceUmd(int *);
+/*
+ * Partitions
+ */
 
-int sceKernelSetRebootKernel(void *);
+typedef struct {
+    SceSize size; // 0
+    u32 startAddr; // 4
+    u32 memSize; // 8
+    u32 attr; // 12
+} SceSysmemPartitionInfo;
 
-int sceKernelGetSystemStatus(void);
-void sceKernelSetSystemStatus(s32 status);
-int sceKernelSetDNAS(int dnas);
+s32 sceKernelQueryMemoryPartitionInfo(s32 mpid, SceSysmemPartitionInfo *info);
+u32 sceKernelPartitionMaxFreeMemSize(s32 mpid);
+u32 sceKernelPartitionMaxFreeMemSizeForUser(void);
+u32 sceKernelPartitionTotalMemSize(s32 mpid);
+u32 sceKernelTotalMemSize(void);
+u32 sceKernelPartitionTotalFreeMemSize(s32 mpid);
+u32 sceKernelPartitionTotalFreeMemSizeForUser(void);
+s32 sceKernelFillFreeBlock(s32 mpid, u32 c);
+SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, s32 size, s32 addr);
+s32 sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, s32 type, s32 size, s32 addr);
 
-int SysMemForKernel_BFE08689(void *buf);
+/*
+ * UIDs
+ */
 
-int sceKernelGetInitialRandomValue(void);
+struct SceSysmemUidLookupFunc;
 
-int sceKernelSetDdrMemoryProtection(int, int, int);
+typedef struct SceSysmemUidCB {
+    struct SceSysmemUidCB *PARENT0; // 0
+    struct SceSysmemUidCB *nextChild; // 4
+    struct SceSysmemUidCB *meta; // 8: the type UID
+    u32 uid; // 12
+    char *name; // 16
+    u8 childSize; // 20
+    u8 size; // 21
+    u16 attr; // 22
+    union {
+        struct SceSysmemUidCB *next; // 24
+        s32 numChild; // 24
+    } next;
+    struct SceSysmemUidCB *PARENT1; // 28
+    struct SceSysmemUidLookupFunc *funcTable; // 32
+} __attribute__((packed)) SceSysmemUidCB; // size: 36
 
-int sceKernelSysMemRealMemorySize(void);
+typedef s32 (*SceSysmemUidFunc)(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 
-int SysMemForKernel_40B744A4(int);
+typedef struct {
+    s32 id;
+    SceSysmemUidFunc func;
+} SceSysmemUidLookupFunc;
+
+s32 sceKernelCallUIDFunction(SceUID id, int funcId, ...);
+s32 sceKernelCallUIDObjFunction(SceSysmemUidCB *uid, s32 funcId, ...);
+int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, void **func, SceSysmemUidCB **parentUidWithFunc);
+s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int size,
+                                  SceSysmemUidLookupFunc *funcTable, SceSysmemUidLookupFunc *metaFuncTable,
+                                  SceSysmemUidCB **uidTypeOut);
+int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysmemUidCB **outUid);
+SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId);
+int sceKernelCreateUIDtype(const char *name, int size, SceSysmemUidLookupFunc *funcTable,
+                           SceSysmemUidLookupFunc *metaFuncTable, SceSysmemUidCB **uidTypeOut);
+s32 sceKernelDeleteUIDtype(SceSysmemUidCB *uid);
+s32 sceKernelGetUIDname(SceUID id, s32 len, char *out);
+s32 sceKernelRenameUID(SceUID id, const char *name);
+s32 sceKernelGetUIDtype(SceUID id);
+s32 sceKernelDeleteUID(SceUID id);
+s32 sceKernelGetUIDcontrolBlock(SceUID id, SceSysmemUidCB **uidOut);
+s32 sceKernelGetUIDcontrolBlockWithType(SceUID id, SceSysmemUidCB *type, SceSysmemUidCB **outUid);
+s32 sceKernelIsKindOf(SceSysmemUidCB *uid, SceSysmemUidCB *type);
+s32 sceKernelPrintUidListAll(void);
+
+typedef struct {
+    SceSysmemUidCB *root; // 0
+    SceSysmemUidCB *metaRoot; // 4
+    SceSysmemUidCB *basic; // 8
+    s32 count; // 12
+} SceSysmemUidList;
+
+SceSysmemUidList *sceKernelGetUidmanCB(void);
+s32 sceKernelIsHold(SceSysmemUidCB *uid0, SceSysmemUidCB *uid1);
+s32 sceKernelHoldUID(SceUID id0, SceUID id1);
+s32 sceKernelReleaseUID(SceUID id0, SceUID id1);
 
 #endif
 

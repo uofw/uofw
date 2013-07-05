@@ -344,7 +344,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
     {
         // D754
         if (((int)dst & 3) != 0)
-        {   
+        {
             // D96C
             int align = 4 - ((int)dst & 3);
             asm("lwl $at, 3(%0)\n \
@@ -401,7 +401,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                     asm("lw $at, 0(%0)\n \
                          addiu %0, %0, 4\n \
                          sw $at, 0(%1)\n \
-                         addiu %1, %1, 4" : : "r" (curSrc), "r" (curDst) : "4at");
+                         addiu %1, %1, 4" : : "r" (curSrc), "r" (curDst) : "$at");
                 }
                 // D79C
                 // D7A0
@@ -501,7 +501,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
             return count;
         }
         if (*fmt == '%')
-        {   
+        {
             int flag = 0;
             // DAAC
             int precision = -1;
@@ -525,17 +525,17 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     if (sign == '\0')
                         sign = ' ';
                     continue;
-            
+
                 case '\0':
                     // DB08 dup
                     cb(ctx, 513);
                     return count;
-            
+
                 case '#':
                     // DB48
                     flag |= 8;
                     continue;
-            
+
                 case '*':
                     // DB58
                     numAlign = va_arg(args, int);
@@ -546,12 +546,12 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // DB70
                     flag |= 0x10;
                     continue;
-            
+
                 case '+':
                     // DB80
                     sign = '+';
                     continue;
-            
+
                 case '.':
                     // DB8C
                     precision = 0;
@@ -576,12 +576,12 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // DBEC
                     precision = pspMax(precision, -1);
                     continue;
-            
+
                 case '0':
                     // DC04
                     flag |= 0x20;
                     continue;
-            
+
                 case '1': case '2': case '3':
                 case '4': case '5': case '6':
                 case '7': case '8': case '9': {
@@ -601,7 +601,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     numAlign = cur;
                 }
                     continue;
-            
+
                 case 'D':
                     // DC64
                     flag |= 1;
@@ -646,12 +646,12 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     stringLen = &string[21] - s;
                 }
                     goto print_string;
-            
+
                 case 'L':
                     // DFD4
                     flag |= 2;
                     continue;
-            
+
                 case 'O':
                     // DFE0
                     flag |= 1;
@@ -659,7 +659,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // DFEC
                     base = 8;
                     goto print_base_unsigned;
-            
+
                 case 'U':
                     // E028
                     flag |= 1;
@@ -667,7 +667,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // E034
                     base = 10;
                     goto print_base_unsigned;
-            
+
                 case 'X':
                     // E044
                     ciphers = g_upHexChars;
@@ -691,7 +691,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // E014
                     sign = '\0';
                     goto print_base;
-            
+
                 case 'c':
                     // E0D8
                     s = string;
@@ -699,12 +699,12 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     sign = '\0';
                     string[0] = (char)va_arg(args, int);
                     goto print_string;
-            
+
                 case 'h':
                     // E0F8
                     flag |= 4;
                     continue;
-            
+
                 case 'l':
                     // E104
                     if ((flag & 1) == 0) {
@@ -714,7 +714,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     else
                         flag = (flag & 0xFFFFFFFE) | 2;
                     continue;
-            
+
                 case 'n':
                     // E12C
                     if ((flag & 1) != 0 || (flag & 4) == 0) {
@@ -724,7 +724,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     else
                         *va_arg(args, short*) = count;
                     break;
-            
+
                 case 'p':
                     // E170
                     base = 16;
@@ -734,7 +734,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // E014
                     sign = '\0';
                     goto print_base;
-            
+
                 case 's':
                     // E17C
                     s = va_arg(args, char*);
@@ -761,7 +761,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     // E1C0
                     sign = '\0';
                     goto print_string;
-            
+
                 default:
                     // E1E8
                     cb(ctx, *fmt);
@@ -770,7 +770,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     break;
                 }
                 break;
-        
+
                 print_base_unsigned:
                 // DFF8
                 if ((flag & 2) == 0) {
@@ -784,7 +784,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 // E010
                 // E014
                 sign = '\0';
-        
+
                 print_base:
                 // DF18
                 usedPrecision = precision;
@@ -808,7 +808,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 }
                 // DD30
                 stringLen = &string[21] - s;
-        
+
                 print_string:
                 // DD38
                 len = stringLen;
@@ -964,9 +964,9 @@ char *strchr(const char *s, char c)
 }
 
 int strcmp(const char *s1, const char *s2)
-{   
+{
     if (s1 != NULL && s2 != NULL)
-    {   
+    {
         // E444, E464, E468
         while (*(s1++) == *(s2++))
             if (*(s1 - 1) == '\0')
@@ -982,7 +982,7 @@ int strcmp(const char *s1, const char *s2)
 }
 
 char *strcpy(char *dest, const char *src)
-{   
+{
     char *curDest = dest;
     if (dest == NULL || src == NULL)
         return NULL;
@@ -1040,7 +1040,7 @@ int strtol(char *nptr, char **endptr, int base)
     else
     {
         if (toupper(*nptr) == '0')
-        {   
+        {
             nptr++;
             // E610
             base = 8;
@@ -1076,7 +1076,7 @@ int strtol(char *nptr, char **endptr, int base)
 }
 
 u32 strtoul(char *nptr, char **endptr, int base)
-{   
+{
     int num = 0;
     if (nptr == NULL)
         return 0;
@@ -1140,7 +1140,7 @@ u32 strtoul(char *nptr, char **endptr, int base)
 int strncmp(const char *s1, const char *s2, int n)
 {
     if (s1 != NULL && s2 != NULL)
-    {   
+    {
         // E89C
         if ((--n) < 0)
             return 0;
@@ -1168,11 +1168,11 @@ char *strncpy(char *dest, const char *src, int n)
     int i;
     // E92C
     for (i = 0; i < n; i++)
-    {  
+    {
         char c = *(src++);
         *(curDst++) = c;
         if (c == '\0')
-        {  
+        {
             // E958, E968
             while ((++i) < n)
                 *(curDst++) = '\0';
@@ -1229,7 +1229,7 @@ char *strrchr(char *s, int c)
 }
 
 char *strpbrk(char *s, const char *accept)
-{   
+{
     // EA58
     while (*(s++) != '\0')
     {

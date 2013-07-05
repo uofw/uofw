@@ -14,7 +14,7 @@
 
 #define SCE_PRIVILEGED_MODULES  (SCE_MODULE_MS | SCE_MODULE_USB_WLAN | SCE_MODULE_APP | SCE_MODULE_VSH | SCE_MODULE_KERNEL)
 
-SceSysmemUIDControlBlock *ModuleServiceInit(void);
+s32 ModuleServiceInit(void);
 
 #endif	/* MODULE_H */
 

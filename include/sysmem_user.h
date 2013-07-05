@@ -31,11 +31,4 @@ enum SceSysMemBlockType {
     SCE_KERNEL_SMEM_Addr = 2
 };
 
-SceUID sceKernelAllocPartitionMemory(SceUID partitionid, const char *name, s32 type, SceSize size, void *addr);
-s32 sceKernelFreePartitionMemory(SceUID uid);
-
-void *sceKernelGetBlockHeadAddr(SceUID uid);
-int SysMemForKernel_CC31DEAD(SceUID uid);
-
-
 #endif	/* SYSMEM_USER_H */

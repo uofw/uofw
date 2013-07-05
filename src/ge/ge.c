@@ -350,7 +350,7 @@ int sceGeInit()
     HW(0xBD400308) = 7;
     int i;
     for (i = 0; i < 256; i++) {
-        if (((save_regs[i >> 3] >> (i & 7)) & 1) != 0)
+        if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
             *(curDl++) = i << 24;
         // 03A0
     }
@@ -876,7 +876,7 @@ int sceGeSaveContext(SceGeContext * ctx)
     // 17C8
     int i;
     for (i = 0; i < 256; i++) {
-        if (((save_regs[i >> 3] >> (i & 7)) & 1) != 0)
+        if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
             *(curCmd++) = *cmds;
         // 1804
         cmds++;

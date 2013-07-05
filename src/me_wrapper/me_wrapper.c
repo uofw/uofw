@@ -229,7 +229,7 @@ int module_start(int argc __attribute__((unused)), void *argp __attribute__((unu
 		SceSysmemPartitionInfo info;
 		info.size = sizeof(SceSysmemPartitionInfo);
 		if (sceKernelQueryMemoryPartitionInfo(4, &info) < 0 || info.startAddr != 0x88300000)
-			sceKernelAllocPartitionMemory(1, "old ME partition", 2, 0x100000, (void*)0x88300000);
+			sceKernelAllocPartitionMemory(1, "old ME partition", 2, 0x100000, 0x88300000);
 	}
 	return 0;
 }
