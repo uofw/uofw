@@ -3,10 +3,12 @@
 
 include ../../lib/common.mak
 
-PSPSDK = $(shell psp-config --pspsdk-path)
-CFLAGS := -I../../include -O1 -fno-toplevel-reorder -G0 -Wall -Wextra -Werror -fno-builtin-bcopy -fno-builtin-bzero -fno-builtin-strchr -fno-builtin-printf -fno-builtin-puts -fno-builtin-putchar -nostdlib -I$(PSPSDK)/include
-CFLAGS_S := -I../../include
-LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx -L$(PSPSDK)/lib
+INCLUDE = -I../../include
+WARNINGS = -Wall -Wextra -Werror
+BUILTINS_DISABLE = -fno-builtin-bcopy -fno-builtin-bzero -fno-builtin-strchr -fno-builtin-printf -fno-builtin-puts -fno-builtin-putchar -fno-builtin-rindex -nostdlib
+CFLAGS := $(INCLUDE) -O1 -fno-toplevel-reorder -G0 $(WARNINGS) $(BUILTINS_DISABLE)
+CFLAGS_S := $(INCLUDE)
+LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
 
 FIXUP_IMPORTS = ../../utils/fixup-imports/psp-fixup-imports
 BUILD_EXPORTS = ../../utils/build-exports/psp-build-exports
@@ -17,7 +19,8 @@ EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
 EXPORT_C=$(PRX_EXPORTS:.exp=.c)
 
 ifeq ($(DEBUG),1)
-CFLAGS += -DDEBUG
+CFLAGS += -DDEBUG -I$(PSPSDK)/include
+LDFLAGS += -L$(PSPSDK)/lib
 LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
 endif
 ifeq ($(INSTALLER),1)
