@@ -46,4 +46,6 @@
 #define UPALIGN256(v)   (((v) + 0xFF) & 0xFFFFFF00)
 #define UPALIGN64(v)    (((v) + 0x3F) & 0xFFFFFFC0)
 #define UPALIGN16(v)    (((v) + 0xF) & 0xFFFFFFF0)
-#define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)   
+#define UPALIGN8(v)     (((v) + 0x7) & 0xFFFFFFF8)
+#define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)
+
