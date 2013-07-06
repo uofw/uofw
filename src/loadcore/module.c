@@ -100,7 +100,7 @@ SceModule *sceKernelCreateModule(void)
         return NULL;
     }
     
-    mod = (SceModule *)((u32 *)cb + g_ModuleType->size);
+    mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     if (mod == NULL) { //0x00006898
         loadCoreCpuResumeIntr(intrState);
         return NULL;
@@ -314,7 +314,7 @@ SceModule *sceKernelGetModuleFromUID(SceUID uid)
         loadCoreCpuResumeIntr(intrState2); //0x00006E14
     }
     else {
-        mod = (SceModule *)((u32 *)block + g_ModuleType->size);
+        mod = UID_CB_TO_DATA(block, g_ModuleType, SceModule);
     }
     
     loadCoreCpuResumeIntr(intrState); //0x00006DB4
@@ -490,7 +490,7 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap); //0x00007234
     
-    mod = (SceModule *)((u32 *)cb + g_ModuleType->size);
+    mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     
     mod->modId = cb->uid; //0x0000725C
     mod->entryAddr = LOADCORE_ERROR; //0x00007260

@@ -314,6 +314,9 @@ s32 sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, s32 type, s32 siz
  * UIDs
  */
 
+#define UID_CB_TO_DATA(uid, typeStruct, type) ((type*)((void*)uid + typeStruct->size * 4))
+#define UID_DATA_TO_CB(data, typeStruct) ((SceSysmemUidCB*)((void*)data - typeStruct->size * 4))
+
 struct SceSysmemUidLookupFunc;
 
 typedef struct SceSysmemUidCB {
