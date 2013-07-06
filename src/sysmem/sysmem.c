@@ -144,7 +144,7 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
                  *uidExtScKernel, *uidExtSc2Kernel, *uidExtMe, *uidExtVsh;
     PartitionServiceInit();
     sceKernelCreateUID(g_145A8, "SceMyKernelPartition", (k1 >> 31) & 0xFF, &uidKernel);
-    SceSysmemMemoryPartition *kernelPart = (void*)uid + g_145A8->size * 4;
+    SceSysmemMemoryPartition *kernelPart = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
     SceSysmemMemoryPartition *part;
     *(int*)(kernelPart + 0) = 0;
     *(int*)(kernelPart + 4) = *(int*)(arg0 + 4);
@@ -157,15 +157,15 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     *(int*)(kernelPart + 20) = *(int*)(arg0 + 16);
     g_145C0.main = kernelPart;
     MemoryBlockServiceInit();
-    sceKernelCreateUID(g_13FE0, "SceSystemMemoryManager", (k1 >> 31) & 0xFF, &uidKernel);
-    SceSysmemMemoryBlock *memBlock = (void*)uidKernel + g_13FE0->size * 4;
+    sceKernelCreateUID(g_MemBlockType, "SceSystemMemoryManager", (k1 >> 31) & 0xFF, &uidKernel);
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
     *(int*)(&g_1455C + 8) = memBlock;
     *(int*)(memBlock + 0) = *(int*)(&g_1455C + 0);
     *(int*)(memBlock + 4) = *(int*)(&g_1455C + 4);
     *(int*)(memBlock + 8) = *(int*)(&g_1455C + 8);
     sceKernelProtectMemoryBlock(*(int*)(&g_1455C + 8), *(int*)(&g_1455C + 0));
-    sceKernelCreateUID(g_13FE0, "SceSystemBlock", (k1 >> 31) & 0xFF, &uidKernel);
-    memBlock = (void*)uidKernel + g_13FE0->size * 4;
+    sceKernelCreateUID(g_MemBlockType, "SceSystemBlock", (k1 >> 31) & 0xFF, &uidKernel);
+    memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
     *(int*)(&g_14568 + 8) = memBlock;
     *(int*)(memBlock + 0) = *(int*)(&g_14568 + 0);
     *(int*)(memBlock + 4) = *(int*)(&g_14568 + 4);
@@ -176,7 +176,7 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceOtherKernelPartition", 12, info->addr, info->size), g_145A8, &uidOther);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidOther + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidOther, g_145A8, SceSysmemMemoryPartition);
     // 11160
     if (*(int*)(arg1 + 4) == 3) {
         // 11450
@@ -191,21 +191,21 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceVshellPartition", 15, info->addr, info->size), g_145A8, &uidVsh);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidVsh + g_145A8->size * 4;
+        UID_CB_TO_DATA(uidVsh, g_145A8, SceSysmemMemoryPartition);
     // 111C8
     g_145C0.vshell = part;
     info = &partTable->scUser;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceScUserPartition", 15, info->addr, info->size), g_145A8, &uidScUser);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidScUser + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidScUser, g_145A8, SceSysmemMemoryPartition)
     // 1121C
     g_145C0.scUser = part;
     info = &partTable->meUser;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceMeUserPartition", 15, info->addr, info->size), g_145A8, &uidMeUser);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidMeUser + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidMeUser, g_145A8, SceSysmemMemoryPartition);
     // 11270
     g_145C0.meUser = part;
     if (*(int*)(arg1 + 8) == 6) {
@@ -218,21 +218,21 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtScKernelPartition", 12, info->addr, info->size), g_145A8, &uidExtScKernel);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidExtScKernel + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidExtScKernel, g_145A8, SceSysmemMemoryPartition);
     // 112DC
     g_145C0.extScKernel = part;
     info = &partTable->extSc2Kernel;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtSc2KernelPartition", 12, info->addr, info->size), g_145A8, &uidExtSc2Kernel);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidSc2Kernel + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidSc2Kernel, g_145A8, SceSysmemMemoryPartition);
     // 11330
     g_145C0.extSc2Kernel = part;
     info = &partTable->extMeKernel;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtMeKernelPartition", 12, info->addr, info->size), g_145A8, &uidExtMeKernel);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidExtMeKernel + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidExtMeKernel, g_145A8, SceSysmemMemoryPartition);
     // 11384
     g_145C0.extMeKernel = part;
     if (*(int*)(arg1 + 4) == 3) {
@@ -248,7 +248,7 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtVshellPartition", 12, info->addr, info->size), g_145A8, &uidExtVsh);
     part = NULL;
     if (info->size != 0)
-        part = (void*)uidExtVsh + g_145A8->size * 4;
+        part = UID_CB_TO_DATA(uidExtVsh, g_145A8, SceSysmemMemoryPartition);
     // 11404
     g_145C0.extVshell = part;
     resumeIntr(oldIntr);

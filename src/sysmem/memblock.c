@@ -1,7 +1,9 @@
-SceUID sceKernelAllocMemoryBlock(const char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt)
+#include <sysmem_kernel.h>
+
+SceUID sceKernelAllocMemoryBlock(char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt)
 {
     s32 oldK1 = pspShiftK1();
-    if (!pspK1PtrOk(name) || !pspK1StaBufOk(a3, size)) {
+    if (!pspK1PtrOk(name) || !pspK1StaBufOk(opt, 4)) {
         pspSetK1(oldK1);
         return 0x800200D3;
     }
@@ -26,7 +28,8 @@ s32 sceKernelFreeMemoryBlock(SceUID id)
     pspSetK1(oldK1);
     return ret;
 }
-s32 sceKernelGetMemoryBlockAddr(SceUID id, u32 *addrPtr)
+
+s32 sceKernelGetMemoryBlockAddr(SceUID id, void **addrPtr)
 {
     s32 oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(addrPtr, sizeof *addrPtr)) {

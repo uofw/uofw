@@ -1,4 +1,4 @@
-#include <common_imp.h>
+#include <sysmem_kdebug.h>
 
 // 143FC
 void (*g_assertHandler)(int);

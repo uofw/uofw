@@ -1,7 +1,15 @@
 #include <stdarg.h>
+#include <sysmem_sysclib.h>
 
 #include <common_imp.h>
 
+#include "intr.h"
+#include "start.h"
+
+int kprnt(short *arg0, const char *fmt, va_list ap, int userMode);
+
+// 14434
+char g_kprintfDefaultParam[260];
 // 13BC4
 int (*g_kprintfHandler)(short*, const char*, va_list, int) = kprnt;
 // 13BC8
@@ -29,8 +37,9 @@ void (*g_dbgPutchar)(short*, int);
 int (*g_dbgWrite)();
 // 14430
 int (*g_dbgRead)();
-// 14434
-char g_kprintfDefaultParam[260];
+
+int DipswSet(int reg, int val);
+void SetIsDvdMode(void);
 
 int DipswInit(u32 lo, u32 hi, int cpTime)
 {
@@ -480,29 +489,29 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
 
                 case 's': {
                     // 106C0
-                    char *s = va_arg(ap, char*);
-                    if (s == NULL)
+                    curStr = va_arg(ap, char*);
+                    if (curStr == NULL)
                     {
                         // 10748
-                        s = g_null;
+                        curStr = g_null;
                     }
                     // 106CC
-                    if (userMode != 0 && !pspK1PtrOk(s))
+                    if (userMode != 0 && !pspK1PtrOk(curStr))
                         return 0x800200D3;
                     // 106E4
                     if (strSize < 0)
                     {
                         // 1072C
-                        stringLen = strlen(s);
+                        stringLen = strlen(curStr);
                     }
                     else
                     {
-                        char *s2 = memchr(s, '\0', strSize);
+                        char *s2 = memchr(curStr, '\0', strSize);
                         stringLen = strSize;
                         if (s2 != NULL)
                         {
-                            stringLen = s2 - s;
-                            if (strSize < s2 - s)
+                            stringLen = s2 - curStr;
+                            if (strSize < s2 - curStr)
                                 stringLen = strSize;
                         }
                     }
@@ -637,7 +646,9 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
     }
 }
 
-int KprintfForUser(const char *fmt, ...) __attribute__((alias("sceKernelPrintf")))
+int sceKernelPrintf(const char *fmt, ...) __attribute__((alias("KprintfForUser")));
+
+int KprintfForUser(const char *fmt, ...)
 {
     va_list ap;
     int oldK1 = pspShiftK1();

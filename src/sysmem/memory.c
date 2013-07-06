@@ -1,3 +1,24 @@
+#include <sysmem_kdebug.h>
+#include <sysmem_kernel.h>
+#include <sysmem_sysclib.h>
+
+#include "intr.h"
+#include "sysmem.h"
+
+#include "memory.h"
+
+s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+
+// 13FE0
+SceSysmemUidCB *g_MemBlockType;
+
 s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
 {
     u32 rightSegs = 0;
@@ -13,13 +34,13 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
     // 4E5C
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret != 0) {
         resumeIntr(oldIntr);
         return ret;
     }
     // 4E90
-    SceSysmemMemoryBlock *memBlock = (void*)uid + g_13FE0.size * 4;
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemMemoryPartition *part = memBlock->part;
     SceSysmemSeg *seg = AddrToSeg(part, memBlock->addr);
     if (seg == NULL)
@@ -53,7 +74,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
         goto fail;
     if (newLeftAddr >= part->addr + part->size)
         goto fail;
-    SceSysmemCtlBlk *ctlBlk = ((u32)seg >> 8) << 8;
+    SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)(((u32)seg >> 8) << 8);
     SceSysmemSeg *prevSeg = &ctlBlk->segs[seg->prev];
     if (seg->prev == 0x3F) {
         // 5394
@@ -86,7 +107,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
     // 4FF0
     seg->unk8 = 0;
     if (leftSegs != 0) {
-        memBlock->addr = newLeftAddr;
+        memBlock->addr = (void *)newLeftAddr;
         if (leftShift <= 0) {
             // 524C
             memBlock->size -= (leftSegs << 8);
@@ -110,7 +131,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
                 newPrevSeg->offset = seg->offset - leftSegs;
                 newPrevSeg->size = leftSegs;
                 // 523C dup
-                updateSmemCtlBlk(part, (u32)newPrevSeg & 0xFFFFFF00);
+                updateSmemCtlBlk(part, (SceSysmemCtlBlk*)((u32)newPrevSeg & 0xFFFFFF00));
             } else {
                 // 504C dup
                 prevSeg->size += leftSegs;
@@ -123,7 +144,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
                 // 5224
                 _ReturnSegBlankList(prevSeg);
                 // 523C dup
-                updateSmemCtlBlk(part, (u32)prevSeg & 0xFFFFFF00);
+                updateSmemCtlBlk(part, (SceSysmemCtlBlk*)((u32)prevSeg & 0xFFFFFF00));
             } else {
                 // 504C dup
                 prevSeg->size -= leftSegs;
@@ -152,7 +173,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
                 ctlBlk->segCount++;
                 newNextSeg->offset = seg->offset + seg->size;
                 newNextSeg->size = rightSegs;
-                updateSmemCtlBlk(part, (u32)newNextSeg & 0xFFFFFF00);
+                updateSmemCtlBlk(part, (SceSysmemCtlBlk*)((u32)newNextSeg & 0xFFFFFF00));
             } else {
                 nextSeg->size += rightSegs;
                 nextSeg->offset -= rightSegs;
@@ -166,7 +187,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
             } else {
                 // 50C0
                 _ReturnSegBlankList(nextSeg);
-                updateSmemCtlBlk(part, (u32)nextSeg & 0xFFFFFF00);
+                updateSmemCtlBlk(part, (SceSysmemCtlBlk*)((u32)nextSeg & 0xFFFFFF00));
             }
         }
     }
@@ -179,19 +200,19 @@ fail:
     return 0x800200DB;
 }
 
-s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2);
+s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid1, *uid2;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id1, g_13FE0, &uid1);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id1, g_MemBlockType, &uid1);
     if (ret != 0)
         goto fail;
-    ret = sceKernelGetUIDcontrolBlockWithType(id2, g_13FE0, &uid2);
+    ret = sceKernelGetUIDcontrolBlockWithType(id2, g_MemBlockType, &uid2);
     if (ret != 0)
         goto fail;
-    SceSysmemMemoryBlock *memBlock1 = (void*)uid1 + g_13FE0.size * 4;
+    SceSysmemMemoryBlock *memBlock1 = UID_CB_TO_DATA(uid1, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg1 = AddrToSeg(memBlock1->part, memBlock1->addr);
-    SceSysmemMemoryBlock *memBlock2 = (void*)uid2 + g_13FE0.size * 4;
+    SceSysmemMemoryBlock *memBlock2 = UID_CB_TO_DATA(uid2, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg2 = AddrToSeg(memBlock2->part, memBlock2->addr);
     if (memBlock1->part != memBlock2->part || seg1->offset + seg1->size != seg2->offset) {
         // 54B8
@@ -211,14 +232,14 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2);
         return 0x800200E2;
     }
     SceSysmemUidCB *newUid;
-    ret = sceKernelCreateUID(g_13FE0, uid1->name, (uid1->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
+    ret = sceKernelCreateUID(g_MemBlockType, uid1->name, (uid1->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
     if (ret != 0)
         goto fail;
     // 5560
     seg1->size += seg2->size;
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)seg2 & 0xFFFFFF00);
     ctlBlk->unk10--;
-    SceSysmemMemoryBlock *newMemBlock = (void*)newUid + g_13FE0.size * 4;
+    SceSysmemMemoryBlock *newMemBlock = UID_CB_TO_DATA(newUid, g_MemBlockType, SceSysmemMemoryBlock);
     newMemBlock->addr = memBlock1->addr;
     newMemBlock->size = seg1->size << 8;
     newMemBlock->part = memBlock1->part;
@@ -228,7 +249,7 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2);
             s32 i;
             // 5658
             for (i = 0; i < 256; i += 4)
-                *(int*)(newMemBlock->addr + newMemBlock->size + i) = newMemBlock->addr - 1;
+                *(u32*)(newMemBlock->addr + newMemBlock->size + i) = (u32)newMemBlock->addr - 1;
             seg1->unk8 = 1;
         }
     }
@@ -246,14 +267,14 @@ fail:
     return ret;
 }
 
-s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
+s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    ret = sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret != 0)
         goto fail;
-    SceSysmemMemoryBlock *memBlock = (void*)uid + g_13FE0.size * 4;
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg = AddrToSeg(memBlock->part, memBlock->addr);
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)seg & 0xFFFFFF00);
     if (seg->sizeLocked) {
@@ -268,7 +289,7 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
         return 0x800200E3;
     }
     SceSysmemUidCB *newUid;
-    ret = sceKernelCreateUID(g_13FE0, uid->name, (uid->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
+    ret = sceKernelCreateUID(g_MemBlockType, uid->name, (uid->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
     if (ret != 0)
         goto fail;
     SceSysmemSeg *freeSeg;
@@ -291,12 +312,12 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
         seg->offset = freeSeg->offset + seg->size - cutSegSize;
     } else {
         u32 freeId = ctlBlk->freeSeg;
-        SceSysmemSeg *freeSeg = &ctlBlk->segs[freeId];
+        freeSeg = &ctlBlk->segs[freeId];
         ctlBlk->freeSeg = freeSeg->next;
         freeSeg->next = seg->next;
         freeSeg->prev = (((u32)seg & 0xFF) - 16) >> 3;
         if (freeSeg->next == 0x3F)
-            ctlBlk->lastseg = freeId;
+            ctlBlk->lastSeg = freeId;
         else
             ctlBlk->segs[seg->next].prev = freeId;
         // 57DC
@@ -309,11 +330,11 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
     freeSeg->used = 1;
     seg->size = cutSegSize;
     seg->unk8 = 0;
-    memBlock->addr = memBlock->part->addr + (seg->offset << 8);
+    memBlock->addr = (void *)(memBlock->part->addr + (seg->offset << 8));
     memBlock->size = cutSegSize << 8;
     ctlBlk->unk10++;
-    SceSysmemMemoryBlock *newMemBlock = (void*)newUid + g_13FE0.size * 4;
-    newMemBlock->addr = memBlock->part->addr + (freeSeg->offset << 8);
+    SceSysmemMemoryBlock *newMemBlock = UID_CB_TO_DATA(newUid, g_MemBlockType, SceSysmemMemoryBlock);
+    newMemBlock->addr = (void *)(memBlock->part->addr + (freeSeg->offset << 8));
     newMemBlock->size = freeSeg->size << 8;
     newMemBlock->part = memBlock->part;
     if (sceKernelIsToolMode() != 0) {
@@ -324,7 +345,7 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
                 // 5950
                 s32 i;
                 for (i = 0; i < 256; i += 4)
-                    *(int*)(newMemBlock->addr + newMemBlock->size + i) = newMemBlock->addr - 1;
+                    *(u32*)(newMemBlock->addr + newMemBlock->size + i) = (u32)newMemBlock->addr - 1;
                 freeSeg->unk8 = 1;
             }
         }
@@ -343,7 +364,7 @@ fail:
 s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
 {
     s32 oldK1 = pspShiftK1();
-    if (!pspK1PtrOk(a0) || !pspK1PtrOk(partitionId) || !pspK1PtrOk(memoryBlockId)) {
+    if (!pspK1PtrOk((void *)address) || !pspK1PtrOk(partitionId) || !pspK1PtrOk(memoryBlockId)) {
         // 5AC0
         pspSetK1(oldK1);
         return 0x800200D1;
@@ -351,7 +372,8 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
     // 5AEC
     s32 oldIntr = suspendIntr();
     s32 partId;
-    s32 memBlockId;
+    SceUID memBlockId = 0; // not in original code but avoids the compiler from complaining
+    SceUID *memBlockPtr = &memBlockId; // TODO: check: looks useless, but the test at 5B44 cannot exist without this..
     if (memoryBlockId == NULL) {
         // 5C68
         SceSysmemMemoryPartition *part = AddrToCB(address);
@@ -359,7 +381,7 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
         partId = -1;
         // 5C88
         while (curUid != g_145A8) {
-            if ((void*)curUid + g_145A8->size * 4 == part) {
+            if (UID_CB_TO_DATA(curUid, g_145A8, SceSysmemMemoryPartition) == part) {
                 // 5CB4
                 partId = curUid->uid;
                 break;
@@ -373,7 +395,7 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
         partId = -1;
         // 5B20
         while (curUid != g_145A8) {
-            if ((void*)curUid + g_145A8->size * 4 == part) {
+            if (UID_CB_TO_DATA(curUid, g_145A8, SceSysmemMemoryPartition) == part) {
                 // 5C60
                 partId = curUid->uid;
                 break;
@@ -381,19 +403,20 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
             curUid = curUid->PARENT0;
         }
         // 5B44
-        if (&memBlockId != NULL) {
-            curUid = g_13FE0->PARENT0;
-            memBlockId = -1;
+        if (memBlockPtr != NULL) {
+            curUid = g_MemBlockType->PARENT0;
+            SceUID foundId = -1;
             // 5B68
-            while (curUid != g_13FE0) {
-                SceSysmemMemoryBlock *memBlock = (void*)curUid + g_13FE0->size * 4;
-                if (address >= memBlock->addr && address < memBlock->addr + memBlock->size) {
-                    memBlockId = curUid->uid;
+            while (curUid != g_MemBlockType) {
+                SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(curUid, g_MemBlockType, SceSysmemMemoryBlock);
+                if (address >= (u32)memBlock->addr && address < (u32)memBlock->addr + memBlock->size) {
+                    foundId = curUid->uid;
                     break;
                 }
                 // 5B94
                 curUid = curUid->PARENT0;
             }
+            *memBlockPtr = foundId;
             // 5BA4
         }
     }
@@ -406,14 +429,14 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
     }
     if (memoryBlockId != NULL) {
         SceSysmemUidCB *uid;
-        s32 ret = sceKernelGetUIDcontrolBlockWithType(memBlockId, g_13FE0, &uid);
+        s32 ret = sceKernelGetUIDcontrolBlockWithType(memBlockId, g_MemBlockType, &uid);
         if (ret != 0) {
             // 5C34
             resumeIntr(oldIntr);
             pspSetK1(oldK1);
             return ret;
         }
-        if (pspK1UserMode() && (uid->attr & 1) == 0) {
+        if (pspK1IsUserMode() && (uid->attr & 1) == 0) {
             // 5C20
             resumeIntr(oldIntr);
             pspSetK1(oldK1);
@@ -439,13 +462,13 @@ s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr)
         return 0x800200D2;
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(arg0, g_13FE0, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret != 0) {
         resumeIntr(oldIntr);
         return ret;
     }
     // 5D4C
-    SceSysmemMemoryBlock *memBlock = (void*)uid + g_13FE0->size * 4;
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg = AddrToSeg(memBlock->part, memBlock->addr);
     // TODO: check if it uses inline memset
     memset(&info, 0, sizeof info);
@@ -458,7 +481,7 @@ s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr)
     // 5D9C
     info.attr = uid->attr;
     info.sizeLocked = seg->sizeLocked;
-    info.addr = memBlock->addr;
+    info.addr = (u32)memBlock->addr;
     info.memSize = memBlock->size;
     info.used = seg->used;
     // 5DD8
@@ -468,7 +491,7 @@ s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr)
     return 0;
 }
 
-int _allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr, int *arg4)
+void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr, SceSysmemCtlBlk **ctlBlkOut)
 {
     u32 numSegs = (size + 0xFF) >> 8;
     if (numSegs == 0)
@@ -476,9 +499,12 @@ int _allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr
     if (sceKernelIsToolMode()) {
         // 6868
         if (sceKernelDipsw(24) == 1 && part == MpidToCB(2) &&
-            (type != 0 || part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg].used == 1)
+            (type != 0 || part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg].used == 1))
             numSegs++;
     }
+    SceSysmemCtlBlk *curCtlBlk;
+    SceSysmemSeg *curSeg;
+    u32 blockOff;
     // (5E84)
     // 5E88
     switch (type) // jump table at 0x1355C
@@ -508,18 +534,18 @@ int _allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr
             Kprintf("%s: Illegal alloc address or size, offset=0x%x\n", "SCE_KERNEL_SMEM_ADDR", off);
             return 0;
         }
-        SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
-        u32 blockOff = off >> 8;
+        curCtlBlk = part->firstCtlBlk;
+        blockOff = off >> 8;
         // 63CC
         while (curCtlBlk != NULL) {
             SceSysmemSeg *firstSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
             SceSysmemSeg *lastSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
-            if (blockOff >= firstSeg->offset && blockOff < lastSeg->offset + lastSeg->size)
-                SceSysmemSeg *curSeg = firstSeg;
+            if (blockOff >= firstSeg->offset && blockOff < (u32)lastSeg->offset + lastSeg->size) {
+                curSeg = firstSeg;
                 u32 i;
                 // 642C
                 for (i = 0; i < curCtlBlk->segCount; i++) {
-                    if (blockOff >= curSeg->offset && blockOff < curSeg->offset + curSeg->size) {
+                    if (blockOff >= curSeg->offset && blockOff < (u32)curSeg->offset + curSeg->size) {
                         // 6488
                         if (curSeg->used) {
                             // 6644
@@ -547,20 +573,20 @@ int _allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr
 
     case 3: // ?
         // 6668
-        SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
+        curCtlBlk = part->firstCtlBlk;
         if (addr < 0x101)
             goto alloc_lo;
         // 6680
         while (curCtlBlk != NULL) {
-            SceSysmemSeg *curSeg = curCtlBlk->segs[curCtlBlk->firstSeg];
+            curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
             u32 i = 0, j = 0;
             // 66BC
-            while (i < curCtlBlk->segCount && j < curCtlBlk->segCount - curCtlBlk->unk10) {
+            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->unk10) {
                 if (curSeg->used == 0) {
                     if (curSeg->size >= numSegs) {
                         // 66F8
                         u32 freeSize = (part->addr + (curSeg->offset << 8)) % addr;
-                        u32 blockOff = (u32)(addr - freeSize) >> 8;
+                        blockOff = (u32)(addr - freeSize) >> 8;
                         if (freeSize == 0)
                             blockOff = 0;
                         // 670C
@@ -584,26 +610,26 @@ int _allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr
 
     case 4: // ?
         // 6768
-        SceSysmemCtlBlk *curCtlBlk = part->lastCtlBlk;
+        curCtlBlk = part->lastCtlBlk;
         if (addr < 0x101)
             goto alloc_hi;
         // 6780
         while (curCtlBlk != NULL) {
-            SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
+            curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
             u32 i = 0, j = 0;
             // 67BC
-            while (i < curCtlBlk->segCount && j < curCtlBlk->segCount - curCtlBlk->unk10) {
+            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->unk10) {
                 if (curSeg->used == 0) {
                     j++;
                     if (curSeg->size >= numSegs) {
                         u32 endOff = curSeg->offset + curSeg->size;
-                        hi = (part->addr + ((endOff - numSegs) << 8)) % addr;
+                        u32 hi = (part->addr + ((endOff - numSegs) << 8)) % addr;
                         // 6804
-                        u32 segSize = numSegs + ((u32)hi >> 8);
+                        u32 segSize = numSegs + (hi >> 8);
                         j++;
                         if (curSeg->size >= numSegs + segSize) {
                             // 6858
-                            u32 blockOff = endOff - numSegs;
+                            blockOff = endOff - numSegs;
                             goto alloc_addr;
                         }
                     }
@@ -625,10 +651,10 @@ alloc_lo:
     // 5EB0
     // 5EBC
     while (curCtlBlk != NULL) {
-        SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
+        curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
         u32 i = 0, j = 0;
         // 5EF8
-        while (j < curCtlBlk->segCount - curCtlBlk->unk10 && i < curCtlBlk->segCount) {
+        while (j < (u32)curCtlBlk->segCount - curCtlBlk->unk10 && i < curCtlBlk->segCount) {
             if (curSeg->used == 0) {
                 j++;
                 if (curSeg->size >= numSegs) {
@@ -658,24 +684,26 @@ alloc_lo:
     return 0;
 
 alloc_enlargeBlock:
-    SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
-    // 5FC0
-    u32 freeSegId = ctlBlk->freeSeg;
-    SceSysmemSeg *firstSeg = &ctlBlk->segs[freeSegId];
-    ctlBlk->freeSeg = firstSeg->next;
-    u32 curSegId = (((u32)curSeg & 0xFF) - 16) / 8;
-    firstSeg->next = curSeg->next;
-    firstSeg->prev = curSegId;
-    if (firstSeg->next == 0x3F)
-        ctlBlk->lastSeg = freeSegId;
-    else
-        ctlBlk->segs[curSeg->next].prev = freeSegId;
-    // 603C
-    curSeg->next = freeSegId;
-    ctlBlk->segCount++;
-    firstSeg->offset = curSeg->offset + numSegs;
-    firstSeg->size = curSeg->size - numSegs;
-    curSeg->size = numSegs;
+    {
+        SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
+        // 5FC0
+        u32 freeSegId = ctlBlk->freeSeg;
+        SceSysmemSeg *firstSeg = &ctlBlk->segs[freeSegId];
+        ctlBlk->freeSeg = firstSeg->next;
+        u32 curSegId = (((u32)curSeg & 0xFF) - 16) / 8;
+        firstSeg->next = curSeg->next;
+        firstSeg->prev = curSegId;
+        if (firstSeg->next == 0x3F)
+            ctlBlk->lastSeg = freeSegId;
+        else
+            ctlBlk->segs[curSeg->next].prev = freeSegId;
+        // 603C
+        curSeg->next = freeSegId;
+        ctlBlk->segCount++;
+        firstSeg->offset = curSeg->offset + numSegs;
+        firstSeg->size = curSeg->size - numSegs;
+        curSeg->size = numSegs;
+    }
 
 alloc_success:
     if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) { // 60C0
@@ -685,12 +713,12 @@ alloc_success:
             ptr[i] = addr - 1;
     }
     // 609C
-    if (arg4 == 0) {
+    if (ctlBlkOut == NULL) {
         // 60B0
         updateSmemCtlBlk(part, curCtlBlk);
     } else
-        *arg4 = curCtlBlk;
-    return addr;
+        *ctlBlkOut = curCtlBlk;
+    return (void *)addr;
 
 alloc_hi:
     // 6168
@@ -698,7 +726,7 @@ alloc_hi:
         SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
         u32 i = 0, j = 0;
         // 61A4
-        while (i < curCtlBlk->segCount && j < curCtlBlk->segCount - curCtlBlk->unk10) {
+        while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->unk10) {
             if (curSeg->used == 0) {
                 j++;
                 if (curSeg->size >= numSegs) {
@@ -716,7 +744,7 @@ alloc_hi:
                         SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
                         u16 freeSegId = ctlBlk->freeSeg;
                         u32 curSegId = (((u32)curSeg & 0xFF) - 16) / 8;
-                        SceSysmemSeg *freeSeg = ctlBlk->segs[freeSegId];
+                        SceSysmemSeg *freeSeg = &ctlBlk->segs[freeSegId];
                         ctlBlk->freeSeg = freeSeg->next;
                         freeSeg->next = curSegId;
                         freeSeg->prev = curSeg->prev;
@@ -731,7 +759,7 @@ alloc_hi:
                         freeSeg->offset = curSeg->offset;
                         freeSeg->size = curSeg->size - numSegs;
                         curSeg->size = numSegs;
-                        curSeg->offset += curSeg->size - numSegs;
+                        curSeg->offset += curSeg->size - numSegs;
                     }
                     goto alloc_success;
                 }
@@ -788,7 +816,7 @@ alloc_addr:
 
 s32 FreeUsedSeg(SceSysmemMemoryPartition *part, SceSysmemSeg *seg)
 {
-    SceSysmemCtlBlk *ctlBlk = ((u32)seg >> 8) << 8;
+    SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)(((u32)seg >> 8) << 8);
     if (ctlBlk->segCount < 2)
         return 0x80020001;
     ctlBlk->unk10--;
@@ -809,7 +837,7 @@ s32 FreeUsedSeg(SceSysmemMemoryPartition *part, SceSysmemSeg *seg)
         // 6B40
         prevSeg = NULL;
         if (ctlBlk->prev != NULL)
-            prevSeg = &ctlBlk->segs[seg->lastSeg];
+            prevSeg = &ctlBlk->segs[ctlBlk->prev->lastSeg];
     }
     // 6960
     if (prevSeg != NULL && nextSeg != NULL)
@@ -874,11 +902,11 @@ s32 FreeUsedSeg(SceSysmemMemoryPartition *part, SceSysmemSeg *seg)
     return 0;
 }
 
-s32 SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
+void SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
 {
     SceSysmemCtlBlk *allocedCtlBlk;
     SceSysmemMemoryPartition *kernel = MpidToCB(1);
-    SceSysmemCtlBlk *newCtlBlk = _allocSysMemory(kernel, 3, 256, 256, *allocedCtlBlk);
+    SceSysmemCtlBlk *newCtlBlk = _allocSysMemory(kernel, 3, 256, 256, &allocedCtlBlk);
     if (newCtlBlk == NULL)
         return;
     // 6BD8
@@ -898,7 +926,7 @@ s32 SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
     newCtlBlk->lastSeg = newSegCount - 1;
     curSeg = &newCtlBlk->segs[newSegCount];
     newCtlBlk->segs[newSegCount & 0xFF].next = 0x3F;
-    s32 i = newSegCount;
+    i = newSegCount;
     SceSysmemSeg *lastSeg = &ctlBlk->segs[ctlBlk->lastSeg];
     // 6C78
     while (i > 0) {
@@ -935,7 +963,7 @@ s32 SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
         return;
     if (allocedCtlBlk->segCount >= 27) {
         // 6DB8
-        SeparateSmemCtlBlk(kernel);
+        SeparateSmemCtlBlk(kernel, allocedCtlBlk);
     }
 }
 
@@ -952,9 +980,22 @@ void updateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
     }
 }
 
+// 13514
+SceSysmemUidLookupFunc MemBlockFuncs[] = {
+    { 0xD310D2D9, block_do_initialize },
+    { 0x87089863, block_do_delete },
+    { 0x2430FC6B, block_do_delete_super },
+    { 0xBB0E0136, block_do_resize },
+    { 0x0927ECA3, block_do_sizelock },
+    { 0x6CD3F455, block_do_querymeminfo },
+    { 0x691F945E, block_do_queryblkinfo },
+    { 0x9A8F243F, block_do_getheadaddr },
+    { 0, NULL }
+};
+
 void MemoryBlockServiceInit(void)
 {
-    sceKernelCreateUIDtype("SceSysMemMemoryBlock", 12, &g_13514, 0, &g_13FE0);
+    sceKernelCreateUIDtype("SceSysMemMemoryBlock", 12, MemBlockFuncs, 0, &g_MemBlockType);
 }
 
 void InitSmemCtlBlk(SceSysmemCtlBlk *ctlBlk)
@@ -969,7 +1010,7 @@ void InitSmemCtlBlk(SceSysmemCtlBlk *ctlBlk)
     ctlBlk->firstSeg = 0x3F;
 }
 
-int _AllocPartitionMemory(SceSysmemMemoryPartition *part, int type, int size, int addr)
+void *_AllocPartitionMemory(SceSysmemMemoryPartition *part, int type, int size, int addr)
 {
     if (type == 2)
     {
@@ -989,28 +1030,28 @@ s32 sceKernelSizeLockMemoryBlock(SceUID id)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret != 0) {
         resumeIntr(oldIntr);
         return ret;
     }
     // 6F7C
-    SceSysmemMemoryBlock *memBlock = (void*)uid + g_13FE0.size * 4;
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg = AddrToSeg(memBlock->part, memBlock->addr);
     seg->sizeLocked = 1;
     resumeIntr(oldIntr);
     return 0;
 }
 
-s32 _FreePartitionMemory(u32 addr)
+s32 _FreePartitionMemory(void *addr)
 {
-    SceSysmemMemoryPartition *part = AddrToCB(addr);
+    SceSysmemMemoryPartition *part = AddrToCB((u32)addr);
     if (part == MpidToCB(1)) {
         // 7004
         SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
         // 7010
         while (curCtlBlk != NULL) {
-            if ((void*)addr == curCtlBlk)
+            if (addr == curCtlBlk)
                 return 0x80020001;
             curCtlBlk = curCtlBlk->next;
         }
@@ -1023,7 +1064,7 @@ s32 sceKernelFreePartitionMemory(SceUID id)
 {
     SceSysmemUidCB *uid;
     s32 oldIntr = suspendIntr();
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret == 0)
         ret = sceKernelDeleteUID(id);
     // 707C
@@ -1036,7 +1077,7 @@ s32 sceKernelFreePartitionMemoryForUser(SceUID id)
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret == 0) {
         if (pspK1IsUserMode() && (uid->attr & 0x10) == 0) {
             // 7148
@@ -1060,16 +1101,16 @@ s32 sceKernelQueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlo
     return 0;
 }
 
-u32 sceKernelGetBlockHeadAddr(SceUID id)
+void *sceKernelGetBlockHeadAddr(SceUID id)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    if (sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid) != 0) {
+    if (sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid) != 0) {
         // 721C
         resumeIntr(oldIntr);
         return 0;
     }
-    u32 addr = (SceSysmemMemoryBlock *)((void*)uid + g_13FE0->size * 4)->addr;
+    void *addr = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock)->addr;
     // 721C
     resumeIntr(oldIntr);
     return addr;
@@ -1079,21 +1120,21 @@ u32 SysMemForKernel_CC31DEAD(SceUID id)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    if (sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid) != 0) {
+    if (sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid) != 0) {
         resumeIntr(oldIntr);
         return 0;
     }
-    u32 size = (SceSysmemMemoryBlock *)((void*)uid + g_13FE0->size * 4)->size;
+    u32 size = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock)->size;
     resumeIntr(oldIntr);
     return size;
 }
 
-u32 sceKernelGetBlockHeadAddrForUser(SceUID id)
+void *sceKernelGetBlockHeadAddrForUser(SceUID id)
 {
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    if (sceKernelGetUIDcontrolBlockWithType(id, g_13FE0, &uid) != 0
+    if (sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid) != 0
      || (pspK1IsUserMode() && (uid->attr & 1) == 0)) {
         // 735C
         resumeIntr(oldIntr);
@@ -1101,27 +1142,27 @@ u32 sceKernelGetBlockHeadAddrForUser(SceUID id)
         return 0;
     }
     resumeIntr(oldIntr);
-    u32 addr = (SceSysmemMemoryBlock *)((void*)uid + g_13FE0->size * 4)->addr;
+    void *addr = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock)->addr;
     pspSetK1(oldK1);
     return addr;
 }
 
-void sceKernelProtectMemoryBlock(SceSysmemMemoryPartition *part)
+void sceKernelProtectMemoryBlock(SceSysmemMemoryPartition *part, void *addr)
 {
-    AddrToSeg(part, part->addr)->unk0_0 = 1;
+    AddrToSeg(part, addr)->unk0_0 = 1;
 }
 
-s32 _freeSysMemory(SceSysmemMemoryPartition *part, u32 addr)
+s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
 {
-    if ((addr & 0xFF) != 0)
+    if (((u32)addr & 0xFF) != 0)
         return -1;
-    s32 offset = (addr & 0x1FFFFFFF) - (part->addr & 0x1FFFFFFF);
+    s32 offset = ((u32)addr & 0x1FFFFFFF) - (part->addr & 0x1FFFFFFF);
     s32 segOff = offset / 256;
     SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
     // 73F8
     while (curCtlBlk != NULL) {
         SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
-        if (segOff >= curSeg->offset && segOff <= curCtlBlk->segs[curSeg->lastSeg].offset) {
+        if (segOff >= curSeg->offset && segOff <= curCtlBlk->segs[curCtlBlk->lastSeg].offset) {
             // 7448
             s32 i;
             for (i = 0; i < curCtlBlk->segCount; i++) {
@@ -1133,11 +1174,11 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, u32 addr)
                             return 0x80020001;
                         if (curSeg->unk0_0 != 0) {
                             // 7570
-                            SceSysmemUidCB *curUid = g_13FE0->PARENT0;
+                            SceSysmemUidCB *curUid = g_MemBlockType->PARENT0;
                             SceUID foundId = -1;
                             // 758C
-                            while (curUid != g_13FE0) {
-                                SceSysmemMemoryBlock *memBlock = (void*)curUid + g_13FE0->size * 4;
+                            while (curUid != g_MemBlockType) {
+                                SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(curUid, g_MemBlockType, SceSysmemMemoryBlock);
                                 if (addr >= memBlock->addr && addr < memBlock->addr + memBlock->size) {
                                     foundId = curUid->uid;
                                     break;
@@ -1147,21 +1188,21 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, u32 addr)
                             }
                             // 75C8
                             char name[32];
-                            sceKernelGetUIDname(foundId, name, 32);
+                            sceKernelGetUIDname(foundId, 32, name);
                             AddrToSeg(MpidToCB(1), addr);
                             return 0x80020001;
                         }
                         if (curSeg->unk8 != 0) {
-                            u32 *curPtr = (u32*)((void*)addr + (curSeg->size - 1) * 256);
+                            u32 *curPtr = (u32*)(addr + (curSeg->size - 1) * 256);
                             // 74EC
                             s32 i;
                             for (i = 0; i < 64; i++) {
-                                if (*curPtr != addr - 1) {
+                                if (*curPtr != (u32)addr - 1) {
                                     // 751C
                                     Kprintf("\n<< Memory block overflow detected >>\n");
                                     Kprintf(" Overflowed block: 0x%08x - 0x%08x\n", addr, addr + (curSeg->size - 1) * 256 - 1);
                                     Kprintf(" (address 0x%08x): expected value is 0x%08x, but actual value is 0x%08x\n", curPtr, addr - 1, *curPtr);
-                                    BREAK(0);
+                                    pspBreak(0);
                                     break;
                                 }
                                 curPtr++;
@@ -1184,7 +1225,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, u32 addr)
 s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    SceSysmemMemoryBlock *memBlock = (void*)uid + g_13FE0->size * 4;
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     memBlock->size = 0;
     memBlock->part = NULL;
     memBlock->addr = 0;
@@ -1193,16 +1234,16 @@ s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int fu
 
 s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
-    u32 addr = (SceSysmemMemoryBlock *)((void*)uid + g_13FE0->size * 4)->addr;
-    if (addr != 0) {
-        SceSysmemMemoryPartition *part = AddrToCB(addr);
+    void *addr = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock)->addr;
+    if (addr != NULL) {
+        SceSysmemMemoryPartition *part = AddrToCB((u32)addr);
         if (part == MpidToCB(1))
         {
             SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
             // 76FC
             // 7704
             while (curCtlBlk != NULL) {
-                if (addr == (u32)curCtlBlk) {
+                if (addr == curCtlBlk) {
                     // 7720
                     return 0x80020001;
                 }
@@ -1219,13 +1260,13 @@ s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId
     return uid->uid;
 }
 
-s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId __attribute__((unused)), va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, 0x87089863, ap);
     return uid->uid;
 }
 
-s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     s32 ret = sceKernelResizeMemoryBlock(uid->uid, va_arg(ap, s32), va_arg(ap, s32));
     if (ret != 0)
@@ -1233,29 +1274,29 @@ s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId
     return uid->uid;
 }
 
-s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid2;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(uid->uid, g_13FE0, &uid2);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(uid->uid, g_MemBlockType, &uid2);
     if (ret != 0) {
         resumeIntr(oldIntr);
         return ret;
     }
     // 7818
-    SceSysmemMemoryBlock *memBlock = (void*)uid2 + g_13FE0->size * 4;
+    SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid2, g_MemBlockType, SceSysmemMemoryBlock);
     AddrToSeg(memBlock->part, memBlock->addr)->sizeLocked = 1;
     resumeIntr(oldIntr);
     return uid->uid;
 }
 
-s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     _QueryMemoryInfo(va_arg(ap, u32), va_arg(ap, SceUID*), va_arg(ap, SceUID*));
     return uid->uid;
 }
 
-s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     s32 ret = sceKernelQueryMemoryBlockInfo(uid->uid, va_arg(ap, SceSysmemMemoryBlockInfo *));
     if (ret != 0)
@@ -1263,19 +1304,19 @@ s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int 
     return uid->uid;
 }
 
-s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
-    u32 *addrPtr = va_arg(ap, u32 *);
+    void **addrPtr = va_arg(ap, void**);
     SceSysmemUidCB *uid2;
-    u32 addr = 0;
-    if (sceKernelGetUIDcontrolBlockWithType(uid->uid, g_13FE0, &uid2) == 0)
-        addr = (SceSysmemMemoryBlock *)((void*)uid2 + g_13FE0->size * 4)->addr;
+    void *addr = NULL;
+    if (sceKernelGetUIDcontrolBlockWithType(uid->uid, g_MemBlockType, &uid2) == 0)
+        addr = UID_CB_TO_DATA(uid2, g_MemBlockType, SceSysmemMemoryBlock)->addr;
     // 791C
     *addrPtr = addr;
     return uid->uid;
 }
 
-s32 _ReturnSegBlankList(SceSysmemSeg *seg)
+void _ReturnSegBlankList(SceSysmemSeg *seg)
 {
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)((u32)seg & 0xFFFFFF00);
     u32 segId = (((u32)seg & 0xFF) - 16) >> 3;
@@ -1301,7 +1342,7 @@ s32 _ReturnSegBlankList(SceSysmemSeg *seg)
     ctlBlk->segCount--;
 }
 
-s32 _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
+void _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
 {
     if (partitionId != NULL) {
         SceSysmemMemoryPartition *part = AddrToCB(address);
@@ -1309,7 +1350,7 @@ s32 _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
         SceUID foundId = -1;
         // 7A80
         while (curUid != g_145A8) {
-            if ((SceSysmemMemoryPartition *)((void*)uid + g_145A8->size * 4) == part) {
+            if (UID_CB_TO_DATA(curUid, g_145A8, SceSysmemMemoryPartition) == part) {
                 // 7B24
                 foundId = curUid->uid;
                 break;
@@ -1321,24 +1362,24 @@ s32 _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
     }
     // 7AA8
     if (memoryBlockId != NULL) {
-        SceSysmemUidCB *curUid = g_13FE0->PARENT0;
+        SceSysmemUidCB *curUid = g_MemBlockType->PARENT0;
         SceUID foundId = -1;
         // 7ACC
-        while (curUid != g_13FE0) {
-            SceSysmemMemoryBlock *memBlock = (SceSysmemMemoryBlock *)((void*)curUid + g_13FE0->size * 4);
-            if (address >= memBlock->addr && address < memBlock->addr + memBlock->size) {
+        while (curUid != g_MemBlockType) {
+            SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(curUid, g_MemBlockType, SceSysmemMemoryBlock);
+            if (address >= (u32)memBlock->addr && address < (u32)memBlock->addr + memBlock->size) {
                 foundId = curUid->uid;
                 break;
             }
             // 7AF8
             curUid = curUid->PARENT0;
         }
+        // 7B08
+        *memoryBlockId = foundId;
     }
-    // 7B08
-    *memoryBlockId = foundId;
 }
 
-s32 JointSmemCtlBlk(SceSysmemPartition *part, SceSysmemCtlBlk *ctlBlk)
+void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
 {
     SceSysmemMemoryPartition *kernelPart = MpidToCB(1);
     SceSysmemCtlBlk *nextCtlBlk = ctlBlk->next;
@@ -1353,7 +1394,7 @@ s32 JointSmemCtlBlk(SceSysmemPartition *part, SceSysmemCtlBlk *ctlBlk)
             SceSysmemSeg *prevDstSeg = &prevCtlBlk->segs[prevCtlBlk->lastSeg];
             s32 i;
             // 80BC
-            for (i = 0; i < ctlBlock->segCount; i++) {
+            for (i = 0; i < ctlBlk->segCount; i++) {
                 SceSysmemCtlBlk *newPrevCtlBlk = (SceSysmemCtlBlk *)((u32)prevDstSeg & 0xFFFFFF00);
                 u32 newId = newPrevCtlBlk->freeSeg;
                 SceSysmemSeg *curDstSeg = &newPrevCtlBlk->segs[newId];
@@ -1389,7 +1430,7 @@ s32 JointSmemCtlBlk(SceSysmemPartition *part, SceSysmemCtlBlk *ctlBlk)
                 part->lastCtlBlk = prevCtlBlk;
         } else {
             u16 joinCount = ((prevCtlBlk->segCount * 2) / 3) >> 1;
-            SceSysmemSeg *curSrcSeg = &prevCtlBlk->segs[prevCtlBlk->last];
+            SceSysmemSeg *curSrcSeg = &prevCtlBlk->segs[prevCtlBlk->lastSeg];
             SceSysmemSeg *prevDstSeg = &ctlBlk->segs[ctlBlk->firstSeg];
             // 7F44
             s32 i;
@@ -1416,7 +1457,7 @@ s32 JointSmemCtlBlk(SceSysmemPartition *part, SceSysmemCtlBlk *ctlBlk)
                 curDstSeg->used = curSrcSeg->used;
                 curDstSeg->unk0_0 = curSrcSeg->unk0_0;
                 curDstSeg->sizeLocked = curSrcSeg->sizeLocked;
-                curDstSeg->unk8 = curSrcSeg->unk4;
+                curDstSeg->unk8 = curSrcSeg->unk8;
                 curDstSeg->offset = curSrcSeg->offset;
                 curDstSeg->size = curSrcSeg->size;
                 _ReturnSegBlankList(curSrcSeg);
@@ -1437,7 +1478,7 @@ s32 JointSmemCtlBlk(SceSysmemPartition *part, SceSysmemCtlBlk *ctlBlk)
                 u32 newId = newPrevCtlBlk->freeSeg;
                 SceSysmemSeg *curDstSeg = &newPrevCtlBlk->segs[newId];
                 newPrevCtlBlk->freeSeg = curDstSeg->next;
-                curDstSeg->next = ((u32)prevDstSeg & 0xFF - 16) >> 3;
+                curDstSeg->next = (((u32)prevDstSeg & 0xFF) - 16) >> 3;
                 curDstSeg->prev = prevDstSeg->prev;
                 if (curDstSeg->prev == 0x3F) {
                     // 7EEC
@@ -1469,7 +1510,7 @@ s32 JointSmemCtlBlk(SceSysmemPartition *part, SceSysmemCtlBlk *ctlBlk)
         } else {
             u16 joinCount = ((nextCtlBlk->segCount * 2) / 3) >> 1;
             SceSysmemSeg *curSrcSeg = &nextCtlBlk->segs[nextCtlBlk->firstSeg];
-            SceSysmemSeg *prevDstSeg = &ctlBlk[ctlBlk->lastSeg];
+            SceSysmemSeg *prevDstSeg = &ctlBlk->segs[ctlBlk->lastSeg];
             // 7BEC
             s32 i;
             for (i = 0; i < joinCount; i++) {
@@ -1576,7 +1617,7 @@ void *hmalloc(SceSysmemHeap *heap, SceSysmemLowheap *lowh, u32 size, u32 align)
             } else {
                 paddingBlocks = 0;
                 SceSysmemLowheapBlock *firstAllocBlock = curBlock + curBlock->count - allocBlocks + 1;
-                if (align == 0 || ((u32)firstAllocBlock % align) == 0) // 8344
+                if (align == 0 || ((u32)firstAllocBlock % align) == 0) { // 8344
                     // 83E4
                     reservedBlockCount = allocBlocks;
                     goto end_resize;
@@ -1614,7 +1655,7 @@ end_resize:
     // 83B8
 end_noresize:
     lowh->firstBlock = prevBlock;
-    curBlock->next = lowh;
+    curBlock->next = (void *)lowh;
     lowh->busyBlocks += curBlock->count;
     return curBlock + 1;
 }
@@ -1625,11 +1666,11 @@ s32 hfree(SceSysmemHeap *heap, SceSysmemLowheap *lowh, void *ptr)
     if (lowh == NULL || lowh->addr != (u32)lowh - 1)
         return -4;
     // 84DC
-    if (allocatedBlock < (void*)lowh + sizeof *lowh || allocatedBlock >= (void*)lowh + lowh->size)
+    if ((u32)allocatedBlock < (u32)lowh + sizeof *lowh || (u32)allocatedBlock >= (u32)lowh + lowh->size)
         return -2;
     if (ptr == NULL)
         return -1;
-    if (allocatedBlock->next != lowh)
+    if (allocatedBlock->next != (void *)lowh)
         return -1;
     // 8518
     if (allocatedBlock->count <= 0)
@@ -1637,7 +1678,7 @@ s32 hfree(SceSysmemHeap *heap, SceSysmemLowheap *lowh, void *ptr)
     SceSysmemLowheapBlock *curBlock = lowh->firstBlock;
     // 8534, 86C4
     while (curBlock >= allocatedBlock || allocatedBlock >= curBlock->next) {
-        if ((void*)curBlock - heap->partAddr >= heap->partSize) {
+        if ((u32)curBlock - heap->partAddr >= heap->partSize) {
             // 8698
             if (sceKernelIsToolMode() == 0) {
                 // 86BC
@@ -1663,7 +1704,7 @@ s32 hfree(SceSysmemHeap *heap, SceSysmemLowheap *lowh, void *ptr)
         return -3;
     // 85DC
     lowh->busyBlocks -= allocatedBlock->count;
-    if ((void*)curBlock->next - heap->partAddr >= heap->partSize) {
+    if ((u32)curBlock->next - heap->partAddr >= heap->partSize) {
         // 866C
         if (sceKernelIsToolMode() == 0) {
             // 867C
@@ -1699,11 +1740,11 @@ s32 hfree(SceSysmemHeap *heap, SceSysmemLowheap *lowh, void *ptr)
     return 0;
 }
 
-s32 initheap(SceSysmemLowheap *lowh, u32 size)
+void initheap(SceSysmemLowheap *lowh, u32 size)
 {
     u32 count = (size - 16) / 8;
     SceSysmemLowheapBlock *start = (SceSysmemLowheapBlock*)(lowh + 1);
-    SceSysmemLowheapBlock *end = start + count - 1; // TODO: correct only if size of block is 8 (needs check)
+    SceSysmemLowheapBlock *end = start + count - 1;
     if (lowh != NULL && size >= 41) {
         lowh->addr = (u32)lowh - 1;
         lowh->size = size;
@@ -1716,7 +1757,7 @@ s32 initheap(SceSysmemLowheap *lowh, u32 size)
     }
 }
 
-s32 checkheapnouse(SceKernelLowHeap *lowh)
+s32 checkheapnouse(SceSysmemLowheap *lowh)
 {
     if (lowh == NULL || lowh->addr != (u32)lowh - 1)
         return 0;
@@ -1730,16 +1771,16 @@ u32 htotalfreesize(SceSysmemLowheap *lowh)
     return (freeBlocks - 1) * 8;
 }
 
-s32 hmaxfreesize(SceSysmemHeap *heap, SceSysmemLowHeap *lowh);
+s32 hmaxfreesize(SceSysmemHeap *heap, SceSysmemLowheap *lowh)
 {
     SceSysmemLowheapBlock *firstBlock = lowh->firstBlock;
     u32 maxfreeblocks = 0;
-    if (firstBlock - heap->partAddr >= heap->partSize)
+    if ((u32)firstBlock - heap->partAddr >= heap->partSize)
         return -1;
     SceSysmemLowheapBlock *curBlock = firstBlock->next;
     // 879C
     for (;;) {
-        if (curBlock - heap->partAddr >= heap->partSize)
+        if ((u32)curBlock - heap->partAddr >= heap->partSize)
             return -1;
         if (curBlock->count > maxfreeblocks)
             maxfreeblocks = curBlock->count;
@@ -1749,20 +1790,20 @@ s32 hmaxfreesize(SceSysmemHeap *heap, SceSysmemLowHeap *lowh);
     }
 }
 
-int memset(void *s, int c, int n)
+void *memset(void *s, int c, u32 n)
 {
     if (s != NULL)
         return sceKernelMemset(s, c, n);
     return s;
 }
 
-s32 sceKernelMemset(s8 *src, s8 c, u32 size)
+void *sceKernelMemset(void *src, s8 c, u32 size)
 {
-    s8 *end = src + size;
+    void *end = src + size;
     if (size >= 8) {
         // 8824
         u32 value = c | (c << 8) | (c << 12) | (c << 16);
-        s8 *alignedSrc = (s8 *)(((u32)src + 3) & 0xFFFFFFFC);
+        void *alignedSrc = (void *)(((u32)src + 3) & 0xFFFFFFFC);
         if (alignedSrc != src) {
             asm("swr %0, 0(%1)" : : "r" (value), "r" (src));
             size -= alignedSrc - src;
@@ -1781,7 +1822,7 @@ s32 sceKernelMemset(s8 *src, s8 c, u32 size)
     return src;
 }
 
-s32 *sceKernelMemset32(s32 *src, s32 c, u32 size)
+void *sceKernelMemset32(void *src, s32 c, u32 size)
 {
     size = size & 0xFFFFFFFC;
     if (((u32)src & 3) != 0)
@@ -1794,7 +1835,7 @@ s32 *sceKernelMemset32(s32 *src, s32 c, u32 size)
         // 8964
         return wmemset(src, c, size);
     }
-    s32 *alignedSrc = (s32 *)(((u32)src + 0x3F) & 0xFFFFFFC0);
+    void *alignedSrc = (void *)(((u32)src + 0x3F) & 0xFFFFFFC0);
     s32 *end = (void*)src + size;
     if (alignedSrc != src)
         wmemset(src, c, alignedSrc - src);
@@ -1856,9 +1897,9 @@ void *sceKernelMemmove(void *dst, void *src, u32 size)
     size -= dstAlign;
     // 8A04
     if (size != 0) {
-        void *alignedDst = dst + dstAlign;
+        s32 *alignedDst = dst + dstAlign;
         s32 *curDst = (void*)alignedDst + size - 64;
-        s32 *curSrc = (void*)src + dstAlign + size - 64;
+        s32 *curSrc = src + dstAlign + size - 64;
         // 8A28
         while (curDst >= alignedDst) {
             pspCache(0x18, curDst);
@@ -1931,7 +1972,7 @@ void *sceKernelMemmoveWithFill(void *dst, void *src, u32 size, s32 fill)
             s32 *curDst = dst + dstAlign + alignedSize - 64;
             s32 *curSrc = src + dstAlign + alignedSize - 64;
             // 8D94
-            while (curDst >= dst + dstAlign) {
+            while ((void *)curDst >= dst + dstAlign) {
                 pspCache(0x18, curDst);
                 curDst[ 0] = curSrc[ 0];
                 curDst[ 1] = curSrc[ 1];
@@ -1974,7 +2015,7 @@ void *sceKernelMemmoveWithFill(void *dst, void *src, u32 size, s32 fill)
             s32 *curDst = dst + dstAlign;
             s32 *curSrc = src + dstAlign;
             // 8BFC
-            while (curDst < dst + size - dstEndAlign) {
+            while ((void *)curDst < dst + size - dstEndAlign) {
                 pspCache(0x18, curDst);
                 curDst[ 0] = curSrc[ 0];
                 curDst[ 1] = curSrc[ 1];
@@ -2004,15 +2045,14 @@ void *sceKernelMemmoveWithFill(void *dst, void *src, u32 size, s32 fill)
         // 8CD4
         if (dstEndAlign != 0) {
             // 8D0C
-            size += src - dstEndAlign;
-            memmove(dstEnd - dstEndAlign, size, dstEndAlign);
-            sceKernelMemset(size, fill, dstEndAlign);
+            memmove(dstEnd - dstEndAlign, src + size - dstEndAlign, dstEndAlign);
+            sceKernelMemset(src + size - dstEndAlign, fill, dstEndAlign);
         }
     }
     return dst;
 }
 
-s32 *sceKernelFillBlock64(void *dst, s32 c, u32 size)
+void *sceKernelFillBlock64(void *dst, s32 c, u32 size)
 {
     void *end = dst + size;
     s32 *curDst = dst;

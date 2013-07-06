@@ -1742,7 +1742,8 @@ loc_000016F8:
     jr $ra
     move $v0, $zr
 
-sub_00001710:
+# 0x1710
+md5BlockUpdate:
     move $at, $ra
     lw $t0, 0($a0)
     lw $t1, 4($a0)
@@ -1836,7 +1837,8 @@ sub_17B0:
     jr $ra
     sw $t7, 12($a0)
 
-sub_00001870:
+# 0x1870
+sha1BlockUpdate:
     addiu $sp, $sp, -64
     sw $ra, 0($sp)
     sw $s0, 4($sp)
@@ -1968,7 +1970,8 @@ loc_00001A00:
     jr $ra
     addu $s4, $t4, $s4
 
-sub_00001A40:
+# 1A40
+sha1Digest:
     addiu $sp, $sp, -256
     sw $s0, 0($sp)
     sw $s1, 4($sp)
@@ -2176,7 +2179,8 @@ loc_00001C88:
     jr $ra
     addiu $sp, $sp, 256
 
-sub_00001CF0:
+# 1CF0
+mt19937UInt:
     lw $a1, 0($a0)
     addiu $a3, $a0, 4
     sltiu $t4, $a1, 624

@@ -1,8 +1,62 @@
+#include <sysmem_kdebug.h>
+#include <sysmem_kernel.h>
+#include <sysmem_sysclib.h>
+
+#include "heap.h"
+#include "intr.h"
+#include "memory.h"
+#include "partition.h"
+
+typedef struct SceSysmemHoldElem {
+    struct SceSysmemHoldElem *next; // 0
+    struct SceSysmemHoldElem *prev; // 4
+} SceSysmemHoldElem;
+
+typedef struct {
+    SceSysmemHoldElem unk0; // 0
+    SceSysmemHoldElem unk8; // 8
+    u32 count1; // 16
+    u32 count2; // 20
+} SceSysmemHoldHead; // size: 24
+
+typedef struct {
+    SceSysmemHoldElem unk0; // 0
+    SceSysmemHoldElem unk8; // 8
+    SceSysmemUidCB *uid1; // 16
+    SceSysmemUidCB *uid0; // 20
+} SceSysmemHoldElement;
+
+s32 obj_no_op(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_name(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_type(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_isKindOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_isMemberOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_doseNotRecognize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 obj_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+
+void InitUidBasic(SceSysmemUidCB *root, char *rootName, SceSysmemUidCB *metaRoot, char *metaRootName, SceSysmemUidCB *basic, char *basicName, SceSysmemUidCB *metaBasic, char *metaBasicName);
+SceSysmemUidCB *search_UidType_By_Name(const char *name);
+SceSysmemUidCB *search_UIDObj_By_Name_With_Type(const char *name, SceSysmemUidCB *type);
+
+// 140D8
+SceSysmemHeap g_140D8;
+
+// 140EC
+SceSysmemUidCB *HeapCB;
+
+// 145AC
+SceUID g_145AC;
+
+// 145B0
+SceSysmemUidList g_uidTypeList;
+
 void InitUid(void)
 {
     SceSysmemHeapBlock *heapBlock = NULL;
     int oldIntr = suspendIntr();
-    g_140EC.PARENT0 = NULL;
+    HeapCB->PARENT0 = NULL;
     g_145AC = 0;
     _CreateHeap(MpidToCB(1), 0x2000, 1, &heapBlock);
     sceKernelProtectMemoryBlock(MpidToCB(1), heapBlock);
@@ -12,8 +66,8 @@ void InitUid(void)
     SceSysmemPartitionInfo part;
     part.size = 16;
     sceKernelQueryMemoryPartitionInfo(1, &part);
-    g_140D8.partAddr = part.addr;
-    g_140D8.partSize = part.size;
+    g_140D8.partAddr = part.startAddr;
+    g_140D8.partSize = part.memSize;
     SceSysmemUidCB *root = _AllocHeapMemory(&g_140D8, sizeof(SceSysmemUidCB), 0);
     // A7FC
     memset(root, 0, sizeof(SceSysmemUidCB));
@@ -32,15 +86,15 @@ void InitUid(void)
     char *metaBasicName = _AllocHeapMemory(&g_140D8, strlen("MetaBasic") + 1, 0);
     InitUidBasic(root, rootName, metaRoot, metaRootName, basic, basicName, metaBasic, metaBasicName);
     HeapInit();
-    if (sceKernelCreateUID(g_145A4, "SceSystemMemoryManager", 0, &g_140EC) == 0)
+    if (sceKernelCreateUID(g_145A4, "SceSystemMemoryManager", 0, &HeapCB) == 0)
     {
-        SceSysmemHeap *heap = (void*)&g_140EC + g_145A4->size * 4;
+        SceSysmemHeap *heap = UID_CB_TO_DATA(HeapCB, g_145A4, SceSysmemHeap);
         heap->size = g_140D8.size;
         heap->partId = g_140D8.partId;
         heap->partSize = g_140D8.partSize;
         heap->firstBlock = g_140D8.firstBlock;
         heap->partAddr = g_140D8.partAddr;
-        g_145AC = g_140EC->uid;
+        g_145AC = HeapCB->uid;
     }
     // A968
     resumeIntr(oldIntr);
@@ -80,13 +134,13 @@ s32 FreeSceUIDobjectCB(SceSysmemUidCB *uid)
     return 0;
 }
 
-u8 *AllocSceUIDnamestr(u8 *str1, u8 *str2)
+char *AllocSceUIDnamestr(const char *str1, const char *str2)
 {
     u32 len1 = strnlen(str1, 31);
     u32 len2 = strnlen(str2, 31);
     if (len1 + len2 >= 32)
         return NULL;
-    u8 *buf = _AllocHeapMemory(&g_140D8, len1 + len2 + 1, 0);
+    char *buf = _AllocHeapMemory(&g_140D8, len1 + len2 + 1, 0);
     if (buf == NULL)
         return buf;
     memcpy(buf, str1, len1);
@@ -146,7 +200,7 @@ s32 sceKernelCallUIDFunction(SceUID id, int funcId, ...)
         return 0x800200CB;
     }
     // ACD8
-    SceSysmemUidFunc *func = NULL;
+    SceSysmemUidFunc func = NULL;
     SceSysmemUidCB *parentUid;
     sceKernelLookupUIDFunction(uid->meta, funcId, &func, &parentUid);
     s32 ret;
@@ -164,10 +218,10 @@ s32 sceKernelCallUIDObjFunction(SceSysmemUidCB *uid, s32 funcId, ...)
 {
     va_list ap;
     va_start(ap, funcId);
-    SceSysmemUidFunc *func = NULL;
+    SceSysmemUidFunc func = NULL;
     SceSysmemUidCB *parentUid;
     s32 oldIntr = suspendIntr();
-    sceKernelLookupUIDFunction(uid->type, funcId, &func, &parentUid);
+    sceKernelLookupUIDFunction(uid->meta, funcId, &func, &parentUid);
     s32 ret;
     if (func == NULL) {
         // ADCC
@@ -180,15 +234,10 @@ s32 sceKernelCallUIDObjFunction(SceSysmemUidCB *uid, s32 funcId, ...)
     return ret;
 }
 
-int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, void **func, SceSysmemUidCB **parentUidWithFunc)
+int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, SceSysmemUidFunc *func, SceSysmemUidCB **parentUidWithFunc)
 {
     int oldIntr = suspendIntr();
     *func = NULL;
-    if (uid == NULL) {
-        // AE54
-        resumeIntr(oldIntr);
-        return 0x800200CE;
-    }
     // AE18
     while (uid != NULL) {
         if (uid->funcTable != NULL) {
@@ -209,13 +258,16 @@ int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, void **func, SceSysm
         uid = uid->PARENT1;
         // AE4C
     }
+    // AE54
+    resumeIntr(oldIntr);
+    return 0x800200CE;
 }
 
 s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
 {
     SceSysmemUidCB *parentWithFunc = uidWithFunc;
     s32 oldIntr = suspendIntr();
-    SceSysmemUidFunc *func;
+    SceSysmemUidFunc func;
     sceKernelLookupUIDFunction(uidWithFunc->PARENT1, funcId, &func, &parentWithFunc);
     s32 ret;
     if (func == NULL) {
@@ -250,20 +302,20 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
         return 0x800200C9;
     }
     SceSysmemUidCB *uidType = AllocSceUIDtypeCB();
-    SceSysmemMetaUidType *metaUidType = AllocSceUIDtypeCB();
-    char *name = AllocSceUIDnamestr(name, "");
+    SceSysmemUidCB *metaUidType = AllocSceUIDtypeCB();
+    char *namePtr = AllocSceUIDnamestr(name, "");
     char *metaName = AllocSceUIDnamestr("Meta", name);
-    if (name == NULL || metaName == NULL || uidType == NULL || metaUidType == NULL)
+    if (namePtr == NULL || metaName == NULL || uidType == NULL || metaUidType == NULL)
     {
         // B024
         if (uidType != NULL)
             FreeSceUIDtypeCB(uidType);
         // B034
         if (metaUidType != NULL)
-            FreeSceUIDTypeCB(metaUidType);
+            FreeSceUIDtypeCB(metaUidType);
         // B044
-        if (name != NULL)
-            FreeSceUIDnamestr(name);
+        if (namePtr != NULL)
+            FreeSceUIDnamestr(namePtr);
         // B054
         if (metaName != NULL)
             FreeSceUIDnamestr(metaName);
@@ -272,7 +324,7 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
         return 0x80020190;
     }
     // B0A4
-    parentUidType->meta->numChild++;
+    parentUidType->meta->next.numChild++;
     uidType->PARENT0 = uidType;
     uidType->uid = ((int)uidType << 5) | ((g_uidTypeList.count & 0x3F) << 1) | 1;
     uidType->nextChild = uidType;
@@ -287,12 +339,12 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
     uidType->size = parentUidType->childSize;
     metaUidType->childSize = 6;
     metaUidType->size = 0;
-    uidType->name = name;
+    uidType->name = namePtr;
     metaUidType->name = metaName;
-    uidType->next = g_uidTypeList.root->next;
+    uidType->next.next = g_uidTypeList.root->next.next;
     uidType->PARENT1 = parentUidType;
-    g_uidTypeList.root->next = uidType;
-    metaUidType->numChild = 0;
+    g_uidTypeList.root->next.next = uidType;
+    metaUidType->next.numChild = 0;
     metaUidType->PARENT1 = parentUidType->meta;
     uidType->funcTable = funcTable;
     *uidTypeOut = uidType;
@@ -301,7 +353,7 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
     return 0;
 }
 
-int sceKernelCreateUID(SceSysmemUidType *type, const char *name, char k1, SceSysmemUidCB **outUid)
+int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysmemUidCB **outUid)
 {
     if (type == NULL || name == NULL)
         return 0x80020001;
@@ -352,7 +404,7 @@ SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
             uid = search_UIDObj_By_Name_With_Type(name, cur);
             if (uid != NULL)
                 break;
-            cur = cur->next.next
+            cur = cur->next.next;
         } while (cur != g_uidTypeList.root);
     } else {
         SceSysmemUidCB *typeUid = (SceSysmemUidCB*)(0x88000000 | (((u32)typeId >> 7) * 4));
@@ -363,7 +415,7 @@ SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
             return 0x800200CB;
         }
         // B3D8
-        if (typeUid->meta->meta != g_uidTypeList->metaRoot || typeUid->meta == g_uidTypeList.root) { // B404
+        if (typeUid->meta->meta != g_uidTypeList.metaRoot || typeUid->meta == g_uidTypeList.root) { // B404
             // B3F4
             resumeIntr(oldIntr);
             return 0x800200C9;
@@ -380,12 +432,12 @@ SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
 
 SceSysmemUidCB *search_UidType_By_Name(const char *name)
 {
-    SceSysmemUidCB *cur = g_uidTypeList->root;
+    SceSysmemUidCB *cur = g_uidTypeList.root;
     // B47C
     do
     {
         char *curStr = cur->name;
-        char *curName = name;
+        const char *curName = name;
         if (name == curStr)
             return cur;
         if (name != NULL && curStr != NULL) {
@@ -394,9 +446,9 @@ SceSysmemUidCB *search_UidType_By_Name(const char *name)
                 if (*(curName++) == '\0')
                     return cur;
         }
-        cur = cur->next;
+        cur = cur->next.next;
         // B4AC
-    } while (cur != g_uidTypeList->root);
+    } while (cur != g_uidTypeList.root);
     return 0;
 }
 
@@ -423,6 +475,27 @@ SceSysmemUidCB *search_UIDObj_By_Name_With_Type(const char *name, SceSysmemUidCB
     }
     return 0;
 }
+
+// 13570
+SceSysmemUidLookupFunc RootFuncs[] = {
+    { 0xD310D2D9, obj_no_op },
+    { 0x973A5367, obj_no_op },
+    { 0x285422D4, obj_no_op },
+    { 0x87089863, obj_do_delete },
+    { 0x86D94883, obj_no_op },
+    { 0xF0ADE1B6, obj_do_name },
+    { 0x58D965CE, obj_do_type },
+    { 0x9AFB14E2, obj_do_isKindOf },
+    { 0xE19A43D1, obj_do_isMemberOf },
+    { 0xB9970352, obj_do_doseNotRecognize },
+    { 0, NULL }
+};
+
+// 135C8
+SceSysmemUidLookupFunc MetaRootFuncs[] = {
+    { 0x87089863, obj_no_op },
+    { 0, NULL }
+};
 
 void InitUidRoot(SceSysmemUidCB *root, char *rootName, SceSysmemUidCB *metaRoot, char *metaRootName)
 {
@@ -452,17 +525,17 @@ void InitUidRoot(SceSysmemUidCB *root, char *rootName, SceSysmemUidCB *metaRoot,
     g_uidTypeList.metaRoot->next.numChild = 0;
     g_uidTypeList.root->PARENT1 = NULL;
     g_uidTypeList.metaRoot->PARENT1 = g_uidTypeList.root;
-    g_uidTypeList.root->funcTable = &g_13570;
-    g_uidTypeList.metaRoot->funcTable = &g_135C8;
+    g_uidTypeList.root->funcTable = RootFuncs;
+    g_uidTypeList.metaRoot->funcTable = MetaRootFuncs;
     resumeIntr(oldIntr);
 }
 
 int _sceKernelCreateUIDtypeInherit_sub(SceSysmemUidCB *root, SceSysmemUidCB *basic, SceSysmemUidCB *metaBasic,
-                                    char *basicName, char *metaBasicName, int size, SceSysmemLookupFunc *funcTable,
-                                    SceSysmemLookupFunc *metaFuncTable, SceSysmemUidCB **outUidType)
+                                    char *basicName, char *metaBasicName, int size, SceSysmemUidLookupFunc *funcTable,
+                                    SceSysmemUidLookupFunc *metaFuncTable, SceSysmemUidCB **outUidType)
 {
     basic->meta = metaBasic;
-    root->metaRoot->numChild++;
+    root->meta->next.numChild++;
     basic->PARENT0 = basic;
     basic->uid = ((int)basic << 5) | ((g_uidTypeList.count & 0x3F) << 1) | 1;
     basic->nextChild = basic;
@@ -478,10 +551,10 @@ int _sceKernelCreateUIDtypeInherit_sub(SceSysmemUidCB *root, SceSysmemUidCB *bas
     metaBasic->childSize = 6;
     metaBasic->size = 0;
     metaBasic->name = metaBasicName;
-    basic->next = g_uidTypeList.root->next;
+    basic->next.next = g_uidTypeList.root->next.next;
     basic->PARENT1 = root;
-    g_uidTypeList.root->next = basic;
-    metaBasic->numChild = 0;
+    g_uidTypeList.root->next.next = basic;
+    metaBasic->next.numChild = 0;
     metaBasic->PARENT1 = root->meta;
     basic->funcTable = funcTable;
     *outUidType = basic;
@@ -531,9 +604,9 @@ s32 sceKernelGetUIDname(SceUID id, s32 len, char *out)
         return 0x800200CB;
     }
     // B974
-    u8 *name = uidType->name;
+    char *name = uidType->name;
     if (len >= 2) {
-        u8 lastChar = *(name++);
+        char lastChar = *(name++);
         while (lastChar != '\0') { // B98C
             len--;
             *(out++) = lastChar;
@@ -575,7 +648,7 @@ s32 sceKernelRenameUID(SceUID id, const char *name)
 
 s32 sceKernelGetUIDtype(SceUID id)
 {
-    SceSysmemUidCB *uid = 0x88000000 | (((u32)id >> 7) * 4);
+    SceSysmemUidCB *uid = (SceSysmemUidCB *)(0x88000000 | (((u32)id >> 7) * 4));
     SceSysmemMemoryPartition *part = g_145C0.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id)
@@ -591,7 +664,7 @@ s32 sceKernelDeleteUID(SceUID id)
 
 s32 sceKernelGetUIDcontrolBlock(SceUID id, SceSysmemUidCB **uidOut)
 {
-    SceSysmemUidCB *uid = 0x88000000 | (((u32)id >> 7) << 2);
+    SceSysmemUidCB *uid = (SceSysmemUidCB *)(0x88000000 | (((u32)id >> 7) << 2));
     SceSysmemMemoryPartition *part = g_145C0.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id)
@@ -600,7 +673,7 @@ s32 sceKernelGetUIDcontrolBlock(SceUID id, SceSysmemUidCB **uidOut)
     return 0;
 }
 
-s32 sceKernelGetUIDcontrolBlockWithType(SceUID id, SceSysmemUidType *type, SceSysmemUidCB **outUid)
+s32 sceKernelGetUIDcontrolBlockWithType(SceUID id, SceSysmemUidCB *type, SceSysmemUidCB **outUid)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid = (SceSysmemUidCB*)(0x88000000 | (((u32)id >> 7) * 4));
@@ -636,12 +709,12 @@ s32 sceKernelPrintUidListAll(void)
 {
     s32 oldIntr = suspendIntr();
     Kprintf("<< UID list >>\n");
-    SceSysmemUidCB *uid = g_uidTypeList->root->next.next;
+    SceSysmemUidCB *uid = g_uidTypeList.root->next.next;
     while (uid != g_uidTypeList.basic) { // BD4C
         Kprintf("\n[%s]   UID 0x%08x (attribute 0x%x)\n", uid->name, uid->uid, uid->attr);
         if (uid->nextChild == uid) {
             // BDE4
-            Kprinft("    <No UID objects>\n");
+            Kprintf("    <No UID objects>\n");
         }
         // BD68
         SceSysmemUidCB *curChild = uid->nextChild;
@@ -663,12 +736,12 @@ SceSysmemUidList *sceKernelGetUidmanCB(void)
     return &g_uidTypeList;
 }
 
-s32 obj_no_op(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_no_op(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     return uid->uid;
 }
 
-s32 obj_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     uid->meta = NULL;
     uid->PARENT0->nextChild = uid->nextChild;
@@ -683,7 +756,7 @@ s32 obj_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, 
 
 s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
-    SceSysmemHoldHead *head = *(SceSysmemHoldHead**)((void*)uid + g_uidTypeList.basic->size * 4);
+    SceSysmemHoldHead *head = *UID_CB_TO_DATA(uid, g_uidTypeList.basic, SceSysmemHoldHead *);
     if (head != NULL) {
         if (head->count1 > 0) {
             SceSysmemHoldElem *cur = head->unk0.next;
@@ -700,9 +773,9 @@ s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId,
                 SceSysmemHoldElem *formerNext0 = elem->unk0.next;
                 SceSysmemHoldElem *formerPrev0 = elem->unk0.prev;
                 formerNext0->prev = formerPrev0;
-                elem->unk0.prev = elem;
+                elem->unk0.prev = &elem->unk0;
                 formerPrev0->next = formerNext0;
-                elem->unk0.next = elem;
+                elem->unk0.next = &elem->unk0;
                 FreeSceUIDHoldElement(elem);
 
                 cur = formerNext0;
@@ -713,10 +786,10 @@ s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId,
             SceSysmemHoldElem *cur = head->unk8.next;
             while (cur != &head->unk8) {
                 // BF30
-                SceSysmemHoldElement *elem = (SceSysmemHoldElement*)(cur - 8);
+                SceSysmemHoldElement *elem = (SceSysmemHoldElement*)((void*)cur - 8);
                 SceSysmemHoldElem *formerNext8 = elem->unk8.next;
                 SceSysmemHoldElem *formerPrev8 = elem->unk8.prev;
-                formerNext8->prev = elem->unk8.prev;
+                formerNext8->prev = formerPrev8;
                 elem->unk8.prev = &elem->unk8;
                 formerPrev8->next = formerNext8;
                 elem->unk8.next = &elem->unk8;
@@ -739,13 +812,13 @@ s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId,
     return sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
 }
 
-s32 obj_do_name(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_do_name(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     s32 length = va_arg(ap, s32);
-    u8 *str = va_arg(ap, s8*);
-    u8 *outStr = uid->name;
+    char *str = va_arg(ap, char*);
+    char *outStr = uid->name;
     if (length >= 2) {
-        u8 c = *(outStr++);
+        char c = *(outStr++);
         // BFE4
         while (c != 0) {
             length--;
@@ -760,15 +833,15 @@ s32 obj_do_name(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va
     return 0;
 }
 
-s32 obj_do_type(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_do_type(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     return uid->meta->uid;
 }
 
-s32 obj_do_isKindOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_do_isKindOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     SceUID typeId = va_arg(ap, SceUID);
-    SceSysmemUidCB *typeUid = (SceSysmemUidCB*)(0x88000000 | (((u32)a3 >> 7) * 4));
+    SceSysmemUidCB *typeUid = (SceSysmemUidCB*)(0x88000000 | (((u32)typeId >> 7) * 4));
     SceSysmemMemoryPartition *part = g_145C0.kernel;
     if ((typeId & 0x80000001) != 1 || (u32)typeUid < part->addr ||
         (u32)typeUid >= part->addr + part->size || typeUid->uid != typeId)
@@ -780,7 +853,7 @@ s32 obj_do_isKindOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId
     return (cur == typeUid);
 }
 
-s32 obj_do_isMemberOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_do_isMemberOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     SceUID id = va_arg(ap, SceUID);
     SceSysmemUidCB *uid2 = (SceSysmemUidCB*)(0x88000000 | (((u32)id >> 7) << 2));
@@ -791,7 +864,7 @@ s32 obj_do_isMemberOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int func
     return (uid->meta == uid2);
 }
 
-s32 obj_do_doseNotRecognize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 obj_do_doseNotRecognize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     Kprintf("WARNING: %s of %s not support 0x%x key\n", uid->name, uid->meta->name, va_arg(ap, s32));
     return 0x800200CE;
@@ -802,15 +875,16 @@ s32 sceKernelIsHold(SceSysmemUidCB *uid0, SceSysmemUidCB *uid1)
     s32 oldIntr = suspendIntr();
     if (sceKernelIsKindOf(uid1, g_uidTypeList.basic) != 0 &&
         sceKernelIsKindOf(uid0, g_uidTypeList.basic) != 0) {
-        SceSysmemHoldHead *head2 = *(SceSysmemHoldHead**)((void*)uid1 + g_uidTypeList.basic->size * 4);
-        SceSysmemHoldHead *head1 = *(SceSysmemHoldHead**)((void*)uid0 + g_uidTypeList.basic->size * 4);
-        SceSysmemHoldElement *cur;
+        SceSysmemHoldHead *head2 = *UID_CB_TO_DATA(uid1, g_uidTypeList.basic, SceSysmemHoldHead *);
+        SceSysmemHoldHead *head1 = *UID_CB_TO_DATA(uid0, g_uidTypeList.basic, SceSysmemHoldHead *);
+        SceSysmemHoldElem *cur;
         if (head2->count2 >= head1->count1) {
             cur = head1->unk0.next;
             // C258
             // C264
             while (cur != &head1->unk0) {
-                if (cur->uid1 == uid1) {
+                SceSysmemHoldElement *elem = (SceSysmemHoldElement*)cur;
+                if (elem->uid1 == uid1) {
                     // C248 dup
                     resumeIntr(oldIntr);
                     return 1;
@@ -819,8 +893,9 @@ s32 sceKernelIsHold(SceSysmemUidCB *uid0, SceSysmemUidCB *uid1)
             }
         } else {
             cur = head2->unk8.next;
-            while (cur != &head1->unk0) {
-                if ((SceSysmemHoldElement*)((void*)cur - 8)->uid0 == uid0) {
+            while (cur != &head1->unk8) {
+                SceSysmemHoldElement *elem = (SceSysmemHoldElement*)((void*)cur - 8);
+                if (elem->uid0 == uid0) {
                     // C248 dup
                     resumeIntr(oldIntr);
                     return 1;
@@ -859,8 +934,8 @@ s32 sceKernelHoldUID(SceUID id0, SceUID id1)
         resumeIntr(oldIntr);
         return 0x800200CF;
     }
-    SceSysmemHoldHead **headPtr0 = (void*)uid0 + g_uidTypeList.basic->size * 4;
-    SceSysmemHoldHead **headPtr1 = (void*)uid1 + g_uidTypeList.basic->size * 4;
+    SceSysmemHoldHead **headPtr0 = UID_CB_TO_DATA(uid0, g_uidTypeList.basic, SceSysmemHoldHead *);
+    SceSysmemHoldHead **headPtr1 = UID_CB_TO_DATA(uid1, g_uidTypeList.basic, SceSysmemHoldHead *);
     if (*headPtr0 == NULL) {
         // C4B4
         head0 = AllocSceUIDHoldHead();
@@ -929,7 +1004,7 @@ s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid0 = (SceSysmemUidCB*)(0x88000000 | (((u32)id0 >> 7) * 4));
-    SceSysmemUidCB *uid1 = 0x88000000 | (((u32)id1 >> 7) * 4);
+    SceSysmemUidCB *uid1 = (SceSysmemUidCB*)(0x88000000 | (((u32)id1 >> 7) * 4));
     if (id1 < 1 || id0 < 1 || uid1->uid != id1 || uid0->uid != id0) {
         // C554
         resumeIntr(oldIntr);
@@ -942,10 +1017,10 @@ s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
         return 0x800200CE;
     }
     // C5CC
-    SceSysmemHoldHead **headPtr1 = (void*)uid1 + g_uidTypeList.basic->size * 4;
+    SceSysmemHoldHead **headPtr1 = UID_CB_TO_DATA(uid1, g_uidTypeList.basic, SceSysmemHoldHead *);
     SceSysmemHoldHead *head1 = *headPtr1;
     SceSysmemHoldElem *cur = head1->unk8.next;
-    SceSysmemHoldhead **headPtr0 = (void*)uid0 + g_uidTypeList.basic->size * 4;
+    SceSysmemHoldHead **headPtr0 = UID_CB_TO_DATA(uid0, g_uidTypeList.basic, SceSysmemHoldHead *);
     SceSysmemHoldElement *elem = (void*)cur - 8;
     // C5F0
     while (cur != &head1->unk8) {
@@ -988,20 +1063,27 @@ s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
     return 0;
 }
 
+// 135D8
+SceSysmemUidLookupFunc BasicFuncs[] = {
+    { 0xD310D2D9, obj_do_initialize },
+    { 0x87089863, obj_do_delete2 },
+    { 0, NULL }
+};
+
 void InitUidBasic(SceSysmemUidCB *root, char *rootName, SceSysmemUidCB *metaRoot, char *metaRootName, SceSysmemUidCB *basic, char *basicName, SceSysmemUidCB *metaBasic, char *metaBasicName)
 {
     int oldIntr = suspendIntr();
     InitUidRoot(root, rootName, metaRoot, metaRootName);
     strcpy(basicName, "Basic");
     strcpy(metaBasicName, "MetaBasic");
-    _sceKernelCreateUIDtypeInherit_sub(g_uidTypeList->root, basic, metaBasic, basicName, metaBasicName, 4, &g_135D8, 0, &g_uidTypeList->basic);
+    _sceKernelCreateUIDtypeInherit_sub(g_uidTypeList.root, basic, metaBasic, basicName, metaBasicName, 4, BasicFuncs, 0, &g_uidTypeList.basic);
     resumeIntr(oldIntr);
 }
 
 s32 obj_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    *(SceSysmemHoldHead**)((void*)uid + g_uidTypeList.basic->size * 4) = NULL;
+    *UID_CB_TO_DATA(uid, g_uidTypeList.basic, SceSysmemHoldHead *) = NULL;
     return uid->uid;
 }
 

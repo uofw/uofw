@@ -167,7 +167,7 @@ typedef struct {
     int totalfreesize; // 52
     int maxfreesize; // 56
     int numheaps; // 60
-    void *heaps[];
+    SceSysmemHeapBlock *heaps[];
 } SceSysmemHeapInfo;
 
 int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info);
@@ -192,7 +192,7 @@ int sceKernelDeleteHeap(SceUID id);
 
 typedef struct {
     u32 size; // structure size (probably)
-    u32 addr;
+    u32 align;
 } SceSysmemHeapAllocOption;
 
 void *sceKernelAllocHeapMemoryWithOption(SceUID id, int size, SceSysmemHeapAllocOption *opt);
@@ -243,9 +243,9 @@ typedef struct {
     s32 size; // Structure size
 } SceSysmemMemoryBlockAllocOption;
 
-SceUID sceKernelAllocMemoryBlock(const char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt);
+SceUID sceKernelAllocMemoryBlock(char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt);
 s32 sceKernelFreeMemoryBlock(SceUID id);
-s32 sceKernelGetMemoryBlockAddr(SceUID id, u32 *addrPtr);
+s32 sceKernelGetMemoryBlockAddr(SceUID id, void **addrPtr);
 
 /*
  * Memory Main
@@ -273,11 +273,11 @@ s32 sceKernelQueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlo
 void *sceKernelGetBlockHeadAddr(SceUID id);
 u32 SysMemForKernel_CC31DEAD(SceUID id);
 void *sceKernelGetBlockHeadAddrForUser(SceUID id);
-int memset(void *s, int c, int n);
 void *sceKernelMemset(void *src, s8 c, u32 size);
 void *sceKernelMemset32(void *src, s32 c, u32 size);
 void *sceKernelMemmove(void *dst, void *src, u32 size);
 void *sceKernelMemmoveWithFill(void *dst, void *src, u32 size, s32 fill);
+void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 
 /*
  * Memory Operations
@@ -308,7 +308,7 @@ u32 sceKernelPartitionTotalFreeMemSize(s32 mpid);
 u32 sceKernelPartitionTotalFreeMemSizeForUser(void);
 s32 sceKernelFillFreeBlock(s32 mpid, u32 c);
 SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, s32 size, s32 addr);
-s32 sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, s32 type, s32 size, s32 addr);
+SceUID sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, u32 type, s32 size, s32 addr);
 
 /*
  * UIDs
@@ -323,7 +323,7 @@ typedef struct SceSysmemUidCB {
     struct SceSysmemUidCB *PARENT0; // 0
     struct SceSysmemUidCB *nextChild; // 4
     struct SceSysmemUidCB *meta; // 8: the type UID
-    u32 uid; // 12
+    SceUID uid; // 12
     char *name; // 16
     u8 childSize; // 20
     u8 size; // 21
@@ -338,14 +338,14 @@ typedef struct SceSysmemUidCB {
 
 typedef s32 (*SceSysmemUidFunc)(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 
-typedef struct {
+typedef struct SceSysmemUidLookupFunc {
     s32 id;
     SceSysmemUidFunc func;
 } SceSysmemUidLookupFunc;
 
 s32 sceKernelCallUIDFunction(SceUID id, int funcId, ...);
 s32 sceKernelCallUIDObjFunction(SceSysmemUidCB *uid, s32 funcId, ...);
-int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, void **func, SceSysmemUidCB **parentUidWithFunc);
+int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, SceSysmemUidFunc *func, SceSysmemUidCB **parentUidWithFunc);
 s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int size,
                                   SceSysmemUidLookupFunc *funcTable, SceSysmemUidLookupFunc *metaFuncTable,

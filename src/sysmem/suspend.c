@@ -1,5 +1,7 @@
 #include <common_imp.h>
 
+#include "intr.h"
+
 typedef struct
 {
     int size; // 0

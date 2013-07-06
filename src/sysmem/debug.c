@@ -1,3 +1,10 @@
+#include <sysmem_sysclib.h>
+
+#include "kdebug.h"
+#include "partition.h"
+
+char g_140C8[9]; // 140C8
+
 s32 sceKernelApiEvaluationInit()
 {
     return 0;
@@ -40,8 +47,8 @@ s32 sceKernelCallGprofFunction()
 
 int sceKernelCheckDebugHandler()
 {
-    void *ptr = MpidToCB(3);
-    return _CheckDebugHandler(*(int*)(ptr + 4), *(int*)(ptr + 8));
+    SceSysmemMemoryPartition *part = MpidToCB(3);
+    return _CheckDebugHandler((void *)part->addr, part->size);
 }
 
 void sub_A1E8(void)

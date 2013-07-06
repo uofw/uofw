@@ -1,4 +1,7 @@
 #include <common_imp.h>
+#include <sysmem_sysevent.h>
+
+#include "intr.h"
 
 // 140F0
 SceSysEventHandler *g_sysEvHandlers;
@@ -47,7 +50,7 @@ int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* 
     // C928
     while (cur != NULL)
     {
-        if ((cur->type_mask & ev_type_mask) != 0)
+        if ((cur->typeMask & ev_type_mask) != 0)
         {
             // C984
             cur->busy = 1;

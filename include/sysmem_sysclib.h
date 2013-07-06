@@ -18,11 +18,11 @@
 
 typedef void (*prnt_callback)(void *ctx, int ch);
 
-int memset(void *s, int c, int n);
+void *memset(void *s, int c, u32 n);
 
 int bcmp(void *s1, void *s2, int n);
-int bcopy(void *src, void *dst, int n);
-int bzero(void *s, int n);
+void bcopy(void *src, void *dst, int n);
+void bzero(void *s, int n);
 int toupper(int c);
 int tolower(int c);
 int look_ctype_table(int c);
@@ -30,7 +30,7 @@ char *index(char *s, int c);
 u64 __udivmoddi4(u64 arg01, u64 arg23, u64 *v);
 u64 __udivdi3(u64 arg01, u64 arg23);
 u64 __umoddi3(u64 arg01, u64 arg23);
-const void *memchr(const void *s, int c, int n);
+void *memchr(const void *s, int c, int n);
 int memcmp(const void *s1, const void *s2, int n);
 void *memcpy(void *dst, const void *src, u32 n);
 void *memmove(void *dst, const void *src, int n);

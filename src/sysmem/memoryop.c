@@ -1,3 +1,12 @@
+#include <sysmem_kernel.h>
+#include <sysmem_kdebug.h>
+#include <sysmem_utils_kernel.h>
+
+#include "intr.h"
+#include "partition.h"
+
+u32 g_140D4; // 140D4
+
 void MemoryProtectInit(u32 size, u32 extSize)
 {
     if (sceKernelGetModel() == 0 && sceKernelDipsw(10) == 0 && sceKernelDipsw(12) == 0) // A4B8
@@ -36,8 +45,7 @@ void MemoryProtectInit(u32 size, u32 extSize)
     } else
         HW(0xBC000048) = 0;
     // A3C8
-    s32 state;
-    COP0_STATE_GET(state, 22);
+    s32 state = pspCop0StateGet(COP0_STATE_CPUID);
     if (state != 0) {
         // A424
         HW(0xBC000030) = 0x300;
@@ -88,13 +96,13 @@ void sceKernelMemoryShrinkSize(void)
         return;
     if (g_140D4 == 1) {
         // A614
-        UtilsForUser_34B9FA9E(g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
+        sceKernelDcacheWritebackInvalidateRange((void *)g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
     }
     // A5A4
     s32 oldIntr = suspendIntr();
     if ((g_140D4--) == 1) {
         // A5E0
-        UtilsForUser_34B9FA9E(g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
+        sceKernelDcacheWritebackInvalidateRange((void *)g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
         HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 1;
         pspSync();
     }

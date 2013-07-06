@@ -1,28 +1,12 @@
 #include <common_imp.h>
 
-typedef struct {
-    u32 count;
-    u32 state[624];
-} SceKernelUtilsMt19937Context;
+#include <sysmem_sysclib.h>
+#include <sysmem_utils_kernel.h>
 
-typedef struct
-{
-    u32 h[4];
-    u32 pad;
-    u16 usRemains;
-    u16 usComputed;
-    u64 ullTotalLen;
-    u8 buf[64];
-} SceKernelUtilsMd5Context;
+#include "start.h"
 
-typedef struct
-{
-    u32 h[5];
-    u16 usRemains;
-    u16 usComputed;
-    u64 ullTotalLen;
-    u8 buf[64];
-} SceKernelUtilsSha1Context;
+u32 sceKernelUtilsMt19937UInt(SceKernelUtilsMt19937Context *ctx);
+const void *sceKernelGzipGetCompressedData(const void *buf);
 
 int sceKernelDcacheInvalidateRangeForUser(const void *p, u32 size)
 {
@@ -126,7 +110,7 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
         }
         // EDD4
         numTotal -= 64;
-        sub_1710(ctx, ctx->buf);
+        md5BlockUpdate(ctx, ctx->buf);
     }
     // EDEC
     if (numTotal != 0) {
@@ -141,7 +125,7 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
 
 int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
 {
-    char buf[64];
+    u8 buf[64];
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(ctx) || !pspK1PtrOk(digest)
      || ctx == NULL || digest == NULL) {
@@ -164,7 +148,7 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
         if (remain >= 56)
         {
             // EFC0
-            sub_1710(ctx, buf);
+            md5BlockUpdate(ctx, buf);
             memset(buf, 0, 64);
         }
         // EF1C
@@ -175,7 +159,7 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
             // EF74
             buf[i + 56] = num >> (i * 8);
         }
-        sub_1710(ctx, buf);
+        md5BlockUpdate(ctx, buf);
         ctx->usComputed = 1;
         memset(ctx->buf, 0, 64);
     }
@@ -277,9 +261,9 @@ int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 
         // F26C
         int i;
         for (i = 0; i < 16; i++)
-            buf[i] = WSBW(buf[i]);
+            buf[i] = pspWsbw(buf[i]);
         total -= 64;
-        sub_1870(buf, ctx);
+        sha1BlockUpdate((u8 *)buf, ctx);
     }
     // F2A4
     if (total != 0) {
@@ -319,8 +303,8 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
         {
             // F3D8
             for (i = 0; i < 16; i++)
-                buf[i] = WSBW(buf[i]);
-            sub_1870(buf, ctx->h);
+                buf[i] = pspWsbw(buf[i]);
+            sha1BlockUpdate((u8 *)buf, ctx);
             memset(buf, 0, 64);
         }
         // F410
@@ -328,11 +312,11 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
             ((char*)buf)[i + 56] = ctx->ullTotalLen >> (56 - i * 8);
         // F480
         for (i = 0; i < 16; i++)
-            buf[i] = WSBW(buf[i]);
-        sub_1870(buf, ctx);
+            buf[i] = pspWsbw(buf[i]);
+        sha1BlockUpdate((u8 *)buf, ctx);
         // F4B0
         for (i = 0; i < 5; i++)
-            ctx->h[i] = WSBW(ctx->h[i]);
+            ctx->h[i] = pspWsbw(ctx->h[i]);
         ctx->usComputed = 1;
         memset(ctx->buf, 0, 64);
     }
@@ -351,7 +335,7 @@ int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest)
         pspSetK1(oldK1);
         return 0x800200D3;
     }
-    sub_1A40(data, size, digest);
+    sha1Digest(data, size, digest);
     pspSetK1(oldK1);
     return 0;
 }
@@ -406,10 +390,16 @@ u32 sceKernelUtilsMt19937UInt(SceKernelUtilsMt19937Context *ctx)
     if (!pspK1PtrOk(ctx))
         ret = 0x800200D3;
     else
-        ret = sub_1CF0(ctx);
+        ret = mt19937UInt(ctx);
     pspSetK1(oldK1);
     return ret;
 }
+
+typedef int clock_t;
+typedef int time_t;
+
+struct timeval;
+struct timezone;
 
 typedef clock_t (*ClockHandler)(void);
 typedef time_t (*TimeHandler)(time_t *t);
@@ -488,29 +478,29 @@ int sceKernelRtcGetTick(u64 *tick)
     return g_rtctick(tick);
 }
 
-int sceKernelGzipDecompress(u8 *dest, u32 destSize, const u8 *src, u32 *unk)
+int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *crc32)
 {
-    void *buf = sceKernelGzipGetCompressedData(src);
-    void *unkPtr;
-    int unkBuf[4];
+    const void *buf = sceKernelGzipGetCompressedData(src);
+    void *crcPtr;
+    int crcBuf[4];
     if (buf == NULL)
         return 0x80020001;
-    if (src[2] != 8)
+    if (((char*)src)[2] != 8)
         return 0x80000004;
-    int ret = sceKernelDeflateDecompress(dest, destSize, buf, &unkPtr);
+    int ret = sceKernelDeflateDecompress(dest, destSize, buf, &crcPtr);
     if (ret < 0)
         return ret;
-    memcpy(unkBuf, unkPtr, 8);
-    if (ret != unkBuf[1])
+    memcpy(crcBuf, crcPtr, 8);
+    if (ret != crcBuf[1])
         return 0x80000108;
-    if (unk != NULL)
-        *unk = unkBuf[0];
+    if (crc32 != NULL)
+        *crc32 = crcBuf[0];
     return ret;
 }
 
-int sceKernelGzipGetInfo(char *buf, char **extra, char **name, char **comment, short *crc16, char **compressedData)
+int sceKernelGzipGetInfo(const void *buf, const void **extra, const char **name, const char **comment, u16 *crc16, const void **compressedData)
 {
-    char *curBuf = buf + 10;
+    const char *curBuf = buf + 10;
     u8 header[10];
     if (extra != NULL)
         *extra = NULL;
@@ -573,32 +563,32 @@ int sceKernelGzipGetInfo(char *buf, char **extra, char **name, char **comment, s
     return 0;
 }
 
-char *sceKernelGzipGetCompressedData(char *buf)
+const void *sceKernelGzipGetCompressedData(const void *buf)
 {
-    char *data;
+    const void *data;
     if (sceKernelGzipGetInfo(buf, NULL, NULL, NULL, NULL, &data) < 0)
         return NULL;
     return data;
 }
 
-int sceKernelGzipIsValid(u8 *buf)
+int sceKernelGzipIsValid(const void *buf)
 {
-    if (buf[0] == 0x1F && buf[1] == 0x8B)
+    if (((u8*)buf)[0] == 0x1F && ((u8*)buf)[1] == 0x8B)
         return 1;
     return 0;
 }
 
-char *sceKernelGzipGetName(char *buf)
+const char *sceKernelGzipGetName(const void *buf)
 {
-    char *name;
+    const char *name;
     if (sceKernelGzipGetInfo(buf, NULL, &name, NULL, NULL, NULL) < 0)
         return NULL;
     return name;
 }
 
-char *sceKernelGzipGetComment(char *buf)
+const char *sceKernelGzipGetComment(const void *buf)
 {
-    char *comment;
+    const char *comment;
     if (sceKernelGzipGetInfo(buf, NULL, NULL, &comment, NULL, NULL) < 0)
         return NULL;
     return comment;

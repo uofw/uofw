@@ -1,8 +1,17 @@
 #include <stdarg.h>
 
 #include <common_imp.h>
+#include <sysmem_sysclib.h>
 
-#include "sysclib.h"
+#define CTYPE_DOWNCASE_LETTER 0x01
+#define CTYPE_UPCASE_LETTER   0x02
+#define CTYPE_CIPHER          0x04
+#define CTYPE_TRANSPARENT     0x08
+#define CTYPE_PUNCTUATION     0x10
+#define CTYPE_CTRL            0x20
+#define CTYPE_HEX_CIPHER      0x40
+
+#define CTYPE_LETTER (CTYPE_DOWNCASE_LETTER | CTYPE_UPCASE_LETTER)
 
 char g_ctypeTbl[] =
 {
@@ -142,14 +151,14 @@ int bcmp(void *s1, void *s2, int n)
     return memcmp(s1, s2, n);
 }
 
-int bcopy(void *src, void *dst, int n)
+void bcopy(void *src, void *dst, int n)
 {
-    return memmove(dst, src, n);
+    memmove(dst, src, n);
 }
 
-int bzero(void *s, int n)
+void bzero(void *s, int n)
 {
-    return memset(s, 0, n);
+    memset(s, 0, n);
 }
 
 int toupper(int c)
@@ -300,7 +309,7 @@ u64 __umoddi3(u64 arg01, u64 arg23)
     return mod;
 }
 
-const void *memchr(const void *s, int c, int n)
+void *memchr(const void *s, int c, int n)
 {
     if (s != NULL)
     {
@@ -308,7 +317,7 @@ const void *memchr(const void *s, int c, int n)
         while ((n--) > 0)
         {
             if (*(char*)s == (c & 0xFF))
-                return s;
+                return (void *)s;
             s++;
         }
     }
@@ -338,6 +347,9 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
     const char *curSrc = (const char*)src;
     char *curDst = (char*)dst;
     char *end = (char*)dst + n;
+
+    asm(".set noat");
+
     if (dst == src)
         return dst;
     if (n >= 8)
@@ -349,7 +361,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
             int align = 4 - ((int)dst & 3);
             asm("lwl $at, 3(%0)\n \
                  lwr $at, 0(%0)\n \
-                 swr $at, 0(%1)" : : "r" (src), "r" (dst) : "$at");
+                 swr $at, 0(%1)" : : "r" (src), "r" (dst) : "at");
             curSrc = src + align;
             curDst = dst + align;
         }
@@ -366,7 +378,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                          lwr $at, 0(%0)\n \
                          addiu %0, %0, 4\n \
                          addiu %1, %1, 4\n \
-                         sw $at, -4(%1)" : : "r" (curSrc), "r" (curDst) : "$at");
+                         sw $at, -4(%1)" : : "r" (curSrc), "r" (curDst) : "at");
                 }
                 // D890
                 // D894
@@ -387,7 +399,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                              sw  $at, 0(%1)\n \
                              sw  $a3, 4(%1)\n \
                              sw  $t0, 8(%1)\n \
-                             sw  $t1, 12(%1)" : : "r" (curSrc + i * 16), "r" (curDst + i * 16) : "$at", "$a3", "$t0", "$t1");
+                             sw  $t1, 12(%1)" : : "r" (curSrc + i * 16), "r" (curDst + i * 16) : "at", "a3", "t0", "t1");
                         curSrc += 64;
                         curDst += 64;
                     }
@@ -401,7 +413,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                     asm("lw $at, 0(%0)\n \
                          addiu %0, %0, 4\n \
                          sw $at, 0(%1)\n \
-                         addiu %1, %1, 4" : : "r" (curSrc), "r" (curDst) : "$at");
+                         addiu %1, %1, 4" : : "r" (curSrc), "r" (curDst) : "at");
                 }
                 // D79C
                 // D7A0
@@ -418,7 +430,7 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
                              sw $at, 0(%1)\n \
                              sw $a3, 4(%1)\n \
                              sw $t0, 8(%1)\n \
-                             sw $t1, 12(%1)" : : "r" (curSrc + i * 16), "r" (curDst + i * 16) : "$at", "$a3", "$t0", "$t1");
+                             sw $t1, 12(%1)" : : "r" (curSrc + i * 16), "r" (curDst + i * 16) : "at", "a3", "t0", "t1");
                         curSrc += 64;
                         curDst += 64;
                     }
@@ -433,7 +445,8 @@ void *sceKernelMemcpy(void *dst, const void *src, u32 n)
         // D84C
         while (curDst != (void*)((int)end & 0xFFFFFFFC))
         {
-            *(int*)curDst = UNALIGNED_LW((int*)curSrc);
+            asm("lwl %0, 3(%1)\n \
+                 lwr %0, 0(%1)" : "=r" (curDst) : "r" (curSrc));
             curDst += 4;
             curSrc += 4;
         }
@@ -886,7 +899,7 @@ char *rindex(const char *s, char c)
     // E22C
     do
         if (*(--cur) == c)
-            return cur;
+            return (char *)cur;
     while (s < cur);
     return 0;
 }
@@ -894,10 +907,10 @@ char *rindex(const char *s, char c)
 int sprintf(char *str, const char *format, ...)
 {
     va_list ap;
-    char **ctx;
+    char *ctx[1];
     va_start(ap, format);
-    *ctx = str;
-    int ret = prnt(sprintf_char, (void*)ctx, format, ap);
+    ctx[0] = str;
+    int ret = prnt((prnt_callback)sprintf_char, (void*)ctx, format, ap);
     va_end(ap);
     return ret;
 }
@@ -910,7 +923,7 @@ int snprintf(char *str, u32 size, const char *format, ...)
     ctx[0] = size - 1;
     ctx[1] = 0;
     ctx[2] = (int)str;
-    int ret = prnt(snprintf_char, ctx, format, ap);
+    int ret = prnt((prnt_callback)snprintf_char, ctx, format, ap);
     va_end(ap);
     return ret;
 }
@@ -957,7 +970,7 @@ char *strchr(const char *s, char c)
     do
     {
         if (*s == c)
-            return s;
+            return (char *)s;
         s++;
     } while (*s != '\0');
     return NULL;
@@ -996,7 +1009,7 @@ char *strcpy(char *dest, const char *src)
     return dest;
 }
 
-int strtol(char *nptr, char **endptr, int base)
+int strtol(const char *nptr, char **endptr, int base)
 {
     int sign = +1;
     int num = 0;
@@ -1066,7 +1079,7 @@ int strtol(char *nptr, char **endptr, int base)
         {
             // E5AC
             if (endptr != NULL)
-                *endptr = nptr - 1;
+                *endptr = (char*)nptr - 1;
             // E5B8
             return num * sign;
         }

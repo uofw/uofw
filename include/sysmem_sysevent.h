@@ -10,7 +10,7 @@ enum SceSysEventTypes {
     SCE_SPEED_CHANGE_EVENTS = 0x01000000
 };
 
-typedef struct {
+typedef struct SceSysEventHandler {
     s32 size;
     char *name;
     s32 typeMask;
