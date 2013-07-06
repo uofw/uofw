@@ -62,3 +62,9 @@ inline static s32 pspSc(s32 value, s32 *ptr)
     return ret;
 }
 
+inline static u32 pspWsbw(u32 value)
+{
+    asm __volatile__ ("wsbw %0, %0" : "=r" (value) : "r" (value));
+    return value;
+}
+
