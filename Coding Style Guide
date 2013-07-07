@@ -26,7 +26,7 @@ Don't put multiple statements on a single line:
 if (condition) doX();
 
 For switch blocks, don't indent the "case"s and "default"s but only their content.
-In example:
+For example:
 
 switch (type) {
 case 'A':
@@ -161,9 +161,11 @@ Use instead:
 32 bit signed/unsigned data size -> s32/u32
 64 bit signed/unsigned data size -> s64/u64
 
-s8 applies to arrays of characters as well, obviously:
-
-s8 project[] = "uOFW";
+The "char" type is a bit special: it is different from both s8 and u8. That way,
+any string between quotes will not be a s8* or a u8*, and you would have to use
+an ugly cast.
+In that case and cases where the data clearly contains a printable character,
+use the "char" type. In all other cases, use either s8 or u8.
 
 Also use these data types for casts, when necessary.
 
@@ -398,7 +400,7 @@ WITHOUT address-, TODO-comments to the uOFW repositiory, as soon as your module 
 
 Put a break at the end of each "case" and at the end of the "default".
 Don't skip lines between the different labels ("case"s and "default"s).
-In example:
+For example:
 
 #define UOFW_IS_COOL            1
 #define UOFW_IS_VERY_COOL       2
@@ -414,3 +416,16 @@ default:
     SetUofwIsHappy();
     break;
 }
+
+
+                        Chapter 11: Export files
+
+Only use the PSP_EXPORT_NID command, so a function or variable name can easily be found from
+the NID using the exports.exp file, and to sometimes avoid mistakes with user functions.
+If the NID is not randomized but doesn't correspond to the function name, specify the string
+the NID comes from in a comment, the line before.
+For example:
+
+# sceKernelDcacheInvalidateRange
+PSP_EXPORT_FUNC_NID(sceKernelDcacheInvalidateRangeForUser, 0xBFA98062)
+
