@@ -24,13 +24,13 @@ u32 g_dipsLo;
 // 14414
 u32 g_dipsHi;
 // 14418
-int g_cpTime;
+u32 g_cpTime;
 // 1441C
 int g_checkedDvdMode;
 // 14420
 int g_dvdMode;
 // 14424
-void *g_sm1;
+void *g_pSm1Ops;
 // 14428
 void (*g_dbgPutchar)(short*, int);
 // 1442C
@@ -41,7 +41,7 @@ int (*g_dbgRead)();
 int DipswSet(int reg, int val);
 void SetIsDvdMode(void);
 
-int DipswInit(u32 lo, u32 hi, int cpTime)
+int DipswInit(u32 lo, u32 hi, u32 cpTime)
 {
     g_dipsLo = lo;
     g_dipsHi = hi;
@@ -116,20 +116,20 @@ int sceKernelIsDVDMode()
 
 int sceKernelSm1RegisterOperations(void *arg)
 {
-    g_sm1 = arg;
+    g_pSm1Ops = arg;
     if (arg != NULL)
     {
-        g_13B40 = *(int*)(arg + 28);
-        g_13B48 = *(int*)(arg + 32);
-        g_13B80 = *(int*)(arg + 52);
-        g_13B84 = *(int*)(arg + 56);
+        g_GetGPI = *(int*)(arg + 28);
+        g_SetGPO = *(int*)(arg + 32);
+        g_GetPTRIG = *(int*)(arg + 52);
+        g_SetPTRIG = *(int*)(arg + 56);
     }
     return 0;
 }
 
 void *sceKernelSm1ReferOperations()
 {
-    return g_sm1;
+    return g_pSm1Ops;
 }
 
 int DipswSet(int reg, int val)
@@ -200,13 +200,6 @@ void SetIsDvdMode(void)
     }
 }
 
-// 13138
-char g_downHexChars[] = "0123456789abcdef";
-// 1314C
-char g_upHexChars[] = "0123456789ABCDEF";
-// 13160
-char g_null[] = "(null)";
-
 int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
 {
     char str[20];
@@ -219,7 +212,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
     if (g_dbgPutchar == NULL || fmt == NULL)
         return 0;
     func(arg0, 512);
-    char *hexNumChars = g_downHexChars;
+    char *hexNumChars = "0123456789abcdef";
     int numChars = 0;
     int stringLen;
     // FF00
@@ -401,7 +394,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
 
                 case 'X':
                     // 10558
-                    hexNumChars = g_upHexChars;
+                    hexNumChars = "0123456789ABCDEF";
                 case 'x':
                     // 10564
                     base = 16;
@@ -493,7 +486,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     if (curStr == NULL)
                     {
                         // 10748
-                        curStr = g_null;
+                        curStr = "(null)";
                     }
                     // 106CC
                     if (userMode != 0 && !pspK1PtrOk(curStr))
@@ -552,7 +545,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         *(--curStr) = lastChar;
                         longVar = __udivdi3(longVar, base);
                     } while (longVar != 0);
-                    hexNumChars = g_downHexChars;
+                    hexNumChars = "0123456789abcdef";
                     if (((attr >> 3) & 1) != 0 && base == 8 && lastChar != '0') // 101D4 dup
                         *(--curStr) = '0';
                 }
@@ -576,7 +569,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         *curStr = hexNumChars[curArg % base];
                         lastC = *curStr;
                     } while (strSize != 0);
-                    hexNumChars = g_downHexChars;
+                    hexNumChars = "0123456789abcdef";
                     if (((attr >> 3) & 1) != 0 && base == 8 && lastC != '0') // 101D4 dup
                         *(--curStr) = '0';
                 }

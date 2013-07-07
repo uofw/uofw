@@ -9,8 +9,8 @@ typedef struct {
     int (*ops[])();
 } SceKernelDeci2Ops;
 
-int sceKernelDeci2pRegisterOperations(void *op);
-void *sceKernelDeci2pReferOperations();
+int sceKernelDeci2pRegisterOperations(SceKernelDeci2Ops *ops);
+SceKernelDeci2Ops *sceKernelDeci2pReferOperations(void);
 
 void *sceKernelSm1ReferOperations();
 
@@ -31,6 +31,7 @@ int sceKernelIsDVDMode(void);
 int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugRead(SceUID fd, const void *data, SceSize size);
 int sceKernelDebugEcho(void);
+void sceKernelRegisterDebugPutcharByBootloader(void (*func)(short*, int));
 
 void sceKernelRegisterAssertHandler(void (*func)(int));
 void sceKernelAssert(int test, int lvl);

@@ -85,8 +85,6 @@ typedef struct {
     SceSysmemPartInfo extVshell; // 76
 } SceSysmemPartTable;
 
-SceKernelUsersystemLibWork g_1454C;
-
 s32 *wmemset(s32 *src, s32 c, u32 n);
 
 #endif

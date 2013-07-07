@@ -488,19 +488,12 @@ void *memmove(void *dst, const void *src, int n)
     return dst;
 }
 
-// 13108
-char g_downHexChars[] = "0123456789abcdef";
-// 131CC
-char g_upHexChars[] = "0123456789ABCDEF";
-// 13130
-char g_null[] = "(null)";
-
 int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
 {
     if (fmt == NULL)
         return 0;
     cb(ctx, 512);
-    char *ciphers = g_downHexChars;
+    char *ciphers = "0123456789abcdef";
     int count = 0;
     char string[21];
 
@@ -653,7 +646,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                             *(--s) = ciphers[__umoddi3(num, 10)];
                             num = __udivdi3(num, 10);
                         }
-                        ciphers = g_downHexChars;
+                        ciphers = "0123456789abcdef";
                     }
                     // DD30
                     stringLen = &string[21] - s;
@@ -683,7 +676,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
 
                 case 'X':
                     // E044
-                    ciphers = g_upHexChars;
+                    ciphers = "0123456789ABCDEF";
                 case 'x':
                     // E050
                     base = 16;
@@ -753,7 +746,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     s = va_arg(args, char*);
                     if (s == NULL) {
                         // E1DC
-                        s = g_null;
+                        s = "(null)";
                     }
                     // E188
                     if (precision < 0) {
@@ -815,7 +808,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                         number /= base;
                         *(--s) = lastC;
                     } while (number != 0);
-                    ciphers = g_downHexChars;
+                    ciphers = "0123456789abcdef";
                     if (((flag >> 3) & 1) && base == 8 && lastC != '0')
                         *(--s) = '0';
                 }

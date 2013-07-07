@@ -12,6 +12,9 @@ s32 (*gGetIdFunc)();
 // 13FEC
 SceKernelGameInfo SystemGameInfo;
 
+// 140C8
+char g_140C8[9];
+
 // 14538
 s32 gSysmemRandomValue;
 
@@ -20,6 +23,32 @@ u32 g_1453C;
 
 // 14540
 u32 gSysmemModel;
+
+void sub_A1E8(void)
+{
+    strncpy(g_140C8, "invalid", 8);
+    g_140C8[8] = '\0';
+}
+
+s32 SysMemUserForUser_945E45DA(char *arg)
+{
+    s32 oldK1 = pspShiftK1();
+    if (arg == NULL || !pspK1PtrOk(arg)) {
+        pspSetK1(oldK1);
+        return 0x800200D3;
+    }
+    // A280
+    strncpy(arg, g_140C8, 8);
+    arg[8] = '\0';
+    pspSetK1(oldK1);
+    return 0;
+}
+
+s32 SysMemForKernel_A03CB480(char *arg)
+{
+    strncpy(g_140C8, arg, 8);
+    return 0;
+}
 
 s32 SysMemForKernel_807179E7(char *gameId, int arg1, char *arg2, char *arg3, int arg4, int arg5, char *arg6)
 {
@@ -588,7 +617,7 @@ s32 sceKernelGetInitialRandomValue(void)
     return gSysmemRandomValue;
 }
 
-s32 SysMemForKernel_A0A9185A(void)
+s32 SysMemUserForUser_D8DE5C1E(void)
 {
     if (g_1453C != 0)
         return 0x80020001;

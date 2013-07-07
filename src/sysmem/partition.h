@@ -3,17 +3,6 @@
 
 #include <sysmem_kernel.h>
 
-typedef struct {
-    unsigned used : 1; // 0
-    unsigned next : 6; /* next index */ // 1
-    unsigned offset : 25; /* offset (from the partition start, divided by 0x100) */ // 7
-    unsigned unk0_0 : 1; // 0
-    unsigned sizeLocked : 1; // 1
-    unsigned prev : 6; // 2
-    unsigned unk8 : 1; // 8
-    unsigned size : 23; /* size (divided by 0x100) */ // 9
-} SceSysmemSeg; // size: 8
-
 typedef struct SceSysmemCtlBlk {
     struct SceSysmemCtlBlk *next; // 0
     struct SceSysmemCtlBlk *prev; // 4
@@ -68,6 +57,12 @@ typedef struct {
 
 extern SceSysmemUidCB *g_145A8;
 extern SceSysmemMemInfo g_145C0;
+
+void PartitionInit(SceSysmemMemoryPartition *part);
+void PartitionServiceInit(void);
+s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 size);
+u32 PartitionQueryMaxFreeMemSize(SceSysmemMemoryPartition *part);
+u32 PartitionQueryTotalFreeMemSize(SceSysmemMemoryPartition *part);
 
 #endif
 

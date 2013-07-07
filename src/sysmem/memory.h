@@ -26,6 +26,7 @@ void _ReturnSegBlankList(SceSysmemSeg *seg);
 
 void *sceKernelFillBlock64(void *dst, s32 c, u32 size);
 
+void MemoryBlockServiceInit(void);
 void sceKernelProtectMemoryBlock(SceSysmemMemoryPartition *part, void *addr);
 
 extern SceSysmemUidCB *g_MemBlockType;

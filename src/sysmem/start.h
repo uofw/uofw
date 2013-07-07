@@ -34,11 +34,10 @@ u32 mt19937UInt(SceKernelUtilsMt19937Context *ctx);
 
 int sceKernelDeflateDecompress(u8 *dest, u32 destSize, const u8 *src, void **unk);
 
-extern int g_13B40;
-extern int g_13B44;
-extern int g_13B48;
-extern int g_13B80;
-extern int g_13B84;
+extern int g_GetGPI;
+extern int g_SetGPO;
+extern int g_GetPTRIG;
+extern int g_SetPTRIG;
 
 #endif
 

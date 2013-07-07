@@ -6,6 +6,8 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
+#include "../pspmoduleexport.h"
+
 /** The maximum length of a module name. */
 #define SCE_MODULE_NAME_LEN                     (27)
 

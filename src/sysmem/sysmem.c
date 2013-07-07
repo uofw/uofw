@@ -1,20 +1,95 @@
+#include <common_imp.h>
+
+#include <sysmem_kdebug.h>
+#include <sysmem_kernel.h>
+#include <sysmem_suspend_kernel.h>
+
+#include "kdebug.h"
+#include "intr.h"
+#include "memory.h"
+#include "memoryop.h"
+#include "misc.h"
+#include "partition.h"
+#include "suspend.h"
+#include "sysevent.h"
+#include "uid.h"
+
+#include "sysmem.h"
+
 SCE_MODULE_INFO("sceSystemMemoryManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
                                          | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 17);
 SCE_MODULE_BOOTSTART("SysMemInit");
 SCE_SDK_VERSION(SDK_VERSION);
 
+extern SceResidentLibraryEntryTable __library_exports[10];
+
+// 14608?
+extern char end;
+
+// 14544
+u32 SystemStatus;
+
 // 14548
 void *g_deci2p;
 
-int SysMemInit(int args, void *argp)
+// 1454C
+SceKernelUsersystemLibWork g_1454C;
+
+// 1455C
+SceSysmemMemoryBlock memblk_kernel;
+
+// 14568
+SceSysmemMemoryBlock memblk_memman;
+
+// 14574
+u32 SysmemRegSave[12];
+
+typedef struct {
+    u32 addr; // 0
+    u32 size; // 4
+    u32 attr; // 8
+    SceUID partId; // 12
+} SceMemoryProtect;
+
+typedef struct {
+
+    u32 unk4; // 4
+    u32 unk8; // 8
+    u32 unk12; // 12
+    u32 unk16; // 16
+    u32 model; // 20
+    u32 unk24; // 24
+
+    u32 dipsLo; // 60
+    u32 dipsHi; // 64
+    u32 cpTime; // 68
+    u32 nBlocks; // 72
+    SceMemoryProtect *memBlocks; // 76
+    void (*debugPutchar)(short*, int); // 80
+
+    SysMemThreadConfig *threadConf; // 88
+
+    u32 realMemSize; // 96
+    u32 randomValue; // 100
+} SysMemConfig;
+
+int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *table);
+int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partTable);
+int SysMemReInit(SceSysmemMemoryPartition *mainPart);
+
+void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table);
+s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
+s32 resumeSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
+
+int SysMemInit(int args __attribute__((unused)), SysMemConfig *config)
 {
     SceSysmemMemoryPartition mainPart;
     SceSysmemPartTable table;
-    sceKernelRegisterDebugPutcharByBootloader(*(int*)(argp + 80));
-    DipswInit(*(int*)(argp + 60), *(int*)(argp + 64), *(int*)(argp + 68));
-    g_145C0.realMemSize = *(int*)(argp + 96);
-    g_model = *(int*)(argp + 20);
-    SysMemInitMain(argp, &mainPart, &table);
+    sceKernelRegisterDebugPutcharByBootloader(config->debugPutchar);
+    DipswInit(config->dipsLo, config->dipsHi, config->cpTime);
+    g_145C0.realMemSize = config->realMemSize;
+    gSysmemModel = config->model;
+    SysMemInitMain(config, &mainPart, &table);
     InitUid();
     SysMemPostInit(&mainPart, &table);
     sceKernelSuspendInit();
@@ -22,57 +97,53 @@ int SysMemInit(int args, void *argp)
     InitGameInfo();
     sub_A1E8();
     // 10B54
-    int i;
-    for (i = 0; i < *(int*)(argp + 72); i++)
-    {
-        void *curPtr = *(int*)(argp + 76) + i * 28;
-        short type = *(unsigned short*)(curPtr + 8);
-        if (type == 32) {
+    u32 i;
+    for (i = 0; i < config->nBlocks; i++) {
+        SceMemoryProtect *curBlock = &config->memBlocks[i];
+        if ((curBlock->attr & 0xFFFF) == 0x20) {
             // 10CFC
-            CopyGameInfo(*(int*)(curPtr + 0));
-        }
-        else if (type == 512)
-        {
+            CopyGameInfo((void *)curBlock->addr);
+        } else if ((curBlock->attr & 0xFFFF) == 0x200) {
             // 10CD4
-            SceUID id = sceKernelAllocPartitionMemory(1, "SceSysmemProtectSystem", 2, *(int*)(curPtr + 4), *(int*)(curPtr + 0));
-            *(int*)(curPtr + 12) = id;
+            SceUID id = sceKernelAllocPartitionMemory(1, "SceSysmemProtectSystem", 2, curBlock->size, curBlock->addr);
+            curBlock->partId = id;
             if (id >= 0)
-                *(int*)(curPtr + 8) |= 0x10000;
+                curBlock->attr |= 0x10000;
             // 10CF4
         }
         // 10B78
     }
     // 10B88
-    void *ptr = *(int*)(argp + 88);
-    g_1453C = -1;
-    g_initialRand = *(int*)(argp + 100);
-    *(int*)(ptr + 16) = &g_11EE0;
-    *(int*)(ptr + 20) = &g_11ED0;
-    *(int*)(ptr + 28) = &g_11F18;
-    *(int*)(ptr + 44) = 6;
-    *(int*)(ptr + 108) = &g_11EA8;
-    *(int*)(ptr + 112) = &g_11EF4;
-    *(int*)(ptr + 60) = sceKernelResizeMemoryBlock;
-    *(int*)(ptr + 24) = &g_11EBC;
-    *(int*)(ptr + 8) = &g_11E94;
-    *(int*)(ptr + 12) = &g_11F2C;
-    *(int*)(ptr + 116) = &g_11F04;
-    *(int*)(ptr + 4) = 9;
-    *(int*)(ptr + 52) = sceKernelAllocPartitionMemory;
-    *(int*)(ptr + 56) = sceKernelGetBlockHeadAddr;
-    *(int*)(ptr + 72) = sceKernelGetBlockHeadAddr(sceKernelAllocPartitionMemory(1, "stack:SceSysmemInitialThread", 1, 0x4000, 0)) + 0x4000;
-    sceKernelRegisterSuspendHandler(31, &g_11C28, 0);
-    sceKernelRegisterResumeHandler(31, &g_11D0C, 0);
-    *(int*)(ptr + 96) = Kprintf;
+    SysMemThreadConfig *threadConf = config->threadConf;
+    g_1453C = 0xFFFFFFFF;
+    gSysmemRandomValue = config->randomValue;
+    threadConf->kernelLibs[2] = &__library_exports[5]; // 0x11EE0 sceSuspendForKernel
+    threadConf->kernelLibs[3] = &__library_exports[4]; // 0x11ED0 sceSysEventForKernel
+    threadConf->kernelLibs[5] = &__library_exports[8]; // 0x11F18 UtilsForKernel
+    threadConf->numKernelLibs = 6;
+    threadConf->userLibs[0] = &__library_exports[2]; // 0x11EA8 SysMemUserForUser
+    threadConf->userLibs[1] = &__library_exports[6]; // 0x11EF4 sceSuspendForUser
+    threadConf->ResizeMemoryBlock = sceKernelResizeMemoryBlock;
+    threadConf->kernelLibs[4] = &__library_exports[3]; // 0x11EBC SysclibForKernel
+    threadConf->kernelLibs[0] = &__library_exports[1]; // 0x11E94 SysMemForKernel
+    threadConf->kernelLibs[1] = &__library_exports[9]; // 0x11F2C KDebugForKernel
+    threadConf->userLibs[3] = &__library_exports[7]; // 0x11F04 UtilsForUser
+    threadConf->numExportLibs = 9;
+    threadConf->AllocPartitionMemory = sceKernelAllocPartitionMemory;
+    threadConf->GetBlockHeadAddr = sceKernelGetBlockHeadAddr;
+    threadConf->initThreadStack = sceKernelGetBlockHeadAddr(sceKernelAllocPartitionMemory(1, "stack:SceSysmemInitialThread", 1, 0x4000, 0)) + 0x4000;
+    sceKernelRegisterSuspendHandler(31, suspendSysmem, 0);
+    sceKernelRegisterResumeHandler(31, resumeSysmem, 0);
+    threadConf->Kprintf = Kprintf;
     return 0;
 }
 
-void SysMemInitMain(void *arg0, SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *table)
+int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *table)
 {
-    table->unk4 = *(int*)(arg0 + 12);
-    table->unk8 = *(int*)(arg0 + 16);
-    SetMemoryPartitionTable(arg0, table);
-    SceSysmemCtlBlk *ctlBlk = (&g_14608 + 0xFF) & 0xFFFFFF00;
+    table->unk4 = config->unk12;
+    table->unk8 = config->unk16;
+    SetMemoryPartitionTable(config, table);
+    SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)(((u32)&end + 0xFF) & 0xFFFFFF00);
     if (table->memSize >= 0xFFFFFF00)
         table->memSize = 0xFFFFFF00;
 
@@ -80,24 +151,24 @@ void SysMemInitMain(void *arg0, SceSysmemMemoryPartition *mainPart, SceSysmemPar
     MemoryProtectInit(table->other1.size + table->other2.size, table->extSc2Kernel.size + table->extScKernel.size + table->extMeKernel.size);
     g_145C0.memSize = table->memSize;
     g_145C0.unk64 = 0;
-    g_145C0.memAddr = *(int*)(arg0 + 4);
+    g_145C0.memAddr = config->unk4;
     SceSysmemPartInfo *info;
     if (table->unk4 != 3)
         info = &table->other2;
     else
         info = &table->other1;
-    mainPart->unk12 = (mainPart->unk12 & 0xFFFFFFF0) | 0xC;
+    mainPart->attr = (mainPart->attr & 0xFFFFFFF0) | 0xC;
     mainPart->unk24 = 1;
     g_145C0.kernel = mainPart;
     mainPart->firstCtlBlk = ctlBlk;
     mainPart->addr = info->addr;
     mainPart->size = info->size;
     mainPart->lastCtlBlk = ctlBlk;
-    if (((info->addr + info->size) & 0x1FFFFFFF) >= (((void*)ctlBlk + 0xFF) & 0x1FFFFFFF)) {
+    if (((info->addr + info->size) & 0x1FFFFFFF) >= (((u32)ctlBlk + 0xFF) & 0x1FFFFFFF)) {
         // 10E38
         return SysMemReInit(mainPart);
     } else
-        mainPart->ctlBlk = NULL;
+        mainPart->firstCtlBlk = NULL;
     return 0;
 }
 
@@ -109,23 +180,23 @@ int SysMemReInit(SceSysmemMemoryPartition *mainPart)
         g_145C0.main = mainPart;
         PartitionInit(mainPart);
         int size = ((u32)mainPart->firstCtlBlk & 0x1FFFFFFF) - (mainPart->addr & 0x1FFFFFFF);
-        int addr = _AllocPartitionMemory(mainPart, 2, size, mainPart->addr);
-        if (addr == 0) {
+        void *addr = _AllocPartitionMemory(mainPart, 2, size, mainPart->addr);
+        if (addr == NULL) {
             // 10F78
             mainPart->firstCtlBlk = NULL;
         } else {
-            *(int*)(&g_1455C + 4) = (size + 0xFF) & 0xFFFFFF00;
-            *(int*)(&g_1455C + 0) = addr;
-            addr = _AllocPartitionMemory(mainPart, 2, 0x100, mainPart->firstCtlBlk);
-            if (addr != 0) {
-                if ((addr & 0x1FFFFFFF) == ((u32)mainPart->firstCtlBlk & 0x1FFFFFFF)) {
-                    *(int*)(&g_14568 + 4) = 0x100;
-                    *(int*)(&g_14568 + 0) = addr;
+            memblk_kernel.size = (size + 0xFF) & 0xFFFFFF00;
+            memblk_kernel.addr = addr;
+            addr = _AllocPartitionMemory(mainPart, 2, 0x100, (u32)mainPart->firstCtlBlk);
+            if (addr != NULL) {
+                if (((u32)addr & 0x1FFFFFFF) == ((u32)mainPart->firstCtlBlk & 0x1FFFFFFF)) {
+                    memblk_memman.size = 0x100;
+                    memblk_memman.addr = addr;
                     resumeIntr(oldIntr);
-                    return (mainPart->lastCtlBlk[mainPart->lastCtlBlk->freeSeg][0] >> 7) << 8;
+                    return mainPart->lastCtlBlk->segs[mainPart->lastCtlBlk->freeSeg].offset << 8;
                 }
                 // 10F60
-                *(int*)(arg0 + 16) = 0;
+                mainPart->firstCtlBlk = NULL;
             }
             // 10F64
             resumeIntr(oldIntr);
@@ -137,48 +208,48 @@ int SysMemReInit(SceSysmemMemoryPartition *mainPart)
     return 0;
 }
 
-int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
+int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partTable)
 {
     int oldIntr = suspendIntr();
     SceSysmemUidCB *uidKernel, *uidOther, *uidVsh, *uidScUser, *uidMeUser,
-                 *uidExtScKernel, *uidExtSc2Kernel, *uidExtMe, *uidExtVsh;
+                 *uidExtScKernel, *uidExtSc2Kernel, *uidExtMeKernel, *uidExtVsh;
     PartitionServiceInit();
-    sceKernelCreateUID(g_145A8, "SceMyKernelPartition", (k1 >> 31) & 0xFF, &uidKernel);
-    SceSysmemMemoryPartition *kernelPart = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
+    sceKernelCreateUID(g_145A8, "SceMyKernelPartition", (pspGetK1() >> 31) & 0xFF, &uidKernel);
+    SceSysmemMemoryPartition *kernelPart = UID_CB_TO_DATA(uidKernel, g_145A8, SceSysmemMemoryPartition);
     SceSysmemMemoryPartition *part;
-    *(int*)(kernelPart + 0) = 0;
-    *(int*)(kernelPart + 4) = *(int*)(arg0 + 4);
-    *(int*)(kernelPart + 8) = *(int*)(arg0 + 8);
+    kernelPart->next = NULL;
+    kernelPart->addr = mainPart->addr;
+    kernelPart->size = mainPart->size;
     SceSysmemPartInfo *info = &partTable->other2;
-    *(int*)(kernelPart + 12) = (*(int*)(kernelPart + 12) & 0xFFFFFFF0) | (*(int*)(arg0 + 12) & 0xF);
+    kernelPart->attr = (kernelPart->attr & 0xFFFFFFF0) | (mainPart->addr & 0xF);
     g_145C0.kernel = kernelPart;
-    *(int*)(kernelPart + 16) = *(int*)(arg0 + 16);
-    *(int*)(kernelPart + 24) = *(int*)(arg0 + 24);
-    *(int*)(kernelPart + 20) = *(int*)(arg0 + 16);
+    kernelPart->firstCtlBlk = mainPart->firstCtlBlk;
+    kernelPart->unk24 = mainPart->unk24;
+    kernelPart->lastCtlBlk = mainPart->firstCtlBlk;
     g_145C0.main = kernelPart;
     MemoryBlockServiceInit();
-    sceKernelCreateUID(g_MemBlockType, "SceSystemMemoryManager", (k1 >> 31) & 0xFF, &uidKernel);
+    sceKernelCreateUID(g_MemBlockType, "sceSystemMemoryManager", (pspGetK1() >> 31) & 0xFF, &uidKernel);
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
-    *(int*)(&g_1455C + 8) = memBlock;
-    *(int*)(memBlock + 0) = *(int*)(&g_1455C + 0);
-    *(int*)(memBlock + 4) = *(int*)(&g_1455C + 4);
-    *(int*)(memBlock + 8) = *(int*)(&g_1455C + 8);
-    sceKernelProtectMemoryBlock(*(int*)(&g_1455C + 8), *(int*)(&g_1455C + 0));
-    sceKernelCreateUID(g_MemBlockType, "SceSystemBlock", (k1 >> 31) & 0xFF, &uidKernel);
+    memblk_kernel.part = kernelPart;
+    memBlock->addr = memblk_kernel.addr;
+    memBlock->size = memblk_kernel.size;
+    memBlock->part = memblk_kernel.part;
+    sceKernelProtectMemoryBlock(memblk_kernel.part, memblk_kernel.addr);
+    sceKernelCreateUID(g_MemBlockType, "SceSystemBlock", (pspGetK1() >> 31) & 0xFF, &uidKernel);
     memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
-    *(int*)(&g_14568 + 8) = memBlock;
-    *(int*)(memBlock + 0) = *(int*)(&g_14568 + 0);
-    *(int*)(memBlock + 4) = *(int*)(&g_14568 + 4);
-    *(int*)(memBlock + 8) = *(int*)(&g_14568 + 8);
-    sceKernelProtectMemoryBlock(memBlock, *(int*)(&g_14568 + 0));
-    if (*(int*)(arg1 + 4) != 3)
+    memblk_memman.part = kernelPart;
+    memBlock->addr = memblk_memman.addr;
+    memBlock->size = memblk_memman.size;
+    memBlock->part = memblk_memman.part;
+    sceKernelProtectMemoryBlock(memblk_memman.part, memblk_memman.addr);
+    if (partTable->unk4 != 3)
         info = &partTable->other1;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceOtherKernelPartition", 12, info->addr, info->size), g_145A8, &uidOther);
     part = NULL;
     if (info->size != 0)
         part = UID_CB_TO_DATA(uidOther, g_145A8, SceSysmemMemoryPartition);
     // 11160
-    if (*(int*)(arg1 + 4) == 3) {
+    if (partTable->unk4 == 3) {
         // 11450
         g_145C0.other2 = part;
         g_145C0.other1 = kernelPart;
@@ -191,14 +262,14 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceVshellPartition", 15, info->addr, info->size), g_145A8, &uidVsh);
     part = NULL;
     if (info->size != 0)
-        UID_CB_TO_DATA(uidVsh, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidVsh, g_145A8, SceSysmemMemoryPartition);
     // 111C8
     g_145C0.vshell = part;
     info = &partTable->scUser;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceScUserPartition", 15, info->addr, info->size), g_145A8, &uidScUser);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidScUser, g_145A8, SceSysmemMemoryPartition)
+        part = UID_CB_TO_DATA(uidScUser, g_145A8, SceSysmemMemoryPartition);
     // 1121C
     g_145C0.scUser = part;
     info = &partTable->meUser;
@@ -208,7 +279,7 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
         part = UID_CB_TO_DATA(uidMeUser, g_145A8, SceSysmemMemoryPartition);
     // 11270
     g_145C0.meUser = part;
-    if (*(int*)(arg1 + 8) == 6) {
+    if (partTable->unk8 == 6) {
         // 11448
         g_145C0.user = g_145C0.scUser;
     } else
@@ -225,7 +296,7 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtSc2KernelPartition", 12, info->addr, info->size), g_145A8, &uidExtSc2Kernel);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidSc2Kernel, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidExtSc2Kernel, g_145A8, SceSysmemMemoryPartition);
     // 11330
     g_145C0.extSc2Kernel = part;
     info = &partTable->extMeKernel;
@@ -235,7 +306,7 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
         part = UID_CB_TO_DATA(uidExtMeKernel, g_145A8, SceSysmemMemoryPartition);
     // 11384
     g_145C0.extMeKernel = part;
-    if (*(int*)(arg1 + 4) == 3) {
+    if (partTable->unk4 == 3) {
         // 11440
         g_145C0.extKernel = g_145C0.extScKernel;
     } else
@@ -254,31 +325,31 @@ int SysMemPostInit(void *arg0, SceSysmemPartTable *partTable)
     resumeIntr(oldIntr);
     return 0;
 }
-s32 sceKernelGetSysMemoryInfo(s32 mpid, s32 arg1, arg2)
+
+void sceKernelGetSysMemoryInfo(s32 mpid, u32 needsInit, SceSysMemoryInfo *info)
 {
     SceSysmemMemoryPartition *part = MpidToCB(mpid);
     s32 oldIntr = suspendIntr();
-    if (arg1 == 0) {
+    if (!needsInit) {
         // 114F4
-        a2 = *(int*)(arg2 + 12);
-        if (a2 != 0)
-        {
+        SceSysmemSeg *seg = info->curSeg;
+        if (seg != NULL) {
             // 11514
-            t4 = (*(u32*)(a2 + 0) >> 7) << 8;
-            v0 = (*(u32*)(a2 + 4) >> 9) << 8;
-            *(int*)(arg2 + 4) = v0;
-            *(int*)(arg2 + 0) = part->addr + t4;
-            if ((*(u32*)(a2 + 0) & 1) == 0) {
+            u32 off = seg->offset << 8;
+            u32 size = seg->size << 8;
+            info->size = size;
+            info->info.segAddr = part->addr + off;
+            if (seg->used == 0) {
                 // 115A8 dup
-                *(int*)(arg2 + 4) = v0 | 1;
+                info->size |= 1;
             } else {
-                SceSysmemCtlBlk *curCtlBlk = part->ctlBlk;
+                SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
                 // 11550
                 while (curCtlBlk != NULL) {
-                    if ((u32)curCtlBlk == part->addr + t4) {
+                    if ((u32)curCtlBlk == part->addr + off) {
                         // 115A4
                         // 115A8 dup
-                        *(int*)(arg2 + 4) |= 2;
+                        info->size |= 2;
                         break;
                     }
                     curCtlBlk = curCtlBlk->next;
@@ -286,24 +357,23 @@ s32 sceKernelGetSysMemoryInfo(s32 mpid, s32 arg1, arg2)
             }
             // (11564)
             // 11568
-            a0 = (a2 & 0xFFFFFF00);
-            v1 = (*(int*)(a2 + 0) >> 1) & 0x3F;
-            if (v1 != 0x3F) {
+            SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)((u32)seg & 0xFFFFFF00);
+            if (seg->next != 0x3F) {
                 // 114CC dup
-                *(int*)(arg2 + 12) = a0 + v1 * 8 + 16;
-            } else if (*(int*)(a0 + 0) != 0) {
+                info->curSeg = &ctlBlk->segs[seg->next];
+            } else if (ctlBlk->next != NULL) {
                 // 11598
                 // 114CC dup
-                *(int*)(arg2 + 12) = &part->ctlBlk->segs[part->ctlBlk->unk14];
+                info->curSeg = &part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg];
             } else
-                *(int*)(arg2 + 12) = 0;
+                info->curSeg = NULL;
         } else {
-            *(int*)(arg2 + 4) = 1;
-            *(int*)(arg2 + 0) = part->size;
+            info->size = 1;
+            info->info.segAddr = part->addr;
         }
     } else {
-        *(int*)(arg2 + 0) = 0;
-        SceSysmemCtlBlk *curCtlBlk = part->ctlBlk;
+        info->info.segCount = 0;
+        SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
         if (curCtlBlk != NULL) {
             s32 count = 0;
             // 114A4
@@ -311,16 +381,15 @@ s32 sceKernelGetSysMemoryInfo(s32 mpid, s32 arg1, arg2)
                 count += curCtlBlk->segCount;
                 curCtlBlk = curCtlBlk->next;
             } while (curCtlBlk != NULL);
-            *(int*)(arg2 + 0) = count;
+            info->info.segCount = count;
         }
         // 114B8
-        *(int*)(arg2 + 4) = part->size;
+        info->size = part->size;
         // 114CC dup
-        *(int*)(arg2 + 12) = &part->ctlBlk->segs[part->ctlBlk->unk14];
+        info->curSeg = &part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg];
     }
     // 114D4
     resumeIntr(oldIntr);
-    return;
 }
 
 s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount)
@@ -382,7 +451,7 @@ s32 sceKernelSysMemRealMemorySize(void)
 
 s32 sceKernelSysMemMemSize(void)
 {
-    if (MpidtoCB(1)->ctlBlk == NULL)
+    if (MpidToCB(1)->firstCtlBlk == NULL)
         return 0;
     return g_145C0.memSize;
 }
@@ -391,7 +460,7 @@ s32 sceKernelSysMemMaxFreeMemSize(void)
 {
     u32 maxSize = 0;
     s32 oldIntr = suspendIntr();
-    if (MpidToCB(1)->ctlBlk == NULL) {
+    if (MpidToCB(1)->firstCtlBlk == NULL) {
         // 117BC
         resumeIntr(oldIntr);
         return 0;
@@ -409,20 +478,40 @@ s32 sceKernelSysMemMaxFreeMemSize(void)
     return maxSize;
 }
 
-int sceKernelDeci2pRegisterOperations(void *op)
+s32 sceKernelSysMemTotalFreeMemSize(void)
 {
-    g_deci2p = op;
+    s32 totalSize = 0;
+    s32 oldIntr = suspendIntr();
+    if (MpidToCB(1)->firstCtlBlk == NULL) {
+        // 11844
+        resumeIntr(oldIntr);
+        return 0;
+    }
+    SceSysmemMemoryPartition *cur = g_145C0.main;
+    // 1180C
+    while (cur != NULL) {
+        totalSize += PartitionQueryTotalFreeMemSize(cur);
+        cur = cur->next;
+    }
+    // 11820
+    resumeIntr(oldIntr);
+    return totalSize;
+}
+
+int sceKernelDeci2pRegisterOperations(SceKernelDeci2Ops *ops)
+{
+    g_deci2p = ops;
     return 0;
 }
 
-void *sceKernelDeci2pReferOperations(void)
+SceKernelDeci2Ops *sceKernelDeci2pReferOperations(void)
 {
     return g_deci2p;
 }
 
 s32 sceKernelGetMEeDramSaveAddr(void)
 {
-    if (g_model != 0) {
+    if (gSysmemModel != 0) {
         // 11894
         if (g_145C0.extVshell == 0) {
             // 118A8
@@ -435,7 +524,7 @@ s32 sceKernelGetMEeDramSaveAddr(void)
 
 s32 sceKernelGetAWeDramSaveAddr(void)
 {
-    if (g_model != 0) {
+    if (gSysmemModel != 0) {
         // 118E0
         return g_145C0.vshell->addr;
     } else
@@ -444,14 +533,14 @@ s32 sceKernelGetAWeDramSaveAddr(void)
 
 s32 sceKernelGetMEeDramSaveSize(void)
 {
-    if (g_model != 0)
+    if (gSysmemModel != 0)
         return 0x400000;
     return 0x200000;
 }
 
 s32 sceKernelGetAWeDramSaveSize(void)
 {
-    if (g_model != 0)
+    if (gSysmemModel != 0)
         return 0x400000;
     return 0x200000;
 }
@@ -463,12 +552,12 @@ s32 sceKernelDevkitVersion(void)
 
 s32 sceKernelGetSystemStatus(void)
 {
-    return g_14544;
+    return SystemStatus;
 }
 
 s32 sceKernelSetSystemStatus(s32 newStatus)
 {
-    return (g_14544 = newStatus);
+    return (SystemStatus = newStatus);
 }
 
 s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_lazy)(s32, void*), SceGeLazy *lazy)
@@ -489,30 +578,29 @@ s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_l
 
 SceKernelUsersystemLibWork *sceKernelGetUsersystemLibWork(void)
 {
-    return g_1454C;
+    return &g_1454C;
 }
 
-void SetMemoryPartitionTable(void *arg0, SceSysmemPartTable *table)
+void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)
 {
     int type;
-    if (*(int*)(arg0 + 20) != 0) {
+    if (config->model != 0) {
         // 11C08
         table->memSize = 0x04000000;
         type = 2;
-        if (*(int*)(arg0 + 24) != 2)
+        if (config->unk24 != 2)
             type = 3;
     } else {
-        type = *(int*)(arg0 + 60);
-        if ((type & 0x400) == 0 || *(u32*)(arg0 + 96) <= 0x037FFFFF) {
+        if ((config->dipsLo & 0x400) == 0 || config->realMemSize <= 0x037FFFFF) {
             // 11B9C
-            if ((type & 0x1000) != 0 || *(u32*)(arg0 + 96) <= 0x03FFFFFF) {
+            if ((config->dipsLo & 0x1000) != 0 || config->realMemSize <= 0x03FFFFFF) {
                 type = 0;
                 // 11C00
                 // 119E0 dup
                 table->memSize = 0x02000000;
             }
             table->memSize = 0x04000000;
-            switch (*(int*)(arg0 + 24)) { // jump table at 0x13AE8
+            switch (config->unk24) { // jump table at 0x13AE8
             case 2:
             case 3:
                 // 11BF0
@@ -529,15 +617,15 @@ void SetMemoryPartitionTable(void *arg0, SceSysmemPartTable *table)
             table->memSize = 0x03800000;
         }
     }
-    u32 curAddr = *(int*)(arg0 + 4);
+    u32 curAddr = config->unk4;
     // 119E4
     table->other1.addr = 0x80000000 | (curAddr & 0x1FFFFFFF);
     // 11A08
     table->other1.size = (type != 2 ? 0x300000 : 0x600000);
     int diff = 0;
-    if (*(int*)(arg0 + 8) != 0) {
-        diff = *(int*)(arg0 + 8) - table->other1.size;
-        table->other1.size = *(int*)(arg0 + 8);
+    if (config->unk8 != 0) {
+        diff = config->unk8 - table->other1.size;
+        table->other1.size = config->unk8;
     }
 
     curAddr += table->other1.size;
@@ -601,7 +689,7 @@ void SetMemoryPartitionTable(void *arg0, SceSysmemPartTable *table)
     table->extMeKernel.addr = 0;
     curAddr += table->extScKernel.size;
     table->extMeKernel.size = 0;
-    if (type == 3 && (*(int*)(arg0 + 60) & 0x1000) == 0) { // 11B14
+    if (type == 3 && (config->dipsLo & 0x1000) == 0) { // 11B14
         table->extVshell.size = 0x400000;
         table->extVshell.addr = 0x80000000 | (curAddr & 0x1FFFFFFF);
     } else {
@@ -611,37 +699,37 @@ void SetMemoryPartitionTable(void *arg0, SceSysmemPartTable *table)
     }
 }
 
-s32 suspendSysmem(void)
+s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)))
 {
-    *(int*)(&g_14574 + 0) = HW(0xBC100040);
-    *(int*)(&g_14574 + 4) = HW(0xBC000000) & 0xFEDCEDCF;
-    *(int*)(&g_14574 + 8) = HW(0xBC000004) & 0xEDCFCCDD;
-    *(int*)(&g_14574 + 12) = HW(0xBC000008);
-    *(int*)(&g_14574 + 16) = HW(0xBC00000C);
-    *(int*)(&g_14574 + 20) = HW(0xBC000030);
-    *(int*)(&g_14574 + 24) = HW(0xBC000034);
-    *(int*)(&g_14574 + 28) = HW(0xBC000038);
-    *(int*)(&g_14574 + 32) = HW(0xBC00003C);
-    *(int*)(&g_14574 + 36) = HW(0xBC000040);
-    *(int*)(&g_14574 + 40) = HW(0xBC000044);
-    *(int*)(&g_14574 + 44) = HW(0xBC000048);
+    SysmemRegSave[0]  = HW(0xBC100040);
+    SysmemRegSave[1]  = HW(0xBC000000) & 0xFEDCEDCF;
+    SysmemRegSave[2]  = HW(0xBC000004) & 0xEDCFCCDD;
+    SysmemRegSave[3]  = HW(0xBC000008);
+    SysmemRegSave[4]  = HW(0xBC00000C);
+    SysmemRegSave[5]  = HW(0xBC000030);
+    SysmemRegSave[6]  = HW(0xBC000034);
+    SysmemRegSave[7]  = HW(0xBC000038);
+    SysmemRegSave[8]  = HW(0xBC00003C);
+    SysmemRegSave[9]  = HW(0xBC000040);
+    SysmemRegSave[10] = HW(0xBC000044);
+    SysmemRegSave[11] = HW(0xBC000048);
     return 0;
 }
 
-s32 resumeSysmem(void)
+s32 resumeSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)))
 {
-    HW(0xBC100040) = *(int*)(&g_14574 + 0);
-    HW(0xBC000000) = *(int*)(&g_14574 + 4) & 0xCDEFDEFC;
-    HW(0xBC000004) = *(int*)(&g_14574 + 8) & 0xDEFCFFEE;
-    HW(0xBC000008) = *(int*)(&g_14574 + 12);
-    HW(0xBC00000C) = *(int*)(&g_14574 + 16);
-    HW(0xBC000030) = *(int*)(&g_14574 + 20);
-    HW(0xBC000034) = *(int*)(&g_14574 + 24);
-    HW(0xBC000038) = *(int*)(&g_14574 + 28);
-    HW(0xBC00003C) = *(int*)(&g_14574 + 32);
-    HW(0xBC000040) = *(int*)(&g_14574 + 36);
-    HW(0xBC000044) = *(int*)(&g_14574 + 40);
-    HW(0xBC000048) = *(int*)(&g_14574 + 44);
+    HW(0xBC100040) = SysmemRegSave[0];
+    HW(0xBC000000) = SysmemRegSave[1] & 0xCDEFDEFC;
+    HW(0xBC000004) = SysmemRegSave[2] & 0xDEFCFFEE;
+    HW(0xBC000008) = SysmemRegSave[3];
+    HW(0xBC00000C) = SysmemRegSave[4];
+    HW(0xBC000030) = SysmemRegSave[5];
+    HW(0xBC000034) = SysmemRegSave[6];
+    HW(0xBC000038) = SysmemRegSave[7];
+    HW(0xBC00003C) = SysmemRegSave[8];
+    HW(0xBC000040) = SysmemRegSave[9];
+    HW(0xBC000044) = SysmemRegSave[10];
+    HW(0xBC000048) = SysmemRegSave[11];
     return 0;
 }
 

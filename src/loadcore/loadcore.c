@@ -701,7 +701,7 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
  */
 s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp) 
 {
-    s32 i;
+    u32 i;
     for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
     s32 seedPart1;
     s32 status;    
@@ -753,8 +753,8 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
         sceKernelSetCompareLatestSubType(sysMemThreadConfig->CompareLatestSubType); //0x00000E58
 
     /* register Sysmem's kernel resident libraries. */             
-    for (i = 0; i < sysMemThreadConfig->userLibStart; i++) { //0x00000BF0 & 0x00000BFC - 0x00000C24
-         if (sceKernelRegisterLibrary(sysMemThreadConfig->exportLib[i]) != SCE_ERROR_OK)
+    for (i = 0; i < sysMemThreadConfig->numKernelLibs; i++) { //0x00000BF0 & 0x00000BFC - 0x00000C24
+         if (sceKernelRegisterLibrary(sysMemThreadConfig->kernelLibs[i]) != SCE_ERROR_OK)
              StopLoadCore();
     } 
     status = sceKernelRegisterLibrary(&loadCoreKernelLib); //0x00000C2C
@@ -1275,8 +1275,9 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     
     //0x000019DC - 0x00001A0C
     /* Register the System Memory Manager user mode resident libraries. */
-    for (i = 0; i < threadConfig->numExportLibs - threadConfig->userLibStart; i++)
-         sceKernelRegisterLibrary(threadConfig->exportEntryTables[i]); //0x000019F0
+    u32 n;
+    for (n = 0; n < threadConfig->numExportLibs - threadConfig->numKernelLibs; n++)
+         sceKernelRegisterLibrary(threadConfig->userLibs[n]); //0x000019F0
        
     if (mod == NULL) //0x00001A10
         StopLoadCore(); //0x00001BDC
@@ -1404,7 +1405,7 @@ s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 
         
         return SCE_BOOT_CALLBACK_FUNCTION_QUEUED;
     }    
-    s32 result = bootCBFunc(1, 0, NULL); //0x0000261C     
+    s32 result = bootCBFunc((void*)1, 0, NULL); //0x0000261C     
     if (status != NULL) //0x00002624
         *status = result; //0x0000262C
      

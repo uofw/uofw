@@ -140,7 +140,7 @@ void PartitionServiceInit(void)
     sceKernelCreateUIDtype("SceSysmemMemoryPartition", sizeof(SceSysmemMemoryPartition), PartFuncs, 0, &g_145A8);
 }
 
-s32 sceKernelCreateMemoryPartition(const char *name, u32 unk, u32 addr, u32 size)
+s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 size)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
@@ -151,7 +151,7 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 unk, u32 addr, u32 size
     }
     // 402C
     SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
-    ret = _CreateMemoryPartition(part, unk, addr, size);
+    ret = _CreateMemoryPartition(part, attr, addr, size);
     if (ret != 0) {
         // 40E0
         sceKernelDeleteUID(uid->uid);
@@ -518,7 +518,7 @@ SceSysmemSeg *AddrToSeg(SceSysmemMemoryPartition *part, void *addr)
     return NULL;
 }
 
-SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, s32 size, s32 addr)
+SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u32 addr)
 {
     if (type > 4)
         return 0x800200D8;
@@ -566,7 +566,7 @@ SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, s32 size, s
     return uid->uid;
 }
 
-SceUID sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, u32 type, s32 size, s32 addr)
+SceUID sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, u32 type, u32 size, u32 addr)
 {
     SceSysmemPartitionInfo info;
     s32 oldK1 = pspShiftK1();

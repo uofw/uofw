@@ -14,26 +14,26 @@
 
 typedef struct {
     s32 unk0; //0
-    s32 numExportLibs; //4 -- number of sysmem's export libraries - set in SysMemInit (from utopia)
-    SceResidentLibraryEntryTable *exportLib[8]; //8 --array of sysmem's export tables set in SysMemInit (from utopia)
+    u32 numExportLibs; //4 -- number of sysmem's export libraries - set in SysMemInit (from utopia)
+    SceResidentLibraryEntryTable *kernelLibs[8]; //8 --array of sysmem's export tables set in SysMemInit (from utopia)
     u32 loadCoreAddr; // 40 -- allocated in SysMemInit (from utopia)
-    s32 userLibStart; // 44 -- offset in export_lib at which user libraries begin - set in SysMemInit (from utopia)
+    u32 numKernelLibs; // 44 -- offset in export_lib at which user libraries begin - set in SysMemInit (from utopia)
     s32 unk48; //48
-    s32 unk52; //52
-    s32 unk56;//56
-    s32 unk60; //60
+    SceUID (*AllocPartitionMemory)(s32 mpid, char *name, u32 type, u32 size, u32 addr); // 52
+    void * (*GetBlockHeadAddr)(SceUID id); // 56
+    s32 (*ResizeMemoryBlock)(SceUID id, s32 leftShift, s32 rightShift); // 60
     SceStubLibraryEntryTable *loadCoreImportTables; //64 -- loadcore stubs - set in kactivate before booting loadcore (from utopia)
     u32 loadCoreImportTablesSize; //68 -- total size of stubs - set in kactivate before booting loadcore (from utopia)
-    s32 init_thread_stack; //72 -- allocated in SysMemInit (from utopia)
+    void *initThreadStack; //72 -- allocated in SysMemInit (from utopia)
     SceLoadCoreExecFileInfo *sysMemExecInfo; //76 -- set in kactivate before booting loadcore (from utopia)
     SceLoadCoreExecFileInfo *loadCoreExecInfo; //80 -- set in kactivate before booting loadcore (from utopia)
     s32 (*CompareSubType)(u32 tag); //84
     u32 (*CompareLatestSubType)(u32 tag); //88
     s32 (*SetMaskFunction)(u32 unk1, vs32 *addr); //92
-    void (*kprintf_handler)(u8 *format, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6, void *arg7); //96 -- set by sysmem (from utopia)
+    void (*Kprintf)(const char *fmt, ...); //96 -- set by sysmem (from utopia)
     s32 (*GetLengthFunction)(u8 *file, u32 size, u32 *newSize); //100 -- set in kactivate before booting loadcore (from utopia)
     s32 (*PrepareGetLengthFunction)(u8 *buf, u32 size); //104
-    SceResidentLibraryEntryTable *exportEntryTables[]; //108 
+    SceResidentLibraryEntryTable *userLibs[3]; //108 
 } SysMemThreadConfig;
 
 /** PSP Hardware models. */
@@ -203,13 +203,33 @@ s32 sceKernelHeapTotalFreeSize(SceUID id);
 /*
  * Main
  */
-s32 sceKernelGetSysMemoryInfo(s32 mpid, s32 arg1, s32 arg2);
+
+typedef struct {
+    unsigned used : 1; // 0
+    unsigned next : 6; /* next index */ // 1
+    unsigned offset : 25; /* offset (from the partition start, divided by 0x100) */ // 7
+    unsigned unk0_0 : 1; // 0
+    unsigned sizeLocked : 1; // 1
+    unsigned prev : 6; // 2
+    unsigned unk8 : 1; // 8
+    unsigned size : 23; /* size (divided by 0x100) */ // 9
+} SceSysmemSeg; // size: 8
+
+typedef struct {
+    union {
+        u32 segCount;
+        u32 segAddr;
+    } info;
+    u32 size; // 4
+    u32 unused8; // 8
+    SceSysmemSeg *curSeg; // 12
+} SceSysMemoryInfo;
+
+void sceKernelGetSysMemoryInfo(s32 mpid, u32 needsInit, SceSysMemoryInfo *info);
 s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount);
 s32 sceKernelSysMemRealMemorySize(void);
 s32 sceKernelSysMemMemSize(void);
 s32 sceKernelSysMemMaxFreeMemSize(void);
-int sceKernelDeci2pRegisterOperations(void *op);
-void *sceKernelDeci2pReferOperations(void);
 s32 sceKernelGetMEeDramSaveAddr(void);
 s32 sceKernelGetAWeDramSaveAddr(void);
 s32 sceKernelGetMEeDramSaveSize(void);
@@ -264,15 +284,12 @@ typedef struct {
 s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift);
 s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2);
 s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size);
-s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *memoryBlockId);
 s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr);
 s32 sceKernelSizeLockMemoryBlock(SceUID id);
 s32 sceKernelFreePartitionMemory(SceUID id);
-s32 sceKernelFreePartitionMemoryForUser(SceUID id);
 s32 sceKernelQueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId);
 void *sceKernelGetBlockHeadAddr(SceUID id);
 u32 SysMemForKernel_CC31DEAD(SceUID id);
-void *sceKernelGetBlockHeadAddrForUser(SceUID id);
 void *sceKernelMemset(void *src, s8 c, u32 size);
 void *sceKernelMemset32(void *src, s32 c, u32 size);
 void *sceKernelMemmove(void *dst, void *src, u32 size);
@@ -301,14 +318,11 @@ typedef struct {
 
 s32 sceKernelQueryMemoryPartitionInfo(s32 mpid, SceSysmemPartitionInfo *info);
 u32 sceKernelPartitionMaxFreeMemSize(s32 mpid);
-u32 sceKernelPartitionMaxFreeMemSizeForUser(void);
 u32 sceKernelPartitionTotalMemSize(s32 mpid);
 u32 sceKernelTotalMemSize(void);
 u32 sceKernelPartitionTotalFreeMemSize(s32 mpid);
-u32 sceKernelPartitionTotalFreeMemSizeForUser(void);
 s32 sceKernelFillFreeBlock(s32 mpid, u32 c);
-SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, s32 size, s32 addr);
-SceUID sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, u32 type, s32 size, s32 addr);
+SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u32 addr);
 
 /*
  * UIDs

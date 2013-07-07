@@ -5,7 +5,37 @@ include ../../lib/common.mak
 
 INCLUDE = -I../../include
 WARNINGS = -Wall -Wextra -Werror
-BUILTINS_DISABLE = -fno-builtin-bcopy -fno-builtin-bzero -fno-builtin-strchr -fno-builtin-printf -fno-builtin-puts -fno-builtin-putchar -fno-builtin-rindex -nostdlib
+
+# Only keep builtins for memcpy, memset for their inline function
+BUILTINS_DISABLE = -fno-builtin-bcmp \
+				   -fno-builtin-bcopy \
+				   -fno-builtin-bzero \
+				   -fno-builtin-index \
+				   -fno-builtin-memchr \
+				   -fno-builtin-memcmp \
+				   -fno-builtin-memcpy \
+				   -fno-builtin-memmove \
+				   -fno-builtin-memset \
+				   -fno-builtin-printf \
+				   -fno-builtin-putchar \
+				   -fno-builtin-puts \
+				   -fno-builtin-rindex \
+				   -fno-builtin-snprintf \
+				   -fno-builtin-sprintf \
+				   -fno-builtin-strcat \
+				   -fno-builtin-strchr \
+				   -fno-builtin-strcmp \
+				   -fno-builtin-strcpy \
+				   -fno-builtin-strlen \
+				   -fno-builtin-strncmp \
+				   -fno-builtin-strncpy \
+				   -fno-builtin-strpbrk \
+				   -fno-builtin-strrchr \
+				   -fno-builtin-strstr \
+				   -fno-builtin-tolower \
+				   -fno-builtin-toupper \
+				   -nostdlib
+
 CFLAGS := $(INCLUDE) -O1 -fno-toplevel-reorder -G0 $(WARNINGS) $(BUILTINS_DISABLE)
 CFLAGS_S := $(INCLUDE)
 LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
@@ -35,6 +65,9 @@ all: $(TARGET).prx
 $(TARGET).elf: $(OBJS) $(EXPORT_OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 	$(FIXUP_IMPORTS) $@
+
+$(PRX_EXPORTS:.exp=.o): $(PRX_EXPORTS:.exp=.c)
+	$(CC) -c $^ -o $@ $(CFLAGS) -fno-builtin
 
 %.o: %.c
 	$(CC) -c $^ -o $@ $(CFLAGS)
