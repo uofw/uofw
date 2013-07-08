@@ -42,7 +42,7 @@ LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
 
 FIXUP_IMPORTS = ../../utils/fixup-imports/psp-fixup-imports
 BUILD_EXPORTS = ../../utils/build-exports/psp-build-exports
-PRXGEN = psp-prxgen
+PRXGEN = ../../utils/kprxgen/psp-kprxgen
 
 PRX_EXPORTS = exports.exp
 EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
