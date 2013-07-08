@@ -532,7 +532,7 @@ s32 sceCtrlInit(void)
     s32 timerId;
     u32 supportedUserButtons;
     void (*func)(SceKernelDeci2Ops *);
-    s32 *retPtr;
+    SceKernelDeci2Ops *deci2Ops;
     s32 pspModel; 
 
     memset(&g_ctrl, 0, sizeof(SceCtrl));
@@ -607,10 +607,10 @@ s32 sceCtrlInit(void)
     sceKernelRegisterSubIntrHandler(SCE_VBLANK_INT, 0x13, _sceCtrlVblankIntr, NULL); 
     sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x13);
    
-    retPtr = sceKernelDeci2pReferOperations();
-    if ((retPtr != NULL) && (*retPtr == 48)) {
-         func = (void (*)(SceKernelDeci2Ops *))*(retPtr + 11);
-         func(&g_ctrlDeci2Ops);
+    deci2Ops = sceKernelDeci2pReferOperations();
+    if (deci2Ops != NULL && deci2Ops->size == 48) {
+        func = (void (*)(SceKernelDeci2Ops *))deci2Ops->ops[10];
+        func(&g_ctrlDeci2Ops);
     }
     return SCE_ERROR_OK;
 }
