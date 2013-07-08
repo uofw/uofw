@@ -13,15 +13,15 @@ typedef struct SceSysmemHoldElem {
 } SceSysmemHoldElem;
 
 typedef struct {
-    SceSysmemHoldElem unk0; // 0
-    SceSysmemHoldElem unk8; // 8
+    SceSysmemHoldElem hold0; // 0
+    SceSysmemHoldElem hold1; // 8
     u32 count1; // 16
     u32 count2; // 20
 } SceSysmemHoldHead; // size: 24
 
 typedef struct {
-    SceSysmemHoldElem unk0; // 0
-    SceSysmemHoldElem unk8; // 8
+    SceSysmemHoldElem hold0; // 0
+    SceSysmemHoldElem hold1; // 8
     SceSysmemUidCB *uid1; // 16
     SceSysmemUidCB *uid0; // 20
 } SceSysmemHoldElement;
@@ -47,7 +47,7 @@ SceSysmemHeap EHeap4UID;
 SceSysmemUidCB *HeapCB;
 
 // 145AC
-SceUID g_145AC;
+SceUID HeapCBUid;
 
 // 145B0
 SceSysmemUidList g_uidTypeList;
@@ -57,7 +57,7 @@ void InitUid(void)
     SceSysmemHeapBlock *heapBlock = NULL;
     int oldIntr = suspendIntr();
     HeapCB->PARENT0 = NULL;
-    g_145AC = 0;
+    HeapCBUid = 0;
     _CreateHeap(MpidToCB(1), 0x2000, 1, &heapBlock);
     sceKernelProtectMemoryBlock(MpidToCB(1), heapBlock);
     EHeap4UID.partId = 1;
@@ -86,15 +86,15 @@ void InitUid(void)
     char *metaBasicName = _AllocHeapMemory(&EHeap4UID, strlen("MetaBasic") + 1, 0);
     InitUidBasic(root, rootName, metaRoot, metaRootName, basic, basicName, metaBasic, metaBasicName);
     HeapInit();
-    if (sceKernelCreateUID(g_145A4, "SceSystemMemoryManager", 0, &HeapCB) == 0)
+    if (sceKernelCreateUID(g_HeapType, "SceSystemMemoryManager", 0, &HeapCB) == 0)
     {
-        SceSysmemHeap *heap = UID_CB_TO_DATA(HeapCB, g_145A4, SceSysmemHeap);
+        SceSysmemHeap *heap = UID_CB_TO_DATA(HeapCB, g_HeapType, SceSysmemHeap);
         heap->size = EHeap4UID.size;
         heap->partId = EHeap4UID.partId;
         heap->partSize = EHeap4UID.partSize;
         heap->firstBlock = EHeap4UID.firstBlock;
         heap->partAddr = EHeap4UID.partAddr;
-        g_145AC = HeapCB->uid;
+        HeapCBUid = HeapCB->uid;
     }
     // A968
     resumeIntr(oldIntr);
@@ -391,7 +391,7 @@ int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysme
 
 SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
 {
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if (name == NULL)
         return 0x80020001;
     s32 oldIntr = suspendIntr();
@@ -594,7 +594,7 @@ s32 sceKernelDeleteUIDtype(SceSysmemUidCB *uid)
 
 s32 sceKernelGetUIDname(SceUID id, s32 len, char *out)
 {
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uidType = (void*)(0x88000000 | (((u32)id >> 7) * 4));
     if ((id & 0x80000001) != 1 || (u32)uidType < part->addr ||
@@ -624,7 +624,7 @@ s32 sceKernelGetUIDname(SceUID id, s32 len, char *out)
 
 s32 sceKernelRenameUID(SceUID id, const char *name)
 {
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid = (SceSysmemUidCB*)(0x88000000 | (((u32)id >> 7) * 4));
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
@@ -649,7 +649,7 @@ s32 sceKernelRenameUID(SceUID id, const char *name)
 s32 sceKernelGetUIDtype(SceUID id)
 {
     SceSysmemUidCB *uid = (SceSysmemUidCB *)(0x88000000 | (((u32)id >> 7) * 4));
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id)
         return 0x800200CB;
@@ -665,7 +665,7 @@ s32 sceKernelDeleteUID(SceUID id)
 s32 sceKernelGetUIDcontrolBlock(SceUID id, SceSysmemUidCB **uidOut)
 {
     SceSysmemUidCB *uid = (SceSysmemUidCB *)(0x88000000 | (((u32)id >> 7) << 2));
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id)
         return 0x800200CB;
@@ -677,7 +677,7 @@ s32 sceKernelGetUIDcontrolBlockWithType(SceUID id, SceSysmemUidCB *type, SceSysm
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid = (SceSysmemUidCB*)(0x88000000 | (((u32)id >> 7) * 4));
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id) {
         // BC50
@@ -759,23 +759,23 @@ s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId,
     SceSysmemHoldHead *head = *UID_CB_TO_DATA(uid, g_uidTypeList.basic, SceSysmemHoldHead *);
     if (head != NULL) {
         if (head->count1 > 0) {
-            SceSysmemHoldElem *cur = head->unk0.next;
-            while (cur != &head->unk0) {
+            SceSysmemHoldElem *cur = head->hold0.next;
+            while (cur != &head->hold0) {
                 // BEC8
                 SceSysmemHoldElement *elem = (SceSysmemHoldElement*)cur;
-                SceSysmemHoldElem *formerNext8 = elem->unk8.next;
-                SceSysmemHoldElem *formerPrev8 = elem->unk8.prev;
+                SceSysmemHoldElem *formerNext8 = elem->hold1.next;
+                SceSysmemHoldElem *formerPrev8 = elem->hold1.prev;
                 formerNext8->prev = formerPrev8;
-                elem->unk8.prev = &elem->unk8;
+                elem->hold1.prev = &elem->hold1;
                 formerPrev8->next = formerNext8;
-                elem->unk8.next = &elem->unk8;
+                elem->hold1.next = &elem->hold1;
 
-                SceSysmemHoldElem *formerNext0 = elem->unk0.next;
-                SceSysmemHoldElem *formerPrev0 = elem->unk0.prev;
+                SceSysmemHoldElem *formerNext0 = elem->hold0.next;
+                SceSysmemHoldElem *formerPrev0 = elem->hold0.prev;
                 formerNext0->prev = formerPrev0;
-                elem->unk0.prev = &elem->unk0;
+                elem->hold0.prev = &elem->hold0;
                 formerPrev0->next = formerNext0;
-                elem->unk0.next = &elem->unk0;
+                elem->hold0.next = &elem->hold0;
                 FreeSceUIDHoldElement(elem);
 
                 cur = formerNext0;
@@ -783,23 +783,23 @@ s32 obj_do_delete2(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId,
         }
         // BF1C
         if (head->count2 > 0) {
-            SceSysmemHoldElem *cur = head->unk8.next;
-            while (cur != &head->unk8) {
+            SceSysmemHoldElem *cur = head->hold1.next;
+            while (cur != &head->hold1) {
                 // BF30
                 SceSysmemHoldElement *elem = (SceSysmemHoldElement*)((void*)cur - 8);
-                SceSysmemHoldElem *formerNext8 = elem->unk8.next;
-                SceSysmemHoldElem *formerPrev8 = elem->unk8.prev;
+                SceSysmemHoldElem *formerNext8 = elem->hold1.next;
+                SceSysmemHoldElem *formerPrev8 = elem->hold1.prev;
                 formerNext8->prev = formerPrev8;
-                elem->unk8.prev = &elem->unk8;
+                elem->hold1.prev = &elem->hold1;
                 formerPrev8->next = formerNext8;
-                elem->unk8.next = &elem->unk8;
+                elem->hold1.next = &elem->hold1;
 
-                SceSysmemHoldElem *formerNext0 = elem->unk0.next;
-                SceSysmemHoldElem *formerPrev0 = elem->unk0.prev;
+                SceSysmemHoldElem *formerNext0 = elem->hold0.next;
+                SceSysmemHoldElem *formerPrev0 = elem->hold0.prev;
                 formerNext0->prev = formerPrev0;
-                elem->unk0.prev = &elem->unk0;
+                elem->hold0.prev = &elem->hold0;
                 formerPrev0->next = formerNext0;
-                elem->unk0.next = &elem->unk0;
+                elem->hold0.next = &elem->hold0;
                 FreeSceUIDHoldElement(elem);
 
                 cur = formerNext8;
@@ -842,7 +842,7 @@ s32 obj_do_isKindOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute
 {
     SceUID typeId = va_arg(ap, SceUID);
     SceSysmemUidCB *typeUid = (SceSysmemUidCB*)(0x88000000 | (((u32)typeId >> 7) * 4));
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((typeId & 0x80000001) != 1 || (u32)typeUid < part->addr ||
         (u32)typeUid >= part->addr + part->size || typeUid->uid != typeId)
         return 0;
@@ -857,7 +857,7 @@ s32 obj_do_isMemberOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribu
 {
     SceUID id = va_arg(ap, SceUID);
     SceSysmemUidCB *uid2 = (SceSysmemUidCB*)(0x88000000 | (((u32)id >> 7) << 2));
-    SceSysmemMemoryPartition *part = g_145C0.kernel;
+    SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid2 < part->addr ||
         (u32)uid2 >= part->addr + part->size || uid2->uid != id)
         return 0;
@@ -879,10 +879,10 @@ s32 sceKernelIsHold(SceSysmemUidCB *uid0, SceSysmemUidCB *uid1)
         SceSysmemHoldHead *head1 = *UID_CB_TO_DATA(uid0, g_uidTypeList.basic, SceSysmemHoldHead *);
         SceSysmemHoldElem *cur;
         if (head2->count2 >= head1->count1) {
-            cur = head1->unk0.next;
+            cur = head1->hold0.next;
             // C258
             // C264
-            while (cur != &head1->unk0) {
+            while (cur != &head1->hold0) {
                 SceSysmemHoldElement *elem = (SceSysmemHoldElement*)cur;
                 if (elem->uid1 == uid1) {
                     // C248 dup
@@ -892,8 +892,8 @@ s32 sceKernelIsHold(SceSysmemUidCB *uid0, SceSysmemUidCB *uid1)
                 cur = cur->next;
             }
         } else {
-            cur = head2->unk8.next;
-            while (cur != &head1->unk8) {
+            cur = head2->hold1.next;
+            while (cur != &head1->hold1) {
                 SceSysmemHoldElement *elem = (SceSysmemHoldElement*)((void*)cur - 8);
                 if (elem->uid0 == uid0) {
                     // C248 dup
@@ -941,20 +941,20 @@ s32 sceKernelHoldUID(SceUID id0, SceUID id1)
         head0 = AllocSceUIDHoldHead();
         if (head0 == NULL)
             goto error;
-        head0->unk0.prev = &head0->unk0;
-        head0->unk0.next = &head0->unk0;
-        head0->unk8.prev = &head0->unk8;
-        head0->unk8.next = &head0->unk8;
+        head0->hold0.prev = &head0->hold0;
+        head0->hold0.next = &head0->hold0;
+        head0->hold1.prev = &head0->hold1;
+        head0->hold1.next = &head0->hold1;
     }
     // C3AC
     if (*headPtr1 == NULL) {
         head1 = AllocSceUIDHoldHead();
         if (head1 == NULL)
             goto error;
-        head1->unk0.prev = &head1->unk0;
-        head1->unk0.next = &head1->unk0;
-        head1->unk8.prev = &head1->unk8;
-        head1->unk8.next = &head1->unk8;
+        head1->hold0.prev = &head1->hold0;
+        head1->hold0.next = &head1->hold0;
+        head1->hold1.prev = &head1->hold1;
+        head1->hold1.next = &head1->hold1;
     }
     // C3DC
     elem = AllocSceUIDHoldElement();
@@ -973,16 +973,16 @@ s32 sceKernelHoldUID(SceUID id0, SceUID id1)
     else
         *headPtr0 = head0;
     // C408
-    elem->unk8.prev = head1->unk8.prev;
-    head1->unk8.prev = &elem->unk8;
-    elem->unk0.prev = head0->unk0.prev;
-    head0->unk0.prev = &elem->unk0;
-    elem->unk8.next = &head1->unk8;
-    elem->unk8.prev->next = &elem->unk8;
+    elem->hold1.prev = head1->hold1.prev;
+    head1->hold1.prev = &elem->hold1;
+    elem->hold0.prev = head0->hold0.prev;
+    head0->hold0.prev = &elem->hold0;
+    elem->hold1.next = &head1->hold1;
+    elem->hold1.prev->next = &elem->hold1;
     head1->count2++;
-    elem->unk0.next = &head0->unk0;
+    elem->hold0.next = &head0->hold0;
     head0->count1++;
-    elem->unk0.next->prev = &elem->unk0;
+    elem->hold0.next->prev = &elem->hold0;
     resumeIntr(oldIntr);
     return 0;
 
@@ -1019,43 +1019,45 @@ s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
     // C5CC
     SceSysmemHoldHead **headPtr1 = UID_CB_TO_DATA(uid1, g_uidTypeList.basic, SceSysmemHoldHead *);
     SceSysmemHoldHead *head1 = *headPtr1;
-    SceSysmemHoldElem *cur = head1->unk8.next;
     SceSysmemHoldHead **headPtr0 = UID_CB_TO_DATA(uid0, g_uidTypeList.basic, SceSysmemHoldHead *);
+    SceSysmemHoldHead *head0 = *headPtr0;
+
+    SceSysmemHoldElem *cur = head1->hold1.next;
     SceSysmemHoldElement *elem = (void*)cur - 8;
     // C5F0
-    while (cur != &head1->unk8) {
+    while (cur != &head1->hold1) {
         if (elem->uid0 == uid0)
             break;
         cur = cur->next;
         elem = (void*)cur - 8;
     }
 
-    if (cur == &head1->unk8) {
+    if (cur == &head1->hold1) {
         // C608
         resumeIntr(oldIntr);
         return 0x800200D0;
     }
     // C61C
-    elem->unk8.next->prev = elem->unk8.prev;
-    elem->unk8.prev = &elem->unk8;
-    elem->unk8.prev->next = elem->unk8.next;
-    elem->unk8.next = &elem->unk8;
-    elem->unk0.next->prev = elem->unk0.prev;
+    elem->hold1.next->prev = elem->hold1.prev;
+    elem->hold1.prev = &elem->hold1;
+    elem->hold1.prev->next = elem->hold1.next;
+    elem->hold1.next = &elem->hold1;
+    elem->hold0.next->prev = elem->hold0.prev;
     head1->count2--;
-    elem->unk0.prev->next = elem->unk0.next;
-    (*headPtr0)->count1--;
-    elem->unk0.prev = &elem->unk0;
-    elem->unk0.next = &elem->unk0;
+    elem->hold0.prev->next = elem->hold0.next;
+    head0->count1--;
+    elem->hold0.prev = &elem->hold0;
+    elem->hold0.next = &elem->hold0;
     FreeSceUIDHoldElement(elem);
-    if ((*headPtr1)->count2 + (*headPtr1)->count1 == 0) {
+    if (head1->count2 + head1->count1 == 0) {
         // C6D0
-        FreeSceUIDHoldHead(*headPtr1);
+        FreeSceUIDHoldHead(head1);
         *headPtr1 = NULL;
     }
     // C698
-    if ((*headPtr0)->count2 + (*headPtr0)->count1 == 0) {
+    if (head0->count2 + head0->count1 == 0) {
         // C6C0
-        FreeSceUIDHoldHead(*headPtr0);
+        FreeSceUIDHoldHead(head0);
         *headPtr0 = NULL;
     }
     // C6B0

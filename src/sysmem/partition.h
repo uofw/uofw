@@ -7,7 +7,7 @@ typedef struct SceSysmemCtlBlk {
     struct SceSysmemCtlBlk *next; // 0
     struct SceSysmemCtlBlk *prev; // 4
     u16 segCount;
-    u16 unk10; // used segments?
+    u16 usedSeg; // 10
     u16 freeSeg; // 12 // points to a free segment id
     u8 firstSeg; // 14
     u8 lastSeg; // 15
@@ -21,7 +21,7 @@ typedef struct SceSysmemMemoryPartition {
     u32 attr; // 12
     SceSysmemCtlBlk *firstCtlBlk; // 16
     SceSysmemCtlBlk *lastCtlBlk; // 20
-    s32 unk24;
+    u32 ctlBlkCount; // 24
 } SceSysmemMemoryPartition;
 
 SceSysmemMemoryPartition *MpidToCB(int mpid);
@@ -55,8 +55,8 @@ typedef struct {
     SceSysmemMemoryPartition *part;
 } SceSysmemMemoryBlock; // size: 12; allocated space in partition
 
-extern SceSysmemUidCB *g_145A8;
-extern SceSysmemMemInfo g_145C0;
+extern SceSysmemUidCB *g_PartType;
+extern SceSysmemMemInfo g_MemInfo;
 
 void PartitionInit(SceSysmemMemoryPartition *part);
 void PartitionServiceInit(void);

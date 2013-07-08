@@ -52,23 +52,23 @@ typedef struct {
 } SceMemoryProtect;
 
 typedef struct {
-
+    u32 unk0;
     u32 unk4; // 4
     u32 unk8; // 8
     u32 unk12; // 12
     u32 unk16; // 16
     u32 model; // 20
     u32 unk24; // 24
-
+    u32 unk28, unk32, unk36, unk40, unk44, unk48, unk52, unk56;
     u32 dipsLo; // 60
     u32 dipsHi; // 64
     u32 cpTime; // 68
     u32 nBlocks; // 72
     SceMemoryProtect *memBlocks; // 76
     void (*debugPutchar)(short*, int); // 80
-
+    u32 unk84;
     SysMemThreadConfig *threadConf; // 88
-
+    u32 unk92;
     u32 realMemSize; // 96
     u32 randomValue; // 100
 } SysMemConfig;
@@ -87,7 +87,7 @@ int SysMemInit(int args __attribute__((unused)), SysMemConfig *config)
     SceSysmemPartTable table;
     sceKernelRegisterDebugPutcharByBootloader(config->debugPutchar);
     DipswInit(config->dipsLo, config->dipsHi, config->cpTime);
-    g_145C0.realMemSize = config->realMemSize;
+    g_MemInfo.realMemSize = config->realMemSize;
     gSysmemModel = config->model;
     SysMemInitMain(config, &mainPart, &table);
     InitUid();
@@ -149,17 +149,17 @@ int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, Sce
 
     // 10D6C
     MemoryProtectInit(table->other1.size + table->other2.size, table->extSc2Kernel.size + table->extScKernel.size + table->extMeKernel.size);
-    g_145C0.memSize = table->memSize;
-    g_145C0.unk64 = 0;
-    g_145C0.memAddr = config->unk4;
+    g_MemInfo.memSize = table->memSize;
+    g_MemInfo.unk64 = 0;
+    g_MemInfo.memAddr = config->unk4;
     SceSysmemPartInfo *info;
     if (table->unk4 != 3)
         info = &table->other2;
     else
         info = &table->other1;
     mainPart->attr = (mainPart->attr & 0xFFFFFFF0) | 0xC;
-    mainPart->unk24 = 1;
-    g_145C0.kernel = mainPart;
+    mainPart->ctlBlkCount = 1;
+    g_MemInfo.kernel = mainPart;
     mainPart->firstCtlBlk = ctlBlk;
     mainPart->addr = info->addr;
     mainPart->size = info->size;
@@ -177,7 +177,7 @@ int SysMemReInit(SceSysmemMemoryPartition *mainPart)
     int oldIntr = suspendIntr();
     if (mainPart->firstCtlBlk != NULL) {
         // 10E9C
-        g_145C0.main = mainPart;
+        g_MemInfo.main = mainPart;
         PartitionInit(mainPart);
         int size = ((u32)mainPart->firstCtlBlk & 0x1FFFFFFF) - (mainPart->addr & 0x1FFFFFFF);
         void *addr = _AllocPartitionMemory(mainPart, 2, size, mainPart->addr);
@@ -214,19 +214,19 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
     SceSysmemUidCB *uidKernel, *uidOther, *uidVsh, *uidScUser, *uidMeUser,
                  *uidExtScKernel, *uidExtSc2Kernel, *uidExtMeKernel, *uidExtVsh;
     PartitionServiceInit();
-    sceKernelCreateUID(g_145A8, "SceMyKernelPartition", (pspGetK1() >> 31) & 0xFF, &uidKernel);
-    SceSysmemMemoryPartition *kernelPart = UID_CB_TO_DATA(uidKernel, g_145A8, SceSysmemMemoryPartition);
+    sceKernelCreateUID(g_PartType, "SceMyKernelPartition", (pspGetK1() >> 31) & 0xFF, &uidKernel);
+    SceSysmemMemoryPartition *kernelPart = UID_CB_TO_DATA(uidKernel, g_PartType, SceSysmemMemoryPartition);
     SceSysmemMemoryPartition *part;
     kernelPart->next = NULL;
     kernelPart->addr = mainPart->addr;
     kernelPart->size = mainPart->size;
     SceSysmemPartInfo *info = &partTable->other2;
     kernelPart->attr = (kernelPart->attr & 0xFFFFFFF0) | (mainPart->addr & 0xF);
-    g_145C0.kernel = kernelPart;
+    g_MemInfo.kernel = kernelPart;
     kernelPart->firstCtlBlk = mainPart->firstCtlBlk;
-    kernelPart->unk24 = mainPart->unk24;
+    kernelPart->ctlBlkCount = mainPart->ctlBlkCount;
     kernelPart->lastCtlBlk = mainPart->firstCtlBlk;
-    g_145C0.main = kernelPart;
+    g_MemInfo.main = kernelPart;
     MemoryBlockServiceInit();
     sceKernelCreateUID(g_MemBlockType, "sceSystemMemoryManager", (pspGetK1() >> 31) & 0xFF, &uidKernel);
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
@@ -244,84 +244,84 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
     sceKernelProtectMemoryBlock(memblk_memman.part, memblk_memman.addr);
     if (partTable->unk4 != 3)
         info = &partTable->other1;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceOtherKernelPartition", 12, info->addr, info->size), g_145A8, &uidOther);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceOtherKernelPartition", 12, info->addr, info->size), g_PartType, &uidOther);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidOther, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidOther, g_PartType, SceSysmemMemoryPartition);
     // 11160
     if (partTable->unk4 == 3) {
         // 11450
-        g_145C0.other2 = part;
-        g_145C0.other1 = kernelPart;
+        g_MemInfo.other2 = part;
+        g_MemInfo.other1 = kernelPart;
     } else {
-        g_145C0.other2 = kernelPart;
-        g_145C0.other1 = part;
+        g_MemInfo.other2 = kernelPart;
+        g_MemInfo.other1 = part;
     }
     // 11178
     info = &partTable->vshell;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceVshellPartition", 15, info->addr, info->size), g_145A8, &uidVsh);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceVshellPartition", 15, info->addr, info->size), g_PartType, &uidVsh);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidVsh, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidVsh, g_PartType, SceSysmemMemoryPartition);
     // 111C8
-    g_145C0.vshell = part;
+    g_MemInfo.vshell = part;
     info = &partTable->scUser;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceScUserPartition", 15, info->addr, info->size), g_145A8, &uidScUser);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceScUserPartition", 15, info->addr, info->size), g_PartType, &uidScUser);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidScUser, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidScUser, g_PartType, SceSysmemMemoryPartition);
     // 1121C
-    g_145C0.scUser = part;
+    g_MemInfo.scUser = part;
     info = &partTable->meUser;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceMeUserPartition", 15, info->addr, info->size), g_145A8, &uidMeUser);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceMeUserPartition", 15, info->addr, info->size), g_PartType, &uidMeUser);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidMeUser, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidMeUser, g_PartType, SceSysmemMemoryPartition);
     // 11270
-    g_145C0.meUser = part;
+    g_MemInfo.meUser = part;
     if (partTable->unk8 == 6) {
         // 11448
-        g_145C0.user = g_145C0.scUser;
+        g_MemInfo.user = g_MemInfo.scUser;
     } else
-        g_145C0.user = g_145C0.meUser;
+        g_MemInfo.user = g_MemInfo.meUser;
     // 11288
     info = &partTable->extScKernel;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtScKernelPartition", 12, info->addr, info->size), g_145A8, &uidExtScKernel);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtScKernelPartition", 12, info->addr, info->size), g_PartType, &uidExtScKernel);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidExtScKernel, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidExtScKernel, g_PartType, SceSysmemMemoryPartition);
     // 112DC
-    g_145C0.extScKernel = part;
+    g_MemInfo.extScKernel = part;
     info = &partTable->extSc2Kernel;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtSc2KernelPartition", 12, info->addr, info->size), g_145A8, &uidExtSc2Kernel);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtSc2KernelPartition", 12, info->addr, info->size), g_PartType, &uidExtSc2Kernel);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidExtSc2Kernel, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidExtSc2Kernel, g_PartType, SceSysmemMemoryPartition);
     // 11330
-    g_145C0.extSc2Kernel = part;
+    g_MemInfo.extSc2Kernel = part;
     info = &partTable->extMeKernel;
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtMeKernelPartition", 12, info->addr, info->size), g_145A8, &uidExtMeKernel);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtMeKernelPartition", 12, info->addr, info->size), g_PartType, &uidExtMeKernel);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidExtMeKernel, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidExtMeKernel, g_PartType, SceSysmemMemoryPartition);
     // 11384
-    g_145C0.extMeKernel = part;
+    g_MemInfo.extMeKernel = part;
     if (partTable->unk4 == 3) {
         // 11440
-        g_145C0.extKernel = g_145C0.extScKernel;
+        g_MemInfo.extKernel = g_MemInfo.extScKernel;
     } else
-        g_145C0.extKernel = g_145C0.extMeKernel;
+        g_MemInfo.extKernel = g_MemInfo.extMeKernel;
     // 1139C
     info = &partTable->extVshell;
-    if (g_145C0.extKernel == NULL)
-        g_145C0.extKernel = g_145C0.kernel;
+    if (g_MemInfo.extKernel == NULL)
+        g_MemInfo.extKernel = g_MemInfo.kernel;
     // 113B8
-    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtVshellPartition", 12, info->addr, info->size), g_145A8, &uidExtVsh);
+    sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceExtVshellPartition", 12, info->addr, info->size), g_PartType, &uidExtVsh);
     part = NULL;
     if (info->size != 0)
-        part = UID_CB_TO_DATA(uidExtVsh, g_145A8, SceSysmemMemoryPartition);
+        part = UID_CB_TO_DATA(uidExtVsh, g_PartType, SceSysmemMemoryPartition);
     // 11404
-    g_145C0.extVshell = part;
+    g_MemInfo.extVshell = part;
     resumeIntr(oldIntr);
     return 0;
 }
@@ -404,7 +404,7 @@ s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount)
         return 0x800201BB;
     }
     // 11624
-    SceSysmemUidCB *heapUid = g_145A4;
+    SceSysmemUidCB *heapUid = g_HeapType;
     // 11628
     s32 oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(uids, maxCount * 4) || !pspK1StaBufOk(totalCount, 4)) {
@@ -446,14 +446,14 @@ s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount)
 
 s32 sceKernelSysMemRealMemorySize(void)
 {
-    return g_145C0.realMemSize;
+    return g_MemInfo.realMemSize;
 }
 
 s32 sceKernelSysMemMemSize(void)
 {
     if (MpidToCB(1)->firstCtlBlk == NULL)
         return 0;
-    return g_145C0.memSize;
+    return g_MemInfo.memSize;
 }
 
 s32 sceKernelSysMemMaxFreeMemSize(void)
@@ -465,7 +465,7 @@ s32 sceKernelSysMemMaxFreeMemSize(void)
         resumeIntr(oldIntr);
         return 0;
     }
-    SceSysmemMemoryPartition *cur = g_145C0.main;
+    SceSysmemMemoryPartition *cur = g_MemInfo.main;
     // 11780
     while (cur != NULL) {
         u32 curMax = PartitionQueryMaxFreeMemSize(cur);
@@ -487,7 +487,7 @@ s32 sceKernelSysMemTotalFreeMemSize(void)
         resumeIntr(oldIntr);
         return 0;
     }
-    SceSysmemMemoryPartition *cur = g_145C0.main;
+    SceSysmemMemoryPartition *cur = g_MemInfo.main;
     // 1180C
     while (cur != NULL) {
         totalSize += PartitionQueryTotalFreeMemSize(cur);
@@ -513,22 +513,22 @@ s32 sceKernelGetMEeDramSaveAddr(void)
 {
     if (gSysmemModel != 0) {
         // 11894
-        if (g_145C0.extVshell == 0) {
+        if (g_MemInfo.extVshell == 0) {
             // 118A8
-            return g_145C0.vshell->addr + 0x400000;
+            return g_MemInfo.vshell->addr + 0x400000;
         } else
-            return g_145C0.extVshell->addr;
+            return g_MemInfo.extVshell->addr;
     } else
-        return g_145C0.vshell->addr;
+        return g_MemInfo.vshell->addr;
 }
 
 s32 sceKernelGetAWeDramSaveAddr(void)
 {
     if (gSysmemModel != 0) {
         // 118E0
-        return g_145C0.vshell->addr;
+        return g_MemInfo.vshell->addr;
     } else
-        return g_145C0.vshell->addr + 0x200000;
+        return g_MemInfo.vshell->addr + 0x200000;
 }
 
 s32 sceKernelGetMEeDramSaveSize(void)

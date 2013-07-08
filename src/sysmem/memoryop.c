@@ -76,7 +76,7 @@ void sceKernelMemoryExtendSize(void)
 {
     if (sceKernelGetModel() != 0)
         return;
-    if (g_145C0.extSc2Kernel != NULL) {
+    if (g_MemInfo.extSc2Kernel != NULL) {
         // A51C
         s32 oldIntr = suspendIntr();
         if (mem_extend_nest == 0) {
@@ -93,17 +93,17 @@ void sceKernelMemoryShrinkSize(void)
 {
     if (sceKernelGetModel() != 0)
         return;
-    if (g_145C0.extSc2Kernel == NULL)
+    if (g_MemInfo.extSc2Kernel == NULL)
         return;
     if (mem_extend_nest == 1) {
         // A614
-        sceKernelDcacheWritebackInvalidateRange((void *)g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
+        sceKernelDcacheWritebackInvalidateRange((void *)g_MemInfo.extSc2Kernel->addr, g_MemInfo.extSc2Kernel->size);
     }
     // A5A4
     s32 oldIntr = suspendIntr();
     if ((mem_extend_nest--) == 1) {
         // A5E0
-        sceKernelDcacheWritebackInvalidateRange((void *)g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
+        sceKernelDcacheWritebackInvalidateRange((void *)g_MemInfo.extSc2Kernel->addr, g_MemInfo.extSc2Kernel->size);
         HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 1;
         pspSync();
     }

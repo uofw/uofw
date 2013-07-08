@@ -22,7 +22,7 @@ int _CreateHeap(void *partition, int size, int attr, SceSysmemHeapBlock **out);
 void *_AllocHeapMemory(SceSysmemHeap *heap, u32 size, u32 align);
 s32 _FreeHeapMemory(SceSysmemHeap *heap, void *addr);
 
-extern SceSysmemUidCB *g_145A4;
+extern SceSysmemUidCB *g_HeapType;
 
 #endif
 

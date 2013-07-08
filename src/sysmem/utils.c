@@ -481,20 +481,24 @@ int sceKernelRtcGetTick(u64 *tick)
 int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *crc32)
 {
     const void *buf = sceKernelGzipGetCompressedData(src);
-    void *crcPtr;
-    int crcBuf[4];
+    void *next;
+    struct {
+        u32 crc32;
+        u32 inSize;
+    } info;
+
     if (buf == NULL)
         return 0x80020001;
     if (((char*)src)[2] != 8)
         return 0x80000004;
-    int ret = sceKernelDeflateDecompress(dest, destSize, buf, &crcPtr);
+    int ret = sceKernelDeflateDecompress(dest, destSize, buf, &next);
     if (ret < 0)
         return ret;
-    memcpy(crcBuf, crcPtr, 8);
-    if (ret != crcBuf[1])
+    memcpy(&info, next, 8);
+    if ((u32)ret != info.inSize)
         return 0x80000108;
     if (crc32 != NULL)
-        *crc32 = crcBuf[0];
+        *crc32 = info.crc32;
     return ret;
 }
 

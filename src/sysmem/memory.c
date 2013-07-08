@@ -105,7 +105,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
             goto fail;
     }
     // 4FF0
-    seg->unk8 = 0;
+    seg->checkOverflow = 0;
     if (leftSegs != 0) {
         memBlock->addr = (void *)newLeftAddr;
         if (leftShift <= 0) {
@@ -238,7 +238,7 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
     // 5560
     seg1->size += seg2->size;
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)seg2 & 0xFFFFFF00);
-    ctlBlk->unk10--;
+    ctlBlk->usedSeg--;
     SceSysmemMemoryBlock *newMemBlock = UID_CB_TO_DATA(newUid, g_MemBlockType, SceSysmemMemoryBlock);
     newMemBlock->addr = memBlock1->addr;
     newMemBlock->size = seg1->size << 8;
@@ -250,7 +250,7 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
             // 5658
             for (i = 0; i < 256; i += 4)
                 *(u32*)(newMemBlock->addr + newMemBlock->size + i) = (u32)newMemBlock->addr - 1;
-            seg1->unk8 = 1;
+            seg1->checkOverflow = 1;
         }
     }
     // 55CC
@@ -329,10 +329,10 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
     freeSeg->size = seg->size - cutSegSize;
     freeSeg->used = 1;
     seg->size = cutSegSize;
-    seg->unk8 = 0;
+    seg->checkOverflow = 0;
     memBlock->addr = (void *)(memBlock->part->addr + (seg->offset << 8));
     memBlock->size = cutSegSize << 8;
-    ctlBlk->unk10++;
+    ctlBlk->usedSeg++;
     SceSysmemMemoryBlock *newMemBlock = UID_CB_TO_DATA(newUid, g_MemBlockType, SceSysmemMemoryBlock);
     newMemBlock->addr = (void *)(memBlock->part->addr + (freeSeg->offset << 8));
     newMemBlock->size = freeSeg->size << 8;
@@ -346,7 +346,7 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
                 s32 i;
                 for (i = 0; i < 256; i += 4)
                     *(u32*)(newMemBlock->addr + newMemBlock->size + i) = (u32)newMemBlock->addr - 1;
-                freeSeg->unk8 = 1;
+                freeSeg->checkOverflow = 1;
             }
         }
     }
@@ -377,11 +377,11 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
     if (memoryBlockId == NULL) {
         // 5C68
         SceSysmemMemoryPartition *part = AddrToCB(address);
-        SceSysmemUidCB *curUid = g_145A8->PARENT0;
+        SceSysmemUidCB *curUid = g_PartType->PARENT0;
         partId = -1;
         // 5C88
-        while (curUid != g_145A8) {
-            if (UID_CB_TO_DATA(curUid, g_145A8, SceSysmemMemoryPartition) == part) {
+        while (curUid != g_PartType) {
+            if (UID_CB_TO_DATA(curUid, g_PartType, SceSysmemMemoryPartition) == part) {
                 // 5CB4
                 partId = curUid->uid;
                 break;
@@ -391,11 +391,11 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
         // 5CAC
     } else {
         SceSysmemMemoryPartition *part = AddrToCB(address);
-        SceSysmemUidCB *curUid = g_145A8->PARENT0;
+        SceSysmemUidCB *curUid = g_PartType->PARENT0;
         partId = -1;
         // 5B20
-        while (curUid != g_145A8) {
-            if (UID_CB_TO_DATA(curUid, g_145A8, SceSysmemMemoryPartition) == part) {
+        while (curUid != g_PartType) {
+            if (UID_CB_TO_DATA(curUid, g_PartType, SceSysmemMemoryPartition) == part) {
                 // 5C60
                 partId = curUid->uid;
                 break;
@@ -581,7 +581,7 @@ void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 ad
             curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
             u32 i = 0, j = 0;
             // 66BC
-            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->unk10) {
+            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
                 if (curSeg->used == 0) {
                     if (curSeg->size >= numSegs) {
                         // 66F8
@@ -618,7 +618,7 @@ void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 ad
             curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
             u32 i = 0, j = 0;
             // 67BC
-            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->unk10) {
+            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
                 if (curSeg->used == 0) {
                     j++;
                     if (curSeg->size >= numSegs) {
@@ -654,19 +654,19 @@ alloc_lo:
         curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
         u32 i = 0, j = 0;
         // 5EF8
-        while (j < (u32)curCtlBlk->segCount - curCtlBlk->unk10 && i < curCtlBlk->segCount) {
+        while (j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg && i < curCtlBlk->segCount) {
             if (curSeg->used == 0) {
                 j++;
                 if (curSeg->size >= numSegs) {
                     // 5F78
-                    curCtlBlk->unk10++;
+                    curCtlBlk->usedSeg++;
                     curSeg->used = 1;
                     addr = part->addr + (curSeg->offset << 8);
-                    curSeg->unk0_0 = 0;
+                    curSeg->isProtected = 0;
                     curSeg->sizeLocked = 0;
                     if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 &&
                         part == MpidToCB(2) && curSeg != &part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg]) // 6108
-                        curSeg->unk8 = 1;
+                        curSeg->checkOverflow = 1;
                     // 5FAC
                     // 5FB0
                     if (curSeg->size == numSegs)
@@ -726,18 +726,18 @@ alloc_hi:
         SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
         u32 i = 0, j = 0;
         // 61A4
-        while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->unk10) {
+        while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
             if (curSeg->used == 0) {
                 j++;
                 if (curSeg->size >= numSegs) {
                     // 61FC
-                    curCtlBlk->unk10++;
+                    curCtlBlk->usedSeg++;
                     curSeg->used = 1;
                     addr = part->addr + ((curSeg->offset + curSeg->size - numSegs) << 8);
-                    curSeg->unk0_0 = 0;
+                    curSeg->isProtected = 0;
                     curSeg->sizeLocked = 0;
                     if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) // 6330
-                        curSeg->unk8 = 1;
+                        curSeg->checkOverflow = 1;
                     // (6238)
                     // 623C
                     if (curSeg->size != numSegs) {
@@ -776,7 +776,7 @@ alloc_hi:
 alloc_addr:
     // 64A0
     addr = part->addr + (blockOff << 8);
-    curCtlBlk->unk10++;
+    curCtlBlk->usedSeg++;
     if (curSeg->offset < blockOff)
     {
         SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
@@ -803,10 +803,10 @@ alloc_addr:
     }
     // 65A0
     curSeg->used = 1;
-    curSeg->unk0_0 = 0;
+    curSeg->isProtected = 0;
     curSeg->sizeLocked = 0;
     if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) // 65E0
-        curSeg->unk8 = 1;
+        curSeg->checkOverflow = 1;
     // (65C4)
     // 65C8
     if (numSegs < curSeg->size)
@@ -819,10 +819,10 @@ s32 FreeUsedSeg(SceSysmemMemoryPartition *part, SceSysmemSeg *seg)
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)(((u32)seg >> 8) << 8);
     if (ctlBlk->segCount < 2)
         return 0x80020001;
-    ctlBlk->unk10--;
-    seg->unk0_0 = 0;
+    ctlBlk->usedSeg--;
+    seg->isProtected = 0;
     seg->sizeLocked = 0;
-    seg->unk8 = 0;
+    seg->checkOverflow = 0;
     seg->used = 0;
     SceSysmemSeg *nextSeg = &ctlBlk->segs[seg->next];
     if (seg->next == 0x3F) {
@@ -931,14 +931,14 @@ void SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
     // 6C78
     while (i > 0) {
         if (lastSeg->used != 0) {
-            ctlBlk->unk10--;
-            newCtlBlk->unk10++;
+            ctlBlk->usedSeg--;
+            newCtlBlk->usedSeg++;
         }
         // 6CA0
         curSeg->used = lastSeg->used;
-        curSeg->unk0_0 = lastSeg->unk0_0;
+        curSeg->isProtected = lastSeg->isProtected;
         curSeg->sizeLocked = lastSeg->sizeLocked;
-        curSeg->unk8 = lastSeg->unk8;
+        curSeg->checkOverflow = lastSeg->checkOverflow;
         curSeg->offset = lastSeg->offset;
         curSeg->size = lastSeg->size;
         _ReturnSegBlankList(lastSeg);
@@ -957,7 +957,7 @@ void SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
         ctlBlk->next->prev = newCtlBlk;
     // 6D5C
     newCtlBlk->segCount = newSegCount;
-    part->unk24++;
+    part->ctlBlkCount++;
     ctlBlk->next = newCtlBlk;
     if (allocedCtlBlk == NULL || allocedCtlBlk == ctlBlk)
         return;
@@ -969,7 +969,7 @@ void SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
 
 void updateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
 {
-    if (part->unk24 != 1 && ctlBlk->segCount < 6) {
+    if (part->ctlBlkCount != 1 && ctlBlk->segCount < 6) {
         // 6E34
         JointSmemCtlBlk(part, ctlBlk);
     }
@@ -1149,7 +1149,7 @@ void *sceKernelGetBlockHeadAddrForUser(SceUID id)
 
 void sceKernelProtectMemoryBlock(SceSysmemMemoryPartition *part, void *addr)
 {
-    AddrToSeg(part, addr)->unk0_0 = 1;
+    AddrToSeg(part, addr)->isProtected = 1;
 }
 
 s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
@@ -1172,7 +1172,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
                         // 74B8
                         if (curSeg->used == 0)
                             return 0x80020001;
-                        if (curSeg->unk0_0 != 0) {
+                        if (curSeg->isProtected != 0) {
                             // 7570
                             SceSysmemUidCB *curUid = g_MemBlockType->PARENT0;
                             SceUID foundId = -1;
@@ -1192,7 +1192,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
                             AddrToSeg(MpidToCB(1), addr);
                             return 0x80020001;
                         }
-                        if (curSeg->unk8 != 0) {
+                        if (curSeg->checkOverflow != 0) {
                             u32 *curPtr = (u32*)(addr + (curSeg->size - 1) * 256);
                             // 74EC
                             s32 i;
@@ -1346,11 +1346,11 @@ void _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
 {
     if (partitionId != NULL) {
         SceSysmemMemoryPartition *part = AddrToCB(address);
-        SceSysmemUidCB *curUid = g_145A8->PARENT0;
+        SceSysmemUidCB *curUid = g_PartType->PARENT0;
         SceUID foundId = -1;
         // 7A80
-        while (curUid != g_145A8) {
-            if (UID_CB_TO_DATA(curUid, g_145A8, SceSysmemMemoryPartition) == part) {
+        while (curUid != g_PartType) {
+            if (UID_CB_TO_DATA(curUid, g_PartType, SceSysmemMemoryPartition) == part) {
                 // 7B24
                 foundId = curUid->uid;
                 break;
@@ -1384,7 +1384,7 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
     SceSysmemMemoryPartition *kernelPart = MpidToCB(1);
     SceSysmemCtlBlk *nextCtlBlk = ctlBlk->next;
     SceSysmemCtlBlk *prevCtlBlk = ctlBlk->prev;
-    if (part->unk24 == 1)
+    if (part->ctlBlkCount == 1)
         return;
     if (prevCtlBlk != NULL && (nextCtlBlk == NULL || nextCtlBlk->segCount >= prevCtlBlk->segCount)) {
         // 7EF4
@@ -1410,9 +1410,9 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
 
                 newPrevCtlBlk->segCount++;
                 curDstSeg->used = curSrcSeg->used;
-                curDstSeg->unk0_0 = curSrcSeg->unk0_0;
+                curDstSeg->isProtected = curSrcSeg->isProtected;
                 curDstSeg->sizeLocked = curSrcSeg->sizeLocked;;
-                curDstSeg->unk8 = curSrcSeg->unk8;
+                curDstSeg->checkOverflow = curSrcSeg->checkOverflow;
                 curDstSeg->offset = curSrcSeg->offset;
                 curDstSeg->size = curSrcSeg->size;
                 curSrcSeg = &ctlBlk->segs[curSrcSeg->next];
@@ -1420,12 +1420,12 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
             }
             // 81E8
             prevCtlBlk->next = ctlBlk->next;
-            prevCtlBlk->unk10 += ctlBlk->unk10;
+            prevCtlBlk->usedSeg += ctlBlk->usedSeg;
             if (nextCtlBlk != NULL)
                 nextCtlBlk->prev = prevCtlBlk;
             // 8204
             _freeSysMemory(kernelPart, ctlBlk);
-            part->unk24--;
+            part->ctlBlkCount--;
             if (part->lastCtlBlk == ctlBlk)
                 part->lastCtlBlk = prevCtlBlk;
         } else {
@@ -1450,14 +1450,14 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
                 prevDstSeg->prev = newId;
                 newPrevCtlBlk->segCount++;
                 if (curSrcSeg->used != 0) {
-                    ctlBlk->unk10++;
-                    prevCtlBlk->unk10--;
+                    ctlBlk->usedSeg++;
+                    prevCtlBlk->usedSeg--;
                 }
                 // 8000
                 curDstSeg->used = curSrcSeg->used;
-                curDstSeg->unk0_0 = curSrcSeg->unk0_0;
+                curDstSeg->isProtected = curSrcSeg->isProtected;
                 curDstSeg->sizeLocked = curSrcSeg->sizeLocked;
-                curDstSeg->unk8 = curSrcSeg->unk8;
+                curDstSeg->checkOverflow = curSrcSeg->checkOverflow;
                 curDstSeg->offset = curSrcSeg->offset;
                 curDstSeg->size = curSrcSeg->size;
                 _ReturnSegBlankList(curSrcSeg);
@@ -1489,9 +1489,9 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
                 prevDstSeg->prev = newId;
                 newPrevCtlBlk->segCount++;
                 curDstSeg->used = curSrcSeg->used;
-                curDstSeg->unk0_0 = curSrcSeg->unk0_0;
+                curDstSeg->isProtected = curSrcSeg->isProtected;
                 curDstSeg->sizeLocked = curSrcSeg->sizeLocked;
-                curDstSeg->unk8 = curSrcSeg->unk8;
+                curDstSeg->checkOverflow = curSrcSeg->checkOverflow;
                 curDstSeg->offset = curSrcSeg->offset;
                 curDstSeg->size = curSrcSeg->size;
                 curSrcSeg = &ctlBlk->segs[curSrcSeg->prev];
@@ -1499,11 +1499,11 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
             }
             // 7EA8
             nextCtlBlk->prev = ctlBlk->prev;
-            nextCtlBlk->unk10 += ctlBlk->unk10;
+            nextCtlBlk->usedSeg += ctlBlk->usedSeg;
             if (prevCtlBlk != NULL)
                 prevCtlBlk->next = nextCtlBlk;
             // 7EC4
-            part->unk24--;
+            part->ctlBlkCount--;
             _freeSysMemory(kernelPart, ctlBlk);
             if (part->firstCtlBlk == ctlBlk)
                 part->firstCtlBlk = nextCtlBlk;
@@ -1528,14 +1528,14 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
                 prevDstSeg->next = newId;
                 newPrevCtlBlk->segCount++;
                 if (curSrcSeg->used != 0) {
-                    ctlBlk->unk10++;
-                    nextCtlBlk->unk10--;
+                    ctlBlk->usedSeg++;
+                    nextCtlBlk->usedSeg--;
                 }
                 // 7CB4
                 curDstSeg->used = curSrcSeg->used;
-                curDstSeg->unk0_0 = curSrcSeg->unk0_0;
+                curDstSeg->isProtected = curSrcSeg->isProtected;
                 curDstSeg->sizeLocked = curSrcSeg->sizeLocked;
-                curDstSeg->unk8 = curSrcSeg->unk8;
+                curDstSeg->checkOverflow = curSrcSeg->checkOverflow;
                 curDstSeg->offset = curSrcSeg->offset;
                 curDstSeg->size = curSrcSeg->size;
                 _ReturnSegBlankList(curSrcSeg);

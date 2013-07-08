@@ -180,9 +180,9 @@ typedef struct SceSysmemLowheapInfoBlock {
 typedef struct {
     u32 size; // 0
     u32 heapSize; // 4
-    u32 unkSize1; // 8
-    u32 unkSize2; // 12
-    u32 maxSize; // 16
+    u32 usedSize; // 8
+    u32 freeSize; // 12
+    u32 maxFreeSize; // 16
     u32 blockCount; // 20
     SceSysmemLowheapInfoBlock infoBlocks[];
 } SceSysmemLowheapInfo; // size: 24
@@ -208,10 +208,10 @@ typedef struct {
     unsigned used : 1; // 0
     unsigned next : 6; /* next index */ // 1
     unsigned offset : 25; /* offset (from the partition start, divided by 0x100) */ // 7
-    unsigned unk0_0 : 1; // 0
+    unsigned isProtected : 1; // 0
     unsigned sizeLocked : 1; // 1
     unsigned prev : 6; // 2
-    unsigned unk8 : 1; // 8
+    unsigned checkOverflow : 1; // 8
     unsigned size : 23; /* size (divided by 0x100) */ // 9
 } SceSysmemSeg; // size: 8
 

@@ -15,10 +15,10 @@ s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc,
 s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
 
 // 145A8
-SceSysmemUidCB *g_145A8;
+SceSysmemUidCB *g_PartType;
 
 // 145C0
-SceSysmemMemInfo g_145C0;
+SceSysmemMemInfo g_MemInfo;
 
 SceSysmemMemoryPartition *MpidToCB(int mpid)
 {
@@ -29,45 +29,45 @@ SceSysmemMemoryPartition *MpidToCB(int mpid)
         return NULL;
     case 1:
         // 3D74
-        return g_145C0.kernel;
+        return g_MemInfo.kernel;
     case 2:
         // 3D80
-        return g_145C0.user;
+        return g_MemInfo.user;
     case 3:
         // 3D8C
-        return g_145C0.other1;
+        return g_MemInfo.other1;
     case 4:
         // 3D98
-        return g_145C0.other2;
+        return g_MemInfo.other2;
     case 5:
         // 3DA4
-        return g_145C0.vshell;
+        return g_MemInfo.vshell;
     case 6:
         // 3DB0
-        return g_145C0.scUser;
+        return g_MemInfo.scUser;
     case 7:
         // 3DBC
-        return g_145C0.meUser;
+        return g_MemInfo.meUser;
     case 8:
         // 3DC8
-        return g_145C0.extScKernel;
+        return g_MemInfo.extScKernel;
     case 9:
         // 3DD4
-        return g_145C0.extSc2Kernel;
+        return g_MemInfo.extSc2Kernel;
     case 10:
         // 3DE0
-        return g_145C0.extMeKernel;
+        return g_MemInfo.extMeKernel;
     case 11:
         // 3DEC
-        return g_145C0.extVshell;
+        return g_MemInfo.extVshell;
     case 12:
         // 3DF8
-        return g_145C0.extKernel;
+        return g_MemInfo.extKernel;
     default:
         // 3E04
-        if (sceKernelGetUIDcontrolBlockWithType(mpid, g_145A8, &uid) != 0)
+        if (sceKernelGetUIDcontrolBlockWithType(mpid, g_PartType, &uid) != 0)
             return 0;
-        return UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
+        return UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     }
 }
 
@@ -76,29 +76,29 @@ s32 CanoniMpid(s32 mpid)
     SceSysmemMemoryPartition *part = MpidToCB(mpid);
     if (part == NULL)
         return 0;
-    else if (part == g_145C0.kernel)
+    else if (part == g_MemInfo.kernel)
         return 1;
-    else if (part == g_145C0.vshell)
+    else if (part == g_MemInfo.vshell)
         return 5;
-    else if (part == g_145C0.user)
+    else if (part == g_MemInfo.user)
         return 2;
-    else if (part == g_145C0.extKernel)
+    else if (part == g_MemInfo.extKernel)
         return 12;
-    else if (part == g_145C0.other1)
+    else if (part == g_MemInfo.other1)
         return 3;
-    else if (part == g_145C0.other2)
+    else if (part == g_MemInfo.other2)
         return 4;
-    else if (part == g_145C0.scUser)
+    else if (part == g_MemInfo.scUser)
         return 6;
-    else if (part == g_145C0.meUser)
+    else if (part == g_MemInfo.meUser)
         return 7;
-    else if (part == g_145C0.extScKernel)
+    else if (part == g_MemInfo.extScKernel)
         return 8;
-    else if (part == g_145C0.extSc2Kernel)
+    else if (part == g_MemInfo.extSc2Kernel)
         return 9;
-    else if (part == g_145C0.extMeKernel)
+    else if (part == g_MemInfo.extMeKernel)
         return 10;
-    else if (part == g_145C0.extVshell)
+    else if (part == g_MemInfo.extVshell)
         return 11;
     else
         return mpid;
@@ -106,7 +106,7 @@ s32 CanoniMpid(s32 mpid)
 
 SceSysmemMemoryPartition *AddrToCB(u32 addr)
 {
-    SceSysmemMemoryPartition *cur = g_145C0.main;
+    SceSysmemMemoryPartition *cur = g_MemInfo.main;
     addr &= 0x1FFFFFFF;
     // 3F10
     while (cur != NULL) {
@@ -137,20 +137,20 @@ SceSysmemUidLookupFunc PartFuncs[] = {
 
 void PartitionServiceInit(void)
 {
-    sceKernelCreateUIDtype("SceSysmemMemoryPartition", sizeof(SceSysmemMemoryPartition), PartFuncs, 0, &g_145A8);
+    sceKernelCreateUIDtype("SceSysmemMemoryPartition", sizeof(SceSysmemMemoryPartition), PartFuncs, 0, &g_PartType);
 }
 
 s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 size)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelCreateUID(g_145A8, name, (pspGetK1() >> 31) & 0xFF, &uid);
+    s32 ret = sceKernelCreateUID(g_PartType, name, (pspGetK1() >> 31) & 0xFF, &uid);
     if (ret != 0) {
         suspendIntr(oldIntr);
         return ret;
     }
     // 402C
-    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
+    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     ret = _CreateMemoryPartition(part, attr, addr, size);
     if (ret != 0) {
         // 40E0
@@ -165,7 +165,7 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
         ctlBlk->segs[0].used = 0;
         ctlBlk->segs[0].next = 0x3F;
         ctlBlk->segs[0].offset = ret;
-        ctlBlk->segs[0].unk0_0 = 0;
+        ctlBlk->segs[0].isProtected = 0;
         ctlBlk->segs[0].sizeLocked = 0;
         ctlBlk->segs[0].prev = 0x3F;
         ctlBlk->segs[0].size = part->size >> 8;
@@ -173,9 +173,9 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
         ctlBlk->lastSeg = 0;
         ctlBlk->segCount = 1;
         ctlBlk->prev = NULL;
-        part->unk24 = 1;
+        part->ctlBlkCount = 1;
         ctlBlk->freeSeg = 1;
-        ctlBlk->unk10 = 0;
+        ctlBlk->usedSeg = 0;
         ctlBlk->next = NULL;
     }
     // 4064
@@ -210,7 +210,7 @@ void PartitionInit(SceSysmemMemoryPartition *part)
         ctlBlk->segs[0].used = 0;
         ctlBlk->segs[0].next = 0x3F;
         ctlBlk->segs[0].offset = 0;
-        ctlBlk->segs[0].unk0_0 = 0;
+        ctlBlk->segs[0].isProtected = 0;
         ctlBlk->segs[0].sizeLocked = 0;
         ctlBlk->segs[0].prev = 0x3F;
         ctlBlk->segs[0].size = part->size >> 8;
@@ -218,9 +218,9 @@ void PartitionInit(SceSysmemMemoryPartition *part)
         ctlBlk->lastSeg = 0;
         ctlBlk->segCount = 1;
         ctlBlk->prev = NULL;
-        part->unk24 = 1;
+        part->ctlBlkCount = 1;
         ctlBlk->freeSeg = 1;
-        ctlBlk->unk10 = 0;
+        ctlBlk->usedSeg = 0;
         ctlBlk->next = NULL;
     }
 }
@@ -363,7 +363,7 @@ s32 sceKernelFillFreeBlock(s32 mpid, u32 c)
         SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
         u32 i;
         // 45E8
-        for (i = 0; i < curCtlBlk->segCount && curCtlBlk->segCount != curCtlBlk->unk10; i++) {
+        for (i = 0; i < curCtlBlk->segCount && curCtlBlk->segCount != curCtlBlk->usedSeg; i++) {
             if (curSeg->used == 0) {
                 // 4664
                 sceKernelFillBlock64((void*)part->addr + (curSeg->offset << 8), c, curSeg->size << 8);
@@ -383,7 +383,7 @@ s32 sceKernelFillFreeBlock(s32 mpid, u32 c)
 s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
+    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     part->size = 0;
     part->attr &= 0xFFFFFFF0;
     part->firstCtlBlk = NULL;
@@ -394,12 +394,12 @@ s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, in
 
 s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
-    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
+    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     if (part == MpidToCB(1))
         return 0x800200D7;
-    if (part->firstCtlBlk->unk10 != 0)
+    if (part->firstCtlBlk->usedSeg != 0)
         return 0x800200D7;
-    SceSysmemMemoryPartition *cur = g_145C0.main;
+    SceSysmemMemoryPartition *cur = g_MemInfo.main;
     // 4750
     for (;;) {
         if (cur == NULL)
@@ -428,7 +428,7 @@ s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc 
 s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     s32 *size = va_arg(ap, s32*);
-    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_145A8, SceSysmemMemoryPartition);
+    SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
     u32 maxSize = 0;
     // 47F4
@@ -453,11 +453,11 @@ s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc
 s32 _CreateMemoryPartition(SceSysmemMemoryPartition *part, u32 attr, u32 addr, u32 size)
 {
     u32 physAddr = addr & 0x1FFFFFFF;
-    u32 startAddr = g_145C0.memAddr & 0x1FFFFFFF;
+    u32 startAddr = g_MemInfo.memAddr & 0x1FFFFFFF;
     if (part->size != 0) {
-        if (physAddr < startAddr || physAddr + size > startAddr + g_145C0.memSize)
+        if (physAddr < startAddr || physAddr + size > startAddr + g_MemInfo.memSize)
             return 0x800200D4;
-        SceSysmemMemoryPartition *cur = g_145C0.main;
+        SceSysmemMemoryPartition *cur = g_MemInfo.main;
         // 48D4
         // 48E0
         while (cur != NULL) {
@@ -475,9 +475,9 @@ s32 _CreateMemoryPartition(SceSysmemMemoryPartition *part, u32 attr, u32 addr, u
     part->attr = (part->attr & 0xFFFFFFF0) | (attr & 0xF);
     part->next = NULL;
     part->size = size;
-    part->unk24 = 0;
+    part->ctlBlkCount = 0;
     if (size != 0) {
-        SceSysmemMemoryPartition *prev = g_145C0.main;
+        SceSysmemMemoryPartition *prev = g_MemInfo.main;
         SceSysmemMemoryPartition *cur = prev->next;
         while (cur != NULL) { // 4960
             prev = cur;

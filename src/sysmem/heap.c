@@ -17,7 +17,8 @@ s32 heap_do_totalfreesize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int 
 s32 _TotalFreeSize(SceSysmemHeap *heap);
 s32 _DeleteHeap(SceSysmemHeap *heap);
 
-SceSysmemUidCB *g_145A4;
+// 145A4
+SceSysmemUidCB *g_HeapType;
 
 SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name)
 {
@@ -29,7 +30,7 @@ SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name
         resumeIntr(oldIntr);
         return 0x800200D6;
     }
-    s32 ret = sceKernelCreateUID(g_145A4, name, (pspGetK1() >> 31) & 0xFF, &uid);
+    s32 ret = sceKernelCreateUID(g_HeapType, name, (pspGetK1() >> 31) & 0xFF, &uid);
     if (ret != 0) {
         // 2FFC
         resumeIntr(oldIntr);
@@ -38,7 +39,7 @@ SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name
     int realSize = 0;
     if ((flag & 1) != 0)
         realSize = (size + 7) & 0xFFFFFFF8;
-    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap);
+    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
     SceSysmemPartitionInfo partInfo;
     heap->size = realSize | ((flag >> 1) & 1);
     heap->partId = mpid;
@@ -158,13 +159,13 @@ int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
         return 0x800200D2;
     int oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    int ret = sceKernelGetUIDcontrolBlockWithType(id, g_145A4, &uid);
+    int ret = sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid);
     if (ret != 0) {
         // 3530
         resumeIntr(oldIntr);
         return ret;
     }
-    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap);
+    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
     // 33B8
     int i;
     for (i = 0; i < 6; i++)
@@ -244,9 +245,9 @@ s32 sceKernelQueryLowheapInfo(SceSysmemHeapBlock *block, SceSysmemLowheapInfo *i
     u32 infoSize = 24;
     SceSysmemLowheapBlock *last = (void*)lowh + lowh->size - 8;
     u32 blockCount = 0;
-    u32 unkCount1 = 0;
-    u32 unkCount2 = 0;
-    u32 maxId = 0;
+    u32 usedCount = 0;
+    u32 freeCount = 0;
+    u32 maxFreeCount = 0;
     SceSysmemLowheapInfoBlock *infoBlock = info->infoBlocks;
     SceSysmemLowheapBlock *first = cur;
     // 35B0
@@ -256,15 +257,15 @@ s32 sceKernelQueryLowheapInfo(SceSysmemHeapBlock *block, SceSysmemLowheapInfo *i
         if (infoSize + 8 >= maxInfoSize)
             infoBlock = NULL;
         SceSysmemLowheapBlock *block;
-        if (cur->next == (void *)lowh) {
+        if (cur->next == (void *)lowh) { // used
             // 3670
             block = (SceSysmemLowheapBlock *)((u32)cur | 0x1);
-            unkCount1 += cur->count - 1;
+            usedCount += cur->count - 1;
         } else {
             block = cur;
-            unkCount2 += cur->count - 1;
-            if (cur->count - 1 > maxId)
-                maxId = cur->count - 1;
+            freeCount += cur->count - 1;
+            if (cur->count - 1 > maxFreeCount)
+                maxFreeCount = cur->count - 1;
         }
         // 35EC
         blockCount++;
@@ -280,9 +281,9 @@ s32 sceKernelQueryLowheapInfo(SceSysmemHeapBlock *block, SceSysmemLowheapInfo *i
     // 3628
     info->size = infoSize;
     info->heapSize = ((lowh->size - 16) & 0xFFFFFFF8) - 8;
-    info->unkSize1 = unkCount1 << 3;
-    info->unkSize2 = unkCount2 << 3;
-    info->maxSize = maxId << 3;
+    info->usedSize = usedCount << 3;
+    info->freeSize = freeCount << 3;
+    info->maxFreeSize = maxFreeCount << 3;
     info->blockCount = blockCount;
     return blockCount;
 }
@@ -300,7 +301,7 @@ SceSysmemUidLookupFunc HeapFuncs[] =
 
 void HeapInit(void)
 {
-    sceKernelCreateUIDtype("SceSysmemHeap", sizeof(SceSysmemHeap), HeapFuncs, NULL, &g_145A4);
+    sceKernelCreateUIDtype("SceSysmemHeap", sizeof(SceSysmemHeap), HeapFuncs, NULL, &g_HeapType);
 }
 
 int _CreateHeap(void *partition, int size, int attr, SceSysmemHeapBlock **out)
@@ -332,13 +333,13 @@ void *sceKernelAllocHeapMemoryWithOption(SceUID id, int size, SceSysmemHeapAlloc
 {
     int oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    if (sceKernelGetUIDcontrolBlockWithType(id, g_145A4, &uid) != 0) {
+    if (sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid) != 0) {
         // 382C
         resumeIntr(oldIntr);
         return 0;
     }
     // 37F4
-    void *ret = _AllocHeapMemory(UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap), size, (opt != NULL) ? opt->align : 0);
+    void *ret = _AllocHeapMemory(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap), size, (opt != NULL) ? opt->align : 0);
     resumeIntr(oldIntr);
     return ret;
 }
@@ -347,12 +348,12 @@ void *sceKernelAllocHeapMemory(SceUID id, int size)
 {
     int oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    if (sceKernelGetUIDcontrolBlockWithType(id, g_145A4, &uid) != 0) {
+    if (sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid) != 0) {
         resumeIntr(oldIntr);
         return 0;
     }
     // 38B0
-    void *ret = _AllocHeapMemory(UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap), size, 0);
+    void *ret = _AllocHeapMemory(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap), size, 0);
     resumeIntr(oldIntr);
     return ret;
 }
@@ -361,9 +362,9 @@ s32 sceKernelFreeHeapMemory(SceUID id, void *addr)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_145A4, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid);
     if (ret == 0)
-        ret = _FreeHeapMemory(UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap), addr);
+        ret = _FreeHeapMemory(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap), addr);
     // 3948
     resumeIntr(oldIntr);
     return ret;
@@ -373,9 +374,9 @@ s32 sceKernelHeapTotalFreeSize(SceUID id)
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_145A4, &uid);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid);
     if (ret == 0)
-        ret = _TotalFreeSize(UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap));
+        ret = _TotalFreeSize(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap));
     // 39D0
     resumeIntr(oldIntr);
     return ret;
@@ -384,7 +385,7 @@ s32 sceKernelHeapTotalFreeSize(SceUID id)
 s32 heap_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap);
+    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
     heap->size = 0;
     heap->partId = 0;
     heap->firstBlock = NULL;
@@ -393,7 +394,7 @@ s32 heap_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int fun
 
 s32 heap_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
 {
-    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap);
+    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
     if (heap->firstBlock != NULL)
         _DeleteHeap(heap);
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
@@ -405,7 +406,7 @@ s32 heap_do_alloc(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__
     u32 size = va_arg(ap, u32);
     SceSysmemHeapAllocOption *opt = va_arg(ap, SceSysmemHeapAllocOption *);
     void **retPtr = va_arg(ap, void**);
-    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap);
+    SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
     // 3B10
     *retPtr = _AllocHeapMemory(heap, size, (opt != NULL) ? opt->align : 0);
     return uid->uid;
@@ -413,7 +414,7 @@ s32 heap_do_alloc(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__
 
 s32 heap_do_free(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
-    s32 ret = _FreeHeapMemory(UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap), va_arg(ap, void*));
+    s32 ret = _FreeHeapMemory(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap), va_arg(ap, void*));
     if (ret != 0)
         return ret;
     return uid->uid;
@@ -421,7 +422,7 @@ s32 heap_do_free(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__(
 
 s32 heap_do_totalfreesize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
-    *va_arg(ap, s32*) = _TotalFreeSize(UID_CB_TO_DATA(uid, g_145A4, SceSysmemHeap));
+    *va_arg(ap, s32*) = _TotalFreeSize(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap));
     return uid->uid;
 }
 

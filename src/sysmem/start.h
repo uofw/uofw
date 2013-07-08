@@ -32,7 +32,7 @@ typedef struct {
 
 u32 mt19937UInt(SceKernelUtilsMt19937Context *ctx);
 
-int sceKernelDeflateDecompress(u8 *dest, u32 destSize, const u8 *src, void **unk);
+int sceKernelDeflateDecompress(u8 *dest, u32 destSize, const void *src, void **next);
 
 extern int g_GetGPI;
 extern int g_SetGPO;

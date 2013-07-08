@@ -277,6 +277,7 @@ s32 SysMemForKernel_F3BDB718(char *arg0)
     // 9598
     return 0;
 }
+
 s32 sceKernelGetQTGP2(char *qtgp2)
 {
     if ((SystemGameInfo.flags & 0x4) == 0)
