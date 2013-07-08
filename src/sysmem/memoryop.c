@@ -5,7 +5,8 @@
 #include "intr.h"
 #include "partition.h"
 
-u32 g_140D4; // 140D4
+// 140D4
+u32 mem_extend_nest;
 
 void MemoryProtectInit(u32 size, u32 extSize)
 {
@@ -78,12 +79,12 @@ void sceKernelMemoryExtendSize(void)
     if (g_145C0.extSc2Kernel != NULL) {
         // A51C
         s32 oldIntr = suspendIntr();
-        if (g_140D4 == 0) {
+        if (mem_extend_nest == 0) {
             HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 2;
             pspSync();
         }
         // A550
-        g_140D4++;
+        mem_extend_nest++;
         resumeIntr(oldIntr);
     }
 }
@@ -94,13 +95,13 @@ void sceKernelMemoryShrinkSize(void)
         return;
     if (g_145C0.extSc2Kernel == NULL)
         return;
-    if (g_140D4 == 1) {
+    if (mem_extend_nest == 1) {
         // A614
         sceKernelDcacheWritebackInvalidateRange((void *)g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
     }
     // A5A4
     s32 oldIntr = suspendIntr();
-    if ((g_140D4--) == 1) {
+    if ((mem_extend_nest--) == 1) {
         // A5E0
         sceKernelDcacheWritebackInvalidateRange((void *)g_145C0.extSc2Kernel->addr, g_145C0.extSc2Kernel->size);
         HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 1;

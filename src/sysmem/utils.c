@@ -407,38 +407,38 @@ typedef int (*GettimeofdayHandler)(struct timeval *tp, struct timezone *tzp);
 typedef int (*RtcTickHandler)(u64 *tick);
 
 // 14400
-ClockHandler g_clock;
+ClockHandler g_pFuncClock;
 // 14404
-TimeHandler g_time;
+TimeHandler g_pFuncTime;
 // 14408
-GettimeofdayHandler g_gettimeofday;
+GettimeofdayHandler g_pFuncGettimeofday;
 // 1440C
-RtcTickHandler g_rtctick;
+RtcTickHandler g_pFuncGetTick;
 
 int sceKernelRegisterRtcFunc(ClockHandler clock, TimeHandler time, GettimeofdayHandler gettimeofday, RtcTickHandler rtctick)
 {
-    g_clock = clock;
-    g_time = time;
-    g_gettimeofday = gettimeofday;
-    g_rtctick = rtctick;
+    g_pFuncClock = clock;
+    g_pFuncTime = time;
+    g_pFuncGettimeofday = gettimeofday;
+    g_pFuncGetTick = rtctick;
     return 0;
 }
 
 int sceKernelReleaseRtcFunc(void)
 {
-    g_clock = NULL;
-    g_time = NULL;
-    g_gettimeofday = NULL;
-    g_rtctick = NULL;
+    g_pFuncClock = NULL;
+    g_pFuncTime = NULL;
+    g_pFuncGettimeofday = NULL;
+    g_pFuncGetTick = NULL;
     return 0;
 }
 
 clock_t sceKernelLibcClock(void)
 {
-    if (g_clock == NULL)
+    if (g_pFuncClock == NULL)
         return 0;
     int oldK1 = pspShiftK1();
-    clock_t ret = g_clock();
+    clock_t ret = g_pFuncClock();
     pspSetK1(oldK1);
     return ret;
 }
@@ -446,13 +446,13 @@ clock_t sceKernelLibcClock(void)
 time_t sceKernelLibcTime(time_t *t)
 {
     time_t ret;
-    if (g_time == NULL)
+    if (g_pFuncTime == NULL)
         return 0;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(t))
         ret = 0;
     else
-        ret = g_time(t);
+        ret = g_pFuncTime(t);
     pspSetK1(oldK1);
     return ret;
 }
@@ -460,22 +460,22 @@ time_t sceKernelLibcTime(time_t *t)
 int sceKernelLibcGettimeofday(struct timeval *tp, struct timezone *tzp)
 {
     int ret;
-    if (g_gettimeofday == NULL)
+    if (g_pFuncGettimeofday == NULL)
         return 1;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(tp) || !pspK1PtrOk(tzp))
         ret = 1;
     else
-        ret = g_gettimeofday(tp, tzp);
+        ret = g_pFuncGettimeofday(tp, tzp);
     pspSetK1(oldK1);
     return ret;
 }
 
 int sceKernelRtcGetTick(u64 *tick)
 {
-    if (g_rtctick == NULL)
+    if (g_pFuncGetTick == NULL)
         return 0x80000001;
-    return g_rtctick(tick);
+    return g_pFuncGetTick(tick);
 }
 
 int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *crc32)

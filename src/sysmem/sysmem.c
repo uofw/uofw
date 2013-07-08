@@ -30,10 +30,10 @@ extern char end;
 u32 SystemStatus;
 
 // 14548
-void *g_deci2p;
+SceKernelDeci2Ops *g_pDeci2pOps;
 
 // 1454C
-SceKernelUsersystemLibWork g_1454C;
+SceKernelUsersystemLibWork g_UsersystemLibWork;
 
 // 1455C
 SceSysmemMemoryBlock memblk_kernel;
@@ -500,13 +500,13 @@ s32 sceKernelSysMemTotalFreeMemSize(void)
 
 int sceKernelDeci2pRegisterOperations(SceKernelDeci2Ops *ops)
 {
-    g_deci2p = ops;
+    g_pDeci2pOps = ops;
     return 0;
 }
 
 SceKernelDeci2Ops *sceKernelDeci2pReferOperations(void)
 {
-    return g_deci2p;
+    return g_pDeci2pOps;
 }
 
 s32 sceKernelGetMEeDramSaveAddr(void)
@@ -568,17 +568,17 @@ s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_l
         return 0x800200D3;
     }
     // 11980
-    g_1454C.cmdList = cmdList;
-    g_1454C.sceGeListUpdateStallAddr_lazy = sceGeListUpdateStallAddr_lazy;
-    g_1454C.lazySyncData = lazy;
-    g_1454C.size = sizeof g_1454C;
+    g_UsersystemLibWork.cmdList = cmdList;
+    g_UsersystemLibWork.sceGeListUpdateStallAddr_lazy = sceGeListUpdateStallAddr_lazy;
+    g_UsersystemLibWork.lazySyncData = lazy;
+    g_UsersystemLibWork.size = sizeof g_UsersystemLibWork;
     pspSetK1(oldK1);
     return 0;
 }
 
 SceKernelUsersystemLibWork *sceKernelGetUsersystemLibWork(void)
 {
-    return &g_1454C;
+    return &g_UsersystemLibWork;
 }
 
 void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)

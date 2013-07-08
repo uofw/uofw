@@ -247,7 +247,7 @@ void CopyGameInfo(SceKernelGameInfo *info)
 
 void InitGameInfo(void)
 {
-    SystemGameInfo.size = 220;
+    SystemGameInfo.size = sizeof SystemGameInfo;
     SystemGameInfo.str116[0] = '\0';
     SystemGameInfo.flags = 0;
     SystemGameInfo.str8[0] = '\0';
@@ -262,6 +262,7 @@ void InitGameInfo(void)
     SystemGameInfo.dnas = 0;
     SystemGameInfo.unk112 = 0;
 }
+
 s32 SysMemForKernel_F3BDB718(char *arg0)
 {
     if (arg0 == NULL) {

@@ -41,7 +41,7 @@ SceSysmemUidCB *search_UidType_By_Name(const char *name);
 SceSysmemUidCB *search_UIDObj_By_Name_With_Type(const char *name, SceSysmemUidCB *type);
 
 // 140D8
-SceSysmemHeap g_140D8;
+SceSysmemHeap EHeap4UID;
 
 // 140EC
 SceSysmemUidCB *HeapCB;
@@ -60,40 +60,40 @@ void InitUid(void)
     g_145AC = 0;
     _CreateHeap(MpidToCB(1), 0x2000, 1, &heapBlock);
     sceKernelProtectMemoryBlock(MpidToCB(1), heapBlock);
-    g_140D8.partId = 1;
-    g_140D8.firstBlock = heapBlock;
-    g_140D8.size = 0x2000;
+    EHeap4UID.partId = 1;
+    EHeap4UID.firstBlock = heapBlock;
+    EHeap4UID.size = 0x2000;
     SceSysmemPartitionInfo part;
     part.size = 16;
     sceKernelQueryMemoryPartitionInfo(1, &part);
-    g_140D8.partAddr = part.startAddr;
-    g_140D8.partSize = part.memSize;
-    SceSysmemUidCB *root = _AllocHeapMemory(&g_140D8, sizeof(SceSysmemUidCB), 0);
+    EHeap4UID.partAddr = part.startAddr;
+    EHeap4UID.partSize = part.memSize;
+    SceSysmemUidCB *root = _AllocHeapMemory(&EHeap4UID, sizeof(SceSysmemUidCB), 0);
     // A7FC
     memset(root, 0, sizeof(SceSysmemUidCB));
-    SceSysmemUidCB *metaRoot = _AllocHeapMemory(&g_140D8, sizeof(SceSysmemUidCB), 0);
+    SceSysmemUidCB *metaRoot = _AllocHeapMemory(&EHeap4UID, sizeof(SceSysmemUidCB), 0);
     // A820
     memset(metaRoot, 0, sizeof(SceSysmemUidCB));
-    SceSysmemUidCB *basic = _AllocHeapMemory(&g_140D8, sizeof(SceSysmemUidCB), 0);
+    SceSysmemUidCB *basic = _AllocHeapMemory(&EHeap4UID, sizeof(SceSysmemUidCB), 0);
     // A844
     memset(basic, 0, sizeof(SceSysmemUidCB));
-    SceSysmemUidCB *metaBasic = _AllocHeapMemory(&g_140D8, 36, 0);
+    SceSysmemUidCB *metaBasic = _AllocHeapMemory(&EHeap4UID, 36, 0);
     // A868
     memset(metaBasic, 0, sizeof(SceSysmemUidCB));
-    char *rootName = _AllocHeapMemory(&g_140D8, strlen("Root") + 1, 0);
-    char *metaRootName = _AllocHeapMemory(&g_140D8, strlen("MetaRoot") + 1, 0);
-    char *basicName = _AllocHeapMemory(&g_140D8, strlen("Basic") + 1, 0);
-    char *metaBasicName = _AllocHeapMemory(&g_140D8, strlen("MetaBasic") + 1, 0);
+    char *rootName = _AllocHeapMemory(&EHeap4UID, strlen("Root") + 1, 0);
+    char *metaRootName = _AllocHeapMemory(&EHeap4UID, strlen("MetaRoot") + 1, 0);
+    char *basicName = _AllocHeapMemory(&EHeap4UID, strlen("Basic") + 1, 0);
+    char *metaBasicName = _AllocHeapMemory(&EHeap4UID, strlen("MetaBasic") + 1, 0);
     InitUidBasic(root, rootName, metaRoot, metaRootName, basic, basicName, metaBasic, metaBasicName);
     HeapInit();
     if (sceKernelCreateUID(g_145A4, "SceSystemMemoryManager", 0, &HeapCB) == 0)
     {
         SceSysmemHeap *heap = UID_CB_TO_DATA(HeapCB, g_145A4, SceSysmemHeap);
-        heap->size = g_140D8.size;
-        heap->partId = g_140D8.partId;
-        heap->partSize = g_140D8.partSize;
-        heap->firstBlock = g_140D8.firstBlock;
-        heap->partAddr = g_140D8.partAddr;
+        heap->size = EHeap4UID.size;
+        heap->partId = EHeap4UID.partId;
+        heap->partSize = EHeap4UID.partSize;
+        heap->firstBlock = EHeap4UID.firstBlock;
+        heap->partAddr = EHeap4UID.partAddr;
         g_145AC = HeapCB->uid;
     }
     // A968
@@ -103,7 +103,7 @@ void InitUid(void)
 
 void *AllocSceUIDtypeCB(void)
 {
-    int *buf = _AllocHeapMemory(&g_140D8, 36, 0);
+    int *buf = _AllocHeapMemory(&EHeap4UID, 36, 0);
     if (buf != NULL)
     {
         // A9B8
@@ -116,13 +116,13 @@ void *AllocSceUIDtypeCB(void)
 
 int FreeSceUIDtypeCB(void *uidType)
 {
-    _FreeHeapMemory(&g_140D8, uidType);
+    _FreeHeapMemory(&EHeap4UID, uidType);
     return 0;
 }
 
 SceSysmemUidCB *AllocSceUIDobjectCB(s32 size)
 {
-    SceSysmemUidCB *uid = _AllocHeapMemory(&g_140D8, size, 0);
+    SceSysmemUidCB *uid = _AllocHeapMemory(&EHeap4UID, size, 0);
     if (uid != NULL)
         sceKernelMemset32(uid, 0, size);
     return uid;
@@ -130,7 +130,7 @@ SceSysmemUidCB *AllocSceUIDobjectCB(s32 size)
 
 s32 FreeSceUIDobjectCB(SceSysmemUidCB *uid)
 {
-    _FreeHeapMemory(&g_140D8, uid);
+    _FreeHeapMemory(&EHeap4UID, uid);
     return 0;
 }
 
@@ -140,7 +140,7 @@ char *AllocSceUIDnamestr(const char *str1, const char *str2)
     u32 len2 = strnlen(str2, 31);
     if (len1 + len2 >= 32)
         return NULL;
-    char *buf = _AllocHeapMemory(&g_140D8, len1 + len2 + 1, 0);
+    char *buf = _AllocHeapMemory(&EHeap4UID, len1 + len2 + 1, 0);
     if (buf == NULL)
         return buf;
     memcpy(buf, str1, len1);
@@ -151,13 +151,13 @@ char *AllocSceUIDnamestr(const char *str1, const char *str2)
 
 int FreeSceUIDnamestr(char *name)
 {
-    _FreeHeapMemory(&g_140D8, name);
+    _FreeHeapMemory(&EHeap4UID, name);
     return 0;
 }
 
 SceSysmemHoldHead *AllocSceUIDHoldHead(void)
 {
-    SceSysmemHoldHead *head = _AllocHeapMemory(&g_140D8, sizeof(SceSysmemHoldHead), 0);
+    SceSysmemHoldHead *head = _AllocHeapMemory(&EHeap4UID, sizeof(SceSysmemHoldHead), 0);
     if (head != NULL)
         memset(head, 0, sizeof(*head));
     return head;
@@ -165,13 +165,13 @@ SceSysmemHoldHead *AllocSceUIDHoldHead(void)
 
 s32 FreeSceUIDHoldHead(SceSysmemHoldHead *head)
 {
-    _FreeHeapMemory(&g_140D8, head);
+    _FreeHeapMemory(&EHeap4UID, head);
     return 0;
 }
 
 SceSysmemHoldElement *AllocSceUIDHoldElement(void)
 {
-    SceSysmemHoldElement *elem = _AllocHeapMemory(&g_140D8, sizeof(SceSysmemHoldElement), 0);
+    SceSysmemHoldElement *elem = _AllocHeapMemory(&EHeap4UID, sizeof(SceSysmemHoldElement), 0);
     if (elem != NULL)
         memset(elem, 0, sizeof(*elem));
     return elem;
@@ -179,7 +179,7 @@ SceSysmemHoldElement *AllocSceUIDHoldElement(void)
 
 s32 FreeSceUIDHoldElement(SceSysmemHoldElement *elem)
 {
-    _FreeHeapMemory(&g_140D8, elem);
+    _FreeHeapMemory(&EHeap4UID, elem);
     return 0;
 }
 

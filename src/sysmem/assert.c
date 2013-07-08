@@ -1,11 +1,11 @@
 #include <sysmem_kdebug.h>
 
 // 143FC
-void (*g_assertHandler)(int);
+void (*assert_handler)(int);
 
 void sceKernelRegisterAssertHandler(void (*func)(int))
 {
-    g_assertHandler = func;
+    assert_handler = func;
 }
 
 void sceKernelAssert(int test, int lvl)
@@ -19,7 +19,7 @@ void sceKernelAssert(int test, int lvl)
         Kprintf("assertion ignore (level %d)\n", lvl);
         return;
     }
-    void (*assertFunc)(int) = g_assertHandler;
+    void (*assertFunc)(int) = assert_handler;
     if (assertFunc == NULL)
     {
         // CFFC

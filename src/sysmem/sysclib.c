@@ -13,7 +13,8 @@
 
 #define CTYPE_LETTER (CTYPE_DOWNCASE_LETTER | CTYPE_UPCASE_LETTER)
 
-char g_ctypeTbl[] =
+// 135F0
+u8 _ctype_[] =
 {
     0,
     CTYPE_CTRL, // 0
@@ -163,21 +164,21 @@ void bzero(void *s, int n)
 
 int toupper(int c)
 {
-    if ((g_ctypeTbl[c + 1] & CTYPE_UPCASE_LETTER) == 0)
+    if ((_ctype_[c + 1] & CTYPE_UPCASE_LETTER) == 0)
         return c;
     return (char)c - 32;
 }
 
 int tolower(int c)
 {
-    if ((g_ctypeTbl[c + 1] & CTYPE_DOWNCASE_LETTER) == 0)
+    if ((_ctype_[c + 1] & CTYPE_DOWNCASE_LETTER) == 0)
         return c;
     return (char)c + 32;
 }
 
 int look_ctype_table(int c)
 {
-    return g_ctypeTbl[c + 1];
+    return _ctype_[c + 1];
 }
 
 char *index(char *s, int c)
