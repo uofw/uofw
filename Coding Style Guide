@@ -429,3 +429,5 @@ For example:
 # sceKernelDcacheInvalidateRange
 PSP_EXPORT_FUNC_NID(sceKernelDcacheInvalidateRangeForUser, 0xBFA98062)
 
+Specify at the beginning of every library whether its NIDs are randomized or not.
+

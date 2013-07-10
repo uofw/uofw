@@ -7,6 +7,7 @@ PSP_EXPORT_VAR_HASH(module_info)
 PSP_EXPORT_VAR_HASH(module_sdk_version)
 PSP_EXPORT_END
 
+# Randomized NIDs
 PSP_EXPORT_START(SysMemForKernel, 0x0011, 0x0001)
 PSP_EXPORT_FUNC_NID(sceKernelSysMemMaxFreeMemSize, 0x00154B6D)
 PSP_EXPORT_FUNC_NID(sceKernelPartitionTotalFreeMemSize, 0x0115B0F8)
@@ -115,6 +116,7 @@ PSP_EXPORT_FUNC_NID(sceKernelGetUsersystemLibWork, 0xFE3CF2BC)
 PSP_EXPORT_FUNC_NID(sceKernelIsKindOf, 0xFFC63884)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(SysMemUserForUser, 0x0011, 0x4000)
 # (randomized?)
 PSP_EXPORT_FUNC_NID(sceKernelSetCompiledSdkVersion410_420, 0x057E7380)
@@ -161,6 +163,7 @@ PSP_EXPORT_FUNC_NID(sceKernelGetCompiledSdkVersion, 0xFC114573)
 PSP_EXPORT_FUNC_NID(sceKernelAllocMemoryBlock, 0xFE707FDF)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(SysclibForKernel, 0x0011, 0x0001)
 PSP_EXPORT_FUNC_NID(bcopy, 0x097049BD)
 PSP_EXPORT_FUNC_NID(strstr, 0x0D188658)
@@ -197,6 +200,7 @@ PSP_EXPORT_FUNC_NID(__udivmoddi4, 0xDF17F4A2)
 PSP_EXPORT_FUNC_NID(strcpy, 0xEC6F1CF2)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(sceSysEventForKernel, 0x0011, 0x0001)
 PSP_EXPORT_FUNC_NID(sceKernelSysEventDispatch, 0x36331294)
 PSP_EXPORT_FUNC_NID(sceKernelReferSysEventHandler, 0x68D55505)
@@ -205,6 +209,7 @@ PSP_EXPORT_FUNC_NID(sceKernelRegisterSysEventHandler, 0xCD9E4BB5)
 PSP_EXPORT_FUNC_NID(sceKernelUnregisterSysEventHandler, 0xD7D3FDCD)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(sceSuspendForKernel, 0x0011, 0x0001)
 PSP_EXPORT_FUNC_NID(sceKernelPowerTick, 0x090CCB3F)
 PSP_EXPORT_FUNC_NID(sceKernelDispatchResumeHandlers, 0x0AB0C6F3)
@@ -224,6 +229,7 @@ PSP_EXPORT_FUNC_NID(sceKernelPowerUnlockForUser, 0xC7C928C7)
 PSP_EXPORT_FUNC_NID(sceKernelPowerLock, 0xEADB1BD7)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(sceSuspendForUser, 0x0011, 0x4000)
 PSP_EXPORT_FUNC_NID(sceKernelPowerTick, 0x090CCB3F)
 PSP_EXPORT_FUNC_NID(sceKernelPowerUnlockForUser, 0x3AEE7261)
@@ -233,6 +239,7 @@ PSP_EXPORT_FUNC_NID(sceKernelVolatileMemUnlock, 0xA569E425)
 PSP_EXPORT_FUNC_NID(sceKernelPowerLockForUser, 0xEADB1BD7)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(UtilsForUser, 0x0011, 0x4001)
 PSP_EXPORT_FUNC_NID(UtilsForUser_004D4DEE, 0x004D4DEE)
 PSP_EXPORT_FUNC_NID(sceKernelUtilsMt19937UInt, 0x06FB8A63)
@@ -290,6 +297,7 @@ PSP_EXPORT_FUNC_NID(sceKernelUtilsSha1BlockInit, 0xF8FCD5BA)
 PSP_EXPORT_FUNC_NID(UtilsForUser_5C7F2B1A, 0xFB05FAD0)
 PSP_EXPORT_END
 
+# Nonrandomized NIDs
 PSP_EXPORT_START(UtilsForKernel, 0x0011, 0x0009)
 PSP_EXPORT_FUNC_NID(UtilsForUser_004D4DEE, 0x004D4DEE)
 PSP_EXPORT_FUNC_NID(sceKernelUtilsMt19937UInt, 0x06FB8A63)
@@ -368,6 +376,7 @@ PSP_EXPORT_FUNC_NID(sceKernelUtilsSha1BlockInit, 0xF8FCD5BA)
 PSP_EXPORT_FUNC_NID(UtilsForKernel_5C7F2B1A, 0xFB05FAD0)
 PSP_EXPORT_END
 
+# Randomized NIDs
 PSP_EXPORT_START(KDebugForKernel, 0x0011, 0x0001)
 PSP_EXPORT_FUNC_NID(sceKernelRegisterDebugPutchar, 0x01FFE328)
 PSP_EXPORT_FUNC_NID(sceKernelSm1RegisterOperations, 0x02668C61)
@@ -383,6 +392,7 @@ PSP_EXPORT_FUNC_NID(sceKernelRegisterDebugWrite, 0x4A74A9D4)
 PSP_EXPORT_FUNC_NID(sceKernelDipswCpTime, 0x568DCD25)
 PSP_EXPORT_FUNC_NID(sceKernelDeci2pRegisterOperations, 0x604276EB)
 PSP_EXPORT_FUNC_NID(sceKernelDipswHigh32, 0x6CB0BDA4)
+# Non-randomized NID
 PSP_EXPORT_FUNC_NID(Kprintf, 0x84F370BC)
 PSP_EXPORT_FUNC_NID(sceKernelDipsw, 0x86010FCB)
 PSP_EXPORT_FUNC_NID(sceKernelRegisterDebugPutcharByBootloader, 0x8A0F4E94)
