@@ -108,14 +108,14 @@ SceModule *sceKernelCreateModule(void)
     //0x000068D0 - 0x0000689C
     mod->modId = cb->uid; //0x000068A0
     mod->moduleStartThreadPriority = LOADCORE_ERROR;
-	mod->moduleStartThreadStacksize = LOADCORE_ERROR;
-	mod->moduleStartThreadAttr = LOADCORE_ERROR;
-	mod->moduleStopThreadPriority = LOADCORE_ERROR;
-	mod->moduleStopThreadStacksize = LOADCORE_ERROR;
-	mod->moduleStopThreadAttr = LOADCORE_ERROR;
-	mod->moduleRebootBeforeThreadPriority = LOADCORE_ERROR;
-	mod->moduleRebootBeforeThreadStacksize = LOADCORE_ERROR;
-	mod->moduleRebootBeforeThreadAttr = LOADCORE_ERROR;   
+    mod->moduleStartThreadStacksize = LOADCORE_ERROR;
+    mod->moduleStartThreadAttr = LOADCORE_ERROR;
+    mod->moduleStopThreadPriority = LOADCORE_ERROR;
+    mod->moduleStopThreadStacksize = LOADCORE_ERROR;
+    mod->moduleStopThreadAttr = LOADCORE_ERROR;
+    mod->moduleRebootBeforeThreadPriority = LOADCORE_ERROR;
+    mod->moduleRebootBeforeThreadStacksize = LOADCORE_ERROR;
+    mod->moduleRebootBeforeThreadAttr = LOADCORE_ERROR;   
     mod->countRegVal = pspCop0StateGet(COP0_STATE_COUNT);
     
     loadCoreCpuResumeIntr(intrState); //0x000068D4
@@ -214,9 +214,9 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
     mod->nSegments = execFileInfo->numSegments; //0x00006B48
     
     for (i = 0; i < SCE_KERNEL_MAX_MODULE_SEGMENT; i++) {
-         mod->segmentAddr[i] = execFileInfo->segmentAddr[i]; //0x00006B60
-         mod->segmentSize[i] = execFileInfo->segmentSize[i]; //0x00006B6C
-         mod->segmentAlign[i] = execFileInfo->segmentAlign[i]; //0x00006B78
+    	mod->segmentAddr[i] = execFileInfo->segmentAddr[i]; //0x00006B60
+        mod->segmentSize[i] = execFileInfo->segmentSize[i]; //0x00006B6C
+        mod->segmentAlign[i] = execFileInfo->segmentAlign[i]; //0x00006B78
     }
     updateUIDName(mod); //0x00006B7C
     
@@ -231,8 +231,8 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
 s32 sceKernelReleaseModule(SceModule *mod)
 {
     u32 intrState;
-    SceModule *curMod = NULL;
-    SceModule *prevMod = NULL;
+    SceModule *curMod;
+    void *prevMod;
    
     if (mod == NULL) 
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
@@ -240,9 +240,10 @@ s32 sceKernelReleaseModule(SceModule *mod)
     intrState = loadCoreCpuSuspendIntr(); //0x00006BDC
     
     //0x00006BF0 - 0x00006C0C
-    for (prevMod = curMod = g_loadCore.registeredMods; curMod; curMod = prevMod->next) {
+    prevMod = &g_loadCore.registeredMods;
+    for (curMod = g_loadCore.registeredMods; curMod; curMod = ((SceModule *)prevMod)->next) {
         if (curMod == mod) { //0x00006C00        
-            prevMod->next = curMod->next; //0x00006C34
+            ((SceModule *)prevMod)->next = curMod->next; //0x00006C34
              
             if (curMod->next == NULL) 
                 g_loadCore.lastRegMod = prevMod;
