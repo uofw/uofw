@@ -293,9 +293,6 @@
 #define SCE_ERROR_MODULE_ALREADY_LOADED                         0x80111102
 #define SCE_ERROR_MODULE_NOT_LOADED                             0x80111103
 #define SCE_ERROR_SCREENSHOT_CONT_MODE_NOT_INIT                 0x80111229
-#define SCE_ERROR_UMD_NOT_READY                                 0x80210001
-#define SCE_ERROR_UMD_LBA_OUT_OF_BOUNDS                         0x80210002
-#define SCE_ERROR_UMD_NO_DISC                                   0x80210003
 #define SCE_ERROR_MEMSTICK_DEVCTL_BAD_PARAMS                    0x80220081
 #define SCE_ERROR_MEMSTICK_DEVCTL_TOO_MANY_CALLBACKS            0x80220082
 #define SCE_ERROR_AUDIO_NOT_INITIALIZED                         0x80260001
