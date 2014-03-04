@@ -100,6 +100,7 @@ int sceKernelClearEventFlag(SceUID evid, u32 bits);
 int sceKernelPollEventFlag(int evid, u32 bits, u32 wait, u32 *outBits);
 int sceKernelWaitEventFlag(int evid, u32 bits, u32 wait, u32 *outBits, SceUInt *timeout);
 int sceKernelWaitEventFlagCB(int evid, u32 bits, u32 wait, u32 *outBits, SceUInt *timeout);
+int sceKernelCancelEventFlag(SceUID evid, SceUInt setpattern, s32 *numWaitThreads);
 int sceKernelDeleteEventFlag(int evid);
 int sceKernelReferEventFlagStatus(SceUID event, SceKernelEventFlagInfo *status);
 

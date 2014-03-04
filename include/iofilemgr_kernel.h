@@ -236,6 +236,13 @@ int sceIoDclose(int fd);
 int sceIoRemove(const char *file);
 int sceIoRename(const char *oldname, const char *newname);
 int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+
+/* IO-Assign mount mode flags. */
+#define SCE_MT_RDWR	          0x00 /** Mount as read/write enabled. */
+#define SCE_MT_RDONLY	      0x01 /** Mount as read-only. */
+#define SCE_MT_ROBUST	      0x02 /** Mount in ROBUST mode. */
+#define SCE_MT_ERRCHECK       0x04 /** Set an error if there is anythign abnormal in the file system when mounting. */
+
 int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2);
 int sceIoUnassign(const char *dev);
 int sceIoChangeThreadCwd(SceUID threadId, const char *path);
