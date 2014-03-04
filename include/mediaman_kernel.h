@@ -33,7 +33,7 @@ u32 sceUmdRegisterGetUMDInfoCallBack(s32 (*umdInfoCallback)(SceUmdDiscInfo *), S
 
 u32 sceUmdUnRegisterGetUMDInfoCallBack(void);
 
-u32 sceUmd_63517CBA(s32 arg0, s32 arg1);
+u32 sceUmd_63517CBA(s32 (*arg0)(void *), void *arg1);
 
 u32 sceUmd_1471F63D(void);
 
@@ -45,11 +45,11 @@ u32 sceUmdRegisterActivateCallBack(s32 (*activateCallback)(s32, void *), void *p
 
 u32 sceUmdRegisterDeactivateCallBack(s32 (*deactivateCallback)(s32, void *), void *param);
 
-u32 sceUmdRegisterReplaceCallBack(void (*umdReplaceCallback)(s32));
+u32 sceUmdRegisterReplaceCallBack(s32 (*umdReplaceCallback)(s32));
 
 u32 sceUmdUnRegisterReplaceCallBack(void);
 
-u32 sceUmd_76D356F9(s32 (*arg1)(void));
+u32 sceUmd_76D356F9(s32 (*arg0)(void));
     
 /**
  * Activate the media mananger driver.
