@@ -74,6 +74,8 @@ extern char _gp[];
  * Module type attributes. 
  */
 enum SceModuleAttribute {
+    /** No module attributes. */
+    SCE_MODULE_ATTR_NONE             = 0x0000,
     /** Resident module - stays in memory. You cannot unload such a module. */
     SCE_MODULE_ATTR_CANT_STOP        = 0x0001,
     /** 
