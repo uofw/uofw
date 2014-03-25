@@ -1,4 +1,5 @@
 html/
+nbproject/
 *.o
 *.elf
 *.prx
