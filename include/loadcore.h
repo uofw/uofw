@@ -7,6 +7,7 @@
 
 #include <memlmd.h>
 #include <mesgled.h>
+#include <modulemgr.h>
 #include "common_imp.h"
 #include "threadman_kernel.h"
 
@@ -15,15 +16,6 @@
  *
  * @{	
  */
-
-/** The maximum number of segments a module can have. */
-#define SCE_KERNEL_MAX_MODULE_SEGMENT           (4)
-
-/** The module will remain in memory and act as a resident library. */
-#define SCE_KERNEL_RESIDENT                     (0)
-
-/** The module is not a resident one, meaning it won't stay in memory and act as a resident library. */
-#define SCE_KERNEL_NO_RESIDENT                  (1)
 
 /** Library number category minor. */
 #define LIBRARY_VERSION_MINOR                   (0)

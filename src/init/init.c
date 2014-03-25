@@ -24,6 +24,7 @@
 #include <iofilemgr_stdio.h>
 #include <loadcore.h>
 #include <loadexec_kernel.h>
+#include <modulemgr.h>
 #include <modulemgr_init.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_user.h>
@@ -902,7 +903,7 @@ static void InitThreadEntry(SceSize args, void *argp)
     }
     
     /* Step3: Init stops and unloads itself now. */
-    sceKernelStopUnloadSelfModuleWithStatusKernel(1, 0, NULL, NULL, NULL);
+    sceKernelStopUnloadSelfModuleWithStatusKernel(SCE_KERNEL_NO_RESIDENT, 0, NULL, NULL, NULL);
 }
 
 #ifdef INSTALLER

@@ -14,6 +14,18 @@
 #ifndef MODULEMGR_H
 #define	MODULEMGR_H
 
+/** The maximum number of segments a module can have. */
+#define SCE_KERNEL_MAX_MODULE_SEGMENT           (4)
+
+/** The module will remain in memory and act as a resident library. */
+#define SCE_KERNEL_RESIDENT                     (0)
+
+/** The module is not a resident one, meaning it won't stay in memory and act as a resident library. */
+#define SCE_KERNEL_NO_RESIDENT                  (1)
+
+#define SCE_KERNEL_STOP_SUCCESS                 (0)
+#define SCE_KERNEL_STOP_FAIL                    (1)
+
 enum ModuleMgrMcbStatus {
 	MCB_STATUS_NOT_LOADED = 0,
 	MCB_STATUS_LOADING = 1,
