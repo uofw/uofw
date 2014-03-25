@@ -15,7 +15,7 @@
 
 #include <syscon.h>
 
-#include "syscon.h"
+#include "syscon_int.h"
 
 SCE_MODULE_INFO("sceSYSCON_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
                                   | SCE_MODULE_ATTR_CANT_STOP, 1, 11);
