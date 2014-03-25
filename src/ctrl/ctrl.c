@@ -1,11 +1,11 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
    See the file COPYING for copying permission.
 */
 
 /*
- * uOFW/trunk/src/ctrl/ctrl.c
+ * uofw/src/ctrl/ctrl.c
  * 
- * sceController_Service - a driver the PSP's hardware buttons.
+ * sceController_Service - a driver for the PSP's hardware buttons.
  * 
  * The controller libraries (controller and controller_driver) main 
  * function is to notify an application of information that is output
@@ -26,6 +26,7 @@
 #include <ctrl.h>
 #include <display.h>
 #include <interruptman.h>
+#include <modulemgr.h>
 #include <modulemgr_init.h>
 #include <syscon.h>
 #include <sysmem_kdebug.h>
@@ -62,13 +63,13 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_MAX_INTERNAL_CONTROLLER_BUFFER     (CTRL_INTERNAL_CONTROLLER_BUFFERS - 1)
 
 /* The center position of the analog stick on both axes. */
-#define CTRL_ANALOG_PAD_CENTER_VALUE            (128)
+#define CTRL_ANALOG_PAD_CENTER_VALUE            (0x80)
 
 /* The minimum position of the analog stick on both axes. */
 #define CTRL_ANALOG_PAD_MIN_VALUE               (0)
 
 /* The maximum position of the analog stick on both axes. */
-#define CTRL_ANALOG_PAD_MAX_VALUE               (255)
+#define CTRL_ANALOG_PAD_MAX_VALUE               (0xFF)
 
 /* 
  * The smallest offset from the analog stick's center position defining 
@@ -137,7 +138,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_USER_MODE_BUTTONS_DEFAULT          (SCE_CTRL_SELECT | SCE_CTRL_START | SCE_CTRL_UP | SCE_CTRL_RIGHT | \
                                                  SCE_CTRL_DOWN | SCE_CTRL_LEFT | SCE_CTRL_LTRIGGER | SCE_CTRL_RTRIGGER | \
                                                  SCE_CTRL_TRIANGLE | SCE_CTRL_CIRCLE | SCE_CTRL_CROSS | SCE_CTRL_SQUARE | \
-                                                 SCE_CTRL_HOME | SCE_CTRL_HOLD)
+                                                 SCE_CTRL_INTERCEPTED | SCE_CTRL_HOLD)
 
 #define CTRL_USER_MODE_BUTTONS_EXTENDED         (0x3FFFF)
 
@@ -148,7 +149,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_ALL_TIME_IDLE_TIMER_RESET_BUTTONS   (SCE_CTRL_SELECT | SCE_CTRL_START | SCE_CTRL_UP | SCE_CTRL_RIGHT | \
                                                  SCE_CTRL_DOWN | SCE_CTRL_LEFT | SCE_CTRL_LTRIGGER | SCE_CTRL_RTRIGGER | \
                                                  SCE_CTRL_TRIANGLE | SCE_CTRL_CIRCLE | SCE_CTRL_CROSS | SCE_CTRL_SQUARE | \
-                                                 SCE_CTRL_HOME | SCE_CTRL_VOLUP | SCE_CTRL_VOLDOWN | SCE_CTRL_SCREEN | \
+                                                 SCE_CTRL_INTERCEPTED | SCE_CTRL_VOLUP | SCE_CTRL_VOLDOWN | SCE_CTRL_SCREEN | \
                                                  SCE_CTRL_NOTE)
 
 #define CTRL_ALL_SUPPORTED_BUTTONS              (0x39FFF3F9)
@@ -185,18 +186,18 @@ enum SceCtrlRapidFireEventModes {
  * OFF without the user actually pressing the buttons.
  */
 typedef struct {
-    /* The buttons which potentially can trigger the rapid fire event.
+    /* Comparison mask of the button operation for rapid-fire trigger.
      * This usage is restricted for now. 
      */
-    u32 eventSupportButtons;
+    u32 uiMask;
     /* The buttons which will start the rapid fire event for the specified 
-     * buttons when being pressed.
+     * <uiTarget> buttons when being pressed.
      */
-    u32 eventTriggerButtons;
+    u32 uiTrigger;
     /* The buttons on which the rapid fire event will be applied to.  User 
      * mode buttons only.
      */
-    u32 buttons;
+    u32 uiTarget;
     /*
      *  7          6 5            0
      * +------------+--------------+
@@ -213,19 +214,18 @@ typedef struct {
      *    multiple of the update interval).
      */
     u8 eventData;
-    /* The number of consecutive internal controller buffer updates the 
-     * buttons will be set to ON (pressed). 
+    /* 
+     * Defines for how long the <uiTarget> buttons will act as being pressed. Meassured in sampling counts.
      */
-    u8 buttonsOnTime;
-    /* The number of consecutive internal controller buffer updates the 
-     * buttons will be set to OFF (un-pressed). 
+    u8 uiMake;
+    /* 
+     * Defines for how long the <uiTarget> buttons will act as being unpressed. Meassured in sampling counts. 
      */
-    u8 buttonsOffTime;
-    /* The number of consecutive internal controller buffer updates the 
-     * buttons will be set to ON.  It will only be applied for the first 
-     * ON period of a (not canceled) rapid fire event. 
+    u8 uiBreak;
+    /* 
+     * Dead time of rapid-fire trigger (sampling count). Specifies the rapid-fire start timing. 
      */
-    u8 eventOnTime;
+    u8 uiDelay;
 } SceCtrlRapidFire;
 
 /* 
@@ -240,7 +240,7 @@ typedef struct {
     /* The number of consecutive internal controller data buffer updates 
      * the emulated analog pad values will be applied. 
      */
-    u32 ctrlBufUpdatesForAnalog;
+    u32 uiAnalogMake;
     /* Emulated user buttons of ::SceCtrlButtons.  You cannot emulate 
      * kernel buttons and the emulated buttons will only be applied for 
      * applications running in User mode.
@@ -254,7 +254,7 @@ typedef struct {
     /* The number of consecutive internal controller data buffer updates
      * the emulated buttons will be applied. 
      */
-    u32 ctrlBufUpdatesForButtons;
+    u32 uiButtonMake;
 } SceCtrlEmulationData;
 
 /*
@@ -987,12 +987,12 @@ s32 sceCtrlClearRapidFire(u8 slot)
     if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
     
-    g_ctrl.rapidFire[slot].eventSupportButtons = 0; 
+    g_ctrl.rapidFire[slot].uiMask = 0; 
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlSetRapidFire(u8 slot, u32 eventSupportButtons, u32 eventTriggerButtons, u32 buttons, u8 eventOnTime, 
-                        u8 buttonsOnTime, u8 buttonsOffTime) 
+s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, 
+                        u8 uiMake, u8 buttonsOffTime) 
 {
     u32 usedButtons;
     u32 invalidButtons;
@@ -1002,12 +1002,12 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 eventSupportButtons, u32 eventTriggerButton
     if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
 
-    if ((eventOnTime | buttonsOnTime | buttonsOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
+    if ((uiDelay | uiMake | buttonsOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
         return SCE_ERROR_INVALID_VALUE;
 
     oldK1 = pspShiftK1();
 
-    usedButtons = eventSupportButtons | eventTriggerButtons | buttons;  
+    usedButtons = uiMask | uiTrigger | uiTarget;  
     
     /*
      * Don't allow kernel buttons or the HOLD button to be used in User
@@ -1022,12 +1022,12 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 eventSupportButtons, u32 eventTriggerButton
     }
     intrState = sceKernelCpuSuspendIntr();
 
-    g_ctrl.rapidFire[slot].buttonsOnTime = buttonsOnTime;
-    g_ctrl.rapidFire[slot].eventSupportButtons = eventSupportButtons; 
-    g_ctrl.rapidFire[slot].eventTriggerButtons = eventTriggerButtons;
-    g_ctrl.rapidFire[slot].buttons = buttons;
-    g_ctrl.rapidFire[slot].buttonsOffTime = buttonsOffTime;
-    g_ctrl.rapidFire[slot].eventOnTime = eventOnTime;
+    g_ctrl.rapidFire[slot].uiMake = uiMake;
+    g_ctrl.rapidFire[slot].uiMask = uiMask; 
+    g_ctrl.rapidFire[slot].uiTrigger = uiTrigger;
+    g_ctrl.rapidFire[slot].uiTarget = uiTarget;
+    g_ctrl.rapidFire[slot].uiBreak = buttonsOffTime;
+    g_ctrl.rapidFire[slot].uiDelay = uiDelay;
     g_ctrl.rapidFire[slot].eventData = 0;
 
     sceKernelCpuResumeIntr(intrState);
@@ -1035,26 +1035,26 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 eventSupportButtons, u32 eventTriggerButton
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 bufUpdates)
+s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 uiMake)
 {    
     if (slot > CTRL_DATA_EMULATION_MAX_SLOT)
         return SCE_ERROR_INVALID_VALUE;
 
     g_ctrl.emulationData[slot].analogX = aX;
     g_ctrl.emulationData[slot].analogY = aY;
-    g_ctrl.emulationData[slot].ctrlBufUpdatesForAnalog = bufUpdates;
+    g_ctrl.emulationData[slot].uiAnalogMake = uiMake;
 
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 bufUpdates)
+s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake)
 {    
     if (slot > CTRL_DATA_EMULATION_MAX_SLOT)
         return SCE_ERROR_INVALID_VALUE;
 
     g_ctrl.emulationData[slot].userButtons = userButtons;
     g_ctrl.emulationData[slot].kernelButtons = kernelButtons;
-    g_ctrl.emulationData[slot].ctrlBufUpdatesForButtons = bufUpdates;
+    g_ctrl.emulationData[slot].uiButtonMake = uiMake;
 
     return SCE_ERROR_OK;
 }
@@ -1381,16 +1381,16 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
         prevButtons = g_ctrl.pureButtons;
         
         /*
-         * A received SYSCON data packet differs in size and content.  Size and
+         * A received SYSCON data package differs in size and content.  Size and
          * content for the controller module depend on the command send to the
          * SYSCON microcontroller.  We test against the different commands in 
-         * order to obtain the button data from the right packet location.
+         * order to obtain the button data from the right package location.
          * 
-         * Packet example_1:  The command 
+         * package example_1:  The command 
          * PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG requests the largest 
-         * packet and contains both kernel and user buttons as well as analog 
+         * package and contains both kernel and user buttons as well as analog 
          * stick data.
-         * Packet example_2: The command PSP_SYSCON_CMD_GET_ANALOG requests the
+         * package example_2: The command PSP_SYSCON_CMD_GET_ANALOG requests the
          * smallest package, containing only analog stick data.
          */
         if (sysPacket->tx[PSP_SYSCON_TX_CMD] != PSP_SYSCON_CMD_GET_DIGITAL_KEY 
@@ -1552,18 +1552,18 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
 
     index = g_ctrl.userModeData.curUpdatableBufIndex;
     ctrlUserBuf = ((SceCtrlData *)g_ctrl.userModeData.sceCtrlBuf[0] + index);
-    ctrlUserBuf->activeTime = sysTimeLow;
+    ctrlUserBuf->timeStamp = sysTimeLow;
 
     index = g_ctrl.kernelModeData.curUpdatableBufIndex;
     ctrlKernelBuf = ((SceCtrlData *)g_ctrl.kernelModeData.sceCtrlBuf[0] + index);
-    ctrlUserBuf->activeTime = sysTimeLow;
+    ctrlUserBuf->timeStamp = sysTimeLow;
 
     analogX = aX;
     analogY = aY;
 
     for (i = 0; i < CTRL_DATA_EMULATION_SLOTS; i++) {
-         if (g_ctrl.emulationData[i].ctrlBufUpdatesForAnalog > 0) {
-             g_ctrl.emulationData[i].ctrlBufUpdatesForAnalog--;
+         if (g_ctrl.emulationData[i].uiAnalogMake > 0) {
+             g_ctrl.emulationData[i].uiAnalogMake--;
              analogX = g_ctrl.emulationData[i].analogX;
              analogY = g_ctrl.emulationData[i].analogY;
          }
@@ -1594,7 +1594,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
          if (g_ctrl.unk772[i + 1] != NULL) {                        
              ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.sceCtrlBuf[i + 1];
              ctrlKernelBufExt = ctrlKernelBufExt + 1;
-             ctrlKernelBufExt->activeTime = sysTimeLow;
+             ctrlKernelBufExt->timeStamp = sysTimeLow;
 
              func = (g_ctrl.unk772[i + 1]->func);
              status = func(g_ctrl.unk780[i + 1]);
@@ -1602,7 +1602,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
                  for (j = 0; j < sizeof ctrlKernelBufExt->rsrv; j++)
                       ctrlKernelBufExt->rsrv[j] = 0;
 
-                 ctrlKernelBufExt->activeTime = 0;
+                 ctrlKernelBufExt->timeStamp = 0;
                  ctrlKernelBufExt->buttons = 0;
                  ctrlKernelBufExt->unk1 = 0;
                  ctrlKernelBufExt->unk2 = 0;
@@ -1662,7 +1662,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
                  }
              }
              ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.sceCtrlBuf[1] + i;
-             ctrlUserBufExt->activeTime = ctrlKernelBufExt->activeTime;
+             ctrlUserBufExt->timeStamp = ctrlKernelBufExt->timeStamp;
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons;
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX;
              ctrlUserBufExt->aY = ctrlKernelBufExt->aY;
@@ -1679,13 +1679,13 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
              ctrlUserBufExt->unk7 = ctrlKernelBufExt->unk7;
              ctrlUserBufExt->unk8 = ctrlKernelBufExt->unk8;
 
-             ctrlUserBufExt->buttons &= ~SCE_CTRL_HOME;
+             ctrlUserBufExt->buttons &= ~SCE_CTRL_INTERCEPTED;
              ctrlUserBufExt->buttons &= g_ctrl.maskSupportButtons;
              ctrlUserBufExt->buttons |= g_ctrl.maskApplyButtons;
 
              if ((g_ctrl.unk768 >> i) == 1) {
                  buttons = ctrlKernelBufExt->buttons;
-                 g_ctrl.emulationData[i + 1].ctrlBufUpdatesForButtons = 1;
+                 g_ctrl.emulationData[i + 1].uiButtonMake = 1;
                  kModeBtnEmulation = (buttons & 0xFFFFF0FF)
                                    | (((buttons & 0x500) != 0) << 8)
                                    | (((buttons & 0xA00) != 0) << 9);
@@ -1782,7 +1782,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     g_ctrl.kernelModeData.readLatchCount++;
 
     if (updatedButtons & SCE_CTRL_HOLD)
-        updatedButtons &= (SCE_CTRL_HOLD | SCE_CTRL_HOME);
+        updatedButtons &= (SCE_CTRL_HOLD | SCE_CTRL_INTERCEPTED);
     
     /* 
      * Apply custom emulation data of the digital pad to the transfered
@@ -1793,7 +1793,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     for (i = 0; i < CTRL_DATA_EMULATION_SLOTS; i++) {
          uModeBtnEmulation = g_ctrl.emulationData[i].userButtons;
          kModeBtnEmulation = g_ctrl.emulationData[i].kernelButtons;
-         numBufUpdates = g_ctrl.emulationData[i].ctrlBufUpdatesForButtons;
+         numBufUpdates = g_ctrl.emulationData[i].uiButtonMake;
 
          uModeBtnEmulationAll |= uModeBtnEmulation;
          kModeBtnEmulationAll |= kModeBtnEmulation;
@@ -1802,7 +1802,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
                  g_ctrl.emulationData[i].userButtons = 0;
                  g_ctrl.emulationData[i].userButtons = 0;
              }
-             g_ctrl.emulationData[i].ctrlBufUpdatesForButtons = numBufUpdates;
+             g_ctrl.emulationData[i].uiButtonMake = numBufUpdates;
          }
     }
     updatedButtons |= uModeBtnEmulationAll;
@@ -1835,16 +1835,16 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
      * for their execution.
      */
     for (i = 0; i < CTRL_BUTTONS_RAPID_FIRE_SLOTS; i++) {
-         if (g_ctrl.rapidFire[i].eventSupportButtons != 0) {
-             pressedButtons = updatedButtons & g_ctrl.rapidFire[i].eventSupportButtons;
-             if (pressedButtons == g_ctrl.rapidFire[i].eventTriggerButtons) {
+         if (g_ctrl.rapidFire[i].uiMask != 0) {
+             pressedButtons = updatedButtons & g_ctrl.rapidFire[i].uiMask;
+             if (pressedButtons == g_ctrl.rapidFire[i].uiTrigger) {
                  rfEventModeTimeLeft = RF_EVENT_GET_APPLY_TIME_LEFT(g_ctrl.rapidFire[i].eventData) - 1;               
                  rfEventMode = RF_EVENT_GET_MODE(g_ctrl.rapidFire[i].eventData);
                  if (rfEventMode != 0) {
                      if (rfEventMode == RAPID_FIRE_EVENT_BUTTONS_ON)
-                         updatedButtons |= g_ctrl.rapidFire[i].buttons;
+                         updatedButtons |= g_ctrl.rapidFire[i].uiTarget;
                      else
-                         updatedButtons &= ~g_ctrl.rapidFire[i].buttons;
+                         updatedButtons &= ~g_ctrl.rapidFire[i].uiTarget;
                      
                      /*
                       * The apply time of one part of the rapid fire event (buttons turned 
@@ -1857,12 +1857,12 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
                          rfEventMode = (rfEventMode == RAPID_FIRE_EVENT_BUTTONS_ON) ? RAPID_FIRE_EVENT_BUTTONS_OFF : 
                                                                                       RAPID_FIRE_EVENT_BUTTONS_ON;
                          rfEventModeTimeLeft = (rfEventMode == RAPID_FIRE_EVENT_BUTTONS_OFF) ? 
-                                                        g_ctrl.rapidFire[i].buttonsOffTime : 
-                                                        g_ctrl.rapidFire[i].buttonsOnTime;
+                                                        g_ctrl.rapidFire[i].uiBreak : 
+                                                        g_ctrl.rapidFire[i].uiMake;
                      }
                  }
                  else {
-                     rfEventModeTimeLeft = g_ctrl.rapidFire[i].eventOnTime;
+                     rfEventModeTimeLeft = g_ctrl.rapidFire[i].uiDelay;
                      rfEventMode = RAPID_FIRE_EVENT_BUTTONS_ON;
                  }
                  g_ctrl.rapidFire[i].eventData = RF_EVENT_SET_MODE(rfEventMode) | rfEventModeTimeLeft;
@@ -1889,7 +1889,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     }
     changedButtons = updatedButtons ^ g_ctrl.userButtons;
     if (updatedButtons & SCE_CTRL_HOLD) {
-        updatedButtons &= (SCE_CTRL_HOLD | SCE_CTRL_HOME);
+        updatedButtons &= (SCE_CTRL_HOLD | SCE_CTRL_INTERCEPTED);
         changedButtons = updatedButtons ^ g_ctrl.userButtons;
     }
     ctrlUserBuf->buttons = updatedButtons;
@@ -1899,7 +1899,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
         g_ctrl.unk582 = g_ctrl.unk583;
 
     if (g_ctrl.unk582 != 0) {
-        updatedButtons &= SCE_CTRL_HOME;
+        updatedButtons &= SCE_CTRL_INTERCEPTED;
         g_ctrl.unk582--;
         changedButtons = updatedButtons ^ g_ctrl.userButtons;
     }
@@ -2020,7 +2020,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
      * Read "nBufs" internal controller data buffers and obtain their data.
      */
     while (nBufs-- > 0) {
-           data->activeTime = ctrlBuf->activeTime;
+           data->timeStamp = ctrlBuf->timeStamp;
 
            buttons = ctrlBuf->buttons;
            if (pspK1IsUserMode())
@@ -2101,12 +2101,12 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
 s32 _sceCtrlModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
     sceCtrlInit();    
-    return SCE_ERROR_OK;
+    return SCE_KERNEL_RESIDENT;
 }
 
 s32 _sceCtrlModuleRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
     sceCtrlEnd();   
-    return SCE_ERROR_OK;
+    return SCE_KERNEL_STOP_SUCCESS;
 }
 

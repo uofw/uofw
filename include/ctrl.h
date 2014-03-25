@@ -1,4 +1,4 @@
-/** Copyright (C) 2011, 2012, 2013 The uOFW team
+/** Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -16,21 +16,21 @@
 typedef void (*SceKernelButtonCallbackFunction)(u32 curButtons, u32 lastButtons, void *opt);
 
 /** 
- * This structure is for obtaining button data (button/stick information) from the 
+ * This structure is for obtaining button data (button/analog stick information) from the 
  * controller using ::sceCtrlPeekBufferPositive(), ::sceCtrlReadBufferNegative() and similar 
  * functions.
  */
 typedef struct {
     /** 
-     * The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
+     * The time stamp of the time during which sampling was performed. Time unit is microseconds. 
      * Can be used to get the time period of a button pressing event. 
      */ 
-    u32 activeTime;
+    u32 timeStamp;
     /** The currently pressed button. Bitwise OR'ed values of ::SceCtrlPadButtons. */
     u32 buttons;
-    /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
+    /** Analog Stick X-axis offset (0 - 0xFF). Left = 0, Right = 0xFF. */
     u8 aX;
-    /** Analog Stick Y-axis offset (0 - 255). Up = 0, Down = 255. */
+    /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
     /** Reserved. Values are normally set to 0. */
     u8 rsrv[6];
@@ -43,15 +43,15 @@ typedef struct {
  */
 typedef struct {
     /** 
-     * The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
-     * Can be used to get the time period if a button pressing. 
+     * The time stamp of the time during which sampling was performed. Time unit is microseconds. 
+     * Can be used to get the time period of a button pressing event.
      */ 
-    u32 activeTime;
+    u32 timeStamp;
     /** The currently pressed button. Bitwise OR'ed values of ::SceCtrlPadButtons. */
     u32 buttons;
-    /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
+    /** Analog Stick X-axis offset (0 - 0xFF). Left = 0, Right = 0xFF. */
     u8 aX;
-    /** Analog Stick Y-axis offset (0 - 255). Up = 0, Down = 255. */
+    /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
     /** Reserved. Values are normally set to 0. */
     u8 rsrv[6];
@@ -102,54 +102,54 @@ typedef struct {
 /**
  * Enumeration for the digital controller buttons in positive logic.
  *
- * @note SCE_CTRL_HOME, SCE_CTRL_WLAN_UP, SCE_CTRL_REMOTE, SCE_CTRL_VOLUP, SCE_CTRL_VOLDOWN, 
+ * @note SCE_CTRL_INTERCEPTED, SCE_CTRL_WLAN_UP, SCE_CTRL_REMOTE, SCE_CTRL_VOLUP, SCE_CTRL_VOLDOWN, 
  *       SCE_CTRL_SCREEN, SCE_CTRL_NOTE, SCE_CTRL_DISC, SCE_CTRL_MS can only be read in kernel mode.
  */
 enum SceCtrlPadButtons {
     /** Select button. */
-    SCE_CTRL_SELECT     = 0x1,
+    SCE_CTRL_SELECT         = 0x1,
     /** Start button. */
-    SCE_CTRL_START      = 0x8,
+    SCE_CTRL_START          = 0x8,
     /** Up D-Pad button. */
-    SCE_CTRL_UP         = 0x10,
+    SCE_CTRL_UP             = 0x10,
     /** Right D-Pad button. */
-    SCE_CTRL_RIGHT      = 0x20,
+    SCE_CTRL_RIGHT          = 0x20,
     /** Down D-Pad button. */
-    SCE_CTRL_DOWN       = 0x40,
+    SCE_CTRL_DOWN           = 0x40,
     /** Left D-Pad button. */
-    SCE_CTRL_LEFT       = 0x80,
+    SCE_CTRL_LEFT           = 0x80,
     /** Left trigger. */
-    SCE_CTRL_LTRIGGER   = 0x100,
+    SCE_CTRL_LTRIGGER       = 0x100,
     /** Right trigger. */
-    SCE_CTRL_RTRIGGER   = 0x200,
+    SCE_CTRL_RTRIGGER       = 0x200,
     /** Triangle button. */
-    SCE_CTRL_TRIANGLE   = 0x1000,
+    SCE_CTRL_TRIANGLE       = 0x1000,
     /** Circle button. */
-    SCE_CTRL_CIRCLE     = 0x2000,
+    SCE_CTRL_CIRCLE         = 0x2000,
     /** Cross button. */
-    SCE_CTRL_CROSS      = 0x4000,
+    SCE_CTRL_CROSS          = 0x4000,
     /** Square button. */
-    SCE_CTRL_SQUARE     = 0x8000,
-    /** Home button. In user mode this bit is set if the exit dialog is visible.*/
-    SCE_CTRL_HOME       = 0x10000,
+    SCE_CTRL_SQUARE         = 0x8000,
+    /** HOME button. In user mode, this bit is set if the exit dialog is visible.*/
+    SCE_CTRL_INTERCEPTED    = 0x10000,
     /** Hold button. */
-    SCE_CTRL_HOLD       = 0x20000,
+    SCE_CTRL_HOLD           = 0x20000,
     /** W-LAN switch up. */
-    SCE_CTRL_WLAN_UP    = 0x40000,
+    SCE_CTRL_WLAN_UP        = 0x40000,
     /** Remote hold position. */
-    SCE_CTRL_REMOTE     = 0x80000,
+    SCE_CTRL_REMOTE         = 0x80000,
     /** Volume up button. */
-    SCE_CTRL_VOLUP      = 0x100000,
+    SCE_CTRL_VOLUP          = 0x100000,
     /** Volume down button. */
-    SCE_CTRL_VOLDOWN    = 0x200000,
+    SCE_CTRL_VOLDOWN        = 0x200000,
     /** Screen button. */
-    SCE_CTRL_SCREEN     = 0x400000,
+    SCE_CTRL_SCREEN         = 0x400000,
     /** Music Note button. */
-    SCE_CTRL_NOTE       = 0x800000,   	
+    SCE_CTRL_NOTE           = 0x800000,   	
     /** Disc present. */
-    SCE_CTRL_DISC       = 0x1000000,
+    SCE_CTRL_DISC           = 0x1000000,
     /** Memory stick present. */
-    SCE_CTRL_MS         = 0x2000000,
+    SCE_CTRL_MS             = 0x2000000,
 };
 
 /** Controller input modes. */
@@ -308,7 +308,7 @@ u32 sceCtrlGetIdleCancelKey(u32 *oneTimeResetButtons, u32 *allTimeResetButtons, 
  * 
  * @par Example:
  * @code
- * //Pressing the select will reset the idle timer. No other button will reset it.
+ * // Pressing the select will reset the idle timer. No other button will reset it.
  * sceCtrlSetIdleCancelKey(0, SCE_CTRL_SELECT, 0, 0);
  * @endcode
  */
@@ -383,7 +383,7 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3);
  *      Button is pressed, button is not pressed, button has been newly pressed
  *      and button has been newly released. 
  * Once a button has been, for example, pressed, its value is stored into the specific latch member 
- * (btnMake in this case) until you manually reset the specific latch buffer field.
+ * (buttonMake in this case) until you manually reset the specific latch buffer field.
  * 
  * @param latch Pointer to a SceCtrlLatch structure retrieving the current button latch data.
  * 
@@ -395,9 +395,9 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3);
  * 
  * sceCtrlPeekLatch(&latch);
  * while (1) {
- *        //Cross button pressed
- *        if (latch.btnPress & SCE_CTRL_CROSS) {
- *            //do something
+ *        // Cross button pressed
+ *        if (latch.buttonPress & SCE_CTRL_CROSS) {
+ *            // do something
  *        }
  * }
  * @endcode
@@ -440,9 +440,9 @@ s32 sceCtrlReadLatch(SceCtrlLatch *latch);
  * 
  * while (1) {
  *        sceCtrlPeekBufferPositive(&data, 1); 
- *        //Cross button pressed
+ *        // Cross button pressed
  *        if (data.buttons & SCE_CTRL_CROSS) {
- *            //do something
+ *            // do something
  *        }
  * }
  * @endcode
@@ -471,9 +471,9 @@ s32 sceCtrlPeekBufferPositive(SceCtrlData *data, u8 nBufs);
  * 
  * while (1) {
  *        sceCtrlPeekBufferNegative(&data, 1); 
- *        //Cross button pressed
+ *        // Cross button pressed
  *        if (data.buttons & ~SCE_CTRL_CROSS) {
- *            //do something
+ *            // do something
  *        }
  * }
  * @endcode
@@ -569,72 +569,65 @@ s32 sceCtrlReadBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @param slot The slot of the event to clear. Between 0 - 15.
  * 
- * @return 0 on success
+ * @return 0 on success.
  */
 s32 sceCtrlClearRapidFire(u8 slot);
 
 /**
  * Specify a rapid-fire event for one or more buttons.
  * 
- * @param slot The slot used to set the custom values. Between 0 - 15. Multiple slots can be used.
- * @param eventSupportButtons The buttons which potentially can trigger the rapid fire event. This
- *                            usage is restricted for now. In order for the "eventTriggerButtons"
+ * @param slot      The slot used to set the custom values. Between 0 - 15. Up to 16 slots can be used.
+ * @param uiMask    Comparison mask of the button operation for rapid-fire trigger. In order for the <uiTrigger> buttons
  *                            to trigger the event, they need to be included in these buttons. 
  *                            One or more buttons of ::SceCtrlPadButtons. 
- * @param eventTriggerButtons The buttons which will start the rapid fire event for the specified 
- *                            buttons when being pressed.
- * @param buttons The buttons on which the rapid fire event will be applied to. User mode 
- *                buttons only.
- * @param eventOnTime The number of consecutive internal controller buffer updates the buttons will 
- *                    be set to ON.  It will only be applied for the first ON period of a (not canceled) 
- *                    rapid fire event. This "ON-time" will only be applied in the beginning of every new 
- *                    fired event (not being fired immediately before). Set to 0 - 63.
- * @param buttonsOnTime      The number of consecutive internal controller buffer updates the 
- *                           buttons will be set to ON (pressed).  This "ON-time" is set after 
- *                           eventOnTime was applied and the reqButton was turned off. It will be 
- *                           applied for as long as the same rapid fire event is called without a 
- *                           break (i.e. pressing of a different PSP button). Set to 0 - 63. 
- *                           If set to 0, the reqButton will be turned ON for one internal controller 
- *                           buffer update. 
- * @param buttonsOffTime     The number of consecutive internal controller buffer updates the 
- *                           buttons will be set to ON. This "OFF-time" is set after eventOnTime was 
- *                           applied. It will be applied as long as the same rapid fire event is called 
- *                           without a break (i.e. the pressing of a different PSP button). Set to 0 - 63. 
- *                           If  set to 0, the reqButton will be turned OFF for 64 consecutive internal 
- *                           controller buffer updates.
+ * @param uiTrigger The buttons which will start the rapid fire event for the specified 
+ *                  <uiTarget> buttons when being pressed.
+ * @param uiTarget  The buttons for which the rapid-fire event will be applied to. User mode 
+ *                  buttons only. <uiMake> and <uiBreak> define the rapid-fire cycle.
+ * @param uiDelay   Dead time of rapid-fire trigger (sampling count). Specifies the rapid-fire start timing. 
+ *                  It will only be applied for the first ON period of a (not cancelled) rapid-fire event.  
+ *                  Set to 0 - 63.
+ * @param uiMake    The press time for the <uiTarget> buttons.  This "ON-time" is set after 
+ *                  <uiDelay> was applied and the <uiTrigger> buttons were turned OFF. It will be 
+ *                  applied for as long as the same rapid fire event is called without a 
+ *                  break (i.e. pressing of a different PSP button). Set to 0 - 63. 
+ *                  If set to 0, the <uiTarget> button(s) will be turned ON for one sampling count.
+ * @param uiBreak   The release time for <uiTarget> buttons. This "OFF-time" is set after <uiDelay> was 
+ *                  applied. It will be applied as long as the same rapid fire event is called 
+ *                  without a break (i.e. the pressing of a different PSP button). Set to 0 - 63. 
+ *                  If  set to 0, the <uiTarget> button will be turned OFF for 64 consecutive sampling counts.
  * 
  * @return 0 on success.
  * 
  * @par Example:
  * @code
- * //A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
- * //R-button will be turned ON and OFF for 64 internal controller buffer updates in both cases 
- * //(as long as D-Pad-Up is pressed).
- * sceCtrlSetRapidFire(0, 0xFF, SCE_CTRL_UP, SCE_CTRL_RTRIGGER, 63, 63, 63);
+ * // A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
+ * // R-button will be turned ON and OFF for 64 internal controller buffer updates in both cases 
+ * // (as long as D-Pad-Up is pressed).
+ * sceCtrlSetRapidFire(0, SCE_CTRL_UP, SCE_CTRL_UP, SCE_CTRL_RTRIGGER, 63, 63, 63);
  * 
- * //A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
- * //R-button will be turned OFF and ON for 40 internal controller buffer updates in both cases 
- * //(as long as D-Pad-Up is pressed).
+ * // A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
+ * // R-button will be turned OFF and ON for 40 internal controller buffer updates in both cases 
+ * // (as long as D-Pad-Up is pressed).
  * sceCtrlSetRapidFire(0, SCE_CTRL_UP, SCE_CTRL_UP, SCE_CTRL_RTRIGGER, 0, 40, 40);
  * @endcode
  * 
  */
-s32 sceCtrlSetRapidFire(u8 slot, u32 eventSupportButtons, u32 eventTriggerButtons, u32 buttons, u8 eventOnTime, 
-                        u8 buttonsOnTime, u8 buttonsOffTime);
+s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, 
+                        u8 uiMake, u8 uiBreak);
 
 /**
  * Emulate values for the analog pad's X- and Y-axis.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, 
  *             their settings are combined.
- * @param aX New emulated value for the X-axis. Between 0 - 255.
- * @param aY New emulate value for the Y-axis. Between 0 - 255.
- * @param bufUpdates Specifies for how many updates of the internal controller buffers the emulation 
- *                   data will be applied for.
+ * @param aX New emulated value for the X-axis. Between 0 - 0xFF.
+ * @param aY New emulate value for the Y-axis. Between 0 - 0xFF.
+ * @param uiMake Specifies the duration of the emulation. Meassured in sampling counts.
  * 
  * @return 0 on success.
  */
-s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 bufUpdates);
+s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 uiMake);
 
 /**
  * Emulate buttons for the digital pad.
@@ -647,12 +640,11 @@ s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 bufUpdates);
  * @param kernelButtons Emulated buttons of ::SceCtrlPadButtons (you can emulate both user and 
  *                      kernel buttons). The emulated buttons will only be applied for applications 
  *                      running in kernel mode.
- * @param bufUpdates Specifies for how many updates of the internal controller buffers the emulation 
- *                   data will be applied for.
+ * @param uiMake Specifies the duration of the emulation. Meassured in sampling counts.
  * 
  * @return 0 on success.
  */
-s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 bufUpdates);
+s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake);
 
 /**
  * Get the button mask settings applied to PSP buttons.
@@ -675,11 +667,11 @@ u32 sceCtrlGetButtonIntercept(u32 buttons);
  * 
  * @par Example:
  * @code
- * //Block user mode buttons for User mode applications
+ * // Block user mode buttons for User mode applications
  * sceCtrlSetButtonIntercept(0xFFFF, SCE_CTRL_MASK_IGNORE_BUTTONS);
- * //Do something
+ * // Do something
  * 
- * //Remove block from user mode buttons for User mode applications
+ * // Remove block from user mode buttons for User mode applications
  * sceCtrlSetButtonIntercept(0xFFFF, SCE_CTRL_MASK_NO_MASK);
  * @endcode
  */
