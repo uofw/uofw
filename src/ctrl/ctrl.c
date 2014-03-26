@@ -992,7 +992,7 @@ s32 sceCtrlClearRapidFire(u8 slot)
 }
 
 s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, 
-                        u8 uiMake, u8 buttonsOffTime) 
+                        u8 uiMake, u8 uiBreak) 
 {
     u32 usedButtons;
     u32 invalidButtons;
@@ -1002,7 +1002,7 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiD
     if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
 
-    if ((uiDelay | uiMake | buttonsOffTime) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
+    if ((uiDelay | uiMake | uiBreak) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
         return SCE_ERROR_INVALID_VALUE;
 
     oldK1 = pspShiftK1();
@@ -1026,7 +1026,7 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiD
     g_ctrl.rapidFire[slot].uiMask = uiMask; 
     g_ctrl.rapidFire[slot].uiTrigger = uiTrigger;
     g_ctrl.rapidFire[slot].uiTarget = uiTarget;
-    g_ctrl.rapidFire[slot].uiBreak = buttonsOffTime;
+    g_ctrl.rapidFire[slot].uiBreak = uiBreak;
     g_ctrl.rapidFire[slot].uiDelay = uiDelay;
     g_ctrl.rapidFire[slot].eventData = 0;
 
