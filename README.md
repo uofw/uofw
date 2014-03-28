@@ -11,7 +11,7 @@ For more information: https://github.com/uofw/uofw/wiki
 ## Getting started
 
 In order to contribute to uOFW, you need advanced knowledge in MIPS ASM and C. Some good MIPS ASM  
-online resources can be found [on the official MIPS page](http://www.mips.com/products/product-materials/processor/mips-architecture/).  
+online resources can be found [on the official MIPS page](http://www.imgtec.com/mips/mips32-architecture.asp).  
 MIPS ASM Instruction Set Reference: http://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf  
 
 In addition, there is a nice MIPS runtime simulator and debugger which can be found at:  
