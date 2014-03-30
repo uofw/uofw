@@ -130,7 +130,11 @@ enum SceCtrlPadButtons {
     SCE_CTRL_CROSS          = 0x4000,
     /** Square button. */
     SCE_CTRL_SQUARE         = 0x8000,
-    /** HOME button. In user mode, this bit is set if the exit dialog is visible.*/
+    /** 
+     * If this bit is set, then controller input is being intercepted by the 
+     * system software or another application.  For example, this is the case 
+     * when the PSP's HOME menu is being shown. 
+     */
     SCE_CTRL_INTERCEPTED    = 0x10000,
     /** Hold button. */
     SCE_CTRL_HOLD           = 0x20000,
