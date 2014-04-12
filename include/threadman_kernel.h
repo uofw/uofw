@@ -27,6 +27,7 @@ SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, int i
                              int stackSize, SceUInt attr, SceKernelThreadOptParam *option);
 int sceKernelDeleteThread(SceUID thid);
 int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
+int sceKernelSuspendThread(SceUID thid);
 int sceKernelExitThread(int status);
 int sceKernelTerminateDeleteThread(SceUID thid);
 int sceKernelDelayThread(SceUInt delay);
