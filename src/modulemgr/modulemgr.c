@@ -30,32 +30,271 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
 
+
+
+// TODO: Reverse function sub_00000000
+// 0x00000000
+void sub_00000000()
+{
+}
+
+// TODO: Reverse function sub_000000B0
+// 0x000000B0
+void sub_000000B0()
+{
+}
+
+// TODO: Reverse function exe_thread
 // 0x00000178
 static void exe_thread(SceSize args, void *argp)
 {
     
 }
 
-// 0x00005048
-s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused))) 
+// TODO: Reverse function ModuleMgrForKernel_2B7FC10D
+// 0x000004A8
+void ModuleMgrForKernel_2B7FC10D()
 {
-    ChunkInit();
-    
-    g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread, 
-            SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL); // 0x00005078
-	g_ModuleManager.semaId = sceKernelCreateSema("SceKernelModmgr", 0, 1, 1, NULL); // 0x0000509C
+}
 
-	g_ModuleManager.eventId = sceKernelCreateEventFlag("SceKernelModmgr", SCE_EVENT_WAITAND, 0, 0); // 0x000050B8
-    
-    g_ModuleManager.userThreadId = -1; // 0x000050DC
-    g_ModuleManager.unk16 = -1; // 0x000050D0
-    
-    g_ModuleManager.unk20 = &g_ModuleManager.unk20; // 0x000050D8
-    g_ModuleManager.unk24 = &g_ModuleManager.unk20; //0x000050F0
-    g_ModuleManager.unk32 = 0; // 0x000050E0
-    g_ModuleManager.unk36 = 0; // 0x000050D4
-    
-	return SCE_KERNEL_RESIDENT;
+// TODO: Reverse function sceKernelLoadModule
+// 0x000006B8
+void sceKernelLoadModule()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleByID
+// 0x0000088C
+void sceKernelLoadModuleByID()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleWithBlockOffset
+// 0x000009FC
+void sceKernelLoadModuleWithBlockOffset()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleByIDWithBlockOffset
+// 0x00000C34
+void sceKernelLoadModuleByIDWithBlockOffset()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleDNAS
+// 0x00000E18
+void sceKernelLoadModuleDNAS()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleNpDrm
+// 0x00001060
+void sceKernelLoadModuleNpDrm()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleMs
+// 0x0000128C
+void sceKernelLoadModuleMs()
+{
+}
+
+// TODO: Reverse function sceKernelLoadModuleBufferUsbWlan
+// 0x00001478
+void sceKernelLoadModuleBufferUsbWlan()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_CE0A74A5
+// 0x00001688
+void ModuleMgrForKernel_CE0A74A5()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_CAE8E169
+// 0x00001858
+void ModuleMgrForKernel_CAE8E169()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_2C4F270D
+// 0x00001A28
+void ModuleMgrForKernel_2C4F270D()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_853A6C16
+// 0x00001BF8
+void ModuleMgrForKernel_853A6C16()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_C2A5E6CA
+// 0x00001DD0
+void ModuleMgrForKernel_C2A5E6CA()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_FE61F16D
+// 0x00001FD8
+void ModuleMgrForKernel_FE61F16D()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_7BD53193
+// 0x000021B0
+void ModuleMgrForKernel_7BD53193()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_D60AB6CC
+// 0x00002388
+void ModuleMgrForKernel_D60AB6CC()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_76F0E956
+// 0x00002590
+void ModuleMgrForKernel_76F0E956()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_4E8A2C9D
+// 0x00002768
+void ModuleMgrForKernel_4E8A2C9D()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_E8422026
+// 0x00002978
+void ModuleMgrForKernel_E8422026()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_8DD336D4
+// 0x00002B88
+void ModuleMgrForKernel_8DD336D4()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_30727524
+// 0x00002D90
+void ModuleMgrForKernel_30727524()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_D5DDAB1F
+// 0x00002FC8
+void ModuleMgrForKernel_D5DDAB1F()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_CBA02988
+// 0x000031E4
+void ModuleMgrForKernel_CBA02988()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_939E4270
+// 0x00003394
+void ModuleMgrForKernel_939E4270()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_EEC2A745
+// 0x00003590
+void ModuleMgrForKernel_EEC2A745()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_D4EE2D26
+// 0x00003728
+void ModuleMgrForKernel_D4EE2D26()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_F7C7FEBC
+// 0x000039C0
+void ModuleMgrForKernel_F7C7FEBC()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_4493E013
+// 0x00003BAC
+void ModuleMgrForKernel_4493E013()
+{
+}
+
+// TODO: Reverse function sceKernelStartModule
+// 0x00003D98
+void sceKernelStartModule()
+{
+}
+
+// TODO: Reverse function sceKernelStopModule
+// 0x00003F28
+void sceKernelStopModule()
+{
+}
+
+// TODO: Reverse function sceKernelSelfStopUnloadModule
+// 0x00004110
+void sceKernelSelfStopUnloadModule()
+{
+}
+
+// TODO: Reverse function sceKernelGetModuleIdList
+// 0x000041E8
+void sceKernelGetModuleIdList()
+{
+}
+
+// TODO: Reverse function sceKernelQueryModuleInfo
+// 0x00004270
+void sceKernelQueryModuleInfo()
+{
+}
+
+// TODO: Reverse function sceKernelGetModuleId
+// 0x000044EC
+void sceKernelGetModuleId()
+{
+}
+
+// TODO: Reverse function sceKernelGetModuleIdByAddress
+// 0x00004598
+void sceKernelGetModuleIdByAddress()
+{
+}
+
+// TODO: Reverse function sceKernelGetModuleGPByAddress
+// 0x00004628
+void sceKernelGetModuleGPByAddress()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_CC873DFA
+// 0x000046E4
+void ModuleMgrForKernel_CC873DFA()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_9B7102E2
+// 0x000049BC
+void ModuleMgrForKernel_9B7102E2()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_5FC3B3DA
+// 0x00004B6C
+void ModuleMgrForKernel_5FC3B3DA()
+{
+}
+
+// TODO: Reverse function syslib_ADF12745
+// 0x0000501C
+void syslib_ADF12745()
+{
 }
 
 // 0x00005024
@@ -65,4 +304,278 @@ s32 _ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attrib
     
     status = sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
     return status;
+}
+
+// 0x00005048
+s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused))) 
+{
+    ChunkInit();
+    
+    g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread, 
+            SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL); // 0x00005078
+    g_ModuleManager.semaId = sceKernelCreateSema("SceKernelModmgr", 0, 1, 1, NULL); // 0x0000509C
+
+    g_ModuleManager.eventId = sceKernelCreateEventFlag("SceKernelModmgr", SCE_EVENT_WAITAND, 0, 0); // 0x000050B8
+    
+    g_ModuleManager.userThreadId = -1; // 0x000050DC
+    g_ModuleManager.unk16 = -1; // 0x000050D0
+    
+    g_ModuleManager.unk20 = &g_ModuleManager.unk20; // 0x000050D8
+    g_ModuleManager.unk24 = &g_ModuleManager.unk20; //0x000050F0
+    g_ModuleManager.unk32 = 0; // 0x000050E0
+    g_ModuleManager.unk36 = 0; // 0x000050D4
+    
+    return SCE_KERNEL_RESIDENT;
+}
+
+// TODO: Reverse function ModuleMgrForKernel_61E3EC69
+// 0x000050FC
+void ModuleMgrForKernel_61E3EC69()
+{
+}
+
+// TODO: Reverse function ModuleMgrForUser_1196472E
+// 0x000051AC
+void ModuleMgrForUser_1196472E()
+{
+}
+
+// TODO: Reverse function ModuleMgrForUser_24EC0641
+// 0x0000529C
+void ModuleMgrForUser_24EC0641()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_2F3F9B6A
+// 0x00005378
+void ModuleMgrForKernel_2F3F9B6A()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_C13E2DE5
+// 0x00005434
+void ModuleMgrForKernel_C13E2DE5()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_C6DE0B9C
+// 0x000054F0
+void ModuleMgrForKernel_C6DE0B9C()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_9236B422
+// 0x000055CC
+void ModuleMgrForKernel_9236B422()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_4E62C48A
+// 0x0000567C
+void ModuleMgrForKernel_4E62C48A()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_253AA17C
+// 0x00005744
+void ModuleMgrForKernel_253AA17C()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_4E38EA1D
+// 0x000057F4
+void ModuleMgrForKernel_4E38EA1D()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_955D6CB2
+// 0x000058A4
+void ModuleMgrForKernel_955D6CB2()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_1CF0B794
+// 0x000058B0
+void ModuleMgrForKernel_1CF0B794()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_5FC32087
+// 0x00005978
+void ModuleMgrForKernel_5FC32087()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_E8B9D19D
+// 0x00005984
+void ModuleMgrForKernel_E8B9D19D()
+{
+}
+
+// TODO: Reverse function sceKernelUnloadModule
+// 0x00005990
+void sceKernelUnloadModule()
+{
+}
+
+// TODO: Reverse function sceKernelStopUnloadSelfModuleWithStatus
+// 0x00005A14
+void sceKernelStopUnloadSelfModuleWithStatus()
+{
+}
+
+// TODO: Reverse function sceKernelStopUnloadSelfModule
+// 0x00005A4C
+void sceKernelStopUnloadSelfModule()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_D86DD11B
+// 0x00005A80
+void ModuleMgrForKernel_D86DD11B()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_12F99392
+// 0x00005AE0
+void ModuleMgrForKernel_12F99392()
+{
+}
+
+// TODO: Reverse function ModuleMgrForUser_CDE1C1FE
+// 0x00005B10
+void ModuleMgrForUser_CDE1C1FE()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_A40EC254
+// 0x00005B6C
+void ModuleMgrForKernel_A40EC254()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_C3DDABEF
+// 0x00005B7C
+void ModuleMgrForKernel_C3DDABEF()
+{
+}
+
+// TODO: Reverse function ModuleMgrForKernel_1CFFC5DE
+// 0x00005BD0
+void ModuleMgrForKernel_1CFFC5DE()
+{
+}
+
+// TODO: Reverse function sub_00005C4C
+// 0x00005C4C
+void sub_00005C4C()
+{
+}
+
+// TODO: Reverse function sub_00006800
+// 0x00006800
+void sub_00006800()
+{
+}
+
+// TODO: Reverse function sub_00006F80
+// 0x00006F80
+void sub_00006F80()
+{
+}
+
+// TODO: Reverse function sub_00006FF4
+// 0x00006FF4
+void sub_00006FF4()
+{
+}
+
+// TODO: Reverse function sub_0000713C
+// 0x0000713C
+void sub_0000713C()
+{
+}
+
+// TODO: Reverse function sub_000074E4
+// 0x000074E4
+void sub_000074E4()
+{
+}
+
+// TODO: Reverse function sub_000075B4
+// 0x000075B4
+void sub_000075B4()
+{
+}
+
+// TODO: Reverse function sub_00007620
+// 0x00007620
+void sub_00007620()
+{
+}
+
+// TODO: Reverse function sub_00007698
+// 0x00007698
+void sub_00007698()
+{
+}
+
+// TODO: Reverse function sub_000076CC
+// 0x000076CC
+void sub_000076CC()
+{
+}
+
+// TODO: Reverse function sub_000077F0
+// 0x000077F0
+void sub_000077F0()
+{
+}
+
+// TODO: Reverse function sub_00007968
+// 0x00007968
+void sub_00007968()
+{
+}
+
+// TODO: Reverse function sub_00007C34
+// 0x00007C34
+void sub_00007C34()
+{
+}
+
+// TODO: Reverse function sub_00007ED8
+// 0x00007ED8
+void sub_00007ED8()
+{
+}
+
+// TODO: Reverse function sub_00007FD0
+// 0x00007FD0
+void sub_00007FD0()
+{
+}
+
+// TODO: Reverse function sub_00008124
+// 0x00008124
+void sub_00008124()
+{
+}
+
+// TODO: Reverse function sub_0000844C
+// 0x0000844C
+void sub_0000844C()
+{
+}
+
+// TODO: Reverse function sub_00008568
+// 0x00008568
+void sub_00008568()
+{
+}
+
+// TODO: Reverse function sub_000086C0
+// 0x000086C0
+void sub_000086C0()
+{
 }
