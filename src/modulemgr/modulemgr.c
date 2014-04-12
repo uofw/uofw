@@ -26,6 +26,7 @@ SCE_MODULE_INFO("sceModuleManager", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERN
                                  18);
 SCE_MODULE_BOOTSTART("ModuleMgrInit");
 SCE_MODULE_REBOOT_BEFORE("ModuleMgrRebootBefore");
+SCE_MODULE_REBOOT_PHASE("ModuleMgrRebootPhase");
 SCE_SDK_VERSION(SDK_VERSION);
 
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
@@ -291,10 +292,10 @@ void ModuleMgrForKernel_5FC3B3DA()
 {
 }
 
-// TODO: Reverse function syslib_ADF12745
 // 0x0000501C
-void syslib_ADF12745()
+s32 ModuleMgrRebootPhase(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
+    return SCE_ERROR_OK;
 }
 
 // 0x00005024
