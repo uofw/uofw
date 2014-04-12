@@ -25,7 +25,7 @@ SCE_MODULE_INFO("sceModuleManager", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERN
                                  SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 
                                  18);
 SCE_MODULE_BOOTSTART("ModuleMgrInit");
-SCE_MODULE_REBOOT_BEFORE("_ModuleMgrRebootBefore");
+SCE_MODULE_REBOOT_BEFORE("ModuleMgrRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
@@ -298,7 +298,7 @@ void syslib_ADF12745()
 }
 
 // 0x00005024
-s32 _ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
+s32 ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
     s32 status;
     
