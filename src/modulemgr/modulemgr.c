@@ -6,6 +6,8 @@
 #include <modulemgr.h>
 #include <threadman_kernel.h>
 
+#include "modulemgr_int.h"
+
 typedef struct {
     SceUID threadId; // 0
     SceUID semaId; // 4
@@ -56,7 +58,11 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
 	return SCE_KERNEL_RESIDENT;
 }
 
+// 0x00005024
 s32 _ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
-    return 0;
+    s32 status;
+    
+    status = sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
+    return status;
 }
