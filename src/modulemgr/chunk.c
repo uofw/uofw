@@ -15,8 +15,8 @@
 /* The group of chunks to be used by the system. */
 s32 chunks[INIT_NUM_CHUNKS]; //0x00009A48
 
-//sub_000086C0
-static void ChunkInit(void)
+// sub_000086C0
+void ChunkInit(void)
 {
     u32 i;
     for (i = 0; i < INIT_NUM_CHUNKS; i++)

@@ -23,6 +23,7 @@ SCE_MODULE_INFO("sceModuleManager", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERN
                                  SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 
                                  18);
 SCE_MODULE_BOOTSTART("ModuleMgrInit");
+SCE_MODULE_REBOOT_BEFORE("_ModuleMgrRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
@@ -36,6 +37,8 @@ static void exe_thread(SceSize args, void *argp)
 // 0x00005048
 s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
+    ChunkInit();
+    
     g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread, 
             SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL); // 0x00005078
 	g_ModuleManager.semaId = sceKernelCreateSema("SceKernelModmgr", 0, 1, 1, NULL); // 0x0000509C
@@ -51,4 +54,9 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
     g_ModuleManager.unk36 = 0; // 0x000050D4
     
 	return SCE_KERNEL_RESIDENT;
+}
+
+s32 _ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
+{
+    return 0;
 }
