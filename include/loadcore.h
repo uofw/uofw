@@ -692,7 +692,7 @@ typedef struct SceModule {
     /** The module's UID. */
 	SceUID modId; //44
     /** The thread ID of a user module. */
-	SceUID userModThid; //480
+	SceUID userModThid; //48
     /** The ID of the memory block belonging to the module. */
 	SceUID memId; //52
     /** The ID of the TEXT segment's memory partition. */
