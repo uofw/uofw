@@ -4,6 +4,7 @@
 
 #include <common_imp.h>
 #include <interruptman.h>
+#include <iofilemgr_kernel.h>
 #include <loadcore.h>
 #include <modulemgr.h>
 #include <threadman_kernel.h>
@@ -46,16 +47,21 @@ typedef struct
 	SceUID fd; //48
      */
 	SceLoadCoreExecFileInfo *execInfo; //16
+    u32 apiType; //20
+    SceUID fd; // 24
     SceUID modId; //52
     SceUID callerModId; //56
 	void *file_buffer; //60
+    u32 unk64;
 	SceSize argSize; //68
 	void *argp; //72
 	u32 unk_76;
 	u32 unk_80;
 	int *status; //84
 	u32 eventId; //88
-} SceModuleMgrParam;
+    u32 unk100;
+    u32 unk124;
+} SceModuleMgrParam; //size = 160
 
 enum ModuleMgrExecModes
 {
@@ -244,14 +250,95 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
 }
 
 // Subroutine ModuleMgrForKernel_2B7FC10D - Address 0x000004A8
-// 0x000004A8
-s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags, SceKernelLMOption *option)
+// 0x000004A8             
+s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags __attribute__((unused)), 
+        SceKernelLMOption *option)
 {
     s32 oldK1;
+    s32 sdkVersion;
+    SceUID fd;
+    s32 status;
+    s32 ioctlCmd;
+    char *c;
+    SceModuleMgrParam modParams;
     
-    oldK1 = pspShiftK1();
+    oldK1 = pspShiftK1(); //0x000004B4
     
-    return 0; // dummy
+    if (sceKernelIsIntrContext()) { //0x000004E0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    if (pspK1IsUserMode()) { //0x000004EC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    if (file == NULL || !pspK1PtrOk(file)) { //0x000004F8 & 0x00000508
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    c = strchr(file, '%'); //0x00000640
+    if (c != NULL) { //0x00000648
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE;
+    }
+    
+    if (option != NULL) { // 0x00000658
+        if (!pspK1StaBufOk(option, sizeof(*option))) { //0x0000066C
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion(); //0x0000067C
+        if (sdkVersion >= 0x2080000 && option->size != sizeof(SceKernelLMOption)) { // 0x00000694 & 0x000006A8
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+    }
+    
+    fd = sceIoOpen(file, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); //0x00000528
+    if (fd < 0) { //0x00000534
+        pspSetK1(oldK1);
+        return fd;
+    }
+    
+    switch (apiType) { //0x00000568
+    case SCE_INIT_APITYPE_GAME_EBOOT:
+    case SCE_INIT_APITYPE_EMU_EBOOT_MS:
+    case SCE_INIT_APITYPE_EMU_EBOOT_EF:
+        ioctlCmd = 0x208010; // 0x00000568 & 0x0000056C
+        break;
+    case SCE_INIT_APITYPE_GAME_BOOT:
+    case SCE_INIT_APITYPE_EMU_BOOT_MS:
+    case SCE_INIT_APITYPE_EMU_BOOT_EF:
+        ioctlCmd = 0x208011; //0x00000630 & 0x00000638
+        break;
+    }
+    status = sceIoIoctl(fd, ioctlCmd, NULL, 0, NULL, 0); //0x00000580
+    if (status < 0) { //0x0000058C
+        sceIoClose(fd); //0x00000600
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x000005A0
+         ((u32 *)modParams)[i] = 0;
+        
+    modParams->apiType = apiType; //0x000005A8
+    modParams->modeFinish = CMD_RELOCATE_MODULE; //0x000005B4
+    modParams->modeStart = CMD_LOAD_MODULE; //0x000005C0
+    modParams->unk64 = 0;
+    modParams->fd = fd; //0x000005D8
+    modParams->unk124 = 0;
+        
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000005DC
+    if (status < 0) //0x000005E4
+        modParams->unk100 = 16;
+        
+    status = _LoadModuleByBufferID(&modParams, option); //0x000005F4
+        
+    sceIoClose(fd); //0x00000600
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModule
@@ -734,7 +821,7 @@ void sub_000074E4()
 
 // TODO: Reverse function sub_000075B4
 // 0x000075B4
-void sub_000075B4()
+void _LoadModuleByBufferID()
 {
 }
 
