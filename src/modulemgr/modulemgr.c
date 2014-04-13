@@ -452,6 +452,14 @@ void sceKernelQueryModuleInfo()
 {
 }
 
+/**
+ * Find the id of the module from which this function is called
+ * 
+ * @return The module id on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ERROR if module couldn't be found.
+ */
 // Subroutine ModuleMgrForUser_F0A26395 - Address 0x000058F8 - Aliases: ModuleMgrForKernel_CECA0FFC
 s32 sceKernelGetModuleId(void)
 {
