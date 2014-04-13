@@ -524,7 +524,7 @@ s32 sceKernelGetModuleIdByAddress(void *codeAddr)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    if (!pspK1PtrOk()) { // 0x000045D0
+    if (!pspK1PtrOk(codeAddr)) { // 0x000045D0
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
