@@ -449,7 +449,7 @@ void sceKernelQueryModuleInfo()
 }
 
 // Subroutine ModuleMgrForUser_F0A26395 - Address 0x000058F8 - Aliases: ModuleMgrForKernel_CECA0FFC
-SceUID sceKernelGetModuleId(void)
+s32 sceKernelGetModuleId(void)
 {
     s32 oldK1;
     s32 retAddr;
