@@ -85,8 +85,27 @@ void sub_00000000()
 
 // TODO: Reverse function sub_000000B0
 // 0x000000B0
-void _UnloadModule(SceModule *pMod)
+s32 _UnloadModule(SceModule *pMod)
 {
+    u32 modStat;
+    
+    modStat = (pMod->status & 0xF);
+	if (modStat < MCB_STATUS_LOADED || (modStat >= MCB_STATUS_STARTING && modStat != MCB_STATUS_STOPPED))
+		return SCE_ERROR_KERNEL_MODULE_CANNOT_REMOVE;
+
+	sceKernelMemset32((void *)pMod->textAddr, 0x4D, UPALIGN4(pMod->textSize)); // 0x00000110
+	sceKernelMemset((void *)(pMod->textAddr + pMod->textSize), -1, pMod->dataSize + pMod->bssSize); //0x00000130
+    
+    sceKernelIcacheInvalidateAll(); //0x00000138
+
+	sceKernelReleaseModule(pMod); //0x00000140
+    
+    if (pMod->status & 0x1000) //0x00000150
+        sceKernelFreePartitionMemory(pMod->memId); //0x00000168
+    
+	sceKernelDeleteModule(pMod); //0x00000158
+
+	return SCE_ERROR_OK;
 }
 
 // 0x00000178
