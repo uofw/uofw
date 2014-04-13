@@ -527,10 +527,33 @@ void sceKernelSelfStopUnloadModule()
 {
 }
 
-// TODO: Reverse function sceKernelGetModuleIdList
-// 0x000041E8
-void sceKernelGetModuleIdList()
+/**
+ * Find the id of the module from which this function is called
+ * 
+ * @param modIdList A pointer which will hold the module id list
+ * @param size Maximum size of the returned buffer
+ * @param idCount The number of module ids in the list (can be greater than the number of returned ids)
+ *
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers can't be accessed with the current rights or are NULL.
+ */
+// Subroutine sceKernelGetModuleIdList - Address 0x000041E8 - Aliases: ModuleMgrForKernel_303FAB7F
+s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
 {
+    s32 oldK1;
+    s32 retVal;
+
+    oldK1 = pspShiftK1();
+
+    if (modIdList == NULL || idCount == NULL || !pspK1DynBufOk(modIdList, size) || !pspK1StaBufOk(idCount, 4)) { // 0x00004200, 0x00004220, 0x00004238, 0x00004244 
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    retVal = sceKernelGetModuleIdListForKernel(modIdList, size, idCount, pspK1IsUserMode());
+    
+    pspSetK1(oldK1);
+    return retVal;
 }
 
 // TODO: Reverse function sceKernelQueryModuleInfo
