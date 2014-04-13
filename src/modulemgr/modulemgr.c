@@ -3,10 +3,13 @@
 */
 
 #include <common_imp.h>
+#include <loadcore.h>
 #include <modulemgr.h>
 #include <threadman_kernel.h>
 
 #include "modulemgr_int.h"
+
+#define SET_MCB_STATUS(v, m) (v = (v & 0xFFF0) | m)
 
 typedef struct {
     SceUID threadId; // 0
@@ -20,6 +23,47 @@ typedef struct {
     u32 unk32;
     u32 unk36;
 } SceModuleManagerCB;
+
+typedef struct
+{
+	u8 modeStart; //0 The Operation to start on, Use one of the ModuleMgrExeModes modes
+	u8 modeFinish; //1 The Operation to finish on, Use one of the ModuleMgrExeModes modes
+	u8 position; //2
+	u8 access; //3
+	//u32 apitype; //4
+	SceUID *returnId; //4
+	SceModule *mod; //12
+    /*
+	SceUID mpidText; //16
+	SceUID mpidData; //20
+	SceUID mpidStack; //24
+	SceSize stackSize; //28
+	int priority; //32
+	u32 attribute; //36
+	SceUID modid; //40
+	SceUID callerModid; //44
+	SceUID fd; //48
+     */
+	SceLoadCoreExecFileInfo *execInfo; //16
+    SceUID modId; //52
+    SceUID callerModId; //56
+	void *file_buffer; //60
+	SceSize argSize; //68
+	void *argp; //72
+	u32 unk_76;
+	u32 unk_80;
+	int *status; //84
+	u32 eventId; //88
+} SceModuleMgrParam;
+
+enum ModuleMgrExecModes
+{
+	CMD_LOAD_MODULE, //0
+	CMD_RELOCATE_MODULE, //1
+	CMD_START_MODULE, //2
+	CMD_STOP_MODULE, //3
+	CMD_UNLOAD_MODULE, //4
+};
 
 SCE_MODULE_INFO("sceModuleManager", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | 
                                  SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 
@@ -41,15 +85,144 @@ void sub_00000000()
 
 // TODO: Reverse function sub_000000B0
 // 0x000000B0
-void sub_000000B0()
+void _UnloadModule(SceModule *pMod)
 {
 }
 
-// TODO: Reverse function exe_thread
 // 0x00000178
-static void exe_thread(SceSize args, void *argp)
+static s32 exe_thread(SceSize args, void *argp)
 {
+    SceModuleMgrParam *modParams;
+    SceLoadCoreExecFileInfo execInfo;
+    s32 status;
     
+    status = SCE_ERROR_OK;
+    modParams = (SceModuleMgrParam *)argp;
+    
+    for (int i = 0; i < sizeof(SceLoadCoreExecFileInfo) / sizeof(u32); i++)
+        ((u32 *)execInfo)[i] = 0; // 0x000001A8
+    
+    SceModule *mod = modParams->mod;
+    
+    switch (modParams->modeStart) { // 0x000001D0
+    case CMD_LOAD_MODULE:
+        if (!mod) {
+            mod = sceKernelCreateModule(); //0x0000048C
+            modParams->mod = mod;
+
+			if (!mod)
+                break; // 0x000004A0
+        }
+        //0x000001E0
+        modParams->execInfo = &execInfo;
+        status = _LoadModule(modParams); //0x000001E4
+            
+        sceKernelChangeThreadPriority(0, SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000001F4
+            
+        if (status < SCE_ERROR_OK) { //0x000001FC
+            modParams->returnId[0] = status; //0x00000480
+            if (modParams->mod != NULL) //0x47C
+                sceKernelDeleteModule(modParams->mod);
+            break;
+        }
+
+        modParams->returnId[0] = modParams->mod->modId; //0x0000020C
+        if (modParams->modeFinish == CMD_LOAD_MODULE) //0x00000214
+            break;
+    // 0x0000021C
+    case CMD_RELOCATE_MODULE:
+        if (mod == NULL) {
+			mod = sceKernelCreateModule(); //0x00000448
+			modParams->mod = mod;
+                
+            // 0x00000454
+            if (mod == NULL)
+                break;
+
+            SET_MCB_STATUS(mod->status, MCB_STATUS_LOADED);
+			sceKernelRegisterModule(mod); //0x0000046C
+        }
+        if (modParams->execInfo == NULL) {
+            for (int i = 0; i < sizeof(SceLoadCoreExecFileInfo) / sizeof(u32); i++) //0x00000238
+                 ((u32 *)execInfo)[i] = 0; // 0x000001A8
+        }
+                 
+		modParams->execInfo = &execInfo;
+            
+        status = _RelocateModule(modParams); //0x00000244
+        if (status < SCE_ERROR_OK) {
+            modParams->returnId[0] = status; //0x0000042C
+                
+            if (mod == NULL) //0x00000428
+               break;
+                
+            //0x00000430
+            sceKernelReleaseModule(mod);
+            sceKernelDeleteModule(mod);
+            break;
+		}
+        modParams->returnId[0] = modParams->mod->modId; //0x00000260        
+        if (modParams->modeFinish == CMD_RELOCATE_MODULE) //0x00000268
+            break;
+    //0x00000270
+    case CMD_START_MODULE:
+        mod = sceKernelGetModuleFromUID(modParams->modId); //0x00000270
+        if (mod == NULL && (mod = sceKernelFindModuleByUID(modParams->modId)) == NULL) //0x00000400
+            modParams->returnId[0] = SCE_ERROR_KERNEL_UNKNOWN_MODULE; //0x00000420
+        else {
+            status = _StartModule(modParams, mod, modParams->argSize, modParams->argp, modParams->status); //0x00000290
+            if (status == SCE_ERROR_OK)
+                modParams->returnId[0] = modParams->mod->modId; //0x000003FC
+            else if (status == 1)
+                modParams->returnId[0] = 0; //0x000002A4
+            else
+                modParams->returnId[0] = status; //0x000002B0   
+        }
+        if (status < SCE_ERROR_OK || modParams->modeFinish == CMD_START_MODULE) //0x000002B4 & 0x000002C0
+			break;
+    //0x000002C8
+    case CMD_STOP_MODULE:
+        if (mod == NULL) { //0x000002C8
+            mod = sceKernelGetModuleFromUID(modParams->modId);
+            if (mod == NULL) { //0x000003D0
+                modParams->returnId[0] = SCE_ERROR_KERNEL_UNKNOWN_MODULE; //0x000003AC
+                break;
+            }
+        }
+        status = _StopModule(modParams, mod, modParams->modeStart, modParams->callerModId, modParams->argSize, 
+                modParams->argp, modParams->status); //0x000002E8
+            
+        if (status == SCE_ERROR_OK) //0x000002F0
+            modParams->returnId[0] = 0;
+        else if (status == 1)
+            modParams->returnId[0] = modParams->mod->modId; //0x000002FC
+        else
+            modParams->returnId[0] = status; //0x00000308
+        
+        if (status < SCE_ERROR_OK || modParams->modeFinish == CMD_STOP_MODULE) //0x0000030C & 0x00000318
+			break;
+    
+    //0x00000320
+    case CMD_UNLOAD_MODULE:
+        mod = sceKernelGetModuleFromUID(modParams->modId); //0x00000320
+        if (mod == NULL) { // 0x00000328
+            modParams->returnId[0] = SCE_ERROR_KERNEL_UNKNOWN_MODULE; //0x000003AC
+            break;
+        }
+        status = _UnloadModule(mod); //0x00000330
+        if (status < SCE_ERROR_OK) //0x00000338
+            modParams->returnId[0] = status;
+        else
+            modParams->returnId[0] = modParams->mod->modId; //0x00000348
+
+        break;       
+    }
+    // 00000350
+    if (modParams->eventId != 0) {
+		sceKernelChangeThreadPriority(0, 1); //0x00000374
+		sceKernelSetEventFlag(modParams->eventId, 1); //0x00000380
+	}
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_2B7FC10D
@@ -469,13 +642,13 @@ void ModuleMgrForKernel_1CFFC5DE()
 
 // TODO: Reverse function sub_00005C4C
 // 0x00005C4C
-void sub_00005C4C()
+void _LoadModule()
 {
 }
 
 // TODO: Reverse function sub_00006800
 // 0x00006800
-void sub_00006800()
+void _RelocateModule()
 {
 }
 
@@ -487,13 +660,13 @@ void sub_00006F80()
 
 // TODO: Reverse function sub_00006FF4
 // 0x00006FF4
-void sub_00006FF4()
+void _StartModule()
 {
 }
 
 // TODO: Reverse function sub_0000713C
 // 0x0000713C
-void sub_0000713C()
+void _StopModule()
 {
 }
 
