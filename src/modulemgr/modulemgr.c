@@ -510,7 +510,7 @@ s32 sceKernelGetModuleId(void)
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
  */
  // Subroutine sceKernelGetModuleIdByAddress - Address 0x00004598 - Aliases: ModuleMgrForKernel_433D5287
-s32 sceKernelGetModuleIdByAddress(void *codeAddr)
+s32 sceKernelGetModuleIdByAddress(const void *codeAddr)
 {
     s32 oldK1;
     s32 intrState;
@@ -554,7 +554,7 @@ s32 sceKernelGetModuleIdByAddress(void *codeAddr)
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
  */
 // Subroutine sceKernelGetModuleGPByAddress - Address 0x00004628 
-s32 sceKernelGetModuleGPByAddress(void *codeAddr, u32 *pGP)
+s32 sceKernelGetModuleGPByAddress(const void *codeAddr, u32 *pGP)
 {
     s32 oldK1;
     s32 intrState;
