@@ -543,10 +543,44 @@ s32 sceKernelGetModuleIdByAddress(void *codeAddr)
     return retVal;
 }
 
-// TODO: Reverse function sceKernelGetModuleGPByAddress
-// 0x00004628
-void sceKernelGetModuleGPByAddress()
+/**
+ * Find the offset from the start of the TEXT segment of the module whose codeAddr belongs to
+ * 
+ * @param codeAddr An address inside the module
+ * @param pGP A pointer to a location where the GP offset will be stored
+ * 
+ * @return SCE_ERROR_OK and sets pGP on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
+ */
+// Subroutine sceKernelGetModuleGPByAddress - Address 0x00004628 
+s32 sceKernelGetModuleGPByAddress(void *codeAddr, u32 *pGP)
 {
+    s32 oldK1;
+    s32 intrState;
+    SceModule *pMod;
+
+    oldK1 = pspShiftK1(); // 0x0000463C
+
+    if (!pspK1PtrOk(codeAddr) || pGP == NULL || !pspK1PtrOk(pGP)) { // 0x00004660, 0x00004670, 0x0000467C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    intrState = sceKernelLoadCoreLock(); // 0x00004684
+
+    pMod = sceKernelFindModuleByAddress(codeAddr); // 0x00004698
+    if (pMod == NULL) { // 0x000046A0
+        retVal = SCE_ERROR_KERNEL_UNKNOWN_MODULE; // 0x0000469C
+    } else {
+        retVal = SCE_ERROR_OK; // 0x000046AC
+        *pGP = pMod->gpValue; // 0x000046B0
+    }
+
+    sceKernelLoadCoreUnlock(intrState); // 0x000046B4
+
+    pspSetK1(oldK1);
+    return retVal;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_CC873DFA
