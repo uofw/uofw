@@ -4,17 +4,39 @@
 
 #include "common_header.h"
 
-#define SCE_O_RDONLY    0x0001
-#define SCE_O_WRONLY    0x0002
-#define SCE_O_RDWR      (SCE_O_RDONLY | SCE_O_WRONLY)
-#define SCE_O_NBLOCK    0x0004
-#define SCE_O_DIROPEN   0x0008  // Internal use for dopen
-#define SCE_O_APPEND    0x0100
-#define SCE_O_CREAT     0x0200
-#define SCE_O_TRUNC     0x0400
-#define SCE_O_EXCL      0x0800
-#define SCE_O_NOWAIT    0x8000
-#define SCE_O_UNKNOWN0  0x04000000
+/* flags */
+#define	SCE_FREAD       (0x0001)  /* readable */
+#define	SCE_FWRITE      (0x0002)  /* writable */
+#define	SCE_FNBLOCK     (0x0004)  /*   Reserved: non-blocking reads */
+#define	SCE_FDIRO       (0x0008)  /* internal use for dopen */
+#define	SCE_FRLOCK      (0x0010)  /*   Reserved: read locked (non-shared) */
+#define	SCE_FWLOCK      (0x0020)  /*   Reserved: write locked (non-shared) */
+#define	SCE_FAPPEND     (0x0100)  /* append on each write */
+#define	SCE_FCREAT      (0x0200)  /* create if nonexistant */
+#define	SCE_FTRUNC      (0x0400)  /* truncate to zero length */
+#define SCE_EXCL        (0x0800)  /* exclusive create */
+#define	SCE_FSCAN       (0x1000)  /*   Reserved: scan type */
+#define	SCE_FRCOM       (0x2000)  /*   Reserved: remote command entry */
+#define	SCE_FNBUF       (0x4000)  /*   Reserved: no ring buf. and console interrupt */
+#define	SCE_FASYNC      (0x8000)  /*   Reserved: asyncronous i/o */
+#define SCE_FFDEXCL     (0x01000000)        /* exclusive access */
+#define SCE_FPWLOCK     (0x02000000)        /* power control lock */
+#define SCE_FGAMEDATA   (0x40000000)
+
+/* Flags for sceIoOpen() */
+#define SCE_O_RDONLY    (SCE_FREAD)
+#define SCE_O_WRONLY    (SCE_FWRITE)
+#define SCE_O_RDWR      (SCE_FREAD|SCE_FWRITE)
+#define SCE_O_NBLOCK    (SCE_FNBLOCK) /*   Reserved: Non-Blocking I/O */
+#define SCE_O_APPEND    (SCE_FAPPEND) /* append (writes guaranteed at the end) */
+#define SCE_O_CREAT     (SCE_FCREAT)  /* open with file create */
+#define SCE_O_TRUNC     (SCE_FTRUNC)  /* open with truncation */
+#define SCE_O_EXCL	    (SCE_EXCL)	  /* exclusive create */
+#define SCE_O_NOBUF     (SCE_FNBUF)	  /*   Reserved: no device buffer and console interrupt */
+#define SCE_O_NOWAIT    (SCE_FASYNC)  /*   Reserved: asyncronous i/o */
+#define SCE_O_FDEXCL    (SCE_FFDEXCL) /* exclusive access */
+#define SCE_O_PWLOCK    (SCE_FPWLOCK) /* power control lock */
+#define SCE_O_FGAMEDATA (SCE_FGAMEDATA)
 
 /** user read/write/execute permission. */
 #define SCE_STM_RWXU		00700
