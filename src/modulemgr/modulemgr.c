@@ -256,7 +256,6 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
 {
     s32 oldK1;
     s32 sdkVersion;
-    SceUID fd;
     s32 status;
     s32 ioctlCmd;
     char *c;
@@ -645,6 +644,7 @@ s32 sceKernelGetModuleGPByAddress(const void *codeAddr, u32 *pGP)
 {
     s32 oldK1;
     s32 intrState;
+    s32 retVal;
     SceModule *pMod;
 
     oldK1 = pspShiftK1(); // 0x0000463C
