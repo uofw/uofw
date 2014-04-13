@@ -77,7 +77,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
 
 
-
 // TODO: Reverse function sub_00000000
 // 0x00000000
 void sub_00000000()
@@ -244,10 +243,15 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_2B7FC10D
+// Subroutine ModuleMgrForKernel_2B7FC10D - Address 0x000004A8
 // 0x000004A8
-void ModuleMgrForKernel_2B7FC10D()
+s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags, SceKernelLMOption *option)
 {
+    s32 oldK1;
+    
+    oldK1 = pspShiftK1();
+    
+    return 0; // dummy
 }
 
 // TODO: Reverse function sceKernelLoadModule
@@ -457,7 +461,7 @@ s32 sceKernelGetModuleId(void)
     s32 retVal;
     SceModule *pMod;
     
-    oldK1 = pspSetK1();
+    oldK1 = pspShiftK1();
     retAddr = pspGetRa();
     
     if (sceKernelIsIntrContext()) { //0x0000450C
