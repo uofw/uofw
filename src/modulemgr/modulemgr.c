@@ -258,6 +258,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     s32 sdkVersion;
     s32 status;
     s32 ioctlCmd;
+    SceUID fd;
     char *c;
     SceModuleMgrParam modParams;
     
