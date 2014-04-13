@@ -3,6 +3,7 @@
 */
 
 #include <common_imp.h>
+#include <interruptman.h>
 #include <loadcore.h>
 #include <modulemgr.h>
 #include <threadman_kernel.h>
@@ -108,7 +109,7 @@ s32 _UnloadModule(SceModule *pMod)
 }
 
 // 0x00000178
-static s32 exe_thread(SceSize args, void *argp)
+static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
 {
     SceModuleMgrParam *modParams;
     SceLoadCoreExecFileInfo execInfo;
@@ -447,10 +448,43 @@ void sceKernelQueryModuleInfo()
 {
 }
 
-// TODO: Reverse function sceKernelGetModuleId
-// 0x000044EC
-void sceKernelGetModuleId()
+// Subroutine ModuleMgrForUser_F0A26395 - Address 0x000058F8 - Aliases: ModuleMgrForKernel_CECA0FFC
+SceUID sceKernelGetModuleId(void)
 {
+    s32 oldK1;
+    s32 retAddr;
+    s32 intrState;
+    SceUID modId;
+    SceModule *pMod;
+    
+    oldK1 = pspSetK1();
+    retAddr = pspGetRa();
+    
+    if (sceKernelIsIntrContext()) { //0x0000450C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if (pspK1IsUserMode()) //0x00004520
+        retAddr = sceKernelGetSyscallRA();
+    
+    if (!pspK1PtrOk(retAddr)) { //0x0000452C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    intrState = sceKernelLoadCoreLock();
+    
+    pMod = sceKernelFindModuleByAddress(retAddr); //0x00004544
+    if (pMod == NULL)
+        modId = SCE_ERROR_KERNEL_ERROR;
+    else
+        modId = pMod->modId;
+    
+    sceKernelLoadCoreUnlock(intrState); //0x0000455C
+    
+    pspSetK1(oldK1);
+    return modId;
 }
 
 // TODO: Reverse function sceKernelGetModuleIdByAddress
