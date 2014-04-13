@@ -454,7 +454,7 @@ SceUID sceKernelGetModuleId(void)
     s32 oldK1;
     s32 retAddr;
     s32 intrState;
-    SceUID modId;
+    s32 retVal;
     SceModule *pMod;
     
     oldK1 = pspSetK1();
@@ -477,14 +477,14 @@ SceUID sceKernelGetModuleId(void)
     
     pMod = sceKernelFindModuleByAddress(retAddr); //0x00004544
     if (pMod == NULL)
-        modId = SCE_ERROR_KERNEL_ERROR;
+        retVal = SCE_ERROR_KERNEL_ERROR;
     else
-        modId = pMod->modId;
+        retVal = pMod->modId;
     
     sceKernelLoadCoreUnlock(intrState); //0x0000455C
     
     pspSetK1(oldK1);
-    return modId;
+    return retVal;
 }
 
 // TODO: Reverse function sceKernelGetModuleIdByAddress
