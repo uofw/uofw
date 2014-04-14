@@ -26,6 +26,18 @@ typedef struct {
     u32 unk36;
 } SceModuleManagerCB;
 
+// Extracted from community PSPSDK, seems up-to-date because size is the same (20)
+typedef struct {
+    /** The size of this structure */
+    SceSize size; // sizeof(SceKernelLMOption)
+    SceUID mpidtext;
+    SceUID mpiddata;
+    u32 flags;
+    u8 position;
+    u8 access;
+    u8 creserved[2];
+} SceKernelLMOption; // size = 20
+
 typedef struct
 {
 	u8 modeStart; //0 The Operation to start on, Use one of the ModuleMgrExeModes modes
@@ -341,10 +353,90 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     return status;
 }
 
-// TODO: Reverse function sceKernelLoadModule
+// Subroutine sceKernelLoadModule - Address 0x000006B8 
 // 0x000006B8
-void sceKernelLoadModule()
+void sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
+    const SceKernelLMOption *opt)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    u32 SDKVersion;
+    SceModuleMgrParam modParams;
+
+    
+    oldK1 = pspShiftK1(); // 0x000006C4
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000006E0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    // Only exported in user space
+    if (!pspK1IsUserMode()) { // 0x000006F8
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+
+    if (path == NULL || !pspK1PtrOk(path)) { // 0x00000704, 0x00000714
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR; 
+    }
+
+    // Protection against formatted string attacks, path cannot contain a '%'
+    if (strchr(path, '%')) { // 0x0000081C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE; 
+    }
+
+    if (opt == NULL || !pspK1StaBufOk(opt, sizeof(SceKernelLMOption))) { // 0x0000082C, 0x00000840
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x00000850
+    SDKVersion &= 0xFFFF0000; // 0x0000085C
+
+    // Firmware > 5.19, updated size field
+    if (SDKVersion > 0x2070FFFF && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+    }
+
+
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00000734
+    if (fd < 0) { // 0x00000740
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x20008001, NULL, 0, NULL, 0); // 0x00000760
+    if (status < 0) { // 0x0000076C
+        sceIoClose(fd); // 0x000007E0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x00000784
+         ((u32 *)modParams)[i] = 0;
+
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000790
+    modParams.apiType = 0x10; // 0x0000079C
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000007A8
+    modParams.unk64 = 0; // 0x000007B4
+    modParams.unk124 = 0; // 0x000007C4
+
+    status = sceIoIoctl(fd, 0x20008081, NULL, 0, NULL, 0); // 0x000007C0
+
+    if (status < 0) // 0x000007C8
+        modParams.unk100 = 0x10; // 0x000007CC
+    
+    status = _LoadModuleByBufferID(&modParams, opt); // 0x000007D4
+    
+    sceIoClose(fd); // 0x000007E0
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModuleByID
