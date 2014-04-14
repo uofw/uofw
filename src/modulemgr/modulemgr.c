@@ -425,6 +425,7 @@ void sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
     modParams.apiType = 0x10; // 0x0000079C
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000007A8
     modParams.unk64 = 0; // 0x000007B4
+    modParams.fd = fd; // 0x000007BC
     modParams.unk124 = 0; // 0x000007C4
 
     status = sceIoIoctl(fd, 0x20008081, NULL, 0, NULL, 0); // 0x000007C0
