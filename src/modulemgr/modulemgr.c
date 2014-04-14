@@ -27,14 +27,21 @@ typedef struct {
 } SceModuleManagerCB;
 
 // Extracted from community PSPSDK, seems up-to-date because size is the same (20)
+/** Specifies options for loading a module (LM=Load Module) */
 typedef struct {
     /** The size of this structure */
     SceSize size; // sizeof(SceKernelLMOption)
+    /** Memory partition where the program of the module will be stored */
     SceUID mpidtext;
+    /** Memory partition where the data of the module will be stored */
     SceUID mpiddata;
+    /** Unused, pass 0 */
     u32 flags;
+    /** Position of the module in memory (default: 0 for low memory address, 1 for high memory address) */
     u8 position;
+    /** Unused, pass 0 */
     u8 access;
+    /** Reserved field, unused */
     u8 creserved[2];
 } SceKernelLMOption; // size = 20
 
