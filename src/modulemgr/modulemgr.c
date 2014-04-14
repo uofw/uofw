@@ -261,8 +261,24 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     return SCE_ERROR_OK;
 }
 
-// Subroutine ModuleMgrForKernel_2B7FC10D - Address 0x000004A8
-// 0x000004A8             
+/**
+ * Load a module specifying the api type
+ * 
+ * @param apiType The api type of the module
+ * @param path A pointer to a '\0' terminated string containing the path to the module
+ * @param flags Unused, pass 0
+ * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module
+ *
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was called in a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 5.20 and opt->size != sizeof(SceKernelLMOption)
+ * @return One of the errors of sceIoOpen() if failed
+ * @return One of the errors of sceIoIoctl() if failed
+ */
+// Subroutine ModuleMgrForKernel_2B7FC10D - Address 0x000004A8            
 s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags __attribute__((unused)), 
         const SceKernelLMOption *option)
 {
@@ -353,8 +369,23 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     return status;
 }
 
+/**
+ * Load a module
+ * 
+ * @param path A pointer to a '\0' terminated string containing the path to the module
+ * @param flags Unused, pass 0
+ * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module
+ *
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called in a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion > 5.19 and opt->size != sizeof(SceKernelLMOption)
+ * @return One of the errors of sceIoOpen() if failed
+ * @return One of the errors of sceIoIoctl() if failed
+ */
 // Subroutine sceKernelLoadModule - Address 0x000006B8 
-// 0x000006B8
 void sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
     const SceKernelLMOption *opt)
 {
