@@ -264,14 +264,13 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
 // Subroutine ModuleMgrForKernel_2B7FC10D - Address 0x000004A8
 // 0x000004A8             
 s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags __attribute__((unused)), 
-        SceKernelLMOption *option)
+        const SceKernelLMOption *option)
 {
     s32 oldK1;
     s32 sdkVersion;
     s32 status;
     s32 ioctlCmd;
     SceUID fd;
-    char *c;
     SceModuleMgrParam modParams;
     
     oldK1 = pspShiftK1(); //0x000004B4
@@ -290,8 +289,8 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     
-    c = strchr(file, '%'); //0x00000640
-    if (c != NULL) { //0x00000648
+    // Protection against formatted string attacks, path cannot contain a '%'
+    if (strchr(file, '%')) { //0x00000648
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE;
     }
@@ -302,6 +301,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
         sdkVersion = sceKernelGetCompiledSdkVersion(); //0x0000067C
+        // Firmware >= 5.20, updated size field
         if (sdkVersion >= 0x2080000 && option->size != sizeof(SceKernelLMOption)) { // 0x00000694 & 0x000006A8
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
@@ -335,16 +335,16 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x000005A0
          ((u32 *)modParams)[i] = 0;
         
-    modParams->apiType = apiType; //0x000005A8
-    modParams->modeFinish = CMD_RELOCATE_MODULE; //0x000005B4
-    modParams->modeStart = CMD_LOAD_MODULE; //0x000005C0
-    modParams->unk64 = 0;
-    modParams->fd = fd; //0x000005D8
-    modParams->unk124 = 0;
+    modParams.apiType = apiType; // 0x000005A8
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000005B4
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000005C0
+    modParams.unk64 = 0; // 0x000005CC
+    modParams.fd = fd; // 0x000005D8
+    modParams.unk124 = 0; // 0x000005E0
         
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000005DC
     if (status < 0) //0x000005E4
-        modParams->unk100 = 16;
+        modParams.unk100 = 0x10; // 0x000005EC
         
     status = _LoadModuleByBufferID(&modParams, option); //0x000005F4
         
