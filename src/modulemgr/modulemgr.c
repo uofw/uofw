@@ -7,6 +7,7 @@
 #include <iofilemgr_kernel.h>
 #include <loadcore.h>
 #include <modulemgr.h>
+#include <modulemgr_options.h>
 #include <threadman_kernel.h>
 
 #include "modulemgr_int.h"
@@ -25,25 +26,6 @@ typedef struct {
     u32 unk32;
     u32 unk36;
 } SceModuleManagerCB;
-
-// Extracted from community PSPSDK, seems up-to-date because size is the same (20)
-/** Specifies options for loading a module (LM=Load Module) */
-typedef struct {
-    /** The size of this structure */
-    SceSize size; // sizeof(SceKernelLMOption)
-    /** Memory partition where the program of the module will be stored */
-    SceUID mpidtext;
-    /** Memory partition where the data of the module will be stored */
-    SceUID mpiddata;
-    /** Unused, pass 0 */
-    u32 flags;
-    /** Position of the module in memory (default: 0 for low memory address, 1 for high memory address) */
-    u8 position;
-    /** Unused, pass 0 */
-    u8 access;
-    /** Reserved field, unused */
-    u8 creserved[2];
-} SceKernelLMOption; // size = 20
 
 typedef struct
 {
