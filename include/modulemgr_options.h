@@ -16,6 +16,7 @@
 #define SCE_KERNEL_LM_ACCESS_NOSEEK     (1)
 
 typedef struct {
+    /** The size of the structure. size = sizeof(SceKernelLMOption). */
 	SceSize	size;
 	SceUID	mpIdText;  /* partition text */
 	SceUID	mpIdData;  /* partition data */
