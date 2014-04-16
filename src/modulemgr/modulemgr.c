@@ -7,6 +7,7 @@
 #include <iofilemgr_kernel.h>
 #include <loadcore.h>
 #include <modulemgr.h>
+#include <modulemgr_options.h>
 #include <threadman_kernel.h>
 
 #include "modulemgr_int.h"
@@ -25,25 +26,6 @@ typedef struct {
     u32 unk32;
     u32 unk36;
 } SceModuleManagerCB;
-
-// Extracted from community PSPSDK, seems up-to-date because size is the same (20)
-/** Specifies options for loading a module (LM=Load Module) */
-typedef struct {
-    /** The size of this structure */
-    SceSize size; // sizeof(SceKernelLMOption)
-    /** Memory partition where the program of the module will be stored */
-    SceUID mpidtext;
-    /** Memory partition where the data of the module will be stored */
-    SceUID mpiddata;
-    /** Unused, pass 0 */
-    u32 flags;
-    /** Position of the module in memory (default: 0 for low memory address, 1 for high memory address) */
-    u8 position;
-    /** Unused, pass 0 */
-    u8 access;
-    /** Reserved field, unused */
-    u8 creserved[2];
-} SceKernelLMOption; // size = 20
 
 typedef struct
 {
@@ -393,7 +375,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
  * @return One of the errors of sceIoIoctl() if failed
  */
 // Subroutine sceKernelLoadModule - Address 0x000006B8 
-s32 sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
+s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused)),
     const SceKernelLMOption *opt)
 {
     s32 oldK1;
@@ -449,7 +431,7 @@ s32 sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
         return fd;
     }
 
-    status = sceIoIoctl(fd, 0x20008001, NULL, 0, NULL, 0); // 0x00000760
+    status = sceIoIoctl(fd, 0x00208001, NULL, 0, NULL, 0); // 0x00000760
     if (status < 0) { // 0x0000076C
         sceIoClose(fd); // 0x000007E0
         pspSetK1(oldK1);
@@ -466,7 +448,7 @@ s32 sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
     modParams.fd = fd; // 0x000007BC
     modParams.unk124 = 0; // 0x000007C4
 
-    status = sceIoIoctl(fd, 0x20008081, NULL, 0, NULL, 0); // 0x000007C0
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
 
     if (status < 0) // 0x000007C8
         modParams.unk100 = 0x10; // 0x000007CC
@@ -478,10 +460,70 @@ s32 sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
     return status;
 }
 
-// TODO: Reverse function sceKernelLoadModuleByID
-// 0x0000088C
-void sceKernelLoadModuleByID()
+// Subroutine ModuleMgrForUser_B7F46618 - Address 0x0000088C
+s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
+        const SceKernelLMOption *opt)
 {
+    s32 oldK1;
+    s32 sdkVersion;
+    s32 status;
+    SceUID fd;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1(); //0x00000898
+    
+    if (sceKernelIsIntrContext()) { //0x000008C0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    if (pspK1IsUserMode()) { //0x000008CC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    if (opt != NULL) { // 0x000008D4
+        if (!pspK1StaBufOk(opt, sizeof(SceKernelLMOption))) { //0x000008E8
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00000918
+        // Firmware >= 2.80, updated size field
+        if (sdkVersion >= 0x2080000 && opt->size != sizeof(SceKernelLMOption)) { // 0x00000930 & 0x00000944
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+    }
+    
+    status = sceIoValidateFd(inputId, 4); //0x00000950
+    if (status < SCE_ERROR_OK) { //0x00000958
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    status = sceIoIoctl(fd, 0x00208001, NULL, 0, NULL, 0); // 0x00000978
+    if (status < 0) { // 0x00000984
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x0000099C
+         ((u32 *)modParams)[i] = 0;
+        
+    modParams.apiType = 0x10; // 0x000009C8
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000009C4
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000009CC
+    modParams.unk64 = 0; // 0x000005CC
+    modParams.fd = inputId; // 0x000005D8
+    modParams.unk124 = 0; // 0x000009DC
+        
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000009D8
+    if (status < 0) //0x000005E4
+        modParams.unk100 = 0x10; // 0x000009E4
+        
+    status = _LoadModuleByBufferID(&modParams, opt); //0x000009EC
+        
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModuleWithBlockOffset
