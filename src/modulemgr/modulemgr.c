@@ -375,7 +375,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
  * @return One of the errors of sceIoIoctl() if failed
  */
 // Subroutine sceKernelLoadModule - Address 0x000006B8 
-s32 sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
+s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused)),
     const SceKernelLMOption *opt)
 {
     s32 oldK1;
