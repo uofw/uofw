@@ -687,10 +687,117 @@ s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
     return retVal;
 }
 
-// TODO: Reverse function sceKernelQueryModuleInfo
-// 0x00004270
-void sceKernelQueryModuleInfo()
+/**
+ * Get module information from id
+ * 
+ * @param modId The module id
+ * @param modInfo Pointer to SceKernelModuleInfo, content will be modified on success with info from the module
+ * 
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer is NULL or can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SDK version >= 2.80  and modInfo->size != 0x40 && modInfo->size != sizeof(modInfo)
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found
+ * @return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO if the module status is 0x100 or you don't have the right to access information about this module
+ */
+// Subroutine sceKernelQueryModuleInfo - Address 0x00004270 - Aliases: ModuleMgrForKernel_22BDBEFF
+s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
 {
+    s32 oldK1;
+    s32 SDKVersion;
+    s32 intrState;
+    SceModule *pMod;
+
+    oldK1 = pspShiftK1();
+
+    // Cannot be called from interrupt
+    if (sceKernelIsIntrContext()) { // 0x0000429C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    if (modInfo == NULL || !pspK1StaBufOk(modInfo, sizeof(*modInfo)) { // 0x000042AC, 0x000042BC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x000042F4
+    SDKVersion &= 0xFFFF;
+
+    if (SDKVersion > 0x2070FFFF && modInfo->size != sizeof(SceKernelModuleInfoV1) // 0x0000430C, 0x00004320
+                                && modInfo->size != sizeof(*modInfo)) { // 0x00004324
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+    }
+
+    intrState = sceKernelLoadCoreLock(); // 0x00004334
+
+    pMod = sceKernelFindModuleByUID(modId); // 0x00004340
+    if (pMod == NULL) { // 0x00004348
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE;
+    }
+
+    if (!pspK1IsUserMode()) { // 0x00004350
+        // TODO: document pMod->status
+        if (!(pMod->status & 0x100)) {
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO;
+        }
+
+        // TODO: find what 0x1E00 exactly represents
+        if ((sceKernelGetUserLevel() == 2 && pMod->attribute & 0x1E00 != SCE_MODULE_USB_WLAN) // 0x00004368,0x00004370,0x000044C0
+            || (sceKernelGetUserLevel() == 1 && pMod->attribute & 0x1E00 != SCE_MODULE_MS) // 0x0000437C,0x00004388,0x000044A8
+            || (sceKernelGetUserLevel() == 3 && pMod->attribute & 0x1E00 != SCE_MODULE_APP) // 0x00004390,0x0000439C,0x00004490
+            && (pMod->attribute & 0x1E00) // 0x000043A8
+            ) {
+
+            sceKernelLoadCoreUnlock(intrState);
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO;
+        }
+    }
+
+
+    // Trying to access Kernel module information?
+    if ((pMod->status & 0b1111 - 0b11) >= 0b101) { // 0x000043C0
+        sceKernelLoadCoreUnlock(intrState);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO;
+    }
+
+    modInfo->nSegment = pMod->nSegments; // 0x000043C8
+
+    for (int i=0;i<SCE_KERNEL_MAX_MODULE_SEGMENT;i++) { // 0x000043F0
+        modInfo->segmentAddr[i] = pMod->segmentAddr[i]; // 0x000043E4
+        modInfo->segmentSize[i] = pMod->segmentSize[i]; // 0x000043F4
+    }
+
+    modInfo->entryAddr = pMod->entryAddr; // 0x00004404
+    modInfo->gpValue = pMod->gpValue; // 0x0000440C
+    modInfo->textAddr = pMod->textAddr; // 0x00004414
+    modInfo->textSize = pMod->textSize; // 0x0000441C
+    modInfo->dataSize = pMod->dataSize; // 0x00004424
+    modInfo->bssSize = pMod->bssSize; // 0x00004430
+
+    // If we have a v1 structure (less fields, size: 64)
+    if (modInfo->size != sizeof(SceKernelModuleInfo)) {
+        sceKernelLoadCoreUnlock(intrState);
+        pspSetK1(oldK1);
+        return SCE_ERROR_OK;
+    }
+
+    // If we have a v2 structure (more fields, size: 96)
+    // TODO: find what 0x1E00 exactly represents
+    modInfo->attribute = pMod->attribute &~ 0x0001E00;
+    modInfo->version[MODULE_VERSION_MINOR] = pMod->version[MODULE_VERSION_MINOR];
+    modInfo->version[MODULE_VERSION_MAJOR] = pMod->version[MODULE_VERSION_MAJOR];
+    strncpy(modInfo->modName, modInfo->modName, SCE_MODULE_NAME_LEN);
+    modInfo->terminal = pMod->terminal;
+
+    sceKernelLoadCoreUnlock(intrState);
+    pspSetK1(oldK1);
+    return SCE_ERROR_OK;
 }
 
 /**
