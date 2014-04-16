@@ -448,8 +448,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
     modParams.fd = fd; // 0x000007BC
     modParams.unk124 = 0; // 0x000007C4
 
-    // TODO: check ioctl command
-    status = sceIoIoctl(fd, 0x20008081, NULL, 0, NULL, 0); // 0x000007C0
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
 
     if (status < 0) // 0x000007C8
         modParams.unk100 = 0x10; // 0x000007CC
