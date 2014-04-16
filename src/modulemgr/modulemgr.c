@@ -431,7 +431,7 @@ s32 sceKernelLoadModule(const char *path, u32 flags __attribute__((unused)),
         return fd;
     }
 
-    status = sceIoIoctl(fd, 0x20008001, NULL, 0, NULL, 0); // 0x00000760
+    status = sceIoIoctl(fd, 0x00208001, NULL, 0, NULL, 0); // 0x00000760
     if (status < 0) { // 0x0000076C
         sceIoClose(fd); // 0x000007E0
         pspSetK1(oldK1);
