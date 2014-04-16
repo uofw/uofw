@@ -758,7 +758,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    if (modInfo == NULL || !pspK1StaBufOk(modInfo, sizeof(*modInfo)) { // 0x000042AC, 0x000042BC
+    if (modInfo == NULL || !pspK1StaBufOk(modInfo, sizeof(*modInfo))) { // 0x000042AC, 0x000042BC
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -808,7 +808,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
         return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO;
     }
 
-    modInfo->nSegment = pMod->nSegments; // 0x000043C8
+    modInfo->nsegment = pMod->nSegments; // 0x000043C8
 
     for (int i=0;i<SCE_KERNEL_MAX_MODULE_SEGMENT;i++) { // 0x000043F0
         modInfo->segmentAddr[i] = pMod->segmentAddr[i]; // 0x000043E4
