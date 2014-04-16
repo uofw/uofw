@@ -263,7 +263,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
  * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was called in a user context
  * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed with the current rights.
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
- * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 5.20 and opt->size != sizeof(SceKernelLMOption)
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.80 and opt->size != sizeof(SceKernelLMOption)
  * @return One of the errors of sceIoOpen() if failed
  * @return One of the errors of sceIoIoctl() if failed
  */
@@ -306,7 +306,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
         sdkVersion = sceKernelGetCompiledSdkVersion(); //0x0000067C
-        // Firmware >= 5.20, updated size field
+        // Firmware >= 2.80, updated size field
         if (sdkVersion >= 0x2080000 && option->size != sizeof(SceKernelLMOption)) { // 0x00000694 & 0x000006A8
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
@@ -370,7 +370,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
  * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called in a user context
  * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed with the current rights.
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
- * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion > 5.19 and opt->size != sizeof(SceKernelLMOption)
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.71 and opt->size != sizeof(SceKernelLMOption)
  * @return One of the errors of sceIoOpen() if failed
  * @return One of the errors of sceIoIoctl() if failed
  */
@@ -418,7 +418,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
     SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x00000850
     SDKVersion &= 0xFFFF0000; // 0x0000085C
 
-    // Firmware > 5.19, updated size field
+    // Firmware >= 2.71, updated size field
     if (SDKVersion > 0x2070FFFF && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
