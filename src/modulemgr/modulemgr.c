@@ -8,6 +8,7 @@
 #include <loadcore.h>
 #include <modulemgr.h>
 #include <modulemgr_options.h>
+#include <sysmem_kernel.h>
 #include <threadman_kernel.h>
 
 #include "modulemgr_int.h"
