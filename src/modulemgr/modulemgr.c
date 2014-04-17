@@ -617,12 +617,86 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
     sceIoClose(fd); //0x00000C14
     pspSetK1(oldK1);
     return status;
-    
 }
-// TODO: Reverse function sceKernelLoadModuleByIDWithBlockOffset
-// 0x00000C34
-void sceKernelLoadModuleByIDWithBlockOffset()
+
+// Subroutine ModuleMgrForUser_FBE27467 - Address 0x00000C34
+s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff offset)
 {
+    s32 oldK1;
+    s32 status;
+    s32 offsetLow;
+    u32 offsetHigh;
+    SceUID fd;
+    SceSysmemMemoryBlockInfo blkInfo;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1(); //0x00000C40
+    
+    if (sceKernelIsIntrContext()) { //0x00000C6C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    if (!pspK1IsUserMode()) { //0x00000C84
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    status = sceKernelQueryMemoryBlockInfo(block, &blkInfo); //0x00000CD0
+    if (status < SCE_ERROR_OK) { // 0x00000AD4
+        pspSetK1(oldK1);
+        return status; 
+    }
+    if (!pspK1DynBufOk(blkInfo.addr, blkInfo.memSize)) { // 0x00000D00
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    offsetLow = (u32)offset;
+    offsetHigh = (u32)(offset >> 32);
+    if (offsetHigh > 0 || ((offsetHigh == 0) && (blkInfo.memSize < offsetLow))) { //0x00000D10 & 0x00000D18 & 0x00000E08
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
+    }  
+    // TODO: Create global ALIGNEMNT check (in common/memory.h)?
+    /* Proceed only with offset being a multiple of 64. */
+    if (offsetLow & 0x3F) { // 0x00000D38
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
+    }
+    
+    status = sceIoValidateFd(inputId, 4); //0x00000D50
+    if (status < SCE_ERROR_OK) { //0x00000D58
+        pspSetK1(oldK1);
+        return status;
+    }
+     
+    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000D78
+    if (status < 0) { // 0x00000D84
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00000D9C
+         ((u32 *)modParams)[i] = 0;
+         
+    modParams.apiType = 0x10; // 0x00000DB4
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000DA8
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00000DC0
+    modParams.unk64 = 0; // 0x00000DCC
+    modParams.fd = inputId; // 0x00000DD4
+    modParams.unk124 = 0; // 0x00000DDC
+    
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000DD8
+    if (status >= 0) //0x00000DE0
+        modParams.unk100 = 0x10; // 0x00000DE4
+        
+    // 0x00000DEC
+    modParams.memBlockId = block;
+    modParams.memBlockOffset = offset;
+    status = _LoadModuleByBufferID(&modParams, NULL); //0x00000DF8
+    
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModuleDNAS
