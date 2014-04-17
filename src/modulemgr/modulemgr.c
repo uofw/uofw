@@ -305,13 +305,13 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     }
     
     if (option != NULL) { // 0x00000658
-        if (!pspK1StaBufOk(option, sizeof(*option))) { //0x0000066C
+        if (!pspK1StaBufOk(option, sizeof(SceKernelLMOption))) { //0x0000066C
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
         sdkVersion = sceKernelGetCompiledSdkVersion(); //0x0000067C
         // Firmware >= 2.80, updated size field
-        if (sdkVersion >= 0x2080000 && option->size != sizeof(SceKernelLMOption)) { // 0x00000694 & 0x000006A8
+        if (sdkVersion >= 0x02080000 && option->size != sizeof(SceKernelLMOption)) { // 0x00000694 & 0x000006A8
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
         }
@@ -420,8 +420,8 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
         }
         SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x00000850
         SDKVersion &= 0xFFFF0000; // 0x0000085C
-        // Firmware >= 2.71, updated size field
-        if (SDKVersion > 0x2070FFFF && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
+        // Firmware >= 2.80, updated size field
+        if (SDKVersion >= 0x02080000 && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
         }
@@ -490,7 +490,7 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
         }
         sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00000918
         // Firmware >= 2.80, updated size field
-        if (sdkVersion >= 0x2080000 && opt->size != sizeof(SceKernelLMOption)) { // 0x00000930 & 0x00000944
+        if (sdkVersion >= 0x02080000 && opt->size != sizeof(SceKernelLMOption)) { // 0x00000930 & 0x00000944
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
         }
@@ -576,7 +576,7 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     }  
-    // TODO: Create global ALIGNEMNT check (in common/memory.h)?
+    // TODO: Create global ALIGNMENT check (in common/memory.h)?
     /* Proceed only with offset being a multiple of 64. */
     if (offsetLow & 0x3F) { // 0x00000B3C
         pspSetK1(oldK1);
@@ -656,7 +656,7 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     }  
-    // TODO: Create global ALIGNEMNT check (in common/memory.h)?
+    // TODO: Create global ALIGNMENT check (in common/memory.h)?
     /* Proceed only with offset being a multiple of 64. */
     if (offsetLow & 0x3F) { // 0x00000D38
         pspSetK1(oldK1);
