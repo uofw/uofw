@@ -351,7 +351,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     modParams.unk124 = 0; // 0x000005E0
         
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000005DC
-    if (status < 0) //0x000005E4
+    if (status >= 0) //0x000005E4
         modParams.unk100 = 0x10; // 0x000005EC
         
     status = _LoadModuleByBufferID(&modParams, option); //0x000005F4
@@ -452,8 +452,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
     modParams.unk124 = 0; // 0x000007C4
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
-
-    if (status < 0) // 0x000007C8
+    if (status >= 0) // 0x000007C8
         modParams.unk100 = 0x10; // 0x000007CC
     
     status = _LoadModuleByBufferID(&modParams, opt); // 0x000007D4
@@ -520,7 +519,7 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
     modParams.unk124 = 0; // 0x000009DC
         
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000009D8
-    if (status < 0) //0x000005E4
+    if (status >= 0) //0x000009E0
         modParams.unk100 = 0x10; // 0x000009E4
         
     status = _LoadModuleByBufferID(&modParams, opt); //0x000009EC
@@ -554,8 +553,7 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
     if (path == NULL || !pspK1PtrOk(path)) { // 0x00000A5C & 0x00000A6C
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    }
-    
+    }  
     /* Protection against formatted string attacks, path cannot contain a '%'. */
     if (strchr(path, '%')) { // 0x00000AB8
         pspSetK1(oldK1);
@@ -585,13 +583,13 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     }
     
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH);
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); //0x00000B5C
     if (fd < 0) { //0x00000B68
         pspSetK1(oldK1);
         return fd;
     }  
     status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000B88
-    if (status < 0) { // 0x00000984
+    if (status < 0) { // 0x00000B94
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -602,13 +600,13 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
     modParams.apiType = 0x10; // 0x00000BC4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000BB8
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000BD0
-    modParams.unk64 = 0; // 0xAE000040
+    modParams.unk64 = 0; // 0x00000BDC
     modParams.fd = fd; // 0x00000BE4
     modParams.unk124 = 0; // 0x00000BEC
     
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000BE8
     if (status >= 0) //0x00000BF0
-        modParams.unk100 = 0x10; // 0x000009E4
+        modParams.unk100 = 0x10; // 0x00000BF4
         
     // 0x00000BFC
     modParams.memBlockId = block;
