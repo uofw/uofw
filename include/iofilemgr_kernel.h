@@ -36,6 +36,7 @@
 #define SCE_O_NOWAIT    (SCE_FASYNC)  /*   Reserved: asyncronous i/o */
 #define SCE_O_FDEXCL    (SCE_FFDEXCL) /* exclusive access */
 #define SCE_O_PWLOCK    (SCE_FPWLOCK) /* power control lock */
+#define SCE_O_UNKNOWN0  (0x04000000)
 #define SCE_O_FGAMEDATA (SCE_FGAMEDATA)
 
 /** user read/write/execute permission. */
