@@ -421,13 +421,11 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
 
     SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x00000850
     SDKVersion &= 0xFFFF0000; // 0x0000085C
-
     // Firmware >= 2.71, updated size field
     if (SDKVersion > 0x2070FFFF && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
     }
-
 
     fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00000734
     if (fd < 0) { // 0x00000740
@@ -479,7 +477,7 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
-    if (pspK1IsUserMode()) { //0x000008CC
+    if (!pspK1IsUserMode()) { //0x000008CC
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -546,7 +544,7 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
-    if (pspK1IsUserMode()) { //0x00000A50
+    if (!pspK1IsUserMode()) { //0x00000A50
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
