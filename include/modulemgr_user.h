@@ -9,6 +9,7 @@
 #include "modulemgr_options.h"
 #include "sysmem_user.h"
 
+// TODO: rename to sceKernelLoadModuleForUser() ?
 SceUID sceKernelLoadModule(const char *path, s32 flags, SceKernelLMOption *option);
 s32 sceKernelStartModule(SceUID modId, SceSize args, void *argp, s32 *result, SceKernelSMOption *option);
 s32 sceKernelUnloadModule(SceUID modId);

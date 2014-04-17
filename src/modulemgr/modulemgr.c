@@ -407,24 +407,24 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR; 
     }
-
     // Protection against formatted string attacks, path cannot contain a '%'
     if (strchr(path, '%')) { // 0x0000081C
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE; 
     }
-
-    if (opt == NULL || !pspK1StaBufOk(opt, sizeof(SceKernelLMOption))) { // 0x0000082C, 0x00000840
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    }
-
-    SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x00000850
-    SDKVersion &= 0xFFFF0000; // 0x0000085C
-    // Firmware >= 2.71, updated size field
-    if (SDKVersion > 0x2070FFFF && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+    
+    if (opt != NULL) { // 0x0000082C
+        if (!pspK1StaBufOk(option, sizeof(SceKernelLMOption))) { //0x00000840
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        SDKVersion = sceKernelGetCompiledSdkVersion(); // 0x00000850
+        SDKVersion &= 0xFFFF0000; // 0x0000085C
+        // Firmware >= 2.71, updated size field
+        if (SDKVersion > 0x2070FFFF && opt->size != sizeof(SceKernelLMOption)) { // 0x00000868, 0x0000087C 
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
     }
 
     fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00000734
@@ -433,7 +433,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
         return fd;
     }
 
-    status = sceIoIoctl(fd, 0x00208001, NULL, 0, NULL, 0); // 0x00000760
+    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000760
     if (status < 0) { // 0x0000076C
         sceIoClose(fd); // 0x000007E0
         pspSetK1(oldK1);
@@ -462,6 +462,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
 }
 
 // Subroutine ModuleMgrForUser_B7F46618 - Address 0x0000088C
+// TODO: Rename to sceKernelLoadModuleByIDForUser() ?
 s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
         const SceKernelLMOption *opt)
 {
