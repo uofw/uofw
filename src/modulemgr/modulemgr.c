@@ -62,6 +62,9 @@ typedef struct
 	u32 eventId; //88
     u32 unk100;
     u32 unk124;
+    SceUID memBlockId; //144
+    u32 unk148;
+    SceOff memBlockOffset; // 152
 } SceModuleMgrParam; //size = 160
 
 enum ModuleMgrExecModes
@@ -526,12 +529,97 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
     return status;
 }
 
-// TODO: Reverse function sceKernelLoadModuleWithBlockOffset
-// 0x000009FC
-void sceKernelLoadModuleWithBlockOffset()
+// Subroutine ModuleMgrForUser_E4C4211C - Address 0x000009FC
+s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff offset)
 {
+    s32 oldK1;
+    s32 status;
+    s32 offsetLow;
+    u32 offsetHigh;
+    SceUID fd;
+    SceSysmemMemoryBlockInfo blkInfo;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1(); //0x00000898
+    
+    if (sceKernelIsIntrContext()) { //0x00000A08
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    if (pspK1IsUserMode()) { //0x00000A50
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    if (path == NULL || !pspK1PtrOk(path)) { // 0x00000A5C & 0x00000A6C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    /* Protection against formatted string attacks, path cannot contain a '%'. */
+    if (strchr(path, '%')) { // 0x00000AB8
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE; 
+    }
+    
+    status = sceKernelQueryMemoryBlockInfo(block, &blkInfo); //0x00000ACC
+    if (status < SCE_ERROR_OK) { // 0x00000AD4
+        pspSetK1(oldK1);
+        return status; 
+    }
+    if (!pspK1DynBufOk(blkInfo.addr, blkInfo.memSize)) { // 0x00000B04
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    offsetLow = (u32)offset;
+    offsetHigh = (u32)(offset >> 32);
+    if (offsetHigh > 0 || ((offsetHigh == 0) && (blkInfo.memSize < offsetLow))) { //0x00000B14 & 0x00000B1C & 0x00000C24
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
+    }  
+    // TODO: Create global ALIGNEMNT check (in common/memory.h)?
+    /* Proceed only with offset being a multiple of 64. */
+    if (offsetLow & 0x3F) { // 0x00000B3C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
+    }
+    
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH);
+    if (fd < 0) { //0x00000B68
+        pspSetK1(oldK1);
+        return fd;
+    }  
+    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000B88
+    if (status < 0) { // 0x00000984
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00000BAC
+         ((u32 *)modParams)[i] = 0;
+         
+    modParams.apiType = 0x10; // 0x00000BC4
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000BB8
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00000BD0
+    modParams.unk64 = 0; // 0xAE000040
+    modParams.fd = fd; // 0x00000BE4
+    modParams.unk124 = 0; // 0x00000BEC
+    
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000BE8
+    if (status >= 0) //0x00000BF0
+        modParams.unk100 = 0x10; // 0x000009E4
+        
+    // 0x00000BFC
+    modParams.memBlockId = block;
+    modParams.memBlockOffset = offset;
+    status = _LoadModuleByBufferID(&modParams, NULL); //0x00000C08
+    
+    sceIoClose(fd); //0x00000C14
+    pspSetK1(oldK1);
+    return status;
+    
 }
-
 // TODO: Reverse function sceKernelLoadModuleByIDWithBlockOffset
 // 0x00000C34
 void sceKernelLoadModuleByIDWithBlockOffset()
