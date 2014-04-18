@@ -14,6 +14,8 @@
 #include <threadman_kernel.h>
 #include <modulemgr.h>
 
+static s32 _sceIdStorageSysEventHandler(s32 id, char* name, void *param, s32 *res);
+
 SCE_MODULE_INFO(
     "sceIdStorage_Service",
     SCE_MODULE_KERNEL |
@@ -42,7 +44,7 @@ SceSysEventHandler g_sysev = { //0x2040
     .size = 64,
     .name = "SceIdStorage",
     .typeMask = 0x00FFFF00,
-    .handler = (void*)0x378, // FIXME: should be a function pointer
+    .handler = _sceIdStorageSysEventHandler,
     .gp = 0,
     .busy = 0,
     .next = NULL,
@@ -222,6 +224,19 @@ s32 sceIdStorageEnd(void)
     sceKernelUnregisterSysEventHandler(&g_sysev);
     sceKernelDeleteMutex(g_idst.mutex);
     sceKernelDeleteFpl(g_idst.fpl);
+
+    return SCE_ERROR_OK;
+}
+
+static s32 _sceIdStorageSysEventHandler(s32 id, char* name, void *param, s32 *res)
+{
+    (void)name, (void)param, (void)res;
+
+    if (id == 256) {
+        if (sceIdStorageIsDirty()) {
+            return SCE_ERROR_BUSY;
+        }
+    }
 
     return SCE_ERROR_OK;
 }
