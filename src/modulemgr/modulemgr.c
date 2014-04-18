@@ -751,7 +751,7 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
  * Load a DNAS module by path and secureInstallId
  * 
  * @param path The file descriptor that was obtained when opening the module with sceIoOpen()
- * @param secureInstallId A pointer to a secure installation identifier string, which is an encryption key used to decrypt the module, example: 0x123456789abcdef123456789abcdef12. It is often used in games that encrypt their modules (and other files) to prevent unauthorized access. This makes reverse engineering slightly harder because one needs to find the keys first.
+ * @param secureInstallId A pointer to a secure installation identifier string, which is an encryption key used to decrypt the module, example: "123456789abcdef123456789abcdef12". It is often used in games that encrypt their modules (and other files) to prevent unauthorized access. This makes reverse engineering slightly harder because one needs to find the keys first.
  * @param flag Unused, pass 0
  * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
 
