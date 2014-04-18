@@ -241,3 +241,14 @@ static s32 _sceIdStorageSysEventHandler(s32 id, char* name, void *param, s32 *re
     return SCE_ERROR_OK;
 }
 
+//sub_000003B0
+static s32 _sceIdStorageLockMutex(void)
+{
+    return sceKernelLockMutex(g_idst.mutex, 1, NULL);
+}
+
+//sub_000003D8
+static s32 _sceIdStorageUnlockMutex(void)
+{
+    return sceKernelUnlockMutex(g_idst.mutex, 1);
+}
