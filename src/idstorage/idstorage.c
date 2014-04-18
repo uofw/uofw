@@ -29,14 +29,14 @@ SCE_SDK_VERSION(SDK_VERSION);
 typedef struct {
     s32 fpl; // 0
     s32 mutex; // 4
-    s32 pages; // 8
+    s32 pagesPerBlock; // 8
     s32 unk0; // 12
     u8 formatted; // 16
     u8 readOnly; // 17
     u8 unk1[2]; // 18
     s16 block; // 20
-    u32 scramb; // 24
-    u8 data[1152]; // 28
+    u32 scramble; // 24
+    u16 data[576]; // 28
     void *pool; // 1180
 } SceIdStorage;
 
@@ -92,16 +92,16 @@ s32 sceIdStorageInit(void)
 
     if (sceSysregGetTachyonVersion() > 0x004FFFFF) {
         /* PSP Slim and greater */
-        g_idst.scramb = (digest[0] ^ digest[3]) + digest[1];
+        g_idst.scramble = (digest[0] ^ digest[3]) + digest[1];
     }
     else {
         /* PSP Fat */
-        g_idst.scramb = 0;
+        g_idst.scramble = 0;
     }
 
     /* Pages */
 
-    g_idst.pages = sceNandGetPagesPerBlock();
+    g_idst.pagesPerBlock = sceNandGetPagesPerBlock();
 
     /* Pool */
 
@@ -146,7 +146,7 @@ s32 sceIdStorageInit(void)
 
     /* Find valid idstorage block */
 
-    for (block=0; block<512; block+=g_idst.pages) {
+    for (block=0; block<512; block+=g_idst.pagesPerBlock) {
         res = sceNandReadExtraOnly(1536 + block, extra, 1);
 
         if (res != 0) {
@@ -187,7 +187,7 @@ s32 sceIdStorageInit(void)
         state = -1;
     }
 
-    (void)sceNandSetScramble(g_idst.scramb);
+    (void)sceNandSetScramble(g_idst.scramble);
 
     /* Read idstorage nand block and store it */
 
@@ -244,7 +244,7 @@ static s32 _sceIdStorageSysEventHandler(s32 id, char* name, void *param, s32 *re
 //sub_000003B0
 static s32 _sceIdStorageLockMutex(void)
 {
-    return sceKernelLockMutex(g_idst.mutex, 1, NULL);
+    return sceKernelLockMutex(g_idst.mutex, 1, 0);
 }
 
 //sub_000003D8
@@ -252,3 +252,31 @@ static s32 _sceIdStorageUnlockMutex(void)
 {
     return sceKernelUnlockMutex(g_idst.mutex, 1);
 }
+
+//sub_000003FC
+static s32 _sceIdStorageFindFreeBlock(void)
+{
+    s32 i, j;
+    s32 size = -1;
+
+    for (i=0; i<512; i+=g_idst.pagesPerBlock) {
+        for (j=0; j<g_idst.pagesPerBlock; j++) {
+            if (g_idst.data[i + j] != 0xFFFF) {
+                break;
+            }
+        }
+
+        /* Block is filled with 0xFFFF, it's free */
+        if (j == g_idst.pagesPerBlock) {
+            size = 512;
+            break;
+        }
+    }
+
+    if (size < 0) {
+        return SCE_ERROR_OUT_OF_MEMORY;
+    }
+
+    return size;
+}
+
