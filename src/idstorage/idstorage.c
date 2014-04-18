@@ -27,6 +27,11 @@ SCE_MODULE_REBOOT_BEFORE("sceIdStorageModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
 typedef struct {
+    u16 value; // 0
+    u8 used; // 2
+} SceIdStoragePair;
+
+typedef struct {
     s32 fpl; // 0
     s32 mutex; // 4
     s32 pagesPerBlock; // 8
@@ -37,7 +42,7 @@ typedef struct {
     s16 block; // 20
     u32 scramble; // 24
     u16 data[512]; // 28
-    u16 unk2[64]; // 1052
+    SceIdStoragePair pairs[32]; // 1052
     void *pool; // 1180
 } SceIdStorage;
 
@@ -302,15 +307,29 @@ static s32 _sceIdStorageFindPage(u16 data)
 }
 
 //sub_000004C4
-static s32 _sceIdStorage_4C4(s32 arg0)
+static s32 _sceIdStorageFindValue(u16 value)
 {
     s32 i;
 
     for (i=0; i<32; i++) {
-        if (g_idst.unk2[2*i] == arg0) {
-            if (*(u8*)&g_idst.unk2[2*i+1] != 0) {
-                return i;
-            }
+        if (g_idst.pairs[i].value == value && g_idst.pairs[i].used) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+//sub_00000510
+static s32 _sceIdStorageInsertValue(u16 value)
+{
+    s32 i;
+
+    for (i=0; i<32; i++) {
+        if (!g_idst.pairs[i].used) {
+            g_idst.pairs[i].value = value;
+            g_idst.pairs[i].used = 1;
+            return i;
         }
     }
 
