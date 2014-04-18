@@ -61,13 +61,13 @@ s32 sceIdStorageModuleStart(SceSize args __attribute__((unused)), void *argp __a
 //0x00000020
 s32 sceIdStorageModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    sceIdStorageEnd();
+    (void)sceIdStorageEnd();
 
     return SCE_KERNEL_STOP_SUCCESS;
 }
 
 //0x00000040
-s32 sceIdStorageInit()
+s32 sceIdStorageInit(void)
 {
     u32 digest[5]; //sp+0
     u32 magic[4];   //sp+32
@@ -212,6 +212,16 @@ s32 sceIdStorageInit()
 
     sceKernelRegisterSysEventHandler(&g_sysev);
     sceNandUnlock();
+
+    return SCE_ERROR_OK;
+}
+
+s32 sceIdStorageEnd(void)
+{
+    sceIdStorageFlush();
+    sceKernelUnregisterSysEventHandler(&g_sysev);
+    sceKernelDeleteMutex(g_idst.mutex);
+    sceKernelDeleteFpl(g_idst.fpl);
 
     return SCE_ERROR_OK;
 }
