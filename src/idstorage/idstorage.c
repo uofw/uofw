@@ -336,3 +336,15 @@ static s32 _sceIdStorageInsertValue(u16 value)
     return -1;
 }
 
+//sub_0000055C
+static s32 _sceIdStorageClearValues(void)
+{
+    s32 i;
+
+    for (i=0; i<32; i++) {
+        g_idst.pairs[i].used = 0;
+    }
+
+    return SCE_ERROR_OK;
+}
+
