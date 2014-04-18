@@ -280,3 +280,23 @@ static s32 _sceIdStorageFindFreeBlock(void)
     return size;
 }
 
+//sub_00000474
+static s32 _sceIdStorageFindPage(u16 data)
+{
+    s32 i;
+    s32 page = -1;
+
+    for (i=0; i<512; i++) {
+        if (g_idst.data[i] == data) {
+            page = i;
+            break;
+        }
+    }
+
+    if (page < 0) {
+        return SCE_ERROR_NOT_FOUND;
+    }
+
+    return page;
+}
+
