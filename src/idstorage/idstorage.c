@@ -348,3 +348,8 @@ static s32 _sceIdStorageClearValues(void)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageGetLeafSize(void)
+{
+    return 512;
+}
+
