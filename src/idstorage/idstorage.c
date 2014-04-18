@@ -36,7 +36,8 @@ typedef struct {
     u8 unk1[2]; // 18
     s16 block; // 20
     u32 scramble; // 24
-    u16 data[576]; // 28
+    u16 data[512]; // 28
+    u16 unk2[64]; // 1052
     void *pool; // 1180
 } SceIdStorage;
 
@@ -298,5 +299,21 @@ static s32 _sceIdStorageFindPage(u16 data)
     }
 
     return page;
+}
+
+//sub_000004C4
+static s32 _sceIdStorage_4C4(s32 arg0)
+{
+    s32 i;
+
+    for (i=0; i<32; i++) {
+        if (g_idst.unk2[2*i] == arg0) {
+            if (*(u8*)&g_idst.unk2[2*i+1] != 0) {
+                return i;
+            }
+        }
+    }
+
+    return -1;
 }
 
