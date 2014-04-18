@@ -678,8 +678,8 @@ typedef struct SceModule {
 	u8 version[MODULE_VERSION_NUMBER_CATEGORY_SIZE]; //6
     /** The module's name. There can be several modules loaded with the same name. */
 	char modName[SCE_MODULE_NAME_LEN]; //8
-    /** Unknown. */
-	u8 terminal; //35
+    /** String terminator (always '\0'). */
+	char terminal; //35
     /** 
      * The status of the module. Contains information whether the module has been started, stopped, 
      * is a user module, etc.
