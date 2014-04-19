@@ -358,3 +358,8 @@ s32 sceIdStorageIsFormatted(void)
     return g_idst.formatted;
 }
 
+s32 sceIdStorageIsReadOnly(void)
+{
+    return g_idst.readOnly;
+}
+
