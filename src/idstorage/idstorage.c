@@ -38,7 +38,7 @@ typedef struct {
     s32 unk0; // 12
     u8 formatted; // 16
     u8 readOnly; // 17
-    u8 unk1[2]; // 18
+    u8 dirty; // 18
     s16 block; // 20
     u32 scramble; // 24
     u16 data[512]; // 28
@@ -361,5 +361,22 @@ s32 sceIdStorageIsFormatted(void)
 s32 sceIdStorageIsReadOnly(void)
 {
     return g_idst.readOnly;
+}
+
+s32 sceIdStorageIsDirty(void)
+{
+    s32 i;
+
+    if (g_idst.dirty) {
+        return 1;
+    }
+
+    for (i=0; i<32; i++) {
+        if (g_idst.pairs[i].used == 3) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
