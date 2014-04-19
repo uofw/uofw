@@ -353,3 +353,8 @@ s32 sceIdStorageGetLeafSize(void)
     return 512;
 }
 
+s32 sceIdStorageIsFormatted(void)
+{
+    return g_idst.formatted;
+}
+
