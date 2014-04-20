@@ -39,7 +39,7 @@ typedef struct {
     u8 formatted; // 16
     u8 readOnly; // 17
     u8 dirty; // 18
-    s16 block; // 20
+    s16 blockPos; // 20
     u32 scramble; // 24
     u16 data[512]; // 28
     SceIdStoragePair pairs[32]; // 1052
@@ -61,7 +61,7 @@ SceIdStorage g_idst; //0x2080
 //0x00000000
 s32 sceIdStorageModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    (void)sceIdStorageInit();
+    sceIdStorageInit();
 
     return SCE_KERNEL_RESIDENT;
 }
@@ -69,7 +69,7 @@ s32 sceIdStorageModuleStart(SceSize args __attribute__((unused)), void *argp __a
 //0x00000020
 s32 sceIdStorageModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    (void)sceIdStorageEnd();
+    sceIdStorageEnd();
 
     return SCE_KERNEL_STOP_SUCCESS;
 }
@@ -78,10 +78,10 @@ s32 sceIdStorageModuleRebootBefore(SceSize args __attribute__((unused)), void *a
 s32 sceIdStorageInit(void)
 {
     u32 digest[5]; //sp+0
-    u32 magic[4];   //sp+32
+    u32 magic[4]; //sp+32
     u8 extra[16]; //sp+48
     u64 fuse;
-    u32 block;
+    u32 pos;
     s32 state;
     s32 res;
 
@@ -152,8 +152,8 @@ s32 sceIdStorageInit(void)
 
     /* Find valid idstorage block */
 
-    for (block=0; block<512; block+=g_idst.pagesPerBlock) {
-        res = sceNandReadExtraOnly(1536 + block, extra, 1);
+    for (pos=0; pos<512; pos+=g_idst.pagesPerBlock) {
+        res = sceNandReadExtraOnly(1536 + pos, extra, 1);
 
         if (res != 0) {
             state = res;
@@ -193,7 +193,7 @@ s32 sceIdStorageInit(void)
         state = -1;
     }
 
-    (void)sceNandSetScramble(g_idst.scramble);
+    sceNandSetScramble(g_idst.scramble);
 
     /* Read idstorage nand block and store it */
 
@@ -201,7 +201,7 @@ s32 sceIdStorageInit(void)
         u32 i;
 
         for (i=0; i<4; i++) {
-            state = sceNandReadPages(1536 + block, &g_idst.data, NULL, 2);
+            state = sceNandReadPages(1536 + pos, &g_idst.data, NULL, 2);
 
             if (state >= 0) {
                 break;
@@ -215,7 +215,7 @@ s32 sceIdStorageInit(void)
     }
     else {
         g_idst.formatted = 1;
-        g_idst.block = block;
+        g_idst.blockPos = pos;
     }
 
     sceKernelRegisterSysEventHandler(&g_sysev);
@@ -378,5 +378,104 @@ s32 sceIdStorageIsDirty(void)
     }
 
     return 0;
+}
+
+s32 sceIdStorageFormat(void)
+{
+    u8 spare[384]; //sp+0
+    s32 res;
+    s32 i, j;
+    s32 pos;
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    res = sceNandLock(1);
+    if (res < 0) {
+        _sceIdStorageUnlockMutex();
+        return res;
+    }
+
+    sceKernelPowerLock(0);
+
+    g_idst.dirty = 0;
+
+    for (i=0; i<32; i++) {
+        g_idst.pairs[i].used = 0;
+    }
+
+    for (i=0; i<512; i++) {
+        g_idst.data[i] = 0xFFFF; // -1
+    }
+
+    for (i=0; i<512; i+=g_idst.pagesPerBlock) {
+        if (!sceNandIsBadBlock(1536 + i)) {
+            res = sceNandTestBlock(1536 + i);
+
+            if (res < 0) {
+                sceNandDoMarkAsBadBlock(1536 + i);
+            }
+            else if (res == 0) {
+                continue;
+            }
+        }
+
+        for (j=0; j<g_idst.pagesPerBlock; j++) {
+            g_idst.data[i + j] = 0xFFF0; // -16
+        }
+    }
+
+    // FIXME: returns 512. overflow?
+    pos = _sceIdStorageFindFreeBlock();
+    if (pos < 0) {
+        sceKernelPowerUnlock(0);
+        sceNandUnlock();
+        _sceIdStorageUnlockMutex();
+        return pos;
+    }
+
+    for (i=0; i<g_idst.pagesPerBlock; i++) {
+        g_idst.data[pos + i] = 0xFFF5; // -11
+    }
+
+    res = sceNandEraseBlock(1536 + pos);
+    if (res < 0) {
+        sceKernelPowerUnlock(0);
+        sceNandUnlock();
+        _sceIdStorageUnlockMutex();
+        return res;
+    }
+
+    sceNandSetScramble(g_idst.scramble);
+
+    memset(&spare, 0xFF, sizeof(spare));
+
+    for (i=0; i<g_idst.pagesPerBlock; i++) {
+        spare[12*i + 2] = 115;
+        spare[12*i + 3] = 1;
+        spare[12*i + 4] = 1;
+        spare[12*i + 5] = 1;
+    }
+
+    res = sceNandWritePages(1536 + pos, &g_idst.data, &spare, 2);
+    if (res < 0) {
+        sceKernelPowerUnlock(0);
+        sceNandUnlock();
+        _sceIdStorageUnlockMutex();
+        return res;
+    }
+
+    g_idst.formatted = 1;
+    g_idst.unk0 = 1;
+    g_idst.blockPos = pos;
+    g_idst.readOnly = 0;
+
+    sceKernelPowerUnlock(0);
+    sceNandUnlock();
+    _sceIdStorageUnlockMutex();
+
+    return SCE_ERROR_OK;
 }
 
