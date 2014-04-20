@@ -479,3 +479,27 @@ s32 sceIdStorageFormat(void)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageUnformat(void)
+{
+    s32 res;
+    s32 i;
+
+    res = sceNandLock(1);
+    if (res < 0) {
+        return res;
+    }
+
+    sceKernelPowerLock(0);
+
+    for (i=0; i<512; i+=g_idst.pagesPerBlock) {
+        sceNandEraseBlock(1536 + i);
+    }
+
+    sceKernelPowerUnlock(0);
+    sceNandUnlock();
+
+    g_idst.formatted = 0;
+
+    return SCE_ERROR_OK;
+}
+
