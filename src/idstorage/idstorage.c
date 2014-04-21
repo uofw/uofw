@@ -308,7 +308,7 @@ static s32 _sceIdStorageFindKeyPos(u16 id)
         }
     }
 
-    if (page < 0) {
+    if (pos < 0) {
         return SCE_ERROR_NOT_FOUND;
     }
 
@@ -587,6 +587,33 @@ s32 sceIdStorageReadLeaf(u16 id, void *buf)
     /* NOTE: asm code seems to contain inlined memcpy */
     memcpy(buf, g_idst.pool + 512*idx, 512);
 
+    _sceIdStorageUnlockMutex();
+
+    return SCE_ERROR_OK;
+}
+
+s32 sceIdStorageFlush(void)
+{
+    s32 res;
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    if (sceIdStorageIsDirty()) {
+        // TODO: reverse associated func
+        res = sceKernelExtendKernelStack(0x8000, (void*)0xCC8, NULL);
+        if (res < 0) {
+            return res;
+        }
+    }
+
+    _sceIdStorageKeyStoreClear();
     _sceIdStorageUnlockMutex();
 
     return SCE_ERROR_OK;
