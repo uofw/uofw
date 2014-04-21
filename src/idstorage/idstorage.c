@@ -664,3 +664,77 @@ s32 sceIdStorageEnumId(void (*cb)(u16 id, s32 ppn, void *opt), void *opt)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageCreateLeaf(u16 id)
+{
+    s32 i, j;
+    s32 intr;
+    s32 pos;
+    s32 count;
+    s32 max;
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    if (sceIdStorageIsReadOnly()) {
+        return -1;
+    }
+
+    if (id > 0xFFEF) {
+        return SCE_ERROR_INVALID_ID;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+
+    if (_sceIdStorageFindKeyPos(id) >= 0) {
+        sceKernelCpuResumeIntr(intr);
+        return SCE_ERROR_ALREADY;
+    }
+
+    if (id != 0) {
+        pos = _sceIdStorageFindKeyPos(id-1);
+        if (pos < 511) {
+            if (g_idst.index[pos+1] == 0xFFFF) {
+                g_idst.index[pos+1] = id;
+                g_idst.dirty = 1;
+                sceKernelCpuResumeIntr(intr);
+                return SCE_ERROR_OK;
+            }
+        }
+    }
+
+    count = 0;
+    max = g_idst.pagesPerBlock + 1;
+    pos = -1;
+
+    for (i=0; i<512; i+=g_idst.pagesPerBlock) {
+        for (j=0; j<g_idst.pagesPerBlock; j++) {
+            if (g_idst.index[i + j] == 0xFFFF) {
+                count++;
+            }
+        }
+
+        if (0 < count && count < max) {
+            max = count;
+            pos = i;
+        }
+    }
+
+    if (pos < 0) {
+        sceKernelCpuResumeIntr(intr);
+        return SCE_ERROR_OUT_OF_MEMORY;
+    }
+
+    for (i=0; i<g_idst.pagesPerBlock; i++) {
+        if (g_idst.index[pos + i] == 0xFFFF) {
+            g_idst.index[pos + i] = id;
+            break;
+        }
+    }
+
+    g_idst.dirty = 1;
+    sceKernelCpuResumeIntr(intr);
+
+    return SCE_ERROR_OK;
+}
+
