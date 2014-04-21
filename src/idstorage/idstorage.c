@@ -12,6 +12,7 @@
 #include <sysmem_sysclib.h>
 #include <sysmem_kdebug.h>
 #include <threadman_kernel.h>
+#include <usersystemlib_kernel.h>
 #include <modulemgr.h>
 
 static s32 _sceIdStorageSysEventHandler(s32 id, char* name, void *param, s32 *res);
@@ -617,5 +618,28 @@ s32 sceIdStorageFlush(void)
     _sceIdStorageUnlockMutex();
 
     return SCE_ERROR_OK;
+}
+
+s32 sceIdStorageGetFreeLeaves(void)
+{
+    s32 intr;
+    s32 i;
+    s32 count = 0;
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+
+    for (i=0; i<512; i++) {
+        if (g_idst.index[i] == 0xFFFF) {
+            count++;
+        }
+    }
+
+    sceKernelCpuResumeIntr(intr);
+
+    return count;
 }
 
