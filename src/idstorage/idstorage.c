@@ -27,9 +27,9 @@ SCE_MODULE_REBOOT_BEFORE("sceIdStorageModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
 
 typedef struct {
-    u16 value; // 0
-    u8 used; // 2
-} SceIdStoragePair;
+    u16 keyId; // 0
+    u8 state; // 2
+} SceIdStorageItem;
 
 typedef struct {
     s32 fpl; // 0
@@ -41,8 +41,8 @@ typedef struct {
     u8 dirty; // 18
     s16 blockPos; // 20
     u32 scramble; // 24
-    u16 data[512]; // 28
-    SceIdStoragePair pairs[32]; // 1052
+    u16 index[512]; // 28
+    SceIdStorageItem store[32]; // 1052
     void *pool; // 1180
 } SceIdStorage;
 
@@ -87,7 +87,7 @@ s32 sceIdStorageInit(void)
 
     memset(&g_idst, 0, sizeof(g_idst));
 
-    /* Generate scramble seed. Used for nand page decryption. */
+    /* Generate scramble seed, used for nand page decryption */
 
     fuse = sceSysregGetFuseId();
     magic[0] = fuse;
@@ -105,11 +105,11 @@ s32 sceIdStorageInit(void)
         g_idst.scramble = 0;
     }
 
-    /* Pages */
+    /* 32 pages per block */
 
     g_idst.pagesPerBlock = sceNandGetPagesPerBlock();
 
-    /* Pool */
+    /* Allocate pool, used to store key contents */
 
     res = sceKernelCreateFpl("SceIdStorage", 1, 1, 16384, 1, NULL);
 
@@ -126,7 +126,7 @@ s32 sceIdStorageInit(void)
         return res;
     }
 
-    /* Mutex */
+    /* Create mutex */
 
     // TODO: proper flags
     // 0x200 = SCE_KERNEL_MUTEX_RECURSIVE
@@ -139,7 +139,7 @@ s32 sceIdStorageInit(void)
 
     g_idst.mutex = res;
 
-    /* Lock nand */
+    /* Lock nand, disable write access */
 
     res = sceNandLock(0);
 
@@ -150,15 +150,18 @@ s32 sceIdStorageInit(void)
 
     g_idst.unk0 = -1;
 
-    /* Find valid idstorage block */
+    /* Find valid idstorage index block by reading the spare area */
+    /* Reference: http://hitmen.c02.at/files/yapspd/psp_doc/chap19.html#sec19.3 */
 
     for (pos=0; pos<512; pos+=g_idst.pagesPerBlock) {
         res = sceNandReadExtraOnly(1536 + pos, extra, 1);
 
+        /* Read failed */
         if (res != 0) {
             state = res;
             continue;
         }
+        /* Block is not valid */
         if (extra[5] != 255) {
             state = -1;
             continue;
@@ -169,20 +172,26 @@ s32 sceIdStorageInit(void)
             break;
         }
 
+        /* Verify spare aera ECC */
         state = sceNandCorrectEcc(&extra[4], ((extra[13] << 8) | extra[12]) & 0xFFF);
         if (state == -3) {
             continue;
         }
-        if (extra[6] == 115) {
+        /* Check for idstorage index */
+        if (extra[6] != 115) {
             continue;
         }
 
         g_idst.unk0 = extra[7];
 
+        /* Second check */
         if (extra[8] < 2) {
+            /* Index is read-only */
             if (extra[9] >= 2) {
                 g_idst.readOnly = 1;
             }
+
+            /* Valid index found */
             break;
         }
 
@@ -193,15 +202,15 @@ s32 sceIdStorageInit(void)
         state = -1;
     }
 
-    sceNandSetScramble(g_idst.scramble);
+    /* Read idstorage index (1024 bytes) and store it */
 
-    /* Read idstorage nand block and store it */
+    sceNandSetScramble(g_idst.scramble);
 
     if (state == 0) {
         u32 i;
 
         for (i=0; i<4; i++) {
-            state = sceNandReadPages(1536 + pos, &g_idst.data, NULL, 2);
+            state = sceNandReadPages(1536 + pos, &g_idst.index, NULL, 2);
 
             if (state >= 0) {
                 break;
@@ -267,7 +276,7 @@ static s32 _sceIdStorageFindFreeBlock(void)
 
     for (i=0; i<512; i+=g_idst.pagesPerBlock) {
         for (j=0; j<g_idst.pagesPerBlock; j++) {
-            if (g_idst.data[i + j] != 0xFFFF) {
+            if (g_idst.index[i + j] != 0xFFFF) {
                 break;
             }
         }
@@ -287,14 +296,14 @@ static s32 _sceIdStorageFindFreeBlock(void)
 }
 
 //sub_00000474
-static s32 _sceIdStorageFindPage(u16 data)
+static s32 _sceIdStorageFindKeyPos(u16 id)
 {
     s32 i;
-    s32 page = -1;
+    s32 pos = -1;
 
     for (i=0; i<512; i++) {
-        if (g_idst.data[i] == data) {
-            page = i;
+        if (g_idst.index[i] == id) {
+            pos = i;
             break;
         }
     }
@@ -303,16 +312,16 @@ static s32 _sceIdStorageFindPage(u16 data)
         return SCE_ERROR_NOT_FOUND;
     }
 
-    return page;
+    return pos;
 }
 
 //sub_000004C4
-static s32 _sceIdStorageFindValue(u16 value)
+static s32 _sceIdStorageKeyStoreFind(u16 id)
 {
     s32 i;
 
     for (i=0; i<32; i++) {
-        if (g_idst.pairs[i].value == value && g_idst.pairs[i].used) {
+        if (g_idst.store[i].keyId == id && g_idst.store[i].state != 0) {
             return i;
         }
     }
@@ -321,14 +330,14 @@ static s32 _sceIdStorageFindValue(u16 value)
 }
 
 //sub_00000510
-static s32 _sceIdStorageInsertValue(u16 value)
+static s32 _sceIdStorageKeyStoreInsert(u16 id)
 {
     s32 i;
 
     for (i=0; i<32; i++) {
-        if (!g_idst.pairs[i].used) {
-            g_idst.pairs[i].value = value;
-            g_idst.pairs[i].used = 1;
+        if (g_idst.store[i].state == 0) {
+            g_idst.store[i].keyId = id;
+            g_idst.store[i].state = 1;
             return i;
         }
     }
@@ -337,12 +346,12 @@ static s32 _sceIdStorageInsertValue(u16 value)
 }
 
 //sub_0000055C
-static s32 _sceIdStorageClearValues(void)
+static s32 _sceIdStorageKeyStoreClear(void)
 {
     s32 i;
 
     for (i=0; i<32; i++) {
-        g_idst.pairs[i].used = 0;
+        g_idst.store[i].state = 0;
     }
 
     return SCE_ERROR_OK;
@@ -372,7 +381,7 @@ s32 sceIdStorageIsDirty(void)
     }
 
     for (i=0; i<32; i++) {
-        if (g_idst.pairs[i].used == 3) {
+        if (g_idst.store[i].state == 3) {
             return 1;
         }
     }
@@ -403,11 +412,11 @@ s32 sceIdStorageFormat(void)
     g_idst.dirty = 0;
 
     for (i=0; i<32; i++) {
-        g_idst.pairs[i].used = 0;
+        g_idst.store[i].state = 0;
     }
 
     for (i=0; i<512; i++) {
-        g_idst.data[i] = 0xFFFF; // -1
+        g_idst.index[i] = 0xFFFF; // -1
     }
 
     for (i=0; i<512; i+=g_idst.pagesPerBlock) {
@@ -423,7 +432,7 @@ s32 sceIdStorageFormat(void)
         }
 
         for (j=0; j<g_idst.pagesPerBlock; j++) {
-            g_idst.data[i + j] = 0xFFF0; // -16
+            g_idst.index[i + j] = 0xFFF0; // -16
         }
     }
 
@@ -437,7 +446,7 @@ s32 sceIdStorageFormat(void)
     }
 
     for (i=0; i<g_idst.pagesPerBlock; i++) {
-        g_idst.data[pos + i] = 0xFFF5; // -11
+        g_idst.index[pos + i] = 0xFFF5; // -11
     }
 
     res = sceNandEraseBlock(1536 + pos);
@@ -459,7 +468,7 @@ s32 sceIdStorageFormat(void)
         spare[12*i + 5] = 1;
     }
 
-    res = sceNandWritePages(1536 + pos, &g_idst.data, &spare, 2);
+    res = sceNandWritePages(1536 + pos, &g_idst.index, &spare, 2);
     if (res < 0) {
         sceKernelPowerUnlock(0);
         sceNandUnlock();
@@ -524,15 +533,15 @@ s32 sceIdStorageReadLeaf(u16 id, void *buf)
         return res;
     }
 
-    pos = _sceIdStorageFindPage(id);
+    pos = _sceIdStorageFindKeyPos(id);
     if (pos < 0) {
         _sceIdStorageUnlockMutex();
         return pos;
     }
 
-    idx = _sceIdStorageFindValue(pos);
+    idx = _sceIdStorageKeyStoreFind(pos);
     if (idx < 0) {
-        idx = _sceIdStorageInsertValue(pos);
+        idx = _sceIdStorageKeyStoreInsert(pos);
         if (idx < 0) {
             res = sceIdStorageFlush();
             if (res < 0) {
@@ -540,13 +549,13 @@ s32 sceIdStorageReadLeaf(u16 id, void *buf)
                 return res;
             }
 
-            pos = _sceIdStorageFindPage(id);
+            pos = _sceIdStorageFindKeyPos(id);
             if (pos < 0) {
                 _sceIdStorageUnlockMutex();
                 return pos;
             }
 
-            idx = _sceIdStorageInsertValue(pos);
+            idx = _sceIdStorageKeyStoreInsert(pos);
         }
 
         for (i=0; i<4; i++) {
@@ -564,15 +573,15 @@ s32 sceIdStorageReadLeaf(u16 id, void *buf)
                 break;
             }
 
-            /* Block read failed on last attempt */
+            /* Page read failed on last attempt */
             if (i == 3) {
-                g_idst.pairs[idx].used = 0;
+                g_idst.store[idx].state = 0;
                 _sceIdStorageUnlockMutex();
                 return res;
             }
         }
 
-        g_idst.pairs[idx].used = 2;
+        g_idst.store[idx].state = 2;
     }
 
     /* NOTE: asm code seems to contain inlined memcpy */
