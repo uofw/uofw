@@ -593,6 +593,64 @@ s32 sceIdStorageReadLeaf(u16 id, void *buf)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageWriteLeaf(u16 id, void *buf)
+{
+    s32 res;
+    s32 pos;
+    s32 idx;
+
+    if (id > 0xFFEF) {
+        return SCE_ERROR_INVALID_ID;
+    }
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    if (sceIdStorageIsReadOnly()) {
+        return -1;
+    }
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    pos = _sceIdStorageFindKeyPos(id);
+    if (pos < 0) {
+        _sceIdStorageUnlockMutex();
+        return pos;
+    }
+
+    idx = _sceIdStorageKeyStoreFind(pos);
+    if (idx < 0) {
+        idx = _sceIdStorageKeyStoreInsert(pos);
+        if (idx < 0) {
+            res = sceIdStorageFlush();
+            if (res < 0) {
+                _sceIdStorageUnlockMutex();
+                return res;
+            }
+
+            pos = _sceIdStorageFindKeyPos(id);
+            if (pos < 0) {
+                _sceIdStorageUnlockMutex();
+                return pos;
+            }
+
+            idx = _sceIdStorageKeyStoreInsert(pos);
+        }
+    }
+
+    /* NOTE: asm code seems to contain inlined memcpy */
+    memcpy(g_idst.pool + 512*idx, buf, 512);
+
+    g_idst.store[idx].state = 3;
+    _sceIdStorageUnlockMutex();
+
+    return SCE_ERROR_OK;
+}
+
 s32 sceIdStorageFlush(void)
 {
     s32 res;
