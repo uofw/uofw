@@ -503,3 +503,83 @@ s32 sceIdStorageUnformat(void)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageReadLeaf(u16 id, void *buf)
+{
+    u8 extra[16]; //sp+0
+    s32 res;
+    s32 i;
+    s32 pos;
+    s32 idx;
+
+    if (id > 0xFFEF) {
+        return SCE_ERROR_INVALID_ID;
+    }
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    pos = _sceIdStorageFindPage(id);
+    if (pos < 0) {
+        _sceIdStorageUnlockMutex();
+        return pos;
+    }
+
+    idx = _sceIdStorageFindValue(pos);
+    if (idx < 0) {
+        idx = _sceIdStorageInsertValue(pos);
+        if (idx < 0) {
+            res = sceIdStorageFlush();
+            if (res < 0) {
+                _sceIdStorageUnlockMutex();
+                return res;
+            }
+
+            pos = _sceIdStorageFindPage(id);
+            if (pos < 0) {
+                _sceIdStorageUnlockMutex();
+                return pos;
+            }
+
+            idx = _sceIdStorageInsertValue(pos);
+        }
+
+        for (i=0; i<4; i++) {
+            res = sceNandLock(0);
+            if (res < 0) {
+                _sceIdStorageUnlockMutex();
+                return res;
+            }
+
+            sceNandSetScramble(g_idst.scramble);
+
+            res = sceNandReadPagesRawExtra(pos, g_idst.pool + 512*idx, &extra, 1);
+            sceNandUnlock();
+            if (res >= 0) {
+                break;
+            }
+
+            /* Block read failed on last attempt */
+            if (i == 3) {
+                g_idst.pairs[idx].used = 0;
+                _sceIdStorageUnlockMutex();
+                return res;
+            }
+        }
+
+        g_idst.pairs[idx].used = 2;
+    }
+
+    /* NOTE: asm code seems to contain inlined memcpy */
+    memcpy(buf, g_idst.pool + 512*idx, 512);
+
+    _sceIdStorageUnlockMutex();
+
+    return SCE_ERROR_OK;
+}
+
