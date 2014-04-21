@@ -643,3 +643,24 @@ s32 sceIdStorageGetFreeLeaves(void)
     return count;
 }
 
+s32 sceIdStorageEnumId(void (*cb)(u16 id, s32 ppn, void *opt), void *opt)
+{
+    s32 res;
+    s32 i;
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    for (i=0; i<512; i++) {
+        if (g_idst.index[i] <= 0xFFEF) {
+            cb(g_idst.index[i], 1536 + i, opt);
+        }
+    }
+
+    _sceIdStorageUnlockMutex();
+
+    return SCE_ERROR_OK;
+}
+
