@@ -24,7 +24,7 @@ typedef struct {
     u32 unk20;
     u32 unk24;
     u32 unk28;
-    u32 unk32;
+    void (*npDrmGetModuleKeyFunction)(void); // 32
     u32 unk36;
 } SceModuleManagerCB;
 
@@ -257,17 +257,17 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
 }
 
 /**
- * Load a module specifying the api type
+ * Load a module by path specifying the api type
  * 
  * @param apiType The api type of the module
  * @param path A pointer to a '\0' terminated string containing the path to the module
  * @param flags Unused, pass 0
- * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module
+ * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
  *
  * @return SCE_ERROR_OK on success, < 0 on error.
  * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
- * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was called in a user context
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
  * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.80 and opt->size != sizeof(SceKernelLMOption)
  * @return One of the errors of sceIoOpen() if failed
@@ -365,16 +365,16 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
 }
 
 /**
- * Load a module
+ * Load a module by path
  * 
  * @param path A pointer to a '\0' terminated string containing the path to the module
  * @param flags Unused, pass 0
- * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module
+ * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
  *
  * @return SCE_ERROR_OK on success, < 0 on error.
  * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
- * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called in a user context
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers are NULL or can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
  * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.71 and opt->size != sizeof(SceKernelLMOption)
  * @return One of the errors of sceIoOpen() if failed
@@ -463,6 +463,21 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
     return status;
 }
 
+/**
+ * Load a module by file descriptor
+ * 
+ * @param inputId The file descriptor that was obtained when opening the module with sceIoOpen()
+ * @param flag Unused, pass 0
+ * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
+ *
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the pointer to SceKernelLMOption can't be accessed from the current context.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.80 and opt->size != sizeof(SceKernelLMOption)
+ * @return One of the errors of sceIoValidateFd() if failed
+ * @return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE if sceIoIoctl() failed
+ */
 // Subroutine ModuleMgrForUser_B7F46618 - Address 0x0000088C
 // TODO: Rename to sceKernelLoadModuleByIDForUser() ?
 s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
@@ -530,6 +545,23 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
     return status;
 }
 
+/**
+ * Load a module by path specifying a block and an offset
+ * 
+ * @param path The file descriptor that was obtained when opening the module with sceIoOpen()
+ * @param block Memory block where the module will be loaded
+ * @param Aligned-to-64-offset (from the memory block) where the module will be loaded
+ *
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the path pointer is NULL or can't be accessed from the current context, or if the address corresponding to the block can't be accessed from the current context.
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
+ * @return SCE_ERROR_KERNEL_INVALID_ARGUMENT if the offset is incorrect or not aligned to 64
+ * @return One of the errors of sceIoOpen() if failed
+ * @return One of the errors of sceIoValidateFd() if failed
+ * @return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE if sceIoIoctl() failed
+ */
 // Subroutine ModuleMgrForUser_E4C4211C - Address 0x000009FC
 s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff offset)
 {
@@ -620,6 +652,21 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
     return status;
 }
 
+/**
+ * Load a module by file descriptor specifying a block and an offset
+ * 
+ * @param inputId The file descriptor that was obtained when opening the module with sceIoOpen()
+ * @param block Memory block where the module will be loaded
+ * @param Aligned-to-64-offset (from the memory block) where the module will be loaded
+
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the address corresponding to the block can't be accessed from the current context.
+ * @return SCE_ERROR_KERNEL_INVALID_ARGUMENT if the offset is incorrect or not aligned to 64
+ * @return One of the errors of sceIoValidateFd() if failed
+ * @return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE if sceIoIoctl() failed
+ */
 // Subroutine ModuleMgrForUser_FBE27467 - Address 0x00000C34
 s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff offset)
 {
@@ -700,6 +747,25 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
     return status;
 }
 
+/**
+ * Load a DNAS module by path and secureInstallId
+ * 
+ * @param path The file descriptor that was obtained when opening the module with sceIoOpen()
+ * @param secureInstallId A pointer to a secure installation identifier string, which is an encryption key used to decrypt the module, example: "123456789abcdef123456789abcdef12". It is often used in games that encrypt their modules (and other files) to prevent unauthorized access. This makes reverse engineering slightly harder because one needs to find the keys first.
+ * @param flag Unused, pass 0
+ * @param opt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
+
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the path or secureInstallId or pOpt is NULL or can't be accessed from the current context.
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
+ * @return SCE_ERROR_KERNEL_INVALID_ARGUMENT if the offset is incorrect or not aligned to 64
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.80 and opt->size != sizeof(SceKernelLMOption)
+ * @return One of the errors of sceIoOpen() if failed
+ * @return One of the errors of sceIoIoctl() if failed
+ * @return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE if sceIoIoctl() failed
+ */
 // Subroutine ModuleMgrForUser_FEF27DC1 - Address 0x00000E18
 s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 flag __attribute__((unused)), 
         const SceKernelLMOption *pOpt)
@@ -797,10 +863,103 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
     return status;
 }
 
-// TODO: Reverse function sceKernelLoadModuleNpDrm
-// 0x00001060
-void sceKernelLoadModuleNpDrm()
+// Subroutine ModuleMgrForUser_F2D8D1B4 - Address 0x00001060 
+void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    u32 sdkVersion;
+    char secInstallId[16];
+    SceNpDrm npDrmData;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1(); // 0x0000106C
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00001094
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+}
+
+    // Only exported in user space
+    if (!pspK1IsUserMode()) { // 0x000010A0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+
+    if (path == NULL || !pspK1PtrOk(path)) { // 0x000010AC, 0x000010BC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR; 
+    }
+    // Protection against formatted string attacks, path cannot contain a '%'
+    if (strchr(path, '%')) { // 0x0000121C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE; 
+    }
+    
+    if (pOpt != NULL) { // 0x0000122C
+        if (!pspK1StaBufOk(pOpt, sizeof(SceKernelLMOption))) { //0x00001240
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x00001250
+        sdkVersion &= 0xFFFF0000;
+        // Firmware >= 2.80, updated size field
+        if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelLMOption)) { // 0x00001268, 0x0000127C 
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x000010DC
+    if (fd < 0) { // 0x000010E8
+        pspSetK1(oldK1);
+        return fd;
+    }
+    
+    if (g_ModuleManager.npDrmGetModuleKeyFunction == NULL) { //0x000010FC
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ERROR;
+    }   
+    status = g_ModuleManager.npDrmGetModuleKeyFunction(fd, &secInstallId, &npDrmData); // 0x00001110
+    if (status < 0) { // 0x00001118
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    sceIoLseek(fd, npDrmData.fileOffset, SCE_SEEK_SET); // 0x0000112C
+
+    status = sceIoIoctl(fd, 0x208002, NULL, 0, NULL, 0); // 0x0000114C
+    if (status < 0) { // 0x00001158
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x0000116C
+         ((u32 *)modParams)[i] = 0;
+
+    modParams.apiType = 0x14; // 0x0000117C
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001188
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00001194
+    modParams.unk64 = 0; // 0x000011A0
+    modParams.fd = fd; // 0x000011A8
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000011AC
+    if (status >= 0) // 0x000011B4
+        modParams.unk100 = 0x10; // 0x000011C0
+    
+    memcpy(&modParams.secureInstallId, secInstallId, 16); //0x000011C8
+    
+    status = _LoadModuleByBufferID(&modParams, pOpt); // 0x000011D4
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModuleMs
@@ -961,7 +1120,7 @@ void sceKernelSelfStopUnloadModule()
  * @param idCount The number of module ids in the list (can be greater than the number of returned ids)
  *
  * @return SCE_ERROR_OK on success, < 0 on error.
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers can't be accessed with the current rights or are NULL.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers can't be accessed from the current context or are NULL.
  */
 // Subroutine sceKernelGetModuleIdList - Address 0x000041E8 - Aliases: ModuleMgrForKernel_303FAB7F
 s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
@@ -990,7 +1149,7 @@ s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
  * 
  * @return SCE_ERROR_OK on success, < 0 on error.
  * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer is NULL or can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer is NULL or can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SDK version >= 2.80  and modInfo->size != sizeof(SceKernelModuleInfoV1) && modInfo->size != sizeof(*modInfo)
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found
  * @return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO if the module status is 0x100 or you don't have the right to access information about this module
@@ -1100,7 +1259,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
  * 
  * @return The module id on success, < 0 on error.
  * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_ERROR if module couldn't be found.
  */
 // Subroutine ModuleMgrForUser_F0A26395 - Address 0x000058F8 - Aliases: ModuleMgrForKernel_CECA0FFC
@@ -1149,7 +1308,7 @@ s32 sceKernelGetModuleId(void)
  * 
  * @return The module id on success, < 0 on error.
  * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
  */
  // Subroutine sceKernelGetModuleIdByAddress - Address 0x00004598 - Aliases: ModuleMgrForKernel_433D5287
@@ -1193,7 +1352,7 @@ s32 sceKernelGetModuleIdByAddress(const void *codeAddr)
  * @param pGP A pointer to a location where the GP offset will be stored
  * 
  * @return SCE_ERROR_OK and sets pGP on success, < 0 on error.
- * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed with the current rights.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
  */
 // Subroutine sceKernelGetModuleGPByAddress - Address 0x00004628 
@@ -1276,7 +1435,7 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
     
     g_ModuleManager.unk20 = &g_ModuleManager.unk20; // 0x000050D8
     g_ModuleManager.unk24 = &g_ModuleManager.unk20; //0x000050F0
-    g_ModuleManager.unk32 = 0; // 0x000050E0
+    g_ModuleManager.npDrmGetModuleKeyFunction = NULL; // 0x000050E0
     g_ModuleManager.unk36 = 0; // 0x000050D4
     
     return SCE_KERNEL_RESIDENT;
