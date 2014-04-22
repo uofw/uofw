@@ -796,3 +796,70 @@ s32 sceIdStorageCreateLeaf(u16 id)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageCreateAtomicLeaves(u16 *ids, s32 size)
+{
+    s32 i, j, k;
+    s32 intr;
+    s32 count;
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    if (sceIdStorageIsReadOnly()) {
+        return -1;
+    }
+
+    if (size <= 0 || g_idst.pagesPerBlock < size) {
+        return SCE_ERROR_INVALID_SIZE;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+
+    /* Verify set of keys */
+    for (i=0; i<size; i++) {
+        if (ids[i] > 0xFFEF) {
+            sceKernelCpuResumeIntr(intr);
+            return SCE_ERROR_INVALID_ID;
+        }
+
+        if (_sceIdStorageFindKeyPos(ids[i]) >= 0) {
+            sceKernelCpuResumeIntr(intr);
+            return SCE_ERROR_ALREADY;
+        }
+    }
+
+    for (i=0; i<512; i+=g_idst.pagesPerBlock) {
+        /* Check against index if the block contains enough unused pages */
+        count = 0;
+
+        for (j=0; j<g_idst.pagesPerBlock; j++) {
+            if (g_idst.index[i + j] == 0xFFFF) {
+                count++;
+            }
+        }
+
+        if (count < size) {
+            continue;
+        }
+
+        /* Reserve early unused pages of the block with set of keys */
+        k = 0;
+
+        for (j=0; j<g_idst.pagesPerBlock; j++) {
+            if (g_idst.index[i + j] == 0xFFFF) {
+                g_idst.index[i + j] = ids[k++];
+
+                if (k == size) {
+                    break;
+                }
+            }
+        }
+    }
+
+    g_idst.dirty = 1;
+    sceKernelCpuResumeIntr(intr);
+
+    return SCE_ERROR_OK;
+}
+
