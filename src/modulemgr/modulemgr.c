@@ -24,7 +24,7 @@ typedef struct {
     u32 unk20;
     u32 unk24;
     u32 unk28;
-    u32 unk32;
+    void (*npDrmGetModuleKeyFunction)(void); // 32
     u32 unk36;
 } SceModuleManagerCB;
 
@@ -863,10 +863,103 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
     return status;
 }
 
-// TODO: Reverse function sceKernelLoadModuleNpDrm
-// 0x00001060
-void sceKernelLoadModuleNpDrm()
+// Subroutine ModuleMgrForUser_F2D8D1B4 - Address 0x00001060 
+void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    u32 sdkVersion;
+    char secInstallId[16];
+    SceNpDrm npDrmData;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1(); // 0x0000106C
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00001094
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+}
+
+    // Only exported in user space
+    if (!pspK1IsUserMode()) { // 0x000010A0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+
+    if (path == NULL || !pspK1PtrOk(path)) { // 0x000010AC, 0x000010BC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR; 
+    }
+    // Protection against formatted string attacks, path cannot contain a '%'
+    if (strchr(path, '%')) { // 0x0000121C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE; 
+    }
+    
+    if (pOpt != NULL) { // 0x0000122C
+        if (!pspK1StaBufOk(pOpt, sizeof(SceKernelLMOption))) { //0x00001240
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x00001250
+        sdkVersion &= 0xFFFF0000;
+        // Firmware >= 2.80, updated size field
+        if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelLMOption)) { // 0x00001268, 0x0000127C 
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x000010DC
+    if (fd < 0) { // 0x000010E8
+        pspSetK1(oldK1);
+        return fd;
+    }
+    
+    if (g_ModuleManager.npDrmGetModuleKeyFunction == NULL) { //0x000010FC
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ERROR;
+    }   
+    status = g_ModuleManager.npDrmGetModuleKeyFunction(fd, &secInstallId, &npDrmData); // 0x00001110
+    if (status < 0) { // 0x00001118
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    sceIoLseek(fd, npDrmData.fileOffset, SCE_SEEK_SET); // 0x0000112C
+
+    status = sceIoIoctl(fd, 0x208002, NULL, 0, NULL, 0); // 0x0000114C
+    if (status < 0) { // 0x00001158
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x0000116C
+         ((u32 *)modParams)[i] = 0;
+
+    modParams.apiType = 0x14; // 0x0000117C
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001188
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00001194
+    modParams.unk64 = 0; // 0x000011A0
+    modParams.fd = fd; // 0x000011A8
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000011AC
+    if (status >= 0) // 0x000011B4
+        modParams.unk100 = 0x10; // 0x000011C0
+    
+    memcpy(&modParams.secureInstallId, secInstallId, 16); //0x000011C8
+    
+    status = _LoadModuleByBufferID(&modParams, pOpt); // 0x000011D4
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModuleMs
@@ -1342,7 +1435,7 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
     
     g_ModuleManager.unk20 = &g_ModuleManager.unk20; // 0x000050D8
     g_ModuleManager.unk24 = &g_ModuleManager.unk20; //0x000050F0
-    g_ModuleManager.unk32 = 0; // 0x000050E0
+    g_ModuleManager.npDrmGetModuleKeyFunction = NULL; // 0x000050E0
     g_ModuleManager.unk36 = 0; // 0x000050D4
     
     return SCE_KERNEL_RESIDENT;
