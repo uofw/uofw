@@ -728,7 +728,7 @@ s32 sceIdStorageCreateLeaf(u16 id)
     s32 intr;
     s32 pos;
     s32 count;
-    s32 max;
+    s32 min;
 
     if (!sceIdStorageIsFormatted()) {
         return SCE_ERROR_INVALID_FORMAT;
@@ -744,14 +744,17 @@ s32 sceIdStorageCreateLeaf(u16 id)
 
     intr = sceKernelCpuSuspendIntr();
 
+    /* Check if the key is already in the index */
     if (_sceIdStorageFindKeyPos(id) >= 0) {
         sceKernelCpuResumeIntr(intr);
         return SCE_ERROR_ALREADY;
     }
 
+    /* Attempt chaining */
     if (id != 0) {
         pos = _sceIdStorageFindKeyPos(id-1);
-        if (pos < 511) {
+
+        if (0 <= pos && pos < 511) {
             if (g_idst.index[pos+1] == 0xFFFF) {
                 g_idst.index[pos+1] = id;
                 g_idst.dirty = 1;
@@ -761,28 +764,32 @@ s32 sceIdStorageCreateLeaf(u16 id)
         }
     }
 
-    count = 0;
-    max = g_idst.pagesPerBlock + 1;
+    min = g_idst.pagesPerBlock + 1;
     pos = -1;
 
+    /* Find the most fully used block with at least one unused page */
     for (i=0; i<512; i+=g_idst.pagesPerBlock) {
+        count = 0;
+
         for (j=0; j<g_idst.pagesPerBlock; j++) {
             if (g_idst.index[i + j] == 0xFFFF) {
                 count++;
             }
         }
 
-        if (0 < count && count < max) {
-            max = count;
+        if (0 < count && count < min) {
+            min = count;
             pos = i;
         }
     }
 
+    /* No suitable block found */
     if (pos < 0) {
         sceKernelCpuResumeIntr(intr);
         return SCE_ERROR_OUT_OF_MEMORY;
     }
 
+    /* Reserve first unused page of the block */
     for (i=0; i<g_idst.pagesPerBlock; i++) {
         if (g_idst.index[pos + i] == 0xFFFF) {
             g_idst.index[pos + i] = id;
