@@ -79,9 +79,11 @@ enum ModuleMgrExecModes
 	CMD_UNLOAD_MODULE, //4
 };
 
-SCE_MODULE_INFO("sceModuleManager", SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | 
-                                 SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 
-                                 18);
+SCE_MODULE_INFO("sceModuleManager", 
+        SCE_MODULE_KIRK_MEMLMD_LIB | 
+        SCE_MODULE_KERNEL | 
+        SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 
+        1, 18);
 SCE_MODULE_BOOTSTART("ModuleMgrInit");
 SCE_MODULE_REBOOT_BEFORE("ModuleMgrRebootBefore");
 SCE_MODULE_REBOOT_PHASE("ModuleMgrRebootPhase");
@@ -1188,10 +1190,38 @@ void sceKernelStopModule()
 {
 }
 
-// TODO: Reverse function sceKernelSelfStopUnloadModule
-// 0x00004110
-void sceKernelSelfStopUnloadModule()
+// Subroutine ModuleMgrForUser_D675EBB8 - Address 0x00004110 - Aliases: ModuleMgrForKernel_5805C1CA
+s32 sceKernelSelfStopUnloadModule(s32 status, SceSize args, void *argp)
 {
+    s32 oldK1;
+    s32 retAddr;
+    s32 status;
+    
+    oldK1 = pspShiftK1();
+    retAddr = pspGetRa();
+    
+    if (sceKernelIsIntrContext()) { //0x0000414C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if (argp != NULL && !pspK1DynBufOk(argp, args)) { //0x00004158, 0x0000416C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    if (pspK1IsUserMode()) //0x00004174
+        retAddr = sceKernelGetSyscallRA();
+    
+    if (!pspK1PtrOk(retAddr)) { //0x0000419C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    status = _SelfStopUnloadModule(status, retAddr, args, argp, NULL, NULL); //0x000041A4
+    
+    pspSetK1(oldK1);
+    return status;
 }
 
 /**
@@ -1717,7 +1747,7 @@ void sub_00007698()
 
 // TODO: Reverse function sub_000076CC
 // 0x000076CC
-void sub_000076CC()
+void _SelfStopUnloadModule()
 {
 }
 
