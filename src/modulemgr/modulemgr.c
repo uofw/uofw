@@ -962,10 +962,92 @@ void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)
     return status;
 }
 
-// TODO: Reverse function sceKernelLoadModuleMs
-// 0x0000128C
-void sceKernelLoadModuleMs()
+// Subroutine ModuleMgrForUser_710F61B5 - Address 0x0000128C
+s32 sceKernelLoadModuleMs(const char *path, s32 flags __attribute__((unused)), SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    u32 sdkVersion;
+    SceModuleMgrParam modParams;
+
+    oldK1 = pspShiftK1(); // 0x00001298
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000012B0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    // Only exported in user space
+    if (!pspK1IsUserMode()) { // 0x000012C4
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    status = sceKernelGetUserLevel();
+    /* Verify if user level relates to the MS API. */
+    if (status != 1) { //0x00001300
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+
+    if (path == NULL || !pspK1PtrOk(path)) { // 0x0000130C, 0x0000131C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR; 
+    }
+    // Protection against formatted string attacks, path cannot contain a '%'
+    if (strchr(path, '%')) { // 0x00001400
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE; 
+    }
+    
+    if (pOption != NULL) { // 0x00001418
+        if (!pspK1StaBufOk(pOption, sizeof(SceKernelLMOption))) { //0x0000142C
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x0000143C
+        sdkVersion &= 0xFFFF0000;
+        // Firmware >= 2.80, updated size field
+        if (sdkVersion >= 0x02080000 && pOption->size != sizeof(SceKernelLMOption)) { // 0x00001454, 0x00001468 
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x0000133C
+    if (fd < 0) { // 0x00001348
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208002, NULL, 0, NULL, 0); // 0x00001368
+    if (status < 0) { // 0x00001374
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x00001388
+         ((u32 *)modParams)[i] = 0;
+
+    modParams.apiType = 0x11;
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000013B0
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000013A4
+    modParams.unk64 = 0; // 0x000013BC
+    modParams.fd = fd; // 0x000013C4
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000013C8
+    if (status >= 0) // 0x000013D0
+        modParams.unk100 = 0x10; // 0x000013D8
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000013E0
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelLoadModuleBufferUsbWlan
