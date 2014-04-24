@@ -3,6 +3,7 @@
 */
 
 #include "usersystemlib_int.h"
+#include <threadman_user.h>
 
 // Kernel_Library_293B45B8
 s32 sceKernelGetThreadId(void)
@@ -68,7 +69,7 @@ void *Kernel_Library_FA835CDE(s32 arg0)
     if (ptr == NULL) { // loc_000004FC
         s32 ret;
 
-        ret = ThreadManForUser_65F54FFB(arg0, &ptr, 0);
+        ret = _sceKernelAllocateTlspl(arg0, &ptr, 0);
 
         if (ret < 0) {
             return NULL;
