@@ -869,6 +869,26 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
     return status;
 }
 
+/**
+ * Load an NPDRM SPRX module, sceNpDrmSetLicenseeKey() needs to be called first in order to set the key
+ * 
+ * @param path A pointer to a '\0' terminated string containing the path to the module
+ * @param flag Unused, pass 0
+ * @param pOpt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
+
+ * @return SCE_ERROR_OK on success, < 0 on error.
+ * @return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT if function was called in an interruption.
+ * @return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL if function was not called from a user context
+ * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the path is NULL, or path/pOpt can't be accessed from the current context.
+ * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE_FILE if the path contains a '%' (protection against formatted strings attack)
+ * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SdkVersion >= 2.80 and opt->size != sizeof(SceKernelLMOption)
+ * @return One of the errors of sceIoOpen() if failed
+ * @return SCE_ERROR_KERNEL_ERROR If the callback npDrmGetModuleKeyFunction in the g_ModuleManager structure is NULL
+ * @return One of the errors of sceIoIoctl() if failed
+ * @return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE if sceIoIoctl() failed
+ *
+ * @see sceNpDrmSetLicenseeKey()
+ */
 // Subroutine ModuleMgrForUser_F2D8D1B4 - Address 0x00001060 
 void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
 {
