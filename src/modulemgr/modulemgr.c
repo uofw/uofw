@@ -959,7 +959,7 @@ void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)
     if (status >= 0) // 0x000011B4
         modParams.unk100 = 0x10; // 0x000011C0
     
-    memcpy(&modParams.secureInstallId, secInstallId, 16); //0x000011C8
+    memcpy(modParams.secureInstallId, secInstallId, 16); //0x000011C8
     
     status = _LoadModuleByBufferID(&modParams, pOpt); // 0x000011D4
     
