@@ -36,7 +36,7 @@ typedef struct
 	u8 access; //3
 	//u32 apitype; //4
 	SceUID *returnId; //4
-	SceModule *mod; //12
+	SceModule *pMod; //12
     /*
 	SceUID mpidText; //16
 	SceUID mpidData; //20
@@ -51,6 +51,10 @@ typedef struct
 	SceLoadCoreExecFileInfo *execInfo; //16
     u32 apiType; //20
     SceUID fd; // 24
+    s32 threadPriority; //28
+    u32 threadAttr; //32
+    SceUID threadMpIdStack; //44
+    SceSize stackSize; //48
     SceUID modId; //52
     SceUID callerModId; //56
 	void *file_buffer; //60
@@ -59,7 +63,7 @@ typedef struct
 	void *argp; //72
 	u32 unk_76;
 	u32 unk_80;
-	int *status; //84
+	s32 *pStatus; //84
 	u32 eventId; //88
     u32 unk100;
     u32 unk124;
@@ -135,13 +139,13 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     for (int i = 0; i < sizeof(SceLoadCoreExecFileInfo) / sizeof(u32); i++)
         ((u32 *)execInfo)[i] = 0; // 0x000001A8
     
-    SceModule *mod = modParams->mod;
+    SceModule *mod = modParams->pMod;
     
     switch (modParams->modeStart) { // 0x000001D0
     case CMD_LOAD_MODULE:
         if (!mod) {
             mod = sceKernelCreateModule(); //0x0000048C
-            modParams->mod = mod;
+            modParams->pMod = mod;
 
 			if (!mod)
                 break; // 0x000004A0
@@ -154,19 +158,19 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
             
         if (status < SCE_ERROR_OK) { //0x000001FC
             modParams->returnId[0] = status; //0x00000480
-            if (modParams->mod != NULL) //0x47C
-                sceKernelDeleteModule(modParams->mod);
+            if (modParams->pMod != NULL) //0x47C
+                sceKernelDeleteModule(modParams->pMod);
             break;
         }
 
-        modParams->returnId[0] = modParams->mod->modId; //0x0000020C
+        modParams->returnId[0] = modParams->pMod->modId; //0x0000020C
         if (modParams->modeFinish == CMD_LOAD_MODULE) //0x00000214
             break;
     // 0x0000021C
     case CMD_RELOCATE_MODULE:
         if (mod == NULL) {
 			mod = sceKernelCreateModule(); //0x00000448
-			modParams->mod = mod;
+			modParams->pMod = mod;
                 
             // 0x00000454
             if (mod == NULL)
@@ -194,7 +198,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
             sceKernelDeleteModule(mod);
             break;
 		}
-        modParams->returnId[0] = modParams->mod->modId; //0x00000260        
+        modParams->returnId[0] = modParams->pMod->modId; //0x00000260        
         if (modParams->modeFinish == CMD_RELOCATE_MODULE) //0x00000268
             break;
     //0x00000270
@@ -203,9 +207,9 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
         if (mod == NULL && (mod = sceKernelFindModuleByUID(modParams->modId)) == NULL) //0x00000400
             modParams->returnId[0] = SCE_ERROR_KERNEL_UNKNOWN_MODULE; //0x00000420
         else {
-            status = _StartModule(modParams, mod, modParams->argSize, modParams->argp, modParams->status); //0x00000290
+            status = _StartModule(modParams, mod, modParams->argSize, modParams->argp, modParams->pStatus); //0x00000290
             if (status == SCE_ERROR_OK)
-                modParams->returnId[0] = modParams->mod->modId; //0x000003FC
+                modParams->returnId[0] = modParams->pMod->modId; //0x000003FC
             else if (status == 1)
                 modParams->returnId[0] = 0; //0x000002A4
             else
@@ -223,12 +227,12 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
             }
         }
         status = _StopModule(modParams, mod, modParams->modeStart, modParams->callerModId, modParams->argSize, 
-                modParams->argp, modParams->status); //0x000002E8
+                modParams->argp, modParams->pStatus); //0x000002E8
             
         if (status == SCE_ERROR_OK) //0x000002F0
             modParams->returnId[0] = 0;
         else if (status == 1)
-            modParams->returnId[0] = modParams->mod->modId; //0x000002FC
+            modParams->returnId[0] = modParams->pMod->modId; //0x000002FC
         else
             modParams->returnId[0] = status; //0x00000308
         
@@ -246,7 +250,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
         if (status < SCE_ERROR_OK) //0x00000338
             modParams->returnId[0] = status;
         else
-            modParams->returnId[0] = modParams->mod->modId; //0x00000348
+            modParams->returnId[0] = modParams->pMod->modId; //0x00000348
 
         break;       
     }
@@ -1184,14 +1188,96 @@ void sceKernelStartModule()
 {
 }
 
-// TODO: Reverse function sceKernelStopModule
-// 0x00003F28
-void sceKernelStopModule()
+// Subroutine ModuleMgrForUser_D1FF982A - Address 0x00003F28 - Aliases: ModuleMgrForKernel_E5D6087B
+s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modResult, const SceKernelSMOption *pOpt)
 {
+    s32 oldK1;
+    s32 sdkVersion;
+    s32 status;
+    u32 retAddr;
+    SceModule *pMod;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1();
+    retAddr = pspGetRa();
+    
+    if (sceKernelIsIntrContext()) { //0x00003F68
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if (argp != NULL && !pspK1DynBufOk(argp, args)) { //0x00003F7C, 0x00003F94
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    if (modResult != NULL && !pspK1StaBufOk(modResult, sizeof(modResult))) { //0x00003F9C, 0x00003FB0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    if (pOpt != NULL) { // 0x00003FB8
+        if (!pspK1StaBufOk(pOpt, sizeof(SceKernelSMOption))) { //0x00003FCC
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00003FCC
+        // Firmware >= 2.80, updated size field
+        if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelSMOption)) { // 0x0000401C & 0x00004030
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+        
+        // TODO: Replace with thread attributes?
+        if (pOpt->attribute & ~0x00F06000) { //0x0000404C
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ERROR;
+        }
+    }
+    
+    pMod = sceKernelFindModuleByAddress(retAddr); //0x00004054
+    if (pMod == NULL) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
+    }
+    
+    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00004078
+         ((u32 *)modParams)[i] = 0;
+   
+    modParams.pMod = sceKernelGetModuleFromUID(modId); //0x00004080
+    if (modParams.pMod && modParams.pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
+    }
+     
+    // 0x000040A4
+    modParams.modeFinish = CMD_STOP_MODULE;
+    modParams.modeStart = CMD_STOP_MODULE;
+    modParams.modId = modId; // 0x000040AC
+    modParams.callerModId = pMod->modId; // 0x000040BC
+    modParams.argSize = args;
+    modParams.argp = argp;
+    modParams.pStatus = modResult;
+    
+    if (pOpt != NULL) { //0x000040C4
+        modParams.threadMpIdStack = pOpt->mpidstack;
+        modParams.stackSize = pOpt->stacksize;
+        modParams.threadPriority = pOpt->priority;
+        modParams.threadAttr = pOpt->attribute;
+    } else { //0x000040FC
+        modParams.threadMpIdStack = 0;
+        modParams.stackSize = 0;
+        modParams.threadPriority = 0;
+        modParams.threadAttr = 0;
+    }
+    status = start_exe_thread(&modParams); //0x000040EC
+    
+    pspSetK1(oldK1);
+    return status;
 }
 
 // Subroutine ModuleMgrForUser_D675EBB8 - Address 0x00004110 - Aliases: ModuleMgrForKernel_5805C1CA
-s32 sceKernelSelfStopUnloadModule(s32 status, SceSize args, void *argp)
+s32 sceKernelSelfStopUnloadModule(s32 modStatus, SceSize args, void *argp)
 {
     s32 oldK1;
     s32 retAddr;
@@ -1218,7 +1304,7 @@ s32 sceKernelSelfStopUnloadModule(s32 status, SceSize args, void *argp)
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     
-    status = _SelfStopUnloadModule(status, retAddr, args, argp, NULL, NULL); //0x000041A4
+    status = _SelfStopUnloadModule(modStatus, retAddr, args, argp, NULL, NULL); //0x000041A4
     
     pspSetK1(oldK1);
     return status;
@@ -1723,7 +1809,7 @@ void _StopModule()
 
 // TODO: Reverse function sub_000074E4
 // 0x000074E4
-void sub_000074E4()
+void start_exe_thread()
 {
 }
 
