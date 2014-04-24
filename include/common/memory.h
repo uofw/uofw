@@ -49,3 +49,21 @@
 #define UPALIGN8(v)     (((v) + 0x7) & 0xFFFFFFF8)
 #define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)
 
+/* Clear memory partitioned in 1-Byte blocks. */
+static inline void pspClearMemory8(void *ptr, int size) {
+    for (int i = 0; i < size; i++)
+         ((u8 *)ptr)[i] = 0;
+}
+
+/* Clear memory partitioned in 2-Byte blocks. */
+static inline void pspClearMemory16(void *ptr, int size) {
+    for (int i = 0; i < size / sizeof(u16); i++)
+         ((u16 *)ptr)[i] = 0;
+}
+
+/* Clear memory partitioned in 4-Byte blocks. */
+static inline void pspClearMemory32(void *ptr, int size) {
+    for (int i = 0; i < size / sizeof(u32); i++)
+         ((u32 *)ptr)[i] = 0;
+}
+
