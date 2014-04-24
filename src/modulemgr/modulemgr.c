@@ -349,8 +349,8 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x000005A0
-         ((u32 *)modParams)[i] = 0;
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x000005A0
         
     modParams.apiType = apiType; // 0x000005A8
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000005B4
@@ -448,8 +448,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x00000784
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00000784
 
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000790
     modParams.apiType = 0x10; // 0x0000079C
@@ -531,8 +530,7 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
     
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x0000099C
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x0000099C
         
     modParams.apiType = 0x10; // 0x000009C8
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000009C4
@@ -634,8 +632,7 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
     
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00000BAC
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00000BAC
          
     modParams.apiType = 0x10; // 0x00000BC4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000BB8
@@ -730,8 +727,7 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
     
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00000D9C
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00000D9C
          
     modParams.apiType = 0x10; // 0x00000DB4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000DA8
@@ -846,8 +842,7 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
     
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00000F34
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00000F34
          
     modParams.apiType = 0x13; // 0x00000F44
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000F50
@@ -945,8 +940,7 @@ void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x0000116C
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000116C
 
     modParams.apiType = 0x14; // 0x0000117C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001188
@@ -1035,8 +1029,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags __attribute__((unused)), S
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) // 0x00001388
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001388
 
     modParams.apiType = 0x11;
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000013B0
@@ -1241,8 +1234,7 @@ s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modRe
         return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
     }
     
-    for (int i = 0; i < sizeof(modParams) / sizeof(u32); i++) //0x00004078
-         ((u32 *)modParams)[i] = 0;
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00004078
    
     modParams.pMod = sceKernelGetModuleFromUID(modId); //0x00004080
     if (modParams.pMod && modParams.pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) {
