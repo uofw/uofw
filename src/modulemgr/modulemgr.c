@@ -1090,7 +1090,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags __attribute__((unused)), S
  * @see sceNpDrmSetLicenseeKey()
  */
 // Subroutine sceKernelLoadModuleBufferUsbWlan - Address 0x00001478 
-void sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
+SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 fd;
