@@ -2017,7 +2017,7 @@ s32 _CheckOption(const SceKernelLMOption *pOpt)
 
 // TODO: Use a proper name: _CreateMgrParamStruct()?
 // Subroutine sub_00007698 - Address 0x00007698
-void sub_00007698(SceModuleMgrParam *modParams, u32 apiType, SceUID fd, void *file_buffer, u32 unk124)
+SceModuleMgrParam* sub_00007698(SceModuleMgrParam *modParams, u32 apiType, SceUID fd, void *file_buffer, u32 unk124)
 {
     pspClearMemory32(modParams); // 0x000076A0
 
