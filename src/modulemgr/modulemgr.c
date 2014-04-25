@@ -1993,10 +1993,27 @@ SceUID _LoadModuleByBufferID(SceModuleMgrParam *modParams, const SceKernelLMOpti
     return _start_exe_thread(modParams); // 0x000075F4
 }
 
-// TODO: Reverse function sub_00007620
-// 0x00007620
-void sub_00007620()
+// TODO: Rename it to _CheckSceKernelLMOption()?
+// Subroutine sub_00007620 - Address 0x00007620 
+s32 sub_00007620(const SceKernelLMOption *pOpt)
 {
+    if (pOpt == NULL) {
+        return SCE_ERROR_OK;
+    }
+
+    if (!pspK1StaBufOk(pOpt, sizeof(SceKernelLMOption))) {
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x0000764C
+    sdkVersion &= 0xFFFF0000;
+    // Firmware >= 2.80, updated size field
+    if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelLMOption)) { // 0x00007668, 0x00007678
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+    }
+
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_00007698
