@@ -11,11 +11,6 @@
 #include <modulemgr_options.h>
 #include <sysmem_kernel.h>
 
-static inline s32 _setupChecks(void)
-{
-    return pspShiftK1();
-}
-
 static inline s32 _checkCallConditionKernel(void)
 {
     if (pspK1IsUserMode()) {
@@ -90,11 +85,6 @@ static inline s32 _checkSecureInstalledIdConditions(const char *secureInstallId)
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     return SCE_ERROR_OK;
-}
-
-static inline void _terminateChecks(s32 k1State)
-{
-    pspSetK1(k1State);
 }
 
 #endif	/* LOADMODULECHECKS_INLINE_H */
