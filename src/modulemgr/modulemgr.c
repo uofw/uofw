@@ -1931,7 +1931,7 @@ void _StopModule()
 }
 
 // Subroutine sub_000074E4 - Address 0x000074E4 
-SceUID _start_exe_thread(SceModuleMgrParam *modParams)
+s32 _start_exe_thread(SceModuleMgrParam *modParams)
 {
     SceUID threadId;
     SceUID returnId;
@@ -2031,10 +2031,58 @@ SceModuleMgrParam* sub_00007698(SceModuleMgrParam *modParams, u32 apiType, SceUI
     return modParams;
 }
 
-// TODO: Reverse function sub_000076CC
-// 0x000076CC
-void _SelfStopUnloadModule()
+// Subroutine sub_000076CC - Address 0x000076CC 
+s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, void *argp, s32 *pStatus, const SceKernelSMOption *pOpt)
 {
+    SceModule *mod;
+    s32 status;
+    SceModuleMgrParam modParams;
+    s32 pStatus2;
+
+    mod = sceKernelFindModuleByAddress(codeAddr); // 0x000076FC
+    if (mod == NULL) { // 0x0000770C
+        return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
+    }
+
+    if (mod->attribute & SCE_MODULE_ATTR_CANT_STOP) { // 0x00007720
+        return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
+    }
+
+    pspClearMemory32(modParams, sizeof(modParams)); // 0x00007734
+
+    modParams->modeStart = CMD_STOP_MODULE; // 0x00007744
+    modParams->modeFinish = CMD_UNLOAD_MODULE; // 0x00007748
+    modParams->argp = argp; // 0x00007750
+    modParams->modId = mod->modId; // 0x00007754
+    modParams->argSize = args; // 0x0000775C
+    modParams->argSize = modId; // 0x00007764
+
+    if (pStatus == NULL) { // 0x00007760
+        modParams->pStatus = &pStatus2; // 0x000077EC
+    } else {
+        modParams->pStatus = pStatus; // 0x00007768
+    }
+
+    if (pOpt == NULL) { // 0x0000776C
+        modParams->threadMpIdStack = 0;
+        modParams->stackSize = 0;
+        modParams->threadPriority = 0;
+        modParams->threadAttr = 0;
+    } else {
+        modParams->threadMpIdStack = pOpt->mpIdStack; // 0x00007784
+        modParams->stackSize = pOpt->stacksize; // 0x00007788
+        modParams->threadPriority = pOpt->priority; // 0x0000778C
+        modParams->threadAttr = pOpt->attribute; // 0x00007790
+    }
+
+    status = _start_exe_thread(modParams); // 0x00007794
+    if (status < 0) {
+        return status;
+    }
+
+    sceKernelExitDeleteThread(returnStatus); // 0x000077A4
+
+    return status;
 }
 
 // TODO: Reverse function sub_000077F0
