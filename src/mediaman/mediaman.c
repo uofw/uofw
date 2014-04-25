@@ -819,7 +819,7 @@ s32 sceUmdReplacePermit(void)
 }
 
 //Subroutine sceUmd_AD1444AB - Address 0x00000F4C - Aliases: sceUmdUser_B103FA38
-s32 sceUmd_AD1444AB(void)
+s32 sceUmdUseUMDInMsUsbWlan(void)
 {
     s32 oldK1;
     s32 status;
@@ -833,7 +833,7 @@ s32 sceUmd_AD1444AB(void)
 }
 
 //Subroutine sceUmd_F0C51280 - Address 0x00000F78 - Aliases: sceUmdUser_14C6C45C
-s32 sceUmd_F0C51280(void)
+s32 sceUmdUnuseUMDInMsUsbWlan(void)
 {
     s32 oldK1;
     s32 status;

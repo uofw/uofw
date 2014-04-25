@@ -148,14 +148,14 @@ s32 sceUmdReplacePermit(void);
  * 
  * @return SCE_ERROR_OK on success, otherwise less than 0.
  */
-s32 sceUmd_AD1444AB(void);
+s32 sceUmdUseUMDInMsUsbWlan(void);
 
 /**
  * Unknown.
  * 
  * @return SCE_ERROR_OK on success, otherwise less than 0.
  */
-s32 sceUmd_F0C51280(void);
+s32 sceUmdUnuseUMDInMsUsbWlan(void);
 
 #ifdef	__cplusplus
 }
