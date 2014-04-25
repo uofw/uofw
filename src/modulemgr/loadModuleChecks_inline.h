@@ -44,6 +44,7 @@ static inline s32 _checkPathConditions(const char *path)
     return SCE_ERROR_OK;
 }
 
+// sub_00007620
 static inline s32 _checkLMOptionConditions(SceKernelLMOption *pOpt)
 {
     s32 sdkVersion; 
