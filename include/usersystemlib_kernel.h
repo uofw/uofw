@@ -101,13 +101,13 @@ s32 sceKernelGetThreadId(void);
 s32 sceKernelCheckThreadStack(void);
 
 /**
- * \fixme Unknown.
+ * Gets a tls address.
  *
- * @param arg0 Unknown.
+ * @param uid Unique tls identifier.
  *
  * @return A pointer, otherwise NULL on error.
  */
-void *Kernel_Library_FA835CDE(s32 arg0);
+void *sceKernelGetTlsAddr(SceUID uid);
 
 
 /* Lightweight Mutex */
