@@ -76,7 +76,8 @@ enum ModuleMgrExecModes
 	CMD_UNLOAD_MODULE, //4
 };
 
-SCE_MODULE_INFO("sceModuleManager", 
+SCE_MODULE_INFO(
+        "sceModuleManager", 
         SCE_MODULE_KIRK_MEMLMD_LIB | 
         SCE_MODULE_KERNEL | 
         SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 
@@ -88,15 +89,37 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
 
-
-// TODO: Reverse function sub_00000000
-// 0x00000000
-void sub_00000000()
+// sub_00000000
+static s32 _EpilogueModule(SceModule *pMod)
 {
+    void *pCurEntry;
+    void *pLastEntry;
+    s32 status;
+    
+    pCurEntry = pMod->entTop;
+    pLastEntry = pMod->entTop + pMod->entSize;
+    status = SCE_ERROR_OK;
+    
+    while (pCurEntry < pLastEntry) {
+        SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
+        if (pCurTable->attribute & SCE_LIB_IS_SYSLIB)
+            continue;
+        
+        status = sceKernelCanReleaseLibrary(pCurTable); //0x00000048
+        if (status != SCE_ERROR_OK)
+            return status;
+        
+        pCurEntry += pCurTable->len * 4; 
+    }
+    if (pMod->stubTop != -1)
+        sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); //0x00000080
+    
+    ModuleReleaseLibraries(pMod); //0x00000088
+    return status;
 }
 
 // 0x000000B0
-s32 _UnloadModule(SceModule *pMod)
+static s32 _UnloadModule(SceModule *pMod)
 {
     u32 modStat;
     
@@ -1732,7 +1755,7 @@ void _RelocateModule()
 
 // TODO: Reverse function sub_00006F80
 // 0x00006F80
-void sub_00006F80()
+void ModuleReleaseLibraries()
 {
 }
 
