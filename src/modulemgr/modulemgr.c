@@ -1828,35 +1828,36 @@ SceModuleMgrParam* sub_00007698(SceModuleMgrParam *modParams, u32 apiType, SceUI
 }
 
 // Subroutine sub_000076CC - Address 0x000076CC 
-s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, void *argp, s32 *pStatus, const SceKernelSMOption *pOpt)
+s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, void *argp, s32 *pStatus, 
+        const SceKernelSMOption *pOpt)
 {
-    SceModule *mod;
+    SceModule *pMod;
     s32 status;
     SceModuleMgrParam modParams;
-    s32 pStatus2;
+    s32 status2;
 
-    mod = sceKernelFindModuleByAddress(codeAddr); // 0x000076FC
-    if (mod == NULL) { // 0x0000770C
+    pMod = sceKernelFindModuleByAddress(codeAddr); // 0x000076FC
+    if (pMod == NULL) { // 0x0000770C
         return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
     }
 
-    if (mod->attribute & SCE_MODULE_ATTR_CANT_STOP) { // 0x00007720
+    if (pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) { // 0x00007720
         return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
     }
 
-    pspClearMemory32(modParams, sizeof(modParams)); // 0x00007734
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00007734
 
-    modParams->modeStart = CMD_STOP_MODULE; // 0x00007744
-    modParams->modeFinish = CMD_UNLOAD_MODULE; // 0x00007748
-    modParams->argp = argp; // 0x00007750
-    modParams->modId = mod->modId; // 0x00007754
-    modParams->argSize = args; // 0x0000775C
-    modParams->argSize = modId; // 0x00007764
+    modParams.modeStart = CMD_STOP_MODULE; // 0x00007744
+    modParams.modeFinish = CMD_UNLOAD_MODULE; // 0x00007748
+    modParams.argp = argp; // 0x00007750
+    modParams.modId = pMod->modId; // 0x00007754
+    modParams.argSize = args; // 0x0000775C
+    modParams.callerModId = pMod->modId; // 0x00007764
 
     if (pStatus == NULL) { // 0x00007760
-        modParams->pStatus = &pStatus2; // 0x000077EC
+        modParams.pStatus = &status2; // 0x000077EC
     } else {
-        modParams->pStatus = pStatus; // 0x00007768
+        modParams.pStatus = pStatus; // 0x00007768
     }
 
     if (pOpt == NULL) { // 0x0000776C
@@ -1865,13 +1866,13 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
         modParams->threadPriority = 0;
         modParams->threadAttr = 0;
     } else {
-        modParams->threadMpIdStack = pOpt->mpIdStack; // 0x00007784
+        modParams->threadMpIdStack = pOpt->mpidstack; // 0x00007784
         modParams->stackSize = pOpt->stacksize; // 0x00007788
         modParams->threadPriority = pOpt->priority; // 0x0000778C
         modParams->threadAttr = pOpt->attribute; // 0x00007790
     }
 
-    status = _start_exe_thread(modParams); // 0x00007794
+    status = _start_exe_thread(&modParams); // 0x00007794
     if (status < 0) {
         return status;
     }
