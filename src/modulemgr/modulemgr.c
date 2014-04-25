@@ -38,17 +38,6 @@ typedef struct
 	//u32 apitype; //4
 	SceUID *returnId; //4
 	SceModule *pMod; //12
-    /*
-	SceUID mpidText; //16
-	SceUID mpidData; //20
-	SceUID mpidStack; //24
-	SceSize stackSize; //28
-	int priority; //32
-	u32 attribute; //36
-	SceUID modid; //40
-	SceUID callerModid; //44
-	SceUID fd; //48
-     */
 	SceLoadCoreExecFileInfo *execInfo; //16
     u32 apiType; //20
     SceUID fd; // 24
@@ -2049,28 +2038,6 @@ SceUID _LoadModuleByBufferID(SceModuleMgrParam *modParams, const SceKernelLMOpti
     modParams->execInfo = NULL;
 
     return _start_exe_thread(modParams); // 0x000075F4
-}
-
-// Subroutine sub_00007620 - Address 0x00007620 
-s32 _CheckOption(const SceKernelLMOption *pOpt)
-{
-    if (pOpt == NULL) {
-        return SCE_ERROR_OK;
-    }
-
-    if (!pspK1StaBufOk(pOpt, sizeof(SceKernelLMOption))) {
-        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    }
-
-    sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x0000764C
-    sdkVersion &= 0xFFFF0000;
-    // Firmware >= 2.80, updated size field
-    if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelLMOption)) { // 0x00007668, 0x00007678
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
-    }
-
-    return SCE_ERROR_OK;
 }
 
 // TODO: Use a proper name: _CreateMgrParamStruct()?
