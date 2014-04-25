@@ -1993,9 +1993,8 @@ SceUID _LoadModuleByBufferID(SceModuleMgrParam *modParams, const SceKernelLMOpti
     return _start_exe_thread(modParams); // 0x000075F4
 }
 
-// TODO: Rename it to _CheckSceKernelLMOption()?
 // Subroutine sub_00007620 - Address 0x00007620 
-s32 sub_00007620(const SceKernelLMOption *pOpt)
+s32 _CheckOption(const SceKernelLMOption *pOpt)
 {
     if (pOpt == NULL) {
         return SCE_ERROR_OK;
