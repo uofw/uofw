@@ -2016,10 +2016,20 @@ s32 sub_00007620(const SceKernelLMOption *pOpt)
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function sub_00007698
-// 0x00007698
-void sub_00007698()
+// TODO: Use a proper name: _CreateMgrParamStruct()?
+// Subroutine sub_00007698 - Address 0x00007698
+void sub_00007698(SceModuleMgrParam *modParams, u32 apiType, SceUID fd, void *file_buffer, u32 unk124)
 {
+    pspClearMemory32(modParams); // 0x000076A0
+
+    modParams->unk124 = unk124; // 0x000076AC
+    modParams->apiType = apiType; // 0x000076B0
+    modParams->modeFinish = CMD_RELOCATE_MODULE; // 0x000076B4
+    modParams->file_buffer = file_buffer; // 0x000076B8
+    modParams->fd = fd; // 0x000076BC
+    modParams->modeStart = CMD_RELOCATE_MODULE; // 0x000076C0
+
+    return modParams;
 }
 
 // TODO: Reverse function sub_000076CC
