@@ -53,6 +53,8 @@ typedef struct
     SceUID fd; // 24
     s32 threadPriority; //28
     u32 threadAttr; //32
+    u32 mpIdText; // 36
+    u32 mpIdData; // 40
     SceUID threadMpIdStack; //44
     SceSize stackSize; //48
     SceUID modId; //52
@@ -61,10 +63,11 @@ typedef struct
     u32 unk64;
 	SceSize argSize; //68
 	void *argp; //72
-	u32 unk_76;
-	u32 unk_80;
+	u32 unk76;
+	u32 unk80;
 	s32 *pStatus; //84
 	u32 eventId; //88
+    u32 unk96;
     u32 unk100;
     u32 unk124;
     // TODO: Add #define for size. 
@@ -1390,7 +1393,7 @@ s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modRe
         modParams.threadPriority = 0;
         modParams.threadAttr = 0;
     }
-    status = start_exe_thread(&modParams); //0x000040EC
+    status = _start_exe_thread(&modParams); //0x000040EC
     
     pspSetK1(oldK1);
     return status;
@@ -1929,14 +1932,32 @@ void _StopModule()
 
 // TODO: Reverse function sub_000074E4
 // 0x000074E4
-void start_exe_thread()
+SceUID _start_exe_thread()
 {
 }
 
-// TODO: Reverse function sub_000075B4
-// 0x000075B4
-void _LoadModuleByBufferID()
+// Subroutine sub_000075B4 - Address 0x000075B4 
+SceUID _LoadModuleByBufferID(SceModuleMgrParam *modParams, const SceKernelLMOption *pOpt)
 {
+    if (pOpt == NULL) { // 0x000075BC
+        modParams->access = 0x1;
+        modParams->mpIdText = 0;
+        modParams->mpIdData = 0;
+        modParams->position = 0;
+    } else {
+        modParams->mpIdText = pOpt->mpIdText;
+        modParams->mpIdData = pOpt->mpIdData;
+        modParams->position = pOpt->position;
+        modParams->access = pOpt->access;
+    }
+
+    // 0x000075E4
+    modParams->unk76 = 0;
+    modParams->unk80 = 0;
+    modParams->unk96 = 0;
+    modParams->execInfo = NULL;
+
+    return _start_exe_thread(modParams); // 0x000075F4
 }
 
 // TODO: Reverse function sub_00007620
