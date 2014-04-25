@@ -223,12 +223,12 @@ void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
  * See http://www.cplusplus.com/reference/cstring/memset/
  *
  * @param dst Pointer to the memory block to fill.
- * @param val Value to be set, casted to the u8 type.
+ * @param val Value to be set.
  * @param size Number of bytes to be set.
  *
  * @return Value of dst.
  */
-void *sceKernelMemset(void *dst, s32 val, SceSize size);
+void *sceKernelMemset(void *dst, s8 val, SceSize size);
 
 /** @} */
 
