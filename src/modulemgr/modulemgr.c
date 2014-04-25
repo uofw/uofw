@@ -1861,15 +1861,15 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
     }
 
     if (pOpt == NULL) { // 0x0000776C
-        modParams->threadMpIdStack = 0;
-        modParams->stackSize = 0;
-        modParams->threadPriority = 0;
-        modParams->threadAttr = 0;
+        modParams.threadMpIdStack = 0;
+        modParams.stackSize = 0;
+        modParams.threadPriority = 0;
+        modParams.threadAttr = 0;
     } else {
-        modParams->threadMpIdStack = pOpt->mpidstack; // 0x00007784
-        modParams->stackSize = pOpt->stacksize; // 0x00007788
-        modParams->threadPriority = pOpt->priority; // 0x0000778C
-        modParams->threadAttr = pOpt->attribute; // 0x00007790
+        modParams.threadMpIdStack = pOpt->mpidstack; // 0x00007784
+        modParams.stackSize = pOpt->stacksize; // 0x00007788
+        modParams.threadPriority = pOpt->priority; // 0x0000778C
+        modParams.threadAttr = pOpt->attribute; // 0x00007790
     }
 
     status = _start_exe_thread(&modParams); // 0x00007794
