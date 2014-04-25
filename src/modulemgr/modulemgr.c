@@ -1930,10 +1930,43 @@ void _StopModule()
 {
 }
 
-// TODO: Reverse function sub_000074E4
-// 0x000074E4
-SceUID _start_exe_thread()
+// Subroutine sub_000074E4 - Address 0x000074E4 
+SceUID _start_exe_thread(SceModuleMgrParam *modParams)
 {
+    SceUID threadId;
+    SceUID returnId;
+    s32 status;
+
+    status = sceKernelGetThreadId();
+    if (status < 0) {
+        return status;
+    }
+
+    threadId = status;
+
+    if (threadId == g_ModuleManager.userThreadId) {
+        Kprintf("module manager busy.\n");
+        return SCE_ERROR_KERNEL_MODULE_MANAGER_BUSY;
+    }
+
+    modParams->returnId = &returnId;
+    modParams->eventId = g_ModuleManager.eventId;
+
+    status = sceKernelLockMutex(g_ModuleManager.semaId, 1, 0);
+    if (status < 0) {
+        return status;
+    }
+
+    status = sceKernelStartThread(g_ModuleManager.threadId, sizeof(SceModuleMgrParam), modParams);
+    if (status < 0) {
+        sceKernelUnlockMutex(g_ModuleManager.semaId, 1);
+        return returnId;
+    }
+
+    sceKernelWaitEventFlag(g_ModuleManager.eventId, 0x1, 0x10 | SCE_EVENT_WAITOR, NULL, NULL);
+
+    sceKernelUnlockMutex(g_ModuleManager.semaId, 1);
+    return returnId;
 }
 
 // Subroutine sub_000075B4 - Address 0x000075B4 
