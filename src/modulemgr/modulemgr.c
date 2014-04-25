@@ -11,6 +11,7 @@
 #include <sysmem_kernel.h>
 #include <threadman_kernel.h>
 
+#include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
 
 #define SET_MCB_STATUS(v, m) (v = (v & 0xFFF0) | m)
@@ -468,6 +469,63 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
     
     sceIoClose(fd); // 0x000007E0
     pspSetK1(oldK1);
+    return status;
+}
+
+// EXAMPLE:
+
+s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused)),
+    const SceKernelLMOption *opt)
+{
+    s32 fd;
+    s32 status;
+    s32 k1State;
+    SceModuleMgrParam modParams;
+
+    k1State = _setupChecks();
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000006E0
+        _terminateChecks(k1State);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionUser()) < 0 || (status = _checkPathConditions(path)) < 0 
+            || (status = _checkLMOptionConditions(opt)) < 0) {
+        _terminateChecks(k1State);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00000734
+    if (fd < 0) { // 0x00000740
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000760
+    if (status < 0) { // 0x0000076C
+        sceIoClose(fd); // 0x000007E0
+        _terminateChecks(k1State);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00000784
+
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000790
+    modParams.apiType = 0x10; // 0x0000079C
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000007A8
+    modParams.unk64 = 0; // 0x000007B4
+    modParams.fd = fd; // 0x000007BC
+    modParams.unk124 = 0; // 0x000007C4
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
+    if (status >= 0) // 0x000007C8
+        modParams.unk100 = 0x10; // 0x000007CC
+    
+    status = _LoadModuleByBufferID(&modParams, opt); // 0x000007D4
+    
+    sceIoClose(fd); // 0x000007E0
+    _terminateChecks(k1State);
     return status;
 }
 
