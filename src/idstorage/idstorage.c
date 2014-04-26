@@ -273,7 +273,7 @@ static s32 _sceIdStorageUnlockMutex(void)
 static s32 _sceIdStorageFindFreeBlock(void)
 {
     s32 i, j;
-    s32 size = -1;
+    s32 pos = -1;
 
     for (i=0; i<512; i+=g_idst.pagesPerBlock) {
         for (j=0; j<g_idst.pagesPerBlock; j++) {
@@ -284,16 +284,16 @@ static s32 _sceIdStorageFindFreeBlock(void)
 
         /* Block is filled with 0xFFFF, it's free */
         if (j == g_idst.pagesPerBlock) {
-            size = 512;
+            pos = i;
             break;
         }
     }
 
-    if (size < 0) {
+    if (pos < 0) {
         return SCE_ERROR_OUT_OF_MEMORY;
     }
 
-    return size;
+    return pos;
 }
 
 //sub_00000474
@@ -437,7 +437,6 @@ s32 sceIdStorageFormat(void)
         }
     }
 
-    // FIXME: returns 512. overflow?
     pos = _sceIdStorageFindFreeBlock();
     if (pos < 0) {
         sceKernelPowerUnlock(0);
