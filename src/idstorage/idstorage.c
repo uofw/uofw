@@ -869,3 +869,39 @@ s32 sceIdStorageCreateAtomicLeaves(u16 *ids, s32 size)
     return SCE_ERROR_OK;
 }
 
+s32 sceIdStorageDeleteLeaf(u16 id)
+{
+    s32 i;
+    s32 ret;
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    if (sceIdStorageIsReadOnly()) {
+        return -1;
+    }
+
+    if (id > 0xFFEF) {
+        return SCE_ERROR_INVALID_ID;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+
+    for (i=0; i<512; i++) {
+        if (g_idst.index[i] == id) {
+            g_idst.index[i] = 0xFFFF;
+            g_idst.dirty = 1;
+            break;
+        }
+    }
+
+    sceKernelCpuResumeIntr(intr);
+
+    if (i == 512) {
+        return SCE_ERROR_NOT_FOUND;
+    }
+
+    return SCE_ERROR_OK;
+}
+
