@@ -109,7 +109,7 @@ static s32 _EpilogueModule(SceModule *pMod)
         if (status != SCE_ERROR_OK)
             return status;
         
-        pCurEntry += pCurTable->len * 4; 
+        pCurEntry += pCurTable->len * sizeof(void *); 
     }
     if (pMod->stubTop != -1)
         sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); //0x00000080
