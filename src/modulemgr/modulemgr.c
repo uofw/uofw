@@ -1905,9 +1905,8 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
     return status;
 }
 
-// TODO: Rename sub_000077F0
 // Subroutine sub_000077F0 - Address 0x000077F0 
-s32 sub_000077F0(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus, SceKernelLMOption *pOpt)
+s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus, SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     void *codeAddr2;
