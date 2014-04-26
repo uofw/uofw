@@ -928,13 +928,65 @@ s32 sceIdStorageLookup(u16 id, u32 offset, void *buf, u32 len)
     }
 
     if (len == 512) {
+        /* Full lookup */
         res = sceIdStorageReadLeaf(id, buf);
     }
     else {
+        /* Partial lookup */
         res = sceIdStorageReadLeaf(id, &sbuf);
 
         if (res == SCE_ERROR_OK) {
             memcpy(buf, &sbuf + offset, len);
+        }
+    }
+
+    _sceIdStorageUnlockMutex();
+
+    if (res < 0) {
+        return res;
+    }
+
+    return SCE_ERROR_OK;
+}
+
+s32 sceIdStorageUpdate(u16 id, u32 offset, void *buf, u32 len)
+{
+    u8 sbuf[512]; //sp+0
+    s32 res;
+
+    if (id > 0xFFEF) {
+        return SCE_ERROR_INVALID_ID;
+    }
+
+    if (offset >= 512 || offset + len > 512) {
+        return SCE_ERROR_INVALID_VALUE;
+    }
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    if (sceIdStorageIsReadOnly()) {
+        return -1;
+    }
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    if (len == 512) {
+        /* Full update */
+        res = sceIdStorageWriteLeaf(id, buf);
+    }
+    else {
+        /* Partial update */
+        res = sceIdStorageReadLeaf(id, &sbuf);
+
+        if (res == SCE_ERROR_OK) {
+            memcpy(&sbuf + offset, buf, len);
+
+            res = sceIdStorageWriteLeaf(id, &sbuf);
         }
     }
 
