@@ -871,8 +871,8 @@ s32 sceIdStorageCreateAtomicLeaves(u16 *ids, s32 size)
 
 s32 sceIdStorageDeleteLeaf(u16 id)
 {
+    s32 intr;
     s32 i;
-    s32 ret;
 
     if (!sceIdStorageIsFormatted()) {
         return SCE_ERROR_INVALID_FORMAT;
@@ -900,6 +900,48 @@ s32 sceIdStorageDeleteLeaf(u16 id)
 
     if (i == 512) {
         return SCE_ERROR_NOT_FOUND;
+    }
+
+    return SCE_ERROR_OK;
+}
+
+s32 sceIdStorageLookup(u16 id, u32 offset, void *buf, u32 len)
+{
+    u8 sbuf[512]; //sp+0
+    s32 res;
+
+    if (id > 0xFFEF) {
+        return SCE_ERROR_INVALID_ID;
+    }
+
+    if (offset >= 512 || offset + len > 512) {
+        return SCE_ERROR_INVALID_VALUE;
+    }
+
+    if (!sceIdStorageIsFormatted()) {
+        return SCE_ERROR_INVALID_FORMAT;
+    }
+
+    res = _sceIdStorageLockMutex();
+    if (res < 0) {
+        return res;
+    }
+
+    if (len == 512) {
+        res = sceIdStorageReadLeaf(id, buf);
+    }
+    else {
+        res = sceIdStorageReadLeaf(id, &sbuf);
+
+        if (res == SCE_ERROR_OK) {
+            memcpy(buf, &sbuf + offset, len);
+        }
+    }
+
+    _sceIdStorageUnlockMutex();
+
+    if (res < 0) {
+        return res;
     }
 
     return SCE_ERROR_OK;
