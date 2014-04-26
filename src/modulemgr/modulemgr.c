@@ -1882,10 +1882,58 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
     return status;
 }
 
-// TODO: Reverse function sub_000077F0
-// 0x000077F0
-void sub_000077F0()
+// TODO: Rename sub_000077F0
+// Subroutine sub_000077F0 - Address 0x000077F0 
+s32 sub_000077F0(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus, SceKernelLMOption *pOpt)
 {
+    s32 oldK1;
+    void *codeAddr2;
+    s32 status;
+
+    oldK1 = pspShiftK1();
+
+    // Cannot be called from interrupt
+    if (sceKernelIsIntrContext()) { // 0x0000783C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+
+    if (argp != NULL && !pspK1DynBufOk(argp, args)) { // 0x0000785C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    if (pStatus != NULL && !pspK1StaBufOk(pStatus, sizeof(*pStatus))) { // 0x00007878
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    status = _checkLMOptionConditions(pOpt); // 0x000078E4, 0x000078F8
+    if (status < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    if (pOpt->attribute &~ 0x00F06000) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+    }
+
+    if (pspK1IsUserMode()) { // 0x0000791C
+        codeAddr2 = sceKernelGetSyscallRA(); // 0x00007958
+    } else {
+        codeAddr2 = codeAddr;
+    }
+
+    if (!pspK1PtrOk(codeAddr2)) { // 0x0000792C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+
+    status = _SelfStopUnloadModule(returnStatus, codeAddr2, args, argp, pStatus, pOpt); // 0x00007948
+    pspSetK1(oldK1):
+
+    return status;
 }
 
 // TODO: Reverse function sub_00007968
