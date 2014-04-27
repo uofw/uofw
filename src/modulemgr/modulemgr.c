@@ -1147,17 +1147,68 @@ void ModuleMgrForKernel_4493E013()
 {
 }
 
-// TODO: Reverse function sceKernelStartModule
-// 0x00003D98
-void sceKernelStartModule()
+// Subroutine ModuleMgrForUser_50F0C1EC - Address 0x00003D98 - Aliases: ModuleMgrForKernel_3FF74DF1
+s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *modResult, 
+        const SceKernelSMOption *pOpt)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1();
+    
+    if (sceKernelIsIntrContext()) { //0x00003DA4
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if (argp != NULL && !pspK1DynBufOk(argp, args)) { //0x00003DE4, 0x00003DFC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    if (modResult != NULL && !pspK1PtrOk(modResult)) { //0x00003E18, 0x00003E10
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    status = _checkSMOptionConditions(pOpt); //0x00003FB8 - 0x00003EAC
+    if (status < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003EBC
+     
+    // 0x00003EC8
+    modParams.modeFinish = CMD_START_MODULE;
+    modParams.modeStart = CMD_START_MODULE;
+    modParams.modId = modId; // 0x00003ECC
+    modParams.argSize = args;
+    modParams.argp = argp;
+    modParams.pStatus = modResult;
+    
+    if (pOpt != NULL) { //0x00003EDC
+        modParams.threadMpIdStack = pOpt->mpidstack;
+        modParams.stackSize = pOpt->stacksize;
+        modParams.threadPriority = pOpt->priority;
+        modParams.threadAttr = pOpt->attribute;
+    } else { //0x00003F14
+        modParams.threadMpIdStack = 0;
+        modParams.stackSize = 0;
+        modParams.threadPriority = 0;
+        modParams.threadAttr = 0;
+    }
+    status = _start_exe_thread(&modParams); //0x00003F04
+    
+    pspSetK1(oldK1);
+    return status;
 }
 
 // Subroutine ModuleMgrForUser_D1FF982A - Address 0x00003F28 - Aliases: ModuleMgrForKernel_E5D6087B
 s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modResult, const SceKernelSMOption *pOpt)
 {
     s32 oldK1;
-    s32 sdkVersion;
     s32 status;
     u32 retAddr;
     SceModule *pMod;
