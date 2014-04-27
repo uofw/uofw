@@ -57,6 +57,29 @@ static inline s32 _checkLMOptionConditions(SceKernelLMOption *pOpt)
     return SCE_ERROR_OK;
 }
 
+// sub_00007620
+static inline s32 _checkSMOptionConditions(SceKernelSMOption *pOpt)
+{
+    s32 sdkVersion; 
+    
+    if (pOpt != NULL) { 
+        if (!pspK1StaBufOk(option, sizeof(SceKernelSMOption))) {
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+        }
+        sdkVersion = sceKernelGetCompiledSdkVersion() & 0xFFFF0000;
+        // Firmware >= 2.80, updated size field
+        if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelSMOption)) {
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
+        }
+        // TODO: Use proper flags (maybe thread attributes)?
+        if (pOpt->attribute & ~0x00F06000) {
+            pspSetK1(oldK1);
+            return SCE_ERROR_KERNEL_ERROR;
+        }
+    }
+    return SCE_ERROR_OK;
+}
+
 static inline s32 _checkMemoryBlockInfoConditions(SceSysmemMemoryBlockInfo *pBlkInfo, u64 offset)
 {
     u32 offsetLow;
