@@ -114,7 +114,7 @@ static s32 _EpilogueModule(SceModule *pMod)
     if (pMod->stubTop != -1)
         sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); //0x00000080
     
-    ModuleReleaseLibraries(pMod); //0x00000088
+    _ModuleReleaseLibraries(pMod); //0x00000088
     return status;
 }
 
@@ -1753,10 +1753,25 @@ void _RelocateModule()
 {
 }
 
-// TODO: Reverse function sub_00006F80
-// 0x00006F80
-void ModuleReleaseLibraries()
+// sub_00006F80
+s32 _ModuleReleaseLibraries(SceModule *pMod)
 {
+    void *pCurEntry;
+    void *pLastEntry;
+    
+    pCurEntry = pMod->entTop;
+    pLastEntry = pMod->entTop + pMod->entSize;
+    
+    while (pCurEntry < pLastEntry) {
+        SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
+        if (pCurTable->attribute & SCE_LIB_IS_SYSLIB) //0x00006FB4
+            continue;
+        
+        sceKernelReleaseLibrary(pCurTable); //0x00006FBC
+        
+        pCurEntry += pCurTable->len * sizeof(void *); 
+    }
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_00006FF4
