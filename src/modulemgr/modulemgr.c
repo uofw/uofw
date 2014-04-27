@@ -1181,23 +1181,10 @@ s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modRe
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     
-    if (pOpt != NULL) { // 0x00003FB8
-        if (!pspK1StaBufOk(pOpt, sizeof(SceKernelSMOption))) { //0x00003FCC
-            pspSetK1(oldK1);
-            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-        }
-        sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00003FCC
-        // Firmware >= 2.80, updated size field
-        if (sdkVersion >= 0x02080000 && pOpt->size != sizeof(SceKernelSMOption)) { // 0x0000401C & 0x00004030
-            pspSetK1(oldK1);
-            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
-        }
-        
-        // TODO: Replace with thread attributes?
-        if (pOpt->attribute & ~0x00F06000) { //0x0000404C
-            pspSetK1(oldK1);
-            return SCE_ERROR_KERNEL_ERROR;
-        }
+    status = _checkSMOptionConditions(pOpt); //0x00003FB8 - 0x0000404C
+    if (status < 0) {
+        pspSetK1(oldK1);
+        return status;
     }
     
     pMod = sceKernelFindModuleByAddress(retAddr); //0x00004054
@@ -1921,7 +1908,8 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
 }
 
 // Subroutine sub_000077F0 - Address 0x000077F0 
-s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus, SceKernelLMOption *pOpt)
+s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus, 
+        SceKernelSMOption *pOpt)
 {
     s32 oldK1;
     void *codeAddr2;
@@ -1945,15 +1933,10 @@ s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize ar
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOpt); // 0x000078E4, 0x000078F8
+    status = _checkSMOptionConditions(pOpt); // 0x000078E4 - 0x000078F8
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
-    }
-
-    if (pOpt->attribute &~ 0x00F06000) {
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
     }
 
     if (pspK1IsUserMode()) { // 0x0000791C
@@ -1968,7 +1951,7 @@ s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize ar
     }
 
     status = _SelfStopUnloadModule(returnStatus, codeAddr2, args, argp, pStatus, pOpt); // 0x00007948
-    pspSetK1(oldK1):
+    pspSetK1(oldK1);
 
     return status;
 }
