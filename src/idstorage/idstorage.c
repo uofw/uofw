@@ -40,7 +40,7 @@ typedef struct {
     u8 formatted; // 16
     u8 readOnly; // 17
     u8 dirty; // 18
-    s16 blockPos; // 20
+    s16 indexPos; // 20
     u32 scramble; // 24
     u16 index[512]; // 28
     SceIdStorageItem store[32]; // 1052
@@ -225,7 +225,7 @@ s32 sceIdStorageInit(void)
     }
     else {
         g_idst.formatted = 1;
-        g_idst.blockPos = pos;
+        g_idst.indexPos = pos;
     }
 
     sceKernelRegisterSysEventHandler(&g_sysev);
@@ -478,7 +478,7 @@ s32 sceIdStorageFormat(void)
 
     g_idst.formatted = 1;
     g_idst.unk0 = 1;
-    g_idst.blockPos = pos;
+    g_idst.indexPos = pos;
     g_idst.readOnly = 0;
 
     sceKernelPowerUnlock(0);
@@ -584,7 +584,7 @@ s32 sceIdStorageReadLeaf(u16 id, void *buf)
         g_idst.store[idx].state = 2;
     }
 
-    /* NOTE: asm code seems to contain inlined memcpy */
+    /* NOTE: inlined memcpy */
     memcpy(buf, g_idst.pool + 512*idx, 512);
 
     _sceIdStorageUnlockMutex();
@@ -641,13 +641,193 @@ s32 sceIdStorageWriteLeaf(u16 id, void *buf)
         }
     }
 
-    /* NOTE: asm code seems to contain inlined memcpy */
+    /* NOTE: inlined memcpy */
     memcpy(g_idst.pool + 512*idx, buf, 512);
 
     g_idst.store[idx].state = 3;
     _sceIdStorageUnlockMutex();
 
     return SCE_ERROR_OK;
+}
+
+//0xCC8
+s32 _sceIdStorageFlushCB(void *arg)
+{
+    (void)arg;
+    u16 index[512]; //sp+0
+    u8 block[32][512]; //sp+1024
+    u8 extra[32][16]; //sp+17408
+    u8 spare[384]; //sp+17920
+    s32 res;
+    s32 i, j;
+    s32 ppn;
+    s32 pos;
+    s32 try;
+    s32 indexPos;
+
+    res = sceNandLock(1);
+    if (res < 0) {
+        return res;
+    }
+
+    sceNandSetScramble(g_idst.scramble);
+    sceKernelPowerLock(0);
+
+    /* NOTE: inlined memcpy */
+    memcpy(index, &g_idst.index, sizeof(g_idst.index));
+
+    for (i=0; i<32; i++) {
+        if (g_idst.store[i].state != 3) {
+            continue;
+        }
+
+        /* TODO: explain this */
+        ppn = g_idst.store[i].keyId & -g_idst.pagesPerBlock;
+
+        /* Read 32 pages of (512 + 16) bytes */
+        sceNandReadBlockWithRetry(1536 + ppn, &block, &extra);
+
+        for (j=0; j<32; j++) {
+            if (g_idst.store[j].state != 3 || g_idst.store[j].keyId < ppn) {
+                continue;
+            }
+
+            if (g_idst.store[j].keyId >= ppn + g_idst.pagesPerBlock) {
+                continue;
+            }
+
+            /* NOTE: inlined memcpy */
+            memcpy(&block[g_idst.store[j].keyId - ppn], g_idst.pool + j*512, 512);
+
+            g_idst.store[j].state = 4;
+        }
+
+        do {
+            pos = _sceIdStorageFindFreeBlock();
+            if (pos < 0) {
+                res = pos;
+                Kprintf("ID storage update failure\n");
+                break;
+            }
+
+            for (j=0; j<g_idst.pagesPerBlock; j++) {
+                index[pos + j] = g_idst.index[ppn + j];
+                index[ppn + j] = 0xFFFF; // -1
+                g_idst.index[pos + j] = 0xFFF4; // -12
+            }
+
+            res = sceNandWriteBlockWithVerify(1536 + pos, &block, &extra);
+            if (res >= SCE_ERROR_OK) {
+                break;
+            }
+
+            for (j=0; j<g_idst.pagesPerBlock; j++) {
+                index[pos + j] = 0xFFF0; // -16
+            }
+        } while (res < 0);
+
+        g_idst.dirty = 1;
+    }
+
+    if (res < 0) {
+        for (i=0; i<512; i++) {
+            if (g_idst.index[i] == 0xFFF4) {
+                g_idst.index[i] = 0xFFFF; // -1
+            }
+        }
+
+        for (i=0; i<32; i++) {
+            if (g_idst.store[i].state == 4) {
+                g_idst.store[i].state = 3;
+            }
+        }
+
+        sceKernelPowerUnlock(0);
+        sceNandUnlock();
+
+        return res;
+    }
+
+    if (!g_idst.dirty) {
+        for (i=0; i<32; i++) {
+            g_idst.store[i].state = 0;
+        }
+
+        sceKernelPowerUnlock(0);
+        sceNandUnlock();
+
+        return res;
+    }
+
+    memset(&spare, 0xFF, 384);
+
+    for (i=0; i<g_idst.pagesPerBlock; i++) {
+        spare[12*i + 2] = 115;
+        spare[12*i + 3] = 1;
+        spare[12*i + 4] = 1;
+        spare[12*i + 5] = 1;
+    }
+
+nextblock:
+    pos = _sceIdStorageFindFreeBlock();
+    if (pos < 0) {
+        Kprintf("ID storage Index update failure\n");
+        sceKernelPowerUnlock(0);
+        sceNandUnlock();
+        return pos;
+    }
+
+    for (i=0; i<g_idst.pagesPerBlock; i++) {
+        index[pos + i] = 0xFFF5; // -11
+        index[g_idst.indexPos + i] = 0xFFFF; // -1
+    }
+
+    try = 0;
+    do {
+        try++;
+
+        res = sceNandEraseBlock(1536 + pos);
+        if (res >= SCE_ERROR_OK) {
+            res = sceNandWritePages(1536 + pos, &index, &spare, 2);
+            if (res >= SCE_ERROR_OK) {
+                break;
+            }
+        }
+
+        /* Index write failed, mark as bad block */
+        if (try >= 4) {
+            for (i=0; i<g_idst.pagesPerBlock; i++) {
+                g_idst.index[pos + i] = 0xFFF0; // -16
+                index[pos + i] = 0xFFF0; // -16
+            }
+
+            sceNandDoMarkAsBadBlock(1536 + pos);
+            goto nextblock;
+        }
+    } while (res < 0);
+
+    /* NOTE: inlined memcpy */
+    memcpy(&g_idst.index, &index, sizeof(index));
+
+    indexPos = g_idst.indexPos;
+    g_idst.indexPos = pos;
+    g_idst.dirty = 0;
+
+    for (i=0; i<32; i++) {
+        g_idst.store[i].state = 0;
+    }
+
+    res = sceNandEraseBlock(1536 + indexPos);
+    if (res < 0) {
+        for (i=0; i<g_idst.pagesPerBlock; i++) {
+            g_idst.index[indexPos + i] = 0xFFF0; // -16
+        }
+    }
+
+    sceKernelPowerUnlock(0);
+    sceNandUnlock();
+
+    return res;
 }
 
 s32 sceIdStorageFlush(void)
@@ -664,8 +844,7 @@ s32 sceIdStorageFlush(void)
     }
 
     if (sceIdStorageIsDirty()) {
-        // TODO: reverse associated func
-        res = sceKernelExtendKernelStack(0x8000, (void*)0xCC8, NULL);
+        res = sceKernelExtendKernelStack(0x8000, _sceIdStorageFlushCB, NULL);
         if (res < 0) {
             return res;
         }
