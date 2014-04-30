@@ -1,0 +1,16 @@
+language: cpp
+branches:
+  only:
+    - master
+before_install:
+  - sudo apt-get update -qq
+install:
+  - sudo apt-get install -qq doxygen
+script:
+  - mkdir gh-pages
+  - cd gh-pages
+  - export GIT_ROOT=`git rev-parse --show-toplevel`
+  - doxygen ../docs/Doxyfile
+  - cd html
+  - # PUSH TO GITHUB
+
