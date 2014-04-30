@@ -8,6 +8,7 @@
 
 #include "idstorage_int.h"
 #include <lowio_sysreg.h>
+#include <lowio_nand.h>
 #include <sysmem_sysevent.h>
 #include <sysmem_sysclib.h>
 #include <sysmem_kdebug.h>

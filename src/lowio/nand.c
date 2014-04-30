@@ -2,34 +2,7 @@
    See the file COPYING for copying permission.
 */
 
-typedef struct {
-	u8	user_ecc[3]; //0
-	u8	reserved; //3
-	u8	block_fmt; //4
-	u8	block_stat; //5
-	union {
-		u16 lbn;
-		struct {
-			u8 idx;
-			u8 ver;
-		} IdStorId;
-	}
-	union {
-		u32 	id;	/* 0x38 0x4a 0xc6 0x6d for IPL area */
-		struct {
-			u8 formatted;
-			u8 readonly;
-		} IdStorInfo;
-	}
-	u8	spare_ecc[2];
-	u8	reserved[2];
-} SceNandSpare_t;
-
-typedef enum {
-	USER_ECC_IN_SPARE	= 0x01,
-	NO_AUTO_USER_ECC	= 0x10,
-	NO_AUTO_SPARE_ECC	= 0x20
-} SceNandEccMode_t;
+#include <lowio_nand.h>
 
 typedef enum {
 	STATE_INVALID			= -1,
@@ -624,9 +597,9 @@ sceNandReadStatus(void)
  * raw reads to the nand will just return rubbish). 
  */
 int
-sceNandSetScramble(u32 scrmb)
+sceNandSetScramble(u32 scramble)
 {
-	g_scramble = scrmb;
+	g_scramble = scramble;
 	return 0;
 }
 
@@ -1026,7 +999,7 @@ sceNandDetectChip(void)
 
 /* sceNand_driver_B2B021E5 */
 int
-sceNandWriteBlockWithVerify(u32 ppn, void *user, void spare)
+sceNandWriteBlockWithVerify(u32 ppn, void *user, void *spare)
 {
 	int ret;
 	int i = 0;
