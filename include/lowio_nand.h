@@ -9,7 +9,7 @@
 
 typedef struct {
 	u8	user_ecc[3]; //0
-	u8	reserved; //3
+	u8	reserved0; //3
 	u8	block_fmt; //4
 	u8	block_stat; //5
 	union {
@@ -27,7 +27,7 @@ typedef struct {
 		} IdStorInfo;
 	};
 	u8	spare_ecc[2];
-	u8	reserved[2];
+	u8	reserved1[2];
 } SceNandSpare_t;
 
 typedef enum {
