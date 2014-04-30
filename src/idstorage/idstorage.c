@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
+/* Copyright (C) 2014 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -7,6 +7,7 @@
  */
 
 #include "idstorage_int.h"
+#include <common_imp.h>
 #include <lowio_sysreg.h>
 #include <lowio_nand.h>
 #include <sysmem_sysevent.h>
@@ -15,8 +16,6 @@
 #include <threadman_kernel.h>
 #include <usersystemlib_kernel.h>
 #include <modulemgr.h>
-
-static s32 _sceIdStorageSysEventHandler(s32 id, char* name, void *param, s32 *res);
 
 SCE_MODULE_INFO(
     "sceIdStorage_Service",
@@ -652,7 +651,7 @@ s32 sceIdStorageWriteLeaf(u16 id, void *buf)
 }
 
 //0xCC8
-s32 _sceIdStorageFlushCB(void *arg)
+static s32 _sceIdStorageFlushCB(void *arg)
 {
     (void)arg;
     u16 index[512]; //sp+0
@@ -880,7 +879,7 @@ s32 sceIdStorageGetFreeLeaves(void)
     return count;
 }
 
-s32 sceIdStorageEnumId(void (*cb)(u16 id, s32 ppn, void *opt), void *opt)
+s32 sceIdStorageEnumId(sceIdStorageEnumCB cb, void *opt)
 {
     s32 res;
     s32 i;
