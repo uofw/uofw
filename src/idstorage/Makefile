@@ -6,6 +6,8 @@ OBJS = idstorage.o
 
 #DEBUG = 1
 
-LIBS =
+LIBS = -lKDebugForKernel -lsceSuspendForKernel -lsceSysEventForKernel \
+    -lInterruptManagerForKernel -lSysclibForKernel -lThreadManForKernel \
+    -lUtilsForKernel -lsceSysreg_driver -lsceNand_driver
 
 include ../../lib/build.mak
