@@ -38,6 +38,7 @@ int sceKernelWaitThreadEnd(SceUID thid, SceUInt *timeout);
 int sceKernelWaitThreadEndCB(SceUID thid, SceUInt *timeout);
 int sceKernelReleaseWaitThread(SceUID thid);
 int sceKernelSuspendAllUserThreads(void);
+int sceKernelExtendKernelStack(u32, s32(void*), void*);
 
 unsigned int sceKernelGetSystemTimeLow(void);
 int sceKernelGetUserLevel(void);

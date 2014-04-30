@@ -13,6 +13,8 @@
 #include <sysmem_sysevent.h>
 #include <sysmem_sysclib.h>
 #include <sysmem_kdebug.h>
+#include <sysmem_utils_kernel.h>
+#include <sysmem_suspend_kernel.h>
 #include <threadman_kernel.h>
 #include <usersystemlib_kernel.h>
 #include <modulemgr.h>
@@ -95,7 +97,7 @@ s32 sceIdStorageInit(void)
     magic[1] = fuse >> 32;
     magic[2] = fuse << 1;
     magic[3] = 0xD41D8CD9;
-    sceKernelUtilsSha1Digest(magic, sizeof(magic), digest);
+    sceKernelUtilsSha1Digest((u8*)magic, sizeof(magic), (u8*)digest);
 
     if (sceSysregGetTachyonVersion() > 0x004FFFFF) {
         /* PSP Slim and greater */
