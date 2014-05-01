@@ -1708,7 +1708,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
 }
 
 // Subroutine ModuleMgrForKernel_9B7102E2 - Address 0x000049BC
-s32 sceKernelRebootPhaseForKernel(SceSize args, void *argc, s32 arg3, s32 arg4)
+s32 sceKernelRebootPhaseForKernel(SceSize args, void *argp, s32 arg3, s32 arg4)
 {
     SceUID uidBlkId;
     SceUID *uidList;
@@ -1732,7 +1732,7 @@ s32 sceKernelRebootPhaseForKernel(SceSize args, void *argc, s32 arg3, s32 arg4)
             continue;
         
         // TODO: Re-define moduleRebootPhase (it currently is a SceKernelThreadEntry)
-        pMod->moduleRebootPhase(args, argc, arg3, arg4); //0x00004B0C
+        pMod->moduleRebootPhase(args, argp, arg3, arg4); //0x00004B0C
         
         if (!sceKernelIsToolMode()) //0x00004B1C
             continue;
@@ -1762,13 +1762,47 @@ s32 sceKernelRebootPhaseForKernel(SceSize args, void *argc, s32 arg3, s32 arg4)
     sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); //0x00004AAC
     status = sceKernelFreePartitionMemory(uidBlkId); //0x00004AB4
     
-    return status;
+    return ((status > SCE_ERROR_OK) ? SCE_ERROR_OK : status);
 }
 
-// TODO: Reverse function ModuleMgrForKernel_5FC3B3DA
-// 0x00004B6C
-void ModuleMgrForKernel_5FC3B3DA()
+// ModuleMgrForKernel_5FC3B3DA - Address 0x00004B6C
+s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
 {
+    SceUID uidBlkId;
+    SceUID *uidList;
+    SceModule *pMod;
+    s32 modCount;
+    s32 status;
+    
+    uidBlkId = sceKernelGetModuleListWithAlloc(&modCount); //0x00004BA8
+    if (uidBlkId < SCE_ERROR_OK)
+        return uidBlkId;
+    
+    uidList = sceKernelGetBlockHeadAddr(uidBlkId); //0x00004BB8
+    
+    s32 i;
+    for (i = modCount - 1; i >= 0; i--) { //0x00004BC4 - 0x00004C10
+        pMod = sceKernelFindModuleByUID(uidList[i]); //0x00004BE4
+        if (pMod == NULL || ((s32)pMod->moduleRebootBefore) == -1) //0x00004BEC, 0x00004BF8
+            continue;
+        
+        if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004C08,  0x00004CB0
+            continue;
+        
+        // TODO: Re-define moduleRebootBefore (it currently is a SceKernelThreadEntry)
+        pMod->moduleRebootBefore(argp, arg2, arg3, arg4); //0x00004CB8
+    }
+    
+    SceSysmemMemoryBlockInfo blkInfo;
+    blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
+    status = sceKernelQueryMemoryBlockInfo(uidBlkId, &blkInfo); //0x00004C24
+    if (status < SCE_ERROR_OK) //0x00004C2C
+        return status;
+    
+    sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); //0x00004C58
+    status = sceKernelFreePartitionMemory(uidBlkId); //0x00004C60
+    
+    return ((status > SCE_ERROR_OK) ? SCE_ERROR_OK : status);
 }
 
 // 0x0000501C
