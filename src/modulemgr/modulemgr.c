@@ -14,7 +14,8 @@
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
 
-#define SET_MCB_STATUS(v, m) (v = (v & 0xFFF0) | m)
+#define GET_MCB_STATUS(status)  (status & 0xF)
+#define SET_MCB_STATUS(v, m)    (v = (v & 0xFFF0) | m)
 
 typedef struct {
     SceUID threadId; // 0
@@ -1586,10 +1587,123 @@ s32 sceKernelGetModuleGPByAddress(const void *codeAddr, u32 *pGP)
     return retVal;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_CC873DFA
-// 0x000046E4
-void ModuleMgrForKernel_CC873DFA()
+// Subroutine ModuleMgrForKernel_CC873DFA - Address 0x000046E4
+s32 sceKernelRebootBeforeForUser(void *arg)
 {
+    s32 oldGp;
+    u32 modCount;
+    s32 status;
+    SceUID uidBlkId;
+    SceUID *uidList;
+    char threadArgs[16];
+    
+    oldGp = pspGetGp();
+    sceKernelLockMutex(g_ModuleManager.semaId, 1, NULL); //0x00004724
+    
+    memcpy(threadArgs, arg, sizeof(threadArgs)); //0x00004734
+    ((u32 *)threadArgs)[0] = 16;
+    
+    uidBlkId = sceKernelGetModuleListWithAlloc(&modCount); //0x00004744
+    if (uidBlkId < SCE_ERROR_OK)
+        return uidBlkId;
+    
+    uidList = sceKernelGetBlockHeadAddr(uidBlkId); //0x00004754
+    
+    u32 i;
+    SceModule *pMod;
+    s32 threadMode;
+    for (i = modCount - 1; i >= 0; i--) { //0x00004760
+        pMod = sceKernelFindModuleByUID(uidList[i]); //0x00004774
+        if (pMod == NULL || ((s32)pMod->moduleRebootBefore) == -1) //0x0000477C
+            continue;
+        
+        if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || !(pMod->status & SCE_MODULE_USER_MODULE)) //0x0000479C - 0x00004830
+            continue;
+        
+        s32 priority = pMod->moduleRebootBeforeThreadPriority;
+        if (priority == -1)
+            priority = SCE_KERNEL_MODULE_INIT_PRIORITY; //0x00004864
+        
+        s32 stackSize = pMod->moduleRebootBeforeThreadStacksize;
+        if (stackSize == -1) //0x00004870
+            stackSize = SCE_KERNEL_TH_DEFAULT_SIZE;
+        
+        s32 attr = pMod->moduleRebootBeforeThreadAttr;
+        if (attr == -1) //0x00004874
+            attr = SCE_KERNEL_TH_DEFAULT_ATTR;
+        
+        // TODO: Add proper define for 0x1E00
+        switch (pMod->attribute & 0x1E00) {
+        case SCE_MODULE_VSH:
+            threadMode = SCE_KERNEL_TH_VSH_MODE;
+            break;
+        case SCE_MODULE_APP: //0x00004884
+            threadMode = SCE_KERNEL_TH_APP_MODE;
+            break;
+        case SCE_MODULE_USB_WLAN: //0x00004890
+            threadMode = SCE_KERNEL_TH_USB_WLAN_MODE;
+            break;
+        case SCE_MODULE_MS: //0x0000489C
+            threadMode = SCE_KERNEL_TH_MS_MODE;
+        default: //0x000048A4
+            threadMode = SCE_KERNEL_TH_USER_MODE;
+            break;
+        }
+        
+        SceKernelThreadOptParam threadParams;
+        threadParams.size = sizeof(threadParams); //0x000048AC
+        threadParams.stackMpid(pMod->mpIdData); //0x000048CC
+        
+        SceSysmemPartitionInfo partInfo;
+        partInfo.size = sizeof(SceSysmemPartitionInfo); //0x000048BC
+        status = sceKernelQueryMemoryPartitionInfo(pMod->mpIdData, &partInfo); //0x000048C8
+        if (status < SCE_ERROR_OK || !(partInfo.attr & 0x3)) //0x000048D0, 0x000048E0
+            threadParams.stackMpid = SCE_KERNEL_PRIMARY_USER_PARTITION;
+                
+        pspSetGp(pMod->gpValue); //0x00004900
+        
+        pMod->userModThid = sceKernelCreateThread("SceModmgrRebootBefore", pMod->moduleRebootBefore, priority, 
+                stackSize, threadMode | attr, &threadParams); //0x0000491C
+        
+        pspSetGp(oldGp);
+        
+        // TODO: Add proper structure for threadArgs
+        status = sceKernelStartThread(pMod->userModThid, sizeof threadArgs, threadArgs); //0x00004934
+        if (status == SCE_ERROR_OK) 
+            sceKernelWaitThreadEnd(pMod->userModThid, NULL); //0x000049AC
+        
+        sceKernelDeleteThread(pMod->userModThid); //0x00004944
+        pMod->userModThid = -1;
+        
+        if (!sceKernelIsToolMode()) //0x00004954
+            continue;
+        
+        status = sceKernelDipsw(25); //0x0000495C
+        if (status == 1) //0x00004968
+            continue;
+        
+        s32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00004970
+        if (sdkVersion < 0x03030000) //0x00004984
+            continue;
+        
+        s32 checkSum = sceKernelSegmentChecksum(pMod);
+        if (checkSum == pMod->segmentChecksum)
+            continue;
+        
+        __asm__("break 0x0\n");
+        continue;
+    }
+    
+    SceSysmemMemoryBlockInfo blkInfo;
+    blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
+    status = sceKernelQueryMemoryBlockInfo(uidBlkId, &blkInfo); //0x000047BC
+    if (status < SCE_ERROR_OK) //0x000047C4
+        return status;
+    
+    sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); //0x000047F0
+    status = sceKernelFreePartitionMemory(uidBlkId);
+    
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_9B7102E2
