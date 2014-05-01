@@ -19,9 +19,26 @@ typedef struct {
 } SceKernelThreadOptParam;
 
 /* thread priority */
-#define SCE_KERNEL_USER_HIGHEST_PRIORITY        16
-#define SCE_KERNEL_MODULE_INIT_PRIORITY         32
-#define SCE_KERNEL_USER_LOWEST_PRIORITY         111
+#define SCE_KERNEL_USER_HIGHEST_PRIORITY        (16)
+#define SCE_KERNEL_MODULE_INIT_PRIORITY         (32)
+#define SCE_KERNEL_USER_LOWEST_PRIORITY         (111)
+
+/* thread size */
+#define SCE_KERNEL_TH_DEFAULT_SIZE              (4096) /* 4 KB */
+
+/* thread attributes */
+#define SCE_KERNEL_TH_VSH_MODE                  0xC0000000
+#define SCE_KERNEL_TH_APP_MODE                  0xB0000000
+#define SCE_KERNEL_TH_USB_WLAN_MODE             0xA0000000
+#define SCE_KERNEL_TH_MS_MODE                   0x90000000
+#define SCE_KERNEL_TH_USER_MODE                 0x80000000
+#define SCE_KERNEL_TH_NO_FILLSTACK              0x00100000
+#define SCE_KERNEL_TH_CLEAR_STACK               0x00200000
+#define SCE_KERNEL_TH_LOW_STACK                 0x00400000
+#define SCE_KERNEL_TH_USE_VFPU                  0x00004000
+#define SCE_KERNEL_TH_NEVERUSE_FPU              0x00002000
+
+#define SCE_KERNEL_TH_DEFAULT_ATTR              (0)
 
 SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, int initPriority,
                              int stackSize, SceUInt attr, SceKernelThreadOptParam *option);
