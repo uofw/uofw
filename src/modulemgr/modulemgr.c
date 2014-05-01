@@ -1645,6 +1645,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
             break;
         case SCE_MODULE_MS: //0x0000489C
             threadMode = SCE_KERNEL_TH_MS_MODE;
+            break;
         default: //0x000048A4
             threadMode = SCE_KERNEL_TH_USER_MODE;
             break;
@@ -1706,10 +1707,62 @@ s32 sceKernelRebootBeforeForUser(void *arg)
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_9B7102E2
-// 0x000049BC
-void ModuleMgrForKernel_9B7102E2()
+// Subroutine ModuleMgrForKernel_9B7102E2 - Address 0x000049BC
+s32 sceKernelRebootPhaseForKernel(SceSize args, void *argc, s32 arg3, s32 arg4)
 {
+    SceUID uidBlkId;
+    SceUID *uidList;
+    SceModule *pMod;
+    s32 modCount;
+    s32 status;
+    
+    uidBlkId = sceKernelGetModuleListWithAlloc(&modCount); //0x000049F8
+    if (uidBlkId < SCE_ERROR_OK)
+        return uidBlkId;
+    
+    uidList = sceKernelGetBlockHeadAddr(uidBlkId); //0x00004A08
+    
+    s32 i;
+    for (i = modCount - 1; i >= 0; i--) { //0x00004A14 - 0x00004A64
+        pMod = sceKernelFindModuleByUID(uidList[i]); //0x00004A34
+        if (pMod == NULL || ((s32)pMod->moduleRebootPhase) == -1) //0x00004A3C, 0x00004A48
+            continue;
+        
+        if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004A58 - 0x00004B04
+            continue;
+        
+        // TODO: Re-define moduleRebootPhase (it currently is a SceKernelThreadEntry)
+        pMod->moduleRebootPhase(args, argc, arg3, arg4); //0x00004B0C
+        
+        if (!sceKernelIsToolMode()) //0x00004B1C
+            continue;
+        
+        status = sceKernelDipsw(25); //0x00004B24
+        if (status == 1) //0x00004B30
+            continue;
+        
+        s32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00004B38
+        if (sdkVersion < 0x03030000) //0x00004B44
+            continue;
+        
+        s32 checkSum = sceKernelSegmentChecksum(pMod); //0x00004B4C
+        if (checkSum == pMod->segmentChecksum) //0x00004B58
+            continue;
+        
+        __asm__("break 0x0\n");
+        continue;
+    }
+    
+    SceSysmemMemoryBlockInfo blkInfo;
+    blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
+    status = sceKernelQueryMemoryBlockInfo(uidBlkId, &blkInfo); //0x00004A74
+    if (status < SCE_ERROR_OK) //0x00004A80
+        return status;
+    
+    sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); //0x00004AAC
+    status = sceKernelFreePartitionMemory(uidBlkId); //0x00004AB4
+    
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_5FC3B3DA
