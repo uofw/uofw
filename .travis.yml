@@ -1,16 +1,44 @@
 language: cpp
+
 branches:
   only:
-    - master
+  - master
+
+env:
+  global:
+    - secure: YbpgkZOWVRMehAjIW4Yr6weDTfARQwUV3+f3VEa4Iyoyos0ur6yFTD+xIQAg5epPlUPGBtXLDnz8f0SfXE+wgLb/NP6mIKgbuys4EyTb8DjmtBTVr6Vdg5tdQyWzDtkcHKAIEXp6xjtUjBsfE4E3mos5PLrLqUbiFWHeyOAHVQ4= # PASSWORD
+
 before_install:
-  - sudo apt-get update -qq
+  - sudo apt-get update
+
 install:
-  - sudo apt-get install -qq doxygen
+  - sudo apt-get install doxygen
+  - sudo apt-get install gnupg
+
 script:
   - mkdir gh-pages
   - cd gh-pages
   - export GIT_ROOT=`git rev-parse --show-toplevel`
   - doxygen ../docs/Doxyfile
-  - cd html
-  - # PUSH TO GITHUB
+  - cd $GIT_ROOT
+
+after_success:
+  - if [[ $TRAVIS_PULL_REQUEST == 'false' ]]; then
+  -   openssl aes-256-cbc -d -a -in id_rsa.enc -out id_rsa -pass "pass:$PASSWORD"
+  -   chmod 600 id_rsa
+
+  -   cd gh-pages/html || exit
+  -   git init
+
+  -   git config user.email "travis@travis-ci.org"
+  -   git config user.name "Bob the Build Bot"
+
+  -   git checkout --orphan gh-pages
+  -   git add .
+  -   git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
+
+  -   git remote add origin "git@github.com:$TRAVIS_REPO_SLUG.git"
+  -   ssh-add $TRAVIS_BUILD_DIR/id_rsa
+  -   git push origin +gh-pages
+  - fi
 
