@@ -858,12 +858,14 @@ void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)
 }
 
 // Subroutine ModuleMgrForUser_710F61B5 - Address 0x0000128C
-s32 sceKernelLoadModuleMs(const char *path, s32 flags __attribute__((unused)), SceKernelLMOption *pOption)
+s32 sceKernelLoadModuleMs(const char *path, s32 flags, SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 fd;
     s32 status;
     SceModuleMgrParam modParams;
+    
+    (void)flags;
 
     oldK1 = pspShiftK1(); // 0x00001298
 
@@ -886,7 +888,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags __attribute__((unused)), S
     }
     
     //0x0000130C - 0x00001468
-    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOption)) < 0) {
+    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOpt)) < 0) {
         pspSetK1(oldK1);
         return status;
     }
@@ -917,7 +919,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags __attribute__((unused)), S
     if (status >= 0) // 0x000013D0
         modParams.unk100 = 0x10; // 0x000013D8
     
-    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000013E0
+    status = _LoadModuleByBufferID(&modParams, pOpt); // 0x000013E0
     
     sceIoClose(fd);
     pspSetK1(oldK1);
