@@ -29,7 +29,7 @@ after_success:
   -   cd gh-pages/html || exit
   -   git init
 
-  -   git config user.email "travis@example.com"
+  -   git config user.email "geecko.dev@free.fr"
   -   git config user.name "Bob the Build Bot"
 
   -   git checkout --orphan gh-pages
