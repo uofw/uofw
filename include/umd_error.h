@@ -4,6 +4,12 @@
 
 #include "common_header.h"
 
+/**
+ * @ingroup UMDDriveManagment
+ * 
+ * @{
+ */
+
 #ifndef UMD_ERROR_H
 #define	UMD_ERROR_H
 
@@ -22,6 +28,11 @@ extern "C" {
 #define SCE_ERROR_UMD_UNKNOWN_MEDIUM                            0x80210004  /** Unknown disc medium. */
 #define SCE_ERROR_UMD_HARDWARE_FAILURE                          0x80210005  /** Hardware failure. */
 #define SCE_ERROR_UMD_POWER_OFF                                 0x80210006  /** UMD device without power. */
+#define SCE_UMD_ERROR_REPLACED                                  0x80210007  /** Media switching prohibited. */
+#define SCE_UMD_ERROR_INVALID_LAYOUT                            0x80210008  /** DVD data image layout is invalid. */
+#define SCE_UMD_READAHEAD_REQ_FULL                              0x80210009  /** Read ahead requests are full. */
+#define SCE_UMD_READAHEAD_NOREQ                                 0x80210010  /** Non-existent read ahead request. */
+#define SCE_UMD_READAHEAD_BUSY                                  0x80210011  /** Read ahead request already running. */
 
 
 #ifdef	__cplusplus
@@ -29,4 +40,6 @@ extern "C" {
 #endif
 
 #endif	/* UMD_ERROR_H */
+
+/** @} */
 

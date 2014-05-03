@@ -5,6 +5,13 @@
 #include "common_header.h"
 #include "mediaman.h"
 
+/** @defgroup MediamanUser Mediaman User
+ *  @ingroup Mediaman
+ * 
+ *  User application API.
+ * @{
+ */
+
 #ifndef MEDIAMAN_USER_H
 #define	MEDIAMAN_USER_H
 
@@ -13,20 +20,21 @@ extern "C" {
 #endif
 
 /**
- * Activate the media mananger driver.
+ * Activate the UMD drive. This includes assigning the file system, the block device (set to "umd0:")
+ * and setting the alias name for the file system access.
  * 
  * @param mode The initial UMD device power mode. One of ::SceUmdDevicePowerModes.
- * @param aliasName The alias name for the mounted filesystem device name.
+ * @param aliasName The alias name for the mounted filesystem device name. Pass ::SCE_UMD_ALIAS_NAME.
  * 
  * @return SCE_ERROR_OK on success, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT.
  */
 s32 sceUmdActivate(s32 mode, const char *aliasName);
 
 /**
- * Deactivate the media manager driver.
+ * Deactivate the UMD drive.
  * 
- * @param mode The new UMD device power mode? One of ::SceUmdDevicePowerModes
- * @param aliasName aliasName The alias name for the mounted filesystem device name.
+ * @param mode The new UMD device power mode. One of ::SceUmdDevicePowerModes.
+ * @param aliasName aliasName The alias name for the mounted filesystem device name. Pass ::SCE_UMD_ALIAS_NAME.
  * 
  * @return SCE_ERROR_OK on success, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT.
  */
@@ -162,4 +170,6 @@ s32 sceUmdUnuseUMDInMsUsbWlan(void);
 #endif
 
 #endif	/* MEDIAMAN_USER_H */
+
+/** @} */
 

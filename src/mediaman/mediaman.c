@@ -7,6 +7,10 @@
  * 
  * sceUmd_driver - an interface for the UMD Manager module.
  *
+ * 1) Assigns the filesystem, the block device and the alias name for the UMD drive.
+ * 
+ * 2) Provides fucntions to handle UMD drive media changes.
+ *
  */
 
 #include <common_imp.h>
@@ -31,7 +35,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define SCE_UMD_FILE_SYSTEM_NAME_LEN        (32)
 
-#define SCE_UMD_PHYSICAL_DEVICE_NAME        "umd0:"
+#define SCE_UMD_BLOCK_DEVICE_NAME           "umd0:"
 #define SCE_UMD_FILE_SYSTEM_DEVICE_NAME     "isofs0:"
 
 #define SCE_UMD_DEVICE_NOT_ASSIGNED         (0)
@@ -39,6 +43,10 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define SCE_UMD_REPLACE_STATUS_PROHIBITED   (1 << 0)
 #define SCE_UMD_REPLACE_STATUS_ALLOWED      (1 << 1)
+
+/* Supported UMD drive states which can be waited for. */
+#define UMD_SUPPORTED_WAIT_DRIVE_STATES     (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY \
+                                              | SCE_UMD_READABLE)
 
 /* This structure defines a Media Manager Control Block. */
 typedef struct {
@@ -124,7 +132,7 @@ static s32 _mountUMDDevice(s32 mode, const char *aliasName)
         if (g_isAssigned)
             return SCE_ERROR_ERRNO_DEVICE_BUSY;
             
-        status = sceIoAssign(aliasName, SCE_UMD_PHYSICAL_DEVICE_NAME, SCE_UMD_FILE_SYSTEM_DEVICE_NAME, SCE_MT_RDONLY, 
+        status = sceIoAssign(aliasName, SCE_UMD_BLOCK_DEVICE_NAME, SCE_UMD_FILE_SYSTEM_DEVICE_NAME, SCE_MT_RDONLY, 
                 &data, sizeof data);
         if (status != SCE_ERROR_OK) {
             g_isAssigned = SCE_UMD_DEVICE_NOT_ASSIGNED;
@@ -442,7 +450,7 @@ s32 sceUmdModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__
     g_umdFileSystem[2] = 'D';
     g_umdFileSystem[3] = ':';
       
-    g_eventId = sceKernelCreateEventFlag("SceMediaManUser", 0x201, 0, NULL);
+    g_eventId = sceKernelCreateEventFlag("SceMediaManUser", SCE_KERNEL_EA_MULTI | 0x1, 0, NULL);
     if (g_eventId < 0) 
         return SCE_KERNEL_NO_RESIDENT;
     
@@ -644,7 +652,7 @@ s32 sceUmdWaitDriveStat(s32 umdState)
     oldK1 = pspShiftK1();
     eventId = sceUmdGetUserEventFlagId();
         
-    if (!(umdState & (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY | SCE_UMD_READABLE)))
+    if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT; 
        
     status = sceKernelWaitEventFlag(eventId, umdState, SCE_EVENT_WAITOR, &resultBits, NULL);
@@ -665,7 +673,7 @@ s32 sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout)
     oldK1 = pspShiftK1();
     eventId = sceUmdGetUserEventFlagId();
         
-    if (!(umdState & (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY | SCE_UMD_READABLE)))
+    if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
        
     if (timeout != 0)
@@ -691,7 +699,7 @@ s32 sceUmdWaitDriveStatCB(u32 umdState, u32 timeout)
     oldK1 = pspShiftK1();
     eventId = sceUmdGetUserEventFlagId();
         
-    if (!(umdState & (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY | SCE_UMD_READABLE)))
+    if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
        
     if (timeout != 0)
