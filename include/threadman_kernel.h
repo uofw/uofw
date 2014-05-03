@@ -72,15 +72,6 @@ int sceKernelDeleteMutex(int);
 
 /* Event flags */
 
-enum SceEventFlagWaitTypes {
-    /** Wait for all bits in the pattern to be set */
-    SCE_EVENT_WAITAND = 0,
-    /** Wait for one or more bits in the pattern to be set */
-    SCE_EVENT_WAITOR = 1,
-    /** Clear the wait pattern when it matches */
-    SCE_EVENT_WAITCLEAR = 0x20
-};
-
 typedef struct {
     SceSize     size;
     char        name[32];
@@ -93,6 +84,27 @@ typedef struct {
 typedef struct {
     SceSize     size;
 } SceKernelEventFlagOptParam;
+
+/* Event flag attributes. */
+#define SCE_KERNEL_EA_SINGLE            (0x0000)    /** Multiple thread waits are prohibited. */ 
+#define SCE_KERNEL_EA_MULTI             (0x0200)    /** Multiple thread waits are permitted. */
+
+// NOTE: Deprecated. These types will be replaced  by the below wait modes in future revisions.
+enum SceEventFlagWaitTypes {
+    /** Wait for all bits in the pattern to be set */
+    SCE_EVENT_WAITAND = 0,
+    /** Wait for one or more bits in the pattern to be set */
+    SCE_EVENT_WAITOR = 1,
+    /** Clear the wait pattern when it matches */
+    SCE_EVENT_WAITCLEAR = 0x20
+};
+
+/* Event flag wait modes. */
+#define SCE_KERNEL_EW_AND               (0x00)      /** Wait for all bits in the bit pattern to be set. */
+#define SCE_KERNEL_EW_OR                (0x01)      /** Wait for one or more bits in the bit pattern to be set. */
+#define SCE_KERNEL_EW_CLEAR_ALL         (0x10)      /** Clear all bits after wait condition is satisfied. */
+#define SCE_KERNEL_EW_CLEAR_PAT         (0x20)      /** Clear bits specified by bit pattern after wait condition is satisfied. */
+#define SCE_KERNEL_EW_CLEAR             SCE_KERNEL_EW_CLEAR_ALL
 
 SceUID sceKernelCreateEventFlag(const char *name, int attr, int bits, SceKernelEventFlagOptParam *opt);
 int sceKernelSetEventFlag(SceUID evid, u32 bits);
