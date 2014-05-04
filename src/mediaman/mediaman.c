@@ -9,7 +9,7 @@
  *
  * 1) Assigns the filesystem, the block device and the alias name for the UMD drive.
  * 
- * 2) Provides fucntions to handle UMD drive media changes.
+ * 2) Provides functions to handle UMD drive media changes.
  *
  */
 
@@ -217,18 +217,20 @@ s32 sceUmd_040A7090(s32 errorState)
         return errorState;
     
     switch (errorState) {
-    case 0x80010070:
-        return SCE_ERROR_ERRNO_FILE_ADDR_IN_USE;
-    case 0x80010071:
-        return SCE_ERROR_ERRNO_CONNECTION_ABORTED;
-    case 0x80010074:
-        return SCE_ERROR_ERRNO_FILE_TIMEOUT;
-    case 0x80010086:
-        return SCE_ERROR_ERRNO_FUNCTION_NOT_SUPPORTED;
-    case 0x80010087:
-        return SCE_ERROR_ERRNO_NO_MEDIA;
-    case 0x8001B006:
-        return SCE_ERROR_ERRNO_INVALID_MEDIUM;
+    case SCE_ERROR_ERRNO_NAME_TOO_LONG:
+        return SCE_ERROR_ERRNO150_ENAMETOOLONG;
+    case SCE_ERROR_ERRNO_EADDRINUSE:
+        return SCE_ERROR_ERRNO150_EADDRINUSE;
+    case SCE_ERROR_ERRNO_CONNECTION_ABORTED:
+        return SCE_ERROR_ERRNO150_ECONNABORTED;
+    case SCE_ERROR_ERRNO_ETIMEDOUT:
+        return SCE_ERROR_ERRNO150_ETIMEDOUT;
+    case SCE_ERROR_ERRNO_NOT_SUPPORTED:
+        return SCE_ERROR_ERRNO150_ENOTSUP;
+    case SCE_ERROR_ERRNO_ENOMEDIUM:
+        return SCE_ERROR_ERRNO150_ENOMEDIUM;
+    case SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE:
+        return SCE_ERROR_ERRNO150_EMEDIUMTYPE;
     default:
         return errorState;
     }

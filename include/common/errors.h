@@ -58,29 +58,44 @@
 #define SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE                    0x8001001C
 #define SCE_ERROR_ERRNO_READ_ONLY                               0x8001001E
 #define SCE_ERROR_ERRNO_CLOSED                                  0x80010020
-#define SCE_ERROR_ERRNO_FILE_PATH_TOO_LONG                      0x80010024
+// #define SCE_ERROR_ERRNO_EIDRM                                   0x80010024 -- Note: Keep this undefined.
 #define SCE_ERROR_ERRNO_FILE_PROTOCOL                           0x80010047
 #define SCE_ERROR_ERRNO_DIRECTORY_IS_NOT_EMPTY                  0x8001005A
+#define SCE_ERROR_ERRNO_NAME_TOO_LONG                           0x8001005B /* File name or path name too long */
 #define SCE_ERROR_ERRNO_TOO_MANY_SYMBOLIC_LINKS                 0x8001005C
-#define SCE_ERROR_ERRNO_FILE_ADDR_IN_USE                        0x80010062
-#define SCE_ERROR_ERRNO_CONNECTION_ABORTED                      0x80010067
 #define SCE_ERROR_ERRNO_CONNECTION_RESET                        0x80010068
 #define SCE_ERROR_ERRNO_NO_FREE_BUF_SPACE                       0x80010069
-#define SCE_ERROR_ERRNO_FILE_TIMEOUT                            0x8001006E
+#define SCE_ERROR_ERRNO_ESHUTDOWN                               0x8001006E /* Error sending package after socket was shutdown */
+#define SCE_ERROR_ERRNO_EADDRINUSE                              0x80010070 /* The address is already in use. */
+#define SCE_ERROR_ERRNO_CONNECTION_ABORTED                      0x80010071 /* Connection was aborted by software. */
+#define SCE_ERROR_ERRNO_ETIMEDOUT                               0x80010074 /* Operation timed out. */
 #define SCE_ERROR_ERRNO_IN_PROGRESS                             0x80010077
 #define SCE_ERROR_ERRNO_ALREADY                                 0x80010078
-#define SCE_ERROR_ERRNO_NO_MEDIA                                0x8001007B
-#define SCE_ERROR_ERRNO_INVALID_MEDIUM                          0x8001007C
+#define SCE_ERROR_ERRNO_INVALID_PROTOCOL                        0x8001007B /* Protocol is not supported. */
+#define SCE_ERROR_ERRNO_INVALID_SOCKET_TYPE                     0x8001007C /* Unsupported socket type. */
 #define SCE_ERROR_ERRNO_ADDRESS_NOT_AVAILABLE                   0x8001007D
 #define SCE_ERROR_ERRNO_IS_ALREADY_CONNECTED                    0x8001007F    
 #define SCE_ERROR_ERRNO_NOT_CONNECTED                           0x80010080
 #define SCE_ERROR_ERRNO_FILE_QUOTA_EXCEEDED                     0x80010084
-#define SCE_ERROR_ERRNO_FUNCTION_NOT_SUPPORTED                  0x8001B000
+#define SCE_ERROR_ERRNO_NOT_SUPPORTED                           0x80010086
+#define SCE_ERROR_ERRNO_ENOMEDIUM                               0x80010087 /* No medium was found. */
+
+/* Non-standard error code definitions */
 #define SCE_ERROR_ERRNO_ADDR_OUT_OF_MAIN_MEM                    0x8001B001
 #define SCE_ERROR_ERRNO_INVALID_UNIT_NUM                        0x8001B002
 #define SCE_ERROR_ERRNO_INVALID_FILE_SIZE                       0x8001B003
 #define SCE_ERROR_ERRNO_INVALID_FLAG                            0x8001B004
 #define SCE_ERROR_ERRNO_NO_CACHE                                0x8001B005
+#define SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE                       0x8001B006
+
+/* Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values. */
+#define SCE_ERROR_ERRNO150_ENAMETOOLONG                         0x80010024
+#define SCE_ERROR_ERRNO150_EADDRINUSE                           0x80010062
+#define SCE_ERROR_ERRNO150_ECONNABORTED                         0x80010067
+#define SCE_ERROR_ERRNO150_ETIMEDOUT                            0x8001006E
+#define SCE_ERROR_ERRNO150_ENOMEDIUM                            0x8001007B
+#define SCE_ERROR_ERRNO150_EMEDIUMTYPE                          0x8001007C
+#define SCE_ERROR_ERRNO150_ENOTSUP                              0x8001B000
 
 #define SCE_ERROR_KERNEL_ERROR                                  0x80020001
 #define SCE_ERROR_KERNEL_NOT_IMPLEMENTED                        0x80020002

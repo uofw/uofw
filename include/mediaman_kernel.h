@@ -18,6 +18,14 @@
 extern "C" {
 #endif
 
+/**
+ * Get corresponding 1.50 error code used by the UMD drivers. On 1.50, a bunch of error codes were \n
+ * mistakenly returned by the UMD modules.
+ * 
+ * @param errorState Get the 1.50 version of this error code.
+ * 
+ * @return The error code used on 1.50.
+ */
 s32 sceUmd_040A7090(s32 errorState);
 
 SceUID sceUmdGetUserEventFlagId(void);
@@ -62,7 +70,7 @@ u32 sceUmd_76D356F9(s32 (*arg0)(void));
  * Activate the UMD drive. This includes assigning the file system, the block device (set to "umd0:")
  * and setting the alias name for the file system access.
  * 
- * @param mode The initial UMD device power mode. One of ::SceUmdDevicePowerModes.
+ * @param mode The initial UMD drive power mode. One of ::SceUmdDevicePowerModes.
  * @param aliasName The alias name for the mounted filesystem device name. Pass ::SCE_UMD_ALIAS_NAME.
  * 
  * @return SCE_ERROR_OK on success, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT.
@@ -72,7 +80,7 @@ s32 sceUmdActivate(s32 mode, const char *aliasName);
 /**
  * Deactivate the UMD drive.
  * 
- * @param mode The new UMD device power mode? One of ::SceUmdDevicePowerModes.
+ * @param mode The new UMD drive power mode. One of ::SceUmdDevicePowerModes.
  * @param aliasName aliasName The alias name for the mounted filesystem device name. Pass ::SCE_UMD_ALIAS_NAME.
  * 
  * @return SCE_ERROR_OK on success, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT.
@@ -122,7 +130,7 @@ s32 sceUmdCheckMedium(void);
  * 
  * @param umdState The state to wait for until it occurs. One of ::SceUmdDiscStates.
  * 
- * @return SCE_ERROR_OK, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT if the given umd state 
+ * @return SCE_ERROR_OK, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT if the given UMD state 
  *         isn't one of the following: SCE_UMD_MEDIA_OUT, SCE_UMD_MEDIA_IN, SCE_UMD_NOT_READY, 
  *         SCE_UMD_READY, SCE_UMD_READABLE
  *         Other errors indicate a thread synchronization error.
@@ -135,7 +143,7 @@ s32 sceUmdWaitDriveStat(s32 umdState);
  * @param umdState The state to wait for until it occurs. One of ::SceUmdDiscStates.
  * @param timeout Timeout value in microseconds for the wait.
  * 
- * @return SCE_ERROR_OK, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT if the given umd state 
+ * @return SCE_ERROR_OK, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT if the given UMD state 
  *         isn't one of the following: SCE_UMD_MEDIA_OUT, SCE_UMD_MEDIA_IN, SCE_UMD_NOT_READY, 
  *         SCE_UMD_READY, SCE_UMD_READABLE. 
  *         Other errors indicate a thread synchronization error.
@@ -148,7 +156,7 @@ s32 sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout);
  * @param umdState The state to wait for until it occurs. One of ::SceUmdDiscStates.
  * @param timeout Timeout value in microseconds for the wait.
  * 
- * @return SCE_ERROR_OK, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT if the given umd state 
+ * @return SCE_ERROR_OK, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT if the given UMD state 
  *         isn't one of the following: SCE_UMD_MEDIA_OUT, SCE_UMD_MEDIA_IN, SCE_UMD_NOT_READY, 
  *         SCE_UMD_READY, SCE_UMD_READABLE
  *         Other errors indicate a thread synchronization error.

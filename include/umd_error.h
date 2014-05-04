@@ -5,7 +5,7 @@
 #include "common_header.h"
 
 /**
- * @ingroup UMDDriveManagment
+ * @ingroup UMDDriveManagement
  * 
  * @{
  */

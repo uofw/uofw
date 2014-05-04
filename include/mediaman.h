@@ -4,14 +4,14 @@
 
 #include "common_header.h"
 
-/** @defgroup UMDDriveManagment UMD Drive Managment
+/** @defgroup UMDDriveManagement UMD Drive Management
  *  Manages the UMD drive and accessing data on it.	
  */
 
 /** @defgroup Mediaman Mediaman
- *  @ingroup UMDDriveManagment
+ *  @ingroup UMDDriveManagement
  * 
- *  Mediaman enables users to access the UMD drive. The drive can be accessed through files or sectors. \n\n
+ *  Mediaman enables users to access the UMD drive. The drive can be accessed through files or sectors. \n
  * 
  *  To access the UMD drive via a file, the PSP provides the ISO-9660 file system. A file can be accessed \n
  *  by standard I/O functions as in sceIoOpen(), sceIoClose() and sceIoRead(). The general path format is the \n
@@ -22,14 +22,14 @@
  * 
  *  To access the UMD drive by sectors, the PSP provides a UMD block device driver. You can read the sectors \n
  *  by using standard I/O functions (i.e. sceIoOpen(), sceIoClose() and sceIoRead()). The general path format \n
- *  is the follwoing: "block device name" + "unit number" + ':'. Note that the block device is set by the \n
+ *  is the following: "block device name" + "unit number" + ':'. Note that the block device is set by the \n
  *  sceUmdActivate() function to "umd0:". \n
  *  To open a phyisical device as a device file, consider this example: \n
  *      sceIoOpen("UMD0:...."); \n
  *  By default, opening a new physical device sets the first sector to read at sector_0. \n
  * 
  *  A sector contains 2048 bytes and reading is performed sector wise. That is, in sceIoRead() the read size \n
- *  has to be specifized in the number of sectors you want to read. \n
+ *  has to be specified in the number of sectors you want to read. \n
  * 
  * @{
  */
@@ -73,6 +73,7 @@ enum SceUmdDiscStates {
 enum SceUmdDevicePowerModes {
     /** Set the UMD drive's power state to ON. */
     SCE_UMD_MODE_POWER_ON  = (1 << 0),
+    /** Set the UMD drive's power state to the cuurent power state. */
     SCE_UMD_MODE_POWER_CUR = (1 << 1),
 };
 
