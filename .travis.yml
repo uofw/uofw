@@ -2,11 +2,11 @@ language: cpp
 
 branches:
   only:
-  - master
+    - travis-ci
 
 env:
   global:
-    - secure: "SB91L0bAcsEDczygCw9LXMCavMHxn24j3JciGgNFyX4KjJj7PIQqNYnAHss88JIe07izV6Egerlml1iWG5HZeTBuS68vrnKUzPg4iCHUHTUhYRlChH5aM13KIiaqYhH/eLOcNeXCJObBWcRXqohkuvtUpKS2aTfJpxnuSXUmLBY=" # PASSWORD
+    - secure: "aiH0ZGvhmY7ldfRxngIZHDuWE7ZF5UpVL577hIOUW1P+t+5lOq4hXpTaJgbaEgl0ZQ9GudeFpwx+OvUoxGwLa1wofGGSygeYRl0rfui3XkNx+5RevZ+KOuRQcv+4gJ15twvhP4+XHKfE/B8HWTO5IGN+ntRn+NzXJQLUZFXnOW8=" # GH_AUTH
 
 before_install:
   - sudo apt-get update
@@ -15,32 +15,24 @@ install:
   - sudo apt-get install doxygen
 
 script:
-  - mkdir gh-pages
-  - cd gh-pages
+  - mkdir gh-pages && cd gh-pages || exit
   - export GIT_ROOT=`git rev-parse --show-toplevel`
   - doxygen ../docs/Doxyfile
   - cd $GIT_ROOT
 
 after_success:
   - if [[ $TRAVIS_PULL_REQUEST == 'false' ]]; then
-  -   openssl aes-256-cbc -d -a -in travis.key.enc -out travis.key -pass "pass:$PASSWORD"
-  -   chmod 600 travis.key
-
   -   cd gh-pages/html || exit
   -   git init
+  -   git remote add origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
+  -   git pull --rebase origin gh-pages
 
-  -   git config user.email ""travis@example.com""
+  -   git config user.email "travis@example.com"
   -   git config user.name "uOFW Doc builder"
 
-  -   git checkout --orphan gh-pages
   -   git add .
   -   git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
 
-  -   git remote add origin "git@github.com:$TRAVIS_REPO_SLUG.git"
-  -   echo "$TRAVIS_BUILD_DIR"
-
-  -   eval "$(ssh-agent)"
-  -   ssh-add $TRAVIS_BUILD_DIR/travis.key
-  -   git push origin +gh-pages
+  -   git push origin gh-pages 2>&1 | sed "s/${GH_AUTH}/[secure]/gi"
   - fi
 
