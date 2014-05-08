@@ -28,10 +28,11 @@ after_success:
   -   git config user.email "travis@example.com"
   -   git config user.name "uOFW Doc builder"
 
+  -   git checkout --orphan master
   -   git add .
   -   git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
+
   -   git remote add origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
-  -   git pull --rebase origin gh-pages
   -   git push origin master:gh-pages 2>&1 | sed "s/${GH_AUTH}/[secure]/gi"
   - fi
 
