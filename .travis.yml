@@ -24,15 +24,14 @@ after_success:
   - if [[ $TRAVIS_PULL_REQUEST == 'false' ]]; then
   -   cd gh-pages/html || exit
   -   git init
-  -   git remote add origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
-  -   git pull --rebase origin gh-pages
 
   -   git config user.email "travis@example.com"
   -   git config user.name "uOFW Doc builder"
 
   -   git add .
   -   git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
-
+  -   git remote add origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
+  -   git pull --rebase origin gh-pages
   -   git push origin gh-pages 2>&1 | sed "s/${GH_AUTH}/[secure]/gi"
   - fi
 
