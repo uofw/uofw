@@ -31,7 +31,7 @@ after_success:
   -   git add .
   -   git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
   -   git remote add origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
-  -   git pull --rebase origin gh-pages
+  -   git pull --no-commit --strategy=ours origin gh-pages
   -   git push origin gh-pages 2>&1 | sed "s/${GH_AUTH}/[secure]/gi"
   - fi
 
