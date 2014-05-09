@@ -80,7 +80,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 /******************************/
 
 int _sceGeReset();
-int _sceGeInitCallback3(int arg0, int arg1, int arg2);
+int _sceGeInitCallback3(void *arg0, s32 arg1, void *arg2);
 int _sceGeInitCallback4();
 int _sceGeSetRegRadr1(int arg0);
 int _sceGeSetRegRadr2(int arg0);
@@ -461,7 +461,7 @@ int sceGeEnd()
 }
 
 // 070C
-int _sceGeInitCallback3(int arg0 __attribute__ ((unused)), int arg1 __attribute__ ((unused)), int arg2 __attribute__ ((unused)))
+int _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribute__ ((unused)), void *arg2 __attribute__ ((unused)))
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
     if (libWork->cmdList != NULL) {
