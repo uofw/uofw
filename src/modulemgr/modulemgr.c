@@ -210,7 +210,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
             sceKernelReleaseModule(mod);
             sceKernelDeleteModule(mod);
             break;
-		}
+        }
         modParams->returnId[0] = modParams->pMod->modId; //0x00000260        
         if (modParams->modeFinish == CMD_RELOCATE_MODULE) //0x00000268
             break;
@@ -229,7 +229,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
                 modParams->returnId[0] = status; //0x000002B0   
         }
         if (status < SCE_ERROR_OK || modParams->modeFinish == CMD_START_MODULE) //0x000002B4 & 0x000002C0
-			break;
+            break;
     //0x000002C8
     case CMD_STOP_MODULE:
         if (mod == NULL) { //0x000002C8
@@ -271,7 +271,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     if (modParams->eventId != 0) {
         sceKernelChangeThreadPriority(0, 1); //0x00000374
         sceKernelSetEventFlag(modParams->eventId, 1); //0x00000380
-	}
+    }
     return SCE_ERROR_OK;
 }
 
@@ -1340,10 +1340,66 @@ s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flags, SceKer
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_FE61F16D
-// 0x00001FD8
-void ModuleMgrForKernel_FE61F16D()
+// Subroutine ModuleMgrForKernel_FE61F16D - Address 0x00001FD8
+s32 sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x00001FE4
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00002004
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionKernel()) < 0 ) { //0x0000201C
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    //0x00002028 - 0x0000214C, 0x00002150 - 0x000021AC
+    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002058
+    if (fd < 0) { // 0x00002064
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208011, NULL, 0, NULL, 0); // 0x00002084
+    if (status < 0) { // 0x00002090
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x000020A4
+
+    modParams.apiType = apiType; //0x000020AC
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000020C4
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000020B8
+    modParams.unk64 = 0; // 0x000020D0
+    modParams.fd = fd; //0x000020DC
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000020E0
+    if (status >= 0) // 0x000020E8
+        modParams.unk100 = 0x10;
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000020F8
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_7BD53193
