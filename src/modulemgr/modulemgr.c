@@ -48,14 +48,14 @@ typedef struct {
     SceSize stackSize; //48
     SceUID modId; //52
     SceUID callerModId; //56
-	void *file_buffer; //60
+    void *file_buffer; //60
     u32 unk64;
-	SceSize argSize; //68
-	void *argp; //72
-	u32 unk76;
-	u32 unk80;
-	s32 *pStatus; //84
-	u32 eventId; //88
+    SceSize argSize; //68
+    void *argp; //72
+    u32 unk76;
+    u32 unk80;
+    s32 *pStatus; //84
+    u32 eventId; //88
     u32 unk96;
     u32 unk100;
     u32 unk124;
@@ -67,11 +67,11 @@ typedef struct {
 } SceModuleMgrParam; //size = 160
 
 enum ModuleMgrExecModes {
-	CMD_LOAD_MODULE, //0
-	CMD_RELOCATE_MODULE, //1
-	CMD_START_MODULE, //2
-	CMD_STOP_MODULE, //3
-	CMD_UNLOAD_MODULE, //4
+    CMD_LOAD_MODULE, //0
+    CMD_RELOCATE_MODULE, //1
+    CMD_START_MODULE, //2
+    CMD_STOP_MODULE, //3
+    CMD_UNLOAD_MODULE, //4
 };
 
 SCE_MODULE_INFO(
@@ -122,22 +122,21 @@ static s32 _UnloadModule(SceModule *pMod)
     u32 modStat;
     
     modStat = (pMod->status & 0xF);
-	if (modStat < MCB_STATUS_LOADED || (modStat >= MCB_STATUS_STARTING && modStat != MCB_STATUS_STOPPED))
+    if (modStat < MCB_STATUS_LOADED || (modStat >= MCB_STATUS_STARTING && modStat != MCB_STATUS_STOPPED))
         return SCE_ERROR_KERNEL_MODULE_CANNOT_REMOVE;
 
-	sceKernelMemset32((void *)pMod->textAddr, 0x4D, UPALIGN4(pMod->textSize)); // 0x00000110
-	sceKernelMemset((void *)(pMod->textAddr + pMod->textSize), -1, pMod->dataSize + pMod->bssSize); //0x00000130
+    sceKernelMemset32((void *)pMod->textAddr, 0x4D, UPALIGN4(pMod->textSize)); // 0x00000110
+    sceKernelMemset((void *)(pMod->textAddr + pMod->textSize), -1, pMod->dataSize + pMod->bssSize); //0x00000130
     
     sceKernelIcacheInvalidateAll(); //0x00000138
-
-	sceKernelReleaseModule(pMod); //0x00000140
+    sceKernelReleaseModule(pMod); //0x00000140
     
     if ((pMod->status & 0x1000) == 0) //0x00000150
         sceKernelFreePartitionMemory(pMod->memId); //0x00000168
     
-	sceKernelDeleteModule(pMod); //0x00000158
+    sceKernelDeleteModule(pMod); //0x00000158
 
-	return SCE_ERROR_OK;
+    return SCE_ERROR_OK;
 }
 
 // 0x00000178
@@ -160,8 +159,8 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
         if (!mod) {
             mod = sceKernelCreateModule(); //0x0000048C
             modParams->pMod = mod;
-
-			if (!mod)
+            
+            if (!mod)
                 break; // 0x000004A0
         }
         //0x000001E0
@@ -183,22 +182,22 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     // 0x0000021C
     case CMD_RELOCATE_MODULE:
         if (mod == NULL) {
-			mod = sceKernelCreateModule(); //0x00000448
-			modParams->pMod = mod;
+            mod = sceKernelCreateModule(); //0x00000448
+            modParams->pMod = mod;
                 
             // 0x00000454
             if (mod == NULL)
                 break;
 
             SET_MCB_STATUS(mod->status, MCB_STATUS_LOADED);
-			sceKernelRegisterModule(mod); //0x0000046C
+            sceKernelRegisterModule(mod); //0x0000046C
         }
         if (modParams->execInfo == NULL) {
             for (int i = 0; i < sizeof(SceLoadCoreExecFileInfo) / sizeof(u32); i++) //0x00000238
                  ((u32 *)execInfo)[i] = 0; // 0x000001A8
         }
                  
-		modParams->execInfo = &execInfo;
+        modParams->execInfo = &execInfo;
             
         status = _RelocateModule(modParams); //0x00000244
         if (status < SCE_ERROR_OK) {
@@ -270,8 +269,8 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     }
     // 00000350
     if (modParams->eventId != 0) {
-		sceKernelChangeThreadPriority(0, 1); //0x00000374
-		sceKernelSetEventFlag(modParams->eventId, 1); //0x00000380
+        sceKernelChangeThreadPriority(0, 1); //0x00000374
+        sceKernelSetEventFlag(modParams->eventId, 1); //0x00000380
 	}
     return SCE_ERROR_OK;
 }
@@ -1275,10 +1274,70 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s32 
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_C2A5E6CA
-// 0x00001DD0
-void ModuleMgrForKernel_C2A5E6CA()
+// Subroutine ModuleMgrForKernel_C2A5E6CA - Address 0x00001DD0
+s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    char installId[16];
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x00001DDC
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00001E00
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionKernel()) < 0 ) { //0x00001E18
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    //0x00001E24 - 0x00001F74, 0x00001F78 - 0x00001FD4
+    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00001E54
+    if (fd < 0) { // 0x00001E60
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00001E7C
+    if (status < 0) { // 0x00001E8C
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    memset(installId, 0, sizeof(installId)); //0x00001EA0
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001EB4
+
+    modParams.apiType = apiType; //0x00001EBC
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00001ED4
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001EC8
+    modParams.unk64 = 0; // 0x00001EE0
+    modParams.fd = fd; //0x00001EEC
+    modParams.unk124 = 0; //0x00001EF4
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001EF0
+    if (status >= 0) // 0x00001EF8
+        modParams.unk100 = 0x10;
+    
+    memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x00001F10
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x00001F1C
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_FE61F16D
