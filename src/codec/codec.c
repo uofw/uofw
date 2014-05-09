@@ -78,7 +78,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 int sub_0000(int reg, int set)
 {
-    char sp[2];
+    u8 sp[2];
     g_codec.flags[reg] = set;
     sp[0] = (reg << 1) | (set >> 8);
     sp[1] = set;

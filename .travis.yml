@@ -1,8 +1,8 @@
 language: cpp
 
 branches:
-  only:
-    - master
+  except:
+    - gh-pages
 
 env:
   global:
@@ -13,16 +13,21 @@ before_install:
 
 install:
   - sudo apt-get install doxygen
+  - cd ..
+  - wget https://dl.dropboxusercontent.com/u/23414835/PSPSDK/psptoolchain_1.0_amd64.deb -O psptoolchain.deb
+  - sudo dpkg --install psptoolchain.deb
+  - source /etc/profile.d/psptoolchain.sh
+  - cd $TRAVIS_BUILD_DIR
 
 script:
-  - mkdir gh-pages && cd gh-pages || exit
-  - export GIT_ROOT=`git rev-parse --show-toplevel`
-  - doxygen ../docs/Doxyfile
-  - cd $GIT_ROOT
+  - make -k
 
-after_success:
-  - if [[ $TRAVIS_PULL_REQUEST == 'false' ]]; then
-  -   cd gh-pages/html || exit
+after_script:
+  - if [[ $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_BRANCH == 'master' ]]; then
+  -   mkdir gh-pages && cd gh-pages
+  -   export GIT_ROOT=`git rev-parse --show-toplevel`
+  -   doxygen ../docs/Doxyfile
+  -   cd html || exit
   -   git init
 
   -   git config user.email "travis@example.com"
