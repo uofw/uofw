@@ -1,4 +1,4 @@
-uOFW
+uOFW [![Build Status](https://travis-ci.org/uofw/uofw.svg?branch=master)](https://travis-ci.org/uofw/uofw)
 ====
 
 The unofficial Official FirmWare, a complete latest PSP firmware reverse engineering project.  
