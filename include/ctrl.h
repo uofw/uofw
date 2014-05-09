@@ -260,8 +260,8 @@ u32 sceCtrlGetSamplingCycle(u32 *cycle);
  * 
  * @param cycle The new interval between two samplings of controller attributes in microseconds.
  *              Setting to 0 enables the VBlank-Interrupt-Update process. If you want to set an own
- *              interval for updating the internal controller buffers, cycle has to be greater 5554 
- *              and less than 20001.
+ *              interval for updating the internal controller buffers, cycle has to in the range of 
+ *              5555 - 20000 (the range from about 180 Hz to 50 Hz).
  *              This will disable the VBlank-Interrupt-Update process.
  * 
  * @return The previous cycle on success.
@@ -324,28 +324,31 @@ u32 sceCtrlSetIdleCancelKey(u32 oneTimeResetButtons, u32 allTimeResetButtons, u3
  *
  * @param iUnHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *        HOLD mode is inactive. -1 is obtained when the analog stick cannot cancel the idle timer,
- *        otherwise the movement needed by the analog stick to cancel the idle timer.
+ *        otherwise the movement needed by the analog stick (between 0 - 128) to cancel the idle timer.
  * @param iHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *                       HOLD mode is active. -1 is obtained when the analog stick cannot cancel the 
- *                       idle timer, otherwise the movement needed by the analog stick to cancel the idle timer.
+ *                       idle timer, otherwise the movement needed by the analog stick (between 0 - 128) to cancel the idle timer.
  *
  * @return 0 on success.
  */
 s32 sceCtrlGetIdleCancelThreshold(s32 *iUnHoldThreshold, s32 *iHoldThreshold);
 
 /**
- * Set analog stick threshold values canceling the idle timer.
+ * Set analog stick threshold values for cancelling the idle timer. In case SCE_CTRL_INPUT_DIGITAL_ONLY is set as the 
+ * input mode for the controller, analog stick movements will not result in cancelling the idle timer.
  *
  * @param iUnHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *                         HOLD mode is inactive.
  *                         Set between 1 - 128 to specify the movement on either axis.
- *                         Set to 0 for idle timer to be canceled even if the analog stick is not moved.
- *                         Set to -1 for analog stick not canceling idle timer (although it is moved).
+ *                         Set to 0 for idle timer to be canceled even if the analog stick is not moved
+ *                         (that is, the idle timer itself stops running).
+ *                         Set to -1 for analog stick to not cancel the idle timer (although it is moved).
  * @param iHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *                       HOLD mode is active.
  *                       Set between 1 - 128 to specify the movement on either axis.
- *                       Set to 0 for idle timer to be canceled even if the analog stick is not moved.
- *                       Set to -1 for analog stick not canceling idle timer (although it is moved).
+ *                       Set to 0 for idle timer to be canceled even if the analog stick is not moved
+ *                       (that is, the idle timer itself stops running).
+ *                       Set to -1 for analog stick to not cancel the idle timer (although it is moved).
  *
  *
  * @return 0 on success.
