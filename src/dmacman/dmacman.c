@@ -108,7 +108,24 @@ int sceKernelDmaOpDeQueue(u32 *arg0) { }
 void sceKernelDmaOpAllCancel() { }
 
 //0x798
-int sceKernelDmaOpSetCallback(u32* arg0, int (*)(int, int) arg1, int arg2) { }
+int sceKernelDmaOpSetCallback(SceDmaOp *op, int (*)(int, int) func, int arg2)
+{
+    if (!op) 
+        return 0x800202CF;
+    if (op->unk28 & 0x1000)
+        return 0x800202C3;
+    if (!(op->unk28 & 0x800))
+        return 0x800202C1;
+    if (op->unk28 & 0x2)
+        return 0x800202C0;
+    if (op->unk28 & 0x70)
+        return 0x800202C4;
+
+    op->unk20 = arg2;
+    op->callback = func;
+    return SCE_ERROR_OK;
+
+}
 
 //0x808
 void sceKernelDmaOpSetupMemcpy() { }
