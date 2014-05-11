@@ -206,7 +206,36 @@ s32 sceKernelDmaOpDeQueue(SceDmaOp *op)
 }
 
 //0x6DC
-void sceKernelDmaOpAllCancel() { }
+s32 sceKernelDmaOpAllCancel()
+{
+    u32 intr;
+    s32 ret;
+    SceDmaOp *op = *(g_8192 + 2128);
+    if (!op) {
+        return 0x800202BF;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+    for (int i = 0; i < 16; i++) {
+        if (*(g_8192 + i*4)) {
+            sceKernelCpuResumeIntr(intr);
+            return 0x800202C0;
+        }
+    }
+
+    op = *(g_8192 + 2128);
+    while (op) {
+        SceDmaOp *tmp = op->unk0;
+        op->unk0 = NULL;
+        op->unk4 = NULL;
+        op = tmp;
+    }
+
+    *(g_8192 + 2128) = NULL; // head, I think.
+    *(g_8192 + 2132) = NULL; // tail, I think.
+    sceKernelCpuResumeIntr(intr);
+    return SCE_ERROR_OK;
+}
 
 //0x798
 int sceKernelDmaOpSetCallback(SceDmaOp *op, int (*)(int, int) func, int arg2)
