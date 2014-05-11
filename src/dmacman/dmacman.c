@@ -99,7 +99,57 @@ s32 sceKernelDmaOpFree(SceDmaOp *op)
 }
 
 //0x488
-int sceKernelDmaOpEnQueue(u32 *arg0) { }
+s32 sceKernelDmaOpEnQueue(SceDmaOp *op)
+{
+    u32 intr;
+    s32 ret;
+    SceDmaOp *cur = op;
+    SceDmaOp *tail = op;
+
+    if (!op)
+        return 0x800202CF;
+    if (op->unk8)
+        return 0x800202CD;
+
+    intr = sceKernelCpuSuspendIntr();
+    for (; cur; cur = cur->next) {
+        if (cur->unk28 & 0x1) {
+            ret = 0x800202BE;
+            goto cleanup;
+        } else if (cur->unk28 & 0x1000) {
+            ret =  0x800202C3;
+            goto cleanup;
+        } else if (!(cur->unk28 & 0x100)) {
+            ret = 0x800202C1;
+            goto cleanup;
+        } else if (cur->unk28 & 0x2) {
+            ret = 0x800202C0;
+            goto cleanup;
+        } else if (cur->unk28 & 0x70) {
+            ret = 0x800202C4;
+            goto cleanup;
+        }
+        prev = cur;
+    }
+
+    if (!*(g_8256 + 2064))
+        *(g_8256 + 2064) = op;
+
+    op->unk0 = 0;
+    op->unk4 = *(g_8256 + 2068);
+    if (*(g_8256 + 2068)) {
+        **(g_8256 + 2068) = op;
+    }
+
+    *(g_8256 + 2068) = op;
+    op->unk28 |= 1;
+    sub_14F4();
+    ret = SCE_ERROR_OK;
+
+cleanup:
+    sceKernelCpuResumeIntr(intr);
+    return ret;
+}
 
 //0x5D4
 int sceKernelDmaOpDeQueue(u32 *arg0) { }
