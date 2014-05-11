@@ -152,7 +152,7 @@ s32 sceKernelDmaOpSetupMemcpy(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3)
 }
 
 //0x8A8
-void sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+s32 sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
     if (!op)
         return 0x800202CF;
