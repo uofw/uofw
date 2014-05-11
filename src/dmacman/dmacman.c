@@ -306,7 +306,48 @@ s32 sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 ar
 }
 
 //0x938
-int sceKernelDmaOpSetupLink(u32 *arg0, int arg1, u32 *arg2) { }
+u32 sceKernelDmaOpSetupLink(SceDmaOp *op, s32 command, u32 *timeout)
+{
+    s32 err;
+
+    if (!op)
+        return 0x800202CF;
+    if (op->unk28 & 0x1000)
+        return 0x800202C3;
+    if (!(op->unk28 & 0x100))
+        return 0x800202C1;
+    if (op->unk28 & 0x20)
+        return 0x800202C6;
+
+    switch (command) {
+    case 0: {
+        if (op->unk28 & 0x40)
+            return SCE_ERROR_OK;
+        if (op->unk28 & 0x10)
+            return 0x800202C7;
+        if (op->unk28 & 0x1)
+            return 0x800202BE;
+        if (op->unk28 & 0x2)
+            return 0x800202C0;
+        return 0x800202BF
+    }
+    case 1:
+        return sceKernelWaitEventFlag(*(g_8192 + 2140), op1->unk24, 33, NULL, NULL) ?
+            SCE_ERROR_KERNEL_ERROR : SCE_ERROR_OK;
+    case 2:
+        err = sceKernelWaitEventFlag(*(g_8192 + 2140), op1->unk24, 33, NULL, timeout);
+        if (err == SCE_ERROR_OK)
+            return SCE_ERROR_OK;
+        if (err == SCE_ERROR_KERNEL_WAIT_TIMEOUT) {
+            sub_BCC(op1);
+            return 0x800202C2;
+        }
+        // intentional fall through
+    default:
+        return SCE_ERROR_KERNEL_ERROR;
+    }
+
+}
 
 //0xA64
 void sceKernelDmaOpSync() { }
