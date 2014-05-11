@@ -56,7 +56,47 @@ void sceKernelDmaSoftRequest(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
 }
 
 //0x388
-int sceKernelDmaOpFree(u32 *arg0) { }
+s32 sceKernelDmaOpFree(SceDmaOp *op)
+{
+    s32 ret;
+    u32 intr;
+
+    intr = sceKernelCpuSuspendIntr();
+
+    if (op) {
+        if (op->unk28 & 0x1000) {
+            ret = 0x800202C3;
+        } else if (arg0->unk28 & 0x1) {
+            ret = 0x800202BE;
+        } else if (arg0->unk28 & 0x2) {
+            ret = 0x800202C0;
+        } else {
+            u32 *unk = *((int)g_8256 + 2060);
+            op->unk0 = unk;
+            op->unk4 = 0;
+            op->unk16 = 0;
+            op->unk28 = 0x1000;
+            op->unk30 = 0xFFFF;
+            op->unk32 = 0;
+            op->unk36 = 0;
+            op->unk40 = 0;
+            op->unk44 = 0;
+            op->unk48 = 0;
+            op->unk56 = 0;
+            if (unk) 
+                unk->unk4 = op;
+            *((int)g_8256 + 2060) = op;
+            ThreadManForKernel_812346E4(*((int)g_8256 + 2076), op->unk24);
+            ret = SCE_ERROR_OK;
+        }
+
+    } else {
+        ret = 0x800202CF;
+    }
+
+    sceKernelCpuResumeIntr(intr);
+    return ret;
+}
 
 //0x488
 int sceKernelDmaOpEnQueue(u32 *arg0) { }

@@ -4,13 +4,27 @@
 
 #include "common_header.h"
 
-int sceKernelDmaOpQuit(u32*);
+typedef struct {
+    void *unk0;
+    u32 unk4;
+    u32 unk16;
+    u16 unk28;
+    u16 unk30;
+    u32 unk32;
+    u32 unk36;
+    u32 unk40;
+    u32 unk44;
+    u32 unk48;
+    u32 unk56;
+} SceDmaOp;
+
+int sceKernelDmaOpQuit(SceDmaOp*);
 int sceKernelDmaOpAssign(u32*, int, int, int, int);
 int sceKernelDmaOpSetCallback(u32*, int (*)(int, int), int);
 int sceKernelDmaOpSetupLink(u32*, int, u32*);
 int sceKernelDmaOpEnQueue(u32*);
 int sceKernelDmaOpDeQueue(u32*);
 u32 *sceKernelDmaOpAlloc(void);
-int sceKernelDmaOpFree(u32*);
+s32 sceKernelDmaOpFree(u32*);
 int DmacManForKernel_E18A93A5(void*, void*);
 
