@@ -308,6 +308,12 @@ s32 sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 ar
 //0x938
 u32 sceKernelDmaOpSetupLink(SceDmaOp *op, s32 command, u32 *timeout)
 {
+
+}
+
+//0xA64
+s32 sceKernelDmaOpSync(SceDmaOp *op, s32 command, u32 *timeout)
+{
     s32 err;
 
     if (!op)
@@ -346,11 +352,7 @@ u32 sceKernelDmaOpSetupLink(SceDmaOp *op, s32 command, u32 *timeout)
     default:
         return SCE_ERROR_KERNEL_ERROR;
     }
-
 }
-
-//0xA64
-void sceKernelDmaOpSync() { }
 
 //0xBCC
 static void sub_BCC() { }
