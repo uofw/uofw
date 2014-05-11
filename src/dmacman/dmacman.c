@@ -128,10 +128,52 @@ int sceKernelDmaOpSetCallback(SceDmaOp *op, int (*)(int, int) func, int arg2)
 }
 
 //0x808
-void sceKernelDmaOpSetupMemcpy() { }
+s32 sceKernelDmaOpSetupMemcpy(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3)
+{
+    if (!op)
+        return 0x800202CF;
+    if (op->unk28 & 0x1000)
+        return 0x800202C3;
+    if (!(op->unk28 & 0x100))
+        return 0x800202C1;
+    if (op->unk28 & 0x2)
+        return 0x800202C0;
+    if (op->unk28 & 0x70)
+        return 0x800202C4;
+    if (arg3 < 0x1000) {
+        op->unk32 = arg2;
+        op->unk36 = arg1;
+        op->unk40 = 0;
+        op->unk44 = arg3 & 0x8C4BF000;
+        op->unk48 |= 0xC001;
+    }
+
+    return SCE_ERROR_OK;
+}
 
 //0x8A8
-void sceKernelDmaOpSetupNormal() { }
+void sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    if (!op)
+        return 0x800202CF;
+    if (op->unk28 & 0x1000)
+        return 0x800202C3;
+    if (!(op->unk28 & 0x100))
+        return 0x800202C1;
+    if (op->unk28 & 0x2)
+        return 0x800202C0;
+    if (op->unk28 & 0x70)
+        return 0x800202C4;
+
+    op->unk32 = arg3;
+    op->unk36 = arg2;
+    op->unk40 = 0;
+    op->unk44 = arg4 | 0x80000000;
+    op->unk48 |= (arg1 | 0xC001);
+
+
+    return SCE_ERROR_OK;
+}
 
 //0x938
 int sceKernelDmaOpSetupLink(u32 *arg0, int arg1, u32 *arg2) { }
