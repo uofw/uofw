@@ -1,8 +1,8 @@
 language: cpp
 
 branches:
-  except:
-    - gh-pages
+  only:
+    - master
 
 env:
   global:
