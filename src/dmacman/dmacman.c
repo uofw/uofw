@@ -152,7 +152,58 @@ cleanup:
 }
 
 //0x5D4
-int sceKernelDmaOpDeQueue(u32 *arg0) { }
+s32 sceKernelDmaOpDeQueue(SceDmaOp *op)
+{
+    u32 intr;
+    s32 ret;
+
+    intr = sceKernelCpuSuspendIntr();
+    if (!op) {
+        ret = 0x800202CF
+    } else if (op->unk28 & 0x1000) {
+        ret = 0x800202C3;
+    } else if (!(op->unk28 & 0x100)) {
+        ret = 0x800202C1;
+    } else if (op->unk28 & 0x2) {
+        ret = 0x800202C0;
+    } else if (!(op->unk28) & 0x1) {
+        ret = 0x800202BF;
+    } else {
+
+        // I'm not sure which is next and which is prev.
+
+        // if op->next
+        //    op->next->prev = op->prev
+        if (op->unk4) {
+            op->unk4->unk0 = op->unk0;
+        }
+
+        // if op->prev
+        //    op->prev->next = op->next
+        if (op->unk0) {
+            op->unk0->unk4 = op->unk4;
+        }
+
+        // if op == head
+        //    head = op->next
+        if (*(g_8256 + 2068) == op) {
+            *(g_8256 + 2068) = op->unk4;
+        }
+
+        // if op == tail
+        //    tail = op->prev;
+        if (*(g_8256 + 2064) == op) {
+            *(g_8256 + 2064) = op->unk0;
+        }
+
+        op->unk0 = NULL;
+        op->unk28 &= ~0x1;
+        ret = SCE_ERROR_OK;
+    }
+
+    sceKernelCpuResumeIntr(intr);
+    return ret;
+}
 
 //0x6DC
 void sceKernelDmaOpAllCancel() { }
