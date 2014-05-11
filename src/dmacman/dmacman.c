@@ -1,8 +1,14 @@
 #include <dmacman.h>
 #include <common_imp.h>
+#include <common_asm.h>
+
+#include <interruptman.h>
+#include <sysmem_sysclib.h>
 
 #define DMACMAN_VERSION_MAJOR   (1)
 #define DMACMAN_VERSION_MINOR   (18)
+
+void *g_8256;
 
 SCE_MODULE_INFO("sceDMAManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START |
                                  SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_CANT_STOP, 
@@ -22,10 +28,32 @@ s32 _sceDmacManModuleRebootBefore(SceSize args __attribute__((unused)), void *ar
 }
 
 //0x300
-void DmacManForKernel_32757C57() { }
+s32 DmacManForKernel_32757C57(u32 arg0)
+{
+    *((int)g_8256 + 2072) = arg0 ? arg0 : 7156;
+    return SCE_ERROR_OK;
+}
 
 //0x328
-void sceKernelDmaSoftRequest() { }
+void sceKernelDmaSoftRequest(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
+{
+    u32 baseaddr = arg0? 0xBCA00000 : 0xBC900000;
+
+    // TODO: make cleaner
+    if (arg3) {
+        if (arg2) {
+            HW(baseaddr + 44) = (1 << arg1);
+        } else {
+            HW(baseaddr + 40) = (1 << arg1);
+        }
+    } else if (arg2) {
+        HW(baseaddr + 32) = (arg2 << arg1);
+    } else {
+        HW(baseaddr + 34) = (1 << arg1);
+    }
+
+    return SCE_ERROR_OK;
+}
 
 //0x388
 int sceKernelDmaOpFree(u32 *arg0) { }
