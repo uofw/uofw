@@ -14,7 +14,7 @@ typedef struct {
     u32 unk2112;
     u32 unk2116;
     u32 unk2120;      // inUse? bit-vector where 1 means ops[bit] is in use
-    SceDmaOp *op2124; // current?
+    SceDmaOp *op2124; // Free list
     SceDmaOp *op2128; // Likely first/head
     SceDmaOp *op2132; // Likely last/tail
     u32 unk2136;
@@ -85,7 +85,7 @@ s32 _sceDmacManModuleRebootBefore(SceSize args __attribute__((unused)), void *ar
 //0x300
 s32 DmacManForKernel_32757C57(u32 arg0)
 {
-    *((int)g_8256 + 2072) = arg0 ? arg0 : 7156;
+    g_dmacman.unk2136 = arg0 ? arg0 : 7156;
     return SCE_ERROR_OK;
 }
 
@@ -126,7 +126,7 @@ s32 sceKernelDmaOpFree(SceDmaOp *op)
         } else if (arg0->unk28 & 0x2) {
             ret = 0x800202C0;
         } else {
-            u32 *unk = *((int)g_8256 + 2060);
+            SceDmaOp *unk = g_dmacman.unk2124;
             op->unk0 = unk;
             op->unk4 = 0;
             op->unk16 = 0;
@@ -140,8 +140,8 @@ s32 sceKernelDmaOpFree(SceDmaOp *op)
             op->unk56 = 0;
             if (unk) 
                 unk->unk4 = op;
-            *((int)g_8256 + 2060) = op;
-            ThreadManForKernel_812346E4(*((int)g_8256 + 2076), op->unk24);
+            g_dmacman.unk2124 = op;
+            sceKernelClearEventFlag(g_dmacman->unk2140, op->unk24);
             ret = SCE_ERROR_OK;
         }
 
@@ -187,16 +187,17 @@ s32 sceKernelDmaOpEnQueue(SceDmaOp *op)
         prev = cur;
     }
 
-    if (!*(g_8256 + 2064))
-        *(g_8256 + 2064) = op;
+    // This seems redundant
+    if (!g_dmacman.unk2128)
+        g_dmacman.unk2128 = op;
 
     op->unk0 = 0;
-    op->unk4 = *(g_8256 + 2068);
-    if (*(g_8256 + 2068)) {
-        **(g_8256 + 2068) = op;
+    op->unk4 = g_dmacman.unk2132;
+    if (g_dmacman.unk2132) {
+        g_dmacman.unk2132->unk0 = op;
     }
 
-    *(g_8256 + 2068) = op;
+    g_dmacman.unk2128 = op;
     op->unk28 |= 1;
     sub_14F4();
     ret = SCE_ERROR_OK;
@@ -241,14 +242,14 @@ s32 sceKernelDmaOpDeQueue(SceDmaOp *op)
 
         // if op == head
         //    head = op->next
-        if (*(g_8256 + 2068) == op) {
-            *(g_8256 + 2068) = op->unk4;
+        if (g_dmacman.unk2132 == op) {
+            g_dmacman.unk2132 = op->unk4;
         }
 
         // if op == tail
         //    tail = op->prev;
-        if (*(g_8256 + 2064) == op) {
-            *(g_8256 + 2064) = op->unk0;
+        if (g_dmacman.unk2128 == op) {
+            g_dmacman.unk2128 = op->unk0;
         }
 
         op->unk0 = NULL;
@@ -265,7 +266,7 @@ s32 sceKernelDmaOpAllCancel()
 {
     u32 intr;
     s32 ret;
-    SceDmaOp *op = *(g_8192 + 2128);
+    SceDmaOp *op = g_dmacman.unk2128;
     if (!op) {
         return 0x800202BF;
     }
@@ -278,7 +279,7 @@ s32 sceKernelDmaOpAllCancel()
         }
     }
 
-    op = *(g_8192 + 2128);
+    op = g_dmacman.unk2128;
     while (op) {
         SceDmaOp *tmp = op->unk0;
         op->unk0 = NULL;
@@ -286,8 +287,8 @@ s32 sceKernelDmaOpAllCancel()
         op = tmp;
     }
 
-    *(g_8192 + 2128) = NULL; // head, I think.
-    *(g_8192 + 2132) = NULL; // tail, I think.
+    g_dmacman.unk2128 = NULL; // head, I think.
+    g_dmacman.unk2132 = NULL; // tail, I think.
     sceKernelCpuResumeIntr(intr);
     return SCE_ERROR_OK;
 }
@@ -393,10 +394,10 @@ s32 sceKernelDmaOpSync(SceDmaOp *op, s32 command, u32 *timeout)
         return 0x800202BF
     }
     case 1:
-        return sceKernelWaitEventFlag(*(g_8192 + 2140), op1->unk24, 33, NULL, NULL) ?
+        return sceKernelWaitEventFlag(g_dmacman.unk2140, op1->unk24, 33, NULL, NULL) ?
             SCE_ERROR_KERNEL_ERROR : SCE_ERROR_OK;
     case 2:
-        err = sceKernelWaitEventFlag(*(g_8192 + 2140), op1->unk24, 33, NULL, timeout);
+        err = sceKernelWaitEventFlag(g_dmacman.unk2140, op1->unk24, 33, NULL, timeout);
         if (err == SCE_ERROR_OK)
             return SCE_ERROR_OK;
         if (err == SCE_ERROR_KERNEL_WAIT_TIMEOUT) {
@@ -424,7 +425,7 @@ static void sub_BCC(SceDmaOp *op)
 
     op->unk28 = 0x20;
     op->unk30 = 0xFFFF;
-    *(g_8192 + 2120) &= ~(1 << unk);
+    g_dmacman.unk2120 &= ~(1 << unk);
     *(g_8192 + unk1 * 4) = 0;
 
     HW(base + 8) = 1 << unk1;
