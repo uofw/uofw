@@ -8,6 +8,21 @@
 #define DMACMAN_VERSION_MAJOR   (1)
 #define DMACMAN_VERSION_MINOR   (18)
 
+typedef struct {
+    u32 unk0[16];     //0
+    SceDmaOp ops[32]; //64
+    u32 unk2112;
+    u32 unk2116;
+    u32 unk2120;      // inUse? bit-vector where 1 means ops[bit] is in use
+    SceDmaOp *op2124; // current?
+    SceDmaOp *op2128; // Likely first/head
+    SceDmaOp *op2132; // Likely last/tail
+    u32 unk2136;
+    u32 unk2140;      // evid passed to sceKernelWaitEventFlag
+} SceDmacMan;
+
+SceDmacMan g_dmacman; //8192
+
 void *g_8256;
 
 SCE_MODULE_INFO("sceDMAManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START |
@@ -19,7 +34,47 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 s32 _sceDmacManModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    return SCE_ERROR_OK;
+    u32 intr;
+    s32 err = SCE_ERROR_OK;
+
+    intr = sceKernelCpuSuspendIntr();
+    memset(&g_dmacman.ops, 0, 2048);
+
+    g_dmacman.op2124 = &g_dmacman.ops[0];
+    for (int i = 0; i < 31; i++) {
+        g_dmacman.ops[i].unk0 = &g_dmacman.ops[i+1];
+        g_dmacman.ops[i+1].unk4 = &g_dmacman.ops[i];
+        g_dmacman.ops[i].unk28 = 0x1000;
+        g_dmacman.ops[i].unk24 = 1 << i;
+    }
+    g_dmacman.ops[31].unk28 = 0x1000;
+    g_dmacman.ops[31].unk24 = 1 << i;
+
+    g_dmacman.unk2128 = NULL;
+    g_dmacman.unk2132 = NULL;
+    g_dmacman.unk2140 = 0;
+
+    sceKernelRegisterSuspendHandler(20, suspendHandler, NULL);
+    sceKernelRegisterResumeHandler(20, resumeHandler, NULL);
+
+    err |= sceKernelRegisterIntrHandler(22, 2, interruptHandler, NULL, NULL);
+    err |= sceKernelEnableIntr(22);
+    err |= sceKernelRegisterIntrHandler(23, 2, interruptHandler, NULL, NULL);
+    err |= sceKernelEnableIntr(23);
+
+    if (err) {
+        sceKernelReleaseIntrHandler(22);
+        sceKernelReleaseIntrHandler(23);
+        err = 0x800202BC;
+    }
+
+    DmacManForKernel_32757C57(sub_1BF4);
+
+    sceKernelCpuResumeIntr(intr);
+
+    g_dmacman.unk2140 = sceKernelCreateEventFlag("SceDmacmanEvflag", 0x200, 0, 0);
+
+    return err;
 }
 
 s32 _sceDmacManModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
@@ -412,6 +467,8 @@ int DmacManForKernel_E18A93A5(void *arg0, void *arg1) { }
 //0xFC0
 void sceKernelDmaOpAssignMultiple() { }
 
+static s32 interruptHandler() { }
+
 //0x14f4
 static void sub_14F4() { }
 
@@ -432,6 +489,15 @@ void DmacManForKernel_1FC036B7() { }
 
 //0x1ADC
 void sceKernelDmaOnDebugMode() { }
+
+//0x1AE4
+static s32 suspendHandler(s32 unk, void *param) { }
+
+//0x1B74
+static s32 resumeHandler(s32 unk, void *param) { }
+
+//0x1BF4
+static s32 sub_1BF4() { }
 
 //0x1C14
 void sub_1C14() { }
