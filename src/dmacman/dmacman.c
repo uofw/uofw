@@ -354,7 +354,7 @@ s32 sceKernelDmaOpSync(SceDmaOp *op, s32 command, u32 *timeout)
     }
 }
 
-//0xBCC
+//0xBCC doDmaOpQuit?
 static void sub_BCC(SceDmaOp *op)
 {
     s32 unk = op->unk30;
@@ -378,7 +378,33 @@ static void sub_BCC(SceDmaOp *op)
 }
 
 //0xC70
-int sceKernelDmaOpQuit(u32 *arg0) { }
+s32 sceKernelDmaOpQuit(SceDmaOp *op)
+{
+    u32 intr;
+    s32 ret = SCE_ERROR_OK;
+
+    intr = sceKernelCpuSuspendIntr();
+    if (!op)
+        ret = 0x800202CF;
+    else if (op->unk28 & 0x1000)
+        ret = 0x800202C3;
+    else if (!(op->unk28 & 0x100))
+        ret = 0x800202C1;
+    else if (op->unk28 & 0x40)
+        ret = 0x800202BF;
+    else if (op->unk28 & 0x1)
+        ret = 0x800202BE;
+    else if (op->unk28 & 0x10)
+        ret = 0x800202C7;
+    else if (op->unk28 & 0x20)
+        ret = 0x800202C6;
+    else if (!(op->unk28 & 0x2))
+        ret = SCE_ERROR_KERNEL_ERROR;
+    else
+        sub_BCC(op);
+
+    return ret;
+}
 
 //0xD80
 int DmacManForKernel_E18A93A5(void *arg0, void *arg1) { }
