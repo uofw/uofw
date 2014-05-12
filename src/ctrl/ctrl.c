@@ -346,16 +346,21 @@ typedef struct {
     u8 cableTypeReq;
     /* Unknown. */
     u8 unk15;
-    /* The busy status of the SYSCON microcontroller for the first communication
-     * function (_sceCtrlSysconCmdIntr1).
-     */
-    u8 sysconBusyIntr1;
-    /* The busy status of the SYSCON microcontroller for the second communication
-     * function (_sceCtrlSysconCmdIntr2).
-     */
-    u8 sysconBusyIntr2;
-    /** Reserved. */
-    u8 resv[2];
+    union {
+        struct {
+            /* The busy status of the SYSCON microcontroller for the first communication
+             * function (_sceCtrlSysconCmdIntr1).
+             */
+            u8 intr1;
+            /* The busy status of the SYSCON microcontroller for the second communication
+             * function (_sceCtrlSysconCmdIntr2).
+             */
+            u8 intr2;
+            /** Reserved. */
+            u8 resv[2];
+        } busy;
+        u32 status;
+    } sysconStatus;
     /* SCE_TRUE = reset the PSP's idle timer, SCE_FALSE = don't reset it. */
     u8 cancelIdleTimer;
     /* Poll mode of the controller.  One of ::SceCtrlPadPollMode. */
@@ -634,10 +639,10 @@ s32 sceCtrlEnd(void)
     sceKernelReleaseSubIntrHandler(SCE_VBLANK_INT, 0x13);
     sceKernelDeleteEventFlag(g_ctrl.updateEventId);
 
-    sysconStatus = *((u32 *)&g_ctrl.sysconBusyIntr1);
+    sysconStatus = g_ctrl.sysconStatus.status;
     while (sysconStatus != 0) { 
            sceDisplayWaitVblankStart();
-           sysconStatus = *((u32 *)&g_ctrl.sysconBusyIntr1);
+           sysconStatus = g_ctrl.sysconStatus.status;
     }
     return SCE_ERROR_OK;
 }
@@ -1167,7 +1172,7 @@ static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName __attribute__((u
     s32 sysconStatus;
 
     if (eventId == 0x402) {
-        sysconStatus = *((u32 *)&g_ctrl.sysconBusyIntr1);
+        sysconStatus = g_ctrl.sysconStatus.status;
         if (sysconStatus == 0)
             return SCE_ERROR_OK;
 
@@ -1254,8 +1259,8 @@ static s32 _sceCtrlVblankIntr(s32 subIntNm __attribute__((unused)), void *arg __
      * choice (and not the custom user timer handler).
      */
     if (g_ctrl.updateCycle == 0) {      
-        if (g_ctrl.sysconBusyIntr1 == SCE_FALSE && g_ctrl.pollMode == SCE_CTRL_POLL_ACTIVE) {
-            g_ctrl.sysconBusyIntr1 = SCE_TRUE;     
+        if (g_ctrl.sysconStatus.busy.intr1 == SCE_FALSE && g_ctrl.pollMode == SCE_CTRL_POLL_ACTIVE) {
+            g_ctrl.sysconStatus.busy.intr1 = SCE_TRUE;     
             
             /* Specify the requested controller device input data. */
             if ((g_ctrl.samplingMode[USER_MODE] | g_ctrl.samplingMode[KERNEL_MODE]) == SCE_CTRL_INPUT_DIGITAL_ONLY)
@@ -1266,7 +1271,7 @@ static s32 _sceCtrlVblankIntr(s32 subIntNm __attribute__((unused)), void *arg __
             g_ctrl.sysPacket[0].tx[PSP_SYSCON_TX_LEN] = 2;
             status = sceSysconCmdExecAsync(&g_ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, NULL);
             if (status < SCE_ERROR_OK)
-                g_ctrl.sysconBusyIntr1 = SCE_FALSE;
+                g_ctrl.sysconStatus.busy.intr1 = SCE_FALSE;
         }
         else {             
             sceKernelSetAlarm(CTRL_ALARM_START_TIME, _sceCtrlDummyAlarm, NULL);
@@ -1309,8 +1314,8 @@ static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __
      * (and not the VBlank interrupt handler).
      */
     if (g_ctrl.updateCycle != 0) {
-        if ((g_ctrl.sysconBusyIntr1 == SCE_FALSE) && (g_ctrl.pollMode == SCE_CTRL_POLL_ACTIVE)) {
-            g_ctrl.sysconBusyIntr1 = SCE_TRUE;
+        if ((g_ctrl.sysconStatus.busy.intr1 == SCE_FALSE) && (g_ctrl.pollMode == SCE_CTRL_POLL_ACTIVE)) {
+            g_ctrl.sysconStatus.busy.intr1 = SCE_TRUE;
 
             /* Specify the requested controller device input data. */
             if (g_ctrl.samplingMode[USER_MODE] != SCE_CTRL_INPUT_DIGITAL_ONLY)
@@ -1319,7 +1324,7 @@ static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __
             g_ctrl.sysPacket[0].tx[PSP_SYSCON_TX_CMD] = sysconCtrlCmd;
             status = sceSysconCmdExecAsync(&g_ctrl.sysPacket[0], 1, _sceCtrlSysconCmdIntr1, NULL);
             if (status < SCE_ERROR_OK)
-                g_ctrl.sysconBusyIntr1 = SCE_FALSE;
+                g_ctrl.sysconStatus.busy.intr1 = SCE_FALSE;
         }
         else {
              sceKernelSetAlarm(CTRL_ALARM_START_TIME, _sceCtrlDummyAlarm, NULL);
@@ -1356,7 +1361,7 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
     u32 idleResetButtons;
 
     curButtons = 0;
-    g_ctrl.sysconBusyIntr1 = SCE_FALSE;
+    g_ctrl.sysconStatus.busy.intr1 = SCE_FALSE;
     
     if (g_ctrl.sysconTransfersLeft > 0)
         g_ctrl.sysconTransfersLeft--;
@@ -1474,18 +1479,18 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
                 g_ctrl.cancelIdleTimer = SCE_TRUE;
             }
         }
-        sampling = (*(u16 *)g_ctrl.samplingMode) != 0;
+        sampling = ((g_ctrl.samplingMode[0] != 0) || (g_ctrl.samplingMode[1] != 0));
         sampling = (g_ctrl.cableTypeReq != 0) ? (sampling | 2) : sampling;
 
-        if (sampling != g_ctrl.unk15 && (g_ctrl.sysconBusyIntr2 == SCE_FALSE)) {
-            g_ctrl.sysconBusyIntr2 = SCE_TRUE;
+        if (sampling != g_ctrl.unk15 && (g_ctrl.sysconStatus.busy.intr2 == SCE_FALSE)) {
+            g_ctrl.sysconStatus.busy.intr2 = SCE_TRUE;
             g_ctrl.sysPacket[1].tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_CTRL_ANALOG_XY_POLLING;
             g_ctrl.sysPacket[1].tx[PSP_SYSCON_TX_LEN] = 3;
             g_ctrl.sysPacket[1].tx[PSP_SYSCON_TX_DATA(0)] = sampling;
 
             status = sceSysconCmdExecAsync(&g_ctrl.sysPacket[1], 0, _sceCtrlSysconCmdIntr2, NULL);
             if (status < SCE_ERROR_OK)
-                g_ctrl.sysconBusyIntr2 = SCE_FALSE;
+                g_ctrl.sysconStatus.busy.intr2 = SCE_FALSE;
         }
         
         /* Set the event flag to indicate a finished update interval. */
@@ -1498,7 +1503,7 @@ static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet __attribute__((unused)
 {   
     g_ctrl.cableTypeReq = 0;
     g_ctrl.unk15 = g_ctrl.sysPacket[1].tx[PSP_SYSCON_TX_DATA(0)] & 0x1;
-    g_ctrl.sysconBusyIntr2 = SCE_FALSE;
+    g_ctrl.sysconStatus.busy.intr2 = SCE_FALSE;
 
     return SCE_ERROR_OK;
 }

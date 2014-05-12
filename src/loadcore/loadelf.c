@@ -80,7 +80,7 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     lowAddr = maxAddr = maxOffset = 0;
     
     sceHeader = (SceHeader *)buf;
-    if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC) { //0x00003FE0
+    if (((sceHeader->magic[0] << 24) | (sceHeader->magic[1] << 16) | (sceHeader->magic[2] << 8) | sceHeader->magic[3]) == SCE_MAGIC) { //0x00003FE0
         if (sceHeader->hdrVersion == SCE_HEADER_BETA_VERSION)
             return SCE_ERROR_KERNEL_CANNOT_USE_BETA_VER_MODULE;
         
@@ -105,7 +105,7 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         }
         
         pspHeader = (PspHeader *)buf;
-        if (((u32 *)pspHeader->magic)[0] == PSP_MAGIC) { //0x00004018
+        if (((pspHeader->magic[0] << 24) | (pspHeader->magic[1] << 16) | (pspHeader->magic[2] << 8) | pspHeader->magic[3]) == PSP_MAGIC) { //0x00004018
             execInfo->modInfoAttribute = pspHeader->modAttribute; //0x00004298
             if (pspHeader->decryptMode == 0) //0x000042A0
                 execInfo->modInfoAttribute = pspHeader->modAttribute & ~SCE_PRIVILEGED_MODULES; //0x000042B0              
@@ -256,7 +256,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     execInfo->bssSize = 0;
     
     sceHeader = (SceHeader *)buf;
-    if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC) { //0x00004408
+    if (((sceHeader->magic[0] << 24) | (sceHeader->magic[1] << 16) | (sceHeader->magic[2] << 8) | sceHeader->magic[3]) == SCE_MAGIC) { //0x00004408
         if (sceHeader->hdrVersion == SCE_HEADER_BETA_VERSION) { //0x000048D8
             execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
             return SCE_ERROR_KERNEL_CANNOT_USE_BETA_VER_MODULE;
@@ -548,7 +548,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     segmentPtr = NULL;
     
     sceHeader = (SceHeader *)buf;
-    if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC) { //0x00004948
+    if (((sceHeader->magic[0] << 24) | (sceHeader->magic[1] << 16) | (sceHeader->magic[2] << 8) | sceHeader->magic[3]) == SCE_MAGIC) { //0x00004948
         if (sceHeader->hdrVersion == SCE_HEADER_BETA_VERSION) //0x00004E3C
             return SCE_ERROR_KERNEL_CANNOT_USE_BETA_VER_MODULE;
             
