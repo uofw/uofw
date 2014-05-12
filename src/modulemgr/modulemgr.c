@@ -1317,7 +1317,7 @@ s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flags, SceKer
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
     
-    memset(installId, 0, sizeof(installId)); //0x00001EA0
+    memset(installId, 0, sizeof installId); //0x00001EA0
     pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001EB4
 
     modParams.apiType = apiType; //0x00001EBC
@@ -1457,17 +1457,77 @@ s32 sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 flag
     if (status >= 0) // 0x000022C0
         modParams.unk100 = 0x10;
     
-    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000020F8
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000022D0
     
     sceIoClose(fd);
     pspSetK1(oldK1);
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_D60AB6CC
-// 0x00002388
-void ModuleMgrForKernel_D60AB6CC()
+// Subroutine ModuleMgrForKernel_D60AB6CC - Address 0x00002388
+s32 sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    char installId[16];
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x00002394
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000023B8
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionKernel()) < 0 ) { //0x000023D0
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    //0x000023DC - 0x0000252C, 0x00002530 - 0x0000258C
+    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x0000240C
+    if (fd < 0) { // 0x00002418
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002438
+    if (status < 0) { // 0x00002444
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    memset(installId, 0, sizeof installId); //0x00002458
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000246C
+
+    modParams.apiType = apiType; //0x00002474
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x0000248C
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002480
+    modParams.unk64 = 0; // 0x00002498
+    modParams.fd = fd; //0x000024A4
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000024A8
+    if (status >= 0) // 0x000024B0
+        modParams.unk100 = 0x10;
+    
+    memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x000024C8
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000024D4
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_76F0E956
