@@ -355,7 +355,27 @@ s32 sceKernelDmaOpSync(SceDmaOp *op, s32 command, u32 *timeout)
 }
 
 //0xBCC
-static void sub_BCC() { }
+static void sub_BCC(SceDmaOp *op)
+{
+    s32 unk = op->unk30;
+    s32 unk1 = (unk & 7) << 5;
+    s32 base = (unk >> 3 == 0) ? 0xBCA00000 : 0xBC900000;
+    s32 address = unk1 + base + 0x100;
+
+    HW(address) &= ~0x1;
+
+    // Wait for the write to go through
+    while (HW(address) & 0x1);
+
+    op->unk28 = 0x20;
+    op->unk30 = 0xFFFF;
+    *(g_8192 + 2120) &= ~(1 << unk);
+    *(g_8192 + unk1 * 4) = 0;
+
+    HW(base + 8) = 1 << unk1;
+    HW(base + 16) = 1 << unk1;
+
+}
 
 //0xC70
 int sceKernelDmaOpQuit(u32 *arg0) { }
