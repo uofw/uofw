@@ -49,9 +49,8 @@ EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
 EXPORT_C=$(PRX_EXPORTS:.exp=.c)
 
 ifeq ($(DEBUG),1)
-CFLAGS += -DDEBUG -I$(PSPSDK)/include
-LDFLAGS += -L$(PSPSDK)/lib
-LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
+CFLAGS += -DDEBUG
+LIBS := -ldebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
 endif
 ifeq ($(INSTALLER),1)
 CFLAGS += -DINSTALLER

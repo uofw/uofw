@@ -10,7 +10,9 @@ TARGET = ../../lib/libdebug.a
 OBJS =	tff/diskio.o \
 		tff/tff.o \
 		debug.o \
+		font.o \
 		memstk.o \
+		scr_printf.o \
 		syscon.o \
 		sysreg.o
 
