@@ -268,7 +268,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
     }
 
     if ((ret == 0 && sceKernelIsToolMode() != 0) || ret == 32) {
-        s32 var;
+        u32 var;
         // FB4
         if (sceKernelGetCompiledSdkVersion() != 0 && sceKernelGetAllowReplaceUmd(&var) == 0 && var != 0) {
             g_loadExecCb = oldD384;
