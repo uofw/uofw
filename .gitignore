@@ -3,4 +3,8 @@ nbproject/
 *.o
 *.elf
 *.prx
+*.exe
 *.*~
+exports.c
+/lib/libdebug.a
+
