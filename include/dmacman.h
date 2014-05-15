@@ -10,6 +10,7 @@ typedef struct {
     u32 unk8;
     SceDmaOp *next;
     u32 unk16;
+    u32 unk20;
     int (*)(int, int) callback;
     u16 unk28;
     u16 unk30;
