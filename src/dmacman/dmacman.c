@@ -503,7 +503,80 @@ s32 sceKernelDmaOpQuit(SceDmaOp *op)
 }
 
 //0xD80
-int DmacManForKernel_E18A93A5(void *arg0, void *arg1) { }
+s32 sceKernelDmaOpConcatenate(SceDmaOp *op, void *arg1)
+{
+    void *unk;
+    u32 intr;
+    s32 ret;
+    s32 addr;
+
+    u32 addr16;
+
+    // s1 = op
+    // s2 = arg1
+    if (!op)
+        return 0x800202CF;
+
+    for (unk = KUNCACHED(arg1); unk->unk8; unk = KUNCACHED(unk->unk8));
+    unk->unk12 |= 0x80000000; // unk->unk12 = KCACHED(unk->unk12)?
+
+    intr = sceKernelCpuSuspendIntr();
+
+    if (op->unk28 & 0x1170 != 0x100) {
+        if (op->unk28 & 0x1000)
+            ret = 0x800202C3;
+        else if (!(op->unk28 & 0x100))
+            ret = 0x800202C1;
+        else
+            ret = 0x800202C4;
+        goto cleanup;
+    }
+
+    if (!(op->unk28 & 0x2)) {
+        if (op->unk28 & 0x1) {
+            op->unk60->unk8 = arg1;
+            op->unk60 = unk;
+            ret = SCE_ERROR_OK;
+        } else
+            ret = SCE_ERROR_KERNEL_ERROR;
+        goto cleanup;
+    }
+
+    addr = (op->unk30 / 8) ? 0xBCA00100 : 0xBC900100;
+    addr16 = HW(addr + 16) | 4;
+    HW(addr + 16) = addr 16;
+    if (!HW(addr + 8)) {
+        s32 mask = addr16 & 0x1003800;
+        if (mask ^ 0x1000000 || mask ^ 0x1001000 || mask == 0x1003000) {
+            ret = 0x800202BC;
+            goto cleanup;
+        }
+
+        while (!(HW(addr + 16) & 0x2));
+
+        if (!(HW(addr + 12) & 0xFFF)) {
+            ret = 0x800202C4;
+            goto cleanup;
+        }
+
+        HW(addr + 16) &= ~0x1;
+        while(HW(addr + 16) & 0x1);
+
+        HW(addr + 8) = arg1;
+        HW(addr + 16) |= 1;
+    } else {
+        op->unk60->unk8 = arg1;
+    }
+
+    op->unk60 = unk;
+    HW(addr + 16) &= 0xFFF00001;
+    g_dmacman->unk2136(4);
+    ret = SCE_ERROR_OK;
+
+cleanup:
+    sceKernelCpuSuspendIntr(intr);
+    return ret;
+}
 
 //0xFC0
 void sceKernelDmaOpAssignMultiple() { }
