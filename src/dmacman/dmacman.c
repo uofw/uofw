@@ -79,6 +79,46 @@ s32 _sceDmacManModuleStart(SceSize args __attribute__((unused)), void *argp __at
 
 s32 _sceDmacManModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
+    u32 intr, intr2;
+    s32 err = SCE_ERROR_OK;
+
+    intr = sceKernelCpuSuspendIntr();
+
+    for (int j = 0; j < 8; j++) {
+        HW(0xBC900100 + j*32) |= 4;
+        while (!(HW(0xBC900100 + j*32) & 0x2));
+    }
+
+    for (int j = 0; j < 8; j++) {
+        HW(0xBCA00100 + j*32) |= 4;
+        while (!(HW(0xBCA00100 + j*32) & 0x2));
+    }
+
+    sceKernelDmaOpAllCancel();
+
+    HW(0xBC900100 + 48) &= ~0x1;
+    HW(0xBC900100 + 8) = 0xFF;
+    HW(0xBC900100 + 16) = 0xFF;
+    err |= sceKernelReleaseIntrHandler(22);
+    intr2 = sceKernelCpuSuspendIntr();
+    HW(0xBC100000) &= ~0x20;
+    sceKernelCpuResumeIntr(intr2);
+
+    HW(0xBCA00100 + 48) &= ~0x1;
+    HW(0xBCA00100 + 8) = 0xFF;
+    HW(0xBCA00100 + 16) = 0xFF;
+    err |= sceKernelReleaseIntrHandler(23);
+    intr2 = sceKernelCpuSuspendIntr();
+    HW(0xBC100000) &= ~0x40;
+    sceKernelCpuResumeIntr(intr2);
+
+    sceKernelCpuResumeIntr(intr);
+
+    if (err) {
+        return 0x800202BC;
+    }
+
+    sceKernelDeleteEventFlag(g_dmacman.unk40);
     return SCE_ERROR_OK;
 }
 
