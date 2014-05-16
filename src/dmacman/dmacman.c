@@ -767,7 +767,19 @@ s32 sceKernelDmaOnDebugMode()
 }
 
 //0x1AE4
-static s32 suspendHandler(s32 unk, void *param) { }
+static s32 suspendHandler(s32 unk, void *param)
+{
+    for (int i = 0; i < 16; i++) {
+        if (g_dmacman.unk0[i])
+            sub_BCC(g_dmacman.unk0[i]);
+    }
+
+    g_dmacman.unk2120 = 0;
+    sceKernelDmaOpAllCancel();
+    sceKernelDisableIntr(22);
+    sceKernelDisableIntr(23);
+    return SCE_ERROR_OK;
+}
 
 //0x1B74
 static s32 resumeHandler(s32 unk, void *param) { }
