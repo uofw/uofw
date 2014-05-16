@@ -664,7 +664,27 @@ static s32 interruptHandler() { }
 static void sub_14F4() { }
 
 //0x1804
-void sceKernelDmaChExclude() { }
+s32 sceKernelDmaChExclude(u32 ch, u32 arg1)
+{
+    u32 intr;
+    u32 ret;
+
+    if (ch > 16)
+        return 0x800202CF;
+
+    intr = sceKernelCpuSuspendIntr();
+    if (g_dmacman.unk2116 & (1 << ch)) {
+        ret = 0x800202C8;
+    } else {
+        if (!arg2) {
+            g_dmacman.unk2112 &= ~(1 << ch);
+        } else {
+            g_dmacman.unk2112 |= (1 << ch);
+            sub_1C14(ch / 8);
+        }
+    }
+
+}
 
 //0x18CC
 void sceKernelDmaChReserve() { }
