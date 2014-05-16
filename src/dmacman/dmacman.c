@@ -710,7 +710,25 @@ void sceKernelDmaChReserve(u32 ch, u32 arg1)
 }
 
 //0x1964
-u32 *sceKernelDmaOpAlloc() { }
+SceDmaOp *sceKernelDmaOpAlloc()
+{
+    u32 intr = sceKernelCpuSuspendIntr();
+    SceDmaOp *op = g_dmacman.unk2124;
+    if (op) {
+        if (op->unk28 & 0x1000) {
+            g_dmacman.unk2124 = op->unk4;
+            op->unk52 = 0xFFFF;
+            op->unk16 = 0;
+            op->unk30 = 0xFFFF;
+            op->unk12 = NULL;
+            op->unk8 = NULL;
+        } else {
+            op = NULL;
+        }
+    }
+    sceKernelCpuResumeIntr(intr);
+    return op;
+}
 
 //0x19E8
 int sceKernelDmaOpAssign(u32 *arg0, int arg1, int arg2, int arg3, int arg4) { }
