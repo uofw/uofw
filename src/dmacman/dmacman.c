@@ -57,9 +57,9 @@ s32 _sceDmacManModuleStart(SceSize args __attribute__((unused)), void *argp __at
     sceKernelRegisterSuspendHandler(20, suspendHandler, NULL);
     sceKernelRegisterResumeHandler(20, resumeHandler, NULL);
 
-    err |= sceKernelRegisterIntrHandler(22, 2, interruptHandler, NULL, NULL);
+    err |= sceKernelRegisterIntrHandler(22, 2, interruptHandler, 0, NULL);
     err |= sceKernelEnableIntr(22);
-    err |= sceKernelRegisterIntrHandler(23, 2, interruptHandler, NULL, NULL);
+    err |= sceKernelRegisterIntrHandler(23, 2, interruptHandler, 1, NULL);
     err |= sceKernelEnableIntr(23);
 
     if (err) {
