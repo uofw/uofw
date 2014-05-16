@@ -782,7 +782,17 @@ static s32 suspendHandler(s32 unk __attribute__((unused)), void *param __attribu
 }
 
 //0x1B74
-static s32 resumeHandler(s32 unk, void *param) { }
+static s32 resumeHandler(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
+{
+    if (g_dmacman.unk2112 & 0xFF00) 
+        sub_1C14(1);
+    if (g_dmacman.unk2112 & 0xFF)
+        sub_1C14(0);
+
+    sceKernelEnableIntr(22);
+    sceKernelEnableIntr(23);
+    return SCE_ERROR_OK;
+}
 
 //0x1BF4
 static s32 sub_1BF4() { }
