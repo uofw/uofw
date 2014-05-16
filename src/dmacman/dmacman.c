@@ -680,7 +680,7 @@ s32 sceKernelDmaChExclude(u32 ch, u32 arg1)
             g_dmacman.unk2112 &= ~(1 << ch);
         } else {
             g_dmacman.unk2112 |= (1 << ch);
-            sub_1C14(ch / 8);
+            _sceKernelDmacClkEnable(ch / 8);
         }
         ret = SCE_ERROR_OK;
     }
@@ -785,9 +785,9 @@ static s32 suspendHandler(s32 unk __attribute__((unused)), void *param __attribu
 static s32 resumeHandler(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 {
     if (g_dmacman.unk2112 & 0xFF00) 
-        sub_1C14(1);
+        _sceKernelDmacClkEnable(1);
     if (g_dmacman.unk2112 & 0xFF)
-        sub_1C14(0);
+        _sceKernelDmacClkEnable(0);
 
     sceKernelEnableIntr(22);
     sceKernelEnableIntr(23);
@@ -804,4 +804,21 @@ static s32 sub_1BF4()
 }
 
 //0x1C14
-void sub_1C14() { }
+static void _sceKernelDmacClkEnable(s32 arg0)
+{
+    u32 addr = arg0 ? 0xBCA00000 : 0xBC900000;
+    if (HW(0xBC100010) & (0x20 << arg0))
+        return;
+    HW(0xBC100010) |= (0x20 << arg0);
+    HW(addr + 48) |= 0x1;
+    HW(addr + 52) = 0;
+    for (int i = 0; i < 8; i++) {
+        HW(addr + 32*i + 256) = 0;
+        HW(addr + 32*i + 260) = 0;
+        HW(addr + 32*i + 264) = 0;
+        HW(addr + 32*i + 268) = 0;
+        HW(addr + 32*i + 272) = 0;
+    }
+    HW(addr + 8) = 0x100;
+    HW(addr + 16) = 0x100;
+}
