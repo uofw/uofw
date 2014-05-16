@@ -731,7 +731,22 @@ SceDmaOp *sceKernelDmaOpAlloc()
 }
 
 //0x19E8
-int sceKernelDmaOpAssign(u32 *arg0, int arg1, int arg2, int arg3, int arg4) { }
+s32 sceKernelDmaOpAssign(SceDmaOp *op, int arg1, int arg2, int arg3, int arg4)
+{
+    if (!op)
+        return 0x800202CF;
+    if (op->unk28 & 0x1000)
+        return 0x800202C3;
+    if (op->unk28 & 0x1)
+        return 0x800202BE;
+    if (op->unk28 & 0x2)
+        return 0x800202C0;
+
+    op->unk48 = arg3;
+    op->unk52 = (arg1 & 0xFF) | (arg2 & 0xFF) << 8;
+    op->unk28 = 0x100;
+    return SCE_ERROR_OK;
+}
 
 //0x1A60
 void DmacManForKernel_1FC036B7() { }
