@@ -402,9 +402,43 @@ s32 sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 ar
 }
 
 //0x938
-u32 sceKernelDmaOpSetupLink(SceDmaOp *op, s32 command, u32 *timeout)
+u32 sceKernelDmaOpSetupLink(SceDmaOp *op, arg1 command, void *arg2)
 {
+    void *unk0;
+    void *unk1;
 
+    if (!op)
+        return 0x800202CF;
+    if (op->unk28 & 0x1172 != 0x100) {
+        if (op->unk28 & 0x1000)
+            return 0x800202C3;
+        if (op->unk28 & 0x1172 != 0)
+            return 0x800202C1;
+        if (op->unk28 & 0x2)
+            return 0x800202C0; // unreachable?
+        return 0x800202C4;
+    }
+
+    op->unk48 |= (arg1 | 0xC001);
+    if (!(arg2 & 0x3)) {
+        for (unk0 = KUNCACHED(arg2); unk0->unk8; unk0 = KUNCACHED(unk->unk8));
+        op->unk60 = unk;
+        unk0->unk12 |= 0x80000000
+        unk1 = KUNCACHED(arg2);
+    } else {
+        unk1 = KCACHED(arg2 & 0xFFFFFFF8);
+    }
+
+    op->unk56 = unk1;
+    op->unk32 = unk1->unk0;
+    op->unk36 = unk1->unk4;
+    op->unk40 = unk1->unk8;
+    op->unk44 = unk1->unk12;
+    if (!(arg2 & 0x3)) {
+        g_dmacman.unk2136(4);
+    }
+
+    return SCE_ERROR_OK;
 }
 
 //0xA64
