@@ -613,7 +613,50 @@ cleanup:
 }
 
 //0xFC0
-void sceKernelDmaOpAssignMultiple() { }
+s32 sceKernelDmaOpAssignMultiple(SceDmaOp **ops, s32 size)
+{
+    u32 intr;
+    u32 unk0 = size;
+
+    if (size > 16)
+        return 0x800202BD;
+
+    for (int i = 0; i < 16; i++) {
+        if (ops[0]->unk52 >> i & 1)
+            unk0--;
+    }
+
+    if (unk0 < 0)
+        return 0x800202BD;
+
+    for (int i = size - 1; i; i--) {
+        SceDmaOp *op = ops[i];
+        if (!op)
+            return 0x800202CF;
+        if (op->unk28 & 0x1000)
+            return 0x800202C3;
+        if (!(op->unk28 & 0x100))
+            return 0x800202C1;
+        if (op->unk28 & 0x1)
+            return 0x800202BE;
+        if (op->unk28 & 0x2)
+            return 0x800202C0;
+        if (op->unk28 & 0x70)
+            return 0x800202C4;
+    }
+
+    intr = sceKernelCpuSuspendIntr();
+    for (int i = 0; i < size - 1; i++) {
+        ops[i]->unk12 = ops[i+1];
+        ops[i+1]->unk8 = ops[i];
+        ops[i]->unk0 = 0;
+        ops[i]->unk4 = 0;
+        ops[i+1]->unk52 = ops[i]->unk52;
+    }
+    ops[0]->unk54 = size;
+    sceKernelCpuResumeIntr(intr);
+    return SCE_ERROR_OK;
+}
 
 static s32 interruptHandler() { }
 
