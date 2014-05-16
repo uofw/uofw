@@ -689,9 +689,24 @@ s32 sceKernelDmaChExclude(u32 ch, u32 arg1)
 }
 
 //0x18CC
-void sceKernelDmaChReserve()
+void sceKernelDmaChReserve(u32 ch, u32 arg1)
 {
+    u32 intr;
+    u32 ret;
 
+    intr = sceKernelCpuSuspendIntr();
+    if (g_dmacman.unk2112 & (1 << ch)) {
+        ret = 0x800202C9;
+    } else {
+        if (arg1 < 0) {
+            g_dmacman.unk2116 &= ~(1 << ch);
+        } else {
+            g_dmacman.unk2116 |= (1 << ch);
+        }
+        ret = SCE_ERROR_OK;
+    }
+    sceKernelCpuResumeIntr(intr);
+    return ret;
 }
 
 //0x1964
