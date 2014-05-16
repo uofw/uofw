@@ -737,7 +737,10 @@ int sceKernelDmaOpAssign(u32 *arg0, int arg1, int arg2, int arg3, int arg4) { }
 void DmacManForKernel_1FC036B7() { }
 
 //0x1ADC
-void sceKernelDmaOnDebugMode() { }
+s32 sceKernelDmaOnDebugMode()
+{
+    return SCE_ERROR_OK;
+}
 
 //0x1AE4
 static s32 suspendHandler(s32 unk, void *param) { }
