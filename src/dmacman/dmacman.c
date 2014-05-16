@@ -767,7 +767,7 @@ s32 sceKernelDmaOnDebugMode()
 }
 
 //0x1AE4
-static s32 suspendHandler(s32 unk, void *param)
+static s32 suspendHandler(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     for (int i = 0; i < 16; i++) {
         if (g_dmacman.unk0[i])
