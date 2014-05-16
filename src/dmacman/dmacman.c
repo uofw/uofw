@@ -682,12 +682,17 @@ s32 sceKernelDmaChExclude(u32 ch, u32 arg1)
             g_dmacman.unk2112 |= (1 << ch);
             sub_1C14(ch / 8);
         }
+        ret = SCE_ERROR_OK;
     }
-
+    sceKernelCpuResumeIntr(intr);
+    return ret;
 }
 
 //0x18CC
-void sceKernelDmaChReserve() { }
+void sceKernelDmaChReserve()
+{
+
+}
 
 //0x1964
 u32 *sceKernelDmaOpAlloc() { }
