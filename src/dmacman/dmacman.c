@@ -794,8 +794,14 @@ static s32 resumeHandler(s32 unk __attribute__((unused)), void *param __attribut
     return SCE_ERROR_OK;
 }
 
-//0x1BF4
-static s32 sub_1BF4() { }
+//0x1BF4 dummyFlush
+static s32 sub_1BF4()
+{
+    pspSync();
+    u32 ra = pspGetRa();
+    *((ra >> 31 + 2) << 29); // Will this just get optimized out?
+    return SCE_ERROR_OK;
+}
 
 //0x1C14
 void sub_1C14() { }
