@@ -121,6 +121,8 @@ s32 _sceDmacManModuleRebootBefore(SceSize args __attribute__((unused)), void *ar
     sceKernelDeleteEventFlag(g_dmacman.unk40);
     return SCE_ERROR_OK;
 }
+s32 sceKernelDmaExit(SceSize args, void *argp) __attribute__((alias ("_sceDmacManModuleRebootBefore")));
+
 
 //0x300
 s32 sceKernelDmaRegisterDdrFlush(void *ddrFlushFunc)
