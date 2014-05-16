@@ -749,7 +749,16 @@ s32 sceKernelDmaOpAssign(SceDmaOp *op, int arg1, int arg2, int arg3, int arg4)
 }
 
 //0x1A60
-void DmacManForKernel_1FC036B7() { }
+s32 sceKernelDmaOpLLIConcatenate(SceDmaOp *op1, SceDmaOp *op2)
+{
+    SceDmaOp *head;
+
+    op1->unk60->unk8 = op2;
+    g_dmacman.unk2136(4);
+    for (*head = KUNCACHED(op2); head->unk8; head = KUNCACHED(head->unk8));
+    op1->unk60 = head;
+    return SCE_ERROR_OK;
+}
 
 //0x1ADC
 s32 sceKernelDmaOnDebugMode()
