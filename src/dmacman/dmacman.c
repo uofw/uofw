@@ -68,7 +68,7 @@ s32 _sceDmacManModuleStart(SceSize args __attribute__((unused)), void *argp __at
         err = 0x800202BC;
     }
 
-    DmacManForKernel_32757C57(sub_1BF4);
+    sceKernelDmaRegisterDdrFlush(_dummyDdrFlush);
 
     sceKernelCpuResumeIntr(intr);
 
@@ -123,9 +123,9 @@ s32 _sceDmacManModuleRebootBefore(SceSize args __attribute__((unused)), void *ar
 }
 
 //0x300
-s32 DmacManForKernel_32757C57(u32 arg0)
+s32 sceKernelDmaRegisterDdrFlush(void *ddrFlushFunc)
 {
-    g_dmacman.unk2136 = arg0 ? arg0 : 7156;
+    g_dmacman.unk2136 = ddrFlushFunc ? ddrFlushFunc : _dummyDdrFlush;
     return SCE_ERROR_OK;
 }
 
@@ -795,7 +795,7 @@ static s32 resumeHandler(s32 unk __attribute__((unused)), void *param __attribut
 }
 
 //0x1BF4 dummyFlush
-static s32 sub_1BF4()
+static s32 _dummyDdrFlush()
 {
     pspSync();
     u32 ra = pspGetRa();
