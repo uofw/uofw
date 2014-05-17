@@ -1,14 +1,33 @@
 #uOFW PSP kernel coding style
 
-This document is about the preferred uOFW coding style. Please stick to the style
-presented in this guide to make working on uOFW as a team easier as far as possible. 
+This document outlines uOFW's workflow and preferred code style. Please make yourself familiar with this document before you begin working.
+
+## Workflow
+We tend to be generous in giving collaborator status which gives you direct push access to uOFW. To keep some degree of stability in the repo, please follow these guidlines:
+
+* Use topic branches
+* Get reviews before merging pull requests into master
+* Merge your branch to master only when it is stable
+* Delete your branch after merging
+
+A few do-nots:
+* Do not push anything that could break a build directly to master (use a PR)
+* Do not rewrite public branch history (e.g. don't rebase a branch you've already pushed)
+* Do not merge/cherry pick across branches
+* Avoid merging/cherry picking from master
+
+All of these rules are meant to keep history clean and to avoid stepping on other developers toes. If you are unsure, do not hesitate to ask us on IRC.
+
+## Coding style
+
+Please stick to the style presented in this guide to make working on uOFW as a team easier as far as possible.
 We know that coding style is very personal and we don't say you have to completely
 follow it, however, your own used coding style for uOFW should not differ too much
 from this one.
 Thank you.
 
 
-##Chapter 1: Indentation
+###Chapter 1: Indentation
 
 Indentations are 4 bytes wide. The reason behind this is to visibly show
 where a block starts and where it ends.
@@ -34,7 +53,7 @@ For example:
     }
 
 
-##Chapter 2: Breaking long lines
+###Chapter 2: Breaking long lines
 
 Make sure to not write code lines longer than 120 characters. If necessary, 
 break lines exceeding the 120 characters limit like below:
@@ -51,7 +70,7 @@ Long `if`-lines (same as `while`-, `for`-lines) are broken into several lines li
         doSomething();
 
 
-##Chapter 3: Placing Braces and Spaces
+###Chapter 3: Placing Braces and Spaces
 
 Put the opening brace last on the line, and put the closing brace first, thusly:
 
@@ -102,7 +121,7 @@ first on the last line:
         doSomethingCool();
     }
 
-###Space policy:
+####Space policy:
 
 Put a space after these keywords: `if`, `switch`, `case`, `do`, `while`, `for`, `return`.
 
@@ -150,7 +169,7 @@ When declaring a pointer to a function, this way suffices:
     s32 (*funcPtr)(void);
 
 
-##Chapter 4: Type using
+###Chapter 4: Type using
 
 Don't use type's like `(unsigned) short`, `(unsigned) int` as their size is NOT
 the same on all machines.
@@ -197,7 +216,7 @@ references itself. In that case, use:
     } Point;
 
 
-##Chapter 5: Naming
+###Chapter 5: Naming
 
 Use simple, short names, easy to understand. For local variables, it is even okay
 to use a variable name consisting of only one letter:
@@ -243,7 +262,7 @@ Instead, use capital letters.
     SceBool isUofwCool = SCE_TRUE; /* Indeed. */
 
 
-##Chapter 6: Magic numbers
+###Chapter 6: Magic numbers
 
 Using magic numbers is bad, as only the author of the C file in which they occur
 will know (for a little while) what they express.
@@ -285,7 +304,7 @@ A similar approach for `for`/`while`-loops:
         g_Array[i] = 0;
 
 
-##Chapter 7: Structure initialization
+###Chapter 7: Structure initialization
 
 Assume we have the following structure:
 
@@ -309,7 +328,7 @@ Use the `sizeof` operator when a structure has a `size` field to be filled with 
     structure size (sizeof(structureType);)
 
 
-##Chapter 8: Accessing hardware registers
+###Chapter 8: Accessing hardware registers
 
 Hardware registers are stored in memory starting at `0xBC000000` and are _special_
 compared to global variables. They have to be written synchronously, which means
@@ -324,7 +343,7 @@ You can find this macro, and other useful `#define`s, in `/include/common/hardwa
     HW(HW_RAM_SIZE) = RAM_TYPE_64_MB;
 
 
-##Chapter 9: Comments
+###Chapter 9: Comments
 
 All exported functions of a module and important data structures as well as
 `#defines` shared among `.c` files have to be put into a header file used as a module 
@@ -396,7 +415,7 @@ with included address comments and, optionally, TODO-comments, and upload a file
 WITHOUT address-, TODO-comments to the uOFW repositiory, as soon as your module fully works.
 
 
-##Chapter 10: Switches
+###Chapter 10: Switches
 
 Put a break at the end of each `case` and at the end of the `default`.
 Don't skip lines between the different labels (`case`s and `default`s).
@@ -418,7 +437,7 @@ For example:
     }
 
 
-##Chapter 11: Export files
+###Chapter 11: Export files
 
 Only use the `PSP_EXPORT_NID` command, so a function or variable name can easily be found from
 the NID using the `exports.exp` file, and to sometimes avoid mistakes with user functions.
