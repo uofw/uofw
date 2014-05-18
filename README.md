@@ -57,7 +57,7 @@ below:
 
 * [Yet Another Playstation Portable Documentation](http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz)
 * [PSP Module Tutorial](http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf)
-* [24C3 - TyRaNiD on early PSP hacking + Pandorra hack](https://www.youtube.com/watch?v=INdUZk4NFIA)
+* [24C3 - TyRaNiD on early PSP hacking + Pandora hack](https://www.youtube.com/watch?v=INdUZk4NFIA)
 
 Other websites are: 
 * http://wololo.net
