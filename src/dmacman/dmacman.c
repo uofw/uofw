@@ -9,7 +9,7 @@
 #define DMACMAN_VERSION_MINOR   (18)
 
 typedef struct {
-    u32 unk0[16];     //0
+    u32 unk0[16];     //0 first 8 are mode1, second 8 are mode 2... whatever that means.
     SceDmaOp ops[32]; //64
     u32 unk2112;
     u32 unk2116;
@@ -660,7 +660,96 @@ s32 sceKernelDmaOpAssignMultiple(SceDmaOp **ops, s32 size)
     return SCE_ERROR_OK;
 }
 
-static s32 interruptHandler() { }
+//0x1148
+static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
+{
+    u32 intr = sceKernelCpuSuspendIntr();
+    u32 addr = arg1? 0xBCA00000 : 0xBC900000;
+
+    u32 unk0, unk1, unk3 = 0, unk4;
+
+    unk0 = HW(addr + 4);
+    unk1 = HW(addr + 12);
+    unk2 = (unk1 | unk2) & 0xFF;
+    HW(addr + 8) = 0;
+
+    for (int i = 0; unk2 > (1 << i); i++) {
+        if (unk2 & (i << i)) {
+            if (!g_dmacman.unk0[i + 8*arg1]) {
+                // 14CC
+                if (g_dmacman.unk2132 & (1 << i))
+                    Kprintf("Fatal error: Stray interrupt occurred\n");
+            } else {
+                SceDmaOp *op = g_dmacman.unk0[i + 8*arg1];
+                op->unk32 = HW(addr + 0x100);
+                op->unk36 = HW(addr + 0x100 + 4);
+                op->unk40 = HW(addr + 0x100 + 8);
+                op->unk44 = HW(addr + 0x100 + 12);
+                op->unk48 = HW(addr + 0x100 + 16);
+                if (unk0 & 1 << i) {
+                    if (!HW(addr + 0x100 + 8) && ! (HW(addr + 0x100 + 16) & 0x1)) {
+                        g_dmacman.unk2120 &= ~(1 << i);
+                        unk3 |= op->unk24;
+                        op->unk28 |= 0x40;
+                        op->unk28 &= ~0x2;
+                        op->unk30 = 0xFFFF;
+                        g_dmacman.unk0[i + 8*arg1] = NULL;
+                    }
+                    HW(addr + 16) = (1 << i);
+                    unk4 = 0;
+                } else {
+                    // 0x1438
+                    if (HW(addr + 0x100 + 8) && (HW(addr + 0x100 + 16) & 0x1)) {
+                        sub_BCC(op);
+                    }
+                    g_dmacman.unk2120 &= ~(1 << i);
+                    g_dmacman.unk0[i + 8*arg1] = NULL;
+                    unk3 |= op->unk24;
+                    op->unk28 |= 0x40;
+                    op->unk28 &= ~0x2;
+                    op->unk30 = 0xFFFF;
+                    HW(addr + 16) = (1 << i);
+                    unk4 = -1
+                }
+                // 0x139C
+                if (op->unk16 && op->unk16(op, unk4, i + 8*arg1, op->unk20) == 1) {
+                    if (op->unk56) {
+                        op->unk32 = op->unk56->unk0;
+                        op->unk36 = op->unk56->unk4;
+                        op->unk40 = op->unk56->unk8;
+                        op->unk46 = op->unk56->unk12;
+                    }
+                    if (!g_dmacman.unk2128)
+                        g_dmacman.unk2128 = op;
+                    op->unk0 = NULL;
+                    if (g_dmacman.unk2132) {
+                        g_dmacman.unk2132->unk0 = op;
+                    }
+                    op->unk4 = g_dmacman.unk2132;
+                    g_dmacman.unk2132 = op;
+                    op->unk28 |= 0x1;
+                }
+            }
+        }
+    }
+    // 11D4
+    sceKernelSetEventFlag(g_dmacman.unk2140, unk3);
+    if (!g_dmacman.unk2128)
+        sub_14F4();
+    if ((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF) {
+        u32 intr2 = sceKernelCpuSuspendIntr();
+        HW(0xBC100000) &= ~(1 << 6);
+        sceKernelCpuResumeIntr(intr2);
+    }
+    if ((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF00) {
+        u32 intr2 = sceKernelCpuSuspendIntr();
+        HW(0xBC100000) &= ~(1 << 5);
+        sceKernelCpuResumeIntr(intr2);
+    }
+    sceKernelCpuResumeIntr(intr);
+    return -1;
+
+}
 
 //0x14f4
 static void sub_14F4() { }
