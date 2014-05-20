@@ -8,16 +8,17 @@
 #define DMACMAN_VERSION_MAJOR   (1)
 #define DMACMAN_VERSION_MINOR   (18)
 
+
 typedef struct {
     u32 unk0[16];     //0 first 8 are mode1, second 8 are mode 2... whatever that means.
     SceDmaOp ops[32]; //64
-    u32 unk2112;
-    u32 unk2116;
+    u32 unk2112;      // excluded channels?
+    u32 unk2116;      // reserved channels?
     u32 unk2120;      // inUse? bit-vector where 1 means ops[bit] is in use
     SceDmaOp *op2124; // Free list
     SceDmaOp *op2128; // Likely first/head
     SceDmaOp *op2132; // Likely last/tail
-    u32 unk2136;
+    u32 unk2136;      // ddr flush func
     u32 unk2140;      // evid passed to sceKernelWaitEventFlag
 } SceDmacMan;
 
@@ -31,6 +32,22 @@ SCE_MODULE_INFO("sceDMAManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_S
 SCE_MODULE_BOOTSTART("_sceDmacManModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceDmacManModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
+
+inline static s32 pspBitrev(s32 a) {
+    s32 ret;
+    asm __volatile__ ("bitrev %0, %1;" : "=r" (ret) : "r"(a));
+    return ret;
+}
+
+inline static s32 pspClz(s32 a) {
+    s32 ret;
+    asm __volatile__ ("clz %0, %1" : "=r"(ret) : "r" (a));
+    return ret;
+}
+
+inline static s32 lsbPosition(s32 a) {
+    return pspClz(pspBitrev(a));
+}
 
 s32 _sceDmacManModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
@@ -241,7 +258,7 @@ s32 sceKernelDmaOpEnQueue(SceDmaOp *op)
 
     g_dmacman.unk2128 = op;
     op->unk28 |= 1;
-    sub_14F4();
+    _sceKernelDmaSchedule();
     ret = SCE_ERROR_OK;
 
 cleanup:
@@ -735,7 +752,7 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
     // 11D4
     sceKernelSetEventFlag(g_dmacman.unk2140, unk3);
     if (!g_dmacman.unk2128)
-        sub_14F4();
+        _sceKernelDmaSchedule();
     if ((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF) {
         u32 intr2 = sceKernelCpuSuspendIntr();
         HW(0xBC100000) &= ~(1 << 6);
@@ -752,7 +769,107 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
 }
 
 //0x14f4
-static void sub_14F4() { }
+static void _sceKernelDmaSchedule()
+{
+    SceDmaOp *t1 = g_dmacman.unk2128;
+    u32 t2 = g_dmacman.unk2120 & g_dmacman.unk2112;
+    u32 a3 = t2 ^ 0xFFFF;
+
+    for (; t1 && a3; t1 = t1->unk0) {
+        if (t1->unk12 && !t1->unk8) {
+            u32 t0 = t1->unk52 & ~t2;
+            u32 a1 = t1->unk54;
+            for (int i = 0; i < 16; i++) {
+                a1 -= (t0 >> i) & 0x1;
+            }
+            if (a1 < 0) {
+                if (t1->unk0) {
+                    SceDmaOp *a0 = t1->unk0;
+                    a0->unk4 = t1->unk4;
+                    t1->unk4 = a0;
+                    t1->unk0 = a0->unk0;
+                    if (a0->unk4)
+                        a0->unk4->unk0 = a0;
+                    if (!a0->unk0)
+                        g_dmacman.unk2132 = t1;
+                    else
+                        t1->unk0->unk4 = t1;
+                    a0->unk0 = t0;
+                }
+                continue;
+            }
+
+            // 1618
+            for (SceDmaOp *op = t1, int j = 0; op; j++) {
+                if (t0 & (1 << j)) {
+                    g_dmacman.unk0[j]->unk30 = j;
+                    op = op->unk12;
+                    t2 |= (1 << j);
+                }
+            }
+        }
+
+        for (SceDmaOp *a2 = t1; a2; a2 = a2->unk12)
+            // 1644
+            if (a2->unk30 < 0) {
+                u32 pos = lsbPosition(~t2 & a2->unk52);
+                if (pos >= 16) {
+                    break;
+                }
+                g_dmacman.unk0[pos] = t1;
+                t1->unk30 = pos;
+                t2 |= pos;
+            }
+
+            // 1674
+            if (!HW(0xBC100080) & 0x20 << (t1->unk30 / 8)) {
+                HW(0xBC100080) |= 0x20 << (t1->unk30 / 8);
+                u32 base = t1->unk30/8 ? 0xBCA00000 : 0xBC900000;
+                HW(base + 48) |= 1;
+                HW(base + 52) = 0;
+
+                for (int i = 8; i > 0; i--) {
+                    HW(base + 0x100 + 32*i) = 0;
+                    HW(base + 0x104 + 32*i) = 0;
+                    HW(base + 0x108 + 32*i) = 0;
+                    HW(base + 0x10C + 32*i) = 0;
+                    HW(base + 0x110 + 32*i) = 0;
+                }
+
+                HW(base + 8) = 0xFF;
+                HW(base + 16) = 0xFF;
+            }
+            // 16EC
+            HW(base + 0x100 + (a2->unk30 & 7) * 32) = t1->unk32;
+            HW(base + 0x104 + (a2->unk30 & 7) * 32) = t1->unk36;
+            HW(base + 0x108 + (a2->unk30 & 7) * 32) = t1->unk40;
+            HW(base + 0x10C + (a2->unk30 & 7) * 32) = t1->unk44;
+            HW(base + 0x110 + (a2->unk30 & 7) * 32) = t1->unk48;
+            a2->unk28 |= 2;
+            if (a2->unk8 && !a2->unk12) {
+                break;
+            } else {
+                a2->unk28 &= ~0x1;
+                if (a2 == g_dmacman.unk2132)
+                    g_dmacman.unk2132 = a2->unk4;
+                if (a2 == g_dmacman.unk2128)
+                    g_dmacman.unk2128 = a2->unk0;
+                if (a2->unk4) {
+                    a2->unk4->unk0 = a2->unk0;
+                    a2->unk4 = NULL;
+                }
+                if (a2->unk0) {
+                    a2->unk0->unk4 = a2->unk4;
+                    a2->unk0 = NULL;
+                }
+            }
+        }
+    }
+
+    // 15E8
+    g_dmacman.unk2120 = ~g_dmacman.unk2112 & t2;
+    return;
+}
 
 //0x1804
 s32 sceKernelDmaChExclude(u32 ch, u32 arg1)
