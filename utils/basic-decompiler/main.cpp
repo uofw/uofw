@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011 - 2014 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -84,7 +84,7 @@ std::map<std::string, Instruction> instructions =
     {"sra", {"r0 R1 i0", "%r0 = (s32)%R1 >> %i0"}},
     {"srav", {"r0 R1 R2", "%r0 = (s32)%R1 >> %R2"}},
 
-    {"slt", {"r0 R1 R2", "%r0 = %(s32)R1 < (s32)%R2"}},
+    {"slt", {"r0 R1 R2", "%r0 = (s32)%R1 < (s32)%R2"}},
     {"sltu", {"r0 R1 R2", "%r0 = (u32)%R1 < (u32)%R2"}},
     {"slti", {"r0 R1 i0", "%r0 = (s32)%R1 < (s32)%i0"}},
     {"sltiu", {"r0 R1 i0", "%r0 = (u32)%R1 < (u32)%i0"}},
