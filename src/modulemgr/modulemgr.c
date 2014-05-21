@@ -1592,10 +1592,77 @@ s32 sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 flag
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_4E8A2C9D
-// 0x00002768
-void ModuleMgrForKernel_4E8A2C9D()
+// Subroutine ModuleMgrForKernel_4E8A2C9D - Address 0x00002768
+s32 sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    char installId[16];
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x00002774
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x0000279C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionKernel()) < 0 ) { //0x000027B4
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    //0x000027C0 - 0x00002914, 0x00002918 - 0x00002974
+    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x000027F0
+    if (fd < 0) {
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002820
+    if (status < 0) { // 0x00002828
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    // TODO: Update sceKernelGetId prototype to match given arguments
+    status = sceKernelGetId(path, installId); //0x00002838
+    if (status < 0) {
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00002854
+
+    modParams.apiType = apiType; //0x00002860
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00002878
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x0000286C
+    modParams.unk64 = 0; // 0x00002884
+    modParams.fd = fd; //0x0000288C
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002890
+    if (status >= 0) // 0x00002898
+        modParams.unk100 = 0x10;
+    
+    memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x000028AC
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000028B8
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_E8422026
