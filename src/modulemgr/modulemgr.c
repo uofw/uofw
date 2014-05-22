@@ -2584,10 +2584,7 @@ s32 ModuleMgrRebootPhase(s32 argc __attribute__((unused)), void *argp __attribut
 // 0x00005024
 s32 ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
 {
-    s32 status;
-    
-    status = sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
-    return status;
+    return sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
 }
 
 // 0x00005048
