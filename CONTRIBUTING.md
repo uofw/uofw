@@ -262,7 +262,38 @@ Instead, use capital letters.
     SceBool isUofwCool = SCE_TRUE; /* Indeed. */
 
 
-###Chapter 6: Magic numbers
+###Chapter 6: Variable declarations
+
+Variables which are used throughout the function, or variables which are important in all the function, are declared at the beginning, the other ones where they are first used.
+Do not use the C99-specific `for (u32 i = 0; ...; i++)`.
+
+    /* Bad code */
+    u32 sceGetStatus(void) {
+        u32 i;
+        initializeThings();
+        u32 status = 0;
+        for (i = 0; i < ...; i++)
+            /* ... */
+        for (u32 j = 0; j < ...; j++)
+            /* ... */
+        return status;
+    }
+    
+    /* Good code */
+    u32 sceGetStatus(void) {
+        /* Declared first because it is the most important variable of the function */
+        u32 status = 0;
+        initializeThings();
+        u32 i = 0;
+        for (i = 0; i < ...; i++)
+            /* ... */
+        for (i = 0; i < ...; i++)
+            /* ... */
+        return status;
+    }
+    
+
+###Chapter 7: Magic numbers
 
 Using magic numbers is bad, as only the author of the C file in which they occur
 will know (for a little while) what they express.
@@ -304,7 +335,7 @@ A similar approach for `for`/`while`-loops:
         g_Array[i] = 0;
 
 
-###Chapter 7: Structure initialization
+###Chapter 8: Structure initialization
 
 Assume we have the following structure:
 
@@ -328,7 +359,7 @@ Use the `sizeof` operator when a structure has a `size` field to be filled with 
     structure size (sizeof(structureType);)
 
 
-###Chapter 8: Accessing hardware registers
+###Chapter 9: Accessing hardware registers
 
 Hardware registers are stored in memory starting at `0xBC000000` and are _special_
 compared to global variables. They have to be written synchronously, which means
@@ -343,7 +374,7 @@ You can find this macro, and other useful `#define`s, in `/include/common/hardwa
     HW(HW_RAM_SIZE) = RAM_TYPE_64_MB;
 
 
-###Chapter 9: Comments
+###Chapter 10: Comments
 
 All exported functions of a module and important data structures as well as
 `#defines` shared among `.c` files have to be put into a header file used as a module 
@@ -415,7 +446,7 @@ with included address comments and, optionally, TODO-comments, and upload a file
 WITHOUT address-, TODO-comments to the uOFW repositiory, as soon as your module fully works.
 
 
-###Chapter 10: Switches
+###Chapter 11: Switches
 
 Put a break at the end of each `case` and at the end of the `default`.
 Don't skip lines between the different labels (`case`s and `default`s).
@@ -437,7 +468,7 @@ For example:
     }
 
 
-###Chapter 11: Export files
+###Chapter 12: Export files
 
 Only use the `PSP_EXPORT_NID` command, so a function or variable name can easily be found from
 the NID using the `exports.exp` file, and to sometimes avoid mistakes with user functions.
