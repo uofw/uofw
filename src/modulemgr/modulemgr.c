@@ -250,7 +250,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
             modParams->returnId[0] = status; //0x00000308
         
         if (status < SCE_ERROR_OK || modParams->modeFinish == CMD_STOP_MODULE) //0x0000030C & 0x00000318
-			break;
+            break;
     
     //0x00000320
     case CMD_UNLOAD_MODULE:
