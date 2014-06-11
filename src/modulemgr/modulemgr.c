@@ -355,7 +355,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     if (status >= 0) //0x000005E4
         modParams.unk100 = 0x10; // 0x000005EC
         
-    status = _LoadModuleByBufferID(&modParams, option); //0x000005F4
+    status = _LoadModuleByBufferID(&modParams, pOpt); //0x000005F4
         
     sceIoClose(fd); //0x00000600
     pspSetK1(oldK1);
@@ -3022,3 +3022,4 @@ void sub_00008568()
 void sub_000086C0()
 {
 }
+

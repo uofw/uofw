@@ -45,7 +45,7 @@ static inline s32 _checkLMOptionConditions(SceKernelLMOption *pOpt)
     s32 sdkVersion; 
     
     if (pOpt != NULL) { 
-        if (!pspK1StaBufOk(option, sizeof(SceKernelLMOption))) {
+        if (!pspK1StaBufOk(pOpt, sizeof(SceKernelLMOption))) {
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
         sdkVersion = sceKernelGetCompiledSdkVersion() & 0xFFFF0000;
@@ -63,7 +63,7 @@ static inline s32 _checkSMOptionConditions(SceKernelSMOption *pOpt)
     s32 sdkVersion; 
     
     if (pOpt != NULL) { 
-        if (!pspK1StaBufOk(option, sizeof(SceKernelSMOption))) {
+        if (!pspK1StaBufOk(pOpt, sizeof(SceKernelSMOption))) {
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
         sdkVersion = sceKernelGetCompiledSdkVersion() & 0xFFFF0000;
