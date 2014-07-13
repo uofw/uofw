@@ -136,7 +136,7 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
 		if (g_chnnlsv.sema2 < 1) //0x00000478
 			sceKernelDeleteSema(g_chnnlsv.sema1);
 		else
-			ret = 0;
+			ret = SCE_ERROR_OK;
 	}
 
 	return ret;
@@ -155,7 +155,7 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
 		if (sceKernelWaitSema(g_chnnlsv.sema2, 1, &timeout) == 0) { //0x00000510
 			sceKernelDeleteSema(g_chnnlsv.sema2);
 
-			ret = 0;
+			ret = SCE_ERROR_OK;
 		}
 	}
 
@@ -192,7 +192,7 @@ s32 sceSdSetIndex(SceSdCtx2 *ctx, s32 mode)
 
 		ctx->size = 0;
 
-		ret = 0;
+		ret = SCE_ERROR_OK;
 	}
 
 	pspSetK1(oldK1);
@@ -235,7 +235,7 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 					}
 
 					ctx->size += size;
-					ret = 0;
+					ret = SCE_ERROR_OK;
 				} else {
 					if (ctx->mode == 6) //0x00000674
 						scramble_code = 17;
@@ -268,7 +268,7 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 							ctx->key[i] = data[newsize + i];
 					}
 
-					ret = 0;
+					ret = SCE_ERROR_OK;
 
 					if (newsize != 0) { //0x00000730
 						for (i = 0; i < newsize; i++) {
@@ -461,7 +461,7 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 
 						ctx->size = 0;
 						ctx->mode = 0;
-						ret = 0;
+						ret = SCE_ERROR_OK;
 					}
 				}
 			} else
@@ -517,7 +517,7 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 						ctx->data[i] ^= key[i];
 				}
 
-				ret = 0;
+				ret = SCE_ERROR_OK;
 			} else if (genMode == 1) { //0x00000E44
 				ret = _kirk14(g_chnnlsv.kirk_buf3);
 
@@ -634,7 +634,7 @@ s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
 				} else
 					ret = ~0x400;
 			} else
-				ret = 0;
+				ret = SCE_ERROR_OK;
 
 signalsema:
 			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0) //0x00001338
@@ -672,7 +672,7 @@ s32 sceChnnlsv_21BE78B4(SceSdCtx1 *ctx)
 
 		ctx->unk4 = 0;
 		ctx->mode = 0;
-		ret = 0;
+		ret = SCE_ERROR_OK;
 	}
 
 	pspSetK1(oldK1);
@@ -694,7 +694,7 @@ s32 _kirk4(void *buf, u32 size, u32 scramble_code)
 	s32 ret = ~0x100;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 4) == 0)
-		ret = 0;
+		ret = SCE_ERROR_OK;
 
 	return ret;
 }
@@ -713,7 +713,7 @@ s32 _kirk7(void *buf, u32 size, u32 scramble_code)
 	s32 ret = ~0x100;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 7) == 0)
-		ret = 0;
+		ret = SCE_ERROR_OK;
 
 	return ret;
 }
@@ -732,7 +732,7 @@ s32 _kirk5(void *buf, u32 size)
 	s32 ret = ~0xFF;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 5) == 0)
-		ret = 0;
+		ret = SCE_ERROR_OK;
 
 	return ret;
 }
@@ -751,7 +751,7 @@ s32 _kirk8(void *buf, u32 size)
 	s32 ret = ~0x101;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 8) == 0)
-		ret = 0;
+		ret = SCE_ERROR_OK;
 
 	return ret;
 }
@@ -854,7 +854,7 @@ s32 _kirk14(void *buf)
 	s32 ret = ~0x104;
 
 	if (sceUtilsBufferCopyWithRange(buf, 20, 0, 0, 14) == 0)
-		ret = 0;
+		ret = SCE_ERROR_OK;
 
 	return ret;
 }
