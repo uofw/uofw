@@ -169,7 +169,7 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
  * @param mode One of the modes whichs sets the scramble key for kirk.
  *
  * @return 0 on initialization success.
- * @return ~0x102 if ctx cannot be accessed from the current context.
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx cannot be accessed from the current context.
  *
  */
 //Subroutine sceSdSetIndex - Address 0x00000528
@@ -177,7 +177,7 @@ s32 sceSdSetIndex(SceSdCtx2 *ctx, s32 mode)
 {
 	s32 oldK1 = pspShiftK1();
 
-	s32 ret = ~0x102;
+	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
 	u32 i;
 
@@ -208,9 +208,9 @@ s32 sceSdSetIndex(SceSdCtx2 *ctx, s32 mode)
  * @param size The size of the data used for hash generation
  *
  * @return 0 on success
- * @return ~0x102 if ctx/data cannot be accessed from the current context.
- * @return ~0x103 wait/signal sema error
- * @return ~0x401 if ctx->size > 16
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/data cannot be accessed from the current context.
+ * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_SIZE if ctx->size > 16
  *
  */
 //Subroutine sceSdRemoveValue - Address 0x0000058C
@@ -218,7 +218,7 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 {
 	s32 oldK1 = pspShiftK1();
 
-	s32 ret = ~0x102;
+	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
 	u32 scramble_code;
 
@@ -290,13 +290,13 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 						ret = _kirk4Xor(g_chnnlsv.kirk_buf1, oldsize, ctx->data, scramble_code);
 				}
 			} else
-				ret = ~0x401;
+				ret = SCE_CHNNLSV_ERROR_ILLEGAL_SIZE;
 
 signalsema:
 			if (sceKernelSignalSema(g_chnnlsv.sema1, 1) != 0) //0x0000078C
-				ret = ~0x103;
+				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
-			ret = ~0x103;
+			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 	}
 
 	pspSetK1(oldK1);
@@ -313,9 +313,9 @@ signalsema:
  * @param key If provided, this key will also be used in the encryption process
  *
  * @return 0 on success
- * @return ~0x102 if ctx/hash/key cannot be accessed from the current context.
- * @return ~0x103 wait/signal sema error
- * @return ~0x401 if ctx->size > 16
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/hash/key cannot be accessed from the current context.
+ * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_SIZE if ctx->size > 16
  *
  */
 //Subroutine sceSdGetLastIndex - Address 0x00000824
@@ -323,7 +323,7 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 {
 	s32 oldK1 = pspShiftK1();
 
-	s32 ret = ~0x102;
+	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
 	u8 block1[16], block2[16];
 
@@ -465,13 +465,13 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 					}
 				}
 			} else
-				ret = ~0x401;
+				ret = SCE_CHNNLSV_ERROR_ILLEGAL_SIZE;
 
 signalsema:
 			if (sceKernelSignalSema(g_chnnlsv.sema1, 1) != 0) //0x00000C80
-				ret = ~0x103;
+				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
-			ret = ~0x103;
+			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 	}
 
 	pspSetK1(oldK1);
@@ -489,8 +489,8 @@ signalsema:
  * @param key If specified, this key will be used as the private key for encryption/decryption
  *
  * @return 0 on success
- * @return ~0x102 if ctx/data/key cannot be accessed from the current context.
- * @return ~0x103 wait/signal sema error
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/data/key cannot be accessed from the current context.
+ * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
  *
  */
 //Subroutine sceSdCreateList - Address 0x00000D60
@@ -498,7 +498,7 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 {
 	s32 oldK1 = pspShiftK1();
 
-	s32 ret = ~0x102;
+	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
 	u32 i;
 
@@ -582,9 +582,9 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 			}
 
 			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0)
-				ret = ~0x103;
+				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
-			ret = ~0x103;
+			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 	}
 
 	pspSetK1(oldK1);
@@ -600,9 +600,9 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
  * @param size The size of "data"
  *
  * @return 0 on success
- * @return ~0x102 if ctx/data cannot be accessed from the current context.
- * @return ~0x103 wait/signal sema error
- * @return ~0x400 if the size of "data" is not 16 byte aligned
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/data cannot be accessed from the current context.
+ * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ALIGNMENT_SIZE if the size of "data" is not 16 byte aligned
  *
  */
 //Subroutine sceSdSetMember - Address 0x00001208
@@ -610,7 +610,7 @@ s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
 {
 	s32 oldK1 = pspShiftK1();
 
-	s32 ret = ~0x102;
+	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
 	//0x00001258 & 0x0000126C
 	if (pspK1DynBufOk(data, size) && pspK1StaBufOk(ctx, sizeof(SceSdCtx1))) {
@@ -632,15 +632,15 @@ s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
 					if (size != 0) //0x0000132C
 						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, size, ctx->data, (u8 *)&ctx->unk4, ctx->mode);
 				} else
-					ret = ~0x400;
+					ret = SCE_CHNNLSV_ERROR_ILLEGAL_ALIGNMENT_SIZE;
 			} else
 				ret = SCE_ERROR_OK;
 
 signalsema:
 			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0) //0x00001338
-				ret = ~0x103;
+				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
-			ret = ~0x103;
+			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 	}
 
 	pspSetK1(oldK1);
@@ -654,7 +654,7 @@ signalsema:
  * @param ctx Pointer to the SceSdCtx1 struct
  *
  * @return 0 on initialization success.
- * @return ~0x102 if ctx cannot be accessed from the current context.
+ * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx cannot be accessed from the current context.
  *
  */
 //Subroutine sceChnnlsv_21BE78B4 - Address 0x00001380
@@ -662,7 +662,7 @@ s32 sceChnnlsv_21BE78B4(SceSdCtx1 *ctx)
 {
 	s32 oldK1 = pspShiftK1();
 
-	s32 ret = ~0x102;
+	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
 	u32 i;
 
@@ -691,7 +691,7 @@ s32 _kirk4(void *buf, u32 size, u32 scramble_code)
 
 	size += 20;
 
-	s32 ret = ~0x100;
+	s32 ret = SCE_CHNNLSV_ERROR_KIRK_IV_ERROR;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 4) == 0)
 		ret = SCE_ERROR_OK;
@@ -710,7 +710,7 @@ s32 _kirk7(void *buf, u32 size, u32 scramble_code)
 
 	size += 20;
 
-	s32 ret = ~0x100;
+	s32 ret = SCE_CHNNLSV_ERROR_KIRK_IV_ERROR;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 7) == 0)
 		ret = SCE_ERROR_OK;
@@ -729,7 +729,7 @@ s32 _kirk5(void *buf, u32 size)
 
 	size += 20;
 
-	s32 ret = ~0xFF;
+	s32 ret = SCE_CHNNLSV_ERROR_KIRK_IV_FUSE_ERROR;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 5) == 0)
 		ret = SCE_ERROR_OK;
@@ -748,7 +748,7 @@ s32 _kirk8(void *buf, u32 size)
 
 	size += 20;
 
-	s32 ret = ~0x101;
+	s32 ret = SCE_CHNNLSV_ERROR_KIRK_IV_FUSE_ERROR;
 
 	if (sceUtilsBufferCopyWithRange(buf, size, buf, size, 8) == 0)
 		ret = SCE_ERROR_OK;
@@ -851,7 +851,7 @@ s32 _kirk8Xor(void *buf, u32 size, u8 *data)
 //Subroutine _kirk14 - Address 0x000017A8
 s32 _kirk14(void *buf)
 {
-	s32 ret = ~0x104;
+	s32 ret = SCE_CHNNLSV_ERROR_KIRK_14_ERROR;
 
 	if (sceUtilsBufferCopyWithRange(buf, 20, 0, 0, 14) == 0)
 		ret = SCE_ERROR_OK;

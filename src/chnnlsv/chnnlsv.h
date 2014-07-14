@@ -78,4 +78,12 @@ s32 _kirk5Xor(void *buf, u32 size, u8 *data);
 s32 _kirk8Xor(void *buf, u32 size, u8 *data);
 s32 _kirk14(void *buf);
 
+#define SCE_CHNNLSV_ERROR_ILLEGAL_SIZE                          0xFFFFFBFE
+#define SCE_CHNNLSV_ERROR_ILLEGAL_ALIGNMENT_SIZE                0xFFFFFBFF
+#define SCE_CHNNLSV_ERROR_KIRK_14_ERROR                         0xFFFFFEFB
+#define SCE_CHNNLSV_ERROR_SEMA_ERROR                            0xFFFFFEFC
+#define SCE_CHNNLSV_ERROR_ILLEGAL_ADDR                          0xFFFFFEFD
+#define SCE_CHNNLSV_ERROR_KIRK_IV_FUSE_ERROR                    0xFFFFFEFE
+#define SCE_CHNNLSV_ERROR_KIRK_IV_ERROR                         0xFFFFFEFF
+
 #endif /* _CHNNLSV_H */
