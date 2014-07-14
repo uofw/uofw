@@ -228,7 +228,7 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 	if (pspK1DynBufOk(data, size) && pspK1StaBufOk(ctx, sizeof(SceSdCtx2))) {
 		if (sceKernelWaitSema(g_chnnlsv.sema1, 1, NULL) == 0) { //0x00000644
 			if (ctx->size < 17) { //0x00000658
-				if ((ctx->size + size) < 16) { //0x00000668
+				if ((ctx->size + size) < 17) { //0x00000668
 					if (size != 0) { //0x000007E0
 						for (i = 0; i < size; i++) //0x000007E8
 							ctx->key[ctx->size + i] = data[i];
