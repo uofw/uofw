@@ -657,8 +657,8 @@ signalsema:
  * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx cannot be accessed from the current context.
  *
  */
-//Subroutine sceChnnlsv_21BE78B4 - Address 0x00001380
-s32 sceChnnlsv_21BE78B4(SceSdCtx1 *ctx)
+//Subroutine sceSdCleanList - Address 0x00001380
+s32 sceSdCleanList(SceSdCtx1 *ctx)
 {
 	s32 oldK1 = pspShiftK1();
 
