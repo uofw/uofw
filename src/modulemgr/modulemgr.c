@@ -1876,15 +1876,82 @@ s32 sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff fi
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_D5DDAB1F
-// 0x00002FC8
-void ModuleMgrForKernel_D5DDAB1F()
+// Subroutine ModuleMgrForKernel_D5DDAB1F - Address 0x00002FC8
+s32 sceKernelLoadModuleVSH(const char *path, s32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x00002FD4
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00002FEC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionUser()) < 0 ) { //0x00003000
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    status = sceKernelGetUserLevel(); // 0x00003030
+    /* Verify if user level relates to the VSH API. */
+    if (status != 4) { //0x00001300
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    //0x00003048, 0x00003180; 0x00003184 - 0x000031D8
+    if ((status = _checkPathConditions(path)) < 0  || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00003078
+    if (fd < 0) { // 0x00003084
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208003, NULL, 0, NULL, 0); // 0x000030A4
+    if (status < 0) { // 0x000030B0
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x000030C4
+
+    modParams.apiType = 20; //0x000030D4
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000030EC
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000030E0
+    modParams.unk64 = 0; // 0x000030F8
+    modParams.fd = fd; // 0x00003100
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003104
+    if (status >= 0) // 0x0000310C
+        modParams.unk100 = 0x10;
+    
+    status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x00003130
+    if (status < 0) // 0x00003138
+        modParams.unk124 = 1; //0x00003164
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x00003144
+    
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_CBA02988
 // 0x000031E4
-void ModuleMgrForKernel_CBA02988()
+void sceKernelLoadModuleVSHByID()
 {
 }
 
