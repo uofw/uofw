@@ -2017,15 +2017,71 @@ s32 sceKernelLoadModuleVSHByID(s32 inputId, s32 flags, SceKernelLMOption *pOptio
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_939E4270
-// 0x00003394
-void ModuleMgrForKernel_939E4270()
+// Subroutine ModuleMgrForKernel_939E4270 - Address 0x00003394
+s32 sceKernelLoadModuleForKernel(const char *path, u32 flags, const SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 fd;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x000033A0
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000033C4
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    //0x000033D0 - 0x000033F0, 0x00003514 - 0x0000358C
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkPathConditions(path)) < 0 
+            || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x0000340C
+    if (fd < 0) { // 0x00000740
+        pspSetK1(oldK1);
+        return fd;
+    }
+
+    status = sceIoIoctl(fd, 0x208006, NULL, 0, NULL, 0); // 0x00003438
+    if (status < 0) { // 0x00003444
+        sceIoClose(fd);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00003458
+
+    modParams.apiType = 0x0; // 0x00003470
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x0000347C
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003464
+    modParams.unk64 = 0; // 0x00003488
+    modParams.fd = fd; // 0x00003490
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003494
+    if (status >= 0) // 0x0000349C
+        modParams.unk100 = 0x10; // 0x000034A4
+    
+    status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000034C0
+    if (status < 0) // 0x000034C8
+        modParams.unk124 = 1; //0x00003510
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x000034D4
+    
+    sceIoClose(fd); // 0x000034E0
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_EEC2A745
 // 0x00003590
-void ModuleMgrForKernel_EEC2A745()
+void sceKernelLoadModuleByIDForKernel()
 {
 }
 
