@@ -457,7 +457,6 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
     SceModuleMgrParam modParams;
     
     oldK1 = pspShiftK1(); //0x00000898
@@ -479,7 +478,7 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
         return status;
     }
     
-    status = sceIoIoctl(fd, 0x00208001, NULL, 0, NULL, 0); // 0x00000978
+    status = sceIoIoctl(inputId, 0x00208001, NULL, 0, NULL, 0); // 0x00000978
     if (status < 0) { // 0x00000984
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
@@ -494,7 +493,7 @@ s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
     modParams.fd = inputId; // 0x000005D8
     modParams.unk124 = 0; // 0x000009DC
         
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000009D8
+    status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x000009D8
     if (status >= 0) //0x000009E0
         modParams.unk100 = 0x10; // 0x000009E4
         
@@ -609,7 +608,6 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
     SceSysmemMemoryBlockInfo blkInfo;
     SceModuleMgrParam modParams;
     
@@ -643,7 +641,7 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
         return status;
     }
      
-    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000D78
+    status = sceIoIoctl(inputId, 0x208001, NULL, 0, NULL, 0); // 0x00000D78
     if (status < 0) { // 0x00000D84
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
@@ -658,7 +656,7 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
     modParams.fd = inputId; // 0x00000DD4
     modParams.unk124 = 0; // 0x00000DDC
     
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000DD8
+    status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x00000DD8
     if (status >= 0) //0x00000DE0
         modParams.unk100 = 0x10; // 0x00000DE4
         
@@ -1927,7 +1925,7 @@ s32 sceKernelLoadModuleVSH(const char *path, s32 flags, SceKernelLMOption *pOpti
 
     pspClearMemory32(&modParams, sizeof(modParams)); // 0x000030C4
 
-    modParams.apiType = 20; //0x000030D4
+    modParams.apiType = 0x20; //0x000030D4
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000030EC
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000030E0
     modParams.unk64 = 0; // 0x000030F8
@@ -1949,10 +1947,74 @@ s32 sceKernelLoadModuleVSH(const char *path, s32 flags, SceKernelLMOption *pOpti
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_CBA02988
-// 0x000031E4
-void sceKernelLoadModuleVSHByID()
+// Subroutine ModuleMgrForKernel_CBA02988 - Address 0x000031E4
+s32 sceKernelLoadModuleVSHByID(s32 inputId, s32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+
+    oldK1 = pspShiftK1(); // 0x000031F0
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00003214
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    if ((status = _checkCallConditionUser()) < 0 ) { //0x0000321C
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    status = sceKernelGetUserLevel(); // 0x0000324C
+    /* Verify if user level relates to the VSH API. */
+    if (status != 4) { //0x00003258
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+    
+    //0x00003260 - 0x000032AC
+    if (status = _checkLMOptionConditions(pOption) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    status = sceIoValidateFd(inputId, 4); //0x000032B4
+    if (status < SCE_ERROR_OK) { //0x000032BC
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    status = sceIoIoctl(inputId, 0x208003, NULL, 0, NULL, 0); // 0x000032DC
+    if (status < 0) { // 0x000032E8
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+
+    pspClearMemory32(&modParams, sizeof(modParams)); // 0x000032FC
+
+    modParams.apiType = 0x20; //0x0000330C
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00003324
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003318
+    modParams.unk64 = 0; // 0x00003330
+    modParams.fd = inputId; // 0x00003338
+    modParams.unk124 = 0;
+
+    status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); // 0x0000333C
+    if (status >= 0) // 0x00003344
+        modParams.unk100 = 0x10;
+    
+    status = sceIoIoctl(inputId, 0x208082, NULL, 0, NULL, 0); // 0x00003368
+    if (status < 0) // 0x00003390
+        modParams.unk124 = 1; //0x00003164
+    
+    status = _LoadModuleByBufferID(&modParams, pOption); // 0x0000337C
+    
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_939E4270
