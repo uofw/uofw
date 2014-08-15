@@ -102,7 +102,7 @@ execNmiHandler:
 sub_0120:
     ctc0       $v0, $6
     mfc0       $v0, $22
-    bne        $zr, $v0, foo
+    bne        $zr, $v0, ExceptionManagerForKernel_79454858
     nop        
 
     .globl sub_0130
@@ -125,7 +125,6 @@ sub_0140:
 
     .globl ExceptionManagerForKernel_79454858
 ExceptionManagerForKernel_79454858:
-foo:
     li         $v0, 92
     b          loc_0000009C
     nop        
