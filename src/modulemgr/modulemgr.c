@@ -2079,10 +2079,62 @@ s32 sceKernelLoadModuleForKernel(const char *path, u32 flags, const SceKernelLMO
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_EEC2A745
-// 0x00003590
-void sceKernelLoadModuleByIDForKernel()
+// Subroutine ModuleMgrForKernel_EEC2A745 - Address 0x00003590
+s32 sceKernelLoadModuleByIDForKernel(SceUID inputId, u32 flag,
+        const SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    (void)flag;
+    
+    oldK1 = pspShiftK1(); //0x0000359C
+    
+    if (sceKernelIsIntrContext()) { //0x000035B4
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    //0x000035CC, 0x000035D4 - 0x000035E8, 0x00003614 - 0x00003644
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    status = sceIoValidateFd(inputId, 4); //0x0000364C
+    if (status < SCE_ERROR_OK) { //0x00003654
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    status = sceIoIoctl(inputId, 0x208006, NULL, 0, NULL, 0); // 0x00003674
+    if (status < 0) { // 0x00003680
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003694
+        
+    modParams.apiType = 0x0; // 0x000036AC
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000036A0
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x000036B8
+    modParams.unk64 = 0; // 0x000036C4
+    modParams.fd = inputId; // 0x000036CC
+    modParams.unk124 = 0;
+        
+    status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x000036D0
+    if (status >= 0) //0x000036D8
+        modParams.unk100 = 0x10; // 0x000036E0
+    
+    status = sceIoIoctl(inputId, 0x208082, NULL, 0, NULL, 0); // 0x000036FC
+    if (status < 0) // 0x00003704
+        modParams.unk124 = 1; //0x00003724
+        
+    status = _LoadModuleByBufferID(&modParams, pOption); //0x00003710
+        
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_D4EE2D26
