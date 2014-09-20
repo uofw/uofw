@@ -3288,10 +3288,45 @@ s32 sceKernelLoadModuleBufferVSH(SceSize bufSize, void *pBuffer, u32 flags, cons
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_9236B422
-// 0x000055CC
-void ModuleMgrForKernel_9236B422()
+// Subroutine ModuleMgrForKernel_9236B422 - Address 0x000055CC
+s32 sceKernelLoadModuleBufferForExitVSHVSH(u32 *modBuf, s32 flags, SceKernelLMOption *option, int opt)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+    (void)opt;
+
+    oldK1 = pspShiftK1(); // 0x000055D8
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000055EC
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    // 0x00005608
+    if (status = _checkCallConditionKernel() < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    // 0x00005618
+    if (!pspK1PtrOk(modBuf)) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    status = _checkLMOptionConditions(option); // 0x00005640
+    if (status < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    _createMgrParamStruct(&modParams, SCE_INIT_APITYPE_VSH_2, modBuf, NULL, 1); // 0x00005660
+    status = _loadModuleByBufferID(&modParams, option); //0x0000566C
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_4E62C48A
