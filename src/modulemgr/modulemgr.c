@@ -3244,10 +3244,48 @@ s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(s32 apiType, u32 *
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_C6DE0B9C
-// 0x000054F0
-void ModuleMgrForKernel_C6DE0B9C()
+// Subroutine ModuleMgrForKernel_C6DE0B9C - Address 0x000054F0
+s32 sceKernelLoadModuleBufferVSH(SceSize bufSize, void *pBuffer, u32 flags, const SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+
+    (void)flags;
+    
+    oldK1 = pspShiftK1(); // 0x000054FC
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x00005518
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }  
+    
+    if ((status = _checkCallConditionKernel()) < 0 ) { // 0x0000552C
+        pspSetK1(oldK1);
+        return status;
+    }  
+
+    /* Check for VSH API */
+    if (sceKernelGetUserLevel() != 4) { // 0x0000555C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+
+    if (!pspK1DynBufOk(pBuffer, bufSize)) { // 0x00005588
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    status = _checkLMOptionConditions(pOption); // 0x00005590
+    if (status < 0) { // 0x0000559C
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    _createMgrParamStruct(&modParams, 0x21, pBuffer, bufSize, 0); // 0x000055B0
+    status = _loadModuleByBufferID(&modParams, pOption); // 0x000055BC
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_9236B422
