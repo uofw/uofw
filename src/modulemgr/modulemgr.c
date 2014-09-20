@@ -36,6 +36,7 @@ typedef struct {
     u8 position; //2
     u8 access; //3
     SceUID *returnId; //4
+    u32 *status;
     SceModule *pMod; //12
     SceLoadCoreExecFileInfo *execInfo; //16
     u32 apiType; //20
@@ -58,6 +59,11 @@ typedef struct {
     u32 eventId; //88
     u32 unk96;
     u32 unk100;
+    u32 unk104;
+    u32 unk108;
+    u32 unk112;
+    u32 unk116;
+    u32 unk120;
     u32 unk124;
     // TODO: Add #define for size. 
     char secureInstallId[16]; // 128
@@ -2080,14 +2086,14 @@ s32 sceKernelLoadModuleForKernel(const char *path, u32 flags, const SceKernelLMO
 }
 
 // Subroutine ModuleMgrForKernel_EEC2A745 - Address 0x00003590
-s32 sceKernelLoadModuleByIDForKernel(SceUID inputId, u32 flag,
+s32 sceKernelLoadModuleByIDForKernel(SceUID inputId, u32 flags,
         const SceKernelLMOption *pOption)
 {
     s32 oldK1;
     s32 status;
     SceModuleMgrParam modParams;
     
-    (void)flag;
+    (void)flags;
     
     oldK1 = pspShiftK1(); //0x0000359C
     
@@ -2137,22 +2143,209 @@ s32 sceKernelLoadModuleByIDForKernel(SceUID inputId, u32 flag,
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_D4EE2D26
-// 0x00003728
-void ModuleMgrForKernel_D4EE2D26()
+// Subroutine ModuleMgrForKernel_D4EE2D26 - Address 0x00003728
+s32 sceKernelLoadModuleToBlock(const char *path, u32 block, u32 *arg2, u32 flags, const SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceUID fd;
+    u32 buf;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+    
+    oldK1 = pspShiftK1(); //0x0000375C
+    
+    if (sceKernelIsIntrContext()) { //0x00003774
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    //0x0000378C, 0x00003798 - 0x000037AC
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkPathConditions(path)) < 0
+            || _checkLMOptionConditions(pOption)) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    // 0x000037BC
+    if (arg2 == NULL) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
+    }
+    
+    // 0x000037C4
+    if (pOption != NULL && pOption->position >= 2) {
+        // Missing pspSetK1(oldk1) here
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
+    }
+    
+    // 0x000037E8
+    if (!pspK1StaBufOk(arg2)) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    // 0x000037F8
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH);
+    if (fd < 0) { // 0x00003804
+        pspSetK1(oldK1);
+        return fd;
+    }
+    
+    status = sceIoIoctl(fd, 0x208007, NULL, 0, NULL, 0); // 0x00003824
+    if (status < 0) { // 0x00003830
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003844
+        
+    modParams.apiType = 0x3; // 0x00003854
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003860
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x0000386C
+    modParams.unk64 = 0; // 0x00003878
+    modParams.fd = fd; // 0x00003880
+    modParams.unk124 = 0;
+        
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003884
+    if (status >= 0) //0x0000388C
+        modParams.unk100 = 0x10; // 0x000036E0
+    
+    modParams.unk104 = block; // 0x0000389C
+    modParams.status = &buf; //0x000038C0
+    status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000038BC
+    if (status < 0) // 0x000038C4
+        modParams.unk124 = 1; //0x00003924
+        
+    status = _LoadModuleByBufferID(&modParams, pOption); //0x000038D0
+    if (status >= 0)
+        *arg2 = buf;
+        
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_F7C7FEBC
-// 0x000039C0
-void ModuleMgrForKernel_F7C7FEBC()
+// Subroutine ModuleMgrForKernel_F7C7FEBC - Address 0x000039C0
+s32 sceKernelLoadModuleBootInitConfig(const char *path, u32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceUID fd;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+    
+    oldK1 = pspShiftK1(); //0x000039CC
+    
+    if (!sceKernelIsDevelopmentToolMode()) { // 0x000039E4
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+        
+    if (sceKernelIsIntrContext()) { //0x00003A1C
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    //0x00003C20, 0x00003C2C - 0x00003C40, 0x00003D1C - 0x00003D94
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkPathConditions(path)) < 0 
+            || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00003C5C
+    if (fd < 0) { // 0x00003C68
+        pspSetK1(oldK1);
+        return fd;
+    }
+    
+    status = sceIoIoctl(fd, 0x20800C, NULL, 0, NULL, 0); // 0x00003C88
+    if (status < 0) { // 0x00003C94
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003CA8
+        
+    modParams.apiType = 0x70; // 0x00003CB8
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003CC4
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00003CD0
+    modParams.unk64 = 0; // 0x00003CDC
+    modParams.fd = fd; // 0x00003CE4
+    modParams.unk124 = 0;
+        
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003CE8
+    if (status >= 0) //0x00003CF0
+        modParams.unk100 = 0x10;
+        
+    status = _LoadModuleByBufferID(&modParams, pOption); //0x00003D00
+        
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_4493E013
-// 0x00003BAC
-void ModuleMgrForKernel_4493E013()
+// Subroutine ModuleMgrForKernel_4493E013 - Address 0x00003BAC
+s32 sceKernelLoadModuleDeci(const char *path, u32 flags, SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceUID fd;
+    SceModuleMgrParam modParams;
+    
+    (void)flags;
+    
+    oldK1 = pspShiftK1(); //0x00003BB8
+    
+    if (!sceKernelIsDevelopmentToolMode()) { // 0x00003BD0
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+        
+    if (sceKernelIsIntrContext()) { // 0x00003C08
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }
+    
+    //0x00003A34, 0x00003A40 - 0x00003A50, 0x00003B30 - 0x00003BA8
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkLMOptionConditions(pOption)) < 0) {
+        pspSetK1(oldK1);
+        return status;
+    }
+    
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00003A70
+    if (fd < 0) { // 0x00003804
+        pspSetK1(oldK1);
+        return fd;
+    }
+    
+    status = sceIoIoctl(fd, 0x208009, NULL, 0, NULL, 0); // 0x00003A9C
+    if (status < 0) { // 0x00003AA8
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
+    }
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003ABC
+        
+    modParams.apiType = 0x52; // 0x00003ACC
+    modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003AD8
+    modParams.modeStart = CMD_LOAD_MODULE; // 0x00003AE4
+    modParams.unk64 = 0; // 0x00003AF0
+    modParams.fd = fd; // 0x00003AF8
+    modParams.unk124 = 0;
+        
+    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003B14
+    if (status >= 0) //0x00003B04
+        modParams.unk100 = 0x10;
+        
+    status = _LoadModuleByBufferID(&modParams, pOption); //0x00003710
+        
+    sceIoClose(fd);
+    pspSetK1(oldK1);
+    return status;
 }
 
 // Subroutine ModuleMgrForUser_50F0C1EC - Address 0x00003D98 - Aliases: ModuleMgrForKernel_3FF74DF1
@@ -2848,7 +3041,7 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
 
 // TODO: Reverse function ModuleMgrForKernel_61E3EC69
 // 0x000050FC
-void ModuleMgrForKernel_61E3EC69()
+s32 sceKernelLoadModuleBufferForExitGame()
 {
 }
 
