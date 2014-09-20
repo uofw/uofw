@@ -3118,14 +3118,52 @@ s32 sceKernelLoadModuleBufferMs(SceSize bufSize, void *pBuffer, u32 flags, const
     }
 
     _createMgrParamStruct(&modParams, 0x42, pBuffer, bufSize, 0); // 0x00005280
-    status = _loadModuleByBufferID(&modParams, pOption); //0x0000528C
+    status = _loadModuleByBufferID(&modParams, pOption); // 0x00005368
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForUser_24EC0641
-// 0x0000529C
-void ModuleMgrForUser_24EC0641()
+// Subroutine ModuleMgrForUser_24EC0641 - Address 0x0000529C
+s32 sceKernelLoadModuleBufferApp(SceSize bufSize, void *pBuffer, u32 flags, const SceKernelLMOption *pOption)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+
+    (void)flags;
+    
+    oldK1 = pspShiftK1(); // 0x000052A8
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000052C4
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }  
+    
+    if ((status = _checkCallConditionUser()) < 0 ) { // 0x000052D8
+        pspSetK1(oldK1);
+        return status;
+    }  
+
+    /* Check for APP API */
+    if (sceKernelGetUserLevel() != 3) { // 0x00005308
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
+    }
+
+    if (!pspK1DynBufOk(pBuffer, bufSize)) { // 0x00005334
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    status = _checkLMOptionConditions(pOption); // 0x0000533C
+    if (status < 0) { // 0x00005348
+        pspSetK1(oldK1);
+        return status;
+    }
+
+    _createMgrParamStruct(&modParams, 0x43, pBuffer, bufSize, 0); // 0x0000535C
+    status = _loadModuleByBufferID(&modParams, pOption); //0x00005368
+    return status;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_2F3F9B6A
