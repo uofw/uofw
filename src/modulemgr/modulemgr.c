@@ -3075,6 +3075,8 @@ s32 sceKernelLoadModuleBufferForExitGame(u32 *modBuf, s32 flags, SceKernelLMOpti
     
     _createMgrParamStruct(&modParams, SCE_INIT_APITYPE_VSH_1, modBuf, NULL, opt); // 0x00005190
     status = _loadModuleByBufferID(&modParams, option); //0x0000519C
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3119,6 +3121,8 @@ s32 sceKernelLoadModuleBufferMs(SceSize bufSize, void *pBuffer, u32 flags, const
 
     _createMgrParamStruct(&modParams, 0x42, pBuffer, bufSize, 0); // 0x00005280
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00005368
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3163,6 +3167,8 @@ s32 sceKernelLoadModuleBufferApp(SceSize bufSize, void *pBuffer, u32 flags, cons
 
     _createMgrParamStruct(&modParams, 0x43, pBuffer, bufSize, 0); // 0x0000535C
     status = _loadModuleByBufferID(&modParams, pOption); //0x00005368
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3202,6 +3208,8 @@ s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(s32 apiType, u32 *modBu
     
     _createMgrParamStruct(&modParams, apiType, modBuf, NULL, 0); // 0x00005418
     status = _loadModuleByBufferID(&modParams, option); // 0x00005424
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3241,6 +3249,8 @@ s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(s32 apiType, u32 *
     
     _createMgrParamStruct(&modParams, apiType, modBuf, NULL, 0); // 0x000054D4
     status = _loadModuleByBufferID(&modParams, option); // 0x000054E0
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3285,6 +3295,8 @@ s32 sceKernelLoadModuleBufferVSH(SceSize bufSize, void *pBuffer, u32 flags, cons
 
     _createMgrParamStruct(&modParams, 0x21, pBuffer, bufSize, 0); // 0x000055B0
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000055BC
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3326,6 +3338,8 @@ s32 sceKernelLoadModuleBufferForExitVSHVSH(u32 *modBuf, s32 flags, SceKernelLMOp
     
     _createMgrParamStruct(&modParams, SCE_INIT_APITYPE_VSH_2, modBuf, NULL, 1); // 0x00005660
     status = _loadModuleByBufferID(&modParams, pOption); //0x0000566C
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3364,6 +3378,8 @@ s32 sceKernelLoadModuleBufferForKernel(SceSize bufSize, void *pBuffer, u32 flags
 
     _createMgrParamStruct(&modParams, 0x2, pBuffer, bufSize, 0); // 0x00005728
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00005734
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3405,6 +3421,8 @@ s32 sceKernelLoadModuleBufferForExitVSHKernel(u32 *modBuf, s32 flags, SceKernelL
     
     _createMgrParamStruct(&modParams, SCE_INIT_APITYPE_KERNEL_1, modBuf, NULL, 1); // 0x000057D8
     status = _loadModuleByBufferID(&modParams, pOption); //0x000057E4
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3446,6 +3464,8 @@ s32 sceKernelLoadModuleBufferForRebootKernel(u32 *modBuf, s32 flags, SceKernelLM
     
     _createMgrParamStruct(&modParams, SCE_INIT_APITYPE_KERNEL_REBOOT, modBuf, NULL, 1); // 0x00005888
     status = _loadModuleByBufferID(&modParams, pOption); //0x00005894
+    
+    pspSetK1(oldK1);
     return status;
 }
 
@@ -3495,25 +3515,51 @@ s32 sceKernelLoadModuleBufferBootInitBtcnf(SceSize modSize, u32 *modBuf, s32 fla
 
     _createMgrParamStruct(&modParams, 0x51, modBuf, modSize, 1); // 0x0000595C
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00005968
+    
+    pspSetK1(oldK1);
     return status;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_5FC32087
-// 0x00005978
-void ModuleMgrForKernel_5FC32087()
+// Subroutine ModuleMgrForKernel_5FC32087 - Address 0x00005978
+s32 sceKernelLoadModuleByIDBootInitConfig()
 {
+    return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_E8B9D19D
-// 0x00005984
-void ModuleMgrForKernel_E8B9D19D()
+// Subroutine ModuleMgrForKernel_E8B9D19D - Address 0x00005984
+s32 sceKernelLoadModuleBufferBootInitConfig()
 {
+    return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 }
 
-// TODO: Reverse function sceKernelUnloadModule
-// 0x00005990
-void sceKernelUnloadModule()
+// Subroutine ModuleMgrForUser_2E0911AA - Address 0x00005990 - Aliases: ModuleMgrForKernel_387E3CA9
+s32 sceKernelUnloadModule(SceUID modId)
 {
+    s32 oldK1;
+    s32 status;
+    SceModuleMgrParam modParams;
+    
+    oldK1 = pspShiftK1(); // 0x0000599C
+
+    // Cannot be called in an interruption
+    if (sceKernelIsIntrContext()) { // 0x000059A8
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    }  
+    
+    pspClearMemory32(&modParams, sizeof(modParams)); //0x000059C8
+     
+    modParams.modeFinish = CMD_UNLOAD_MODULE; // 0x000059D8
+    modParams.modeStart = CMD_UNLOAD_MODULE; // 0x000059DC
+    modParams.modId = modId; // 0x000059E0
+    modParams.argSize = 0; // 0x000059E4
+    modParams.argp = NULL; // 0x000059E8
+    modParams.pStatus = NULL; // 0x000059F0
+    
+    status = _start_exe_thread(&modParams); // 0x000059EC
+    
+    pspSetK1(oldK1);
+    return status;
 }
 
 // TODO: Reverse function sceKernelStopUnloadSelfModuleWithStatus
