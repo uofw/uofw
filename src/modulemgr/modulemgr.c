@@ -3615,10 +3615,20 @@ s32 sceKernelSetNpDrmGetModuleKeyFunction(void (*function)(s32 fd, void *, void 
     g_ModuleManager.npDrmGetModuleKeyFunction = function;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_C3DDABEF
-// 0x00005B7C
-void ModuleMgrForKernel_C3DDABEF()
+// Subroutine ModuleMgrForKernel_C3DDABEF - Address 0x00005B7C
+s32 sceKernelNpDrmGetModuleKey(s32 fd, void *arg2, void *arg3)
 {
+    s32 status;
+    
+    if (arg2 == NULL || arg3 == NULL)
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    
+    if (g_ModuleManager.npDrmGetModuleKeyFunction == NULL)
+        return SCE_ERROR_KERNEL_ERROR;
+    
+    status = g_ModuleManager.npDrmGetModuleKeyFunction(fd, arg2, arg3); // 0x00005BB0
+    
+    return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; // 0x00005BBC
 }
 
 // TODO: Reverse function ModuleMgrForKernel_1CFFC5DE
