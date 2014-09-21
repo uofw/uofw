@@ -3562,22 +3562,35 @@ s32 sceKernelUnloadModule(SceUID modId)
     return status;
 }
 
-// TODO: Reverse function sceKernelStopUnloadSelfModuleWithStatus
-// 0x00005A14
-void sceKernelStopUnloadSelfModuleWithStatus()
+// Subroutine ModuleMgrForUser_8F2DF740 - Address 0x00005A14 - Aliases: ModuleMgrForKernel_EE6E8F49
+s32 sceKernelStopUnloadSelfModuleWithStatus(s32 exitStatus, SceSize args, void *argp, s32 *pModResult, SceKernelSMOption *pOption)
 {
+    return _StopUnloadSelfModuleWithStatus(exitStatus, pspGetRa(), args, argp, pModResult, pOption);
 }
 
-// TODO: Reverse function sceKernelStopUnloadSelfModule
-// 0x00005A4C
-void sceKernelStopUnloadSelfModule()
+// Subroutine ModuleMgrForUser_CC1D3699 - Address 0x00005A4C - Aliases: ModuleMgrForKernel_E97E0DB7
+s32 sceKernelStopUnloadSelfModule(SceSize args, void *argp, s32 *pModResult, SceKernelSMOption *pOption)
 {
+    return _StopUnloadSelfModuleWithStatus(SCE_ERROR_OK, pspGetRa(), args, argp, pModResult, pOption);
 }
 
-// TODO: Reverse function ModuleMgrForKernel_D86DD11B
-// 0x00005A80
-void ModuleMgrForKernel_D86DD11B()
+// Subroutine ModuleMgrForKernel_D86DD11B - Address 0x00005A80
+s32 sceKernelSearchModuleByName(const char *name)
 {
+    s32 oldK1;
+    SceModule *pMod;
+    
+    oldK1 = pspShiftK1();
+    
+    if (!pspK1PtrOk(name)) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
+    
+    pMod = sceKernelFindModuleByName(name); // 0x00005AA8
+    
+    pspSetK1(oldK1);
+    return (pMod != NULL) ? pMod->modId : SCE_ERROR_KERNEL_UNKNOWN_MODULE;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_12F99392

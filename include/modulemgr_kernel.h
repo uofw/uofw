@@ -40,7 +40,7 @@ s32 sceKernelLoadModuleBufferForRebootKernel(u32 *modBuf, s32 flags, SceKernelLM
 s32 sceKernelLoadModuleBootInitBtcnf(u32 *modBuf, s32 flags, SceKernelLMOption *pOption); /* Disabled - returns error */
 s32 sceKernelLoadModuleBufferBootInitBtcnf(SceSize modSize, u32 *modBuf, s32 flags, SceKernelLMOption *pOption, s32 opt);
 
-s32 sceKernelStopUnloadSelfModuleWithStatusKernel(s32 exitStatus, SceSize args, void *argp, s32 *status, SceKernelSMOption *option);
+s32 sceKernelStopUnloadSelfModuleWithStatusKernel(s32 exitStatus, SceSize args, void *argp, s32 *pModResult, SceKernelSMOption *pOption);
 
 #endif	/* MODULEMGR_KERNEL_H */
 
