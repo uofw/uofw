@@ -3672,10 +3672,48 @@ s32 _ModuleReleaseLibraries(SceModule *pMod)
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function sub_00006FF4
-// 0x00006FF4
-void _StartModule()
+// Subroutine sub_00006FF4 - Address 0x00006FF4 
+s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
 {
+    s32 status;
+    
+    status = pMod->status;
+    if ((status & 0xF) != 3) // 0x00007034
+        return SCE_ERROR_KERNEL_ERROR;
+    
+    status = (status & ~0xF) | 0x4; //0x0000704C
+    
+    status = _PrologueModule(modParams, pMod); // 0x00007048
+    if (status < SCE_ERROR_OK) {
+        pMod->status = (pMod->status & ~0xF) | 0x3; //0x00007138
+        return SCE_ERROR_KERNEL_ERROR;
+    }
+    
+    if (pMod->userModThid != -1) { //0x0000705C
+        g_ModuleManager.userThreadId = pMod->userModThid; // 0x0000706C
+        
+        status = sceKernelStartThread(pMod->userModThid, argSize, argp); //0x00007078
+        if (status == SCE_ERROR_OK) // 0x00007080
+            status = sceKernelWaitThreadEnd(pMod->userModThid, NULL); // 0x00007114
+        
+        g_ModuleManager.userThreadId = -1;
+        sceKernelDeleteThread(pMod->userModThid); // 0x00007094
+        pMod->userModThid = -1;
+    }
+    
+    if (pStatus != NULL) // 0x000070A0
+        *pStatus = status;
+    
+    if (status != SCE_ERROR_OK) { // 0x000070A8
+        _EpilogueModule(pMod);
+        pMod->status = (pMod->status & ~0xF) | 0x7; //0x00007100
+        _UnloadModule(pMod); // 0x00007104
+        
+        return status;
+    }
+    
+    pMod->status = (pMod->status & ~0xF) | 0x5; //0x000070B8
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_0000713C
@@ -3892,7 +3930,7 @@ void sub_00007FD0()
 
 // TODO: Reverse function sub_00008124
 // 0x00008124
-void sub_00008124()
+void _PrologueModule()
 {
 }
 
