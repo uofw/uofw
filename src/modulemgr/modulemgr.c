@@ -3631,10 +3631,12 @@ s32 sceKernelNpDrmGetModuleKey(s32 fd, void *arg2, void *arg3)
     return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; // 0x00005BBC
 }
 
-// TODO: Reverse function ModuleMgrForKernel_1CFFC5DE
-// 0x00005BD0
-void ModuleMgrForKernel_1CFFC5DE()
+// Subroutine ModuleMgrForKernel_1CFFC5DE - Address 0x00005BD0
+s32 sceKernelModuleMgrMode(s32 mode)
 {
+    (void)mode;
+    
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_00005C4C
