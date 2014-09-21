@@ -3593,10 +3593,14 @@ s32 sceKernelSearchModuleByName(const char *name)
     return (pMod != NULL) ? pMod->modId : SCE_ERROR_KERNEL_UNKNOWN_MODULE;
 }
 
-// TODO: Reverse function ModuleMgrForKernel_12F99392
-// 0x00005AE0
-void ModuleMgrForKernel_12F99392()
+// Subroutine ModuleMgrForKernel_12F99392 - Address 0x00005AE0
+s32 sceKernelSearchModuleByAddress(u32 addr)
 {
+    SceModule *pMod;
+    
+    pMod = sceKernelFindModuleByAddress(addr); // 0x00005AE8
+    
+    return (pMod != NULL) ? pMod->modId : SCE_ERROR_KERNEL_UNKNOWN_MODULE;
 }
 
 // TODO: Reverse function ModuleMgrForUser_CDE1C1FE
