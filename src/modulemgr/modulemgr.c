@@ -3603,16 +3603,16 @@ s32 sceKernelSearchModuleByAddress(u32 addr)
     return (pMod != NULL) ? pMod->modId : SCE_ERROR_KERNEL_UNKNOWN_MODULE;
 }
 
-// TODO: Reverse function ModuleMgrForUser_CDE1C1FE
-// 0x00005B10
-void ModuleMgrForUser_CDE1C1FE()
+// Subroutine ModuleMgrForUser_CDE1C1FE - Address 0x00005B10
+s32 ModuleMgrForUser_CDE1C1FE()
 {
+    // TODO: Figure out structure member unk36 of SceModuleManagerCB
 }
 
-// TODO: Reverse function ModuleMgrForKernel_A40EC254
-// 0x00005B6C
-void ModuleMgrForKernel_A40EC254()
+// Subroutine ModuleMgrForKernel_A40EC254 - Address 0x00005B6C
+s32 sceKernelSetNpDrmGetModuleKeyFunction(void (*function)(s32 fd, void *, void *))
 {
+    g_ModuleManager.npDrmGetModuleKeyFunction = function;
 }
 
 // TODO: Reverse function ModuleMgrForKernel_C3DDABEF
