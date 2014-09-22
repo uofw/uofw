@@ -3678,14 +3678,14 @@ s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize,
     s32 status;
     
     status = pMod->status;
-    if ((status & 0xF) != 3) // 0x00007034
+    if ((status & 0xF) != MCB_STATUS_RELOCATED) // 0x00007034
         return SCE_ERROR_KERNEL_ERROR;
     
-    status = (status & ~0xF) | 0x4; //0x0000704C
+    status = (status & ~0xF) | MCB_STATUS_STARTING; //0x0000704C
     
     status = _PrologueModule(modParams, pMod); // 0x00007048
     if (status < SCE_ERROR_OK) {
-        pMod->status = (pMod->status & ~0xF) | 0x3; //0x00007138
+        pMod->status = (pMod->status & ~0xF) | MCB_STATUS_RELOCATED; //0x00007138
         return SCE_ERROR_KERNEL_ERROR;
     }
     
@@ -3706,20 +3706,142 @@ s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize,
     
     if (status != SCE_ERROR_OK) { // 0x000070A8
         _EpilogueModule(pMod);
-        pMod->status = (pMod->status & ~0xF) | 0x7; //0x00007100
+        pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STOPPED; //0x00007100
         _UnloadModule(pMod); // 0x00007104
         
         return status;
     }
     
-    pMod->status = (pMod->status & ~0xF) | 0x5; //0x000070B8
+    pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STARTED; //0x000070B8
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function sub_0000713C
-// 0x0000713C
-void _StopModule()
+// Subroutine sub_0000713C - Address 0x0000713C
+s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startMode, SceUID modId, SceSize argSize, 
+                void *argp, s32 *pStatus)
 {
+    s32 status;
+    s32 threadPriority;
+    SceSize stackSize;
+    SceUInt threadAttr;
+    
+    status = pMod->status & 0xF;
+    switch (status) { // 0x000071A4
+    case MCB_STATUS_NOT_LOADED: MCB_STATUS_LOADING: MCB_STATUS_STARTING: MCB_STATUS_UNLOADED:
+        return SCE_ERROR_KERNEL_ERROR;
+    case MCB_STATUS_LOADED: MCB_STATUS_RELOCATED:
+        // 0x000071AC
+        return SCE_ERROR_KERNEL_MODULE_NOT_STARTED;
+    case MCB_STATUS_STARTED:
+        // 0x000071F4
+        if (pMod->moduleStop != -1) { // 0x000071FC
+            threadPriority = modParams->threadPriority;
+            if (threadPriority == 0) { //0x00007208
+                threadPriority = (pMod->moduleStopThreadPriority == -1) ? SCE_KERNEL_MODULE_INIT_PRIORITY 
+                        : pMod->moduleStopThreadPriority; //0x0000721C
+            }
+            stackSize = modParams->stackSize;
+            if (stackSize == 0)
+                stackSize = (pMod->moduleStopThreadStacksize == -1) ? 0 : pMod->moduleStopThreadStacksize; // 0x00007238
+            
+            threadAttr = (pMod->moduleStopThreadAttr == -1) ? SCE_KERNEL_TH_DEFAULT_ATTR : pMod->moduleStopThreadAttr; //0x00007250
+            if (modParams->threadAttr != 0)
+                threadAttr |= (modParams->threadAttr & 0xF06000); // 0x00007260           
+            threadAttr &= ~0xF0000000; //0x0000726C
+            
+            if (!(pMod->status & SCE_MODULE_USER_MODULE)) //0x00007268
+                stackSize = (stackSize == 0) ? SCE_KERNEL_TH_DEFAULT_SIZE : 0;
+            else {
+                stackSize = (stackSize == 0) ? 0x40000 : 0; //0x00007280
+            
+                if ((pMod->attribute & 0x1E00) == SCE_MODULE_VSH) //0x00007284
+                    threadAttr |= SCE_KERNEL_TH_VSH_MODE;
+                else if ((pMod->attribute & 0x1E00) == SCE_MODULE_APP) // 0x00007290
+                    threadAttr |= SCE_KERNEL_TH_APP_MODE;
+                else if ((pMod->attribute & 0x1E00) == SCE_MODULE_USB_WLAN) // 0x0000729C
+                    threadAttr |= SCE_KERNEL_TH_USB_WLAN_MODE;
+                else if ((pMod->attribute & 0x1E00) == SCE_MODULE_MS) // 0x000072A8
+                    threadAttr |= SCE_KERNEL_TH_MS_MODE;
+                else
+                    threadAttr |= SCE_KERNEL_TH_USER_MODE;
+            }
+            SceKernelThreadOptParam threadOptions;
+            threadOptions.size = sizeof(SceKernelThreadOptParam);
+            threadOptions.stackMpid = (modParams->threadMpIdStack == 0) ? pMod->mpIdData : modParams->threadMpIdStack; // 0x000072C0 & 0x000072CC
+            if (threadOptions.stackMpid != 0) { //0x000072D4
+                SceSysmemPartitionInfo partitionInfo;
+                partitionInfo.size = sizeof(SceSysmemPartitionInfo);
+                status = sceKernelQueryMemoryPartitionInfo(threadOptions.stackMpid, &partitionInfo); // 0x000072F0
+                
+                if (pMod->status & SCE_MODULE_USER_MODULE) { // 0x000072E0
+                    if (status < SCE_ERROR_OK || !(partitionInfo.attr & 0x3))
+                        return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
+                } else {
+                    if (status < SCE_ERROR_OK || !(partitionInfo.attr != 12)) //0x000074A8
+                        return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
+                }
+            }
+            s32 oldGp = pspSetGp(pMod->gpValue); //0x0000732C
+            
+            status = sceKernelCreateThread("SceKernelModmgrStop", pMod->moduleStop, threadPriority, stackSize, 
+                    threadAttr, &threadOptions); // 0x00007348
+            pMod->userModThid = status;
+            
+            pspSetGp(oldGp); // 0x00007354
+            
+            if (status < SCE_ERROR_OK) // 0x0000735C
+                return status;
+            
+            g_ModuleManager.userThreadId = status; // 0x00007370
+            pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STOPPING; // 0x0000737C  
+            s32 stopResult = 1; // 0x00007390
+            
+            status = sceKernelStartThread(pMod->userModThid, argSize, argp); // 0x0000738C
+            if (status == SCE_ERROR_OK) // 0x00007394
+                stopResult = sceKernelWaitThreadEnd(pMod->userModThid, NULL); //0x0000747C
+            g_ModuleManager.userThreadId = -1;
+            
+            sceKernelDeleteThread(pMod->userModThid); // 0x000073A8
+            pMod->userModThid = -1;
+            
+            sceKernelChangeThreadPriority(0, SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000073B8
+            
+            if (pStatus != NULL) // 0x000073C0
+                *pStatus = stopResult;
+            
+            if (sceKernelIsToolMode()) { // 0x000073D0
+                status = sceKernelDipsw(25); // 0x0000742C
+                
+                if (status != 1 && sceKernelGetCompiledSdkVersion() >= 0x3030000 
+                        && sceKernelSegmentChecksum(pMod) != pMod->segmentChecksum)
+                    pspBreak(0); // 0x00007470
+            }
+            if (stopResult == 1) // 0x000073E0
+                return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
+            
+            if (stopResult != SCE_ERROR_OK) {
+                pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STARTED; // 0x000073FC
+                return stopResult;
+            }
+            status = _EpilogueModule(pMod); // 0x00007408
+            if (status < SCE_ERROR_OK) {
+                pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STARTED;
+                return status; // 0x000073FC
+            }
+            pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STOPPED; //0x00007428
+            return SCE_ERROR_OK; // 0x000073FC
+        }
+    case MCB_STATUS_STOPPING:
+        // 0x000074CC
+        return SCE_ERROR_KERNEL_MODULE_ALREADY_STOPPING;
+    case MCB_STATUS_STOPPED:
+        // 0x000074D8
+        return SCE_ERROR_KERNEL_MODULE_ALREADY_STOPPED;
+    default: // 0x0000718C
+       return SCE_ERROR_KERNEL_ERROR;
+    }
+    
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_000074E4 - Address 0x000074E4 
