@@ -3717,7 +3717,7 @@ s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize,
 }
 
 // Subroutine sub_0000713C - Address 0x0000713C
-s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startMode, SceUID modId, SceSize argSize, 
+s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceUID modId, SceSize argSize, 
                 void *argp, s32 *pStatus)
 {
     s32 status;
@@ -4028,43 +4028,154 @@ s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize ar
 
 // TODO: Reverse function sub_00007968
 // 0x00007968
-void sub_00007968()
+void ProcessModuleExportEnt()
 {
 }
 
 // TODO: Reverse function sub_00007C34
 // 0x00007C34
-void sub_00007C34()
+void allocate_module_block()
 {
 }
 
 // TODO: Reverse function sub_00007ED8
-// 0x00007ED8
+// CheckSkipPbpHeader ?
 void sub_00007ED8()
 {
 }
 
 // TODO: Reverse function sub_00007FD0
 // 0x00007FD0
-void sub_00007FD0()
+void PartitionCheck()
 {
 }
 
-// TODO: Reverse function sub_00008124
-// 0x00008124
-void _PrologueModule()
+// sub_00008124
+s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
 {
+    s32 oldGp;
+    s32 status;
+    
+    oldGp = pspGetGp(); // 0x00008150
+    
+    status = ModuleRegisterLibraries(pMod); // 0x00008154
+    if (status < SCE_ERROR_OK) // 0x0000815C
+        return status;
+    
+    // 0x0000816C
+    if (pMod->stubTop != -1) {
+        if (pMod->status & SCE_MODULE_USER) // 0x0000817C
+            status = sceKernelLinkLibraryEntriesWithModule(pMod, pMod->stubTop, pMod->stubSize); // 0x00008188
+        else
+            status = sceKernelLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000843C
+        if (status < SCE_ERROR_OK) { // 0x00008190
+            status = _ModuleReleaseLibraries(pMod); // 0x00008424
+            if (status < SCE_ERROR_OK) // 0x0000842C
+                return status;
+        }
+    }
+    pMod->segmentChecksum = sceKernelSegmentChecksum(pMod); // 0x00008198
+    if (pMod->unk224 != 0) { // 0x000081A4
+        s32 sum;
+        u32 *textSegment = (u32 *)pMod->segmentAddr[0];
+        for (s32 i = 0; i < pMod->textSize / sizeof(u32); i++) // 0x000081D0
+            sum += textSegment[i];
+        pMod->unk220 = sum; // 0x000081D8
+    } else
+        pMod->unk220 = 0; // 0x00008420
+        
+    void *modStart = pMod->moduleStart;
+    if (pMod->moduleStart == -1) // 0x000081E4
+        modStart = (pMod->moduleBootstart != modStart) ? pMod->moduleBootstart : (u32 *)pMod->entryAddr;
+    
+    /* No module entry point found */
+    if (modStart == (void *)-1 || modStart == NULL) {
+        pMod->userModThid = -1;
+        return SCE_ERROR_OK;
+    }
+    s32 threadPriority = modParams->threadPriority;
+    if (threadPriority == 0) { // 0x0000823C
+        threadPriority = (pMod->moduleStartThreadPriority == -1) ? SCE_KERNEL_MODULE_INIT_PRIORITY 
+                : pMod->moduleStartThreadPriority; //0x0000824C
+    }
+    s32 stackSize = modParams->stackSize; // 0x00008258
+    if (stackSize == 0) // 0x00008258
+        stackSize = (pMod->moduleStartThreadStacksize == -1) ? 0 : pMod->moduleStartThreadStacksize; // 0x0000826C
+            
+    s32 threadAttr = (pMod->moduleStartThreadAttr == -1) ? SCE_KERNEL_TH_DEFAULT_ATTR : pMod->moduleStartThreadAttr; //0x00007250
+    if (modParams->threadAttr != 0) // 0x00008280
+        threadAttr |= (modParams->threadAttr & 0xF06000); // 0x00008294           
+    threadAttr &= ~0xF0000000; //0x000082A4
+    
+    if (!(pMod->status & SCE_MODULE_USER_MODULE)) //0x000082A0
+        stackSize = (stackSize == 0) ? SCE_KERNEL_TH_DEFAULT_SIZE : 0; // 0x00008404
+    else {
+        stackSize = (stackSize == 0) ? 0x40000 : 0; //0x000082B8
+            
+        if ((pMod->attribute & 0x1E00) == SCE_MODULE_VSH) //0x000082BC
+            threadAttr |= SCE_KERNEL_TH_VSH_MODE;
+        else if ((pMod->attribute & 0x1E00) == SCE_MODULE_APP) // 0x000082C8
+            threadAttr |= SCE_KERNEL_TH_APP_MODE;
+        else if ((pMod->attribute & 0x1E00) == SCE_MODULE_USB_WLAN) // 0x000082D4
+            threadAttr |= SCE_KERNEL_TH_USB_WLAN_MODE;
+        else if ((pMod->attribute & 0x1E00) == SCE_MODULE_MS) // 0x000082E0
+            threadAttr |= SCE_KERNEL_TH_MS_MODE;
+        else
+            threadAttr |= SCE_KERNEL_TH_USER_MODE;
+    }
+    SceKernelThreadOptParam threadOptions;
+    threadOptions.size = sizeof(SceKernelThreadOptParam);
+    threadOptions.stackMpid = (modParams->threadMpIdStack == 0) ? pMod->mpIdData : modParams->threadMpIdStack; // 0x000082F8 & 0x000083F8
+    if (threadOptions.stackMpid != 0) { // 0x0000830C
+        SceSysmemPartitionInfo partitionInfo;
+        partitionInfo.size = sizeof(SceSysmemPartitionInfo);
+        status = sceKernelQueryMemoryPartitionInfo(threadOptions.stackMpid, &partitionInfo); // 0x00008328
+                
+        if (pMod->status & SCE_MODULE_USER_MODULE) { // 0x00008318
+            if (status < SCE_ERROR_OK || !(partitionInfo.attr & 0x3)) { // 0x00008330 & 0x00008340
+                if (pMod->stubTop != (void *)-1)
+                    sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
+                 
+                _ModuleReleaseLibraries(pMod); // 0x00008374
+                return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
+            }
+        } else {
+            if (status < SCE_ERROR_OK || !(partitionInfo.attr != 12)) //0x000083D4 & 0x000083E4
+                if (pMod->stubTop != (void *)-1) // 0x00008364
+                    sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
+                 
+                _ModuleReleaseLibraries(pMod); // 0x00008374
+                return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
+        }
+    }
+    pspSetGp(pMod->gpValue); //0x00008384
+            
+    status = sceKernelCreateThread("SceModmgrStart", (SceKernelThreadEntry)modStart, threadPriority, stackSize, 
+                    threadAttr, &threadOptions); // 0x000083A0
+    pMod->userModThid = status; // 0x000083A8
+            
+    pspSetGp(oldGp); // 0x000083AC
+            
+    if (status < SCE_ERROR_OK) { // 0x000083C0
+        if (pMod->stubTop != (void *)-1) // 0x00008364
+            sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
+                 
+        _ModuleReleaseLibraries(pMod); // 0x00008374
+        return status;
+    }
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_0000844C
 // 0x0000844C
-void sub_0000844C()
+s32 ModuleRegisterLibraries(SceModule *pMod)
 {
+    
 }
 
 // TODO: Reverse function sub_00008568
 // 0x00008568
-void sub_00008568()
+void CheckOverride()
 {
 }
 
