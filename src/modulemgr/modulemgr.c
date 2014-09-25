@@ -7,6 +7,7 @@
 #include <iofilemgr_kernel.h>
 #include <loadcore.h>
 #include <modulemgr.h>
+#include <modulemgr_nids.h>
 #include <modulemgr_options.h>
 #include <sysmem_kernel.h>
 #include <threadman_kernel.h>
@@ -4028,10 +4029,61 @@ s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize ar
     return status;
 }
 
-// TODO: Reverse function sub_00007968
-// 0x00007968
-void ProcessModuleExportEnt()
+// sub_00007968
+static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable *pLib)
 {
+    u32 i;
+    SceModuleEntryThread *entryThread;
+    
+    if (pMod->status & 0x400) // 0x00007970
+        return SCE_ERROR_OK;
+    
+    pMod->status |= 0x400; // 0x0000797C
+    
+    //0x00007988 - 0x000079F8
+    for (i = 0; i < pLib->stubCount; i++) {        
+         switch (pLib->entryTable[i]) { 
+         case NID_MODULE_REBOOT_PHASE: //0x000079C0
+             pMod->moduleRebootPhase = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007C14
+             break;
+         case NID_MODULE_BOOTSTART: //0x00007B94
+             pMod->moduleBootstart = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007BF4
+             break;
+         case NID_MODULE_START: //0x00007BCC
+             pMod->moduleStart = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007BF0
+             break;
+         case NID_MODULE_STOP: //0x00007BA4
+             pMod->moduleStop = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007BC8
+             break;
+         case NID_MODULE_REBOOT_BEFORE: //0x000079E8
+             pMod->moduleRebootBefore = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007B8C
+             break;
+         }         
+    }
+    //0x00007A04 - 0x00007A6C
+    for (i = 0; i < pLib->vStubCount; i++) {
+         switch (pLib->entryTable[pLib->vStubCount + i]) {
+         case NID_MODULE_STOP_THREAD_PARAM: //0x000034D0
+             entryThread = (SceModuleEntryThread *)pLib->entryTable[2 * pLib->stubCount + pLib->vStubCount + i];
+             pMod->moduleStopThreadPriority = entryThread->initPriority; //0x00007AF0
+             pMod->moduleStopThreadStacksize = entryThread->stackSize; //0x00007AF8
+             pMod->moduleStopThreadAttr = entryThread->attr; //0x00007B04
+             break;
+         case NID_MODULE_REBOOT_BEFORE_THREAD_PARAM: //0x00007B08
+             entryThread = (SceModuleEntryThread *)pLib->entryTable[2 * pLib->stubCount + pLib->vStubCount + i];
+             pMod->moduleRebootBeforeThreadPriority = entryThread->initPriority; //0x00007B30
+             pMod->moduleRebootBeforeThreadStacksize = entryThread->stackSize; //0x00007B38
+             pMod->moduleRebootBeforeThreadAttr = entryThread->attr; //0x00007B44
+             break;               
+         case NID_MODULE_START_THREAD_PARAM: //0x000034E0
+             entryThread = (SceModuleEntryThread *)pLib->entryTable[2 * pLib->stubCount + pLib->vStubCount + i];
+             pMod->moduleStartThreadPriority = entryThread->initPriority; //0x00007A98
+             pMod->moduleStartThreadStacksize = entryThread->stackSize; //0x00007AA0
+             pMod->moduleStartThreadAttr = entryThread->attr; //0x00007AA8
+             break;
+        }
+    }
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_00007C34
@@ -4183,7 +4235,7 @@ static s32 ModuleRegisterLibraries(SceModule *pMod)
         SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
         if (!pCurTable->attribute & SCE_LIB_AUTO_EXPORT) { //0x00006FB4
             if (pCurTable->attribute == SCE_LIB_IS_SYSLIB)
-                ProcessModuleExportEnt(pCurTable); // 0x00008558
+                _ProcessModuleExportEnt(pMod, pCurTable); // 0x00008558
             
             pCurEntry += pCurTable->len * sizeof(void *);
             continue;
