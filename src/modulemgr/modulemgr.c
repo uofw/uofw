@@ -4166,11 +4166,50 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function sub_0000844C
-// 0x0000844C
-s32 ModuleRegisterLibraries(SceModule *pMod)
+// sub_0000844C
+static s32 ModuleRegisterLibraries(SceModule *pMod)
 {
+    void *pCurEntry;
+    void *pLastEntry;
+    s32 status;
     
+    pCurEntry = pMod->entTop;
+    pLastEntry = pMod->entTop + pMod->entSize;
+    
+    // 0x00008468 & 0x0000847C - 0x000084C4
+    while (pCurEntry < pLastEntry) {
+        SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
+        if (!pCurTable->attribute & SCE_LIB_AUTO_EXPORT) { //0x00006FB4
+            if (pCurTable->attribute == SCE_LIB_IS_SYSLIB)
+                ProcessModuleExportEnt(pCurTable); // 0x00008558
+            
+            pCurEntry += pCurTable->len * sizeof(void *);
+            continue;
+        }
+        
+        /* Register resident libraries. */
+        if (pMod->status & SCE_MODULE_USER_MODULE) // 0x0000849C
+            status = sceKernelRegisterLibraryForUser(pCurEntry); // 0x000084A4
+        else
+            status = sceKernelRegisterLibrary(pCurEntry); // 0x0000853C
+        
+        /* Unregister the successfully registered resident libraries in case of an error. */
+        if (status < SCE_ERROR_OK) { // 0x000084AC
+            pLastEntry = pCurEntry;
+            pCurEntry = pMod->entTop;
+            // 0x000084F4
+            while (pCurEntry < pLastEntry) {
+                *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
+                if (pCurTable->attribute & SCE_LIB_AUTO_EXPORT) // 0x00008504
+                    sceKernelReleaseLibrary(pCurTable); // 0x0000852C
+                
+                pCurEntry += pCurTable->len * sizeof(void *);
+            }
+            return status;   
+        }
+        pCurEntry += pCurTable->len * sizeof(void *);  // 0x000084BC
+    }
+    return SCE_ERROR_OK;
 }
 
 // TODO: Reverse function sub_00008568
