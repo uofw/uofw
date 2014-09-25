@@ -3652,7 +3652,7 @@ void _RelocateModule()
 }
 
 // sub_00006F80
-s32 _ModuleReleaseLibraries(SceModule *pMod)
+static s32 _ModuleReleaseLibraries(SceModule *pMod)
 {
     void *pCurEntry;
     void *pLastEntry;
@@ -3662,8 +3662,10 @@ s32 _ModuleReleaseLibraries(SceModule *pMod)
     
     while (pCurEntry < pLastEntry) {
         SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
-        if (pCurTable->attribute & SCE_LIB_IS_SYSLIB) //0x00006FB4
+        if (pCurTable->attribute & SCE_LIB_IS_SYSLIB) { //0x00006FB4
+            pCurEntry += pCurTable->len * sizeof(void *);
             continue;
+        }
         
         sceKernelReleaseLibrary(pCurTable); //0x00006FBC
         
