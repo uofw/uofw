@@ -33,6 +33,7 @@
 #include <loadcore.h>
 #include <memlmd.h>
 #include <modulemgr.h>
+#include <modulemgr_nids.h>
 #include <sysmem_kdebug.h>
 #include <sysmem_utils_kernel.h>
 
