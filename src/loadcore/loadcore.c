@@ -2058,19 +2058,19 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->vStubCount; i++) {
          switch (lib->entryTable[lib->vStubCount + i]) {
          case NID_MODULE_STOP_THREAD_PARAM: //0x000034D0
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleStopThreadPriority = entryThread->initPriority; //0x000035A4
              mod->moduleStopThreadStacksize = entryThread->stackSize; //0x000035AC
              mod->moduleStopThreadAttr = entryThread->attr; //0x000035B8
              break;
          case NID_MODULE_REBOOT_BEFORE_THREAD_PARAM: //0x00003544
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleRebootBeforeThreadPriority = entryThread->initPriority; //0x0000356C
              mod->moduleRebootBeforeThreadStacksize = entryThread->stackSize; //0x00003574
              mod->moduleRebootBeforeThreadAttr = entryThread->attr; //0x00003580
              break;               
          case NID_MODULE_START_THREAD_PARAM: //0x000034E0
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleStartThreadPriority = entryThread->initPriority; //0x00003520
              mod->moduleStartThreadStacksize = entryThread->stackSize; //0x00003528
              mod->moduleStartThreadAttr = entryThread->attr; //0x00003530
