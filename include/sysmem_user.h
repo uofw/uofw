@@ -26,9 +26,11 @@ enum SceSysMemPartitionId {
 };
 
 enum SceSysMemBlockType {
-    SCE_KERNEL_SMEM_Low = 0,
-    SCE_KERNEL_SMEM_High = 1,
-    SCE_KERNEL_SMEM_Addr = 2
+    SCE_KERNEL_SMEM_Low         = 0,
+    SCE_KERNEL_SMEM_High        = 1,
+    SCE_KERNEL_SMEM_Addr        = 2,
+    SCE_KERNEL_SMEM_LOWALIGNED  = 3,
+    SCE_KERNEL_SMEM_HIGHALIGNED = 4
 };
 
 #endif	/* SYSMEM_USER_H */
