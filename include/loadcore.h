@@ -636,7 +636,7 @@ typedef struct {
      */
     u32 isSignChecked; //100
     /** Unknown. */
-    u32 unk104;
+    char *secureInstallId; // 104
     /** The size of the GZIP compression overlap. */
     SceSize overlapSize; //108
     /** Pointer to the first resident library entry table of the module. */

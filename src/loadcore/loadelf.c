@@ -1289,13 +1289,13 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_18:
-        if (sceMesgLed_driver_CED2C075(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_CED2C075(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_19:
-        if (sceMesgLed_driver_C7D1C16B(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_C7D1C16B(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         execInfo->isDecrypted = SCE_TRUE;
@@ -1304,7 +1304,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS) //0x00005C30
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_EBB4613D(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_EBB4613D(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         execInfo->isDecrypted = SCE_TRUE;
@@ -1313,7 +1313,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS) //0x00005C60
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_66B348B2(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_66B348B2(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         execInfo->isDecrypted = SCE_TRUE;
@@ -1331,7 +1331,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) //0x00005CB8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_91E0A9AD(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_91E0A9AD(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         execInfo->isDecrypted = SCE_TRUE;
@@ -1340,7 +1340,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) //0x00005CE4
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_31D6D8AA(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_31D6D8AA(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         execInfo->isDecrypted = SCE_TRUE;
