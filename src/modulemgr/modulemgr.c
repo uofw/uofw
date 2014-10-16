@@ -4494,10 +4494,39 @@ s32 _CheckSkipPbpHeader()
 {
 }
 
-// TODO: Reverse function sub_00007FD0
-// 0x00007FD0
-void PartitionCheck()
+// sub_00007FD0
+s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
 {
+    s32 status;
+    
+    if (pExecInfo->isKernelMod) { // 0x00007FE8
+        pExecInfo->partitionId = SCE_KERNEL_PRIMARY_KERNEL_PARTITION; // 0x000080A8
+        if (pModParams->mpIdText != 0) {
+            status = _CheckKernelOnlyMemoryPartition(pModParams->mpIdText);
+            if (status < SCE_ERROR_OK)
+                return status;
+            pExecInfo->partitionId = pModParams->mpIdText; // 0x00008120
+        }
+        if (pModParams->mpIdData != 0) { // 0x000080B0
+            status = _CheckKernelOnlyMemoryPartition(pModParams->mpIdText);
+            if (status < SCE_ERROR_OK)
+                return status;
+        }
+    } else {
+        pExecInfo->partitionId = SCE_KERNEL_PRIMARY_USER_PARTITION;
+        if (pModParams->mpIdText != 0) {
+            status = _CheckUserMemoryPartition(pModParams->mpIdText);
+            if (status < SCE_ERROR_OK)
+                return status;
+            pExecInfo->partitionId = pModParams->mpIdText; // 0x00008098
+        }
+        if (pModParams->mpIdData != 0) { // 0x00008004
+            status = _CheckUserMemoryPartition(pModParams->mpIdData);
+            if (status < SCE_ERROR_OK)
+                return status;
+        }
+    }
+    return SCE_ERROR_OK;
 }
 
 // sub_00008124
