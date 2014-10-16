@@ -3700,7 +3700,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
     while (1); // 0x00005D90
     
     s32 data2;
-    status = _CheckSkipPbpHeader(modParams, fd, pBlock, &data2); // 0x00005DB0
+    status = _CheckSkipPbpHeader(modParams, fd, pBlock, &data2, modParams->apiType); // 0x00005DB0
     if (status <= 0) { // 0x00005DB8
         ClearFreePartitionMemory(partitionId); // 0x0000674C - 0x00006780
         if (data != 0) // 0x0000678C
@@ -4490,8 +4490,48 @@ void allocate_module_block()
 }
 
 // sub_00007ED8
-s32 _CheckSkipPbpHeader()
+// TODO: Add a PBP header structure
+s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, u32 *pOffset, s32 apiType)
 {
+    (void)pModParams;
+    u8 *data = (u8 *)pBlock;
+    
+    switch (apiType) {
+    case SCE_INIT_APITYPE_DISC_EMU_MS2:
+    case SCE_INIT_APITYPE_DISC_EMU_EF2:
+    case SCE_INIT_APITYPE_MS1:
+    case SCE_INIT_APITYPE_MS2:
+    case SCE_INIT_APITYPE_MS3:
+    case SCE_INIT_APITYPE_MS4:
+    case SCE_INIT_APITYPE_MS5:
+    case SCE_INIT_APITYPE_MS6:
+    case SCE_INIT_APITYPE_EF1:
+    case SCE_INIT_APITYPE_EF2:
+    case SCE_INIT_APITYPE_EF3:
+    case SCE_INIT_APITYPE_EF4:
+    case SCE_INIT_APITYPE_EF5:
+    case SCE_INIT_APITYPE_EF6:
+    case SCE_INIT_APITYPE_UNK_GAME1:
+    case SCE_INIT_APITYPE_UNK_GAME2:
+        // 0x00007F14
+        if (data[0] != 0 || data[1] != 'P' || data[2] != 'B' || data[3] != 'P') // 0x00007F40
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+        
+        if (pOffset != NULL)
+            *pOffset = ((u32 *)data)[9] - ((u32 *)data)[8];
+            
+         sceIoLseek(fd, ((u32 *)data)[8], SCE_SEEK_CUR); // 0x00007F6C
+         return ((u32 *)data)[8];
+        
+    default:
+        // 0x00007F8C
+        if (data[0] != 0 || data[1] != 'P' || data[2] != 'B' || data[3] != 'P') // 0x00007FB8
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+        
+        if (pOffset != NULL)
+            *pOffset = 0;
+        return SCE_ERROR_OK;
+    }
 }
 
 // sub_00007FD0
