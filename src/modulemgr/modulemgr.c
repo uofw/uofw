@@ -18,6 +18,8 @@
 #define GET_MCB_STATUS(status)  (status & 0xF)
 #define SET_MCB_STATUS(v, m)    (v = (v & ~0xF) | m)
 
+#define FILE_USER_ACCESS_PERMISSIONS    (SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH)
+
 typedef struct {
     SceUID threadId; // 0
     SceUID semaId; // 4
@@ -329,7 +331,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
         return status;
     }
     
-    fd = sceIoOpen(file, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); //0x00000528
+    fd = sceIoOpen(file, SCE_O_FGAMEDATA | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); //0x00000528
     if (fd < 0) { //0x00000534
         pspSetK1(oldK1);
         return fd;
@@ -414,7 +416,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00000734
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00000734
     if (fd < 0) { // 0x00000740
         pspSetK1(oldK1);
         return fd;
@@ -566,7 +568,7 @@ s32 sceKernelLoadModuleWithBlockOffset(const char *path, SceUID block, SceOff of
         return status;
     }
     
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); //0x00000B5C
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); //0x00000B5C
     if (fd < 0) { //0x00000B68
         pspSetK1(oldK1);
         return fd;
@@ -726,7 +728,7 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
     }
 
     fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_UNKNOWN0 | SCE_O_RDONLY, 
-            SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00000EB8
+            FILE_USER_ACCESS_PERMISSIONS); // 0x00000EB8
     if (fd < 0) { // 0x00000EC4
         pspSetK1(oldK1);
         return fd;
@@ -814,7 +816,7 @@ void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x000010DC
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x000010DC
     if (fd < 0) { // 0x000010E8
         pspSetK1(oldK1);
         return fd;
@@ -899,7 +901,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags, SceKernelLMOption *pOpt)
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x0000133C
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x0000133C
     if (fd < 0) { // 0x00001348
         pspSetK1(oldK1);
         return fd;
@@ -1065,7 +1067,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flags, SceKernel
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00001700
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001700
     if (fd < 0) { // 0x0000170C
         pspSetK1(oldK1);
         return fd;
@@ -1116,7 +1118,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flags, Sc
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x00001894
+    if ((status = _checkCallConditionKernel()) < 0) { //0x00001894
         pspSetK1(oldK1);
         return status;
     }
@@ -1127,7 +1129,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flags, Sc
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x000018D0
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x000018D0
     if (fd < 0) { // 0x000018DC
         pspSetK1(oldK1);
         return fd;
@@ -1178,7 +1180,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flags, SceK
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x00001A64
+    if ((status = _checkCallConditionKernel()) < 0) { //0x00001A64
         pspSetK1(oldK1);
         return status;
     }
@@ -1189,7 +1191,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flags, SceK
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00001AA0
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001AA0
     if (fd < 0) { // 0x00001AAC
         pspSetK1(oldK1);
         return fd;
@@ -1240,7 +1242,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s32 
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x00001C3C
+    if ((status = _checkCallConditionKernel()) < 0) { //0x00001C3C
         pspSetK1(oldK1);
         return status;
     }
@@ -1251,7 +1253,7 @@ s32 sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s32 
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00001C78
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001C78
     if (fd < 0) { // 0x00001C84
         pspSetK1(oldK1);
         return fd;
@@ -1303,7 +1305,7 @@ s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flags, SceKer
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x00001E18
+    if ((status = _checkCallConditionKernel()) < 0) { //0x00001E18
         pspSetK1(oldK1);
         return status;
     }
@@ -1314,7 +1316,7 @@ s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flags, SceKer
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00001E54
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001E54
     if (fd < 0) { // 0x00001E60
         pspSetK1(oldK1);
         return fd;
@@ -1368,7 +1370,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 flag
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x0000201C
+    if ((status = _checkCallConditionKernel()) < 0) { //0x0000201C
         pspSetK1(oldK1);
         return status;
     }
@@ -1379,7 +1381,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 flag
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002058
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002058
     if (fd < 0) { // 0x00002064
         pspSetK1(oldK1);
         return fd;
@@ -1430,7 +1432,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 flag
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x000021F4
+    if ((status = _checkCallConditionKernel()) < 0) { //0x000021F4
         pspSetK1(oldK1);
         return status;
     }
@@ -1441,14 +1443,14 @@ s32 sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 flag
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002230
-    if (fd < 0) { // 0x0000223C
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002230
+    if (fd < SCE_ERROR_OK) { // 0x0000223C
         pspSetK1(oldK1);
         return fd;
     }
 
     status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x0000225C
-    if (status < 0) { // 0x00002268
+    if (status < SCE_ERROR_OK) { // 0x00002268
         sceIoClose(fd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
@@ -1493,7 +1495,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 flag
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x000023D0
+    if ((status = _checkCallConditionKernel()) < 0) { //0x000023D0
         pspSetK1(oldK1);
         return status;
     }
@@ -1504,7 +1506,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 flag
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x0000240C
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x0000240C
     if (fd < 0) { // 0x00002418
         pspSetK1(oldK1);
         return fd;
@@ -1558,7 +1560,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 flag
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x000025D4
+    if ((status = _checkCallConditionKernel()) < 0) { //0x000025D4
         pspSetK1(oldK1);
         return status;
     }
@@ -1569,7 +1571,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 flag
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002610
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002610
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1621,7 +1623,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 flag
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { //0x000027B4
+    if ((status = _checkCallConditionKernel()) < 0) { //0x000027B4
         pspSetK1(oldK1);
         return status;
     }
@@ -1632,7 +1634,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 flag
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x000027F0
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x000027F0
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1705,7 +1707,7 @@ s32 sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 flag
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002A00
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002A00
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1778,7 +1780,7 @@ s32 ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flags, SceKer
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002C0C
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002C0C
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1849,7 +1851,7 @@ s32 sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff fi
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00002E40
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002E40
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1921,7 +1923,7 @@ s32 sceKernelLoadModuleVSH(const char *path, s32 flags, SceKernelLMOption *pOpti
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00003078
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00003078
     if (fd < 0) { // 0x00003084
         pspSetK1(oldK1);
         return fd;
@@ -1975,7 +1977,7 @@ s32 sceKernelLoadModuleVSHByID(s32 inputId, s32 flags, SceKernelLMOption *pOptio
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionUser()) < 0 ) { //0x0000321C
+    if ((status = _checkCallConditionUser()) < 0) { //0x0000321C
         pspSetK1(oldK1);
         return status;
     }
@@ -2052,7 +2054,7 @@ s32 sceKernelLoadModuleForKernel(const char *path, u32 flags, const SceKernelLMO
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x0000340C
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x0000340C
     if (fd < 0) { // 0x00000740
         pspSetK1(oldK1);
         return fd;
@@ -2179,7 +2181,7 @@ s32 sceKernelLoadModuleToBlock(const char *path, u32 block, u32 *arg2, u32 flags
     }
     
     // 0x000037C4
-    if (pOption != NULL && pOption->position >= 2) {
+    if (pOption != NULL && pOption->position >= SCE_KERNEL_SMEM_Addr) {
         // Missing pspSetK1(oldk1) here
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     }
@@ -2191,7 +2193,7 @@ s32 sceKernelLoadModuleToBlock(const char *path, u32 block, u32 *arg2, u32 flags
     }
     
     // 0x000037F8
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH);
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS);
     if (fd < 0) { // 0x00003804
         pspSetK1(oldK1);
         return fd;
@@ -2260,7 +2262,7 @@ s32 sceKernelLoadModuleBootInitConfig(const char *path, u32 flags, SceKernelLMOp
         return status;
     }
     
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00003C5C
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00003C5C
     if (fd < 0) { // 0x00003C68
         pspSetK1(oldK1);
         return fd;
@@ -2320,7 +2322,7 @@ s32 sceKernelLoadModuleDeci(const char *path, u32 flags, SceKernelLMOption *pOpt
         return status;
     }
     
-    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH); // 0x00003A70
+    fd = sceIoOpen(path, SCE_O_UNKNOWN0 | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00003A70
     if (fd < 0) { // 0x00003804
         pspSetK1(oldK1);
         return fd;
@@ -2353,7 +2355,7 @@ s32 sceKernelLoadModuleDeci(const char *path, u32 flags, SceKernelLMOption *pOpt
 }
 
 // Subroutine ModuleMgrForUser_50F0C1EC - Address 0x00003D98 - Aliases: ModuleMgrForKernel_3FF74DF1
-s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *modResult, 
+s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *pModResult, 
         const SceKernelSMOption *pOpt)
 {
     s32 oldK1;
@@ -2372,7 +2374,7 @@ s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *modR
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     
-    if (modResult != NULL && !pspK1PtrOk(modResult)) { //0x00003E18, 0x00003E10
+    if (pModResult != NULL && !pspK1PtrOk(pModResult)) { //0x00003E18, 0x00003E10
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -2391,7 +2393,7 @@ s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *modR
     modParams.modId = modId; // 0x00003ECC
     modParams.argSize = args;
     modParams.argp = argp;
-    modParams.pStatus = modResult;
+    modParams.pStatus = pModResult;
     
     if (pOpt != NULL) { //0x00003EDC
         modParams.threadMpIdStack = pOpt->mpidstack;
@@ -2411,7 +2413,7 @@ s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *modR
 }
 
 // Subroutine ModuleMgrForUser_D1FF982A - Address 0x00003F28 - Aliases: ModuleMgrForKernel_E5D6087B
-s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modResult, const SceKernelSMOption *pOpt)
+s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, s32 *pModResult, const SceKernelSMOption *pOpt)
 {
     s32 oldK1;
     s32 status;
@@ -2432,7 +2434,7 @@ s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modRe
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     
-    if (modResult != NULL && !pspK1StaBufOk(modResult, sizeof(modResult))) { //0x00003F9C, 0x00003FB0
+    if (pModResult != NULL && !pspK1StaBufOk(pModResult, sizeof(*pModResult))) { //0x00003F9C, 0x00003FB0
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -2464,7 +2466,7 @@ s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, int *modRe
     modParams.callerModId = pMod->modId; // 0x000040BC
     modParams.argSize = args;
     modParams.argp = argp;
-    modParams.pStatus = modResult;
+    modParams.pStatus = pModResult;
     
     if (pOpt != NULL) { //0x000040C4
         modParams.threadMpIdStack = pOpt->mpidstack;
@@ -2535,7 +2537,7 @@ s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
 
     oldK1 = pspShiftK1();
 
-    if (modIdList == NULL || idCount == NULL || !pspK1DynBufOk(modIdList, size) || !pspK1StaBufOk(idCount, 4)) { // 0x00004200, 0x00004220, 0x00004238, 0x00004244 
+    if (modIdList == NULL || idCount == NULL || !pspK1DynBufOk(modIdList, size) || !pspK1StaBufOk(idCount, sizeof(u32))) { // 0x00004200, 0x00004220, 0x00004238, 0x00004244 
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -2557,7 +2559,7 @@ s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
  * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer is NULL or can't be accessed from the current context.
  * @return SCE_ERROR_KERNEL_ILLEGAL_SIZE if SDK version >= 2.80  and modInfo->size != sizeof(SceKernelModuleInfoV1) && modInfo->size != sizeof(*modInfo)
  * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found
- * @return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO if the module status is 0x100 or you don't have the right to access information about this module
+ * @return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO if you don't have the right to access information about this module
  */
 // Subroutine sceKernelQueryModuleInfo - Address 0x00004270 - Aliases: ModuleMgrForKernel_22BDBEFF
 s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *pModInfo)
@@ -2646,7 +2648,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *pModInfo)
 
     // If we have a v2 structure (more fields, size: 96)
     // TODO: find what 0x1E00 exactly represents
-    pModInfo->attribute = pMod->attribute & ~0x0001E00;
+    pModInfo->attribute = pMod->attribute & ~0x1E00;
     pModInfo->version[MODULE_VERSION_MINOR] = pMod->version[MODULE_VERSION_MINOR];
     pModInfo->version[MODULE_VERSION_MAJOR] = pMod->version[MODULE_VERSION_MAJOR];
     strncpy(pModInfo->modName, pModInfo->modName, SCE_MODULE_NAME_LEN);
@@ -2776,9 +2778,9 @@ s32 sceKernelGetModuleGPByAddress(const void *codeAddr, u32 *pGP)
     intrState = sceKernelLoadCoreLock(); // 0x00004684
 
     pMod = sceKernelFindModuleByAddress(codeAddr); // 0x00004698
-    if (pMod == NULL) { // 0x000046A0
+    if (pMod == NULL) // 0x000046A0
         retVal = SCE_ERROR_KERNEL_UNKNOWN_MODULE; // 0x0000469C
-    } else {
+    else {
         retVal = SCE_ERROR_OK; // 0x000046AC
         *pGP = pMod->gpValue; // 0x000046B0
     }
@@ -2855,12 +2857,10 @@ s32 sceKernelRebootBeforeForUser(void *arg)
         
         SceKernelThreadOptParam threadParams;
         threadParams.size = sizeof(threadParams); //0x000048AC
-        threadParams.stackMpid(pMod->mpIdData); //0x000048CC
+        threadParams.stackMpid = pMod->mpIdData; //0x000048CC
         
-        SceSysmemPartitionInfo partInfo;
-        partInfo.size = sizeof(SceSysmemPartitionInfo); //0x000048BC
-        status = sceKernelQueryMemoryPartitionInfo(pMod->mpIdData, &partInfo); //0x000048C8
-        if (status < SCE_ERROR_OK || !(partInfo.attr & 0x3)) //0x000048D0, 0x000048E0
+        status = _CheckUserModulePartition(pMod->mpIdData); // 0x000048BC - 0x000048E0
+        if (status < SCE_ERROR_OK)
             threadParams.stackMpid = SCE_KERNEL_PRIMARY_USER_PARTITION;
                 
         pspSetGp(pMod->gpValue); //0x00004900
@@ -2955,15 +2955,7 @@ s32 sceKernelRebootPhaseForKernel(SceSize args, void *argp, s32 arg3, s32 arg4)
         continue;
     }
     
-    SceSysmemMemoryBlockInfo blkInfo;
-    blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
-    status = sceKernelQueryMemoryBlockInfo(uidBlkId, &blkInfo); //0x00004A74
-    if (status < SCE_ERROR_OK) //0x00004A80
-        return status;
-    
-    sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); //0x00004AAC
-    status = sceKernelFreePartitionMemory(uidBlkId); //0x00004AB4
-    
+    status = ClearFreePartitionMemory(uidBlkId); // 0x00004A74 - 0x00004AB4
     return ((status > SCE_ERROR_OK) ? SCE_ERROR_OK : status);
 }
 
@@ -2995,15 +2987,7 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
         pMod->moduleRebootBefore(argp, arg2, arg3, arg4); //0x00004CB8
     }
     
-    SceSysmemMemoryBlockInfo blkInfo;
-    blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
-    status = sceKernelQueryMemoryBlockInfo(uidBlkId, &blkInfo); //0x00004C24
-    if (status < SCE_ERROR_OK) //0x00004C2C
-        return status;
-    
-    sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); //0x00004C58
-    status = sceKernelFreePartitionMemory(uidBlkId); //0x00004C60
-    
+    status = ClearFreePartitionMemory(uidBlkId); // 0x00004C24 - 0x00004C60
     return ((status > SCE_ERROR_OK) ? SCE_ERROR_OK : status);
 }
 
@@ -3775,14 +3759,14 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
                 }
             }
             if (pExecInfo->isKernelMod) { // 0x0000656C
-                status = _CheckKernelOnlyMemoryPartition(modParams->unk108); // 0x00006574 - 0x0000659C
+                status = _CheckKernelOnlyModulePartition(modParams->unk108); // 0x00006574 - 0x0000659C
                 if (status < SCE_ERROR_OK) { // 0x00006608 & 0x00006618
                     _FreeMemoryResources(data, partitionId, modParams, pExecInfo);
                     return status;
                 }
                 pExecInfo->partitionId = modParams->unk108; // 0x00006630
                 if (modParams->mpIdData != 0) { // 0x00006638
-                    status = _CheckKernelOnlyMemoryPartition(modParams->mpIdData); // 0x00006640 - 0x0000666C
+                    status = _CheckKernelOnlyModulePartition(modParams->mpIdData); // 0x00006640 - 0x0000666C
                     if (status < SCE_ERROR_OK) {
                         _FreeMemoryResources(data, partitionId, modParams, pExecInfo);
                         return status;
@@ -3790,14 +3774,14 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
                 }
             }
             else {
-                status = _CheckUserMemoryPartition(modParams->unk108); // 0x000065F8 - 0x00006620
+                status = _CheckUserModulePartition(modParams->unk108); // 0x000065F8 - 0x00006620
                 if (status < SCE_ERROR_OK) { // 0x00006608 & 0x00006618
                     _FreeMemoryResources(data, partitionId, modParams, pExecInfo);
                     return status;
                 }
                 pExecInfo->partitionId = modParams->unk108; // 0x000065AC
                 if (modParams->mpIdData != 0) { // 0x000065B0
-                    status = _CheckUserMemoryPartition(modParams->mpIdData); // 0x000065BC - 0x000065E4
+                    status = _CheckUserModulePartition(modParams->mpIdData); // 0x000065BC - 0x000065E4
                     if (status < SCE_ERROR_OK) {
                         _FreeMemoryResources(data, partitionId, modParams, pExecInfo);
                         return status;
@@ -4018,14 +4002,16 @@ static s32 ClearFreePartitionMemory(s32 partitionId)
     SceSysmemMemoryBlockInfo blkInfo;
     blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
     status = sceKernelQueryMemoryBlockInfo(partitionId, &blkInfo); // 0x000066D0
-    if (status >= SCE_ERROR_OK) { // 0x00006754
-        sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); // 0x00006778
-        sceKernelFreePartitionMemory(partitionId); // 0x00006780
-    }
+    if (status < SCE_ERROR_OK)
+        return status;
+    
+    sceKernelMemset(blkInfo.addr, 0, blkInfo.memSize); // 0x00006778
+    status = sceKernelFreePartitionMemory(partitionId); // 0x00006780
+    
     return status;
 }
 
-static s32 _CheckUserMemoryPartition(SceUID memoryPartitionId) 
+static s32 _CheckUserModulePartition(SceUID memoryPartitionId) 
 {
     s32 status;
     SceSysmemPartitionInfo partitionInfo;
@@ -4037,7 +4023,7 @@ static s32 _CheckUserMemoryPartition(SceUID memoryPartitionId)
     return SCE_ERROR_OK;
 }
 
-static s32 _CheckKernelOnlyMemoryPartition(SceUID memoryPartitionId) 
+static s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId) 
 {
     s32 status;
     SceSysmemPartitionInfo partitionInfo;
@@ -4173,9 +4159,9 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
             threadOptions.stackMpid = (modParams->threadMpIdStack == 0) ? pMod->mpIdData : modParams->threadMpIdStack; // 0x000072C0 & 0x000072CC
             if (threadOptions.stackMpid != 0) { //0x000072D4
                 if (pMod->status & SCE_MODULE_USER_MODULE) // 0x000072E0
-                    status = _CheckUserMemoryPartition(threadOptions.stackMpid);
+                    status = _CheckUserModulePartition(threadOptions.stackMpid);
                 else
-                    status = _CheckKernelOnlyMemoryPartition(threadOptions.stackMpid);
+                    status = _CheckKernelOnlyModulePartition(threadOptions.stackMpid);
                 
                 if (status < SCE_ERROR_OK)
                     return status;
@@ -4530,26 +4516,26 @@ s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExe
     if (pExecInfo->isKernelMod) { // 0x00007FE8
         pExecInfo->partitionId = SCE_KERNEL_PRIMARY_KERNEL_PARTITION; // 0x000080A8
         if (pModParams->mpIdText != 0) {
-            status = _CheckKernelOnlyMemoryPartition(pModParams->mpIdText);
+            status = _CheckKernelOnlyModulePartition(pModParams->mpIdText);
             if (status < SCE_ERROR_OK)
                 return status;
             pExecInfo->partitionId = pModParams->mpIdText; // 0x00008120
         }
         if (pModParams->mpIdData != 0) { // 0x000080B0
-            status = _CheckKernelOnlyMemoryPartition(pModParams->mpIdText);
+            status = _CheckKernelOnlyModulePartition(pModParams->mpIdText);
             if (status < SCE_ERROR_OK)
                 return status;
         }
     } else {
         pExecInfo->partitionId = SCE_KERNEL_PRIMARY_USER_PARTITION;
         if (pModParams->mpIdText != 0) {
-            status = _CheckUserMemoryPartition(pModParams->mpIdText);
+            status = _CheckUserModulePartition(pModParams->mpIdText);
             if (status < SCE_ERROR_OK)
                 return status;
             pExecInfo->partitionId = pModParams->mpIdText; // 0x00008098
         }
         if (pModParams->mpIdData != 0) { // 0x00008004
-            status = _CheckUserMemoryPartition(pModParams->mpIdData);
+            status = _CheckUserModulePartition(pModParams->mpIdData);
             if (status < SCE_ERROR_OK)
                 return status;
         }
@@ -4635,9 +4621,9 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
     threadOptions.stackMpid = (modParams->threadMpIdStack == 0) ? pMod->mpIdData : modParams->threadMpIdStack; // 0x000082F8 & 0x000083F8
     if (threadOptions.stackMpid != 0) { // 0x0000830C
         if (pMod->status & SCE_MODULE_USER_MODULE)
-            status = _CheckUserMemoryPartition(threadOptions.stackMpid);
+            status = _CheckUserModulePartition(threadOptions.stackMpid);
         else
-            status = _CheckKernelOnlyMemoryPartition(threadOptions.stackMpid);
+            status = _CheckKernelOnlyModulePartition(threadOptions.stackMpid);
         
         if (status < SCE_ERROR_OK) {
             if (pMod->stubTop != (void *)-1) // 0x00008364
