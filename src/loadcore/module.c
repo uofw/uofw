@@ -29,6 +29,7 @@
  */
 
 #include <sysmem_utils_kernel.h>
+#include <modulemgr_nids.h>
 #include "clibUtils.h"
 #include "module.h"
 

@@ -888,7 +888,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags, SceKernelLMOption *pOpt)
     
     status = sceKernelGetUserLevel();
     /* Verify if user level relates to the MS API. */
-    if (status != 1) { //0x00001300
+    if (status != SCE_USER_LEVEL_MS) { //0x00001300
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -968,12 +968,12 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flag
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }  
     
-    if ((status = _checkCallConditionUser()) < 0 ) { // 0x000014B8
+    if ((status = _checkCallConditionUser()) < 0) { // 0x000014B8
         pspSetK1(oldK1);
         return status;
     }  
 
-    if (sceKernelGetUserLevel() != 1 && sceKernelGetUserLevel() != 2) { // 0x0000150C
+    if (sceKernelGetUserLevel() != SCE_USER_LEVEL_MS && sceKernelGetUserLevel() != SCE_USER_LEVEL_USBWLAN) { // 0x0000150C
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -1910,8 +1910,7 @@ s32 sceKernelLoadModuleVSH(const char *path, s32 flags, SceKernelLMOption *pOpti
     }
     
     status = sceKernelGetUserLevel(); // 0x00003030
-    /* Verify if user level relates to the VSH API. */
-    if (status != 4) { //0x00001300
+    if (status != SCE_USER_LEVEL_VSH) { //0x00001300
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -1982,8 +1981,7 @@ s32 sceKernelLoadModuleVSHByID(s32 inputId, s32 flags, SceKernelLMOption *pOptio
     }
     
     status = sceKernelGetUserLevel(); // 0x0000324C
-    /* Verify if user level relates to the VSH API. */
-    if (status != 4) { //0x00003258
+    if (status != SCE_USER_LEVEL_VSH) { //0x00003258
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -2599,17 +2597,17 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
         return SCE_ERROR_KERNEL_UNKNOWN_MODULE;
     }
 
-    if (!pspK1IsUserMode()) { // 0x00004350
+    if (pspK1IsUserMode()) { // 0x00004350
         // TODO: document pMod->status
-        if (!(pMod->status & 0x100)) {
+        if (!(pMod->status & SCE_MODULE_USER_MODULE)) {
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO;
         }
 
         // TODO: find what 0x1E00 exactly represents
-        if ((sceKernelGetUserLevel() == 2 && pMod->attribute & 0x1E00 != SCE_MODULE_USB_WLAN) // 0x00004368,0x00004370,0x000044C0
-            || (sceKernelGetUserLevel() == 1 && pMod->attribute & 0x1E00 != SCE_MODULE_MS) // 0x0000437C,0x00004388,0x000044A8
-            || (sceKernelGetUserLevel() == 3 && pMod->attribute & 0x1E00 != SCE_MODULE_APP) // 0x00004390,0x0000439C,0x00004490
+        if ((sceKernelGetUserLevel() == SCE_USER_LEVEL_USBWLAN && pMod->attribute & 0x1E00 != SCE_MODULE_USB_WLAN) // 0x00004368,0x00004370,0x000044C0
+            || (sceKernelGetUserLevel() == SCE_USER_LEVEL_MS && pMod->attribute & 0x1E00 != SCE_MODULE_MS) // 0x0000437C,0x00004388,0x000044A8
+            || (sceKernelGetUserLevel() == SCE_USER_LEVEL_APP && pMod->attribute & 0x1E00 != SCE_MODULE_APP) // 0x00004390,0x0000439C,0x00004490
             && (pMod->attribute & 0x1E00) // 0x000043A8
             ) {
 
@@ -2629,7 +2627,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
 
     modInfo->nsegment = pMod->nSegments; // 0x000043C8
 
-    for (int i=0;i<SCE_KERNEL_MAX_MODULE_SEGMENT;i++) { // 0x000043F0
+    for (int i = 0; i < SCE_KERNEL_MAX_MODULE_SEGMENT; i++) { // 0x000043F0
         modInfo->segmentAddr[i] = pMod->segmentAddr[i]; // 0x000043E4
         modInfo->segmentSize[i] = pMod->segmentSize[i]; // 0x000043F4
     }
@@ -2650,7 +2648,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *modInfo)
 
     // If we have a v2 structure (more fields, size: 96)
     // TODO: find what 0x1E00 exactly represents
-    modInfo->attribute = pMod->attribute &~ 0x0001E00;
+    modInfo->attribute = pMod->attribute & ~0x0001E00;
     modInfo->version[MODULE_VERSION_MINOR] = pMod->version[MODULE_VERSION_MINOR];
     modInfo->version[MODULE_VERSION_MAJOR] = pMod->version[MODULE_VERSION_MAJOR];
     strncpy(modInfo->modName, modInfo->modName, SCE_MODULE_NAME_LEN);
@@ -3012,20 +3010,29 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
 }
 
 // 0x0000501C
-s32 ModuleMgrRebootPhase(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 ModuleMgrRebootPhase(s32 argc, void *argp)
 {
+    (void)argc;
+    (void)argp;
+        
     return SCE_ERROR_OK;
 }
 
 // 0x00005024
-s32 ModuleMgrRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
+s32 ModuleMgrRebootBefore(s32 argc, void *argp) 
 {
+    (void)argc;
+    (void)argp;
+    
     return sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
 }
 
 // 0x00005048
-s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused))) 
+s32 ModuleMgrInit(SceSize argc, void *argp) 
 {
+    (void)argc;
+    (void)argp;
+    
     ChunkInit();
     
     g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread, 
@@ -3046,7 +3053,7 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
 }
 
 // Subroutine ModuleMgrForKernel_61E3EC69 - Address 0x000050FC
-s32 sceKernelLoadModuleBufferForExitGame(u32 *modBuf, s32 flags, SceKernelLMOption *option, int opt)
+s32 sceKernelLoadModuleBufferForExitGame(u32 *modBuf, s32 flags, SceKernelLMOption *option, s32 opt)
 {
     s32 oldK1;
     s32 status;
@@ -3103,13 +3110,13 @@ s32 sceKernelLoadModuleBufferMs(SceSize bufSize, void *pBuffer, u32 flags, const
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }  
     
-    if ((status = _checkCallConditionUser()) < 0 ) { // 0x000051E8
+    if ((status = _checkCallConditionUser()) < 0) { // 0x000051E8
         pspSetK1(oldK1);
         return status;
     }  
 
     /* Check for MS API */
-    if (sceKernelGetUserLevel() != 1 && sceKernelGetUserLevel() != 3) { // 0x00005220 & 0x0000522C
+    if (sceKernelGetUserLevel() != SCE_USER_LEVEL_MS && sceKernelGetUserLevel() != SCE_USER_LEVEL_APP) { // 0x00005220 & 0x0000522C
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -3149,13 +3156,13 @@ s32 sceKernelLoadModuleBufferApp(SceSize bufSize, void *pBuffer, u32 flags, cons
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }  
     
-    if ((status = _checkCallConditionUser()) < 0 ) { // 0x000052D8
+    if ((status = _checkCallConditionUser()) < 0) { // 0x000052D8
         pspSetK1(oldK1);
         return status;
     }  
 
     /* Check for APP API */
-    if (sceKernelGetUserLevel() != 3) { // 0x00005308
+    if (sceKernelGetUserLevel() != SCE_USER_LEVEL_APP) { // 0x00005308
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -3277,13 +3284,13 @@ s32 sceKernelLoadModuleBufferVSH(SceSize bufSize, void *pBuffer, u32 flags, cons
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }  
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { // 0x0000552C
+    if ((status = _checkCallConditionKernel()) < 0) { // 0x0000552C
         pspSetK1(oldK1);
         return status;
     }  
 
     /* Check for VSH API */
-    if (sceKernelGetUserLevel() != 4) { // 0x0000555C
+    if (sceKernelGetUserLevel() != SCE_USER_LEVEL_VSH) { // 0x0000555C
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
@@ -3366,7 +3373,7 @@ s32 sceKernelLoadModuleBufferForKernel(SceSize bufSize, void *pBuffer, u32 flags
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }  
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { // 0x000056CC
+    if ((status = _checkCallConditionKernel()) < 0) { // 0x000056CC
         pspSetK1(oldK1);
         return status;
     } 
@@ -3503,7 +3510,7 @@ s32 sceKernelLoadModuleBufferBootInitBtcnf(SceSize modSize, u32 *modBuf, s32 fla
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }  
     
-    if ((status = _checkCallConditionKernel()) < 0 ) { // 0x00005900
+    if ((status = _checkCallConditionKernel()) < 0) { // 0x00005900
         pspSetK1(oldK1);
         return status;
     } 
@@ -3527,13 +3534,13 @@ s32 sceKernelLoadModuleBufferBootInitBtcnf(SceSize modSize, u32 *modBuf, s32 fla
 }
 
 // Subroutine ModuleMgrForKernel_5FC32087 - Address 0x00005978
-s32 sceKernelLoadModuleByIDBootInitConfig()
+s32 sceKernelLoadModuleByIDBootInitConfig(void)
 {
     return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 }
 
 // Subroutine ModuleMgrForKernel_E8B9D19D - Address 0x00005984
-s32 sceKernelLoadModuleBufferBootInitConfig()
+s32 sceKernelLoadModuleBufferBootInitConfig(void)
 {
     return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 }
@@ -3733,7 +3740,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
     }
     
     /* Calculate size of executable. */
-    if (pExecInfo->execSize !== 0) { // 0x00005E48
+    if (pExecInfo->execSize == 0) { // 0x00005E48
         pos = sceIoLseek(data, 0, SCE_SEEK_CUR); // 0x00006678
         u64 endPos = sceIoLseek(data, 0, SCE_SEEK_END); // 0x00006694
         sceIoLseek(data, pos, SCE_SEEK_SET); // 0x000066AC
@@ -4008,7 +4015,7 @@ static s32 ClearFreePartitionMemory(s32 partitionId)
     s32 status;
     
     if (partitionId <= 0)
-        return;
+        return 0;
     
     SceSysmemMemoryBlockInfo blkInfo;
     blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
@@ -4132,7 +4139,7 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
         return SCE_ERROR_KERNEL_MODULE_NOT_STARTED;
     case MCB_STATUS_STARTED:
         // 0x000071F4
-        if (pMod->moduleStop != -1) { // 0x000071FC
+        if ((s32)pMod->moduleStop != -1) { // 0x000071FC
             threadPriority = modParams->threadPriority;
             if (threadPriority == 0) { //0x00007208
                 threadPriority = (pMod->moduleStopThreadPriority == -1) ? SCE_KERNEL_MODULE_INIT_PRIORITY 
@@ -4143,7 +4150,7 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
                 stackSize = (pMod->moduleStopThreadStacksize == -1) ? 0 : pMod->moduleStopThreadStacksize; // 0x00007238
             
             threadAttr = (pMod->moduleStopThreadAttr == -1) ? SCE_KERNEL_TH_DEFAULT_ATTR : pMod->moduleStopThreadAttr; //0x00007250
-            if (modParams->threadAttr != 0)
+            if (modParams->threadAttr != SCE_KERNEL_TH_DEFAULT_ATTR)
                 threadAttr |= (modParams->threadAttr & 0xF06000); // 0x00007260           
             threadAttr &= ~0xF0000000; //0x0000726C
             
@@ -4268,7 +4275,7 @@ s32 _start_exe_thread(SceModuleMgrParam *modParams)
         return returnId;
     }
 
-    sceKernelWaitEventFlag(g_ModuleManager.eventId, 0x1, SCE_KERNEL_EW_CLEAR_ALL | SCE_KERNEL_EW_OR, NULL, NULL);
+    sceKernelWaitEventFlag(g_ModuleManager.eventId, 1, SCE_KERNEL_EW_CLEAR_ALL | SCE_KERNEL_EW_OR, NULL, NULL);
 
     sceKernelUnlockMutex(g_ModuleManager.semaId, 1);
     return returnId;
@@ -4323,13 +4330,8 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
     s32 status2;
 
     pMod = sceKernelFindModuleByAddress(codeAddr); // 0x000076FC
-    if (pMod == NULL) { // 0x0000770C
+    if (pMod == NULL || pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) // 0x0000770C & 0x00007720
         return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
-    }
-
-    if (pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) { // 0x00007720
-        return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
-    }
 
     pspClearMemory32(&modParams, sizeof(modParams)); // 0x00007734
 
@@ -4340,11 +4342,10 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
     modParams.argSize = args; // 0x0000775C
     modParams.callerModId = pMod->modId; // 0x00007764
 
-    if (pStatus == NULL) { // 0x00007760
+    if (pStatus == NULL) // 0x00007760
         modParams.pStatus = &status2; // 0x000077EC
-    } else {
+    else
         modParams.pStatus = pStatus; // 0x00007768
-    }
 
     if (pOpt == NULL) { // 0x0000776C
         modParams.threadMpIdStack = 0;
@@ -4359,9 +4360,8 @@ s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, 
     }
 
     status = _start_exe_thread(&modParams); // 0x00007794
-    if (status < 0) {
+    if (status < 0)
         return status;
-    }
 
     sceKernelExitDeleteThread(returnStatus); // 0x000077A4
 
@@ -4400,11 +4400,10 @@ s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize ar
         return status;
     }
 
-    if (pspK1IsUserMode()) { // 0x0000791C
+    if (pspK1IsUserMode()) // 0x0000791C
         codeAddr2 = sceKernelGetSyscallRA(); // 0x00007958
-    } else {
+    else
         codeAddr2 = codeAddr;
-    }
 
     if (!pspK1PtrOk(codeAddr2)) { // 0x0000792C
         pspSetK1(oldK1);
@@ -4573,7 +4572,7 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
         return status;
     
     // 0x0000816C
-    if (pMod->stubTop != -1) {
+    if ((s32)pMod->stubTop != -1) {
         if (pMod->status & SCE_MODULE_USER_MODULE) // 0x0000817C
             status = sceKernelLinkLibraryEntriesWithModule(pMod, pMod->stubTop, pMod->stubSize); // 0x00008188
         else
@@ -4599,7 +4598,7 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
         modStart = (pMod->moduleBootstart != modStart) ? pMod->moduleBootstart : (u32 *)pMod->entryAddr;
     
     /* No module entry point found */
-    if (modStart == (void *)-1 || modStart == NULL) {
+    if ((s32)modStart == -1 || modStart == NULL) {
         pMod->userModThid = -1;
         return SCE_ERROR_OK;
     }
@@ -4613,7 +4612,7 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
         stackSize = (pMod->moduleStartThreadStacksize == -1) ? 0 : pMod->moduleStartThreadStacksize; // 0x0000826C
             
     s32 threadAttr = (pMod->moduleStartThreadAttr == -1) ? SCE_KERNEL_TH_DEFAULT_ATTR : pMod->moduleStartThreadAttr; //0x00007250
-    if (modParams->threadAttr != 0) // 0x00008280
+    if (modParams->threadAttr != SCE_KERNEL_TH_DEFAULT_ATTR) // 0x00008280
         threadAttr |= (modParams->threadAttr & 0xF06000); // 0x00008294           
     threadAttr &= ~0xF0000000; //0x000082A4
     
@@ -4659,7 +4658,7 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
     pspSetGp(oldGp); // 0x000083AC
             
     if (status < SCE_ERROR_OK) { // 0x000083C0
-        if (pMod->stubTop != (void *)-1) // 0x00008364
+        if ((s32)pMod->stubTop != -1) // 0x00008364
             sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
                  
         _ModuleReleaseLibraries(pMod); // 0x00008374

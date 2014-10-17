@@ -48,6 +48,7 @@ int sceKernelDeleteThread(SceUID thid);
 int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
 int sceKernelSuspendThread(SceUID thid);
 int sceKernelExitThread(int status);
+s32 sceKernelExitDeleteThread(s32 exitStatus);
 int sceKernelTerminateDeleteThread(SceUID thid);
 int sceKernelDelayThread(SceUInt delay);
 int sceKernelChangeThreadPriority(SceUID thid, int priority);
@@ -60,6 +61,13 @@ int sceKernelReleaseWaitThread(SceUID thid);
 int sceKernelSuspendAllUserThreads(void);
 
 unsigned int sceKernelGetSystemTimeLow(void);
+
+enum SceUserLevel {
+    SCE_USER_LEVEL_MS       = 1,
+    SCE_USER_LEVEL_USBWLAN  = 2,
+    SCE_USER_LEVEL_APP      = 3,
+    SCE_USER_LEVEL_VSH      = 4,
+};
 int sceKernelGetUserLevel(void);
 
 typedef enum {

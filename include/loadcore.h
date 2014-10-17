@@ -665,6 +665,9 @@ typedef struct {
     u32 maxSegAlign; //188
 } SceLoadCoreExecFileInfo;
 
+/** SceModule.status */
+#define SCE_MODULE_USER_MODULE  (0x100)
+
 /** The SceModule structure represents a loaded module in memory. */
 typedef struct SceModule {
     /** Pointer to the next registered module. Modules are connected via a linked list. */
