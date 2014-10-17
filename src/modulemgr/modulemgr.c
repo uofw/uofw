@@ -121,7 +121,7 @@ static s32 _EpilogueModule(SceModule *pMod)
         
         pCurEntry += pCurTable->len * sizeof(void *); 
     }
-    if (pMod->stubTop != -1)
+    if (pMod->stubTop != (void *)-1)
         sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); //0x00000080
     
     _ModuleReleaseLibraries(pMod); //0x00000088
@@ -133,7 +133,7 @@ static s32 _UnloadModule(SceModule *pMod)
 {
     u32 modStat;
     
-    modStat = (pMod->status & 0xF);
+    modStat = GET_MCB_STATUS(pMod->status);
     if (modStat < MCB_STATUS_LOADED || (modStat >= MCB_STATUS_STARTING && modStat != MCB_STATUS_STOPPED))
         return SCE_ERROR_KERNEL_MODULE_CANNOT_REMOVE;
 
@@ -179,7 +179,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
         modParams->execInfo = &execInfo;
         status = _LoadModule(modParams); //0x000001E4
             
-        sceKernelChangeThreadPriority(0, SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000001F4
+        sceKernelChangeThreadPriority(SCE_KERNEL_TH_SELF, SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000001F4
             
         if (status < SCE_ERROR_OK) { //0x000001FC
             modParams->returnId[0] = status; //0x00000480
@@ -281,7 +281,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
     }
     // 00000350
     if (modParams->eventId != 0) {
-        sceKernelChangeThreadPriority(0, 1); //0x00000374
+        sceKernelChangeThreadPriority(SCE_KERNEL_TH_SELF, 1); //0x00000374
         sceKernelSetEventFlag(modParams->eventId, 1); //0x00000380
     }
     return SCE_ERROR_OK;
@@ -881,7 +881,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags, SceKernelLMOption *pOpt)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
     
-    if ((status = _checkCallConditionUser()) < 0 ) { //0x000012C4
+    if ((status = _checkCallConditionUser()) < 0) { //0x000012C4
         pspSetK1(oldK1);
         return status;
     }
@@ -2897,7 +2897,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
         if (checkSum == pMod->segmentChecksum)
             continue;
         
-        __asm__("break 0x0\n");
+        pspBreak(0);
         continue;
     }
     
@@ -2955,7 +2955,7 @@ s32 sceKernelRebootPhaseForKernel(SceSize args, void *argp, s32 arg3, s32 arg4)
         if (checkSum == pMod->segmentChecksum) //0x00004B58
             continue;
         
-        __asm__("break 0x0\n");
+        pspBreak(0);
         continue;
     }
     
@@ -3030,9 +3030,9 @@ s32 ModuleMgrInit(SceSize argc __attribute__((unused)), void *argp __attribute__
     
     g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread, 
             SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL); // 0x00005078
-    g_ModuleManager.semaId = sceKernelCreateSema("SceKernelModmgr", 0, 1, 1, NULL); // 0x0000509C
+    g_ModuleManager.semaId = sceKernelCreateSema("SceKernelModmgr", SCE_KERNEL_SA_THFIFO, 1, 1, NULL); // 0x0000509C
 
-    g_ModuleManager.eventId = sceKernelCreateEventFlag("SceKernelModmgr", SCE_EVENT_WAITAND, 0, 0); // 0x000050B8
+    g_ModuleManager.eventId = sceKernelCreateEventFlag("SceKernelModmgr", SCE_KERNEL_EW_AND, 0, NULL); // 0x000050B8
     
     g_ModuleManager.userThreadId = -1; // 0x000050DC
     g_ModuleManager.unk16 = -1; // 0x000050D0
@@ -3701,7 +3701,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
     
     s32 data2;
     status = _CheckSkipPbpHeader(modParams, fd, pBlock, &data2, modParams->apiType); // 0x00005DB0
-    if (status <= 0) { // 0x00005DB8
+    if (status < 0) { // 0x00005DB8
         ClearFreePartitionMemory(partitionId); // 0x0000674C - 0x00006780
         if (data != 0) // 0x0000678C
             sceIoClose(data); // 0x0000679C
@@ -3722,7 +3722,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
     }
     pExecInfo->modeAttribute = SCE_EXEC_FILE_NO_HEADER_COMPRESSION; // 0x00005E10
     if (modParams->unk124 & 0x1) // 0x00005E1C
-        pExecInfo->isSignChecked = 1; 
+        pExecInfo->isSignChecked = SCE_TRUE; 
     pExecInfo->secureInstallId = modParams->secureInstallId; // 0x00005E28
     char *secInstallId = modParams->secureInstallId; // 0x00005E38
     
@@ -3752,7 +3752,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
         if (modParams->unk104 == 0) { // 0x00006510
             status = _PartitionCheck(modParams, pExecInfo); // 0x0000651C
             pBlock = status; // 0x00006528 -- continue at loc_00005ECC
-            if (status != 0) { // 0x00006524
+            if (status != SCE_ERROR_OK) { // 0x00006524
                 _FreeMemoryResources(data, partitionId, modParams, pExecInfo);
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             }   
@@ -4077,15 +4077,14 @@ s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize,
 {
     s32 status;
     
-    status = pMod->status;
-    if ((status & 0xF) != MCB_STATUS_RELOCATED) // 0x00007034
+    if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_RELOCATED) // 0x00007034
         return SCE_ERROR_KERNEL_ERROR;
     
-    status = (status & ~0xF) | MCB_STATUS_STARTING; //0x0000704C
+    SET_MCB_STATUS(pMod->status, MCB_STATUS_STARTING); //0x0000704C
     
     status = _PrologueModule(modParams, pMod); // 0x00007048
     if (status < SCE_ERROR_OK) {
-        pMod->status = (pMod->status & ~0xF) | MCB_STATUS_RELOCATED; //0x00007138
+        SET_MCB_STATUS(pMod->status , MCB_STATUS_RELOCATED); //0x00007138
         return SCE_ERROR_KERNEL_ERROR;
     }
     
@@ -4106,13 +4105,13 @@ s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize,
     
     if (status != SCE_ERROR_OK) { // 0x000070A8
         _EpilogueModule(pMod);
-        pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STOPPED; //0x00007100
+        SET_MCB_STATUS(pMod->status, MCB_STATUS_STOPPED); //0x00007100
         _UnloadModule(pMod); // 0x00007104
         
         return status;
     }
     
-    pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STARTED; //0x000070B8
+    SET_MCB_STATUS(pMod->status, MCB_STATUS_STARTED); //0x000070B8
     return SCE_ERROR_OK;
 }
 
@@ -4125,8 +4124,7 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
     SceSize stackSize;
     SceUInt threadAttr;
     
-    status = pMod->status & 0xF;
-    switch (status) { // 0x000071A4
+    switch (GET_MCB_STATUS(pMod->status)) { // 0x000071A4
     case MCB_STATUS_NOT_LOADED: MCB_STATUS_LOADING: MCB_STATUS_STARTING: MCB_STATUS_UNLOADED:
         return SCE_ERROR_KERNEL_ERROR;
     case MCB_STATUS_LOADED: MCB_STATUS_RELOCATED:
@@ -4169,17 +4167,13 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
             threadOptions.size = sizeof(SceKernelThreadOptParam);
             threadOptions.stackMpid = (modParams->threadMpIdStack == 0) ? pMod->mpIdData : modParams->threadMpIdStack; // 0x000072C0 & 0x000072CC
             if (threadOptions.stackMpid != 0) { //0x000072D4
-                SceSysmemPartitionInfo partitionInfo;
-                partitionInfo.size = sizeof(SceSysmemPartitionInfo);
-                status = sceKernelQueryMemoryPartitionInfo(threadOptions.stackMpid, &partitionInfo); // 0x000072F0
+                if (pMod->status & SCE_MODULE_USER_MODULE) // 0x000072E0
+                    status = _CheckUserMemoryPartition(threadOptions.stackMpid);
+                else
+                    status = _CheckKernelOnlyMemoryPartition(threadOptions.stackMpid);
                 
-                if (pMod->status & SCE_MODULE_USER_MODULE) { // 0x000072E0
-                    if (status < SCE_ERROR_OK || !(partitionInfo.attr & 0x3))
-                        return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
-                } else {
-                    if (status < SCE_ERROR_OK || !(partitionInfo.attr != 12)) //0x000074A8
-                        return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
-                }
+                if (status < SCE_ERROR_OK)
+                    return status;
             }
             s32 oldGp = pspSetGp(pMod->gpValue); //0x0000732C
             
@@ -4193,7 +4187,7 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
                 return status;
             
             g_ModuleManager.userThreadId = status; // 0x00007370
-            pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STOPPING; // 0x0000737C  
+            SET_MCB_STATUS(pMod->status, MCB_STATUS_STOPPING); // 0x0000737C  
             s32 stopResult = 1; // 0x00007390
             
             status = sceKernelStartThread(pMod->userModThid, argSize, argp); // 0x0000738C
@@ -4204,7 +4198,7 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
             sceKernelDeleteThread(pMod->userModThid); // 0x000073A8
             pMod->userModThid = -1;
             
-            sceKernelChangeThreadPriority(0, SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000073B8
+            sceKernelChangeThreadPriority(SCE_KERNEL_TH_SELF, SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000073B8
             
             if (pStatus != NULL) // 0x000073C0
                 *pStatus = stopResult;
@@ -4220,15 +4214,15 @@ s32 _StopModule(SceModuleMgrParam *modParams, SceModule *pMod, s32 startOp, SceU
                 return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
             
             if (stopResult != SCE_ERROR_OK) {
-                pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STARTED; // 0x000073FC
+                SET_MCB_STATUS(pMod->status, MCB_STATUS_STARTED); // 0x000073FC
                 return stopResult;
             }
             status = _EpilogueModule(pMod); // 0x00007408
             if (status < SCE_ERROR_OK) {
-                pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STARTED;
+                SET_MCB_STATUS(pMod->status, MCB_STATUS_STARTED);
                 return status; // 0x000073FC
             }
-            pMod->status = (pMod->status & ~0xF) | MCB_STATUS_STOPPED; //0x00007428
+            SET_MCB_STATUS(pMod->status, MCB_STATUS_STOPPED); //0x00007428
             return SCE_ERROR_OK; // 0x000073FC
         }
     case MCB_STATUS_STOPPING:
@@ -4251,12 +4245,9 @@ s32 _start_exe_thread(SceModuleMgrParam *modParams)
     SceUID returnId;
     s32 status;
 
-    status = sceKernelGetThreadId();
-    if (status < 0) {
-        return status;
-    }
-
-    threadId = status;
+    threadId = sceKernelGetThreadId();
+    if (threadId < 0)
+        return threadId;
 
     if (threadId == g_ModuleManager.userThreadId) {
         Kprintf("module manager busy.\n");
@@ -4267,17 +4258,17 @@ s32 _start_exe_thread(SceModuleMgrParam *modParams)
     modParams->eventId = g_ModuleManager.eventId;
 
     status = sceKernelLockMutex(g_ModuleManager.semaId, 1, 0);
-    if (status < 0) {
+    if (status < SCE_ERROR_OK) {
         return status;
     }
 
     status = sceKernelStartThread(g_ModuleManager.threadId, sizeof(SceModuleMgrParam), modParams);
-    if (status < 0) {
+    if (status < SCE_ERROR_OK) {
         sceKernelUnlockMutex(g_ModuleManager.semaId, 1);
         return returnId;
     }
 
-    sceKernelWaitEventFlag(g_ModuleManager.eventId, 0x1, 0x10 | SCE_EVENT_WAITOR, NULL, NULL);
+    sceKernelWaitEventFlag(g_ModuleManager.eventId, 0x1, SCE_KERNEL_EW_CLEAR_ALL | SCE_KERNEL_EW_OR, NULL, NULL);
 
     sceKernelUnlockMutex(g_ModuleManager.semaId, 1);
     return returnId;
@@ -4290,7 +4281,7 @@ SceUID _loadModuleByBufferID(SceModuleMgrParam *modParams, const SceKernelLMOpti
         modParams->access = 0x1;
         modParams->mpIdText = 0;
         modParams->mpIdData = 0;
-        modParams->position = 0;
+        modParams->position = SCE_KERNEL_SMEM_Low;
     } else {
         modParams->mpIdText = pOpt->mpIdText;
         modParams->mpIdData = pOpt->mpIdData;
@@ -4587,10 +4578,10 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
             status = sceKernelLinkLibraryEntriesWithModule(pMod, pMod->stubTop, pMod->stubSize); // 0x00008188
         else
             status = sceKernelLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000843C
+        
         if (status < SCE_ERROR_OK) { // 0x00008190
-            status = _ModuleReleaseLibraries(pMod); // 0x00008424
-            if (status < SCE_ERROR_OK) // 0x0000842C
-                return status;
+            _ModuleReleaseLibraries(pMod); // 0x00008424
+            return status;
         }
     }
     pMod->segmentChecksum = sceKernelSegmentChecksum(pMod); // 0x00008198
@@ -4646,25 +4637,17 @@ s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
     threadOptions.size = sizeof(SceKernelThreadOptParam);
     threadOptions.stackMpid = (modParams->threadMpIdStack == 0) ? pMod->mpIdData : modParams->threadMpIdStack; // 0x000082F8 & 0x000083F8
     if (threadOptions.stackMpid != 0) { // 0x0000830C
-        SceSysmemPartitionInfo partitionInfo;
-        partitionInfo.size = sizeof(SceSysmemPartitionInfo);
-        status = sceKernelQueryMemoryPartitionInfo(threadOptions.stackMpid, &partitionInfo); // 0x00008328
-                
-        if (pMod->status & SCE_MODULE_USER_MODULE) { // 0x00008318
-            if (status < SCE_ERROR_OK || !(partitionInfo.attr & 0x3)) { // 0x00008330 & 0x00008340
-                if (pMod->stubTop != (void *)-1)
-                    sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
+        if (pMod->status & SCE_MODULE_USER_MODULE)
+            status = _CheckUserMemoryPartition(threadOptions.stackMpid);
+        else
+            status = _CheckKernelOnlyMemoryPartition(threadOptions.stackMpid);
+        
+        if (status < SCE_ERROR_OK) {
+            if (pMod->stubTop != (void *)-1) // 0x00008364
+                sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
                  
-                _ModuleReleaseLibraries(pMod); // 0x00008374
-                return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
-            }
-        } else {
-            if (status < SCE_ERROR_OK || !(partitionInfo.attr != 12)) //0x000083D4 & 0x000083E4
-                if (pMod->stubTop != (void *)-1) // 0x00008364
-                    sceKernelUnLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000836C
-                 
-                _ModuleReleaseLibraries(pMod); // 0x00008374
-                return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
+            _ModuleReleaseLibraries(pMod); // 0x00008374
+            return status;
         }
     }
     pspSetGp(pMod->gpValue); //0x00008384

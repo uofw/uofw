@@ -18,6 +18,8 @@ typedef struct {
     SceUID      stackMpid;
 } SceKernelThreadOptParam;
 
+#define SCE_KERNEL_TH_SELF                      (0)
+
 /* thread priority */
 #define SCE_KERNEL_USER_HIGHEST_PRIORITY        (16)
 #define SCE_KERNEL_MODULE_INIT_PRIORITY         (32)
@@ -172,6 +174,9 @@ typedef struct {
     int         maxCount;
     int         numWaitThreads;
 } SceKernelSemaInfo;
+
+#define SCE_KERNEL_SA_THFIFO    (0x0000)            /* A FIFO queue is used for the waiting thread */
+#define SCE_KERNEL_SA_THPRI     (0x0100)            /* The waiting thread is queued by its thread priority */
 
 SceUID sceKernelCreateSema(const char *name, SceUInt attr, int initVal, int maxVal, SceKernelSemaOptParam *option);
 int sceKernelDeleteSema(SceUID semaid);
