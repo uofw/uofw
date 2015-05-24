@@ -97,32 +97,32 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00015"></a>00015     u8 keyData[16]; <span class="comment">//16  -- TODO: Confirm</span>
 <a name="l00016"></a>00016 } SceNpDrm;
 <a name="l00017"></a>00017 
-<a name="l00018"></a>00018 s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00019"></a>00019 s32 sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, SceOff fileOffset, u8 keyData[16], s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00020"></a>00020 s32 sceKernelLoadModuleForLoadExecVSHDisc(<span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00021"></a>00021 s32 sceKernelLoadModuleForLoadExecVSHDiscUpdater(<span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00022"></a>00022 s32 sceKernelLoadModuleForLoadExecVSHDiscDebug(<span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00023"></a>00023 s32 sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00024"></a>00024 s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00025"></a>00025 s32 sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00026"></a>00026 s32 sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00027"></a>00027 s32 sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00028"></a>00028 s32 sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00029"></a>00029 s32 sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00030"></a>00030 s32 sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00031"></a>00031 s32 ModuleMgrForKernel_8DD336D4(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
+<a name="l00018"></a>00018 s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00019"></a>00019 s32 sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, SceOff fileOffset, u8 keyData[16], s32 flags, SceKernelLMOption *option);
+<a name="l00020"></a>00020 s32 sceKernelLoadModuleForLoadExecVSHDisc(<span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00021"></a>00021 s32 sceKernelLoadModuleForLoadExecVSHDiscUpdater(<span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00022"></a>00022 s32 sceKernelLoadModuleForLoadExecVSHDiscDebug(<span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00023"></a>00023 s32 sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00024"></a>00024 s32 ModuleMgrForKernel_C2A5E6CA(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00025"></a>00025 s32 sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00026"></a>00026 s32 sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00027"></a>00027 s32 sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00028"></a>00028 s32 sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00029"></a>00029 s32 sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00030"></a>00030 s32 sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
+<a name="l00031"></a>00031 s32 ModuleMgrForKernel_8DD336D4(s32 apiType, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, s32 flags, SceKernelLMOption *option);
 <a name="l00032"></a>00032 
-<a name="l00033"></a>00033 s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(s32 apiType, u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00034"></a>00034 s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(s32 apiType, u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option);
-<a name="l00035"></a>00035 s32 sceKernelLoadModuleBufferForExitVSHKernel(u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *pOption, s32 opt);
-<a name="l00036"></a>00036 s32 sceKernelLoadModuleBufferForExitGame(u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option, <span class="keywordtype">int</span>);
-<a name="l00037"></a>00037 s32 sceKernelLoadModuleBufferForExitVSHVSH(u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *option, <span class="keywordtype">int</span>);
-<a name="l00038"></a>00038 s32 sceKernelLoadModuleBufferForRebootKernel(u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *pOption, s32 opt);
+<a name="l00033"></a>00033 s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(s32 apiType, u32 *modBuf, s32 flags, SceKernelLMOption *option);
+<a name="l00034"></a>00034 s32 sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(s32 apiType, u32 *modBuf, s32 flags, SceKernelLMOption *option);
+<a name="l00035"></a>00035 s32 sceKernelLoadModuleBufferForExitVSHKernel(u32 *modBuf, s32 flags, SceKernelLMOption *option, <span class="keywordtype">int</span>);
+<a name="l00036"></a>00036 s32 sceKernelLoadModuleBufferForExitGame(u32 *modBuf, s32 flags, SceKernelLMOption *option, <span class="keywordtype">int</span>);
+<a name="l00037"></a>00037 s32 sceKernelLoadModuleBufferForExitVSHVSH(u32 *modBuf, s32 flags, SceKernelLMOption *option, <span class="keywordtype">int</span>);
+<a name="l00038"></a>00038 s32 sceKernelLoadModuleBufferForRebootKernel(u32 *modBuf, s32 flags, SceKernelLMOption *option, <span class="keywordtype">int</span>);
 <a name="l00039"></a>00039 
-<a name="l00040"></a>00040 s32 sceKernelLoadModuleBootInitBtcnf(u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *pOption); <span class="comment">/* Disabled - returns error */</span>
-<a name="l00041"></a>00041 s32 sceKernelLoadModuleBufferBootInitBtcnf(SceSize modSize, u32 *modBuf, s32 flags, <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a> *pOption, s32 opt);
+<a name="l00040"></a>00040 s32 sceKernelLoadModuleBootInitBtcnf(u32 *modBuf, s32 flags, SceKernelLMOption *option); <span class="comment">/* Disabled - returns error */</span>
+<a name="l00041"></a>00041 s32 sceKernelLoadModuleBufferBootInitBtcnf(SceSize modSize, u32 *modBuf, s32 flags, SceKernelLMOption *option, s32);
 <a name="l00042"></a>00042 
-<a name="l00043"></a>00043 s32 sceKernelStopUnloadSelfModuleWithStatusKernel(s32 exitStatus, SceSize args, <span class="keywordtype">void</span> *argp, s32 *pModResult, SceKernelSMOption *pOption);
+<a name="l00043"></a>00043 s32 sceKernelStopUnloadSelfModuleWithStatusKernel(s32 exitStatus, SceSize args, <span class="keywordtype">void</span> *argp, s32 *status, SceKernelSMOption *option);
 <a name="l00044"></a>00044 
 <a name="l00045"></a>00045 <span class="preprocessor">#endif  </span><span class="comment">/* MODULEMGR_KERNEL_H */</span>
 <a name="l00046"></a>00046 
@@ -144,7 +144,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Oct 17 2014 21:26:06 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun May 24 2015 20:06:21 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

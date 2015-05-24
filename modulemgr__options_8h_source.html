@@ -80,7 +80,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">/home/travis/build/uofw/uofw/include/modulemgr_options.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team</span>
+<div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/* Copyright (C) 2011, 2012, 2013 The uOFW team</span>
 <a name="l00002"></a>00002 <span class="comment">   See the file COPYING for copying permission.</span>
 <a name="l00003"></a>00003 <span class="comment">*/</span>
 <a name="l00004"></a>00004 
@@ -97,26 +97,26 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00015"></a>00015 <span class="comment">/* SceKernelLMOption.access */</span>
 <a name="l00016"></a>00016 <span class="preprocessor">#define SCE_KERNEL_LM_ACCESS_NOSEEK     (1)</span>
 <a name="l00017"></a>00017 <span class="preprocessor"></span>
-<a name="l00019"></a><a class="code" href="structSceKernelLMOption.html">00019</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00021"></a><a class="code" href="structSceKernelLMOption.html#a4e35c721c22b0855672bb6e3f6cded25">00021</a>         SceSize <a class="code" href="structSceKernelLMOption.html#a4e35c721c22b0855672bb6e3f6cded25">size</a>;
-<a name="l00023"></a><a class="code" href="structSceKernelLMOption.html#acbe16a6f1c1d9dd041669111c6c76f83">00023</a>         SceUID  <a class="code" href="structSceKernelLMOption.html#acbe16a6f1c1d9dd041669111c6c76f83">mpIdText</a>; 
-<a name="l00025"></a><a class="code" href="structSceKernelLMOption.html#a287ccdcd94ba0083cb97ccfd9254dea1">00025</a>         SceUID  <a class="code" href="structSceKernelLMOption.html#a287ccdcd94ba0083cb97ccfd9254dea1">mpIdData</a>;
-<a name="l00027"></a><a class="code" href="structSceKernelLMOption.html#a58e41f61508bfdcccd7b93771b3fb8c9">00027</a>         u32     <a class="code" href="structSceKernelLMOption.html#a58e41f61508bfdcccd7b93771b3fb8c9">flags</a>;
-<a name="l00029"></a><a class="code" href="structSceKernelLMOption.html#ab61be6bcda1ffc5ed788e256396a39de">00029</a>         s8      <a class="code" href="structSceKernelLMOption.html#ab61be6bcda1ffc5ed788e256396a39de">position</a>; 
-<a name="l00031"></a><a class="code" href="structSceKernelLMOption.html#a56d98b19ac8aced917b572cbf441a1d0">00031</a>         s8      <a class="code" href="structSceKernelLMOption.html#a56d98b19ac8aced917b572cbf441a1d0">access</a>;
-<a name="l00033"></a><a class="code" href="structSceKernelLMOption.html#a5449efe2912ffb13d2470c0cde011e11">00033</a>         s8      creserved[2];
-<a name="l00034"></a>00034 } <a class="code" href="structSceKernelLMOption.html">SceKernelLMOption</a>;
+<a name="l00018"></a>00018 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00019"></a>00019         SceSize size;
+<a name="l00020"></a>00020         SceUID  mpIdText;  <span class="comment">/* partition text */</span>
+<a name="l00021"></a>00021         SceUID  mpIdData;  <span class="comment">/* partition data */</span>
+<a name="l00022"></a>00022         u32     flags;
+<a name="l00023"></a>00023         s8      position;  <span class="comment">/* module allocation type */</span>
+<a name="l00024"></a>00024         s8      access;    <span class="comment">/* file access type */</span>
+<a name="l00025"></a>00025         s8      creserved[2];
+<a name="l00026"></a>00026 } SceKernelLMOption;
+<a name="l00027"></a>00027 
+<a name="l00028"></a>00028 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00029"></a>00029         SceSize size;
+<a name="l00030"></a>00030         SceUID  mpidstack;      <span class="comment">/* partition stack */</span>
+<a name="l00031"></a>00031         SceSize stacksize;
+<a name="l00032"></a>00032         s32             priority;
+<a name="l00033"></a>00033         u32     attribute;      <span class="comment">/* thread attribute */</span>
+<a name="l00034"></a>00034 } SceKernelSMOption;
 <a name="l00035"></a>00035 
-<a name="l00036"></a>00036 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00038"></a>00038         SceSize size;
-<a name="l00039"></a>00039         SceUID  mpidstack;      <span class="comment">/* partition stack */</span>
-<a name="l00040"></a>00040         SceSize stacksize;
-<a name="l00041"></a>00041         s32             priority;
-<a name="l00042"></a>00042         u32     attribute;      <span class="comment">/* thread attribute */</span>
-<a name="l00043"></a>00043 } SceKernelSMOption;
-<a name="l00044"></a>00044 
-<a name="l00045"></a>00045 <span class="preprocessor">#endif  </span><span class="comment">/* MODULEMGR_OPTIONS_H */</span>
-<a name="l00046"></a>00046 
+<a name="l00036"></a>00036 <span class="preprocessor">#endif  </span><span class="comment">/* MODULEMGR_OPTIONS_H */</span>
+<a name="l00037"></a>00037 
 </pre></div></div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -135,7 +135,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Oct 17 2014 21:26:06 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun May 24 2015 20:06:21 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

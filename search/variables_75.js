@@ -4,7 +4,7 @@ var searchData=
   ['unk0',['unk0',['../structSceAudioInputParams.html#a76b9cf5bd0095b1e79e4bb5dd8db1c2a',1,'SceAudioInputParams::unk0()'],['../structSceStubLibrary.html#ad485b8be0ca63748a16454a633ab4500',1,'SceStubLibrary::unk0()'],['../structSceLoadCoreExecFileInfo.html#aaa2b1e08cdbbcc66f2f3ed88e4bbcec8',1,'SceLoadCoreExecFileInfo::unk0()']]],
   ['unk1',['unk1',['../structSceCtrlDataExt.html#a4f1e236bcf6eb1923a5c220c0df8fdbc',1,'SceCtrlDataExt::unk1()'],['../structSceCtrlUnkStruct.html#a7720adf49c7e2927eaba4669c4cd5f6e',1,'SceCtrlUnkStruct::unk1()']]],
   ['unk100',['unk100',['../structSceLoadCoreBootInfo.html#ac30c428d050864fc23369f73834a3df9',1,'SceLoadCoreBootInfo']]],
-  ['unk104',['unk104',['../structSceLoadCoreBootInfo.html#a9c8cff862168027e89226f18c07cb568',1,'SceLoadCoreBootInfo']]],
+  ['unk104',['unk104',['../structSceLoadCoreBootInfo.html#a9c8cff862168027e89226f18c07cb568',1,'SceLoadCoreBootInfo::unk104()'],['../structSceLoadCoreExecFileInfo.html#a56ecdaaf3a812e48fe696e93b61f14e5',1,'SceLoadCoreExecFileInfo::unk104()']]],
   ['unk108',['unk108',['../structSceLoadCoreBootInfo.html#a7d4a87382837e70f927d648203cb6208',1,'SceLoadCoreBootInfo']]],
   ['unk112',['unk112',['../structSceLoadCoreBootInfo.html#a410d0e78612597db9994680e3d72dd03',1,'SceLoadCoreBootInfo']]],
   ['unk116',['unk116',['../structSceLoadCoreBootInfo.html#a08c0f28262fc728b8bac977e834254c9',1,'SceLoadCoreBootInfo']]],

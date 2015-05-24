@@ -543,7 +543,7 @@ Functions</h2></td></tr>
 <p>Set the update frequency of the internal controller buffer. Default update interval is the VBlank interrupt (approximately 60 times per second).</p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">cycle</td><td>The new interval between two samplings of controller attributes in microseconds. Setting to 0 enables the VBlank-Interrupt-Update process. If you want to set an own interval for updating the internal controller buffers, cycle has to be greater 5554 and less than 20001. This will disable the VBlank-Interrupt-Update process.</td></tr>
+    <tr><td class="paramname">cycle</td><td>The new interval between two samplings of controller attributes in microseconds. Setting to 0 enables the VBlank-Interrupt-Update process. If you want to set an own interval for updating the internal controller buffers, cycle has to in the range of 5555 - 20000 (the range from about 180 Hz to 50 Hz). This will disable the VBlank-Interrupt-Update process.</td></tr>
   </table>
   </dd>
 </dl>
@@ -681,8 +681,8 @@ Functions</h2></td></tr>
 <p>Get the idle timer cancel threshold values for the analog stick.</p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">iUnHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is inactive. -1 is obtained when the analog stick cannot cancel the idle timer, otherwise the movement needed by the analog stick to cancel the idle timer. </td></tr>
-    <tr><td class="paramname">iHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is active. -1 is obtained when the analog stick cannot cancel the idle timer, otherwise the movement needed by the analog stick to cancel the idle timer.</td></tr>
+    <tr><td class="paramname">iUnHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is inactive. -1 is obtained when the analog stick cannot cancel the idle timer, otherwise the movement needed by the analog stick (between 0 - 128) to cancel the idle timer. </td></tr>
+    <tr><td class="paramname">iHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is active. -1 is obtained when the analog stick cannot cancel the idle timer, otherwise the movement needed by the analog stick (between 0 - 128) to cancel the idle timer.</td></tr>
   </table>
   </dd>
 </dl>
@@ -714,11 +714,11 @@ Functions</h2></td></tr>
       </table>
 </div>
 <div class="memdoc">
-<p>Set analog stick threshold values canceling the idle timer.</p>
+<p>Set analog stick threshold values for cancelling the idle timer. In case SCE_CTRL_INPUT_DIGITAL_ONLY is set as the input mode for the controller, analog stick movements will not result in cancelling the idle timer.</p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">iUnHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is inactive. Set between 1 - 128 to specify the movement on either axis. Set to 0 for idle timer to be canceled even if the analog stick is not moved. Set to -1 for analog stick not canceling idle timer (although it is moved). </td></tr>
-    <tr><td class="paramname">iHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is active. Set between 1 - 128 to specify the movement on either axis. Set to 0 for idle timer to be canceled even if the analog stick is not moved. Set to -1 for analog stick not canceling idle timer (although it is moved).</td></tr>
+    <tr><td class="paramname">iUnHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is inactive. Set between 1 - 128 to specify the movement on either axis. Set to 0 for idle timer to be canceled even if the analog stick is not moved (that is, the idle timer itself stops running). Set to -1 for analog stick to not cancel the idle timer (although it is moved). </td></tr>
+    <tr><td class="paramname">iHoldThreshold</td><td>Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is active. Set between 1 - 128 to specify the movement on either axis. Set to 0 for idle timer to be canceled even if the analog stick is not moved (that is, the idle timer itself stops running). Set to -1 for analog stick to not cancel the idle timer (although it is moved).</td></tr>
   </table>
   </dd>
 </dl>
@@ -1626,7 +1626,7 @@ Functions</h2></td></tr>
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Oct 17 2014 21:26:06 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun May 24 2015 20:06:21 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

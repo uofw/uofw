@@ -13,7 +13,7 @@ var searchData=
   ['modeattribute',['modeAttribute',['../structSceLoadCoreExecFileInfo.html#a64f6d1f2c21930f2a9dd23e018e88a4d',1,'SceLoadCoreExecFileInfo']]],
   ['modid',['modId',['../structSceModule.html#aa87f63a55b8b499e595e1b53aee08b4b',1,'SceModule']]],
   ['modinfoattribute',['modInfoAttribute',['../structSceLoadCoreExecFileInfo.html#ab9977fd84797398fa309809bf52d71f3',1,'SceLoadCoreExecFileInfo']]],
-  ['modname',['modName',['../structSceModuleInfo.html#a7db7c60a7a6535cec7bda124b6318d48',1,'SceModuleInfo::modName()'],['../structSceModule.html#a50e9d5204e7bda386387275e6889fd68',1,'SceModule::modName()'],['../structSceKernelModuleInfo.html#a430c0fa74760ee911b8fb165cc51f632',1,'SceKernelModuleInfo::modName()']]],
+  ['modname',['modName',['../structSceModuleInfo.html#a7db7c60a7a6535cec7bda124b6318d48',1,'SceModuleInfo::modName()'],['../structSceModule.html#a50e9d5204e7bda386387275e6889fd68',1,'SceModule::modName()']]],
   ['modpath',['modPath',['../structSceLoadCoreBootModuleInfo.html#a2ec0abf81e5ade22ae27012d2890d6af',1,'SceLoadCoreBootModuleInfo']]],
   ['modprotid',['modProtId',['../structSceLoadCoreBootInfo.html#a11c1e8222ca411ebd9fb792318971fdd',1,'SceLoadCoreBootInfo']]],
   ['modsize',['modSize',['../structSceLoadCoreBootModuleInfo.html#a522c1c83a49608ea3dd5c5df447353e6',1,'SceLoadCoreBootModuleInfo']]],
@@ -35,6 +35,6 @@ var searchData=
   ['modulestopthreadpriority',['moduleStopThreadPriority',['../structSceModule.html#a364210df451544bbb74304b6b9863bab',1,'SceModule']]],
   ['modulestopthreadstacksize',['moduleStopThreadStacksize',['../structSceModule.html#ad7d6120cb8b0982f7fe51dcf0cf35b43',1,'SceModule']]],
   ['modversion',['modVersion',['../structSceModuleInfo.html#aad9242b2be4b2e8864bf81560324851e',1,'SceModuleInfo']]],
-  ['mpiddata',['mpIdData',['../structSceModule.html#aaaf0e252a028a49d22f44c7713e013e2',1,'SceModule::mpIdData()'],['../structSceKernelLMOption.html#a287ccdcd94ba0083cb97ccfd9254dea1',1,'SceKernelLMOption::mpIdData()']]],
-  ['mpidtext',['mpIdText',['../structSceModule.html#a6f4f62682c1b498888ed2793ea7481e3',1,'SceModule::mpIdText()'],['../structSceKernelLMOption.html#acbe16a6f1c1d9dd041669111c6c76f83',1,'SceKernelLMOption::mpIdText()']]]
+  ['mpiddata',['mpIdData',['../structSceModule.html#aaaf0e252a028a49d22f44c7713e013e2',1,'SceModule']]],
+  ['mpidtext',['mpIdText',['../structSceModule.html#a6f4f62682c1b498888ed2793ea7481e3',1,'SceModule']]]
 ];

@@ -105,57 +105,25 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00026"></a>00026 <span class="preprocessor">#define SCE_KERNEL_STOP_SUCCESS                 (0)</span>
 <a name="l00027"></a>00027 <span class="preprocessor"></span><span class="preprocessor">#define SCE_KERNEL_STOP_FAIL                    (1)</span>
 <a name="l00028"></a>00028 <span class="preprocessor"></span>
-<a name="l00030"></a><a class="code" href="structSceKernelModuleInfo.html">00030</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00032"></a><a class="code" href="structSceKernelModuleInfo.html#a6bc36956dd5c294e8f613adfb33730ab">00032</a>     SceSize <a class="code" href="structSceKernelModuleInfo.html#a6bc36956dd5c294e8f613adfb33730ab">size</a>; <span class="comment">//0</span>
-<a name="l00034"></a><a class="code" href="structSceKernelModuleInfo.html#a32dd87bb5358ece7cd7fc3e07ec74918">00034</a> <span class="comment"></span>    u8 <a class="code" href="structSceKernelModuleInfo.html#a32dd87bb5358ece7cd7fc3e07ec74918">nsegment</a>; <span class="comment">//4</span>
-<a name="l00036"></a><a class="code" href="structSceKernelModuleInfo.html#a246d9d0eb4657edb58a3486733d29f0d">00036</a> <span class="comment"></span>    u8 reserved[3]; <span class="comment">//5</span>
-<a name="l00038"></a><a class="code" href="structSceKernelModuleInfo.html#ad4ba8e66d836312f5ba485e3a4fd3b32">00038</a> <span class="comment"></span>    u32 segmentAddr[SCE_KERNEL_MAX_MODULE_SEGMENT]; <span class="comment">//8</span>
-<a name="l00040"></a><a class="code" href="structSceKernelModuleInfo.html#adb54f27d47aa30f48b2d3e436a009aec">00040</a> <span class="comment"></span>    SceSize segmentSize[SCE_KERNEL_MAX_MODULE_SEGMENT]; <span class="comment">//24</span>
-<a name="l00042"></a><a class="code" href="structSceKernelModuleInfo.html#ae5b73076674a5f59ada0a5e8c60ab7a5">00042</a> <span class="comment"></span>    u32 <a class="code" href="structSceKernelModuleInfo.html#ae5b73076674a5f59ada0a5e8c60ab7a5">entryAddr</a>; <span class="comment">//40</span>
-<a name="l00044"></a><a class="code" href="structSceKernelModuleInfo.html#aded2c4cee78417fedd41404276b2d5b8">00044</a> <span class="comment"></span>    u32 <a class="code" href="structSceKernelModuleInfo.html#aded2c4cee78417fedd41404276b2d5b8">gpValue</a>; <span class="comment">//44</span>
-<a name="l00046"></a><a class="code" href="structSceKernelModuleInfo.html#ac2cc522ba328d6b0da05a37b412a7859">00046</a> <span class="comment"></span>    u32 <a class="code" href="structSceKernelModuleInfo.html#ac2cc522ba328d6b0da05a37b412a7859">textAddr</a>; <span class="comment">//48</span>
-<a name="l00048"></a><a class="code" href="structSceKernelModuleInfo.html#af2d65b0c6d549efc70bfb307af5ee341">00048</a> <span class="comment"></span>    SceSize <a class="code" href="structSceKernelModuleInfo.html#af2d65b0c6d549efc70bfb307af5ee341">textSize</a>; <span class="comment">//52</span>
-<a name="l00050"></a><a class="code" href="structSceKernelModuleInfo.html#a4747ae70b1871430431fb02438c89abb">00050</a> <span class="comment"></span>    SceSize <a class="code" href="structSceKernelModuleInfo.html#a4747ae70b1871430431fb02438c89abb">dataSize</a>; <span class="comment">//56</span>
-<a name="l00052"></a><a class="code" href="structSceKernelModuleInfo.html#ac9b5703d609f3b456cb7fb3a3d190741">00052</a> <span class="comment"></span>    SceSize <a class="code" href="structSceKernelModuleInfo.html#ac9b5703d609f3b456cb7fb3a3d190741">bssSize</a>; <span class="comment">//60</span>
-<a name="l00054"></a><a class="code" href="structSceKernelModuleInfo.html#ac23c8a4f4b7de0feb0239df0e9f47ec4">00054</a> <span class="comment"></span>    u16 <a class="code" href="structSceKernelModuleInfo.html#ac23c8a4f4b7de0feb0239df0e9f47ec4">attribute</a>; <span class="comment">//64</span>
-<a name="l00056"></a><a class="code" href="structSceKernelModuleInfo.html#a02ea660c67c22f03d3530c19a06e3852">00056</a> <span class="comment"></span>    u8 version[MODULE_VERSION_NUMBER_CATEGORY_SIZE]; <span class="comment">//66</span>
-<a name="l00058"></a><a class="code" href="structSceKernelModuleInfo.html#a430c0fa74760ee911b8fb165cc51f632">00058</a> <span class="comment"></span>    <span class="keywordtype">char</span> modName[SCE_MODULE_NAME_LEN]; <span class="comment">//68</span>
-<a name="l00060"></a><a class="code" href="structSceKernelModuleInfo.html#acaf9af36d381474dcfc6a9eb01ec2936">00060</a> <span class="comment"></span>    <span class="keywordtype">char</span> <a class="code" href="structSceKernelModuleInfo.html#acaf9af36d381474dcfc6a9eb01ec2936">terminal</a>; <span class="comment">//95</span>
-<a name="l00061"></a>00061 } <a class="code" href="structSceKernelModuleInfo.html">SceKernelModuleInfo</a>; <span class="comment">// size = 96</span>
-<a name="l00062"></a>00062 
-<a name="l00066"></a><a class="code" href="structSceKernelModuleInfoV1.html">00066</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00068"></a><a class="code" href="structSceKernelModuleInfoV1.html#a1a0ffad6fb329244f4312e3c16dcb543">00068</a>     SceSize <a class="code" href="structSceKernelModuleInfoV1.html#a1a0ffad6fb329244f4312e3c16dcb543">size</a>; <span class="comment">//0</span>
-<a name="l00070"></a><a class="code" href="structSceKernelModuleInfoV1.html#a174ae5ec6c684621c99792f61a792987">00070</a> <span class="comment"></span>    u8 <a class="code" href="structSceKernelModuleInfoV1.html#a174ae5ec6c684621c99792f61a792987">nsegment</a>; <span class="comment">//4</span>
-<a name="l00072"></a><a class="code" href="structSceKernelModuleInfoV1.html#a73a5b219c55b2e2d848f0fd03255cc43">00072</a> <span class="comment"></span>    u8 reserved[3]; <span class="comment">//5</span>
-<a name="l00074"></a><a class="code" href="structSceKernelModuleInfoV1.html#a19c8bad924b6ebb6f548bf87669efcb1">00074</a> <span class="comment"></span>    u32 segmentAddr[SCE_KERNEL_MAX_MODULE_SEGMENT]; <span class="comment">//8</span>
-<a name="l00076"></a><a class="code" href="structSceKernelModuleInfoV1.html#aae6ba894bb7317214fd0c84c40b38f0a">00076</a> <span class="comment"></span>    SceSize segmentSize[SCE_KERNEL_MAX_MODULE_SEGMENT]; <span class="comment">//24</span>
-<a name="l00078"></a><a class="code" href="structSceKernelModuleInfoV1.html#a8fb4b3819ad1383fd10107d08d93bb6d">00078</a> <span class="comment"></span>    u32 <a class="code" href="structSceKernelModuleInfoV1.html#a8fb4b3819ad1383fd10107d08d93bb6d">entryAddr</a>; <span class="comment">//40</span>
-<a name="l00080"></a><a class="code" href="structSceKernelModuleInfoV1.html#a325258e173c78f217de8fee71865dc4c">00080</a> <span class="comment"></span>    u32 <a class="code" href="structSceKernelModuleInfoV1.html#a325258e173c78f217de8fee71865dc4c">gpValue</a>; <span class="comment">//44</span>
-<a name="l00082"></a><a class="code" href="structSceKernelModuleInfoV1.html#ae4c24de8fb646549164e6c468e0eda12">00082</a> <span class="comment"></span>    u32 <a class="code" href="structSceKernelModuleInfoV1.html#ae4c24de8fb646549164e6c468e0eda12">textAddr</a>; <span class="comment">//48</span>
-<a name="l00084"></a><a class="code" href="structSceKernelModuleInfoV1.html#a87d1f58fda411008d7fa8777ba78f5c0">00084</a> <span class="comment"></span>    SceSize <a class="code" href="structSceKernelModuleInfoV1.html#a87d1f58fda411008d7fa8777ba78f5c0">textSize</a>; <span class="comment">//52</span>
-<a name="l00086"></a><a class="code" href="structSceKernelModuleInfoV1.html#aa3371262af24c28d4cf29f5fd114d3b5">00086</a> <span class="comment"></span>    SceSize <a class="code" href="structSceKernelModuleInfoV1.html#aa3371262af24c28d4cf29f5fd114d3b5">dataSize</a>; <span class="comment">//56</span>
-<a name="l00088"></a><a class="code" href="structSceKernelModuleInfoV1.html#acae42ad04c51f481e1424847d8dbed9b">00088</a> <span class="comment"></span>    SceSize <a class="code" href="structSceKernelModuleInfoV1.html#acae42ad04c51f481e1424847d8dbed9b">bssSize</a>; <span class="comment">//60</span>
-<a name="l00089"></a>00089 } <a class="code" href="structSceKernelModuleInfoV1.html">SceKernelModuleInfoV1</a> __attribute__((deprecated)); <span class="comment">// size = 64</span>
-<a name="l00090"></a>00090 
-<a name="l00091"></a>00091 <span class="keyword">enum</span> ModuleMgrMcbStatus {
-<a name="l00092"></a>00092         MCB_STATUS_NOT_LOADED = 0,
-<a name="l00093"></a>00093         MCB_STATUS_LOADING = 1,
-<a name="l00094"></a>00094         MCB_STATUS_LOADED = 2,
-<a name="l00095"></a>00095         MCB_STATUS_RELOCATED = 3,
-<a name="l00096"></a>00096         MCB_STATUS_STARTING = 4,
-<a name="l00097"></a>00097         MCB_STATUS_STARTED = 5,
-<a name="l00098"></a>00098         MCB_STATUS_STOPPING = 6,
-<a name="l00099"></a>00099         MCB_STATUS_STOPPED = 7,
-<a name="l00100"></a>00100         MCB_STATUS_UNLOADED = 8
-<a name="l00101"></a>00101 };
-<a name="l00102"></a>00102 
-<a name="l00103"></a>00103 s32 ModuleMgrForKernel_C3DDABEF(SceUID, <span class="keywordtype">void</span> *, <span class="keywordtype">void</span> *);
-<a name="l00104"></a>00104 s32 sceKernelRebootBeforeForUser(<span class="keywordtype">void</span> *);
-<a name="l00105"></a>00105 s32 sceKernelRebootPhaseForKernel(s32, <span class="keywordtype">void</span> *, s32, s32);
-<a name="l00106"></a>00106 s32 sceKernelRebootBeforeForKernel(<span class="keywordtype">void</span> *, s32, s32, s32);
-<a name="l00107"></a>00107 
-<a name="l00108"></a>00108 <span class="preprocessor">#endif  </span><span class="comment">/* MODULEMGR_H */</span>
-<a name="l00109"></a>00109 
+<a name="l00029"></a>00029 <span class="keyword">enum</span> ModuleMgrMcbStatus {
+<a name="l00030"></a>00030         MCB_STATUS_NOT_LOADED = 0,
+<a name="l00031"></a>00031         MCB_STATUS_LOADING = 1,
+<a name="l00032"></a>00032         MCB_STATUS_LOADED = 2,
+<a name="l00033"></a>00033         MCB_STATUS_RELOCATED = 3,
+<a name="l00034"></a>00034         MCB_STATUS_STARTING = 4,
+<a name="l00035"></a>00035         MCB_STATUS_STARTED = 5,
+<a name="l00036"></a>00036         MCB_STATUS_STOPPING = 6,
+<a name="l00037"></a>00037         MCB_STATUS_STOPPED = 7,
+<a name="l00038"></a>00038         MCB_STATUS_UNLOADED = 8
+<a name="l00039"></a>00039 };
+<a name="l00040"></a>00040 
+<a name="l00041"></a>00041 s32 ModuleMgrForKernel_C3DDABEF(SceUID, <span class="keywordtype">void</span> *, <span class="keywordtype">void</span> *);
+<a name="l00042"></a>00042 s32 sceKernelRebootBeforeForUser(<span class="keywordtype">void</span> *);
+<a name="l00043"></a>00043 s32 sceKernelRebootPhaseForKernel(s32, <span class="keywordtype">void</span> *, s32, s32);
+<a name="l00044"></a>00044 s32 sceKernelRebootBeforeForKernel(<span class="keywordtype">void</span> *, s32, s32, s32);
+<a name="l00045"></a>00045 
+<a name="l00046"></a>00046 <span class="preprocessor">#endif  </span><span class="comment">/* MODULEMGR_H */</span>
+<a name="l00047"></a>00047 
 </pre></div></div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -174,7 +142,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Oct 17 2014 21:26:06 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun May 24 2015 20:06:21 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

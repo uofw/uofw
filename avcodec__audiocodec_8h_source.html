@@ -98,41 +98,57 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00016"></a>00016     s32 unk28;
 <a name="l00017"></a>00017     <span class="keywordtype">void</span> *outBuf; <span class="comment">// 32</span>
 <a name="l00018"></a>00018     s32 unk36;
-<a name="l00019"></a>00019     s8 unk40;
-<a name="l00020"></a>00020     s8 unk41;
-<a name="l00021"></a>00021     s8 unk42;
-<a name="l00022"></a>00022     s8 unk43;
-<a name="l00023"></a>00023     s8 unk44;
-<a name="l00024"></a>00024     s8 unk45;
-<a name="l00025"></a>00025     s8 unk46;
-<a name="l00026"></a>00026     s8 unk47;
-<a name="l00027"></a>00027     s32 unk48;
-<a name="l00028"></a>00028     s32 unk52;
-<a name="l00029"></a>00029     s32 unk56;
-<a name="l00030"></a>00030     s32 unk60;
-<a name="l00031"></a>00031     s32 unk64;
-<a name="l00032"></a>00032     s32 unk68;
-<a name="l00033"></a>00033     s32 unk72;
-<a name="l00034"></a>00034     s32 unk76;
-<a name="l00035"></a>00035     s32 unk80;
-<a name="l00036"></a>00036     s32 unk84;
-<a name="l00037"></a>00037     s32 unk88;
-<a name="l00038"></a>00038     s32 unk92;
-<a name="l00039"></a>00039     s32 unk96;
-<a name="l00040"></a>00040     s32 unk100;
-<a name="l00041"></a>00041     <span class="keywordtype">void</span> *allocMem; <span class="comment">// 104</span>
-<a name="l00042"></a>00042 } SceAudiocodecCodec;
-<a name="l00043"></a>00043 
-<a name="l00044"></a>00044 s32 sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, s32 codec);
-<a name="l00045"></a>00045 s32 sceAudiocodecInit(SceAudiocodecCodec *info, s32 codec);
-<a name="l00046"></a>00046 s32 sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, s32 codec);
-<a name="l00047"></a>00047 s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec);
-<a name="l00048"></a>00048 s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec);
-<a name="l00049"></a>00049 s32 sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, s32 codec, s32 *sizeOut);
-<a name="l00050"></a>00050 s32 sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, s32 codec);
-<a name="l00051"></a>00051 s32 sceAudiocodecReleaseEDRAM(SceAudiocodecCodec *info);
-<a name="l00052"></a>00052 
-<a name="l00053"></a>00053 
+<a name="l00019"></a>00019 
+<a name="l00020"></a>00020    <span class="comment">/* Note: this part is probably completely different depending on the codec. This should be cleaned up. */</span>
+<a name="l00021"></a>00021     <span class="keyword">union </span>{
+<a name="l00022"></a>00022         <span class="keyword">struct </span>{
+<a name="l00023"></a>00023             s8 u40;
+<a name="l00024"></a>00024             s8 u41;
+<a name="l00025"></a>00025             s8 u42;
+<a name="l00026"></a>00026             s8 u43;
+<a name="l00027"></a>00027         } v8;
+<a name="l00028"></a>00028         s32 v32;
+<a name="l00029"></a>00029     } unk40;
+<a name="l00030"></a>00030     <span class="keyword">union </span>{
+<a name="l00031"></a>00031         <span class="keyword">struct </span>{
+<a name="l00032"></a>00032             u8 u44;
+<a name="l00033"></a>00033             s8 u45;
+<a name="l00034"></a>00034             s8 u46;
+<a name="l00035"></a>00035             s8 u47;
+<a name="l00036"></a>00036         } v8;
+<a name="l00037"></a>00037         <span class="keyword">struct </span>{
+<a name="l00038"></a>00038             s16 u44;
+<a name="l00039"></a>00039             s16 u46;
+<a name="l00040"></a>00040         } v16;
+<a name="l00041"></a>00041         s32 v32;
+<a name="l00042"></a>00042     } unk44;
+<a name="l00043"></a>00043     s32 unk48;
+<a name="l00044"></a>00044     s32 unk52;
+<a name="l00045"></a>00045     s32 unk56;
+<a name="l00046"></a>00046     s32 unk60;
+<a name="l00047"></a>00047     s32 unk64;
+<a name="l00048"></a>00048     s32 unk68;
+<a name="l00049"></a>00049     s32 unk72;
+<a name="l00050"></a>00050     s32 unk76;
+<a name="l00051"></a>00051     s32 unk80;
+<a name="l00052"></a>00052     s32 unk84;
+<a name="l00053"></a>00053     s32 unk88;
+<a name="l00054"></a>00054     s32 unk92;
+<a name="l00055"></a>00055     s32 unk96;
+<a name="l00056"></a>00056     s32 unk100;
+<a name="l00057"></a>00057     <span class="keywordtype">void</span> *allocMem; <span class="comment">// 104</span>
+<a name="l00058"></a>00058 } SceAudiocodecCodec;
+<a name="l00059"></a>00059 
+<a name="l00060"></a>00060 s32 sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, s32 codec);
+<a name="l00061"></a>00061 s32 sceAudiocodecInit(SceAudiocodecCodec *info, s32 codec);
+<a name="l00062"></a>00062 s32 sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, s32 codec);
+<a name="l00063"></a>00063 s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec);
+<a name="l00064"></a>00064 s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec);
+<a name="l00065"></a>00065 s32 sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, s32 codec, s32 *sizeOut);
+<a name="l00066"></a>00066 s32 sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, s32 codec);
+<a name="l00067"></a>00067 s32 sceAudiocodecReleaseEDRAM(SceAudiocodecCodec *info);
+<a name="l00068"></a>00068 
+<a name="l00069"></a>00069 
 </pre></div></div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -151,7 +167,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Oct 17 2014 21:26:06 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun May 24 2015 20:06:21 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
