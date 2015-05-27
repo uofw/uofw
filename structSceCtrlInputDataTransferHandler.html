@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
-<title>uOFW: /home/travis/build/uofw/uofw/include/common_asm.h Source File</title>
+<title>uOFW: SceCtrlInputDataTransferHandler Struct Reference</title>
 
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
@@ -49,8 +49,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       <li><a href="index.html"><span>Main&#160;Page</span></a></li>
       <li><a href="pages.html"><span>Related&#160;Pages</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
-      <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
-      <li class="current"><a href="files.html"><span>Files</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
@@ -71,32 +71,62 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   </div>
   <div id="navrow2" class="tabs2">
     <ul class="tablist">
-      <li><a href="files.html"><span>File&#160;List</span></a></li>
+      <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
+      <li><a href="classes.html"><span>Data&#160;Structure&#160;Index</span></a></li>
+      <li><a href="functions.html"><span>Data&#160;Fields</span></a></li>
     </ul>
   </div>
 </div>
 <div class="header">
+  <div class="summary">
+<a href="#pub-attribs">Data Fields</a>  </div>
   <div class="headertitle">
-<div class="title">/home/travis/build/uofw/uofw/include/common_asm.h</div>  </div>
+<div class="title">SceCtrlInputDataTransferHandler Struct Reference<div class="ingroups"><a class="el" href="group__Controller.html">Controller Module</a></div></div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/* Copyright (C) 2011, 2012, 2013 The uOFW team</span>
-<a name="l00002"></a>00002 <span class="comment">   See the file COPYING for copying permission.</span>
-<a name="l00003"></a>00003 <span class="comment">*/</span>
-<a name="l00004"></a>00004 
-<a name="l00005"></a>00005 <span class="comment">/* Common file for ASM files. */</span>
-<a name="l00006"></a>00006 
-<a name="l00007"></a>00007 <span class="preprocessor">#ifndef COMMON_ASM_H</span>
-<a name="l00008"></a>00008 <span class="preprocessor"></span><span class="preprocessor">#define COMMON_ASM_H</span>
-<a name="l00009"></a>00009 <span class="preprocessor"></span>
-<a name="l00010"></a>00010 <span class="preprocessor">#define COMMON_INCLUDED</span>
-<a name="l00011"></a>00011 <span class="preprocessor"></span>
-<a name="l00012"></a>00012 <span class="preprocessor">#include &quot;common/common.S&quot;</span>
-<a name="l00013"></a>00013 <span class="preprocessor">#include &quot;common/errors.h&quot;</span>
-<a name="l00014"></a>00014 
-<a name="l00015"></a>00015 <span class="preprocessor">#endif</span>
-<a name="l00016"></a>00016 <span class="preprocessor"></span>
-</pre></div></div><!-- contents -->
+<!-- doxytag: class="SceCtrlInputDataTransferHandler" -->
+<p><code>#include &lt;<a class="el" href="ctrl_8h_source.html">ctrl.h</a>&gt;</code></p>
+<table class="memberdecls">
+<tr><td colspan="2"><h2><a name="pub-attribs"></a>
+Data Fields</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">unk1</a></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">s32(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceCtrlInputDataTransferHandler.html#aba7f069a5f49d6654eef9496ab294a83">copyInputData</a> )(void *src, <a class="el" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *dest)</td></tr>
+</table>
+<hr/><a name="details" id="details"></a><h2>Detailed Description</h2>
+<div class="textblock"><p>This structure is used to copy external input data into PSP internal controller buffers. </p>
+</div><hr/><h2>Field Documentation</h2>
+<a class="anchor" id="a4ac2b5681b0ebbcbc4cf5040f8ab69a9"></a><!-- doxytag: member="SceCtrlInputDataTransferHandler::unk1" ref="a4ac2b5681b0ebbcbc4cf5040f8ab69a9" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">s32 <a class="el" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">SceCtrlInputDataTransferHandler::unk1</a></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+<p>Unknown. Is set to 0xC by Sony. </p>
+
+</div>
+</div>
+<a class="anchor" id="aba7f069a5f49d6654eef9496ab294a83"></a><!-- doxytag: member="SceCtrlInputDataTransferHandler::copyInputData" ref="aba7f069a5f49d6654eef9496ab294a83" args=")(void *src, SceCtrlDataExt *dest)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">s32(* <a class="el" href="structSceCtrlInputDataTransferHandler.html#aba7f069a5f49d6654eef9496ab294a83">SceCtrlInputDataTransferHandler::copyInputData</a>)(void *src, <a class="el" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *dest)</td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+<p>Pointer to a transfer function to copy input data into a PSP internal controller buffer. &lt;copyInputData&gt; should return a value &gt;= 0 on success, &lt; 0 otherwise. </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li>/home/travis/build/uofw/uofw/include/<a class="el" href="ctrl_8h_source.html">ctrl.h</a></li>
+</ul>
+</div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -114,7 +144,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed May 27 2015 18:49:59 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed May 27 2015 18:50:00 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
