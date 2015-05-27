@@ -90,14 +90,17 @@ typedef struct {
 } SceCtrlLatch;
 
 /**
- * Unknown structure. 
+ * This structure is used to copy external input data into PSP internal controller buffers. 
  */
 typedef struct {
-    /** Unknown. */
+    /** Unknown. Is set to 0xC by Sony. */
     s32 unk1;
-    /** Unknown. */
-    s32 (*func)(s32);
-} SceCtrlUnkStruct;
+    /** 
+	 * Pointer to a transfer function to copy input data into a PSP internal controller buffer. 
+	 * <copyInputData> should return a value >= 0 on success, < 0 otherwise.
+	 */
+	s32(*copyInputData)(void *src, SceCtrlDataExt *dest);
+} SceCtrlInputDataTransferHandler;
 
 /**
  * Enumeration for the digital controller buttons in positive logic.
@@ -170,6 +173,16 @@ enum SceCtrlPadPollMode {
     SCE_CTRL_POLL_INACTIVE = 0,
     /** Controller input is recognized. */
     SCE_CTRL_POLL_ACTIVE = 1,
+};
+
+/** External input data sources. */
+enum SceCtrlExternalInputMode {
+	/** No external input data. */
+	SCE_CTRL_EXTERNAL_INPUT_PSP = 0,
+	/** Input data of the PS3's DUALSHOCK®3 controller is used. */
+	SCE_CTRL_EXTERNAL_DUALSHOCK_3 = 1,
+	/** Unknown. */
+	SCE_CTRL_EXTERNAL_UNKNOWN_2 = 2
 };
 
 /** Button mask settings. */
@@ -372,17 +385,20 @@ s16 sceCtrlGetSuspendingExtraSamples(void);
 s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
 
 /**
- * Extend the 64 internal controller buffers to represent SceCtrlDataExt structures.
- * By default, an internal controller buffer is equivalent to a SceCtrlData structure. This function 
- * has to be called before using the extended read/peekBuffer functions (only the first time).
+ * Set up internal controller buffers to receive external input data. Each input mode has its own
+ * set of buffers. These buffers are of type ::SceCtrlDataExt. 
+ * Note: This function has to be called initially in order to obtain external input data via the corresponding 
+ * Peek/Read functions.
  * 
- * @param mode Seems to be an index. Pass either 1 or 2.
- * @param arg2 Unknown. Pointer to a ctrlUnkStruct structure?
- * @param arg3 Unknown.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
+ * @param arg2 Unknown. Pointer to a SceCtrlInputDataTransferHandler containing a function to copy the <inputSource>
+ *						into the PSP's controller buffers.
+ * @param inputSource Pointer to buffer containing the Controller input data to copy to the PSP's 
+ *					  controller buffers. It is passed as the source argument to the given transfer function.
  * 
  * @return 0 on success.
  */
-s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3);
+s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource);
 
 /**
  * Obtain button latch data stored in the internal latch controller buffers. The following button 
@@ -519,7 +535,7 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
  * Extended ::sceCtrlPeekBufferPositive(). See description for more info.
  * You need to call ::SceCtrlExtendInternalCtrlBuffers() before use.
  * 
- * @param arg1 Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in positive logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -527,13 +543,13 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
 
 /**
  * Extended ::sceCtrlPeekBufferNegative(). See description for more info. 
  * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
  * 
- * @param arg1 Unknown. Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in negative logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -541,13 +557,13 @@ s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
 
 /**
  * Extended ::sceCtrlReadBufferPositive(). See description for more info.
  * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
  * 
- * @param arg1 Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in positive logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -555,13 +571,13 @@ s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
 
 /**
  * Extended ::sceCtrlReadBufferNegative(). See description for more info.
  * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
  * 
- * @param arg1 Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in negative logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -569,7 +585,7 @@ s32 sceCtrlReadBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
 
 /**
  * Disable a rapid-fire button event.

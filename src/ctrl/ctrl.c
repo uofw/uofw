@@ -111,6 +111,9 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_SAMPLING_MODES                     (2)
 #define CTRL_SAMPLING_MODE_MAX_MODE             (CTRL_SAMPLING_MODES - 1)
 
+/* The total number of different external input sources for the controller data. */
+#define CTRL_NUN_EXTERNAL_INPUT_MODES			(2)
+
 /* The maximum number of button callbacks which can be registered. */
 #define CTRL_BUTTON_CALLBACK_SLOTS              (4)
 #define CTRL_BUTTON_CALLBACK_MAX_SLOT           (CTRL_BUTTON_CALLBACK_SLOTS - 1)
@@ -289,34 +292,34 @@ typedef struct {
     /* Button is newly pressed (it wasn't pressed one frame before the
      * current one). 
      */
-    u32 btnMake;
+    u32 btnMake; // 0
     /* Stop of button press. It was pressed one frame before the current 
      * one. 
      */
-    u32 btnBreak;
+    u32 btnBreak; // 4
     /* Button is pressed. */
-    u32 btnPress;
+	u32 btnPress; // 8
     /* Button is not pressed. */
-    u32 btnRelease;
+    u32 btnRelease; // 12
     /* Count the internal latch buffer reads.  Is set to 0 when the 
      * buffer is reset. 
      */
-    u32 readLatchCount;
+    u32 readLatchCount; // 16
     /* Index representing the first updated controller button data buffer
      * which wasn't read while containing the updated data before.  Thus, 
      * if we have 13 updated buffers (from position 0 - 12), and this member 
      * is set to 10, the buffers at index 10, 11 and 12 are updated buffers 
      * which weren't read with the updated data before.
      */
-    u32 firstUnReadUpdatedBufIndex;
+    u32 firstUnReadUpdatedBufIndex; // 20
     /* The index describing the current buffer which will be updated the
      * next time a SYSCON hardware button data transfer occurs.
      */
-    u32 curUpdatableBufIndex;
+    u32 curUpdatableBufIndex; // 24
     /* An array of three pointers to 64 internal button data buffers 
      * containing controller information. 
      */
-    void *sceCtrlBuf[3];
+    void *sceCtrlBuf[3]; // 28
 } SceCtrlInternalData;
 
 /*
@@ -453,22 +456,20 @@ typedef struct {
     SceCtrlButtonCallback buttonCallback[CTRL_BUTTON_CALLBACK_SLOTS];
     /* Unknown. */
     s32 unk768;
-    /* Unknown. */
-    SceCtrlUnkStruct *unk772[2]; 
-    /* Unknown. */
-    s32 unk780[2];
+    /* Pointers to transferHandlers to copy external input data into the PSP internal controller buffers. */
+	SceCtrlInputDataTransferHandler *transferHandler[CTRL_NUN_EXTERNAL_INPUT_MODES];
+    /* Pointers to external input data buffers to copy via the <transferHandler>. */
+	void *extInputDataSource[CTRL_NUN_EXTERNAL_INPUT_MODES];
 } SceCtrl;
 
-static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName __attribute__((unused)), void *param __attribute__((unused)), 
-                                   s32 *result __attribute__((unused)));
+static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result);
 static SceUInt _sceCtrlDummyAlarm(void *common);
 static s32 _sceCtrlVblankIntr(s32 subIntNm, void *arg);
-static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __attribute__((unused)), 
-                             void *common __attribute__((unused)), s32 unused3 __attribute__((unused)));
+static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4);
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp);
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp);
 static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY);
-static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode);
+static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 arg3, u8 mode);
 
 /* 
  * The controller module's manager. Keeps track of every important
@@ -854,26 +855,26 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples)
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3) 
+s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
 {
     SceUID poolId;
-    void *ctrlBuf;
+	SceCtrlDataExt *ctrlBuf;
 
-    if (mode < 1 || mode > 2)
+	if (inputMode != SCE_CTRL_EXTERNAL_DUALSHOCK_3 || inputMode != SCE_CTRL_EXTERNAL_UNKNOWN_2)
         return SCE_ERROR_INVALID_VALUE;
     
-    if (g_ctrl.unk772[mode - 1] == NULL) {
+	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
         poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
                                     2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
 
-        sceKernelTryAllocateFpl(poolId, &ctrlBuf);
-        g_ctrl.kernelModeData.sceCtrlBuf[0] = (SceCtrlDataExt *)(ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS);
-        g_ctrl.userModeData.sceCtrlBuf[0] = (SceCtrlDataExt *)ctrlBuf;
+        sceKernelTryAllocateFpl(poolId, (void **)&ctrlBuf);
+		g_ctrl.kernelModeData.sceCtrlBuf[inputMode] = ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS;
+		g_ctrl.userModeData.sceCtrlBuf[inputMode] = (SceCtrlDataExt *)ctrlBuf;
     }
-    g_ctrl.unk780[mode - 1] = arg3;
-    g_ctrl.unk772[mode - 1] = arg2;
+	g_ctrl.extInputDataSource[inputMode - 1] = inputSource;
+	g_ctrl.transferHandler[inputMode - 1] = transferHandler;
     
     return SCE_ERROR_OK;
 }
@@ -949,42 +950,42 @@ s32 sceCtrlReadLatch(SceCtrlLatch *latch)
 
 s32 sceCtrlPeekBufferPositive(SceCtrlData *data, u8 nBufs) 
 {
-    return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, 0, PEEK_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, PEEK_BUFFER_POSITIVE);
 }
 
 s32 sceCtrlPeekBufferNegative(SceCtrlData *data, u8 nBufs) 
 {
-    return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, 0, PEEK_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, PEEK_BUFFER_NEGATIVE);
 }
 
 s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs) 
 {
-   return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, 0, READ_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, READ_BUFFER_POSITIVE);
 }
 
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs) 
 {
-    return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, 0, READ_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, READ_BUFFER_NEGATIVE);
 }
 
-s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs) 
+s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs) 
 {
-    return _sceCtrlReadBuf(data, nBufs, arg1, PEEK_BUFFER_POSITIVE_EXTRA);
+	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs) 
+s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
 {
-    return _sceCtrlReadBuf(data, nBufs, arg1, PEEK_BUFFER_NEGATIVE_EXTRA);
+	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_NEGATIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs) 
+s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
 {
-    return _sceCtrlReadBuf(data, nBufs, arg1, READ_BUFFER_POSITIVE_EXTRA);
+	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs) 
+s32 sceCtrlReadBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
 {
-    return _sceCtrlReadBuf(data, nBufs, arg1, READ_BUFFER_NEGATIVE_EXTRA);
+	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_NEGATIVE_EXTRA);
 }
 
 s32 sceCtrlClearRapidFire(u8 slot) 
@@ -1166,10 +1167,13 @@ u32 sceCtrlUpdateCableTypeReq(void)
  * 
  * Returns 0 on success.
  */
-static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName __attribute__((unused)), void *param __attribute__((unused)), 
-                                   s32 *result __attribute__((unused))) 
+static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result) 
 {
     s32 sysconStatus;
+
+	(void)eventName;
+	(void)param;
+	(void)result;
 
     if (eventId == 0x402) {
         sysconStatus = g_ctrl.sysconStatus.status;
@@ -1213,10 +1217,12 @@ static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName __attribute__((u
  * 
  * Returns 0.        
  */
-static SceUInt _sceCtrlDummyAlarm(void *opt __attribute__((unused))) 
+static SceUInt _sceCtrlDummyAlarm(void *opt) 
 {
     s32 intrState;
     u32 pureButtons;   
+
+	(void)opt;
 
     intrState = sceKernelCpuSuspendIntr();
     
@@ -1247,10 +1253,13 @@ static SceUInt _sceCtrlDummyAlarm(void *opt __attribute__((unused)))
  * 
  * Returns -1.
  */
-static s32 _sceCtrlVblankIntr(s32 subIntNm __attribute__((unused)), void *arg __attribute__((unused)))
+static s32 _sceCtrlVblankIntr(s32 subIntNm, void *arg)
 {
     s32 intrState;
     s32 status;   
+
+	(void)subIntNm;
+	(void)arg;
     
     intrState = sceKernelCpuSuspendIntr();
     
@@ -1299,12 +1308,16 @@ static s32 _sceCtrlVblankIntr(s32 subIntNm __attribute__((unused)), void *arg __
  *
  * Returns -1.
  */
-static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __attribute__((unused)), 
-                             void *common __attribute__((unused)), s32 unused3 __attribute__((unused))) 
+static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4) 
 {
     u8 sysconCtrlCmd;
     s32 intrState;
     s32 status;    
+
+	(void)timerId;
+	(void)count;
+	(void)common;
+	(void)arg4;
 
     sysconCtrlCmd = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY;  
     intrState = sceKernelCpuSuspendIntr();
@@ -1347,7 +1360,7 @@ static s32 _sceCtrlTimerIntr(s32 timerId __attribute__((unused)), s32 unused1 __
  *
  * Returns 0.
  */
-static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attribute__((unused)))
+static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
 {
     u32 pureButtons;
     s32 intrState;
@@ -1359,6 +1372,8 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
     u8 sampling;
     u32 oneTimeIdleResetButtons, allTimeIdleResetButtons;
     u32 idleResetButtons;
+
+	(void)argp;
 
     curButtons = 0;
     g_ctrl.sysconStatus.busy.intr1 = SCE_FALSE;
@@ -1499,8 +1514,11 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp __attri
     }
 }
 
-static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet __attribute__((unused)), void *argp __attribute__((unused)))
+static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp)
 {   
+	(void)packet;
+	(void)argp;
+
     g_ctrl.cableTypeReq = 0;
     g_ctrl.unk15 = g_ctrl.sysPacket[1].tx[PSP_SYSCON_TX_DATA(0)] & 0x1;
     g_ctrl.sysconStatus.busy.intr2 = SCE_FALSE;
@@ -1528,7 +1546,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     u8 aXCenterOffset, aXCenterOffset2;
     u8 aYCenterOffset, aYCenterOffset2;
     u8 minIdleReset;
-    s32 (*func)(s32);
+	s32(*func)(void *, SceCtrlDataExt *);
     s32 status;
     s32 res;
     u32 storeData;
@@ -1555,13 +1573,13 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
 
     sysTimeLow = sceKernelGetSystemTimeLow();
 
-    index = g_ctrl.userModeData.curUpdatableBufIndex;
-    ctrlUserBuf = ((SceCtrlData *)g_ctrl.userModeData.sceCtrlBuf[0] + index);
+    //index = g_ctrl.userModeData.curUpdatableBufIndex;
+	ctrlUserBuf = (SceCtrlData *)g_ctrl.userModeData.sceCtrlBuf[0] + g_ctrl.userModeData.curUpdatableBufIndex;;
     ctrlUserBuf->timeStamp = sysTimeLow;
 
-    index = g_ctrl.kernelModeData.curUpdatableBufIndex;
-    ctrlKernelBuf = ((SceCtrlData *)g_ctrl.kernelModeData.sceCtrlBuf[0] + index);
-    ctrlUserBuf->timeStamp = sysTimeLow;
+    //index = g_ctrl.kernelModeData.curUpdatableBufIndex;
+	ctrlKernelBuf = (SceCtrlData *)g_ctrl.kernelModeData.sceCtrlBuf[0] + g_ctrl.kernelModeData.curUpdatableBufIndex;
+    ctrlKernelBuf->timeStamp = sysTimeLow;
 
     analogX = aX;
     analogY = aY;
@@ -1595,14 +1613,14 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     for (i = 0; i < sizeof ctrlKernelBuf->rsrv; i++)
          ctrlKernelBuf->rsrv[i] = 0;
 
-    for (i = 0; i < 2; i++) {
-         if (g_ctrl.unk772[i + 1] != NULL) {                        
-             ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.sceCtrlBuf[i + 1];
-             ctrlKernelBufExt = ctrlKernelBufExt + 1;
+	/* Check for additionally registered input data transferers. */
+	for (i = 0; i < CTRL_NUN_EXTERNAL_INPUT_MODES; i++) {
+		if (g_ctrl.transferHandler[i] != NULL) {
+			 ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.sceCtrlBuf[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
              ctrlKernelBufExt->timeStamp = sysTimeLow;
 
-             func = (g_ctrl.unk772[i + 1]->func);
-             status = func(g_ctrl.unk780[i + 1]);
+			 func = (g_ctrl.transferHandler[i]->copyInputData);
+			 status = func(g_ctrl.extInputDataSource[i], ctrlKernelBufExt); // 0x00000F64
              if (status < 0) {
                  for (j = 0; j < sizeof ctrlKernelBufExt->rsrv; j++)
                       ctrlKernelBufExt->rsrv[j] = 0;
@@ -1666,7 +1684,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
                          g_ctrl.cancelIdleTimer = SCE_TRUE;
                  }
              }
-             ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.sceCtrlBuf[1] + i;
+			 ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.sceCtrlBuf[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
              ctrlUserBufExt->timeStamp = ctrlKernelBufExt->timeStamp;
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons;
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX;
@@ -1929,7 +1947,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
  * 
  * Returns the number of read internal controller data buffers.
  */
-static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode) 
+static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mode) 
 {
     SceCtrlInternalData *intDataPtr;
     SceCtrlDataExt *ctrlBuf;
@@ -1944,10 +1962,10 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
     if (nBufs >= CTRL_INTERNAL_CONTROLLER_BUFFERS)
         return SCE_ERROR_INVALID_SIZE;
 
-    if (arg3 > 2)
+	if (inputMode > CTRL_NUN_EXTERNAL_INPUT_MODES)
         return SCE_ERROR_INVALID_VALUE;
 
-    if (arg3 != 0 && (mode & READ_BUFFER_POSITIVE))
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && (mode & READ_BUFFER_POSITIVE))
         return SCE_ERROR_NOT_SUPPORTED;
 
     oldK1 = pspShiftK1();
@@ -1962,7 +1980,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
     else
         intDataPtr = &g_ctrl.kernelModeData;
 
-    if (arg3 != 0 && intDataPtr->sceCtrlBuf[arg3] == NULL)
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && intDataPtr->sceCtrlBuf[inputMode] == NULL)
         return SCE_ERROR_NOT_SUPPORTED;
 
     /*
@@ -2010,8 +2028,8 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
             numReadIntBufs = nBufs;
         }
     }
-    if (arg3 != 0)
-        ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[arg3] + startBufIndex;
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP)
+		ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[inputMode] + startBufIndex;
     else
          ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->sceCtrlBuf[0] + startBufIndex);
 
@@ -2053,7 +2071,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
            if (mode >= PEEK_BUFFER_POSITIVE_EXTRA) {
                data->rsrv[2] = 0;
                data->rsrv[3] = 0;
-               if (arg3 == 0) {
+			   if (inputMode == 0) {
                    data->rsrv[0] = -128;
                    data->rsrv[1] = -128;
                    data->rsrv[4] = 0;
@@ -2084,18 +2102,14 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
                data += 1;
            }
            startBufIndex++;
-           if (arg3 == 0)
+		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP)
                ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)ctrlBuf + startBufIndex);
            else
                ctrlBuf = (SceCtrlDataExt *)ctrlBuf + startBufIndex;
 
            if (startBufIndex == CTRL_INTERNAL_CONTROLLER_BUFFERS) {
                startBufIndex = 0;
-
-               if (arg3 != 0)
-                   ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[0];
-               else
-                   ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[arg3];
+			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[inputMode];
            }
     }
     sceKernelCpuResumeIntr(intrState);
@@ -2103,14 +2117,20 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, s32 arg3, u8 mode)
     return numReadIntBufs;
 }
 
-s32 _sceCtrlModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
+s32 _sceCtrlModuleStart(s32 argc, void *argp) 
 {
+	(void)argc;
+	(void)argp;
+
     sceCtrlInit();    
     return SCE_KERNEL_RESIDENT;
 }
 
-s32 _sceCtrlModuleRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused))) 
+s32 _sceCtrlModuleRebootBefore(s32 argc, void *argp) 
 {
+	(void)argc;
+	(void)argp;
+
     sceCtrlEnd();   
     return SCE_KERNEL_STOP_SUCCESS;
 }
