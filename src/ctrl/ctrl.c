@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -112,7 +112,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_SAMPLING_MODE_MAX_MODE             (CTRL_SAMPLING_MODES - 1)
 
 /* The total number of different external input sources for the controller data. */
-#define CTRL_NUN_EXTERNAL_INPUT_MODES			(2)
+#define CTRL_NUM_EXTERNAL_INPUT_MODES			(2)
 
 /* The maximum number of button callbacks which can be registered. */
 #define CTRL_BUTTON_CALLBACK_SLOTS              (4)
@@ -319,7 +319,7 @@ typedef struct {
     /* An array of three pointers to 64 internal button data buffers 
      * containing controller information. 
      */
-    void *sceCtrlBuf[3]; // 28
+    void *pCtrlInputBuffers[3]; // 28
 } SceCtrlInternalData;
 
 /*
@@ -383,7 +383,7 @@ typedef struct {
     /* The rapid fire structure objects. */
     SceCtrlRapidFire rapidFire[CTRL_BUTTONS_RAPID_FIRE_SLOTS];
     /* The obtained button data from a SYSCON hardware transfer. */
-    u32 pureButtons;
+    u32 rawButtons;
     /* Previously pressed kernel buttons. */
     u32 prevKernelButtons[2];
     /* Previously pressed buttons (one frame past the current one).  Button 
@@ -457,9 +457,9 @@ typedef struct {
     /* Unknown. */
     s32 unk768;
     /* Pointers to transferHandlers to copy external input data into the PSP internal controller buffers. */
-	SceCtrlInputDataTransferHandler *transferHandler[CTRL_NUN_EXTERNAL_INPUT_MODES];
+	SceCtrlInputDataTransferHandler *transferHandler[CTRL_NUM_EXTERNAL_INPUT_MODES];
     /* Pointers to external input data buffers to copy via the <transferHandler>. */
-	void *extInputDataSource[CTRL_NUN_EXTERNAL_INPUT_MODES];
+	void *extInputDataSource[CTRL_NUM_EXTERNAL_INPUT_MODES];
 } SceCtrl;
 
 static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result);
@@ -468,7 +468,7 @@ static s32 _sceCtrlVblankIntr(s32 subIntNm, void *arg);
 static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4);
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp);
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp);
-static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY);
+static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY);
 static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 arg3, u8 mode);
 
 /* 
@@ -544,10 +544,10 @@ s32 sceCtrlInit(void)
     memset(&g_ctrl, 0, sizeof(SceCtrl));
 
     g_ctrl.pollMode = SCE_CTRL_POLL_ACTIVE;
-    g_ctrl.userModeData.sceCtrlBuf[0] = ctrlUserBufs;
+    g_ctrl.userModeData.pCtrlInputBuffers[0] = ctrlUserBufs;
     g_ctrl.analogY = CTRL_ANALOG_PAD_CENTER_VALUE;
     g_ctrl.analogX = CTRL_ANALOG_PAD_CENTER_VALUE;
-    g_ctrl.kernelModeData.sceCtrlBuf[0] = ctrlKernelBufs;
+    g_ctrl.kernelModeData.pCtrlInputBuffers[0] = ctrlKernelBufs;
     g_ctrl.sysconTransfersLeft = -1;
 
     /* 
@@ -860,18 +860,18 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandl
     SceUID poolId;
 	SceCtrlDataExt *ctrlBuf;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_DUALSHOCK_3 || inputMode != SCE_CTRL_EXTERNAL_UNKNOWN_2)
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 || inputMode != SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2)
         return SCE_ERROR_INVALID_VALUE;
     
 	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
-        poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
+        poolId = sceKernelCreateFpl("pCtrlInputBuffers", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
                                     2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
 
         sceKernelTryAllocateFpl(poolId, (void **)&ctrlBuf);
-		g_ctrl.kernelModeData.sceCtrlBuf[inputMode] = ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS;
-		g_ctrl.userModeData.sceCtrlBuf[inputMode] = (SceCtrlDataExt *)ctrlBuf;
+		g_ctrl.kernelModeData.pCtrlInputBuffers[inputMode] = ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS;
+		g_ctrl.userModeData.pCtrlInputBuffers[inputMode] = ctrlBuf;
     }
 	g_ctrl.extInputDataSource[inputMode - 1] = inputSource;
 	g_ctrl.transferHandler[inputMode - 1] = transferHandler;
@@ -1220,17 +1220,17 @@ static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName, void *param, s3
 static SceUInt _sceCtrlDummyAlarm(void *opt) 
 {
     s32 intrState;
-    u32 pureButtons;   
+    u32 rawButtons;   
 
 	(void)opt;
 
     intrState = sceKernelCpuSuspendIntr();
     
-    pureButtons = g_ctrl.pureButtons;
+    rawButtons = g_ctrl.rawButtons;
     if (g_ctrl.sysconTransfersLeft == 0)
-        pureButtons &= ~0x1FFFF;
+        rawButtons &= ~0x1FFFF;
     
-    _sceCtrlUpdateButtons(pureButtons, g_ctrl.analogX, g_ctrl.analogY);
+    _sceCtrlUpdateButtons(rawButtons, g_ctrl.analogX, g_ctrl.analogY);
     
     /* Set the event flag to indicate a finished update interval. */
     sceKernelSetEventFlag(g_ctrl.updateEventId, UPDATE_INTERRUPT_EVENT_FLAG_ON);
@@ -1362,7 +1362,7 @@ static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4)
  */
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
 {
-    u32 pureButtons;
+    u32 rawButtons;
     s32 intrState;
     s32 status;
     u32 curButtons, prevButtons, newButtons;
@@ -1385,11 +1385,11 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
         intrState = sceKernelCpuSuspendIntr();
         
         if (g_ctrl.sysconTransfersLeft == 0)    
-            pureButtons = g_ctrl.pureButtons & ~0x1FFFF;
+            rawButtons = g_ctrl.rawButtons & ~0x1FFFF;
         else
-            pureButtons = g_ctrl.pureButtons;
+            rawButtons = g_ctrl.rawButtons;
  
-        _sceCtrlUpdateButtons(pureButtons, g_ctrl.analogX, g_ctrl.analogY);
+        _sceCtrlUpdateButtons(rawButtons, g_ctrl.analogX, g_ctrl.analogY);
         
         /* Set the event flag to indicate a finished update interval. */
         sceKernelSetEventFlag(g_ctrl.updateEventId, UPDATE_INTERRUPT_EVENT_FLAG_ON);
@@ -1398,7 +1398,7 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
         return SCE_ERROR_OK;
     }
     else {
-        prevButtons = g_ctrl.pureButtons;
+        prevButtons = g_ctrl.rawButtons;
         
         /*
          * A received SYSCON data package differs in size and content.  Size and
@@ -1434,9 +1434,9 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
                        | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xF) << 4)
                        | (sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0x9)) 
                     ^ 0x7F3F9) 
-                    | (g_ctrl.pureButtons & 0xFFF00000);
+                    | (g_ctrl.rawButtons & 0xFFF00000);
         }
-        g_ctrl.pureButtons = curButtons;
+        g_ctrl.rawButtons = curButtons;
 
         if (sysPacket->tx[PSP_SYSCON_TX_CMD] == PSP_SYSCON_CMD_GET_ANALOG) {
             analogY = sysPacket->rx[PSP_SYSCON_RX_DATA(1)];
@@ -1528,12 +1528,12 @@ static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp)
 
 /*
  * Update the internal controller button data buffers with the obtained
- * button data from a SYSCON hardware register transfer.  Furthermore, 
+ * raw button data from a SYSCON hardware register transfer.  Furthermore, 
  * apply custom user settings to the button data.
  * 
  * Returns 0.
  */
-static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY) 
+static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY) 
 {
     SceCtrlData *ctrlUserBuf, *ctrlKernelBuf;
     SceCtrlDataExt *ctrlUserBufExt, *ctrlKernelBufExt;
@@ -1546,7 +1546,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     u8 aXCenterOffset, aXCenterOffset2;
     u8 aYCenterOffset, aYCenterOffset2;
     u8 minIdleReset;
-	s32(*func)(void *, SceCtrlDataExt *);
+	s32(*transferInputFunc)(void *, SceCtrlDataExt *);
     s32 status;
     s32 res;
     u32 storeData;
@@ -1573,12 +1573,10 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
 
     sysTimeLow = sceKernelGetSystemTimeLow();
 
-    //index = g_ctrl.userModeData.curUpdatableBufIndex;
-	ctrlUserBuf = (SceCtrlData *)g_ctrl.userModeData.sceCtrlBuf[0] + g_ctrl.userModeData.curUpdatableBufIndex;;
+	ctrlUserBuf = (SceCtrlData *)g_ctrl.userModeData.pCtrlInputBuffers[0] + g_ctrl.userModeData.curUpdatableBufIndex;
     ctrlUserBuf->timeStamp = sysTimeLow;
 
-    //index = g_ctrl.kernelModeData.curUpdatableBufIndex;
-	ctrlKernelBuf = (SceCtrlData *)g_ctrl.kernelModeData.sceCtrlBuf[0] + g_ctrl.kernelModeData.curUpdatableBufIndex;
+	ctrlKernelBuf = (SceCtrlData *)g_ctrl.kernelModeData.pCtrlInputBuffers[0] + g_ctrl.kernelModeData.curUpdatableBufIndex;
     ctrlKernelBuf->timeStamp = sysTimeLow;
 
     analogX = aX;
@@ -1613,14 +1611,14 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     for (i = 0; i < sizeof ctrlKernelBuf->rsrv; i++)
          ctrlKernelBuf->rsrv[i] = 0;
 
-	/* Check for additionally registered input data transferers. */
-	for (i = 0; i < CTRL_NUN_EXTERNAL_INPUT_MODES; i++) {
+	/* Check for additionally registered input data transfers. */
+	for (i = 0; i < CTRL_NUM_EXTERNAL_INPUT_MODES; i++) {
 		if (g_ctrl.transferHandler[i] != NULL) {
-			 ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.sceCtrlBuf[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
+			 ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.pCtrlInputBuffers[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
              ctrlKernelBufExt->timeStamp = sysTimeLow;
 
-			 func = (g_ctrl.transferHandler[i]->copyInputData);
-			 status = func(g_ctrl.extInputDataSource[i], ctrlKernelBufExt); // 0x00000F64
+			 transferInputFunc = (g_ctrl.transferHandler[i]->copyInputData);
+			 status = transferInputFunc(g_ctrl.extInputDataSource[i], ctrlKernelBufExt); // 0x00000F64
              if (status < 0) {
                  for (j = 0; j < sizeof ctrlKernelBufExt->rsrv; j++)
                       ctrlKernelBufExt->rsrv[j] = 0;
@@ -1684,7 +1682,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
                          g_ctrl.cancelIdleTimer = SCE_TRUE;
                  }
              }
-			 ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.sceCtrlBuf[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
+			 ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.pCtrlInputBuffers[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
              ctrlUserBufExt->timeStamp = ctrlKernelBufExt->timeStamp;
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons;
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX;
@@ -1780,8 +1778,8 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     if (index == g_ctrl.kernelModeData.firstUnReadUpdatedBufIndex)
         g_ctrl.kernelModeData.firstUnReadUpdatedBufIndex = SVALALIGN64(index + 1);
  
-    updatedButtons = pureButtons;
-    if (pureButtons & SCE_CTRL_HOLD)
+    updatedButtons = rawButtons;
+    if (rawButtons & SCE_CTRL_HOLD)
         updatedButtons &= CTRL_HARDWARE_IO_BUTTONS;
 
     for (i = 0; i < CTRL_DATA_EMULATION_SLOTS; i++)
@@ -1796,7 +1794,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     pressedButtons = g_ctrl.kernelModeData.btnPress | updatedButtons;
     g_ctrl.prevModifiedButtons = updatedButtons;
     
-    updatedButtons = pureButtons & g_ctrl.maskSupportButtons;
+    updatedButtons = rawButtons & g_ctrl.maskSupportButtons;
 
     g_ctrl.kernelModeData.btnPress = pressedButtons;
     g_ctrl.kernelModeData.btnRelease |= unpressedButtons;
@@ -1831,7 +1829,7 @@ static s32 _sceCtrlUpdateButtons(u32 pureButtons, u8 aX, u8 aY)
     updatedButtons |= uModeBtnEmulationAll;
     gp = pspGetGp();
 
-    curButtons = kModeBtnEmulationAll | pureButtons; 
+    curButtons = kModeBtnEmulationAll | rawButtons; 
     prevButtons = g_ctrl.prevButtons;
     g_ctrl.prevButtons = curButtons;
     pressedButtons = curButtons ^ prevButtons;
@@ -1962,7 +1960,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
     if (nBufs >= CTRL_INTERNAL_CONTROLLER_BUFFERS)
         return SCE_ERROR_INVALID_SIZE;
 
-	if (inputMode > CTRL_NUN_EXTERNAL_INPUT_MODES)
+	if (inputMode > CTRL_NUM_EXTERNAL_INPUT_MODES)
         return SCE_ERROR_INVALID_VALUE;
 
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && (mode & READ_BUFFER_POSITIVE))
@@ -1980,7 +1978,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
     else
         intDataPtr = &g_ctrl.kernelModeData;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && intDataPtr->sceCtrlBuf[inputMode] == NULL)
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && intDataPtr->pCtrlInputBuffers[inputMode] == NULL)
         return SCE_ERROR_NOT_SUPPORTED;
 
     /*
@@ -2029,9 +2027,9 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
         }
     }
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP)
-		ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[inputMode] + startBufIndex;
+		ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     else
-         ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->sceCtrlBuf[0] + startBufIndex);
+         ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[0] + startBufIndex);
 
     if (numReadIntBufs < 0) {
         sceKernelCpuResumeIntr(intrState);
@@ -2109,7 +2107,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
 
            if (startBufIndex == CTRL_INTERNAL_CONTROLLER_BUFFERS) {
                startBufIndex = 0;
-			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->sceCtrlBuf[inputMode];
+			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode];
            }
     }
     sceKernelCpuResumeIntr(intrState);

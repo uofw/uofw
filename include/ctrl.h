@@ -1,4 +1,4 @@
-/** Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
+/** Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -17,8 +17,7 @@ typedef void (*SceKernelButtonCallbackFunction)(u32 curButtons, u32 lastButtons,
 
 /** 
  * This structure is for obtaining button data (button/analog stick information) from the 
- * controller using ::sceCtrlPeekBufferPositive(), ::sceCtrlReadBufferNegative() and similar 
- * functions.
+ * controller using ::sceCtrlPeekBufferPositive(), ::sceCtrlReadBufferNegative() etc...
  */
 typedef struct {
     /** 
@@ -32,14 +31,13 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
-    /** Reserved. Values are normally set to 0. */
+    /** Reserved. */
     u8 rsrv[6];
 } SceCtrlData;
 
 /** 
- * This structure is for obtaining button data (button/stick information) from the 
- * controller using ::sceCtrlPeekBufferPositiveExtra(), ::sceCtrlReadBufferNegativeExtra()
- * and similar functions.
+ * This structure is for obtaining button data (button/analog stick information) from the 
+ * controller using ::sceCtrlPeekBufferPositiveExtra(), ::sceCtrlReadBufferNegativeExtra() etc...
  */
 typedef struct {
     /** 
@@ -53,7 +51,7 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
-    /** Reserved. Values are normally set to 0. */
+    /** Reserved. */
     u8 rsrv[6];
     /** Unknown. */
     s32 unk1;
@@ -180,9 +178,9 @@ enum SceCtrlExternalInputMode {
 	/** No external input data. */
 	SCE_CTRL_EXTERNAL_INPUT_PSP = 0,
 	/** Input data of the PS3's DUALSHOCK®3 controller is used. */
-	SCE_CTRL_EXTERNAL_DUALSHOCK_3 = 1,
+	SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 = 1,
 	/** Unknown. */
-	SCE_CTRL_EXTERNAL_UNKNOWN_2 = 2
+	SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2 = 2
 };
 
 /** Button mask settings. */
@@ -391,7 +389,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
  * Peek/Read functions.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
- * @param arg2 Unknown. Pointer to a SceCtrlInputDataTransferHandler containing a function to copy the <inputSource>
+ * @param transferHandler Pointer to a SceCtrlInputDataTransferHandler containing a function to copy the <inputSource>
  *						into the PSP's controller buffers.
  * @param inputSource Pointer to buffer containing the Controller input data to copy to the PSP's 
  *					  controller buffers. It is passed as the source argument to the given transfer function.
