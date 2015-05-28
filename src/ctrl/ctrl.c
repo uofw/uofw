@@ -864,7 +864,7 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandl
         return SCE_ERROR_INVALID_VALUE;
     
 	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
-        poolId = sceKernelCreateFpl("pCtrlInputBuffers", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
+        poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
                                     2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
