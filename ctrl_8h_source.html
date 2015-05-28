@@ -88,166 +88,166 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00014"></a>00014 <span class="preprocessor"></span>
 <a name="l00016"></a><a class="code" href="group__Controller.html#gab31eb7e12d4123d169b2a01231e02fe3">00016</a> <span class="keyword">typedef</span> void (*<a class="code" href="group__Controller.html#gab31eb7e12d4123d169b2a01231e02fe3">SceKernelButtonCallbackFunction</a>)(u32 curButtons, u32 lastButtons, <span class="keywordtype">void</span> *opt);
 <a name="l00017"></a>00017 
-<a name="l00023"></a><a class="code" href="structSceCtrlData.html">00023</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00028"></a><a class="code" href="structSceCtrlData.html#a4d956741adfd85933d1362caf1df4838">00028</a>     u32 <a class="code" href="structSceCtrlData.html#a4d956741adfd85933d1362caf1df4838">timeStamp</a>;
-<a name="l00030"></a><a class="code" href="structSceCtrlData.html#a8694cfbad5c0bf41f36548a522fb17a7">00030</a>     u32 <a class="code" href="structSceCtrlData.html#a8694cfbad5c0bf41f36548a522fb17a7">buttons</a>;
-<a name="l00032"></a><a class="code" href="structSceCtrlData.html#a6b5a5f1eaf00139a31610a1240b4aa4d">00032</a>     u8 <a class="code" href="structSceCtrlData.html#a6b5a5f1eaf00139a31610a1240b4aa4d">aX</a>;
-<a name="l00034"></a><a class="code" href="structSceCtrlData.html#ab835f5daf1daf6d7873cc9979c3680bd">00034</a>     u8 <a class="code" href="structSceCtrlData.html#ab835f5daf1daf6d7873cc9979c3680bd">aY</a>;
-<a name="l00036"></a><a class="code" href="structSceCtrlData.html#aa70235fba2997110a866a8f4ce6ccb56">00036</a>     u8 rsrv[6];
-<a name="l00037"></a>00037 } <a class="code" href="structSceCtrlData.html">SceCtrlData</a>;
-<a name="l00038"></a>00038 
-<a name="l00044"></a><a class="code" href="structSceCtrlDataExt.html">00044</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00049"></a><a class="code" href="structSceCtrlDataExt.html#a326deeee2ea8c050e59aa15850e8c823">00049</a>     u32 <a class="code" href="structSceCtrlDataExt.html#a326deeee2ea8c050e59aa15850e8c823">timeStamp</a>;
-<a name="l00051"></a><a class="code" href="structSceCtrlDataExt.html#af7979cb02358e519fc1dfd624c99fc59">00051</a>     u32 <a class="code" href="structSceCtrlDataExt.html#af7979cb02358e519fc1dfd624c99fc59">buttons</a>;
-<a name="l00053"></a><a class="code" href="structSceCtrlDataExt.html#a285155f0083c2f4ea5c4122cb43acbdb">00053</a>     u8 <a class="code" href="structSceCtrlDataExt.html#a285155f0083c2f4ea5c4122cb43acbdb">aX</a>;
-<a name="l00055"></a><a class="code" href="structSceCtrlDataExt.html#a414872df702050cd4e6be349db894418">00055</a>     u8 <a class="code" href="structSceCtrlDataExt.html#a414872df702050cd4e6be349db894418">aY</a>;
-<a name="l00057"></a><a class="code" href="structSceCtrlDataExt.html#a255804444fb7f69d7114b6592cfaf1a7">00057</a>     u8 rsrv[6];
-<a name="l00059"></a><a class="code" href="structSceCtrlDataExt.html#a4f1e236bcf6eb1923a5c220c0df8fdbc">00059</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a4f1e236bcf6eb1923a5c220c0df8fdbc">unk1</a>;
-<a name="l00061"></a><a class="code" href="structSceCtrlDataExt.html#a386bf2f515cb7f8b91fa463b1fa725a7">00061</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a386bf2f515cb7f8b91fa463b1fa725a7">unk2</a>;
-<a name="l00063"></a><a class="code" href="structSceCtrlDataExt.html#a0fca4cbcb4dfd1e44990748da39ddb72">00063</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a0fca4cbcb4dfd1e44990748da39ddb72">unk3</a>;
-<a name="l00065"></a><a class="code" href="structSceCtrlDataExt.html#ac88cb2b6b1799526175c88575eaea915">00065</a>     s32 <a class="code" href="structSceCtrlDataExt.html#ac88cb2b6b1799526175c88575eaea915">unk4</a>;
-<a name="l00067"></a><a class="code" href="structSceCtrlDataExt.html#a7d3c93451f2e2250e10b996176e1b99c">00067</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a7d3c93451f2e2250e10b996176e1b99c">unk5</a>;
-<a name="l00069"></a><a class="code" href="structSceCtrlDataExt.html#ae89cc7f351832d91e15e3b023d168c35">00069</a>     s32 <a class="code" href="structSceCtrlDataExt.html#ae89cc7f351832d91e15e3b023d168c35">unk6</a>;
-<a name="l00071"></a><a class="code" href="structSceCtrlDataExt.html#a33b6001fec726e32f5dd3737e0d3414c">00071</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a33b6001fec726e32f5dd3737e0d3414c">unk7</a>;
-<a name="l00073"></a><a class="code" href="structSceCtrlDataExt.html#a83b98f9dbc6eaf6c9df9dc081363ad67">00073</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a83b98f9dbc6eaf6c9df9dc081363ad67">unk8</a>;
-<a name="l00074"></a>00074 } <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a>;
-<a name="l00075"></a>00075 
-<a name="l00081"></a><a class="code" href="structSceCtrlLatch.html">00081</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00083"></a><a class="code" href="structSceCtrlLatch.html#a6e02734a6f89e842c30145af70b1dc26">00083</a>     u32 <a class="code" href="structSceCtrlLatch.html#a6e02734a6f89e842c30145af70b1dc26">buttonMake</a>;
-<a name="l00085"></a><a class="code" href="structSceCtrlLatch.html#abf1e5e536aedf7a1e7d117fb43970d79">00085</a>     u32 <a class="code" href="structSceCtrlLatch.html#abf1e5e536aedf7a1e7d117fb43970d79">buttonBreak</a>;
-<a name="l00087"></a><a class="code" href="structSceCtrlLatch.html#a86e3a3df0e46be6a7da98d04f8feb20d">00087</a>     u32 <a class="code" href="structSceCtrlLatch.html#a86e3a3df0e46be6a7da98d04f8feb20d">buttonPress</a>;
-<a name="l00089"></a><a class="code" href="structSceCtrlLatch.html#a55978d3656d8da44e8c0bf8b797ba61a">00089</a>     u32 <a class="code" href="structSceCtrlLatch.html#a55978d3656d8da44e8c0bf8b797ba61a">buttonRelease</a>;
-<a name="l00090"></a>00090 } <a class="code" href="structSceCtrlLatch.html">SceCtrlLatch</a>;
-<a name="l00091"></a>00091 
-<a name="l00095"></a><a class="code" href="structSceCtrlInputDataTransferHandler.html">00095</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00097"></a><a class="code" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">00097</a>     s32 <a class="code" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">unk1</a>;
-<a name="l00102"></a><a class="code" href="structSceCtrlInputDataTransferHandler.html#aba7f069a5f49d6654eef9496ab294a83">00102</a>         s32(*copyInputData)(<span class="keywordtype">void</span> *src, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *dest);
-<a name="l00103"></a>00103 } <a class="code" href="structSceCtrlInputDataTransferHandler.html">SceCtrlInputDataTransferHandler</a>;
-<a name="l00104"></a>00104 
-<a name="l00111"></a><a class="code" href="group__Controller.html#ga6104b860a63a93d46fa4348f596e8548">00111</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga6104b860a63a93d46fa4348f596e8548">SceCtrlPadButtons</a> {
-<a name="l00113"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad8cd1e340f5e13979b4cdefcf0487691">00113</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad8cd1e340f5e13979b4cdefcf0487691">SCE_CTRL_SELECT</a>         = 0x1,
-<a name="l00115"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8728e23635e8a8cb66bba777182be4de">00115</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8728e23635e8a8cb66bba777182be4de">SCE_CTRL_START</a>          = 0x8,
-<a name="l00117"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4275a1d4d7b662514f3258423e0fd770">00117</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4275a1d4d7b662514f3258423e0fd770">SCE_CTRL_UP</a>             = 0x10,
-<a name="l00119"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a69bf7b49f9cbe3fd1c3a6cf615d69dc1">00119</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a69bf7b49f9cbe3fd1c3a6cf615d69dc1">SCE_CTRL_RIGHT</a>          = 0x20,
-<a name="l00121"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a152892bee6c021fb3a41aa1d753ca338">00121</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a152892bee6c021fb3a41aa1d753ca338">SCE_CTRL_DOWN</a>           = 0x40,
-<a name="l00123"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a2cead064cd16d43807e6a2445bf8a362">00123</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a2cead064cd16d43807e6a2445bf8a362">SCE_CTRL_LEFT</a>           = 0x80,
-<a name="l00125"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a04799c8e184d2ae7f7df6633fff89f86">00125</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a04799c8e184d2ae7f7df6633fff89f86">SCE_CTRL_LTRIGGER</a>       = 0x100,
-<a name="l00127"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8a8396d93981d7ac967a7ae405dbd990">00127</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8a8396d93981d7ac967a7ae405dbd990">SCE_CTRL_RTRIGGER</a>       = 0x200,
-<a name="l00129"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a9debd2be025f0e081238399dd396d456">00129</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a9debd2be025f0e081238399dd396d456">SCE_CTRL_TRIANGLE</a>       = 0x1000,
-<a name="l00131"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548acc26a837d4e5a5cfb62adaf48ddead2c">00131</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548acc26a837d4e5a5cfb62adaf48ddead2c">SCE_CTRL_CIRCLE</a>         = 0x2000,
-<a name="l00133"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a477d551daa482e03598b67aaf4466923">00133</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a477d551daa482e03598b67aaf4466923">SCE_CTRL_CROSS</a>          = 0x4000,
-<a name="l00135"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548af935d4e61120671b2acdf6cee2f776e6">00135</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548af935d4e61120671b2acdf6cee2f776e6">SCE_CTRL_SQUARE</a>         = 0x8000,
-<a name="l00141"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a12085cf461189faeb160ccd99affe06d">00141</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a12085cf461189faeb160ccd99affe06d">SCE_CTRL_INTERCEPTED</a>    = 0x10000,
-<a name="l00143"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a1fe78e8242046ce4ac16f34cd9088827">00143</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a1fe78e8242046ce4ac16f34cd9088827">SCE_CTRL_HOLD</a>           = 0x20000,
-<a name="l00145"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4473282f9f5057d35c8ef3b102d7aaf3">00145</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4473282f9f5057d35c8ef3b102d7aaf3">SCE_CTRL_WLAN_UP</a>        = 0x40000,
-<a name="l00147"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a0a31abd94110a8cdb07dedd838e28bd9">00147</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a0a31abd94110a8cdb07dedd838e28bd9">SCE_CTRL_REMOTE</a>         = 0x80000,
-<a name="l00149"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a436d88aeb4ce14521088bd556eb863cc">00149</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a436d88aeb4ce14521088bd556eb863cc">SCE_CTRL_VOLUP</a>          = 0x100000,
-<a name="l00151"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548aeab7d0c864db59474af654aad4427963">00151</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548aeab7d0c864db59474af654aad4427963">SCE_CTRL_VOLDOWN</a>        = 0x200000,
-<a name="l00153"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a54ea84024e88b5408c772fe41d9d4c4b">00153</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a54ea84024e88b5408c772fe41d9d4c4b">SCE_CTRL_SCREEN</a>         = 0x400000,
-<a name="l00155"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548add58de33467132daa6ef656a7a4bda8f">00155</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548add58de33467132daa6ef656a7a4bda8f">SCE_CTRL_NOTE</a>           = 0x800000,         
-<a name="l00157"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a621e06863028d8003568bfa3e89ada9b">00157</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a621e06863028d8003568bfa3e89ada9b">SCE_CTRL_DISC</a>           = 0x1000000,
-<a name="l00159"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad5927b8379706451759520fc7f38548c">00159</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad5927b8379706451759520fc7f38548c">SCE_CTRL_MS</a>             = 0x2000000,
-<a name="l00160"></a>00160 };
-<a name="l00161"></a>00161 
-<a name="l00163"></a><a class="code" href="group__Controller.html#ga62ab7ac206d0514d11e60309f9621fb6">00163</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga62ab7ac206d0514d11e60309f9621fb6">SceCtrlPadInputMode</a> {
-<a name="l00165"></a><a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6afa4b32e51f6ab1908737fee4db12fb5e">00165</a>     <a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6afa4b32e51f6ab1908737fee4db12fb5e">SCE_CTRL_INPUT_DIGITAL_ONLY</a> = 0,         
-<a name="l00167"></a><a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6a6d7fec611a11883cbafed2240dfb162f">00167</a>     <a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6a6d7fec611a11883cbafed2240dfb162f">SCE_CTRL_INPUT_DIGITAL_ANALOG</a> = 1,
-<a name="l00168"></a>00168 };
-<a name="l00169"></a>00169 
-<a name="l00171"></a><a class="code" href="group__Controller.html#ga17d4f10bb96061a642c0a2d0dad006ca">00171</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga17d4f10bb96061a642c0a2d0dad006ca">SceCtrlPadPollMode</a> {
-<a name="l00173"></a><a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa3b7e60cb4f40ee10c673406e3c10ffc8">00173</a>     <a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa3b7e60cb4f40ee10c673406e3c10ffc8">SCE_CTRL_POLL_INACTIVE</a> = 0,
-<a name="l00175"></a><a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa6129b973b49202993ec157eb9d6eda70">00175</a>     <a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa6129b973b49202993ec157eb9d6eda70">SCE_CTRL_POLL_ACTIVE</a> = 1,
-<a name="l00176"></a>00176 };
-<a name="l00177"></a>00177 
-<a name="l00179"></a><a class="code" href="group__Controller.html#ga4284796d5063074e02d4915af9d5ab04">00179</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga4284796d5063074e02d4915af9d5ab04">SceCtrlExternalInputMode</a> {
-<a name="l00181"></a><a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3">00181</a>         <a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3">SCE_CTRL_EXTERNAL_INPUT_PSP</a> = 0,
-<a name="l00183"></a><a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a4fb78a48150662a9fd4a5b27ddb781d0">00183</a>         <a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a4fb78a48150662a9fd4a5b27ddb781d0">SCE_CTRL_EXTERNAL_DUALSHOCK_3</a> = 1,
-<a name="l00185"></a><a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04acf3258881da08adad51d1541405ded72">00185</a>         <a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04acf3258881da08adad51d1541405ded72">SCE_CTRL_EXTERNAL_UNKNOWN_2</a> = 2
-<a name="l00186"></a>00186 };
-<a name="l00187"></a>00187 
-<a name="l00189"></a><a class="code" href="group__Controller.html#ga9aca46c5af11b73d3a00e6911725bf01">00189</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga9aca46c5af11b73d3a00e6911725bf01">SceCtrlPadButtonMaskMode</a> {
-<a name="l00191"></a><a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a01dc8a59e089dd75a7e786890710552e">00191</a>     <a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a01dc8a59e089dd75a7e786890710552e">SCE_CTRL_MASK_NO_MASK</a> = 0,
-<a name="l00197"></a><a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01aeb8d298533f9c48b1eaf446d1afbe0a5">00197</a>     <a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01aeb8d298533f9c48b1eaf446d1afbe0a5">SCE_CTRL_MASK_IGNORE_BUTTONS</a> = 1,
-<a name="l00202"></a><a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a00ffbcca27c08d89e3fbd058e15e202f">00202</a>     <a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a00ffbcca27c08d89e3fbd058e15e202f">SCE_CTRL_MASK_APPLY_BUTTONS</a> = 2,
-<a name="l00203"></a>00203 };
-<a name="l00204"></a>00204 
-<a name="l00210"></a>00210 s32 <a class="code" href="group__Controller.html#ga52a35dfe35c7e7428b8cc1763529e6c7">sceCtrlInit</a>(<span class="keywordtype">void</span>);
-<a name="l00211"></a>00211 
-<a name="l00217"></a>00217 s32 <a class="code" href="group__Controller.html#gac0b6f484dc61e8210ed5f8ceaccec415">sceCtrlEnd</a>(<span class="keywordtype">void</span>);
-<a name="l00218"></a>00218 
-<a name="l00224"></a>00224 s32 <a class="code" href="group__Controller.html#ga9bdb2c2deb872125f9233c7792e581b3">sceCtrlSuspend</a>(<span class="keywordtype">void</span>);
-<a name="l00225"></a>00225 
-<a name="l00231"></a>00231 s32 <a class="code" href="group__Controller.html#ga5ec6a8961ee47304b13326cc89d46971">sceCtrlResume</a>(<span class="keywordtype">void</span>);
-<a name="l00232"></a>00232 
-<a name="l00241"></a>00241 u32 <a class="code" href="group__Controller.html#ga4b19d2e1df02c8d1aa56824e1ceb1d0d">sceCtrlSetPollingMode</a>(u8 pollMode);
-<a name="l00242"></a>00242 
-<a name="l00250"></a>00250 u32 <a class="code" href="group__Controller.html#ga39337ecb08e9d3aef0380bb2929fb3f3">sceCtrlGetSamplingMode</a>(u8 *mode);
-<a name="l00251"></a>00251 
-<a name="l00259"></a>00259 s32 <a class="code" href="group__Controller.html#gad5094d2309808580c53de19fb4f08a5d">sceCtrlSetSamplingMode</a>(u8 mode);
-<a name="l00260"></a>00260 
-<a name="l00268"></a>00268 u32 <a class="code" href="group__Controller.html#ga7ca88dc071078b4239d0956792c73255">sceCtrlGetSamplingCycle</a>(u32 *cycle);
-<a name="l00269"></a>00269 
-<a name="l00282"></a>00282 s32 <a class="code" href="group__Controller.html#ga6ac060595213e8f55054f80ddfad5391">sceCtrlSetSamplingCycle</a>(u32 cycle);
-<a name="l00283"></a>00283 
-<a name="l00298"></a>00298 u32 <a class="code" href="group__Controller.html#gad577bfa3d0aac44cf68f3b77bcc5e604">sceCtrlGetIdleCancelKey</a>(u32 *oneTimeResetButtons, u32 *allTimeResetButtons, u32 *oneTimeHoldResetButtons, 
-<a name="l00299"></a>00299                             u32 *allTimeHoldResetButtons);
-<a name="l00300"></a>00300 
-<a name="l00332"></a>00332 u32 <a class="code" href="group__Controller.html#ga0a695e56568a17fd5ec5f53345a4c740">sceCtrlSetIdleCancelKey</a>(u32 oneTimeResetButtons, u32 allTimeResetButtons, u32 oneTimeHoldResetButtons, 
-<a name="l00333"></a>00333                             u32 allTimeHoldResetButtons);
-<a name="l00334"></a>00334 
-<a name="l00347"></a>00347 s32 <a class="code" href="group__Controller.html#gad97dd5c963216c6015806567472cd6e0">sceCtrlGetIdleCancelThreshold</a>(s32 *iUnHoldThreshold, s32 *iHoldThreshold);
-<a name="l00348"></a>00348 
-<a name="l00369"></a>00369 s32 <a class="code" href="group__Controller.html#ga27a047fa8b7e650057da93582a38eb10">sceCtrlSetIdleCancelThreshold</a>(s32 iUnHoldThreshold, s32 iHoldThreshold);
-<a name="l00370"></a>00370 
-<a name="l00376"></a>00376 s16 <a class="code" href="group__Controller.html#gac7b45e84899d51a4e720507568e92cab">sceCtrlGetSuspendingExtraSamples</a>(<span class="keywordtype">void</span>);
-<a name="l00377"></a>00377 
-<a name="l00385"></a>00385 s32 <a class="code" href="group__Controller.html#gabee049e9ce1b88f11ad272bc43269aff">sceCtrlSetSuspendingExtraSamples</a>(s16 suspendSamples);
-<a name="l00386"></a>00386 
-<a name="l00401"></a>00401 s32 <a class="code" href="group__Controller.html#ga00429089678f40db79077d366211813b">sceCtrlExtendInternalCtrlBuffers</a>(u8 inputMode, <a class="code" href="structSceCtrlInputDataTransferHandler.html">SceCtrlInputDataTransferHandler</a> *transferHandler, <span class="keywordtype">void</span> *inputSource);
-<a name="l00402"></a>00402 
-<a name="l00429"></a>00429 s32 <a class="code" href="group__Controller.html#gafada18750f6649cac838583d10299908">sceCtrlPeekLatch</a>(<a class="code" href="structSceCtrlLatch.html">SceCtrlLatch</a> *latch);
-<a name="l00430"></a>00430 
-<a name="l00443"></a>00443 s32 <a class="code" href="group__Controller.html#ga95f41716b1ffa89303934f2eee1895be">sceCtrlReadLatch</a>(<a class="code" href="structSceCtrlLatch.html">SceCtrlLatch</a> *latch);
-<a name="l00444"></a>00444 
-<a name="l00474"></a>00474 s32 <a class="code" href="group__Controller.html#gaa5a402c5d8eb893d83297df3d1e13110">sceCtrlPeekBufferPositive</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
-<a name="l00475"></a>00475 
-<a name="l00504"></a>00504 s32 <a class="code" href="group__Controller.html#ga3ed4ca8d70db17a9801f6bebce59cc95">sceCtrlPeekBufferNegative</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
-<a name="l00505"></a>00505 
-<a name="l00518"></a>00518 s32 <a class="code" href="group__Controller.html#ga4c0b5754bdb4a5bf918b7065a74db4ee">sceCtrlReadBufferPositive</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
-<a name="l00519"></a>00519 
-<a name="l00532"></a>00532 s32 <a class="code" href="group__Controller.html#gab679f3c1505ef1082837c5721f04bd55">sceCtrlReadBufferNegative</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
-<a name="l00533"></a>00533 
-<a name="l00546"></a>00546 s32 <a class="code" href="group__Controller.html#ga0628c13c880b18af4787eca984c8bc9f">sceCtrlPeekBufferPositiveExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
-<a name="l00547"></a>00547 
-<a name="l00560"></a>00560 s32 <a class="code" href="group__Controller.html#gafbcb75e0b9bebd52ac083b2b3e50d496">sceCtrlPeekBufferNegativeExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
-<a name="l00561"></a>00561 
-<a name="l00574"></a>00574 s32 <a class="code" href="group__Controller.html#gad847dfb2fd3acd9a9d61b55d93781333">sceCtrlReadBufferPositiveExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
-<a name="l00575"></a>00575 
-<a name="l00588"></a>00588 s32 <a class="code" href="group__Controller.html#ga080635d848e084ba2611ab42d9964ca4">sceCtrlReadBufferNegativeExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
-<a name="l00589"></a>00589 
-<a name="l00597"></a>00597 s32 <a class="code" href="group__Controller.html#gad30bd0932ec2d6557d3ff50792bcae76">sceCtrlClearRapidFire</a>(u8 slot);
-<a name="l00598"></a>00598 
-<a name="l00639"></a>00639 s32 <a class="code" href="group__Controller.html#ga57c6374cc45b7af697b17a9269e17d37">sceCtrlSetRapidFire</a>(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, 
-<a name="l00640"></a>00640                         u8 uiMake, u8 uiBreak);
-<a name="l00641"></a>00641 
-<a name="l00653"></a>00653 s32 <a class="code" href="group__Controller.html#gadf40ec0c5149ac3589a6a46b7421db72">sceCtrlSetAnalogEmulation</a>(u8 slot, u8 aX, u8 aY, u32 uiMake);
-<a name="l00654"></a>00654 
-<a name="l00670"></a>00670 s32 <a class="code" href="group__Controller.html#ga9f9174b1924b483a8ea85701447399db">sceCtrlSetButtonEmulation</a>(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake);
-<a name="l00671"></a>00671 
-<a name="l00679"></a>00679 u32 <a class="code" href="group__Controller.html#gab3361c6d71b227660eb0cfbd7360aa6a">sceCtrlGetButtonIntercept</a>(u32 buttons);
-<a name="l00680"></a>00680 
-<a name="l00701"></a>00701 u32 <a class="code" href="group__Controller.html#ga6bda79d76ef15dbb96aa2ae6e469e4b8">sceCtrlSetButtonIntercept</a>(u32 buttons, u32 buttonMaskMode);
-<a name="l00702"></a>00702 
-<a name="l00714"></a>00714 s32 <a class="code" href="group__Controller.html#ga4d31b522faef3b2f338bbf80d19d5948">sceCtrlSetSpecialButtonCallback</a>(u32 slot, u32 buttonMask, <a class="code" href="group__Controller.html#gab31eb7e12d4123d169b2a01231e02fe3">SceKernelButtonCallbackFunction</a> callback, <span class="keywordtype">void</span> *opt);
-<a name="l00715"></a>00715 
-<a name="l00723"></a>00723 u32 <a class="code" href="group__Controller.html#ga38e7a8b2d7d4fe5b6a40b0051d8bd3ab">sceCtrl_driver_6C86AF22</a>(s32 arg1);
-<a name="l00724"></a>00724 
-<a name="l00732"></a>00732 u32 <a class="code" href="group__Controller.html#ga03b60f5463ef60ad75383a6eae6c4f28">sceCtrl_driver_5886194C</a>(s8 arg1);
-<a name="l00733"></a>00733 
-<a name="l00739"></a>00739 u32 <a class="code" href="group__Controller.html#gacee332af425275a0dbf362e4cbe8abd4">sceCtrlUpdateCableTypeReq</a>(<span class="keywordtype">void</span>);
+<a name="l00022"></a><a class="code" href="structSceCtrlData.html">00022</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00027"></a><a class="code" href="structSceCtrlData.html#a4d956741adfd85933d1362caf1df4838">00027</a>     u32 <a class="code" href="structSceCtrlData.html#a4d956741adfd85933d1362caf1df4838">timeStamp</a>;
+<a name="l00029"></a><a class="code" href="structSceCtrlData.html#a8694cfbad5c0bf41f36548a522fb17a7">00029</a>     u32 <a class="code" href="structSceCtrlData.html#a8694cfbad5c0bf41f36548a522fb17a7">buttons</a>;
+<a name="l00031"></a><a class="code" href="structSceCtrlData.html#a6b5a5f1eaf00139a31610a1240b4aa4d">00031</a>     u8 <a class="code" href="structSceCtrlData.html#a6b5a5f1eaf00139a31610a1240b4aa4d">aX</a>;
+<a name="l00033"></a><a class="code" href="structSceCtrlData.html#ab835f5daf1daf6d7873cc9979c3680bd">00033</a>     u8 <a class="code" href="structSceCtrlData.html#ab835f5daf1daf6d7873cc9979c3680bd">aY</a>;
+<a name="l00035"></a><a class="code" href="structSceCtrlData.html#aa70235fba2997110a866a8f4ce6ccb56">00035</a>     u8 rsrv[6];
+<a name="l00036"></a>00036 } <a class="code" href="structSceCtrlData.html">SceCtrlData</a>;
+<a name="l00037"></a>00037 
+<a name="l00042"></a><a class="code" href="structSceCtrlDataExt.html">00042</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00047"></a><a class="code" href="structSceCtrlDataExt.html#a326deeee2ea8c050e59aa15850e8c823">00047</a>     u32 <a class="code" href="structSceCtrlDataExt.html#a326deeee2ea8c050e59aa15850e8c823">timeStamp</a>;
+<a name="l00049"></a><a class="code" href="structSceCtrlDataExt.html#af7979cb02358e519fc1dfd624c99fc59">00049</a>     u32 <a class="code" href="structSceCtrlDataExt.html#af7979cb02358e519fc1dfd624c99fc59">buttons</a>;
+<a name="l00051"></a><a class="code" href="structSceCtrlDataExt.html#a285155f0083c2f4ea5c4122cb43acbdb">00051</a>     u8 <a class="code" href="structSceCtrlDataExt.html#a285155f0083c2f4ea5c4122cb43acbdb">aX</a>;
+<a name="l00053"></a><a class="code" href="structSceCtrlDataExt.html#a414872df702050cd4e6be349db894418">00053</a>     u8 <a class="code" href="structSceCtrlDataExt.html#a414872df702050cd4e6be349db894418">aY</a>;
+<a name="l00055"></a><a class="code" href="structSceCtrlDataExt.html#a255804444fb7f69d7114b6592cfaf1a7">00055</a>     u8 rsrv[6];
+<a name="l00057"></a><a class="code" href="structSceCtrlDataExt.html#a4f1e236bcf6eb1923a5c220c0df8fdbc">00057</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a4f1e236bcf6eb1923a5c220c0df8fdbc">unk1</a>;
+<a name="l00059"></a><a class="code" href="structSceCtrlDataExt.html#a386bf2f515cb7f8b91fa463b1fa725a7">00059</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a386bf2f515cb7f8b91fa463b1fa725a7">unk2</a>;
+<a name="l00061"></a><a class="code" href="structSceCtrlDataExt.html#a0fca4cbcb4dfd1e44990748da39ddb72">00061</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a0fca4cbcb4dfd1e44990748da39ddb72">unk3</a>;
+<a name="l00063"></a><a class="code" href="structSceCtrlDataExt.html#ac88cb2b6b1799526175c88575eaea915">00063</a>     s32 <a class="code" href="structSceCtrlDataExt.html#ac88cb2b6b1799526175c88575eaea915">unk4</a>;
+<a name="l00065"></a><a class="code" href="structSceCtrlDataExt.html#a7d3c93451f2e2250e10b996176e1b99c">00065</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a7d3c93451f2e2250e10b996176e1b99c">unk5</a>;
+<a name="l00067"></a><a class="code" href="structSceCtrlDataExt.html#ae89cc7f351832d91e15e3b023d168c35">00067</a>     s32 <a class="code" href="structSceCtrlDataExt.html#ae89cc7f351832d91e15e3b023d168c35">unk6</a>;
+<a name="l00069"></a><a class="code" href="structSceCtrlDataExt.html#a33b6001fec726e32f5dd3737e0d3414c">00069</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a33b6001fec726e32f5dd3737e0d3414c">unk7</a>;
+<a name="l00071"></a><a class="code" href="structSceCtrlDataExt.html#a83b98f9dbc6eaf6c9df9dc081363ad67">00071</a>     s32 <a class="code" href="structSceCtrlDataExt.html#a83b98f9dbc6eaf6c9df9dc081363ad67">unk8</a>;
+<a name="l00072"></a>00072 } <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a>;
+<a name="l00073"></a>00073 
+<a name="l00079"></a><a class="code" href="structSceCtrlLatch.html">00079</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00081"></a><a class="code" href="structSceCtrlLatch.html#a6e02734a6f89e842c30145af70b1dc26">00081</a>     u32 <a class="code" href="structSceCtrlLatch.html#a6e02734a6f89e842c30145af70b1dc26">buttonMake</a>;
+<a name="l00083"></a><a class="code" href="structSceCtrlLatch.html#abf1e5e536aedf7a1e7d117fb43970d79">00083</a>     u32 <a class="code" href="structSceCtrlLatch.html#abf1e5e536aedf7a1e7d117fb43970d79">buttonBreak</a>;
+<a name="l00085"></a><a class="code" href="structSceCtrlLatch.html#a86e3a3df0e46be6a7da98d04f8feb20d">00085</a>     u32 <a class="code" href="structSceCtrlLatch.html#a86e3a3df0e46be6a7da98d04f8feb20d">buttonPress</a>;
+<a name="l00087"></a><a class="code" href="structSceCtrlLatch.html#a55978d3656d8da44e8c0bf8b797ba61a">00087</a>     u32 <a class="code" href="structSceCtrlLatch.html#a55978d3656d8da44e8c0bf8b797ba61a">buttonRelease</a>;
+<a name="l00088"></a>00088 } <a class="code" href="structSceCtrlLatch.html">SceCtrlLatch</a>;
+<a name="l00089"></a>00089 
+<a name="l00093"></a><a class="code" href="structSceCtrlInputDataTransferHandler.html">00093</a> <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00095"></a><a class="code" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">00095</a>     s32 <a class="code" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">unk1</a>;
+<a name="l00100"></a><a class="code" href="structSceCtrlInputDataTransferHandler.html#aba7f069a5f49d6654eef9496ab294a83">00100</a>         s32(*copyInputData)(<span class="keywordtype">void</span> *src, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *dest);
+<a name="l00101"></a>00101 } <a class="code" href="structSceCtrlInputDataTransferHandler.html">SceCtrlInputDataTransferHandler</a>;
+<a name="l00102"></a>00102 
+<a name="l00109"></a><a class="code" href="group__Controller.html#ga6104b860a63a93d46fa4348f596e8548">00109</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga6104b860a63a93d46fa4348f596e8548">SceCtrlPadButtons</a> {
+<a name="l00111"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad8cd1e340f5e13979b4cdefcf0487691">00111</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad8cd1e340f5e13979b4cdefcf0487691">SCE_CTRL_SELECT</a>         = 0x1,
+<a name="l00113"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8728e23635e8a8cb66bba777182be4de">00113</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8728e23635e8a8cb66bba777182be4de">SCE_CTRL_START</a>          = 0x8,
+<a name="l00115"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4275a1d4d7b662514f3258423e0fd770">00115</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4275a1d4d7b662514f3258423e0fd770">SCE_CTRL_UP</a>             = 0x10,
+<a name="l00117"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a69bf7b49f9cbe3fd1c3a6cf615d69dc1">00117</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a69bf7b49f9cbe3fd1c3a6cf615d69dc1">SCE_CTRL_RIGHT</a>          = 0x20,
+<a name="l00119"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a152892bee6c021fb3a41aa1d753ca338">00119</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a152892bee6c021fb3a41aa1d753ca338">SCE_CTRL_DOWN</a>           = 0x40,
+<a name="l00121"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a2cead064cd16d43807e6a2445bf8a362">00121</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a2cead064cd16d43807e6a2445bf8a362">SCE_CTRL_LEFT</a>           = 0x80,
+<a name="l00123"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a04799c8e184d2ae7f7df6633fff89f86">00123</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a04799c8e184d2ae7f7df6633fff89f86">SCE_CTRL_LTRIGGER</a>       = 0x100,
+<a name="l00125"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8a8396d93981d7ac967a7ae405dbd990">00125</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a8a8396d93981d7ac967a7ae405dbd990">SCE_CTRL_RTRIGGER</a>       = 0x200,
+<a name="l00127"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a9debd2be025f0e081238399dd396d456">00127</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a9debd2be025f0e081238399dd396d456">SCE_CTRL_TRIANGLE</a>       = 0x1000,
+<a name="l00129"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548acc26a837d4e5a5cfb62adaf48ddead2c">00129</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548acc26a837d4e5a5cfb62adaf48ddead2c">SCE_CTRL_CIRCLE</a>         = 0x2000,
+<a name="l00131"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a477d551daa482e03598b67aaf4466923">00131</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a477d551daa482e03598b67aaf4466923">SCE_CTRL_CROSS</a>          = 0x4000,
+<a name="l00133"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548af935d4e61120671b2acdf6cee2f776e6">00133</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548af935d4e61120671b2acdf6cee2f776e6">SCE_CTRL_SQUARE</a>         = 0x8000,
+<a name="l00139"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a12085cf461189faeb160ccd99affe06d">00139</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a12085cf461189faeb160ccd99affe06d">SCE_CTRL_INTERCEPTED</a>    = 0x10000,
+<a name="l00141"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a1fe78e8242046ce4ac16f34cd9088827">00141</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a1fe78e8242046ce4ac16f34cd9088827">SCE_CTRL_HOLD</a>           = 0x20000,
+<a name="l00143"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4473282f9f5057d35c8ef3b102d7aaf3">00143</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a4473282f9f5057d35c8ef3b102d7aaf3">SCE_CTRL_WLAN_UP</a>        = 0x40000,
+<a name="l00145"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a0a31abd94110a8cdb07dedd838e28bd9">00145</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a0a31abd94110a8cdb07dedd838e28bd9">SCE_CTRL_REMOTE</a>         = 0x80000,
+<a name="l00147"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a436d88aeb4ce14521088bd556eb863cc">00147</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a436d88aeb4ce14521088bd556eb863cc">SCE_CTRL_VOLUP</a>          = 0x100000,
+<a name="l00149"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548aeab7d0c864db59474af654aad4427963">00149</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548aeab7d0c864db59474af654aad4427963">SCE_CTRL_VOLDOWN</a>        = 0x200000,
+<a name="l00151"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a54ea84024e88b5408c772fe41d9d4c4b">00151</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a54ea84024e88b5408c772fe41d9d4c4b">SCE_CTRL_SCREEN</a>         = 0x400000,
+<a name="l00153"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548add58de33467132daa6ef656a7a4bda8f">00153</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548add58de33467132daa6ef656a7a4bda8f">SCE_CTRL_NOTE</a>           = 0x800000,         
+<a name="l00155"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a621e06863028d8003568bfa3e89ada9b">00155</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548a621e06863028d8003568bfa3e89ada9b">SCE_CTRL_DISC</a>           = 0x1000000,
+<a name="l00157"></a><a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad5927b8379706451759520fc7f38548c">00157</a>     <a class="code" href="group__Controller.html#gga6104b860a63a93d46fa4348f596e8548ad5927b8379706451759520fc7f38548c">SCE_CTRL_MS</a>             = 0x2000000,
+<a name="l00158"></a>00158 };
+<a name="l00159"></a>00159 
+<a name="l00161"></a><a class="code" href="group__Controller.html#ga62ab7ac206d0514d11e60309f9621fb6">00161</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga62ab7ac206d0514d11e60309f9621fb6">SceCtrlPadInputMode</a> {
+<a name="l00163"></a><a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6afa4b32e51f6ab1908737fee4db12fb5e">00163</a>     <a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6afa4b32e51f6ab1908737fee4db12fb5e">SCE_CTRL_INPUT_DIGITAL_ONLY</a> = 0,         
+<a name="l00165"></a><a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6a6d7fec611a11883cbafed2240dfb162f">00165</a>     <a class="code" href="group__Controller.html#gga62ab7ac206d0514d11e60309f9621fb6a6d7fec611a11883cbafed2240dfb162f">SCE_CTRL_INPUT_DIGITAL_ANALOG</a> = 1,
+<a name="l00166"></a>00166 };
+<a name="l00167"></a>00167 
+<a name="l00169"></a><a class="code" href="group__Controller.html#ga17d4f10bb96061a642c0a2d0dad006ca">00169</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga17d4f10bb96061a642c0a2d0dad006ca">SceCtrlPadPollMode</a> {
+<a name="l00171"></a><a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa3b7e60cb4f40ee10c673406e3c10ffc8">00171</a>     <a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa3b7e60cb4f40ee10c673406e3c10ffc8">SCE_CTRL_POLL_INACTIVE</a> = 0,
+<a name="l00173"></a><a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa6129b973b49202993ec157eb9d6eda70">00173</a>     <a class="code" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa6129b973b49202993ec157eb9d6eda70">SCE_CTRL_POLL_ACTIVE</a> = 1,
+<a name="l00174"></a>00174 };
+<a name="l00175"></a>00175 
+<a name="l00177"></a><a class="code" href="group__Controller.html#ga4284796d5063074e02d4915af9d5ab04">00177</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga4284796d5063074e02d4915af9d5ab04">SceCtrlExternalInputMode</a> {
+<a name="l00179"></a><a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3">00179</a>         <a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3">SCE_CTRL_EXTERNAL_INPUT_PSP</a> = 0,
+<a name="l00181"></a><a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a979ecb3aaf84bdb1864b79bf85255107">00181</a>         <a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a979ecb3aaf84bdb1864b79bf85255107">SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3</a> = 1,
+<a name="l00183"></a><a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a20f4e529115cb1534f5a5cda02a3b790">00183</a>         <a class="code" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a20f4e529115cb1534f5a5cda02a3b790">SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2</a> = 2
+<a name="l00184"></a>00184 };
+<a name="l00185"></a>00185 
+<a name="l00187"></a><a class="code" href="group__Controller.html#ga9aca46c5af11b73d3a00e6911725bf01">00187</a> <span class="keyword">enum</span> <a class="code" href="group__Controller.html#ga9aca46c5af11b73d3a00e6911725bf01">SceCtrlPadButtonMaskMode</a> {
+<a name="l00189"></a><a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a01dc8a59e089dd75a7e786890710552e">00189</a>     <a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a01dc8a59e089dd75a7e786890710552e">SCE_CTRL_MASK_NO_MASK</a> = 0,
+<a name="l00195"></a><a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01aeb8d298533f9c48b1eaf446d1afbe0a5">00195</a>     <a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01aeb8d298533f9c48b1eaf446d1afbe0a5">SCE_CTRL_MASK_IGNORE_BUTTONS</a> = 1,
+<a name="l00200"></a><a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a00ffbcca27c08d89e3fbd058e15e202f">00200</a>     <a class="code" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a00ffbcca27c08d89e3fbd058e15e202f">SCE_CTRL_MASK_APPLY_BUTTONS</a> = 2,
+<a name="l00201"></a>00201 };
+<a name="l00202"></a>00202 
+<a name="l00208"></a>00208 s32 <a class="code" href="group__Controller.html#ga52a35dfe35c7e7428b8cc1763529e6c7">sceCtrlInit</a>(<span class="keywordtype">void</span>);
+<a name="l00209"></a>00209 
+<a name="l00215"></a>00215 s32 <a class="code" href="group__Controller.html#gac0b6f484dc61e8210ed5f8ceaccec415">sceCtrlEnd</a>(<span class="keywordtype">void</span>);
+<a name="l00216"></a>00216 
+<a name="l00222"></a>00222 s32 <a class="code" href="group__Controller.html#ga9bdb2c2deb872125f9233c7792e581b3">sceCtrlSuspend</a>(<span class="keywordtype">void</span>);
+<a name="l00223"></a>00223 
+<a name="l00229"></a>00229 s32 <a class="code" href="group__Controller.html#ga5ec6a8961ee47304b13326cc89d46971">sceCtrlResume</a>(<span class="keywordtype">void</span>);
+<a name="l00230"></a>00230 
+<a name="l00239"></a>00239 u32 <a class="code" href="group__Controller.html#ga4b19d2e1df02c8d1aa56824e1ceb1d0d">sceCtrlSetPollingMode</a>(u8 pollMode);
+<a name="l00240"></a>00240 
+<a name="l00248"></a>00248 u32 <a class="code" href="group__Controller.html#ga39337ecb08e9d3aef0380bb2929fb3f3">sceCtrlGetSamplingMode</a>(u8 *mode);
+<a name="l00249"></a>00249 
+<a name="l00257"></a>00257 s32 <a class="code" href="group__Controller.html#gad5094d2309808580c53de19fb4f08a5d">sceCtrlSetSamplingMode</a>(u8 mode);
+<a name="l00258"></a>00258 
+<a name="l00266"></a>00266 u32 <a class="code" href="group__Controller.html#ga7ca88dc071078b4239d0956792c73255">sceCtrlGetSamplingCycle</a>(u32 *cycle);
+<a name="l00267"></a>00267 
+<a name="l00280"></a>00280 s32 <a class="code" href="group__Controller.html#ga6ac060595213e8f55054f80ddfad5391">sceCtrlSetSamplingCycle</a>(u32 cycle);
+<a name="l00281"></a>00281 
+<a name="l00296"></a>00296 u32 <a class="code" href="group__Controller.html#gad577bfa3d0aac44cf68f3b77bcc5e604">sceCtrlGetIdleCancelKey</a>(u32 *oneTimeResetButtons, u32 *allTimeResetButtons, u32 *oneTimeHoldResetButtons, 
+<a name="l00297"></a>00297                             u32 *allTimeHoldResetButtons);
+<a name="l00298"></a>00298 
+<a name="l00330"></a>00330 u32 <a class="code" href="group__Controller.html#ga0a695e56568a17fd5ec5f53345a4c740">sceCtrlSetIdleCancelKey</a>(u32 oneTimeResetButtons, u32 allTimeResetButtons, u32 oneTimeHoldResetButtons, 
+<a name="l00331"></a>00331                             u32 allTimeHoldResetButtons);
+<a name="l00332"></a>00332 
+<a name="l00345"></a>00345 s32 <a class="code" href="group__Controller.html#gad97dd5c963216c6015806567472cd6e0">sceCtrlGetIdleCancelThreshold</a>(s32 *iUnHoldThreshold, s32 *iHoldThreshold);
+<a name="l00346"></a>00346 
+<a name="l00367"></a>00367 s32 <a class="code" href="group__Controller.html#ga27a047fa8b7e650057da93582a38eb10">sceCtrlSetIdleCancelThreshold</a>(s32 iUnHoldThreshold, s32 iHoldThreshold);
+<a name="l00368"></a>00368 
+<a name="l00374"></a>00374 s16 <a class="code" href="group__Controller.html#gac7b45e84899d51a4e720507568e92cab">sceCtrlGetSuspendingExtraSamples</a>(<span class="keywordtype">void</span>);
+<a name="l00375"></a>00375 
+<a name="l00383"></a>00383 s32 <a class="code" href="group__Controller.html#gabee049e9ce1b88f11ad272bc43269aff">sceCtrlSetSuspendingExtraSamples</a>(s16 suspendSamples);
+<a name="l00384"></a>00384 
+<a name="l00399"></a>00399 s32 <a class="code" href="group__Controller.html#ga00429089678f40db79077d366211813b">sceCtrlExtendInternalCtrlBuffers</a>(u8 inputMode, <a class="code" href="structSceCtrlInputDataTransferHandler.html">SceCtrlInputDataTransferHandler</a> *transferHandler, <span class="keywordtype">void</span> *inputSource);
+<a name="l00400"></a>00400 
+<a name="l00427"></a>00427 s32 <a class="code" href="group__Controller.html#gafada18750f6649cac838583d10299908">sceCtrlPeekLatch</a>(<a class="code" href="structSceCtrlLatch.html">SceCtrlLatch</a> *latch);
+<a name="l00428"></a>00428 
+<a name="l00441"></a>00441 s32 <a class="code" href="group__Controller.html#ga95f41716b1ffa89303934f2eee1895be">sceCtrlReadLatch</a>(<a class="code" href="structSceCtrlLatch.html">SceCtrlLatch</a> *latch);
+<a name="l00442"></a>00442 
+<a name="l00472"></a>00472 s32 <a class="code" href="group__Controller.html#gaa5a402c5d8eb893d83297df3d1e13110">sceCtrlPeekBufferPositive</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
+<a name="l00473"></a>00473 
+<a name="l00502"></a>00502 s32 <a class="code" href="group__Controller.html#ga3ed4ca8d70db17a9801f6bebce59cc95">sceCtrlPeekBufferNegative</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
+<a name="l00503"></a>00503 
+<a name="l00516"></a>00516 s32 <a class="code" href="group__Controller.html#ga4c0b5754bdb4a5bf918b7065a74db4ee">sceCtrlReadBufferPositive</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
+<a name="l00517"></a>00517 
+<a name="l00530"></a>00530 s32 <a class="code" href="group__Controller.html#gab679f3c1505ef1082837c5721f04bd55">sceCtrlReadBufferNegative</a>(<a class="code" href="structSceCtrlData.html">SceCtrlData</a> *data, u8 nBufs);
+<a name="l00531"></a>00531 
+<a name="l00544"></a>00544 s32 <a class="code" href="group__Controller.html#ga0628c13c880b18af4787eca984c8bc9f">sceCtrlPeekBufferPositiveExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
+<a name="l00545"></a>00545 
+<a name="l00558"></a>00558 s32 <a class="code" href="group__Controller.html#gafbcb75e0b9bebd52ac083b2b3e50d496">sceCtrlPeekBufferNegativeExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
+<a name="l00559"></a>00559 
+<a name="l00572"></a>00572 s32 <a class="code" href="group__Controller.html#gad847dfb2fd3acd9a9d61b55d93781333">sceCtrlReadBufferPositiveExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
+<a name="l00573"></a>00573 
+<a name="l00586"></a>00586 s32 <a class="code" href="group__Controller.html#ga080635d848e084ba2611ab42d9964ca4">sceCtrlReadBufferNegativeExtra</a>(u32 inputMode, <a class="code" href="structSceCtrlDataExt.html">SceCtrlDataExt</a> *data, u8 nBufs);
+<a name="l00587"></a>00587 
+<a name="l00595"></a>00595 s32 <a class="code" href="group__Controller.html#gad30bd0932ec2d6557d3ff50792bcae76">sceCtrlClearRapidFire</a>(u8 slot);
+<a name="l00596"></a>00596 
+<a name="l00637"></a>00637 s32 <a class="code" href="group__Controller.html#ga57c6374cc45b7af697b17a9269e17d37">sceCtrlSetRapidFire</a>(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, 
+<a name="l00638"></a>00638                         u8 uiMake, u8 uiBreak);
+<a name="l00639"></a>00639 
+<a name="l00651"></a>00651 s32 <a class="code" href="group__Controller.html#gadf40ec0c5149ac3589a6a46b7421db72">sceCtrlSetAnalogEmulation</a>(u8 slot, u8 aX, u8 aY, u32 uiMake);
+<a name="l00652"></a>00652 
+<a name="l00668"></a>00668 s32 <a class="code" href="group__Controller.html#ga9f9174b1924b483a8ea85701447399db">sceCtrlSetButtonEmulation</a>(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake);
+<a name="l00669"></a>00669 
+<a name="l00677"></a>00677 u32 <a class="code" href="group__Controller.html#gab3361c6d71b227660eb0cfbd7360aa6a">sceCtrlGetButtonIntercept</a>(u32 buttons);
+<a name="l00678"></a>00678 
+<a name="l00699"></a>00699 u32 <a class="code" href="group__Controller.html#ga6bda79d76ef15dbb96aa2ae6e469e4b8">sceCtrlSetButtonIntercept</a>(u32 buttons, u32 buttonMaskMode);
+<a name="l00700"></a>00700 
+<a name="l00712"></a>00712 s32 <a class="code" href="group__Controller.html#ga4d31b522faef3b2f338bbf80d19d5948">sceCtrlSetSpecialButtonCallback</a>(u32 slot, u32 buttonMask, <a class="code" href="group__Controller.html#gab31eb7e12d4123d169b2a01231e02fe3">SceKernelButtonCallbackFunction</a> callback, <span class="keywordtype">void</span> *opt);
+<a name="l00713"></a>00713 
+<a name="l00721"></a>00721 u32 <a class="code" href="group__Controller.html#ga38e7a8b2d7d4fe5b6a40b0051d8bd3ab">sceCtrl_driver_6C86AF22</a>(s32 arg1);
+<a name="l00722"></a>00722 
+<a name="l00730"></a>00730 u32 <a class="code" href="group__Controller.html#ga03b60f5463ef60ad75383a6eae6c4f28">sceCtrl_driver_5886194C</a>(s8 arg1);
+<a name="l00731"></a>00731 
+<a name="l00737"></a>00737 u32 <a class="code" href="group__Controller.html#gacee332af425275a0dbf362e4cbe8abd4">sceCtrlUpdateCableTypeReq</a>(<span class="keywordtype">void</span>);
+<a name="l00738"></a>00738 
+<a name="l00739"></a>00739 <span class="preprocessor">#endif  </span><span class="comment">/* CTRL_H */</span>
 <a name="l00740"></a>00740 
-<a name="l00741"></a>00741 <span class="preprocessor">#endif  </span><span class="comment">/* CTRL_H */</span>
-<a name="l00742"></a>00742 
 </pre></div></div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -266,7 +266,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed May 27 2015 18:49:59 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu May 28 2015 23:10:39 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

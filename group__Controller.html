@@ -129,8 +129,8 @@ Enumerations</h2></td></tr>
 <a class="el" href="group__Controller.html#gga17d4f10bb96061a642c0a2d0dad006caa6129b973b49202993ec157eb9d6eda70">SCE_CTRL_POLL_ACTIVE</a> =  1
  }</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Controller.html#ga4284796d5063074e02d4915af9d5ab04">SceCtrlExternalInputMode</a> { <a class="el" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3">SCE_CTRL_EXTERNAL_INPUT_PSP</a> =  0, 
-<a class="el" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a4fb78a48150662a9fd4a5b27ddb781d0">SCE_CTRL_EXTERNAL_DUALSHOCK_3</a> =  1, 
-<a class="el" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04acf3258881da08adad51d1541405ded72">SCE_CTRL_EXTERNAL_UNKNOWN_2</a> =  2
+<a class="el" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a979ecb3aaf84bdb1864b79bf85255107">SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3</a> =  1, 
+<a class="el" href="group__Controller.html#gga4284796d5063074e02d4915af9d5ab04a20f4e529115cb1534f5a5cda02a3b790">SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2</a> =  2
  }</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Controller.html#ga9aca46c5af11b73d3a00e6911725bf01">SceCtrlPadButtonMaskMode</a> { <a class="el" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01a01dc8a59e089dd75a7e786890710552e">SCE_CTRL_MASK_NO_MASK</a> =  0, 
 <a class="el" href="group__Controller.html#gga9aca46c5af11b73d3a00e6911725bf01aeb8d298533f9c48b1eaf446d1afbe0a5">SCE_CTRL_MASK_IGNORE_BUTTONS</a> =  1, 
@@ -176,7 +176,7 @@ Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Controller.html#gacee332af425275a0dbf362e4cbe8abd4">sceCtrlUpdateCableTypeReq</a> (void)</td></tr>
 </table>
 <hr/><a name="details" id="details"></a><h2>Detailed Description</h2>
-<p>Copyright (C) 2011, 2012, 2013, 2014 The uOFW team See the file COPYING for copying permission. Controller (joystick) management. </p>
+<p>Copyright (C) 2011 - 2015 The uOFW team See the file COPYING for copying permission. Controller (joystick) management. </p>
 <hr/><h2>Typedef Documentation</h2>
 <a class="anchor" id="gab31eb7e12d4123d169b2a01231e02fe3"></a><!-- doxytag: member="ctrl.h::SceKernelButtonCallbackFunction" ref="gab31eb7e12d4123d169b2a01231e02fe3" args=")(u32 curButtons, u32 lastButtons, void *opt)" -->
 <div class="memitem">
@@ -341,10 +341,10 @@ Functions</h2></td></tr>
 <tr><td valign="top"><em><a class="anchor" id="gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3"></a><!-- doxytag: member="SCE_CTRL_EXTERNAL_INPUT_PSP" ref="gga4284796d5063074e02d4915af9d5ab04ad70f18238ba6e8be07aee0e1912e67a3" args="" -->SCE_CTRL_EXTERNAL_INPUT_PSP</em>&nbsp;</td><td>
 <p>No external input data. </p>
 </td></tr>
-<tr><td valign="top"><em><a class="anchor" id="gga4284796d5063074e02d4915af9d5ab04a4fb78a48150662a9fd4a5b27ddb781d0"></a><!-- doxytag: member="SCE_CTRL_EXTERNAL_DUALSHOCK_3" ref="gga4284796d5063074e02d4915af9d5ab04a4fb78a48150662a9fd4a5b27ddb781d0" args="" -->SCE_CTRL_EXTERNAL_DUALSHOCK_3</em>&nbsp;</td><td>
+<tr><td valign="top"><em><a class="anchor" id="gga4284796d5063074e02d4915af9d5ab04a979ecb3aaf84bdb1864b79bf85255107"></a><!-- doxytag: member="SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3" ref="gga4284796d5063074e02d4915af9d5ab04a979ecb3aaf84bdb1864b79bf85255107" args="" -->SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3</em>&nbsp;</td><td>
 <p>Input data of the PS3's DUALSHOCK®3 controller is used. </p>
 </td></tr>
-<tr><td valign="top"><em><a class="anchor" id="gga4284796d5063074e02d4915af9d5ab04acf3258881da08adad51d1541405ded72"></a><!-- doxytag: member="SCE_CTRL_EXTERNAL_UNKNOWN_2" ref="gga4284796d5063074e02d4915af9d5ab04acf3258881da08adad51d1541405ded72" args="" -->SCE_CTRL_EXTERNAL_UNKNOWN_2</em>&nbsp;</td><td>
+<tr><td valign="top"><em><a class="anchor" id="gga4284796d5063074e02d4915af9d5ab04a20f4e529115cb1534f5a5cda02a3b790"></a><!-- doxytag: member="SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2" ref="gga4284796d5063074e02d4915af9d5ab04a20f4e529115cb1534f5a5cda02a3b790" args="" -->SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2</em>&nbsp;</td><td>
 <p>Unknown. </p>
 </td></tr>
 </table>
@@ -835,7 +835,7 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">inputMode</td><td>Pass a valid element of <a class="el" href="group__Controller.html#ga4284796d5063074e02d4915af9d5ab04">SceCtrlExternalInputMode</a> (either 1 or 2). </td></tr>
-    <tr><td class="paramname">arg2</td><td>Unknown. Pointer to a <a class="el" href="structSceCtrlInputDataTransferHandler.html">SceCtrlInputDataTransferHandler</a> containing a function to copy the &lt;inputSource&gt; into the PSP's controller buffers. </td></tr>
+    <tr><td class="paramname">transferHandler</td><td>Pointer to a <a class="el" href="structSceCtrlInputDataTransferHandler.html">SceCtrlInputDataTransferHandler</a> containing a function to copy the &lt;inputSource&gt; into the PSP's controller buffers. </td></tr>
     <tr><td class="paramname">inputSource</td><td>Pointer to buffer containing the Controller input data to copy to the PSP's controller buffers. It is passed as the source argument to the given transfer function.</td></tr>
   </table>
   </dd>
@@ -1657,7 +1657,7 @@ Functions</h2></td></tr>
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed May 27 2015 18:50:00 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu May 28 2015 23:10:39 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
