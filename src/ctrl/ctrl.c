@@ -37,8 +37,12 @@
 #include <systimer.h>
 #include <threadman_kernel.h>
 
-SCE_MODULE_INFO("sceController_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | 
-                                         SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
+SCE_MODULE_INFO(
+	"sceController_Service", 
+	SCE_MODULE_KERNEL | 
+	SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START,
+	1, 1
+	);
 SCE_MODULE_BOOTSTART("_sceCtrlModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceCtrlModuleRebootBefore");
 SCE_SDK_VERSION(SDK_VERSION);
@@ -59,8 +63,8 @@ SCE_SDK_VERSION(SDK_VERSION);
  * The number of the controller module's internal controller button data
  * buffers.
  */
-#define CTRL_INTERNAL_CONTROLLER_BUFFERS        (64)
-#define CTRL_MAX_INTERNAL_CONTROLLER_BUFFER     (CTRL_INTERNAL_CONTROLLER_BUFFERS - 1)
+#define CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS	(64)
+#define CTRL_MAX_INTERNAL_CONTROLLER_BUFFER     (CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS - 1)
 
 /* The center position of the analog stick on both axes. */
 #define CTRL_ANALOG_PAD_CENTER_VALUE            (0x80)
@@ -523,13 +527,12 @@ SceSysEventHandler g_ctrlSysEvent = {
  * applications.  The member "buttons" of these buffers only contains
  * User buttons.
  */
-SceCtrlData ctrlUserBufs[CTRL_INTERNAL_CONTROLLER_BUFFERS];
+SceCtrlData ctrlUserBufs[CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS];
 /* 
  * The 64 interval controller button data buffers used for Kernel mode
  * applications.
  */
-SceCtrlData ctrlKernelBufs[CTRL_INTERNAL_CONTROLLER_BUFFERS];
-
+SceCtrlData ctrlKernelBufs[CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS];
 
 s32 sceCtrlInit(void) 
 {   
@@ -554,7 +557,7 @@ s32 sceCtrlInit(void)
      * Create the event used to signal the end of an update process of 
      * internal controller button data buffers.
      */
-    eventId = sceKernelCreateEventFlag("SceCtrl", SCE_EVENT_WAITOR, 0, NULL);
+    eventId = sceKernelCreateEventFlag("SceCtrl", SCE_KERNEL_EW_OR, 0, NULL);
     g_ctrl.updateEventId = eventId;
 
     /* 
@@ -865,12 +868,12 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandl
     
 	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
         poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
-                                    2 * sizeof(SceCtrlDataExt) * CTRL_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
+                                    2 * sizeof(SceCtrlDataExt) * CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
 
         sceKernelTryAllocateFpl(poolId, (void **)&ctrlBuf);
-		g_ctrl.kernelModeData.pCtrlInputBuffers[inputMode] = ctrlBuf + CTRL_INTERNAL_CONTROLLER_BUFFERS;
+		g_ctrl.kernelModeData.pCtrlInputBuffers[inputMode] = ctrlBuf + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
 		g_ctrl.userModeData.pCtrlInputBuffers[inputMode] = ctrlBuf;
     }
 	g_ctrl.extInputDataSource[inputMode - 1] = inputSource;
@@ -1768,15 +1771,23 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
     /*
      * Update the controller module's kernel controller data buffers.
      */
-    index = SVALALIGN64(g_ctrl.userModeData.curUpdatableBufIndex + 1);
+    //index = SVALALIGN64(g_ctrl.userModeData.curUpdatableBufIndex + 1);
+	index = (g_ctrl.userModeData.curUpdatableBufIndex + 1) % CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
     g_ctrl.userModeData.curUpdatableBufIndex = index; 
+	/* 
+	 * In case we updated 64 internal buffers without reading from any updated buffer 
+	 * during this process we increase the index for the first unread updated buffer by 1
+	 * to ensure that a consecutive read of 64 buffers will read from the latest updated 64
+	 * internal buffers.
+	 */
     if (index == g_ctrl.userModeData.firstUnReadUpdatedBufIndex)
-        g_ctrl.userModeData.firstUnReadUpdatedBufIndex = SVALALIGN64(index + 1);
+		g_ctrl.userModeData.firstUnReadUpdatedBufIndex = (index + 1) % CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
 
-    index = SVALALIGN64(g_ctrl.kernelModeData.curUpdatableBufIndex + 1);
+    //index = SVALALIGN64(g_ctrl.kernelModeData.curUpdatableBufIndex + 1);
+	index = (g_ctrl.kernelModeData.curUpdatableBufIndex + 1) % CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
     g_ctrl.kernelModeData.curUpdatableBufIndex = index;
     if (index == g_ctrl.kernelModeData.firstUnReadUpdatedBufIndex)
-        g_ctrl.kernelModeData.firstUnReadUpdatedBufIndex = SVALALIGN64(index + 1);
+		g_ctrl.kernelModeData.firstUnReadUpdatedBufIndex = (index + 1) % CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
  
     updatedButtons = rawButtons;
     if (rawButtons & SCE_CTRL_HOLD)
@@ -1957,7 +1968,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
     s32 status;
     s32 intrState;
 
-    if (nBufs >= CTRL_INTERNAL_CONTROLLER_BUFFERS)
+    if (nBufs >= CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
         return SCE_ERROR_INVALID_SIZE;
 
 	if (inputMode > CTRL_NUM_EXTERNAL_INPUT_MODES)
@@ -1989,7 +2000,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
      * data and does not receive previously read old button data.
      */
     if (mode & READ_BUFFER_POSITIVE) {
-        status = sceKernelWaitEventFlag(g_ctrl.updateEventId, UPDATE_INTERRUPT_EVENT_FLAG_ON, SCE_EVENT_WAITOR, NULL,
+        status = sceKernelWaitEventFlag(g_ctrl.updateEventId, UPDATE_INTERRUPT_EVENT_FLAG_ON, SCE_KERNEL_EW_OR, NULL,
                                         NULL);
         if (status < SCE_ERROR_OK) {
             pspSetK1(oldK1);
@@ -2006,30 +2017,29 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
         startBufIndex = intDataPtr->firstUnReadUpdatedBufIndex;
         numReadIntBufs = intDataPtr->curUpdatableBufIndex - startBufIndex;
         if (numReadIntBufs < 0)
-            numReadIntBufs += CTRL_INTERNAL_CONTROLLER_BUFFERS;
+            numReadIntBufs += CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
 
         intDataPtr->firstUnReadUpdatedBufIndex = intDataPtr->curUpdatableBufIndex;
         if (nBufs < numReadIntBufs) {
             startBufIndex = intDataPtr->curUpdatableBufIndex - nBufs;
-            startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_INTERNAL_CONTROLLER_BUFFERS : startBufIndex;
+            startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS : startBufIndex;
             numReadIntBufs = nBufs;
         }
     }
     else {
         intrState = sceKernelCpuSuspendIntr();
         
+		/* Read input data from the last 'nBufs' updated buffers. */
         bufIndex = intDataPtr->curUpdatableBufIndex;
         startBufIndex = bufIndex;
-        if (nBufs < CTRL_INTERNAL_CONTROLLER_BUFFERS) {
-            startBufIndex = bufIndex - nBufs;
-            startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_INTERNAL_CONTROLLER_BUFFERS : startBufIndex;
-            numReadIntBufs = nBufs;
-        }
+        startBufIndex = bufIndex - nBufs;
+        startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS : startBufIndex;
+        numReadIntBufs = nBufs;
     }
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP)
 		ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     else
-         ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[0] + startBufIndex);
+		ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
 
     if (numReadIntBufs < 0) {
         sceKernelCpuResumeIntr(intrState);
@@ -2044,6 +2054,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
            data->timeStamp = ctrlBuf->timeStamp;
 
            buttons = ctrlBuf->buttons;
+		   /* Ignore kernel mode buttons in user mode applications. */
            if (pspK1IsUserMode())
                buttons &= g_ctrl.userModeButtons;
 
@@ -2069,7 +2080,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
            if (mode >= PEEK_BUFFER_POSITIVE_EXTRA) {
                data->rsrv[2] = 0;
                data->rsrv[3] = 0;
-			   if (inputMode == 0) {
+			   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP) {
                    data->rsrv[0] = -128;
                    data->rsrv[1] = -128;
                    data->rsrv[4] = 0;
@@ -2100,15 +2111,13 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
                data += 1;
            }
            startBufIndex++;
-		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP)
-               ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)ctrlBuf + startBufIndex);
-           else
-               ctrlBuf = (SceCtrlDataExt *)ctrlBuf + startBufIndex;
+		   if (startBufIndex == CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
+			   startBufIndex = 0;
 
-           if (startBufIndex == CTRL_INTERNAL_CONTROLLER_BUFFERS) {
-               startBufIndex = 0;
-			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode];
-           }
+		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP)
+			   ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+           else
+			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     }
     sceKernelCpuResumeIntr(intrState);
     pspSetK1(oldK1);
