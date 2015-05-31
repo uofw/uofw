@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -53,15 +53,15 @@ typedef struct {
     u32 umdActivateCallbackGp;
     u32 umdDeactivateCallbackGp;
     u32 umdInfoCallbackGp;
-    u32 unk12;
+	u32 umdMediaPresentCallbackGp;
     u32 umdReplaceCallbackGp;
     void *umdActivateCallbackParam;
     void *umdDeactivateCallbackParam;
     SceUmdDiscInfo *umdInfoCallbackDiscInfo;
-    void *unk32;
+	void *umdMediaPresentCallbackParam;
     u32 unk36;
     s32 (*umdInfoCallback)(SceUmdDiscInfo *info);
-    s32 (*unk44)(void *param);
+	s32 (*umdMediaPresentCallback)(void *param);
     s32 (*umdActivateCallback)(s32 mode, void *param);
     s32 (*umdDeactivateCallback)(s32 mode, void *param);
     s32 (*umdReplaceCallback)(s32 status);
@@ -311,12 +311,12 @@ static s32 sub_000004DC(void)
     u32 oldGp;
     s32 status;
     
-    if (g_mediaMan.unk44 == NULL)
+	if (g_mediaMan.umdMediaPresentCallback == NULL)
         return SCE_ERROR_OK;
     
-    oldGp = pspSetGp(g_mediaMan.unk12);
+	oldGp = pspSetGp(g_mediaMan.umdMediaPresentCallbackGp);
     
-    status = g_mediaMan.unk44(g_mediaMan.unk32);
+	status = g_mediaMan.umdMediaPresentCallback(g_mediaMan.umdMediaPresentCallbackParam);
     
     pspSetGp(oldGp);
     return status;
@@ -353,30 +353,30 @@ u32 sceUmdUnRegisterGetUMDInfoCallBack(void)
 }
 
 //Subroutine sceUmd_63517CBA - Address 0x000005CC 
-u32 sceUmd_63517CBA(s32 (*arg0)(void *), void *arg1)
+u32 sceUmdRegisterMediaPresentCallBack(s32(*MediaPresentCallback)(void *), void *param)
 {
     s32 intrState;
     
     intrState = sceKernelCpuSuspendIntr();
     
-    g_mediaMan.unk44 = arg0;
-    g_mediaMan.unk32 = arg1;
-    g_mediaMan.unk12 = pspGetGp();
+	g_mediaMan.umdMediaPresentCallback = MediaPresentCallback;
+	g_mediaMan.umdMediaPresentCallbackParam = param;
+	g_mediaMan.umdMediaPresentCallbackGp = pspGetGp();
     
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
 }
 
 //Subroutine sceUmd_1471F63D - Address 0x00000620
-u32 sceUmd_1471F63D(void)
+u32 sceUmdUnRegisterMediaPresentCallBack(void)
 {
     s32 intrState;
     
     intrState = sceKernelCpuSuspendIntr();
     
-    g_mediaMan.unk32 = NULL;
-    g_mediaMan.unk12 = 0;
-    g_mediaMan.unk44 = NULL;
+	g_mediaMan.umdMediaPresentCallbackParam = NULL;
+	g_mediaMan.umdMediaPresentCallbackGp = 0;
+	g_mediaMan.umdMediaPresentCallback = NULL;
     
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
@@ -440,9 +440,12 @@ u32 sceUmdRegisterDeactivateCallBack(s32 (*deactivateCallback)(s32, void *), voi
     return SCE_ERROR_OK;
 }
 
-s32 sceUmdModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 sceUmdModuleStart(s32 argc, void *argp)
 {   
     s32 intrState;
+
+	(void)argc;
+	(void)argp;
     
     memset(&g_mediaMan, 0, sizeof g_mediaMan);
     
