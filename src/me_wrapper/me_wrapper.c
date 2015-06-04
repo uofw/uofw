@@ -135,7 +135,7 @@ int sub_0x1000020(){
 	meTable[9] = 0;
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_KERNEL_EW_CLEAR_PAT, 0, 0);
 	sceKernelUnlockMutex(meRpc.mutex, 1);
 	return 0;
 }
@@ -166,7 +166,7 @@ int sub_0x1000002(int arg)
 	meTable[9] = 0;
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_KERNEL_EW_CLEAR_PAT, 0, 0);
 	return 0;	
 }
 
@@ -1203,7 +1203,7 @@ int sceMeCore_driver_FA398D71(int cmd, ...)
 	va_end(ap);
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_KERNEL_EW_CLEAR_PAT, 0, 0);
 	ret = meTable[10];
 	sceKernelUnlockMutex(meRpc.mutex, 1);
 	return ret;

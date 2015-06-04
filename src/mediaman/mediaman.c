@@ -660,7 +660,7 @@ s32 sceUmdWaitDriveStat(s32 umdState)
     if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT; 
        
-    status = sceKernelWaitEventFlag(eventId, umdState, SCE_EVENT_WAITOR, &resultBits, NULL);
+    status = sceKernelWaitEventFlag(eventId, umdState, SCE_KERNEL_EW_OR, &resultBits, NULL);
        
     pspSetK1(oldK1);
     return status;
@@ -686,7 +686,7 @@ s32 sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout)
     else
         pTimeout = NULL;
        
-    status = sceKernelWaitEventFlag(eventId, umdState, SCE_EVENT_WAITOR, &resultBits, pTimeout);
+    status = sceKernelWaitEventFlag(eventId, umdState, SCE_KERNEL_EW_OR, &resultBits, pTimeout);
     
     pspSetK1(oldK1);
     return status;
@@ -712,7 +712,7 @@ s32 sceUmdWaitDriveStatCB(u32 umdState, u32 timeout)
     else
         pTimeout = NULL;
    
-    status = sceKernelWaitEventFlagCB(eventId, umdState, SCE_EVENT_WAITOR, &outBits, pTimeout);
+    status = sceKernelWaitEventFlagCB(eventId, umdState, SCE_KERNEL_EW_OR, &outBits, pTimeout);
     pspSetK1(oldK1);
     return status;
 }
