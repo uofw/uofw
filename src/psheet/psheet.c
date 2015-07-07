@@ -1,5 +1,6 @@
-#include <pspkernel.h>
-#include <pspkerneltypes.h>
+#include <common_imp.h>
+#include <iofilemgr_kernel.h>
+#include <sysmem_kernel.h >
 
 #define SCE_PSHEET_ERROR_SEMAID 0x80510108
 #define SCE_PSHEET_ERROR_ILLEGAL_ADDRESS 0x80510109
@@ -13,7 +14,8 @@
 #define SCE_PSHEET_ERROR_P8 0x80510112
 #define IS_KERNEL_ADDR(addr)  (addr < 0)
 
-PSP_MODULE_INFO("scePsheet", SCE_MODULE_KERNEL | SCE_MODULE_SINGLE_LOAD | SCE_MODULE_SINGLE_START, 1, 5);
+SCE_MODULE_INFO("scePsheet", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_LOAD    | SCE_MODULE_ATTR_EXCLUSIVE_START  , 1, 5);
+SCE_SDK_VERSION(SDK_VERSION);
 
 SceUID semaID = 0;			//00002a40
 SceUID unk1 = 0;			//00002a44
@@ -48,16 +50,46 @@ int p17;				//0x000032DC
 int p18;				//0x00003804
 int p19;				//0x00004804
 
+int sceDRMInstallInit(int address, int size);
+int sceDRMInstallGetPkgInfo(int address, int size, int a2);
+int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3);
+int sceDRMInstallInstall(char a0[256], int a1, int a2, int *a3);
+int module_start(SceSize argc, void* argp);
+int module_reboot_before(SceSize args, void *argp) __attribute__((alias("module_stop")));
+int sceDRMInstallEnd(void);
+void sceDRMInstallAbort(void);char *sub_72C(void *a0, int a1, void *a2);
+int sub_864(int a0, int a1, int a2, void *a3);
+int sub_009EC(int a0, int a1, int a2);
+int getSemaIdStatus(SceUInt *sTimeout);
+int getSemaIdStatusIncrement(SceUInt *sTimeout);
+int getSemaIdStatusUsingTimeout(int timeout, int a1);
+int getSemaIdStatusUsingBuf(void);
+int sub_01410(int a0);
+int sub_014A8(char *file);
+int sub_015D8(SceUID a0, int a1);
+int sub_017C0 (int arg1, int arg2, int arg3, int arg4, int arg5);
+void sub_01998 (int arg1, int arg2, int arg3, int arg4);
+void sub_01B3C (int arg1, int arg2, int arg3, int arg4, int arg5);
+int sub_01CEC (int arg1, int arg2);
+int sub_01E14 (char *dir, int a1);
+int sub_01EF0(void *a0);
+int sub_01F4C(int a0, int a1, int a2);
+int sub_2000(int a0, int a1, int a2, int a3);
+int sub_20C8(int a0, int a1, int a2); //Inside of sub_2000
+int sub_2134(int a0, int a1, int a2, int a3, int t0);
+int sub_21F0(SceUID fd, int offset, int a2, int a3, void *t0);
+
+
 //scePsheet_driver_302AB4B8 = sceDRMInstallInit
 //sets up the initial DRM params.
 //returns 0 on success, 0x80510109 on failure
 int sceDRMInstallInit(int address, int size) {
 	s32 oldK1;
 	oldK1 = pspShiftK1();
-	sceKernelMemset(g_unkP, 0, 0x4D0);
+	sceKernelMemset((void *)g_unkP, 0, 0x4D0);
 
 	//Standard illegal address check
-	if (((address | size | address + size) & k1) < 0)		
+	if (((address | size | address + size) & oldK1) < 0)		
 	{
 		pspSetK1(oldK1);
 		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
@@ -82,11 +114,10 @@ int sceDRMInstallInit(int address, int size) {
 
 //scePsheet_driver_15355B0E = sceDRMInstallGetPkgInfo
 //determines what kind of package it is, based on hash comparison.
-int sceDRMInstallGetPkgInfo(int address, int size, int a2)
-{
+int sceDRMInstallGetPkgInfo(int address, int size, int a2) {
 	int crntAddress;
 	SceUID s3;
-	int k1 = pspSdkGetK1();
+	s32 oldK1 = pspGetK1();
 	crntAddress = address;
 	if(!(buf == 0))
 	{
@@ -94,12 +125,12 @@ int sceDRMInstallGetPkgInfo(int address, int size, int a2)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		if(a2 == 0)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
-		pspSdkSetK1(k1 << 11);
-		if(!(((k1<<11) & address) < 0))
+		oldK1 = pspShiftK1();
+		if(!(((oldK1<<11) & address) < 0))
 		{
-			if(!((((size+16) | size) & (k1 << 11)) < 0))
+			if(!((((size+16) | size) & (oldK1 << 11)) < 0))
 			{
-				if(!(((a2+16) | a2 ) & (k1 << 11)) >= 0)
+				if(!(((a2+16) | a2 ) & (oldK1 << 11)) >= 0)
 				{
 					address = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 					size = 0;
@@ -135,8 +166,7 @@ int sceDRMInstallGetPkgInfo(int address, int size, int a2)
 
 //scePsheet_driver_34E68A41 = sceDRMInstallGetFileInfo
 //determines what kind of file it is, based on hash comparison.
-int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
-{
+int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3) {
 	SceUID s0;
 	s32 oldK1;
 	SceUID s4;
@@ -144,18 +174,18 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 	{
 		if(file == NULL || size == 0 || a2 == NULL)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
-		k1 = pspSdkGetK1();
+		oldK1 = pspGetK1();
 		if(!(a3 < 0))
 		{
-			if(!(((k1<<11) & file) < 0))
+			if(!(((oldK1<<11) & file) < 0))
 			{
 				if(!((((size+16) | size) & size) < 0))
 				{
-					if((((a3+264) | a3) & (k1<<11)) >= 0)
+					if((((a3+264) | a3) & (oldK1<<11)) >= 0)
 					{
 						pspSetK1(oldK1);
-						s4 = sceIoOpen(file, IOASSIGN_RDONLY, 0);
-						s0 = k1 << 11;
+						s4 = sceIoOpen(file, SCE_O_RDONLY , 0);
+						s0 = oldK1 << 11;
 						pspSdkSetK1(s0);
 						s0 = s4;
 							if(!(s4 < 0))
@@ -173,7 +203,7 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 				s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 				goto end;
 			}
-			pspSdkSetK1(k1 << 11);
+			oldK1 = pspShiftK1();
 			s0 = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 			end:
 			size = 0;
@@ -186,17 +216,14 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 	return SCE_PSHEET_ERROR_SEMAID;
 }
 
-int sceDRMInstallInstall(char a0[256], int a1, int a2, int *a3) 
-{
+int sceDRMInstallInstall(char a0[256], int a1, int a2, int *a3)  {
 	a3 = buf[0];		//buf pointer to buf
-	int s1 = a1, s2 = a2, s3, s4 = -1, s5, s6, s7;
 	if(a3 == 0)
 		return SCE_PSHEET_ERROR_SEMAID;
 	return 0;
 }
 
-int module_start(SceSize argc, void* argp)
-{
+int module_start(SceSize argc, void* argp) {
 	SceUID s0;
 	SceUID *s1 = semaID;
 	s0 = sceKernelCreateSema("ScePsheet1", 0, 1, 1, 0);
@@ -215,8 +242,7 @@ int module_start(SceSize argc, void* argp)
 }
 
 //module_reboot_before
-int module_reboot_before(SceSize args, void *argp) __attribute__((alias("module_stop")))
-{
+int module_reboot_before(SceSize args, void *argp) __attribute__((alias("module_stop"))) {
 	SceUID *s0 = semaID;
 	if(!(semaID < 0))
 	{
@@ -233,20 +259,18 @@ int module_reboot_before(SceSize args, void *argp) __attribute__((alias("module_
 
 //scePsheet_driver_3CEC4078 = sceDRMInstallEnd
 //cleans up the internal param struct
-int sceDRMInstallEnd(void)
-{
+int sceDRMInstallEnd(void) {
 	sceDRMInstallInit(0, 0);
 	return 0;
 }
 
 //scePsheet_driver_3BA93CFA = ???
 //unknown, just waits and signals a semaphore
-int scePsheet_driver_3BA93CFA(int a0)
-{
-	int k1 = pspSdkGetK1();
-	if((((a0+8) | a0) & (k1 << 11)) >= 0)
+int scePsheet_driver_3BA93CFA(int a0) {
+	s32 oldK1 = pspGetK1();
+	if((((a0+8) | a0) & (oldK1 << 11)) >= 0)
 	{
-		pspSdkSetK1(k1 << 11);
+		oldK1 = pspShiftK1();
 		int result = sub_122C(a0);
 		pspSetK1(oldK1);
 		return result;
@@ -257,16 +281,14 @@ int scePsheet_driver_3BA93CFA(int a0)
 
 //scePsheet_driver_226D9099 = sceDRMInstallAbort
 //stops the encryption process.
-void sceDRMInstallAbort(void)
-{
+void sceDRMInstallAbort(void) {
 	int oldK1 = pspShiftK1();
 	sub_1410(1);
 	pspSetK1(oldK1);
 	return;
 }
 
-char *sub_72C(void *a0, int a1, void *a2)
-{
+char *sub_72C(void *a0, int a1, void *a2) {
 	int buf[4];
 	void *s1;
 	void *s4 = g_unkP;
@@ -295,9 +317,7 @@ char *sub_72C(void *a0, int a1, void *a2)
 	return buf;
 }
 
-//
-int sub_864(int a0, int a1, int a2, void *a3)
-{
+int sub_864(int a0, int a1, int a2, void *a3) {
 	int buf[4];
 	char *s3;
 	char *s5;
@@ -346,12 +366,9 @@ int sub_864(int a0, int a1, int a2, void *a3)
 	return SCE_PSHEET_ERROR_P;
 }
 
-int sub_009EC(int a0, int a1, int a2);
-
 //Returns the status of the semaID
 //sub_0122C
-int getSemaIdStatus(SceUInt *sTimeout)
-{
+int getSemaIdStatus(SceUInt *sTimeout) {
 	int resultult;
 	resultult = sceKernelWaitSema(semaID, 1, 0);
 	if(resultult < 0)
@@ -365,8 +382,7 @@ int getSemaIdStatus(SceUInt *sTimeout)
 
 //Returns the status of the semaID while also incrementing the Timeout
 //sub_012A0
-int getSemaIdStatusIncrement(SceUInt *sTimeout)
-{
+int getSemaIdStatusIncrement(SceUInt *sTimeout) {
 	int resultult;
 	resultult = sceKernelWaitSema(semaID, 1, 0);
 	if(resultult < 0)
@@ -380,8 +396,7 @@ int getSemaIdStatusIncrement(SceUInt *sTimeout)
 
 //Signals a sema and returns a resultult
 //sub_01310
-int getSemaIdStatusUsingTimeout(int timeout, int a1)
-{
+int getSemaIdStatusUsingTimeout(int timeout, int a1) {
 	int resultult;
 	resultult = sceKernelWaitSema(semaID, 1, 0);
 	if(resultult < 0)
@@ -395,8 +410,7 @@ int getSemaIdStatusUsingTimeout(int timeout, int a1)
 }
 
 //sub_01388
-int getSemaIdStatusUsingBuf(void)
-{
+int getSemaIdStatusUsingBuf(void) {
 	int resultult = 0, lckdresultult;
 	lckdresultult = sceKernelWaitSema(semaID, 1, 0);
 	if(lckdresultult < 0)
@@ -413,8 +427,7 @@ int getSemaIdStatusUsingBuf(void)
 }
 
 //sub_01410
-int sub_01410(int a0)
-{
+int sub_01410(int a0) {
 	int resultult = 0, lckdresultult;
 	lckdresultult = sceKernelWaitSema(semaID, 1, 0);
 	if(lckdresultult < 0)
@@ -432,13 +445,12 @@ int sub_01410(int a0)
 }
 
 //sub_014A8
-int sub_014A8(char *file)
-{
+int sub_014A8(char *file) {
 	SceUID result;
 	result = strncmp(file, "ms0:/", 5);
 	if(!(result != 0))
 	{
-		result = sceIoOpen(file, IOASSIGN_RDONLY, 0);
+		result = sceIoOpen(file, SCE_O_RDONLY , 0);
 		file = result;
 		if(!(result < 0))
 		{
@@ -467,8 +479,8 @@ int sub_014A8(char *file)
 }
 
 //
-int sub_015D8(SceUID a0, int a1)
-{
+//sub_014A8
+int sub_015D8(SceUID a0, int a1) {
 	int result, s1;
 	void *s3 = g_unkP;
 	int temp;
@@ -542,15 +554,7 @@ int sub_015D8(SceUID a0, int a1)
 	return 0;
 }
 
-int sub_017C0 (int arg1, int arg2, int arg3, int arg4, int arg5);
-void sub_01998 (int arg1, int arg2, int arg3, int arg4);
-void sub_01B3C (int arg1, int arg2, int arg3, int arg4, int arg5);
-int sub_01CEC (int arg1, int arg2);
-int sub_01E14 (char *dir, int a1);
-int sub_01EF0(void *a0);
-
-int sub_01F4C(int a0, int a1, int a2)
-{
+int sub_01F4C(int a0, int a1, int a2) {
 	int s2 = 0x00002F08;
 	int result;
 	//result = sceAmctrl_driver_1CCB66D2(s2, 2, 1,, a2, 0); //Where and how is a3 set???
@@ -573,8 +577,7 @@ int sub_01F4C(int a0, int a1, int a2)
 	return result;
 }
 
-int sub_2000(int a0, int a1, int a2, int a3)
-{
+int sub_2000(int a0, int a1, int a2, int a3) {
 	int *s2 = p13;
 	int result = sceAmctrl_driver_525B8218(s2, 2);//sceDrmBBMacUpdate(void *mkey, u8 *buf, int buf[1])
 	if(!(result < 0))
@@ -596,11 +599,7 @@ int sub_2000(int a0, int a1, int a2, int a3)
 	return SCE_PSHEET_ERROR_P3;
 }
 
-//Inside of sub_2000
-int sub_20C8(int a0, int a1, int a2);
-
-int sub_2134(int a0, int a1, int a2, int a3, int t0)
-{
+int sub_2134(int a0, int a1, int a2, int a3, int t0) {
 	int *s2 = cipher;
 	int result = sceAmctrl_driver_1CCB66D2(s2, 1, 2, t0, a3, a2);//sceDrmBBCipherInit(void *ckey, int type, int mode, u8 *header_key, u8 *version_key, u32 seed)
 	if(!(result < 0))
@@ -621,5 +620,3 @@ int sub_2134(int a0, int a1, int a2, int a3, int t0)
 	KDebugForKernel_84F370BC("%s: %s(): error 0x%08X\n\n", "decrypt_wrapper.c", "drmbb_decrypt", result);
 	return SCE_PSHEET_ERROR_P3;
 }
-
-int sub_21F0(SceUID fd, int offset, int a2, int a3, void *t0);
