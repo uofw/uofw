@@ -11,6 +11,7 @@
 #define SCE_PSHEET_ERROR_P6 0x80510110
 #define SCE_PSHEET_ERROR_P7 0x80510113
 #define SCE_PSHEET_ERROR_P8 0x80510112
+#define IS_KERNEL_ADDR(addr)  (addr < 0)
 
 PSP_MODULE_INFO("scePsheet", SCE_MODULE_KERNEL | SCE_MODULE_SINGLE_LOAD | SCE_MODULE_SINGLE_START, 1, 5);
 
@@ -51,15 +52,14 @@ int p19;				//0x00004804
 //sets up the initial DRM params.
 //returns 0 on success, 0x80510109 on failure
 int sceDRMInstallInit(int address, int size) {
-	int k1;
-	k1 = pspSdkGetK1();
-	pspSdkSetK1(k1 << 11);
+	s32 oldK1;
+	oldK1 = pspShiftK1();
 	sceKernelMemset(g_unkP, 0, 0x4D0);
 
 	//Standard illegal address check
 	if (((address | size | address + size) & k1) < 0)		
 	{
-		pspSdkSetK1(k1);
+		pspSetK1(oldK1);
 		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 	}
 
@@ -72,11 +72,11 @@ int sceDRMInstallInit(int address, int size) {
 	{
 		buf[0] = 0;
 		buf[1] = 0;
-		pspSdkSetK1(k1);
+		pspSetK1(oldK1);
 		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 	}
 
-	pspSdkSetK1(k1);
+	pspSetK1(oldK1);
 	return 0;
 }
 
@@ -90,7 +90,7 @@ int sceDRMInstallGetPkgInfo(int address, int size, int a2)
 	crntAddress = address;
 	if(!(buf == 0))
 	{
-		if((address < 1 | size < 1) != 0)
+		if(address == NULL || IS_KERNEL_ADDR(address) || size <= 0x1FFFF)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 		if(a2 == 0)
 			return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
@@ -127,7 +127,7 @@ int sceDRMInstallGetPkgInfo(int address, int size, int a2)
 		size = 0;
 		end:
 		sceKernelMemset(g_unkP, 0, 0x4D0);
-		pspSdkSetK1(k1);
+		pspSetK1(oldK1);
 		return crntAddress;
 	}
 	return SCE_PSHEET_ERROR_SEMAID;
@@ -138,7 +138,7 @@ int sceDRMInstallGetPkgInfo(int address, int size, int a2)
 int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 {
 	SceUID s0;
-	int k1;
+	s32 oldK1;
 	SceUID s4;
 	if(!(buf = 0))
 	{
@@ -153,7 +153,7 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 				{
 					if((((a3+264) | a3) & (k1<<11)) >= 0)
 					{
-						pspSdkSetK1(k1);
+						pspSetK1(oldK1);
 						s4 = sceIoOpen(file, IOASSIGN_RDONLY, 0);
 						s0 = k1 << 11;
 						pspSdkSetK1(s0);
@@ -178,7 +178,7 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
 			end:
 			size = 0;
 			sceKernelMemset(g_unkP, 0, 0x4D0);
-			pspSdkSetK1(k1);
+			pspSetK1(oldK1);
 			return s0;
 		}
 		return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
@@ -248,10 +248,10 @@ int scePsheet_driver_3BA93CFA(int a0)
 	{
 		pspSdkSetK1(k1 << 11);
 		int result = sub_122C(a0);
-		pspSdkSetK1(k1);
+		pspSetK1(oldK1);
 		return result;
 	}
-	pspSdkSetK1(k1);
+	pspSetK1(oldK1);
 	return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
 }
 
@@ -259,10 +259,9 @@ int scePsheet_driver_3BA93CFA(int a0)
 //stops the encryption process.
 void sceDRMInstallAbort(void)
 {
-	int k1 = pspSdkGetK1();
-	pspSdkSetK1(k1 << 11);
+	int oldK1 = pspShiftK1();
 	sub_1410(1);
-	pspSdkSetK1(k1);
+	pspSetK1(oldK1);
 	return;
 }
 
