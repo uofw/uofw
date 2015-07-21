@@ -61,19 +61,15 @@ int g_fd;
 /*
  * Headers
  */
-extern int pspSdkGetK1();
-extern int pspSdkSetK1(int);
 
 extern int sceKernelTerminateThread(SceUID thid);
-
-extern int SysclibForKernel_7DEE14DE(int, int, int, int); // __udivdi3?
 
 extern int sceRtc_driver_CEEF238F(void *data);
 extern int sceRtc_driver_89FA4262(void *, void *, int, int);
 
 extern int sceOpenPSIDGetPSID(PspOpenPSID, int);
 
-extern int scePspNpDrm_driver_EBB198ED(void *, void *);
+extern int sceNpDrmDecActivation(void *, void *);
 extern int sceNpDrmVerifyAct(void *data);
 
 extern int scePcactAuth1BB(int, PspOpenPSID, void *, void *, int, int);
@@ -121,14 +117,13 @@ u32 module_stop(SceSize args __attribute__((unused)),
  */
 s32 sceNpInstall_user_5847D8C7(int a0, int a1, int a2, int a3) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
-	int k1 = pspSdkGetK1();
-	pspSdkSetK1(k1 << 11);
+	s32 oldk1 = pspShiftK1();
 	//0x44
-	if ((((a1 + 32) | a1) & (k1 << 11)) >= 0) {
+	if ((((a1 + 32) | a1) & (oldk1 << 11)) >= 0) {
 		//0x4C
-		if ((((a2 + 128) | a2) & (k1 << 11)) >= 0) {
+		if ((((a2 + 128) | a2) & (oldk1 << 11)) >= 0) {
 			//0x5C
-			if ((((a3 + 64) | a3) & (k1 << 11)) >= 0) {
+			if ((((a3 + 64) | a3) & (oldk1 << 11)) >= 0) {
 				res = sub_0016C(a0, a1, a2, a3);
 			}
 			//0x70
@@ -136,7 +131,7 @@ s32 sceNpInstall_user_5847D8C7(int a0, int a1, int a2, int a3) {
 		//0x70
 	}
 	//0x70
-	pspSdkSetK1(k1);
+	pspSetK1(oldk1);
 	return res;
 }
 
@@ -152,18 +147,17 @@ s32 sceNpInstall_user_5847D8C7(int a0, int a1, int a2, int a3) {
  */
 s32 sceNpInstall_user_0B039B36(int addr, int crypt, int addr2) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
-	int k1 = pspSdkGetK1();
-	pspSdkSetK1(k1 << 11);
+	s32 oldk1 = pspShiftK1();
 	//0xC0
-	if (((k1 << 11) & (((addr + crypt) | addr) | crypt)) >= 0) {
+	if (((oldk1 << 11) & (((addr + crypt) | addr) | crypt)) >= 0) {
 		//0xC8
-		if ((((addr2 + 64) | addr2) & (k1 << 11)) >= 0) {
+		if ((((addr2 + 64) | addr2) & (oldk1 << 11)) >= 0) {
 			res = installActivationDat(addr, crypt, addr2);
 		}
 		//0xDC
 	}
 	//0xDC
-	pspSdkSetK1(k1);
+	pspSetK1(oldk1);
 	return res;
 }
 
@@ -177,14 +171,13 @@ s32 sceNpInstall_user_0B039B36(int addr, int crypt, int addr2) {
  */
 s32 sceNpInstall_user_91F9D50D(int addr) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
-	int k1 = pspSdkGetK1();
-	pspSdkSetK1(k1 << 11);
+	s32 oldk1 = pspShiftK1();
 	//0x11C
-	if ((((addr + 8) | addr) & (k1 << 11)) >= 0) {
+	if ((((addr + 8) | addr) & (oldk1 << 11)) >= 0) {
 		res = storeAccountID(addr);
 	}
 	//0x12C
-	pspSdkSetK1(k1);
+	pspSetK1(oldk1);
 	return res;
 }
 
@@ -195,10 +188,9 @@ s32 sceNpInstall_user_91F9D50D(int addr) {
  * Creates and runs the thread for act.dat deletion
  */
 void sceNpInstall_user_7AE4C8BC(void) {
-	int k1 = pspSdkGetK1();
-	pspSdkSetK1(k1 << 11);
+	s32 oldk1 = pspShiftK1();
 	registerNpDeactivationThread();
-	pspSdkSetK1(k1);
+	pspSetK1(oldk1);
 	return;
 }
 
@@ -210,12 +202,8 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 	PspOpenPSID psid; 	// 0  - 16
 	u8 data[64];		// 16 - 80
 	s32 retStatus = SCE_NULL_POINTER;
-	int s1 = a0;
 	int s2 = 2;
 	int fd = -1;
-	int tempSize = size;
-	int s6 = a2;
-	int s7 = a3;
 	s32 res = SCE_NULL_POINTER;
 
 	//0x1B0
@@ -233,7 +221,7 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		return res;
 
 	//0x1D4
-	if (s1 == 1) {
+	if (a0 == 1) {
 		//0x238
 		res = sceIoOpen("flash2:/act.dat", 0x04000001, 0);
 		retStatus = SCE_ERROR_UNKNOWN_0;
@@ -243,7 +231,7 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 	}
 
 	//0x1DC
-	if (s1 == 0) {
+	if (a0 == 0) {
 		//0x1F8
 		s2 = 0;
 		//0x208
@@ -261,7 +249,7 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		goto mem;
 	}
 	//0x1E8
-	if (s1 != 2)
+	if (a0 != 2)
 		return SCE_NULL_POINTER;
 
 	//0x274
@@ -270,11 +258,11 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		mem: memset(&data[0], 0, 48); //memset
 		data[0] = 16;
 		data[1] = 0;
-		memcpy(&data[16], (u8 *) tempSize, 32);	//memcpy
+		memcpy(&data[16], (u8 *) size, 32);	//memcpy - Since value of size is not altered throughout the function, we don't need a 'tempSize' variable in the 2nd arg.
 		u32 temp = 0xFF2BC000;
-		res = SysclibForKernel_7DEE14DE(*((u32 *) data + 0xC) - temp,
-				(*((u32 *) data + 0xD) - temp) - (*((u32 *) data + 0xC) < temp),
-				0x3E8, 0);
+		res = __udivdi3(*((u32 *) data + 0xC) - temp,
+				(*((u32 *) data + 0xD) - temp) - (*((u32 *) data + 0xC) < temp)); // __udivdi3(*((u32 *) data + 0xC) - temp,
+																				//(*((u32 *) data + 0xD) - temp) - (*((u32 *) data + 0xC) < temp), 0x3E8, 0)
 		*((int *) data + 0xE) = res;
 		*((int *) data + 0xF) = 0x00DCBFFE;
 		res = sceOpenPSIDGetPSID(psid, 1);
@@ -282,9 +270,9 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		if (res < 0)
 			return res;
 
-		retStatus = scePcactAuth1BB(s2, psid, &data[0], &data[56], s6, s7);
+		retStatus = scePcactAuth1BB(s2, psid, &data[0], &data[56], a2, a3);
 		//0x314
-		if (s1 == 1)
+		if (a0 == 1)
 			retStatus = sceRtc_driver_89FA4262(&g_0x9D0[0], &data[48], 30, 0);
 	}
 	//0x334
@@ -323,7 +311,7 @@ s32 installActivationDat(int addr, int crypt, int addr2) {
 	fd = scePcactAuth2BB(addr, addr2, gActAddr);
 	//0x3D0
 	if (fd >= 0) {
-		fd = scePspNpDrm_driver_EBB198ED(data, gActAddr);
+		fd = sceNpDrmDecActivation(data, gActAddr);
 		//0x3E4
 		if (fd >= 0) {
 			fd = sceNpDrmVerifyAct(data);
