@@ -61,19 +61,15 @@ int g_fd;
 /*
  * Headers
  */
-extern int pspSdkGetK1();
-extern int pspSdkSetK1(int);
 
 extern int sceKernelTerminateThread(SceUID thid);
-
-extern int SysclibForKernel_7DEE14DE(int, int, int, int); // __udivdi3?
 
 extern int sceRtc_driver_CEEF238F(void *data);
 extern int sceRtc_driver_89FA4262(void *, void *, int, int);
 
 extern int sceOpenPSIDGetPSID(PspOpenPSID, int);
 
-extern int scePspNpDrm_driver_EBB198ED(void *, void *);
+extern int sceNpDrmDecActivation(void *, void *);
 extern int sceNpDrmVerifyAct(void *data);
 
 extern int scePcactAuth1BB(int, PspOpenPSID, void *, void *, int, int);
@@ -264,9 +260,9 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		data[1] = 0;
 		memcpy(&data[16], (u8 *) size, 32);	//memcpy - Since value of size is not altered throughout the function, we don't need a 'tempSize' variable in the 2nd arg.
 		u32 temp = 0xFF2BC000;
-		res = SysclibForKernel_7DEE14DE(*((u32 *) data + 0xC) - temp,
-				(*((u32 *) data + 0xD) - temp) - (*((u32 *) data + 0xC) < temp),
-				0x3E8, 0);
+		res = __udivdi3(*((u32 *) data + 0xC) - temp,
+				(*((u32 *) data + 0xD) - temp) - (*((u32 *) data + 0xC) < temp)); // __udivdi3(*((u32 *) data + 0xC) - temp,
+																				//(*((u32 *) data + 0xD) - temp) - (*((u32 *) data + 0xC) < temp), 0x3E8, 0)
 		*((int *) data + 0xE) = res;
 		*((int *) data + 0xF) = 0x00DCBFFE;
 		res = sceOpenPSIDGetPSID(psid, 1);
@@ -315,7 +311,7 @@ s32 installActivationDat(int addr, int crypt, int addr2) {
 	fd = scePcactAuth2BB(addr, addr2, gActAddr);
 	//0x3D0
 	if (fd >= 0) {
-		fd = scePspNpDrm_driver_EBB198ED(data, gActAddr);
+		fd = sceNpDrmDecActivation(data, gActAddr);
 		//0x3E4
 		if (fd >= 0) {
 			fd = sceNpDrmVerifyAct(data);
