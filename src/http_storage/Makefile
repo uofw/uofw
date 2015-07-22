@@ -6,6 +6,6 @@ OBJS = http_storage.o k1set.o imports.o exports.o
 
 #DEBUG = 1
 
-LIBS = -lIoFileMgrForKernel -lModuleMgrForKernel -lSysMemForKernel
+LIBS = -lIoFileMgrForKernel -lModuleMgrForKernel -lSysMemForKernel -lSysclibForKernel
 
 include ../../lib/build.mak

@@ -4,6 +4,7 @@
 
 #include <common_imp.h>
 #include <sysmem_kernel.h>
+#include <sysmem_sysclib.h>
 #include <iofilemgr_kernel.h>
 #include <modulemgr_kernel.h>
 
@@ -37,12 +38,11 @@ extern int sceKernelSearchModuleByName(const char *module);
 extern int sceKernelStopModule(int, int, int, int, int); //Alias sceHttpStorageEnd
 
 extern int sceChkregGetPsCode(char *buf); //sceChkregGetPsCode
-extern int strncpy(char *dst, char *src, int count); //strncpy
 
 u32 sceHttpStorage_driver_24AA94F4(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageWrite")));
 u32 sceHttpStorage_driver_2D8DAE58(int a0, int a1) __attribute__((alias("sceHttpStorageGetstat")));
 u32 sceHttpStorage_driver_700AAD44(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageOpen")));
-SceOff sceHttpStorage_driver_B33389CE(int a0) __attribute__((alias("sceHttpStorageWrite")));
+u32 sceHttpStorage_driver_B33389CE(int a0) __attribute__((alias("sceHttpStorageWrite")));
 u32 sceHttpStorage_driver_CDA3D8F6(int a0) __attribute__((alias("sceHttpStorageClose")));
 u32 sceHttpStorage_driver_CDDF1103(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageRead")));
 
