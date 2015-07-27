@@ -2,7 +2,7 @@
 # See the file COPYING for copying permission.
 
 TARGET = np_core
-OBJS = np_core.o k1set.o
+OBJS = np_core.o
 
 #DEBUG = 1
 
