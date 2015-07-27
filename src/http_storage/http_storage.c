@@ -24,7 +24,7 @@
 
 #define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
 
-SCE_MODULE_INFO("sceHttpStorage_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD, 1, 3);
+SCE_MODULE_INFO("sceHttpStorage_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD, 1, 0);
 SCE_MODULE_STOP("sceHttpStorage_driver_C59AC98A");
 SCE_SDK_VERSION( SDK_VERSION);
 
@@ -37,7 +37,7 @@ extern int sceKernelLoadModule(const char *prx);
 extern int sceKernelSearchModuleByName(const char *module);
 extern int sceKernelStopModule(int, int, int, int, int); //Alias sceHttpStorageEnd
 
-extern int sceChkregGetPsCode(char *buf); //sceChkregGetPsCode
+extern int sceChkreg_driver_59F8491D(char *buf); //sceChkregGetPsCode
 
 u32 sceHttpStorage_driver_24AA94F4(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageWrite")));
 u32 sceHttpStorage_driver_2D8DAE58(int a0, int a1) __attribute__((alias("sceHttpStorageGetstat")));
@@ -281,7 +281,7 @@ u32 sceHttpStorage_bridge_04EF00F8(int a0) {
 		if ((u32) res != 0x8002012E) { //SCE_ERROR_KERNEL_UNKNOWN_MODULE
 			//0x4AC
 			if (res >= 0) {
-				res = sceChkregGetPsCode((char *) a0);
+				res = sceChkreg_driver_59F8491D((char *) a0);
 				goto end;
 			}
 			pspSetK1(oldk1);
@@ -295,7 +295,7 @@ u32 sceHttpStorage_bridge_04EF00F8(int a0) {
 			if (res < 0) {
 				goto end;
 			}
-			res = sceChkregGetPsCode((char *) a0);
+			res = sceChkreg_driver_59F8491D((char *) a0);
 			end:
 			//0x4D0
 			if (res >= 0) {

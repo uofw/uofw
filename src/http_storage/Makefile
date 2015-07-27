@@ -2,10 +2,10 @@
 # See the file COPYING for copying permission.
 
 TARGET = http_storage
-OBJS = http_storage.o k1set.o imports.o exports.o
+OBJS = http_storage.o
 
 #DEBUG = 1
 
-LIBS = -lIoFileMgrForKernel -lModuleMgrForKernel -lSysMemForKernel -lSysclibForKernel
+LIBS = -lIoFileMgrForKernel -lModuleMgrForKernel -lSysMemForKernel -lSysclibForKernel -lsceChkreg_driver
 
 include ../../lib/build.mak
