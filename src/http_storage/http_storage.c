@@ -28,9 +28,6 @@ SCE_MODULE_INFO("sceHttpStorage_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EX
 SCE_MODULE_STOP("sceHttpStorage_driver_C59AC98A");
 SCE_SDK_VERSION( SDK_VERSION);
 
-extern inline int pspSdkGetK1(void);
-extern inline void pspSdkSetK1(int k1);
-
 extern int sceKernelUnloadModule(int);
 extern int sceKernelStartModule(int, int, int, void *data, int);
 extern int sceKernelLoadModule(const char *prx);
@@ -42,11 +39,10 @@ extern int sceChkreg_driver_59F8491D(char *buf); //sceChkregGetPsCode
 u32 sceHttpStorage_driver_24AA94F4(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageWrite")));
 u32 sceHttpStorage_driver_2D8DAE58(int a0, int a1) __attribute__((alias("sceHttpStorageGetstat")));
 u32 sceHttpStorage_driver_700AAD44(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageOpen")));
-u32 sceHttpStorage_driver_B33389CE(int a0) __attribute__((alias("sceHttpStorageWrite")));
+u32 sceHttpStorage_driver_B33389CE(int a0) __attribute__((alias("sceHttpStorageLseek")));
 u32 sceHttpStorage_driver_CDA3D8F6(int a0) __attribute__((alias("sceHttpStorageClose")));
 u32 sceHttpStorage_driver_CDDF1103(int a0, int a1, int a2) __attribute__((alias("sceHttpStorageRead")));
-
-int sceHttpStorage_driver_C59AC98A(void) __attribute__((alias("sceHttpStorage_C59AC98A")));
+int sceHttpStorage_driver_C59AC98A(void) __attribute__((alias("sceHttpStorageEnd")));
 
 // .data - 0x9C0
 SceUID g_fd[2];
@@ -233,7 +229,7 @@ Subroutine module_stop - Address 0x00000368 - Aliases: sceHttpStorageEnd
 Exported in syslib
 Exported in sceHttpStorage_driver
 */
-int sceHttpStorage_C59AC98A(void) {
+int sceHttpStorageEnd(void) {
 	SceUID *s0 = &g_fd[0];
 	int i = 0;
 	for (i = 0; i < 2; i++) {
