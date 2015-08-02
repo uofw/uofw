@@ -5,7 +5,7 @@
 /**
  * rtc.c
  *    Reverse engineered rtc module of the SCE PSP system.
- * Author: Omega2058
+ * Author: Omega2058 / Joel16
  * Version: 6.60
  *
  */
