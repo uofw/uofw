@@ -4,6 +4,7 @@
 TARGET = rtc
 OBJS = rtc.o
 
-LIBS =
+LIBS = -lInitForKernel -lInterruptManagerForKernel -lKDebugForKernel -lSysMemForKernel -lSysclibForKernel \
+	   -lThreadManForKernel -lUtilsForKernel -lsceSuspendForKernel -lsceSysEventForKernel -lsceSyscon_driver
 
 include ../../lib/build.mak
