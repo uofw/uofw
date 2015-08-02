@@ -1,3 +1,15 @@
+/* Copyright (C) 2011, 2012, 2013, 2014, 2015 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
+/**
+ * rtc.c
+ *    Reverse engineered rtc module of the SCE PSP system.
+ * Author: Omega2058
+ * Version: 6.60
+ *
+ */
+
 #include <common_header.h>
 #include <sysmem_sysevent.h>
 #include <sysmem_sysclib.h>
