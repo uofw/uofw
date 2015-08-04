@@ -268,9 +268,9 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
     }
 
     if ((ret == 0 && sceKernelIsToolMode() != 0) || ret == 32) {
-        s32 var;
+        u32 allowReplaceUmd;
         // FB4
-        if (sceKernelGetCompiledSdkVersion() != 0 && sceKernelGetAllowReplaceUmd(&var) == 0 && var != 0) {
+        if (sceKernelGetCompiledSdkVersion() != 0 && sceKernelGetAllowReplaceUmd(&allowReplaceUmd) == 0 && allowReplaceUmd != 0) {
             g_loadExecCb = oldD384;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);

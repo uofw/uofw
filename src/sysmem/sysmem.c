@@ -164,7 +164,7 @@ int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, Sce
     mainPart->addr = info->addr;
     mainPart->size = info->size;
     mainPart->lastCtlBlk = ctlBlk;
-    if (((info->addr + info->size) & 0x1FFFFFFF) >= (((u32)ctlBlk + 0xFF) & 0x1FFFFFFF)) {
+    if (((info->addr + info->size) & 0x1FFFFFFF) >= (((u32)ctlBlk + 0x100) & 0x1FFFFFFF)) {
         // 10E38
         return SysMemReInit(mainPart);
     } else

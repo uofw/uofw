@@ -16,12 +16,7 @@
 #include <iofilemgr_kernel.h>
 #include <syscon.h>
 
-/* From pspdebug.h */
-void pspDebugScreenInit(void);
-void pspDebugScreenInitEx(void *vram_base, int mode, int setup);
-void pspDebugScreenPrintf(const char *fmt, ...) __attribute__((format(printf,1,2)));
-void pspDebugScreenPutChar(int x, int y, u32 color, u8 ch);
-int pspDebugScreenPrintData(const char *buff, int size);
+#include "scr_printf.h"
 
 typedef struct {
     int size;
@@ -29,7 +24,7 @@ typedef struct {
     char *str;
 } SnprintfCtx;
 
-void snprintf_char(SnprintfCtx *ctx, int c)
+void mysnprintf_char(SnprintfCtx *ctx, int c)
 {
     if (c >= 256 || ctx->written >= ctx->size)
         *ctx->str = '\0';
@@ -45,7 +40,7 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args); /* don't u
 int my_vsnprintf(char *str, int size, const char *format, va_list ap)
 {   
     SnprintfCtx ctx = { size - 1, 0, str };
-    return prnt((prnt_callback)snprintf_char, &ctx, format, ap);
+    return prnt((prnt_callback)mysnprintf_char, &ctx, format, ap);
 }
 
 int ms_append(const void *data, int size)

@@ -3,4 +3,30 @@ nbproject/
 *.o
 *.elf
 *.prx
+*.exe
 *.*~
+exports.c
+/lib/libdebug.a
+
+## Ignore Visual Studio project files, Visual Studio temporary files, build results.
+
+# User-specific files
+*.suo
+*.user
+*.sln.docstates
+
+*.vcxproj
+*.vcxproj.*
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.cachefile
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx

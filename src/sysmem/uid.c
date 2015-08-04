@@ -56,7 +56,7 @@ void InitUid(void)
 {
     SceSysmemHeapBlock *heapBlock = NULL;
     int oldIntr = suspendIntr();
-    HeapCB->PARENT0 = NULL;
+    HeapCB = NULL;
     HeapCBUid = 0;
     _CreateHeap(MpidToCB(1), 0x2000, 1, &heapBlock);
     sceKernelProtectMemoryBlock(MpidToCB(1), heapBlock);

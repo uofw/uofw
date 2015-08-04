@@ -1,6 +1,6 @@
 MODULES=debug audio clockgen codec ctrl exceptionman ge init interruptman \
-iofilemgr led libatrac3plus loadcore loadexec mediaman memlmd me_wrapper \
-syscon sysmem systimer usersystemlib wlanfirm
+iofilemgr led libatrac3plus loadcore loadexec mediaman me_wrapper syscon \
+sysmem systimer usersystemlib wlanfirm
 
 all: $(MODULES)
 

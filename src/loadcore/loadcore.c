@@ -1576,7 +1576,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
                   * Step 3: Register the library if it has a newer version than the
                   *         currently registered libraries.
                   */
-                 versionDiff = ((u16 *)nLib->version)[0] - ((u16 *)curLib->version)[0]; //0x00002DB0
+                 versionDiff = ((nLib->version[1] << 8) | nLib->version[0]) - ((curLib->version[1] << 8) | curLib->version[0]); //0x00002DB0
                  libRegStatus = (versionDiff > 0) ? LIB_REGISTRATION_OK : LIB_REGISTRATION_NOT_NEEDED; //0x00002DBC                                 
              }               
          }
@@ -2059,19 +2059,19 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->vStubCount; i++) {
          switch (lib->entryTable[lib->vStubCount + i]) {
          case NID_MODULE_STOP_THREAD_PARAM: //0x000034D0
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleStopThreadPriority = entryThread->initPriority; //0x000035A4
              mod->moduleStopThreadStacksize = entryThread->stackSize; //0x000035AC
              mod->moduleStopThreadAttr = entryThread->attr; //0x000035B8
              break;
          case NID_MODULE_REBOOT_BEFORE_THREAD_PARAM: //0x00003544
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleRebootBeforeThreadPriority = entryThread->initPriority; //0x0000356C
              mod->moduleRebootBeforeThreadStacksize = entryThread->stackSize; //0x00003574
              mod->moduleRebootBeforeThreadAttr = entryThread->attr; //0x00003580
              break;               
          case NID_MODULE_START_THREAD_PARAM: //0x000034E0
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleStartThreadPriority = entryThread->initPriority; //0x00003520
              mod->moduleStartThreadStacksize = entryThread->stackSize; //0x00003528
              mod->moduleStartThreadAttr = entryThread->attr; //0x00003530
@@ -2189,7 +2189,7 @@ static s32 aLinkLibEntries(SceStubLibrary *stubLib)
          if (strcmp(stubLib->libName, curLib->libName) != 0) //0x00003C88
              continue;
          
-         if ((((u16 *)curLib->version)[0] - ((u16 *)stubLib->version)[0]) < 0) //0x00003C9C
+         if ((((curLib->version[1] << 8) | curLib->version[0]) - ((stubLib->version[1] << 8) | stubLib->version[0])) < 0) //0x00003C9C
              continue;
                  
          status = EXPORT_LIB_CANNOT_BE_LINKED; //0x00003CB4
@@ -2248,7 +2248,7 @@ s32 sceKernelCheckPspConfig(u8 *file, u32 size)
     
     pspHdr = (PspHeader *)file;
             
-    if (((u32 *)pspHdr->magic)[0] != PSP_MAGIC) //0x00003DB8
+    if (((pspHdr->magic[0] << 24) | (pspHdr->magic[1] << 16) | (pspHdr->magic[2] << 8) | pspHdr->magic[3]) != PSP_MAGIC) //0x00003DB8
         return LOADCORE_ERROR;
     
     if (g_prepareGetLengthFunc != NULL && g_prepareGetLengthFunc(file, size) != 0) //0x00003DE8 & 0x00003DF8
