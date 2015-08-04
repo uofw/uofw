@@ -17,13 +17,21 @@
 /** The maximum number of segments a module can have. */
 #define SCE_KERNEL_MAX_MODULE_SEGMENT           (4)
 
+/** The module could be started successfully. */
+#define SCE_KERNEL_START_SUCCESS				(0)
+/** The module could not be started successfully. */
+#define SCE_KERNEL_START_FAIL					(1)
+
+
 /** The module will remain in memory and act as a resident library. */
-#define SCE_KERNEL_RESIDENT                     (0)
+#define SCE_KERNEL_RESIDENT                     (SCE_KERNEL_START_SUCCESS)
 
 /** The module is not a resident one, meaning it won't stay in memory and act as a resident library. */
-#define SCE_KERNEL_NO_RESIDENT                  (1)
+#define SCE_KERNEL_NO_RESIDENT                  (SCE_KERNEL_START_FAIL)
 
+/** The module could be stopped successfully. */
 #define SCE_KERNEL_STOP_SUCCESS                 (0)
+/** The module could not be stopped successfully. */
 #define SCE_KERNEL_STOP_FAIL                    (1)
 
 enum ModuleMgrMcbStatus {

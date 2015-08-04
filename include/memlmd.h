@@ -24,7 +24,7 @@
  * 
  * @return 0 on success.
  */
-s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 *newsize);
+s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 * newSize);
 
 /**	
  * Checks the param against a magic value (unknown usage)
@@ -65,7 +65,7 @@ s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr);
  * 
  * @return 0 on success.
  */
-s32 memlmd_CF03556B(u8 *prx, u32 size, u32 *newsize);
+s32 memlmd_CF03556B(u8 *prx, u32 size, u32 * newSize);
 
 /**	
  * Unsign a module. Asynced mode.
