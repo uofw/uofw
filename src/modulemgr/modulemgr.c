@@ -7,6 +7,8 @@
 #include <iofilemgr_kernel.h>
 #include <loadcore.h>
 #include <modulemgr.h>
+#include <modulemgr_init.h>
+#include <modulemgr_kernel.h>
 #include <modulemgr_nids.h>
 #include <modulemgr_options.h>
 #include <sysmem_kernel.h>
@@ -29,7 +31,7 @@ typedef struct {
     u32 unk20;
     u32 unk24;
     u32 unk28;
-    void (*npDrmGetModuleKeyFunction)(s32 fd, void *, void *); // 32
+    s32 (*npDrmGetModuleKeyFunction)(s32 fd, void *, void *); // 32
     u32 unk36;
 } SceModuleManagerCB;
 
@@ -154,11 +156,13 @@ static s32 _UnloadModule(SceModule *pMod)
 }
 
 // 0x00000178
-static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
+static s32 exe_thread(SceSize args, void *argp)
 {
     SceModuleMgrParam *modParams;
     SceLoadCoreExecFileInfo execInfo;
     s32 status;
+
+	(void)args;
     
     status = SCE_ERROR_OK;
     modParams = (SceModuleMgrParam *)argp;
@@ -294,7 +298,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
  * 
  * @param apiType The api type of the module
  * @param path A pointer to a '\0' terminated string containing the path to the module
- * @param flags Unused, pass 0
+ * @param flag Unused, pass 0
  * @param pOpt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. 
  *             Pass NULL if you don't want to specify any option.
  *
@@ -308,7 +312,7 @@ static s32 exe_thread(SceSize args __attribute__((unused)), void *argp)
  * @return One of the errors of sceIoIoctl() if failed
  */
 // Subroutine ModuleMgrForKernel_2B7FC10D - Address 0x000004A8            
-s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flags __attribute__((unused)), 
+s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 flag, 
         const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
@@ -316,6 +320,8 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
     s32 ioctlCmd;
     SceUID fd;
     SceModuleMgrParam modParams;
+
+	(void)flag;
     
     oldK1 = pspShiftK1(); //0x000004B4
     
@@ -380,7 +386,7 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
  * Load a module by path
  * 
  * @param path A pointer to a '\0' terminated string containing the path to the module
- * @param flags Unused, pass 0
+ * @param flag Unused, pass 0
  * @param pOpt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
  *
  * @return SCE_ERROR_OK on success, < 0 on error.
@@ -393,13 +399,14 @@ s32 sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 fla
  * @return One of the errors of sceIoIoctl() if failed
  */
 // Subroutine sceKernelLoadModule - Address 0x000006B8 
-s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused)),
-    const SceKernelLMOption *pOpt)
+s32 sceKernelLoadModuleForUser(const char *path, u32 flag, const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 fd;
     s32 status;
     SceModuleMgrParam modParams;
+
+	(void)flag;
 
     oldK1 = pspShiftK1(); // 0x000006C4
 
@@ -453,7 +460,7 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
  * Load a module by file descriptor
  * 
  * @param inputId The file descriptor that was obtained when opening the module with sceIoOpen()
- * @param flag Unused, pass 0
+ * @param flags Unused, pass 0
  * @param pOpt A pointer to a SceKernelLMOption structure, which holds various options about the way to load the module. Pass NULL if you don't want to specify any option.
  *
  * @return SCE_ERROR_OK on success, < 0 on error.
@@ -466,12 +473,13 @@ s32 sceKernelLoadModuleForUser(const char *path, u32 flags __attribute__((unused
  */
 // Subroutine ModuleMgrForUser_B7F46618 - Address 0x0000088C
 // TODO: Rename to sceKernelLoadModuleByIDForUser() ?
-s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag __attribute__((unused)),
-        const SceKernelLMOption *pOpt)
+s32 sceKernelLoadModuleByID(SceUID inputId, u32 flag, const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 status;
     SceModuleMgrParam modParams;
+
+	(void)flag;
     
     oldK1 = pspShiftK1(); //0x00000898
     
@@ -703,13 +711,15 @@ s32 sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID block, SceOff 
  * @return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE if sceIoIoctl() failed
  */
 // Subroutine ModuleMgrForUser_FEF27DC1 - Address 0x00000E18
-s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 flag __attribute__((unused)), 
+s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 flag, 
         const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 fd;
     s32 status;
     SceModuleMgrParam modParams;
+
+	(void)flag;
     
     oldK1 = pspShiftK1(); // 0x00000E24
 
@@ -762,7 +772,7 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
     if (status >= 0) //0x00000F7C
         modParams.unk100 = 0x10; // 0x00000DE4
     
-    memcpy(&modParams.secureInstallId, secureInstallId, 16) //0x00000F90
+	memcpy(&modParams.secureInstallId, secureInstallId, 16); //0x00000F90
     
     status = _loadModuleByBufferID(&modParams, pOpt); // 0x00000F9C
     
@@ -792,7 +802,7 @@ s32 sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s32 f
  * @see sceNpDrmSetLicenseeKey()
  */
 // Subroutine ModuleMgrForUser_F2D8D1B4 - Address 0x00001060 
-void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
+void sceKernelLoadModuleNpDrm(const char *path, s32 flags, const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 fd;
@@ -800,6 +810,8 @@ void sceKernelLoadModuleNpDrm(const char *path, s32 flags __attribute__((unused)
     char secInstallId[16];
     SceNpDrm npDrmData;
     SceModuleMgrParam modParams;
+
+	(void)flags;
     
     oldK1 = pspShiftK1(); // 0x0000106C
 
@@ -955,12 +967,14 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags, SceKernelLMOption *pOpt)
  * @see sceNpDrmSetLicenseeKey()
  */
 // Subroutine sceKernelLoadModuleBufferUsbWlan - Address 0x00001478 
-SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flags __attribute__((unused)), const SceKernelLMOption *pOpt)
+SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flags, const SceKernelLMOption *pOpt)
 {
     s32 oldK1;
     s32 fd;
     SceModuleMgrParam modParams;
     s32 status;
+
+	(void)flags;
 
     oldK1 = pspShiftK1(); // 0x00001484
 
@@ -2187,7 +2201,7 @@ s32 sceKernelLoadModuleToBlock(const char *path, u32 block, u32 *arg2, u32 flags
     }
     
     // 0x000037E8
-    if (!pspK1StaBufOk(arg2)) {
+    if (!pspK1StaBufOk(arg2, sizeof arg2)) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -3605,7 +3619,7 @@ s32 ModuleMgrForUser_CDE1C1FE()
 }
 
 // Subroutine ModuleMgrForKernel_A40EC254 - Address 0x00005B6C
-s32 sceKernelSetNpDrmGetModuleKeyFunction(void (*function)(s32 fd, void *, void *))
+s32 sceKernelSetNpDrmGetModuleKeyFunction(s32 (*function)(s32 fd, void *, void *))
 {
     g_ModuleManager.npDrmGetModuleKeyFunction = function;
 }
@@ -4292,7 +4306,7 @@ SceUID _loadModuleByBufferID(SceModuleMgrParam *modParams, const SceKernelLMOpti
 // Subroutine sub_00007698 - Address 0x00007698
 SceModuleMgrParam* _createMgrParamStruct(SceModuleMgrParam *modParams, u32 apiType, SceUID fd, void *file_buffer, u32 unk124)
 {
-    pspClearMemory32(modParams); // 0x000076A0
+    pspClearMemory32(modParams, sizeof modParams); // 0x000076A0
 
     modParams->unk124 = unk124; // 0x000076AC
     modParams->apiType = apiType; // 0x000076B0
@@ -4684,7 +4698,7 @@ static s32 ModuleRegisterLibraries(SceModule *pMod)
             pCurEntry = pMod->entTop;
             // 0x000084F4
             while (pCurEntry < pLastEntry) {
-                *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
+                pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
                 if (pCurTable->attribute & SCE_LIB_AUTO_EXPORT) // 0x00008504
                     sceKernelReleaseLibrary(pCurTable); // 0x0000852C
                 
