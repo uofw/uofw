@@ -22,9 +22,9 @@
 #include "config.h"
 #endif
 
-#include "types.h"
-#include "elftypes.h"
-#include "prxtypes.h"
+#include "../common/types.h"
+#include "../common/elftypes.h"
+#include "../common/prxtypes.h"
 
 /* Arrangement of ELF file after stripping
  *
