@@ -16,6 +16,7 @@
 
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
+#include "override.h"
 
 #define GET_MCB_STATUS(status)  (status & 0xF)
 #define SET_MCB_STATUS(v, m)    (v = (v & ~0xF) | m)
@@ -1107,10 +1108,36 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function sub_00007C34
-// 0x00007C34
-void allocate_module_block()
+// sub_00007C34
+void allocate_module_block(SceModuleMgrParam *modParams)
 {
+    s32 ret = LoadCoreForKernel_41D10899(modParams->execInfo->fileBase, modParams->execInfo);
+    // 0x00007C68
+    if (ret < 0) {
+        return ret;
+    }
+
+    // 0x00007C7C
+    if (modParams->threadAttr >= 4) {
+        return SCE_ERROR_KERNEL_ILLEGAL_OBJECT_FORMAT;
+    }
+
+    // TODO: Weird function call 0x00007C98
+
+    // 0x00007CB0
+    if (modParams->eventId & 0x1E00 == 4096) {
+        return -1;
+    }
+
+    // 0x00007CC0
+    if (modParams->pStatus != 1) {
+
+    }
+    modParams->mpIdText = modParams->threadPriority;
+    modParams->pMod = fd;
+
+    mpIdText = modParms->unk64
+    return -1;
 }
 
 // sub_00007ED8
@@ -1348,15 +1375,3 @@ static s32 ModuleRegisterLibraries(SceModule *pMod)
     return SCE_ERROR_OK;
 }
 
-// TODO: Reverse function sub_00008568
-// 0x00008568
-s32 _CheckOverride(s32 apiType, void *pBuffer, void *data)
-{
-    
-}
-
-// TODO: Reverse function sub_000086C0
-// 0x000086C0
-void sub_000086C0()
-{
-}

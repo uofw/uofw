@@ -1,0 +1,1 @@
+s32 _CheckOverride(s32 apiType, void *pBuffer, SceUID *fd);
