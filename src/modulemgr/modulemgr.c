@@ -345,6 +345,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
         if (data != 0 || modParams->unk124 != 0) // 0x00005D5C & 0x00005D68
             break;
         
+		// If we get here, we always break outside the loop
         status = _CheckOverride(modParams->apiType, pBlock, &data); //0x00005D74
         if (status == 0) // 0x00005D7C
             break;
@@ -357,8 +358,8 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
     }
     while (1); // 0x00005D90
     
-    s32 data2;
-    status = _CheckSkipPbpHeader(modParams, fd, pBlock, &data2, modParams->apiType); // 0x00005DB0
+    s32 execCodeOffset;
+	status = _CheckSkipPbpHeader(modParams, fd, pBlock, &execCodeOffset, modParams->apiType); // 0x00005DB0
     if (status < 0) { // 0x00005DB8
         ClearFreePartitionMemory(partitionId); // 0x0000674C - 0x00006780
         if (data != 0) // 0x0000678C
@@ -1137,6 +1138,7 @@ s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, 
     case SCE_INIT_APITYPE_UNK_GAME1:
     case SCE_INIT_APITYPE_UNK_GAME2:
         // 0x00007F14
+		// TODO: define PBP magic value
         if (data[0] != 0 || data[1] != 'P' || data[2] != 'B' || data[3] != 'P') // 0x00007F40
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
@@ -1148,7 +1150,7 @@ s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, 
         
     default:
         // 0x00007F8C
-        if (data[0] != 0 || data[1] != 'P' || data[2] != 'B' || data[3] != 'P') // 0x00007FB8
+        if (data[0] == 0 && data[1] == 'P' && data[2] == 'B' && data[3] == 'P') // 0x00007FB8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         if (pOffset != NULL)
