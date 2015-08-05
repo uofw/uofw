@@ -14,6 +14,7 @@
 
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
+#include "override.h"
 
 #define GET_MCB_STATUS(status)  (status & 0xF)
 #define SET_MCB_STATUS(v, m)    (v = (v & ~0xF) | m)
@@ -4721,12 +4722,5 @@ static s32 ModuleRegisterLibraries(SceModule *pMod)
         pCurEntry += pCurTable->len * sizeof(void *);  // 0x000084BC
     }
     return SCE_ERROR_OK;
-}
-
-// TODO: Reverse function sub_00008568
-// 0x00008568
-s32 _CheckOverride(s32 apiType, void *pBuffer, void *data)
-{
-    
 }
 
