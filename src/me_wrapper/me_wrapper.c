@@ -135,7 +135,7 @@ int sub_0x1000020(){
 	meTable[9] = 0;
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_KERNEL_EW_CLEAR_PAT, 0, 0);
 	sceKernelUnlockMutex(meRpc.mutex, 1);
 	return 0;
 }
@@ -166,7 +166,7 @@ int sub_0x1000002(int arg)
 	meTable[9] = 0;
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_KERNEL_EW_CLEAR_PAT, 0, 0);
 	return 0;	
 }
 
@@ -863,17 +863,17 @@ int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecCodec *info)
 			}
 		break;
 		case 0x1001://at3
-			*(int*)&info->unk44 = 44100;
-			info->unk48 = unk[*(int*)&info->unk40 * 2 + 1];
-			ret = sceMeCore_driver_635397BB(115, unk[*(int*)&info->unk40 * 2], 44100, unk[*(int*)&info->unk40 * 2 + 1], info->edramAddr);
-			if (*(int*)&info->unk40 >= 14 && *(int*)&info->unk40 < 16)
+			info->unk44.v32 = 44100;
+			info->unk48 = unk[info->unk40.v32 * 2 + 1];
+			ret = sceMeCore_driver_635397BB(115, unk[info->unk40.v32 * 2], 44100, unk[info->unk40.v32 * 2 + 1], info->edramAddr);
+			if (info->unk40.v32 >= 14 && info->unk40.v32 < 16)
 				info->unk52 = 2;
 		break;
 		case 0x1002://mp3
 			ret = sceMeCore_driver_635397BB(139, info->edramAddr);
 		break;
 		case 0x1003://aac
-			switch (*(int*)&info->unk40){
+			switch (info->unk40.v32){
 				case 96000:
 				case 88200:
 				case 64000:
@@ -885,16 +885,16 @@ int sceMeAudio_driver_6AD33F60(u32 codec, SceAudiocodecCodec *info)
 				case 16000:
 				case 11050:
 				case 8000:
-					ret = sceMeCore_driver_635397BB(147, *(int*)&info->unk40, info->edramAddr);
+					ret = sceMeCore_driver_635397BB(147, info->unk40.v32, info->edramAddr);
 					if (ret >= 0)
 					{
-						if (*(short*)&info->unk44 != 0)
+						if (info->unk44.v16.u44 != 0)
 						{
 							ret = sceMeCore_driver_635397BB(149, info->unk44, info->edramAddr);
-							if (ret >= 0 && info->unk45 != 0)
+							if (ret >= 0 && info->unk44.v8.u45 != 0)
 								ret = sceMeCore_driver_635397BB(151, 0, 2, 0, info->edramAddr);
 						}
-						else if (info->unk45 != 0)
+						else if (info->unk44.v8.u45 != 0)
 							ret = sceMeCore_driver_635397BB(151, 0, 2, 0, info->edramAddr);
 					}
 				break;
@@ -947,11 +947,11 @@ int sceMeAudio_driver_B57F033A(u32 codec, SceAudiocodecCodec *info)
 		break;
 
     case 0x1001:
-        if (*(int*)&info->unk40 < 14 || *(int*)&info->unk40 >= 16)
+        if (info->unk40.v32 < 14 || info->unk40.v32 >= 16)
 			return -1;
 		info->unk52 = 1;
-		info->unk48 = unk[*(int*)&info->unk40 * 2 + 1];
-		ret = sceMeCore_driver_635397BB(115, unk[*(int*)&info->unk40 * 2], 44100, unk[*(int*)&info->unk40 * 2 + 1], info->edramAddr);
+		info->unk48 = unk[info->unk40.v32 * 2 + 1];
+		ret = sceMeCore_driver_635397BB(115, unk[info->unk40.v32 * 2], 44100, unk[info->unk40.v32 * 2 + 1], info->edramAddr);
 		break;
 	
 	default:
@@ -971,23 +971,22 @@ int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, SceAudiocodecCodec *info)
 	switch (arg1)
 	{
 	case 3: {
-		u32 codecIndex = codec - 0x1000;
-		int index;
-		switch(codecIndex)
+	    int index;
+		switch(codec)
 		{
-			case 0:
+			case 0x1000:
 				index = 97;
 			break;
-			case 1:
+			case 0x1001:
 				index = 116;
 			break;
-			case 2:
+			case 0x1002:
 				index = 129;
 			break;
-			case 3:
+			case 0x1003:
 				index = 148;
 			break;
-			case 5:
+			case 0x1005:
 				index = 225;
 			break;
 			default:
@@ -999,9 +998,9 @@ int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, SceAudiocodecCodec *info)
 		return ret;
 	}
 	case 4: {
-		if (codec != 4096) {
+		if (codec != 0x1000)
 			return -1;
-		}
+
 		//at3+ checkneed mem
 		ret = sceMeCore_driver_635397BB(99, &info->unk52, &info->unk60, &info->unk64, &info->unk40);
 		if (ret < 0) {
@@ -1010,10 +1009,10 @@ int sceMeAudio_driver_C300D466(u32 codec, u32 arg1, SceAudiocodecCodec *info)
 		return ret;
 	}
 	case 2: {
-		if (codec != 4098){
+		if (codec != 0x1002)
 			return -1;
-		}
-		ret = sceMeCore_driver_635397BB(137, info->unk40, info->edramAddr);
+
+		ret = sceMeCore_driver_635397BB(137, info->unk40.v32, info->edramAddr);
 		if (ret == 0) {
 			ret = sceMeCore_driver_635397BB(130, info->inBuf, &info->unk44, &info->unk56, info->edramAddr);
 		}
@@ -1204,7 +1203,7 @@ int sceMeCore_driver_FA398D71(int cmd, ...)
 	va_end(ap);
 	sceDdrFlush(5);
 	sceSysregInterruptToOther();
-	sceKernelWaitEventFlag(meRpc.event, 1, SCE_EVENT_WAITCLEAR, 0, 0);
+	sceKernelWaitEventFlag(meRpc.event, 1, SCE_KERNEL_EW_CLEAR_PAT, 0, 0);
 	ret = meTable[10];
 	sceKernelUnlockMutex(meRpc.mutex, 1);
 	return ret;

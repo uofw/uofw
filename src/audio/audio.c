@@ -1437,7 +1437,7 @@ int audioInputThread()
         }
         u32 *ptr1 = g_audio.dmaPtr[2];
         int curSampleCount = g_audio.inputCurSampleCnt;
-        int unk = (ptr1[9] < g_audio.buf752[0x80000000 + 16]); // yes, it's correct, it reverses the kernel mode
+        int unk = (ptr1[9] < *(u8*)(0x80000000 + (u32)&g_audio.buf752[16])); // yes, it's correct, it reverses the kernel mode
         short *uncached1 = KUNCACHED(&g_audio.buf512[unk << 8]);
         char unk2 = g_audio.inputHwFreq;
         u16 *ptr3 = g_audio.inputBuf;

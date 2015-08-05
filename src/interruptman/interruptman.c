@@ -797,7 +797,7 @@ s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *arg2)
 s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 arg2)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 0)
+    if (intrNum >= 68)
         return 0x80020065;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();

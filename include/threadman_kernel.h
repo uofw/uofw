@@ -117,16 +117,6 @@ typedef struct {
 #define SCE_KERNEL_EA_SINGLE            (0x0000)    /** Multiple thread waits are prohibited. */ 
 #define SCE_KERNEL_EA_MULTI             (0x0200)    /** Multiple thread waits are permitted. */
 
-// NOTE: Deprecated. These types will be replaced  by the below wait modes in future revisions.
-enum SceEventFlagWaitTypes {
-    /** Wait for all bits in the pattern to be set */
-    SCE_EVENT_WAITAND = 0,
-    /** Wait for one or more bits in the pattern to be set */
-    SCE_EVENT_WAITOR = 1,
-    /** Clear the wait pattern when it matches */
-    SCE_EVENT_WAITCLEAR = 0x20
-};
-
 /* Event flag wait modes. */
 #define SCE_KERNEL_EW_AND               (0x00)      /** Wait for all bits in the bit pattern to be set. */
 #define SCE_KERNEL_EW_OR                (0x01)      /** Wait for one or more bits in the bit pattern to be set. */

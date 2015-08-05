@@ -2,7 +2,10 @@ typedef struct
 {
     u16 channels; // 0
     u16 dataBlkSz; // 2
-    u8 unk4[2]; // 4
+    union {
+        u8 v8[2];
+        u16 v16;
+    } unk4; // 4
     // padding
     u32 dataOff; // 8
     u32 factSz; // 12

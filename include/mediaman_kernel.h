@@ -1,8 +1,10 @@
-/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
 #include "common_header.h"
+
+#include "mediaman.h"
 
 /** @defgroup MediamanKernel Mediaman Kernel
  *  @ingroup Mediaman
@@ -48,9 +50,9 @@ u32 sceUmdRegisterGetUMDInfoCallBack(s32 (*umdInfoCallback)(SceUmdDiscInfo *), S
 
 u32 sceUmdUnRegisterGetUMDInfoCallBack(void);
 
-u32 sceUmd_63517CBA(s32 (*arg0)(void *), void *arg1);
+u32 sceUmdRegisterMediaPresentCallBack(s32(*MediaPresentCallback)(void *), void *param);
 
-u32 sceUmd_1471F63D(void);
+u32 sceUmdUnRegisterMediaPresentCallBack(void);
 
 void sceUmdUnRegisterActivateCallBack(void);
 

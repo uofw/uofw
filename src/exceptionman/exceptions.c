@@ -233,7 +233,7 @@ void build_exectbl(void)
         }
         // 0918
     }
-    int op = *(int*)(syscallHandler);
+    u32 op = syscallHandler;
     // 0948
     for (i = 0; i < 32; i++)
     {
@@ -255,7 +255,7 @@ void build_exectbl(void)
         }
         // 0964
     }
-    *(int*)(syscallHandler) = op;
+    syscallHandler = op;
 }
 
 SceExceptionHandler *newExcepCB(void)

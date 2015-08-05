@@ -22,9 +22,9 @@
 #include "config.h"
 #endif
 
-#include "types.h"
-#include "elftypes.h"
-#include "prxtypes.h"
+#include "../common/types.h"
+#include "../common/elftypes.h"
+#include "../common/prxtypes.h"
 
 /* Arrangement of ELF file after stripping
  *
@@ -419,7 +419,8 @@ int remove_weak_relocs(struct ElfSection *pReloc, struct ElfSection *pSymbol, st
 				}
 			}
 
-			if(LH(pSymData[iSymbol].st_shndx) == 0)
+			/* Remove PC16 relocations (unsupported by PSP, and useless) */
+			if(LH(pSymData[iSymbol].st_shndx) == 0 || ELF32_R_TYPE(LW(pInRel->r_info)) == R_MIPS_PC16)
 			{
 				if(g_verbose)
 				{
