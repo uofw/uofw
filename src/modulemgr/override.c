@@ -1,3 +1,4 @@
+#include "modulemgr_int.h"
 #include "../loadcore/loadelf.c"
 
 #define numberof(n) (sizeof(n)/sizeof(*(n)))
@@ -143,67 +144,55 @@ u32 g_HashListVideocodec260[][4] = {
 
 // This is the list containing every override rule
 OverrideRule g_OverrideList[] = { // 0x000098FC
-    [0] = {
+    {
         .overridePath = "flash0:/kd/audiocodec_260.prx",
         .nHash = numberof(g_HashListAudiocodec260), // = 8
         .hashList = g_HashListAudiocodec260,
-    },
-    [1] = {
+    },{
         .overridePath = "flash0:/kd/avcodec.prx",
         .nHash = numberof(g_HashListAvcodec), // = 1
         .hashList = g_HashListAvcodec,
-    },
-    [2] = {
+    },{
         .overridePath = "flash0:/kd/cert_loader.prx",
         .nHash = numberof(g_HashListCertLoader), // = 5
         .hashList = g_HashListCertLoader,
-    },
-    [3] = {
+    },{
         .overridePath = "flash0:/kd/ifhandle.prx",
         .nHash = numberof(g_HashListIfhandle), // = 6
         .hashList = g_HashListIfhandle,
-    },
-    [4] = {
+    },{
         .overridePath = "flash0:/kd/memab.prx",
         .nHash = numberof(g_HashListMemab), // = 3
         .hashList = g_HashListMemab,
-    },
-    [5] = {
+    },{
         .overridePath = "flash0:/kd/mpegbase_260.prx",
         .nHash = numberof(g_HashListMpegbase260), // = 9
         .hashList = g_HashListMpegbase260,
-    },
-    [6] = {
+    },{
         .overridePath = "flash0:/kd/pspnet_adhoc_auth.prx",
         .nHash = numberof(g_HashListPspnetAdhocAuth), // = 6
         .hashList = g_HashListPspnetAdhocAuth,
-    },
-    [7] = {
+    },{
         .overridePath = "flash0:/kd/sc_sascore.prx",
         .nHash = numberof(g_HashListScSascore), // = 9
         .hashList = g_HashListScSascore,
-    },
-    [8] = {
+    },{
         .overridePath = "flash0:/kd/usbacc.prx",
         .nHash = numberof(g_HashListUsbacc), // = 3
         .hashList = g_HashListUsbacc,
-    },
-    [8] = {
+    },{
         .overridePath = "flash0:/kd/usbgps.prx",
         .nHash = numberof(g_HashListUsbgps), // = 1
         .hashList = g_HashListUsbgps,
-    },
-    [9] = {
+    },{
         .overridePath = "flash0:/kd/usbmic.prx",
         .nHash = numberof(g_HashListUsbmic), // = 3
         .hashList = g_HashListUsbmic,
-    },
-    [10] = {
+    },{
         .overridePath = "flash0:/kd/usbpspcm.prx",
         .nHash = numberof(g_HashListUsbpspcm), // = 8
         .hashList = g_HashListUsbpspcm,
-    },
-    [11] = {
+    },{
         .overridePath = "flash0:/kd/videocodec_260.prx",
         .nHash = numberof(g_HashListVideocodec260), // = 8
         .hashList = g_HashListVideocodec260,
@@ -214,7 +203,8 @@ OverrideRule g_OverrideList[] = { // 0x000098FC
 // and return the file descriptor from which the module will be loaded instead
 s32 _CheckOverride(s32 apiType, void *pBuffer, SceUID *fd) // 0x00008568
 {
-    if (apiType != 0x30 && apiType != 0x10) { // 0x000085B0
+    
+    if (apiType != MODULEMGR_API_LOADMODULE_USBWLAN && apiType != MODULEMGR_API_LOADMODULE) { // 0x000085B0
         return SCE_ERROR_OK;
     }
 

@@ -70,6 +70,13 @@ enum ModuleMgrExecModes {
 	CMD_UNLOAD_MODULE, //4
 };
 
+enum ModuleMgrApiType {
+	MODULEMGR_API_LOADMODULE = 0x10,
+	MODULEMGR_API_LOADMODULE_MS = 0x11,
+	MODULEMGR_API_LOADMODULE_VSH = 0x20,
+	MODULEMGR_API_LOADMODULE_USBWLAN = 0x30,
+};
+
 extern SceModuleManagerCB g_ModuleManager;
 
 s32 _start_exe_thread(SceModuleMgrParam *modParams);
