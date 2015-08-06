@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 - 2014 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -17,6 +17,7 @@
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
 #include "override.h"
+#include "pbp.h"
 
 #define GET_MCB_STATUS(status)  (status & 0xF)
 #define SET_MCB_STATUS(v, m)    (v = (v & ~0xF) | m)
@@ -955,102 +956,6 @@ s32 _start_exe_thread(SceModuleMgrParam *modParams)
     return returnId;
 }
 
-// Subroutine sub_000076CC - Address 0x000076CC 
-s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, void *argp, s32 *pStatus, 
-        const SceKernelSMOption *pOpt)
-{
-    SceModule *pMod;
-    s32 status;
-    SceModuleMgrParam modParams;
-    s32 status2;
-
-    pMod = sceKernelFindModuleByAddress(codeAddr); // 0x000076FC
-    if (pMod == NULL || pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) // 0x0000770C & 0x00007720
-        return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
-
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00007734
-
-    modParams.modeStart = CMD_STOP_MODULE; // 0x00007744
-    modParams.modeFinish = CMD_UNLOAD_MODULE; // 0x00007748
-    modParams.argp = argp; // 0x00007750
-    modParams.modId = pMod->modId; // 0x00007754
-    modParams.argSize = args; // 0x0000775C
-    modParams.callerModId = pMod->modId; // 0x00007764
-
-    if (pStatus == NULL) // 0x00007760
-        modParams.pStatus = &status2; // 0x000077EC
-    else
-        modParams.pStatus = pStatus; // 0x00007768
-
-    if (pOpt == NULL) { // 0x0000776C
-        modParams.threadMpIdStack = 0;
-        modParams.stackSize = 0;
-        modParams.threadPriority = 0;
-        modParams.threadAttr = 0;
-    } else {
-        modParams.threadMpIdStack = pOpt->mpidstack; // 0x00007784
-        modParams.stackSize = pOpt->stacksize; // 0x00007788
-        modParams.threadPriority = pOpt->priority; // 0x0000778C
-        modParams.threadAttr = pOpt->attribute; // 0x00007790
-    }
-
-    status = _start_exe_thread(&modParams); // 0x00007794
-    if (status < 0)
-        return status;
-
-    sceKernelExitDeleteThread(returnStatus); // 0x000077A4
-
-    return status;
-}
-
-// Subroutine sub_000077F0 - Address 0x000077F0 
-s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus, 
-        SceKernelSMOption *pOpt)
-{
-    s32 oldK1;
-    void *codeAddr2;
-    s32 status;
-
-    oldK1 = pspShiftK1();
-
-    // Cannot be called from interrupt
-    if (sceKernelIsIntrContext()) { // 0x0000783C
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
-    }
-
-    if (argp != NULL && !pspK1DynBufOk(argp, args)) { // 0x0000785C
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    }
-
-    if (pStatus != NULL && !pspK1StaBufOk(pStatus, sizeof(*pStatus))) { // 0x00007878
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    }
-
-    status = _checkSMOptionConditions(pOpt); // 0x000078E4 - 0x000078F8
-    if (status < 0) {
-        pspSetK1(oldK1);
-        return status;
-    }
-
-    if (pspK1IsUserMode()) // 0x0000791C
-        codeAddr2 = sceKernelGetSyscallRA(); // 0x00007958
-    else
-        codeAddr2 = codeAddr;
-
-    if (!pspK1PtrOk(codeAddr2)) { // 0x0000792C
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    }
-
-    status = _SelfStopUnloadModule(returnStatus, codeAddr2, args, argp, pStatus, pOpt); // 0x00007948
-    pspSetK1(oldK1);
-
-    return status;
-}
-
 // sub_00007968
 static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable *pLib)
 {
@@ -1141,11 +1046,12 @@ void allocate_module_block(SceModuleMgrParam *modParams)
 }
 
 // sub_00007ED8
-// TODO: Add a PBP header structure
-s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, u32 *pOffset, s32 apiType)
+static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, u32 *pOffset, s32 apiType)
 {
+	PBPHeader *pbpHdr;
+
     (void)pModParams;
-    u8 *data = (u8 *)pBlock;
+    pbpHdr = (PBPHeader *)pBlock;
     
     switch (apiType) {
     case SCE_INIT_APITYPE_DISC_EMU_MS2:
@@ -1165,19 +1071,18 @@ s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, 
     case SCE_INIT_APITYPE_UNK_GAME1:
     case SCE_INIT_APITYPE_UNK_GAME2:
         // 0x00007F14
-		// TODO: define PBP magic value
-        if (data[0] != 0 || data[1] != 'P' || data[2] != 'B' || data[3] != 'P') // 0x00007F40
+		if (pbpHdr->magic[0] != 0 || pbpHdr->magic[1] != 'P' || pbpHdr->magic[2] != 'B' || pbpHdr->magic[3] != 'P') // 0x00007F40
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         if (pOffset != NULL)
-            *pOffset = ((u32 *)data)[9] - ((u32 *)data)[8];
+			*pOffset = pbpHdr->dataPSAROff - pbpHdr->dataPSPOff;
             
-         sceIoLseek(fd, ((u32 *)data)[8], SCE_SEEK_CUR); // 0x00007F6C
-         return ((u32 *)data)[8];
+		sceIoLseek(fd, pbpHdr->dataPSPOff, SCE_SEEK_CUR); // 0x00007F6C
+		return pbpHdr->dataPSPOff;
         
     default:
         // 0x00007F8C
-        if (data[0] == 0 && data[1] == 'P' && data[2] == 'B' && data[3] == 'P') // 0x00007FB8
+		if (pbpHdr->magic[0] == 0 && pbpHdr->magic[1] == 'P' && pbpHdr->magic[2] == 'B' && pbpHdr->magic[3] == 'P') // 0x00007FB8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         if (pOffset != NULL)
@@ -1187,7 +1092,7 @@ s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, 
 }
 
 // sub_00007FD0
-s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
+static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
 {
     s32 status;
     
@@ -1222,7 +1127,7 @@ s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExe
 }
 
 // sub_00008124
-s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
+static s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
 {
     s32 oldGp;
     s32 status;
