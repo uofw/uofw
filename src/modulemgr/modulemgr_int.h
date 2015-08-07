@@ -10,6 +10,7 @@
 typedef struct {
 	u8 modeStart; //0 The Operation to start on, Use one of the ModuleMgrExeModes modes
 	u8 modeFinish; //1 The Operation to finish on, Use one of the ModuleMgrExeModes modes
+	// SceSysMemBlockType position
 	u8 position; //2
 	u8 access; //3
 	SceUID *returnId; //4

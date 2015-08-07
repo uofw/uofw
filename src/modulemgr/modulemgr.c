@@ -711,11 +711,17 @@ static s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId)
 static s32 _RelocateModule(SceModuleMgrParam *modParams)
 {
 	s32 status;
+	SceModule *pMod;
+	SceUID gzipMemId;
 	SceLoadCoreExecFileInfo *pExecInfo;
 	
+	gzipMemId = 0; // 0x00006808
+
 	pExecInfo = modParams->execInfo;
 	pExecInfo->apiType = modParams->apiType; // 0x00006844
 	pExecInfo->unk12 = modParams->unk100; // 0x00006858
+
+	pMod = modParams->pMod; // 0x0000683C
 
 	if (pExecInfo->elfType == SCE_EXEC_FILE_TYPE_INVALID_ELF || pExecInfo->elfType == 0) { // 0x00006854
 		pExecInfo->modeAttribute = SCE_EXEC_FILE_NO_HEADER_COMPRESSION; // 0x00006860
@@ -726,9 +732,209 @@ static s32 _RelocateModule(SceModuleMgrParam *modParams)
 		pExecInfo->secureInstallId = modParams->secureInstallId; //0x00006880
 		status = sceKernelCheckExecFile(pExecInfo->fileBase, pExecInfo); // 0x00006884
 		if (status < SCE_ERROR_OK) { // 0x0000688C
+			cleanupMemory(gzipMemId, pExecInfo);
+			return status;
+		}
 
+		status = _PartitionCheck(modParams, pExecInfo); // 0x00006898
+		if (status < SCE_ERROR_OK) {
+			cleanupMemory(gzipMemId, pExecInfo); // 0x000068A0
+			return status;
+		}
+
+		if ((pExecInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED)
+			|| pExecInfo->apiType == 0x2 || pExecInfo->apiType == 0x21 || pExecInfo->apiType == 0x30
+			|| pExecInfo->apiType == 0x42 || pExecInfo->apiType == 0x43) // 0x000068B0 - 0x000068E8
+		{
+			u32 decSize = (pExecInfo->decSize < pExecInfo->largestSegSize) ? pExecInfo->largestSegSize : pExecInfo->decSize; // 0x00006904
+			u32 execSize = (pExecInfo->execSize < decSize) ? decSize : pExecInfo->execSize; // 0x0000690C
+			u32 bufSize = (modParams->file_buffer < execSize) ? execSize : modParams->file_buffer; // 0x00006918
+
+			pExecInfo->maxAllocSize = UPALIGN256(bufSize); // 0x00006934
+
+			SceUID memId;
+			switch (pExecInfo->elfType) {
+			case SCE_EXEC_FILE_TYPE_PRX:
+				// 0x000006954
+				u8 blkAllocType = modParams->position;
+				u32 addr = 0;
+				if (pExecInfo->maxSegAlign > 0x100) { // 0x00006964
+					if (modParams->position == SCE_KERNEL_SMEM_Low) { // 0x00006974
+						blkAllocType = SCE_KERNEL_SMEM_LOWALIGNED; // 0x00006F20
+						addr = pExecInfo->maxSegAlign;
+					}
+
+					if (modParams->position == SCE_KERNEL_SMEM_High) { // 0x00006974
+						blkAllocType = SCE_KERNEL_SMEM_HIGHALIGNED; // 0x00006F14
+						addr = pExecInfo->maxSegAlign;
+					}
+				}
+				memId = sceKernelAllocPartitionMemory(pExecInfo->partitionId, "SceModmgrModuleBody",
+					blkAllocType, pExecInfo->maxAllocSize, addr); // 0x00006990
+				if (memId < 0) { // 0x0000699C
+					cleanupMemory(gzipMemId, pExecInfo);
+					return memId;
+				}
+				break;
+			case SCE_EXEC_FILE_TYPE_ELF:
+				// 0x00006F38
+				memId = sceKernelAllocPartitionMemory(pExecInfo->partitionId, "SceModmgrElfBody", 
+					SCE_KERNEL_SMEM_Addr, pExecInfo->maxAllocSize, pExecInfo->topAddr); // 0x00006F4C
+				if (memId < 0) // 0x00006F54
+					return memId;
+				break;
+			default:
+				// 0x00006F2C
+				cleanupMemory(gzipMemId, pExecInfo);
+				return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+			}
+
+			pExecInfo->topAddr = sceKernelGetBlockHeadAddr(memId); // 0x000069A4
+			pMod->memId = memId;
+			pMod->mpIdText = pExecInfo->partitionId; // 0x000069C0
+			pMod->mpIdData = pExecInfo->partitionId; // 0x000069C8
+
+			pExecInfo->isCompressed = SCE_TRUE; // 0x000069D0
+			pExecInfo->decompressionMemId = memId; // 0x000069D8
+
+			if (pExecInfo->apiType == 0x30 || pExecInfo->apiType == 0x2 || pExecInfo->apiType == 0x21
+				|| pExecInfo->apiType == 0x42 || pExecInfo->apiType == 0x43) { // 0x000069D4
+				// 0x00006E48
+				if (pExecInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED) {
+					// 0x00006E50
+					void *topAddr;
+					if (modParams->unk104 == 0) { // 0x00006E64
+						gzipMemId = sceKernelAllocPartitionMemory(pExecInfo->partitionId, "SceModmgrRelocateModuleGzip",
+							(modParams->position == SCE_KERNEL_SMEM_High) ? SCE_KERNEL_SMEM_Low : SCE_KERNEL_SMEM_High, pExecInfo->execSize, 0); // 0x00006EC0
+						if (gzipMemId < 0) { // 0x00006ECC
+							cleanupMemory(gzipMemId, pExecInfo);
+							return gzipMemId;
+						}
+						topAddr = sceKernelGetBlockHeadAddr(gzipMemId); // 0x00006ED4
+					}
+					else {
+						(u32)topAddr = (u32)sceKernelGetBlockHeadAddr(modParams->unk104) + (modParams->unk112 - UPALIGN64(pExecInfo->execSize)); // 0x00006E6C - 0x00006E90
+						modParams->unk120 = topAddr; // 0x00006E94
+					}
+					sceKernelMemmove(topAddr, pExecInfo->fileBase, pExecInfo->execSize); // 0x00006EA0
+					pExecInfo->fileBase = topAddr; // 0x00006EAC
+				}
+				else {
+					sceKernelMemmove(pExecInfo->topAddr, pExecInfo->fileBase, bufSize); // 0x00006EE8
+					pExecInfo->fileBase = pExecInfo->topAddr; // 0x00006EF8
+				}
+			}
+		}
+		// 0x00006A00
+		pExecInfo->modeAttribute = SCE_EXEC_FILE_DECRYPT; // 0x000068EC
+		if (modParams->unk124 & 0x1) // 0x00006A08
+			pExecInfo->isSignChecked = SCE_TRUE; // 0x00006A14
+		pExecInfo->secureInstallId = modParams->secureInstallId; // 0x00006A18
+
+		status = sceKernelCheckExecFile(pExecInfo->fileBase, pExecInfo); // 0x00006A1C
+		if (status < SCE_ERROR_OK) { // 0x00006A24
+			cleanupMemory(gzipMemId, pExecInfo);
+			return status;
 		}
 	}
+	status = allocate_module_block(modParams); // 0x00006A2C
+	if (status < SCE_ERROR_OK) { 
+		cleanupMemory(gzipMemId, pExecInfo);
+		return status;
+	}
+	status = sceKernelLoadExecutableObject(pExecInfo->fileBase, pExecInfo); // 0x00006A40
+	if (status < SCE_ERROR_OK) {
+		cleanupMemory(gzipMemId, pExecInfo);
+		return status;
+	}
+	ClearFreePartitionMemory(gzipMemId); // 0x00006A50 - 0x00006A98
+	gzipMemId = 0; // 0x00006A9C
+
+	if (!pExecInfo->isCompressed) { // 0x00006AA4
+		ClearFreePartitionMemory(pExecInfo->decompressionMemId);
+
+		if (pExecInfo->memBlockId >= 0) // 0x00006B04
+			pMod->memId = pExecInfo->memBlockId; // 0x00006B08
+		pExecInfo->decompressionMemId = pMod->memId; // 0x00006B10
+	}
+	if (modParams->memBlockId != 0) { // 0x00006B18
+		SceSysmemMemoryBlockInfo blkInfo;
+		blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
+		sceKernelQueryMemoryBlockInfo(modParams->memBlockId, &blkInfo); // 0x00006E28
+
+		if ((pExecInfo->largestSegSize + modParams->memBlockOffset) < blkInfo.memSize) // 0x00006E38
+			sceKernelMemset(blkInfo.addr + pExecInfo->largestSegSize + modParams->memBlockOffset, 0, 
+				blkInfo.memSize - (pExecInfo->largestSegSize + modParams->memBlockOffset)); // 0x00006D8C
+	} else if (modParams->unk104 == 0) { // 0x00006B24
+		SceSysmemMemoryBlockInfo blkInfo;
+		blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
+		sceKernelQueryMemoryBlockInfo(pMod->memId, &blkInfo); // 0x00006E28
+
+		if (pExecInfo->largestSegSize < blkInfo.memSize) // 0x00006DC0
+			sceKernelMemset(blkInfo.addr + pExecInfo->largestSegSize, 0, blkInfo.memSize - pExecInfo->largestSegSize); // 0x00006E08
+
+		if (pExecInfo->isCompressed) { // 0x00006DCC
+			status = sceKernelResizeMemoryBlock(pExecInfo->decompressionMemId, 0, pExecInfo->largestSegSize - pExecInfo->maxAllocSize); // 0x00006DE4
+			if (status >= 0) // 0x00006DEC
+				pExecInfo->maxAllocSize = pExecInfo->largestSegSize; // 0x00006DFC
+		}
+	}
+	else {
+		SceBool cutBefore = SCE_FALSE;
+		if (modParams->position == SCE_KERNEL_SMEM_High) // 0x00006B38
+			cutBefore = SCE_TRUE;
+		modParams->unk116 = sceKernelSeparateMemoryBlock(modParams->unk104, cutBefore, pExecInfo->largestSegSize); // 0x00006B48
+		if (modParams->status != NULL) // 0x00006B54
+			*modParams->status = modParams->unk116; // 0x00006B60
+
+		SceSysmemMemoryBlockInfo blkInfo;
+		blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
+		sceKernelQueryMemoryBlockInfo(modParams->unk104, &blkInfo); // 0x00006B74
+		if (pExecInfo->largestSegSize < blkInfo.memSize) // 0x00006B84
+			sceKernelMemset(blkInfo.addr + pExecInfo->largestSegSize, 0, blkInfo.memSize - pExecInfo->largestSegSize); // 0x00006D8C
+	}
+	if (modParams->memBlockId != 0) // 0x00006B90
+		pMod->status = 0x2000; //0x00006B9C
+
+	status = sceKernelAssignModule(pMod, pExecInfo); // 0x00006BA0
+	if (status < SCE_ERROR_OK) {
+		cleanupMemory(gzipMemId, pExecInfo);
+		return status;
+	}
+	if (modParams->memBlockId != 0) // 0x00006BB4
+		pMod->status |= 0x3000; // 0x00006BC4
+	if (modParams->unk104 != 0) // 0x00006BCC
+		pMod->status |= 0x1000; // 0x00006BD8
+
+	sceKernelDcacheWritebackAll(); // 0x00006BE0
+
+	pMod->status &= ~0xF; // 0x00006BFC
+
+	void *pCurEntry = pMod->entTop; // 0x00006BF8
+	void *pLastEntry = pMod->entTop + pMod->entSize; // 0x00006C0C
+
+	// 0x00006C14 - 0x00006C34
+	while (pCurEntry < pLastEntry) {
+		SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
+		if (pCurTable->attribute & SCE_LIB_IS_SYSLIB) { //0x00006FB4
+			_ProcessModuleExportEnt(pMod, pCurTable); // 0x00008558
+
+			pCurEntry += pCurTable->len * sizeof(void *);
+			continue;
+		}
+	}
+	return status;
+}
+
+//loc_00006CCC
+static void cleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo)
+{
+	ClearFreePartitionMemory(gzipMemId);
+	if (pExecInfo == NULL) // 0x00006CCC
+		return;
+
+	ClearFreePartitionMemory(pExecInfo->decompressionMemId); // 0x00006CD8 - 0x00006D20
+	ClearFreePartitionMemory(pExecInfo->memBlockId); // 0x00006D28 - 0x00006D74
 }
 
 // sub_00006F80
@@ -1014,7 +1220,7 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
 }
 
 // sub_00007C34
-void allocate_module_block(SceModuleMgrParam *modParams)
+s32 allocate_module_block(SceModuleMgrParam *modParams)
 {
     s32 ret = LoadCoreForKernel_41D10899(modParams->execInfo->fileBase, modParams->execInfo);
     // 0x00007C68
