@@ -19,7 +19,7 @@ s32 sceMlnBridge_msapp_D527DEB0(char *arg0, int arg1) {
 	s32 res = 0x80000023;
 
 	s32 oldK1 = pspShiftK1(); //s1
-	int arg3 = 0; //Recheck
+	int arg3 = (int)arg0 + arg1;
 
 	//0x34
 	if (((oldK1 << 11) & ((arg3 | (int)arg0) | arg1)) >= 0) {
