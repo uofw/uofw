@@ -7,7 +7,7 @@
 s32 (*gRebootFunc)(void *arg);
 
 // 13FE8
-s32 (*gGetIdFunc)();
+s32(*gGetIdFunc)(const char *path, char *id);
 
 // 13FEC
 SceKernelGameInfo SystemGameInfo;
@@ -657,12 +657,12 @@ s32 sceKernelRegisterGetIdFunc(void *func)
     return 0;
 }
 
-s32 sceKernelGetId()
+s32 sceKernelGetId(const char *path, char *id)
 {
     if (gGetIdFunc == NULL || gGetIdFunc == (void*)-1)
         return 0x80020001;
     // A164
-    s32 ret = gGetIdFunc();
+    s32 ret = gGetIdFunc(path, id);
     gGetIdFunc = (void*)-1;
     return ret;
 }

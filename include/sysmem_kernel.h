@@ -124,7 +124,7 @@ u32 sceKernelGetModel(void);
 s32 sceKernelSetRebootKernel(s32 (*rebootKernel)());
 s32 sceKernelRebootKernel(void *arg);
 s32 sceKernelRegisterGetIdFunc(void *func);
-s32 sceKernelGetId();
+s32 sceKernelGetId(const char *path, char *id);
 
 /*
  * Debugging (disabled in release)

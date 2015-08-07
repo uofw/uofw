@@ -1382,7 +1382,6 @@ s32 sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 flag
 		return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
 	}
 
-	// TODO: Update sceKernelGetId prototype to match given arguments
 	status = sceKernelGetId(path, installId); //0x00002838
 	if (status < 0) {
 		sceIoClose(fd);
