@@ -270,9 +270,28 @@ s32 ModuleMgrInit(SceSize argc, void *argp)
 }
 
 // Subroutine ModuleMgrForUser_CDE1C1FE - Address 0x00005B10
-s32 ModuleMgrForUser_CDE1C1FE()
+// TODO: Figure out structure member unk36 of SceModuleManagerCB
+s32 ModuleMgrForUser_CDE1C1FE(void)
 {
-    // TODO: Figure out structure member unk36 of SceModuleManagerCB
+	s32 oldK1;
+
+	oldK1 = pspShiftK1();
+
+	if (g_ModuleManager.unk36 == NULL)
+		//pspSetK1(oldK1) forgotten by Sony
+		return 1;
+
+	u32 *unk = g_ModuleManager.unk36;
+
+	// 0x00005B2C - 0x00005B50
+	s32 i;
+	s32 j;
+	u32 count = 0;
+	for (i = 0, j = 0; i < *(unk + 28); i += 4, j += 1)
+		count += *(unk + 32 + j);
+
+	pspSetK1(oldK1);
+	return ((*(unk + 55) ^ count) == 0); // 0x00005B60
 }
 
 // Subroutine ModuleMgrForKernel_A40EC254 - Address 0x00005B6C
