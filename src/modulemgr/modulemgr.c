@@ -1454,7 +1454,7 @@ static s32 ModuleRegisterLibraries(SceModule *pMod)
     while (pCurEntry < pLastEntry) {
         SceResidentLibraryEntryTable *pCurTable = (SceResidentLibraryEntryTable *)pCurEntry;
         if (!pCurTable->attribute & SCE_LIB_AUTO_EXPORT) { //0x00006FB4
-            if (pCurTable->attribute == SCE_LIB_IS_SYSLIB)
+            if (pCurTable->attribute & SCE_LIB_IS_SYSLIB)
                 _ProcessModuleExportEnt(pMod, pCurTable); // 0x00008558
             
             pCurEntry += pCurTable->len * sizeof(void *);
