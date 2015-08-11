@@ -7,7 +7,6 @@
  *    Reverse engineered rtc module of the SCE PSP system.
  * Author: Omega2058 / Joel16
  * Version: 6.60
- *
  */
 
 #include <common_header.h>
@@ -16,12 +15,15 @@
 #include <modulemgr_init.h>
 #include <syscon.h>
 #include <threadman_kernel.h>
+#include <interruptman.h>
+#include "rtc.h"
 
 SCE_MODULE_INFO("sceRTC_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_SDK_VERSION(SDK_VERSION);
 
 #define TICKS_PER_SECOND  1000000
 
+// TODO: Finish struct.
 // .data - 0x000046B0 - flags 0x0003
 SceSysEventHandler rtc_handler = {
     .size = sizeof(SceSysEventHandler),
@@ -38,8 +40,8 @@ SceSysEventHandler rtc_handler = {
 typedef struct rtcContext {
     u32 aUnk;           // 0x46F0
     u32 bUnk;           // 0x46F4
-    u32 cUnk;           // 0x46F8
-    u32 dUnk;           // 0x46FC
+    u32 cUnk;           // 0x46F8 - Timezone upper minutes?
+    u32 dUnk;           // 0x46FC - Timezone lower minutes?
     u32 currPresent;    // 0x4700 - Current internal tick
     u32 securePresent;  // 0x4704 - Current secure tick
     // size flag?
@@ -53,34 +55,40 @@ typedef struct rtcContext {
     u32 lowerUTick;     // 0x4744 - Lower unknown tick
 	u32 upperUnk;		// 0x4748 - Upper unknown
 	u32 lowerUnk;		// 0x474C - Lower unknown
-    u64 *internalTick;  // 0x4750
+    u64 internalTick;   // 0x4750
+    u32 tickUnk;        // 0x4758
     SceUID rtc_cb;      // 0x475C
 } rtcContext;
 
 rtcContext ctx;
 
-// DONE! TODO: Fix pointers.
+// TODO: Fix/pointers.
 // Address 0x00000000
 // arg1 - chunk/byte size
 // arg2 - struct for RTC
-s32 secondaryCallback (int size, u32 *unk, void *arg) {
-    (void)arg;
+s32 secondaryCallback (int size, u32 *unk, u32 *arg) {
+    (void)unk;
+    u32 s0 = arg[5];
+    u32 *s1 = arg;
 
-    u32 s0 = unk[5];
-    u32 *s1 = unk;
-
+    // ASM OK!
     if(size == 4 * 1024) {
+        // ASM OK!
         sceRtcGetCurrentTick((u64*)(s0 + 16));
+        // ASM OK!
         sceRtc_C2DDBEB5((u64*)(s0 + 24));
 
         // status/enum type?
+        // ASM OK!
         if(s1[1] == 0) {
             return SCE_ERROR_OK;
-        } else if(sceKernelApplicationType() != SCE_INIT_APPLICATION_GAME) {
+        }
+        // ASM OK! - BRANCH PROPER.
+        if(sceKernelApplicationType() == SCE_INIT_APPLICATION_GAME) {
+            sceRtc_C2DDBEB5(&ctx.internalTick);
+            sceRtc_7D1FBED3(0);
             return SCE_ERROR_OK;
         } else {
-            sceRtc_C2DDBEB5(ctx.internalTick);
-            sceRtc_7D1FBED3(0);
             return SCE_ERROR_OK;
         }
     }
@@ -89,19 +97,19 @@ s32 secondaryCallback (int size, u32 *unk, void *arg) {
         if(size != 1024 * 1024) {
             return SCE_ERROR_OK;
         } else {
-            sceRtc_driver_852255B8();
-            u32 *t5 = *s1[1];
-            u32 t4 = t5[1]; // next pointer, linked list?
+            //sceRtc_driver_852255B8();
+            //u32 *t5 = *s1[1];
+            //u32 t4 = t5[1]; // next pointer, linked list?
             // k1 shifted?
-            if(t4 == 0x80000000) {
+            //if(t4 == 0x80000000) {
                 ctx.tickCleared = 0;
-                sceRtc_7D1FBED3(ctx.internalTick);
-            }
+                //sceRtc_7D1FBED3(&ctx.internalTick);
+            //}
 
             if(ctx.szStatus == 1) {
-                s1 = ctx.szStatus;
+            //    s1 = ctx.szStatus;
             } else {
-                sceKernelNotifyCallback(ctx.rtc_cb, sceRtcIsAlarmed());
+                //sceKernelNotifyCallback(ctx.rtc_cb, (int)sceRtcIsAlarmed());
                 ctx.szStatus = 0;
             }
         }
@@ -112,9 +120,9 @@ s32 secondaryCallback (int size, u32 *unk, void *arg) {
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! ASM OK! - Branch invertion won't matter here.
 // Address 0x00000114
-void primaryCallback (void *arg) {
+void primaryCallback (int arg) {
     if(ctx.rtc_cb < 0) {
         return;
     }
@@ -133,54 +141,68 @@ void primaryCallback (void *arg) {
 // Subroutine sceRtc_driver_852255B8 - Address 0x0000016C
 // Exported in sceRtc_driver
 s32 sceRtc_driver_852255B8(void) {
-    //u32 s0[20];
+    u32 data[20];   // s0
     //int s1, s2, s3, s4, s5, s6, s7;
-    // Secure RTC reset?
-    sceSyscon_driver_EB277C88(8, 0x4758, sizeof(s32));
+    //s32 res;
 
-    return SCE_ERROR_OK;
+    // Secure RTC reset?
+    //sceSyscon_driver_EB277C88(8, &ctx.tickUnk, sizeof(ctx.tickUnk));
+
+    // verify.
+    //res = sceSyscon_driver_EB277C88(16, &data[3], sizeof(u64));
+
+/*
+    if(res < 0) {
+        return res;
+    }
+*/
+
+    data[4] = data[4] & 0xFFFFFFFF;
+    data[5] = data[5] & 0xFF;
+
+    if((data[4] | data[5]) == 0) {
+        //res = KDebugForKernel_568DCD25();
+        //if()
+    }
+
+    return 0;//res;
 }
 
 // Subroutine sceRtc_driver_929620CE - Address 0x0000054C - Aliases: sceRtc_driver_9763C138
 // Exported in sceRtc_driver
 s32 sceRtc_driver_929620CE() {
     return SCE_ERROR_OK;
-
 }
 
 // Subroutine sceRtc_driver_17C26C00 - Address 0x00000858 - Aliases: sceRtc_driver_66054C2A
 // Exported in sceRtc_driver
 s32 sceRtcSetCurrentSecureTick() {
     return SCE_ERROR_OK;
-
 }
 
-// DONE! TODO: Fix dereference.
+// DONE! ASM seems OK :|
 // Subroutine sceRtc_508BA64B - Address 0x00000A54 - Aliases: sceRtc_driver_508BA64B
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtc_508BA64B(u64 *tick) {
     u64 *oldTick = tick;
     int oldK1 = pspShiftK1();
-    s32 res = SCE_ERROR_OK;
+    s32 res = SCE_ERROR_PRIV_REQUIRED;
     s32 intr;
 
-    if (oldK1 & (int)tick < 0) {
-        res = SCE_ERROR_PRIV_REQUIRED;
-    } else {
+    if ((oldK1 & (int)tick) >= 0) {
         intr = sceKernelCpuSuspendIntr();
-
         /* Validate pointer */
-        if(oldTick == NULL) {
-            ctx.tickCleared = 0;
-            sceKernelCpuResumeIntr(intr);
+        if(oldTick != NULL) {
             /* Validate upper and lower unknown tick values */
-        } else if((u32)oldTick[0] | (u32)oldTick[1]) != 0) {
-            s64 tWide = sceKernelGetSystemTimeWide();
-            ctx.tickCleared = 0;
-            ctx.upperUTick = oldTick[0] - tWide[0];
-            ctx.lowerUTick = (oldTick[1] - tWide[1]) - (oldTick[0] < tWide[0]);
+            if((((u32 *)oldTick)[0] | ((u32 *)oldTick)[1]) == 0) {
+                s64 tWide = sceKernelGetSystemTimeWide();
+                ctx.tickCleared = 0;
+                ctx.upperUTick = ((u32 *)oldTick)[0] - ((u32 *)&tWide)[0];
+                ctx.lowerUTick = (((u32 *)oldTick)[1] - ((u32 *)&tWide)[1]) - (((u32 *)oldTick)[0] < ((u32 *)&tWide)[0]);
+            }
         }
+        ctx.tickCleared = 0;
         sceKernelCpuResumeIntr(intr);
     }
 
@@ -193,10 +215,11 @@ s32 sceRtc_508BA64B(u64 *tick) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtc_7D1FBED3(u64 *tick) {
+    (void)tick;
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! ASM OK!
 // Subroutine sceRtc_C2DDBEB5 - Address 0x00000D5C - Aliases:
 // sceRtc_driver_366669D6
 // Exported in sceRtc
@@ -204,27 +227,27 @@ s32 sceRtc_7D1FBED3(u64 *tick) {
 s32 sceRtc_C2DDBEB5(u64 *tick) {
     s32 shiftedK1 = pspGetK1() << 11;
     u64 *oldTick = tick;
-    s32 res = SCE_ERROR_OK;
+    s32 res = SCE_ERROR_INVALID_POINTER;
 
-    if(oldTick == NULL) {
-        res = SCE_ERROR_INVALID_POINTER;
-    } else if(shiftedK1 & (int)tick < 0) {
-        res = SCE_ERROR_INVALID_POINTER;
-    } else {
-        (u32)oldTick[0] = ctx.upperUnk;
-        (u32)oldTick[1] = ctx.lowerUnk;
+    if(oldTick != NULL) {
+        if((shiftedK1 & (int)tick) >= 0) {
+            ((u32 *)oldTick)[0] = ctx.upperUnk;
+            ((u32 *)oldTick)[1] = ctx.lowerUnk;
+            res = SCE_ERROR_OK;
+        } else {
+            res = SCE_ERROR_PRIV_REQUIRED;
+        }
     }
 
     return res;
 }
 
-// DONE!
+// DONE! TODO: Revise useless assignments
 // Subroutine sceRtc_81FCDA34 - Address 0x00000DA0 - Aliases: sceRtc_driver_CF76CFE5
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcIsAlarmed(void) {
-    u64 *tempTick;
-    u32 s1 = 0;
+    u64 *tempTick = NULL;
     int oldK1 = pspShiftK1();
     s32 res = SCE_ERROR_OK;
 
@@ -233,11 +256,12 @@ s32 sceRtcIsAlarmed(void) {
         /* The PSP alarm was triggered */
         if(res == 1) {
             sceRtcGetCurrentTick(tempTick);
-            if((u32)tempTick[1] < ctx.lowerUnk) {
+            if(((u32 *)tempTick)[1] < ctx.lowerUnk) {
                 res = SCE_ERROR_OK;
-            } else if (ctx.lowerUnk != (u32)tempTick[1]){
+            } else
+             if (ctx.lowerUnk != ((u32 *)tempTick)[1]){
                 res = SCE_ERROR_OK;
-            } else if ((u32)tempTick[0] < ctx.upperUnk) {
+            } else if (((u32 *)tempTick)[0] < ctx.upperUnk) {
                 res = SCE_ERROR_OK;
             } else {
                 res = SCE_ERROR_OK;
@@ -249,42 +273,69 @@ s32 sceRtcIsAlarmed(void) {
     return res;
 }
 
-// DONE! TODO: Fix this. Needs to be revised.
+// TODO: Fix this. Needs to be revised.
 // Subroutine sceRtc_FB3B18CD - Address 0x00000E54 - Aliases: sceRtc_driver_530A903E
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcRegisterCallback(SceUID id) {
     int oldK1 = pspShiftK1();
-    u32 *oldID = id;
+    //SceUID *oldID = (SceUID *)id;
     s32 res = SCE_ERROR_OK;
-    s16 temp = 2;
-    SceSysmemUidCB **cbUID;
-    s32 intr;
+    //s16 temp = 2;
+    //SceSysmemUidCB **cbUID;
+    //s32 intr;
 
-    if(sceKernelGetThreadmanIdType() != SCE_KERNEL_TMID_Callback) {
+    //if(sceKernelGetThreadmanIdType() != SCE_KERNEL_TMID_Callback) {
         res = SCE_ERROR_INVALID_ID;
-    } else {
-        SceUID uid = sceKernelGetUIDcontrolBlock(id, cbUID);
-        a1 = pspGetK1() >> 31;
-        a0 = 2;
-        if(uid != SCE_ERROR_OK) {
-            res = SCE_ERROR_PRIV_REQUIRED;
-        } else {
+    //} else {
+        //SceUID uid = sceKernelGetUIDcontrolBlock(id, cbUID);
+        //a1 = pspGetK1() >> 31;
+        //a0 = 2;
+        //if(uid != SCE_ERROR_OK) {
+        //    res = SCE_ERROR_PRIV_REQUIRED;
+        //} else {
             if((pspGetK1() >> 31) != 0) {
-                temp = (u16)id[11] & 2);
+                //temp = (u16)id[11] & 2;
             } else {
                 res = SCE_ERROR_ALREADY;
             }
 
-            intr = sceKernelCpuSuspendIntr();
+            //intr = sceKernelCpuSuspendIntr();
 
             if(ctx.rtc_cb < 0) {
                 ctx.rtc_cb = id;
                 res = SCE_ERROR_OK;
-                sceKernelNotifyCallback(oldID, sceRtcIsAlarmed());
+                //sceKernelNotifyCallback(oldID, sceRtcIsAlarmed());
             }
 
-            sceKernelCpuResumeIntr(intr);
+            //sceKernelCpuResumeIntr(intr);
+        //}
+    //}
+
+    pspSetK1(oldK1);
+    return res;
+}
+
+// DONE! ASM OK!
+// Subroutine sceRtc_3F7AD767 - Address 0x00000F40 - Aliases: sceRtc_driver_3F7AD767
+// Exported in sceRtc
+// Exported in sceRtc_driver
+s32 sceRtcGetCurrentTick(u64 *tick) {
+    u64 *oldTick = tick;
+    int oldK1 = pspShiftK1();
+    s32 res = SCE_ERROR_PRIV_REQUIRED;
+
+    if((oldK1 & (int)tick) >= 0) {
+        // is curr(Internal/Tick)Present?
+        if(ctx.currPresent == 0) {
+            ((u32 *)oldTick)[0] = 0xB3A14000;
+            ((u32 *)oldTick)[1] = 0x00DDDEF8;
+            res = SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED;
+        } else {
+            s64 tWide = sceKernelGetSystemTimeWide();
+            ((u32 *)oldTick)[0] = ctx.upperCTick + ((u32 *)&tWide)[0];
+            ((u32 *)oldTick)[1] = (ctx.lowerCTick + ((u32 *)&tWide)[1]) + (((u32 *)oldTick)[0] < ((u32 *)&tWide)[0]);
+            res = SCE_ERROR_OK;
         }
     }
 
@@ -292,61 +343,34 @@ s32 sceRtcRegisterCallback(SceUID id) {
     return res;
 }
 
-// DONE! TODO: Fix dereference.
-// Subroutine sceRtc_3F7AD767 - Address 0x00000F40 - Aliases: sceRtc_driver_3F7AD767
-// Exported in sceRtc
-// Exported in sceRtc_driver
-s32 sceRtcGetCurrentTick(u64 *tick) {
-    u64 *oldTick = tick;
-    int oldK1 = pspShiftK1();
-    s32 res;
-
-    if(oldK1 & (int)tick < 0) {
-        res = SCE_ERROR_PRIV_REQUIRED
-        // is curr(Internal/Tick)Present?
-    } else if(ctx.currPresent != 0) {
-        s64 tWide = sceKernelGetSystemTimeWide();
-        (u32)oldTick[0] = upperCTick + (u32)tWide[0];
-        (u32)oldTick[1] = (lowerCTick + (u32)tWide[1]) + ((u32)oldTick[0] < (u32)tWide[0]);
-        res = SCE_ERROR_OK;
-    } else {
-        (u32)oldTick[0] = 0xB3A14000;
-        (u32)oldTick[1] = 0x00DDDEF8;
-        res = SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED;
-    }
-
-    pspSetK1(oldK1);
-    return res;
-}
-
-// DONE! TODO: Fix dereference.
+// DONE! ASM OK!
 // Subroutine sceRtc_driver_B44BDAED - Address 0x00000FFC - Aliases: sceRtc_driver_CEEF238F
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcGetCurrentSecureTick(u64 *tick) {
     u64 *oldTick = tick;
     int oldK1 = pspShiftK1();
-    s32 res;
+    s32 res = SCE_ERROR_PRIV_REQUIRED;
 
-    if(oldK1 & (int)tick < 0) {
-        res = SCE_ERROR_PRIV_REQUIRED;
+    if((oldK1 & (int)tick) >= 0) {
         // is currSecure(Internal/Tick)Present?
-    } else if(ctx.securePresent != 0) {
-        u64 tWide = sceKernelGetSystemTimeWide();
-        (u32)oldTick[0] = upperSTick + (u32)tWide[0];
-        (u32)oldTick[1] = (lowerSTick + (u32)tWide[1]) + ((u32)oldTick[0] < (u32)tWide[0]);
-        res = SCE_ERROR_OK;
-    } else {
-        (u32)oldTick[0] = 0xB3A14000;
-        (u32)oldTick[1] = 0x00DDDEF8;
-        res = SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED;
+        if(ctx.securePresent == 0) {
+            ((u32 *)oldTick)[0] = 0xB3A14000;
+            ((u32 *)oldTick)[1] = 0x00DDDEF8;
+            res = SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED;
+        } else {
+            s64 tWide = sceKernelGetSystemTimeWide();
+            ((u32 *)oldTick)[0] = ctx.upperSTick + ((u32 *)&tWide)[0];
+            ((u32 *)oldTick)[1] = (ctx.lowerSTick + ((u32 *)&tWide)[1]) + (((u32 *)oldTick)[0] < ((u32 *)&tWide)[0]);
+            res = SCE_ERROR_OK;
+        }
     }
 
     pspSetK1(oldK1);
     return res;
 }
 
-// DONE! TODO: Fix dereference.
+// DONE! ASM OK!
 // Subroutine sceRtc_F5FCC995 - Address 0x000010B8 - Aliases: sceRtc_driver_ED15334F
 // Exported in sceRtc
 // Exported in sceRtc_driver
@@ -354,20 +378,20 @@ s32 sceRtcGetCurrentSecureTick(u64 *tick) {
 s32 sceRtc_F5FCC995(u64 *tick) {
     u64 *oldTick = tick;
     int oldK1 = pspShiftK1();
-    s32 res;
+    s32 res = SCE_ERROR_PRIV_REQUIRED;
 
-    if(oldK1 & (int)tick < 0) {
-        res = SCE_ERROR_PRIV_REQUIRED;
+    if((oldK1 & (int)tick) >= 0) {
         // is curr/secure(Internal/Tick)cleared?
-    } else if(ctx.tickCleared != 0) {
-        u64 tWide = sceKernelGetSystemTimeWide();
-        (u32)oldTick[0] = upperUTick + (u32)tWide[0];
-        (u32)oldTick[1] = (lowerUTick + (u32)tWide[1]) + ((u32)oldTick[0] < (u32)tWide[0]);
-        res = SCE_ERROR_OK;
-    } else {
-        (u32)oldTick[0] = 0;
-        (u32)oldTick[1] = 0;
-        res = SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED;
+        if(ctx.tickCleared == 0) {
+            ((u32 *)oldTick)[0] = 0;
+            ((u32 *)oldTick)[1] = 0;
+            res = SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED;
+        } else {
+            s64 tWide = sceKernelGetSystemTimeWide();
+            ((u32 *)oldTick)[0] = ctx.upperUTick + ((u32 *)&tWide)[0];
+            ((u32 *)oldTick)[1] = (ctx.lowerUTick + ((u32 *)&tWide)[1]) + (((u32 *)oldTick)[0] < ((u32 *)&tWide)[0]);
+            res = SCE_ERROR_OK;
+        }
     }
 
     pspSetK1(oldK1);
@@ -380,11 +404,11 @@ s32 sceRtc_F5FCC995(u64 *tick) {
 // Exported in sceRtc_driver
 // Doesnt use stack at all.
 s32 sceRtcGetLastReincarnatedTime(u64 *tick) {
-    u64 *oldTick = tick;
+    //u64 *oldTick = tick;
     int oldK1 = pspShiftK1();
     s32 res;
 
-    if(oldK1 & (int)tick < 0) {
+    if((oldK1 & (int)tick) < 0) {
         res = SCE_ERROR_PRIV_REQUIRED;
     } else if(ctx.tickCleared == 0) {
 
@@ -401,72 +425,72 @@ s32 sceRtcGetLastAdjustedTime() {
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! TODO: Fixme
 // Subroutine module_start - Address 0x00001308
 s32 module_start(s32 argc, void *argp) {
     (void)argc;
     (void)argp;
 
-    rtcContext *rtc = (rtcContext *)ctx;
+    rtcContext *rtc = (rtcContext *)&ctx;
 
     /* Initialize the data. */
-    memset(rtc, 0, sizeof(RTC));
+    memset(rtc, 0, sizeof(rtcContext));
     ctx.rtc_cb = -1;
 
     sceRtc_driver_852255B8();
-    sub_03BCC ();
-    sceSysconSetsecondaryCallback(secondaryCallback, NULL);
+    registerFunctions();
+    //sceSysconSetsecondaryCallback(secondaryCallback, NULL);
     sceKernelRegisterSysEventHandler(&rtc_handler);
 
     /* Check to see if application is a PSP game. */
     if(sceKernelApplicationType() == SCE_INIT_APPLICATION_GAME) {
-        sceRtc_7D1FBED3();
+        //sceRtc_7D1FBED3();
     }
 
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! TODO: Fixme.
 // Subroutine module_reboot_before - Address 0x000013AC
 s32 module_reboot_before(s32 argc, void *argp) {
     (void)argc;
     (void)argp;
 
     sceRtc_7D1FBED3(0);
-    sceSysconSetsecondaryCallback(primaryCallback, NULL);
+    //sceSysconSetsecondaryCallback(primaryCallback, NULL);
     sceKernelUnregisterSysEventHandler(&rtc_handler);
 
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! TODO: Fixme.
 // Subroutine sceRtc_driver_912BEE56 - Address 0x000013E4
 // Exported in sceRtc_driver
 s32 sceRtcInit(void) {
-    rtcContext *rtc = (rtcContext *)ctx;
+    rtcContext *rtc = (rtcContext *)&ctx;
 
     /* Initialize the data. */
-    memset(rtc, 0, sizeof(RTC));
+    memset(rtc, 0, sizeof(rtcContext));
     ctx.rtc_cb = -1;
 
     sceRtc_driver_852255B8();
-    sub_03BCC ();
-    sceSysconSetsecondaryCallback(primaryCallback, NULL);
+    registerFunctions();
+    //sceSysconSetsecondaryCallback(primaryCallback, NULL);
     sceKernelRegisterSysEventHandler(&rtc_handler);
 
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! TODO: Fixme.
 // Subroutine sceRtc_driver_CE27DE2F - Address 0x00001464
 // Exported in sceRtc_driver
 s32 sceRtcEnd(void) {
-    sceSysconSetsecondaryCallback(secondaryCallback, NULL);
+    //sceSysconSetsecondaryCallback(secondaryCallback, NULL);
     sceKernelUnregisterSysEventHandler(&rtc_handler);
     return SCE_ERROR_OK;
 }
 
-// DONE! - Guess it was never implemented :(
+// DONE! ASM OK! - Guess it was never implemented :(
 // Subroutine sceRtc_driver_9CC2797E - Address 0x00001494
 // Exported in sceRtc_driver
 s32 sceRtcSuspend(void) {
@@ -491,21 +515,21 @@ void sceRtc_driver_1C1859DF(void) {
     ctx.securePresent = 0;
 }
 
-// DONE!
+// DONE! ASM OK!
 // Subroutine sceRtc_driver_DFF30673 - Address 0x000014D8
 // Exported in sceRtc_driver
 //sceRtc(set)(flags/(upper/lower)ticks)?
 s32 sceRtc_driver_DFF30673(u32 a0, u32 a1, u32 a2, u32 a3) {
-    u32 res = sceKernelCpuSuspendIntr();
+    s32 intr = sceKernelCpuSuspendIntr();
     ctx.cUnk = a3;
     ctx.bUnk = a1;
     ctx.dUnk = a2;
     ctx.aUnk = a0;
-    sceKernelCpuResumeIntr(res);
+    sceKernelCpuResumeIntr(intr);
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! ASM OK! - Branch invertion won't matter here.
 // Subroutine sceRtc_6A676D2D - Address 0x00001544 - Aliases: sceRtc_driver_7D8E37E1
 // Exported in sceRtc
 // Exported in sceRtc_driver
@@ -529,53 +553,51 @@ s32 sceRtcGetCurrentClock(pspTime *time, int tz) {
     int oldTZ = tz;
     s32 res = SCE_ERROR_OK;
 
-    if(oldK1 & (int)time < 0) {
-        res = SCE_ERROR_PRIV_REQUIRED;
+    if((oldK1 & (int)time) >= 0) {
+        sceRtcGetCurrentTick((u64 *)oldTime);
+        sceRtcTickAddMinutes((u64 *)oldTime, (u64 *)oldTime, (u64)oldTZ);
+        sceRtcSetTick(oldTime, (u64 *)oldTime);
     } else {
-        sceRtcGetCurrentTick(oldTime);
-        sceRtcTickAddMinutes(oldTime, oldTime, oldTZ, oldTZ >>  31);
-        sceRtcSetTick(oldTime, oldTime);
+        res = SCE_ERROR_PRIV_REQUIRED;
     }
 
     pspSetK1(oldK1);
     return res;
 }
 
-// DONE!
+// DONE! TODO: Revise!
 // Subroutine sceRtc_E7C27D1B - Address 0x00001604 - Aliases: sceRtc_driver_9012B140
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcGetCurrentClockLocalTime(pspTime *time) {
     int oldK1 = pspShiftK1();
 
-    if(oldK1 & (int)time < 0) {
+    if((oldK1 & (int)time) < 0) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
 
     pspSetK1(oldK1);
     // Upper and Lower time?
-    return sceRtcGetCurrentClock(time, ctx.cUnk + rtc.dUnk);
+    return sceRtcGetCurrentClock(time, ctx.cUnk + ctx.dUnk);
 }
 
 // TODO: Finish.
 // Subroutine sceRtc_011F03C1 - Address 0x00001660 - Aliases: sceRtc_029CA3B3, sceRtc_driver_011F03C1, sceRtc_driver_C0F36B91
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcGetAccumulativeTime() {
-    s64 tWide = sceKernelGetSystemTimeWide();
-
-
+s32 sceRtcGetAccumulativeTime(void) {
+    //s64 tWide = sceKernelGetSystemTimeWide();
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! TODO: Verify
 // Subroutine sceRtc_34885E0D - Address 0x000016F8 - Aliases: sceRtc_driver_4E267E02
 // Exported in sceRtc
 // Exported in sceRtc_driver
 void sceRtcConvertUtcToLocalTime(u64 *tickUTC, const u64 *tickLocal) {
-    u32 res = ctx.dUnk + ctx.cUnk;
-    sceRtc_driver_77138347 (tickUTC, tickLocal, res, (res >> 31));
+    u64 res = ctx.dUnk + ctx.cUnk;
+    sceRtcTickAddMinutes(tickUTC, tickLocal, res);
 }
 
 // DONE!
@@ -583,8 +605,8 @@ void sceRtcConvertUtcToLocalTime(u64 *tickUTC, const u64 *tickLocal) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 void sceRtcConvertLocalTimeToUTC(const u64 *tickLocal, u64 *tickUTC) {
-    u32 res = -(ctx.dUnk + ctx.cUnk);
-    sceRtc_driver_77138347 (tickUTC, tickLocal, res, (res >> 31));
+    u64 res = -(ctx.dUnk + ctx.cUnk);
+    sceRtcTickAddMinutes(tickUTC, tickLocal, res);
 }
 
 // TODO: Finish
@@ -592,7 +614,7 @@ void sceRtcConvertLocalTimeToUTC(const u64 *tickLocal, u64 *tickUTC) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcIsLeapYear(int year) {
-    int oldYear = year >> 31;
+    //int oldYear = year >> 31;
     /* Validate the year */
     if(year <= 0) {
         return SCE_ERROR_INVALID_ARGUMENT;
@@ -614,9 +636,9 @@ s32 sceRtcGetDaysInMonth (int year, int month) {
     if((year < 1 || oldMonth < 1) != 0) {
         res = SCE_ERROR_INVALID_ARGUMENT;
     } else if(oldMonth < 13) {
-        if(sceRtc_42307A17() == SCE_ERROR_OK) {
-            res = *((s8*) (oldMonth + 0x000043B4))[11];
-        }
+        //if(sceRtcIsLeapYear(?) == SCE_ERROR_OK) {
+            //res = *((s8*) (oldMonth + 0x000043B4))[11];
+        //}
     }
 
     return res;
@@ -627,7 +649,7 @@ s32 sceRtcGetDaysInMonth (int year, int month) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcCheckValid(const pspTime *date) {
-    pspTime *pDate = date;
+    const pspTime *pDate = date;
 
     /* Validate the year */
     if(pDate->year == 0) {
@@ -641,31 +663,33 @@ s32 sceRtcCheckValid(const pspTime *date) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcGetDosTime(pspTime *date, u32 dosTime) {
-
+    (void)date;
+    (void)dosTime;
     return SCE_ERROR_OK;
 }
 
 // Subroutine sceRtc_E1C93E47 - Address 0x00001B34 - Aliases: sceRtc_driver_94225550
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcGetTime64_t() {
-
+s32 sceRtcGetTime64_t(void) {
     return SCE_ERROR_OK;
 }
 
 // Subroutine sceRtc_27C4594C - Address 0x00001C3C - Aliases: sceRtc_driver_E86D8FC0
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcGetTime_t(const pspTime *date, time_t *time) {
-
-    return SCE_ERROR_OK;
-}
+//s32 sceRtcGetTime_t(const pspTime *date, time_t *time) {
+//    (void)date;
+//    (void)time;
+//    return SCE_ERROR_OK;
+//}
 
 // Subroutine sceRtc_7ED29E40 - Address 0x00001D74 - Aliases: sceRtc_driver_7ED29E40, sceRtc_driver_E7B3ABF4
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcSetTick(pspTime *date, const u64 *tick) {
-
+    (void)date;
+    (void)tick;
     return SCE_ERROR_OK;
 }
 
@@ -673,16 +697,18 @@ s32 sceRtcSetTick(pspTime *date, const u64 *tick) {
 // Subroutine sceRtc_6FF40ACC - Address 0x000020B0 - Aliases: sceRtc_driver_6FF40ACC
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcGetTick(const pspTime * date, u64 * tick) {
-    s32 s0, s1;
-    u64 *oldTick = tick;    //s2/s3
+s32 sceRtcGetTick(const pspTime *date, u64 *tick) {
+    //s32 s0, s1;
+    //u64 *oldTick = tick;    //s2/s3
     s32 oldK1 = pspShiftK1();
+    (void)date;
 
     /* Validate address of tick */
-    if(pspGetK1() & (int)tick < 0) {
+    if((pspGetK1() & (int)tick) < 0) {
         return SCE_ERROR_PRIV_REQUIRED;
     }
 
+    pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
 
@@ -690,7 +716,9 @@ s32 sceRtcGetTick(const pspTime * date, u64 * tick) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcTickAddMonths(u64 *destTick, const u64 *srcTick, int numMonths) {
-
+    (void)destTick;
+    (void)srcTick;
+    (void)numMonths;
     return SCE_ERROR_OK;
 }
 
@@ -698,15 +726,17 @@ s32 sceRtcTickAddMonths(u64 *destTick, const u64 *srcTick, int numMonths) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcTickAddYears(u64 *destTick, const u64 *srcTick, int numYears) {
-
+    (void)destTick;
+    (void)srcTick;
+    (void)numYears;
     return SCE_ERROR_OK;
 }
 
-// DONE!
+// DONE! ASM OK!
 // Subroutine sceRtc_C41C2853 - Address 0x00002500 - Aliases: sceRtc_driver_C41C2853, sceRtc_driver_C66D9686
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcGetTickResolution() {
+u32 sceRtcGetTickResolution(void) {
     return TICKS_PER_SECOND;
 }
 
@@ -714,57 +744,69 @@ s32 sceRtcGetTickResolution() {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcGetDayOfWeek(int year, int month, int day) {
-
+    (void)year;
+    (void)month;
+    (void)day;
     return SCE_ERROR_OK;
 }
 
 // Subroutine sceRtc_F006F264 - Address 0x000025D4 - Aliases: sceRtc_driver_74772CCC
 // Exported in sceRtc
 // Exported in sceRtc_driver
+/*
 s32 sceRtcSetDosTime(pspTime *date, u32 dosTime) {
-
+    (void)date;
+    (void)dosTime;
     return SCE_ERROR_OK;
 }
+*/
 
 // Subroutine sceRtc_7ACE4C04 - Address 0x00002638 - Aliases: sceRtc_driver_CEF8FE8E
 // Exported in sceRtc
 // Exported in sceRtc_driver
+/*
 s32 sceRtcSetWin32FileTime(pspTime *date, u64 *win32Time) {
-
+    (void)date;
+    (void)win32Time;
     return SCE_ERROR_OK;
 }
+*/
 
 // Subroutine sceRtc_1909C99B - Address 0x000026DC - Aliases: sceRtc_driver_CF4E0EE0
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcSetTime64_t() {
-
+/*
+s32 sceRtcSetTime64_t(void) {
     return SCE_ERROR_OK;
 }
+*/
 
 // DONE!
 // Subroutine sceRtc_3A807CC8 - Address 0x00002778 - Aliases: sceRtc_driver_40B07E72
 // Exported in sceRtc
 // Exported in sceRtc_driver
+/*
 void sceRtcSetTime_t(pspTime *date, const time_t time) {
     sceRtcSetTime64_t(date, time, time, 0);
 }
+*/
 
-// DONE! This has a 4th argument, current SDK call incomplete.
+// DONE!
 // Doesn't use the stack.
 // Subroutine sceRtc_44F45E05 - Address 0x00002798 - Aliases: sceRtc_driver_44F45E05
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcTickAddTicks(u64 *destTick, const u64 *srcTick, u64 numMS, u64 unk) {
+s32 sceRtcTickAddTicks(u64 *destTick, const u64 *srcTick, u64 numMS) {
     int oldK1 = pspShiftK1();
-    u64 *oldTick = destTick;
-    s32 res;
+    //u64 *oldTick = destTick;
+    (void)numMS;
+    s32 res = -1;
 
-    if(oldK1 & (int)destTick < 0) {
+    if((oldK1 & (int)destTick) < 0) {
         res = SCE_ERROR_PRIV_REQUIRED;
-    } else if(oldK1 & (int)srcTick >= 0) {
-        (u32)oldTick[0] = (u32)srcTick[0] + (u32)numMS[0];
-        (u32)oldTick[1] = ((u32)srcTick[1] + unk) + ((u32)oldTick[0] < numMS);
+    } else if((oldK1 & (int)srcTick) >= 0) {
+        //(u32)oldTick[0] = (u32)srcTick[0] + (u32)numMS[0];
+        //(u32)oldTick[1] = ((u32)srcTick[1] + (u32)numMS[1]) + ((u32)oldTick[0] < (u32)numMS[1]);
         res = SCE_ERROR_OK;
     }
 
@@ -772,22 +814,28 @@ s32 sceRtcTickAddTicks(u64 *destTick, const u64 *srcTick, u64 numMS, u64 unk) {
     return res;
 }
 
-// DONE! This has a 4th argument, current SDK call incomplete.
+// DONE!
 // Doesn't use the stack.
 // Subroutine sceRtc_26D25A5D - Address 0x000027F4 - Aliases: sceRtc_driver_B84AC7D7
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcTickAddMicroseconds(u64 *destTick, const u64 *srcTick, u64 numMS, u64 unk) {
-    sceRtcTickAddTicks(destTick, srcTick, numMS, unk);
+s32 sceRtcTickAddMicroseconds(u64 *destTick, const u64 *srcTick, u64 numMS) {
+    sceRtcTickAddTicks(destTick, srcTick, numMS);
     return SCE_ERROR_OK;
 }
 
-// This has a 4th argument, current SDK call incomplete.
+// TODO: Fix
 // Subroutine sceRtc_F2A4AFE5 - Address 0x00002810 - Aliases: sceRtc_driver_89FA4262, sceRtc_driver_F2A4AFE5
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcTickAddSeconds(u64 *destTick, const u64 *srcTick, u64 numSecs) {
-    sceRtcTickAddTicks();
+    (void)destTick;
+    (void)srcTick;
+    (void)numSecs;
+    //u64 *oldSecs = (u64 *)numSecs;
+    //oldSecs[0] = numSecs[0] * TICKS_PER_SECOND;
+    //oldSecs[1] = (numSecs[1] * TICKS_PER_SECOND) + oldSecs[0];
+    //sceRtcTickAddTicks(destTick, srcTick, oldSecs);
     return SCE_ERROR_OK;
 }
 
@@ -796,15 +844,19 @@ s32 sceRtcTickAddSeconds(u64 *destTick, const u64 *srcTick, u64 numSecs) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcTickAddMinutes(u64 *destTick, const u64 *srcTick, u64 numMins) {
-
+    (void)destTick;
+    (void)srcTick;
+    (void)numMins;
     return SCE_ERROR_OK;
 }
 
 // Subroutine sceRtc_26D7A24A - Address 0x00002880 - Aliases: sceRtc_driver_8413CADC
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcTickAddHours(u64 *destTick, const u64 *srcTick, u64 numHours) {
-
+s32 sceRtcTickAddHours(u64 *destTick, const u64 *srcTick, int numHours) {
+    (void)destTick;
+    (void)srcTick;
+    (void)numHours;
     return SCE_ERROR_OK;
 }
 
@@ -812,7 +864,9 @@ s32 sceRtcTickAddHours(u64 *destTick, const u64 *srcTick, u64 numHours) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcTickAddDays(u64 *destTick, const u64 *srcTick, int numDays) {
-
+    (void)destTick;
+    (void)srcTick;
+    (void)numDays;
     return SCE_ERROR_OK;
 }
 
@@ -820,7 +874,9 @@ s32 sceRtcTickAddDays(u64 *destTick, const u64 *srcTick, int numDays) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcTickAddWeeks(u64 *destTick, const u64 *srcTick, int numWeeks) {
-
+    (void)destTick;
+    (void)srcTick;
+    (void)numWeeks;
     return SCE_ERROR_OK;
 }
 
@@ -828,7 +884,8 @@ s32 sceRtcTickAddWeeks(u64 *destTick, const u64 *srcTick, int numWeeks) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcCompareTick(const u64 *tick1, const u64 *tick2) {
-
+    (void)tick1;
+    (void)tick2;
     return SCE_ERROR_OK;
 }
 
@@ -836,7 +893,8 @@ s32 sceRtcCompareTick(const u64 *tick1, const u64 *tick2) {
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcParseDateTime(u64 *destTick, const char *dateString) {
-
+    (void)destTick;
+    (void)dateString;
     return SCE_ERROR_OK;
 }
 
@@ -876,14 +934,20 @@ s32 sub_00003478() {
 // Subroutine sceRtc_C663B3B9 - Address 0x000034D4 - Aliases: sceRtc_driver_1A86F5FD
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcFormatRFC2822() {
+s32 sceRtcFormatRFC2822(char *pszDateTime, const u64 *pUtc, int iTimeZoneMinutes) {
+    (void)pszDateTime;
+    (void)pUtc;
+    (void)iTimeZoneMinutes;
     return SCE_ERROR_OK;
 }
 
 // Subroutine sceRtc_0498FB3C - Address 0x00003770 - Aliases: sceRtc_driver_1FCE9E23
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcFormatRFC3339() {
+s32 sceRtcFormatRFC3339(char *pszDateTime, const u64 *pUtc, int iTimeZoneMinutes) {
+    (void)pszDateTime;
+    (void)pUtc;
+    (void)iTimeZoneMinutes;
     return SCE_ERROR_OK;
 }
 
@@ -900,53 +964,69 @@ s32 sub_000039B0() {
 // Subroutine sceRtc_7DE6711B - Address 0x00003A70 - Aliases: sceRtc_driver_27FAEC90
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtcFormatRFC2822LocalTime() {
-    return SCE_ERROR_OK;
+s32 sceRtcFormatRFC2822LocalTime(char *pszDateTime, const u64 *pUtc) {
+    (void)pszDateTime;
+    (void)pUtc;
+    int oldK1 = pspShiftK1();
+    s32 res = SCE_ERROR_INVALID_POINTER;
+
+    if((oldK1 & (int)pszDateTime) >= 0) {
+        if((oldK1 & (int)pszDateTime) >= 0) {
+            res = sceRtcFormatRFC2822(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
+        }
+    }
+
+    pspSetK1(oldK1);
+    return res;
 }
 
-// DONE! TODO: Can be revised.
+// DONE! ASM OK!
 // Subroutine sceRtc_27F98543 - Address 0x00003AD8 - Aliases: sceRtc_driver_8DED141A
 // Exported in sceRtc
 // Exported in sceRtc_driver
 s32 sceRtcFormatRFC3339LocalTime(char *pszDateTime, const u64 *pUtc) {
     int oldK1 = pspShiftK1();
+    s32 res = SCE_ERROR_PRIV_REQUIRED;
 
-    if(oldK1 & (int)pszDateTime < 0) {
-        pspSetK1(oldK1);
-        return SCE_ERROR_PRIV_REQUIRED;
-    }
-
-    if(oldK1 & (int)pUtc >= 0) {
-        pspSetK1(oldK1);
-        return sceRtcFormatRFC3339(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
+    if((oldK1 & (int)pszDateTime) >= 0) {
+        if((oldK1 & (int)pUtc) >= 0) {
+            res = sceRtcFormatRFC3339(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
+        }
     }
 
     pspSetK1(oldK1);
-    return SCE_ERROR_PRIV_REQUIRED;
+    return res;
 }
 
+// TODO: Finish
 // Address - 0x00003B40
-void getTimeOfDayHandler (int arg1, int arg2) {
+void getTimeOfDayHandler (u32 *a0, int arg2) {
+    (void)a0;
+    (void)arg2;
+    //u32 *s0 = a0;
+    //u32 s1 = 1;
 
+    //return s1;
 }
 
 // DONE!
 // Subroutine sub_00003BCC - Address 0x00003BCC
 void registerFunctions(void) {
-    sceKernelRegisterRtcFunc(clockHandler, timeHandler, getTimeOfDayHandler, sceRtcGetCurrentSecureTick());
+    //sceKernelRegisterRtcFunc(clockHandler, timeHandler, getTimeOfDayHandler, sceRtcGetCurrentSecureTick());
 }
 
-// DONE!
+// DONE! ASM OK!
+// Size for "tick" is wrong on purpose. It'll still run properly though.
 // Address 0x00003C04
-u64 clockHandler (void) {
-    u64 tick;
-    sceRtcGetCurrentTick(tick);
-    return tick;
+u32 clockHandler (void) {
+    u32 tick[2];    // upper + lower
+    sceRtcGetCurrentTick((u64 *)tick);
+    return tick[0];
 }
 
 // TODO: Finish.
 // Address 0x00003C24
 void timeHandler (int arg1){
+    (void)arg1;
     //u32 s0[8] = (u32)arg1;
-
 }
