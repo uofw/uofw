@@ -1,22 +1,40 @@
+/* Copyright (C) 2011 - 2015 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
+#include <common_imp.h>
+#include <iofilemgr_kernel.h>
+
 #include "modulemgr_int.h"
-#include "../loadcore/loadelf.c"
+#include "../loadcore/loadelf.h"
 
-#define numberof(n) (sizeof(n)/sizeof(*(n)))
+#define numElements(n) (sizeof (n) / sizeof(*(n)))
 
+/**
+ * uofw/src/modulemgr/override.c 
+ *
+ * Starting with firmware 2.60, Sony moved several modules (mainly USB/AV-modules), which were provided by
+ * the PSP SDK, into flash memory. Override.c checks if one of those modules is provided by the 
+ * external bootable binary - i.e. a PSP game - to be loaded via sceKernelLoadModuleBufferUsbWlan()
+ * and, if found, replaces it with the module version provided by the PSP kernel on the retrieving PSP.
+ *
+ * 1) This enables larger games to be transferred between PSPs as part of the game sharing functionality 
+ * (the transfer data limit is set to 8 MB).
+ * 
+ * 2) Even if not required, the retrieving PSP will always use the newest module versions (provided by its
+ * current PSP firmware) of the specified modules.
+ */
 
 /** 
- * Rule for overriding the file descriptor of a module, to force it to load from
- * a desired location (usually flash0:).
- * Some modules were first only provided in UMD discs, but Sony decided at some
- * point that they should instead be loaded from the PSP (most likely to run the
- * latest version available).
+ * Defines an override rule to be used to replace a module provided by an external
+ * bootable binary with the corresponding PSP kernel module.
  */
 typedef struct {
-    /** The path of the module that will be loaded instead */
+    /** The path of the module that will be loaded instead. */
     char *overridePath; // 0
     /** The number of module hashes (most likely used to match different module versions) */
-    u32 nHash; // 4
-    /** List containing nHash hashes, each of the size of 16 bytes */
+    u32 numHashes; // 4
+    /** List containing numHashes hashes, each of the size of 16 bytes. */
     u32 *hashList; // 8
 } OverrideRule; // Size: 12
 
@@ -146,115 +164,97 @@ u32 g_HashListVideocodec260[][4] = {
 OverrideRule g_OverrideList[] = { // 0x000098FC
     {
         .overridePath = "flash0:/kd/audiocodec_260.prx",
-        .nHash = numberof(g_HashListAudiocodec260), // = 8
+        .numHashes = numElements(g_HashListAudiocodec260), // = 8
         .hashList = g_HashListAudiocodec260,
     },{
         .overridePath = "flash0:/kd/avcodec.prx",
-        .nHash = numberof(g_HashListAvcodec), // = 1
+        .numHashes = numElements(g_HashListAvcodec), // = 1
         .hashList = g_HashListAvcodec,
     },{
         .overridePath = "flash0:/kd/cert_loader.prx",
-        .nHash = numberof(g_HashListCertLoader), // = 5
+        .numHashes = numElements(g_HashListCertLoader), // = 5
         .hashList = g_HashListCertLoader,
     },{
         .overridePath = "flash0:/kd/ifhandle.prx",
-        .nHash = numberof(g_HashListIfhandle), // = 6
+        .numHashes = numElements(g_HashListIfhandle), // = 6
         .hashList = g_HashListIfhandle,
     },{
         .overridePath = "flash0:/kd/memab.prx",
-        .nHash = numberof(g_HashListMemab), // = 3
+        .numHashes = numElements(g_HashListMemab), // = 3
         .hashList = g_HashListMemab,
     },{
         .overridePath = "flash0:/kd/mpegbase_260.prx",
-        .nHash = numberof(g_HashListMpegbase260), // = 9
+        .numHashes = numElements(g_HashListMpegbase260), // = 9
         .hashList = g_HashListMpegbase260,
     },{
         .overridePath = "flash0:/kd/pspnet_adhoc_auth.prx",
-        .nHash = numberof(g_HashListPspnetAdhocAuth), // = 6
+        .numHashes = numElements(g_HashListPspnetAdhocAuth), // = 6
         .hashList = g_HashListPspnetAdhocAuth,
     },{
         .overridePath = "flash0:/kd/sc_sascore.prx",
-        .nHash = numberof(g_HashListScSascore), // = 9
+        .numHashes = numElements(g_HashListScSascore), // = 9
         .hashList = g_HashListScSascore,
     },{
         .overridePath = "flash0:/kd/usbacc.prx",
-        .nHash = numberof(g_HashListUsbacc), // = 3
+        .numHashes = numElements(g_HashListUsbacc), // = 3
         .hashList = g_HashListUsbacc,
     },{
         .overridePath = "flash0:/kd/usbgps.prx",
-        .nHash = numberof(g_HashListUsbgps), // = 1
+        .numHashes = numElements(g_HashListUsbgps), // = 1
         .hashList = g_HashListUsbgps,
     },{
         .overridePath = "flash0:/kd/usbmic.prx",
-        .nHash = numberof(g_HashListUsbmic), // = 3
+        .numHashes = numElements(g_HashListUsbmic), // = 3
         .hashList = g_HashListUsbmic,
     },{
         .overridePath = "flash0:/kd/usbpspcm.prx",
-        .nHash = numberof(g_HashListUsbpspcm), // = 8
+        .numHashes = numElements(g_HashListUsbpspcm), // = 8
         .hashList = g_HashListUsbpspcm,
     },{
         .overridePath = "flash0:/kd/videocodec_260.prx",
-        .nHash = numberof(g_HashListVideocodec260), // = 8
+        .numHashes = numElements(g_HashListVideocodec260), // = 8
         .hashList = g_HashListVideocodec260,
     }
 };
 
-// This function checks if the module provided in pBuffer is known (using its hash),
-// and return the file descriptor from which the module will be loaded instead
-s32 _CheckOverride(s32 apiType, void *pBuffer, SceUID *fd) // 0x00008568
+/* 
+ * Replace an external provided module by the corresponding kernel module.
+ *
+ * @param modBuf The external module to be loaded.
+ *
+ * Returns SCE_TRUE if the module was replaced by a kernel module, SCE_FALSE otherwise.
+ */
+SceBool _CheckOverride(s32 apiType, void *modBuf, SceUID *fd) // 0x00008568
 {
-    
-    if (apiType != MODULEMGR_API_LOADMODULE_USBWLAN && apiType != MODULEMGR_API_LOADMODULE) { // 0x000085B0
-        return SCE_ERROR_OK;
-    }
+    if (apiType != MODULEMGR_API_LOADMODULE_USBWLAN && apiType != MODULEMGR_API_LOADMODULE) // 0x000085B0
+        return SCE_FALSE;
 
-    // Let's assume we were provided a PspHeader
-    PspHeader* pspHeader = pBuffer;
+	SceHeader* sceHeader = (SceHeader *)modBuf;
+	if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC_LE) // 0x000085C4 
+        /* Skip SCE header. */
+        modBuf += sceHeader->size;
 
-    // If this is not a PspHeader but a SceHeader
-    if ((u32)pspHeader->magic == SCE_MAGIC) { // 0x000085C4, from loadelf.h
-        // Skip the SCE header
-        pspHeader += ((SceHeader *)pspHeader)->size;
-    }
+	PspHeader *pspHeader = (PspHeader *)modBuf;
+	if (((u32 *)pspHeader->magic)[0] != PSP_MAGIC_LE) // 0x000085DC,
+		return SCE_FALSE;
 
-    // If this is still not a PspHeader, we can't fix anything
-    if((u32)pspHeader->magic != PSP_MAGIC) { // 0x000085DC, from loadcore_int.h
-        return SCE_ERROR_OK;
-    }
-
-
+	/* Search for a matching hash in the override table. */
     u32 i;
-    // Try to find if the hash of our module matches the one of our rules
-    for (i=0; i <= 13; i++) { // 0x00008630, 0x00008684, 0x0000868C
-
-        // Get the current rule
+	for (i = 0; i < numElements(g_OverrideList); i++) { // 0x00008630, 0x00008684, 0x0000868C
         OverrideRule curRule = g_OverrideList[i];
 
-        // Get the number of hashes of the current rule
-        u32 curNHash = curRule.nHash;
-
-        // No hash available? Try the next rule
-        if (curNHash <= 0) {
-            continue;
-        }
-
+		/* Scan current override rule for a matching hash. */
         u32 j;
-        // Check the hash of our module against the list of hashes of the current rule
-        for (j=0; j < curNHash; j++) {
-
-            // Current hash to check against
+		for (j = 0; j < curRule.numHashes; j++) {
             u32 curHash = curRule.hashList[j];
 
-            // Compare the hash of the module, with the current hash
-            int sameHash = !memcmp(curHash, curHash, KEY_DATA_SIZE); // KEY_DATA_SIZE is from loadelf.h
-
-            // Phew! A hash from the list of the current rule is the same as the one from the module
-            if (sameHash) {
-                // Override the file descriptor of the module with our own
-                fd = sceIoOpen(curRule.overridePath, 0x04000001, 0);
-
-                return SCE_ERROR_OK;
+			s32 res = memcmp(pspHeader->keyData4, curHash, sizeof pspHeader->keyData4); // 0x0000865C
+            if (res == 0) {
+				/* We found a matching hash, load module provided by the PSP kernel. */
+				*fd = sceIoOpen(curRule.overridePath, SCE_O_UNKNOWN0 | SCE_O_RDONLY, 0);
+				return SCE_TRUE;
             }
         }
     }
+	return SCE_FALSE;
 }

@@ -11,6 +11,7 @@
 
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
+#include "override.h"
 
 #define FILE_USER_ACCESS_PERMISSIONS    (SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH)
 
@@ -688,7 +689,7 @@ s32 sceKernelLoadModuleMs(const char *path, s32 flags, SceKernelLMOption *pOpt)
 * @see sceNpDrmSetLicenseeKey()
 */
 // Subroutine sceKernelLoadModuleBufferUsbWlan - Address 0x00001478 
-SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flags, const SceKernelLMOption *pOpt)
+SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, u32 flags, const SceKernelLMOption *pOpt)
 {
 	s32 oldK1;
 	s32 fd;
@@ -715,7 +716,7 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flag
 		return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 	}
 
-	if (!pspK1DynBufOk(pBuffer, bufSize)) { // 0x00001528
+	if (!pspK1DynBufOk(base, size)) { // 0x00001528
 		pspSetK1(oldK1);
 		return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
 	}
@@ -727,18 +728,18 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize bufSize, void *pBuffer, u32 flag
 	}
 
 	// sub_00008568
-	if (!_CheckOverride(0x30, pBuffer, &fd)) {
+	if (!_CheckOverride(0x30, base, &fd)) {
 		pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000160C
 
 		modParams.apiType = 0x30;
 		modParams.modeFinish = CMD_RELOCATE_MODULE;
-		modParams.file_buffer = bufSize;
+		modParams.file_buffer = size;
 
 		// TODO: understand this, and fix the structure field if necessary
-		modParams.fd = pBuffer;
+		modParams.fd = base;
 		modParams.unk124 = 0;
 		modParams.modeStart = CMD_RELOCATE_MODULE;
-		modParams.unk64 = pBuffer;
+		modParams.unk64 = base;
 
 		// sub_000075B4
 		status = _loadModuleByBufferID(&modParams, pOpt); // 0x0000163C

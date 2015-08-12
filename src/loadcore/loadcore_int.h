@@ -13,8 +13,11 @@
     
 #define LOADCORE_ERROR                      (-1)
 
-/* The magic number identifying a file as a PSP object file. */
+/* For compatibility reasons. Use PSP_MAGIC_LE. */
 #define PSP_MAGIC                           (0x7E505350)  /* "~PSP" */
+
+/* The magic number identifying a file as a PSP object file. */
+#define PSP_MAGIC_LE						(0x5053507E)  /* "~PSP" in Little Endian. */
 
 /* 
  * A test if a specified address is a kernel address. If the sign-bit
