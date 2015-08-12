@@ -6,6 +6,7 @@
 #define MODULEMGR_INT_H
 
 #include <common_header.h>
+#include <loadcore.h>
 
 typedef struct {
 	u8 modeStart; //0 The Operation to start on, Use one of the ModuleMgrExeModes modes
@@ -60,7 +61,7 @@ typedef struct {
 	u32 unk24;
 	u32 unk28;
 	s32(*npDrmGetModuleKeyFunction)(s32 fd, void *, void *); // 32
-	u32 unk36;
+	u32 *unk36;
 } SceModuleManagerCB;
 
 enum ModuleMgrExecModes {

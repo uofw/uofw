@@ -172,8 +172,8 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
     if (status < SCE_ERROR_OK) //0x000069B8
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     
-    mod->attribute = (execFileInfo->moduleInfo->modAttribute & ~SCE_PRIVILEGED_MODULES) | execFileInfo->modInfoAttribute; //0x000069CC & 0x000069E0
-    if ((mod->attribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_KERNEL)
+    mod->attribute = (execFileInfo->moduleInfo->modAttribute & ~SCE_MODULE_PRIVILEGE_LEVELS) | execFileInfo->modInfoAttribute; //0x000069CC & 0x000069E0
+    if ((mod->attribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL)
         mod->status &= ~SCE_MODULE_USER_MODULE; //0x00006BB4
     else
         mod->status |= SCE_MODULE_USER_MODULE; //0x000069E8

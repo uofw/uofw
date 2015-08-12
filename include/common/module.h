@@ -113,6 +113,8 @@ enum SceModulePrivilegeLevel {
     SCE_MODULE_KIRK_SEMAPHORE_LIB   = 0x4000,
 };
 
+#define SCE_MODULE_PRIVILEGE_LEVELS		(SCE_MODULE_MS | SCE_MODULE_USB_WLAN | SCE_MODULE_APP | SCE_MODULE_VSH | SCE_MODULE_KERNEL)
+
 #define SCE_MODINFO_SECTION_NAME        ".rodata.sceModuleInfo"
 
 /** Release X.Y.Z -> 0xXXYYZZZZ */

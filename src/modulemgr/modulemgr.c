@@ -264,7 +264,7 @@ s32 ModuleMgrInit(SceSize argc, void *argp)
     g_ModuleManager.unk20 = &g_ModuleManager.unk20; // 0x000050D8
     g_ModuleManager.unk24 = &g_ModuleManager.unk20; //0x000050F0
     g_ModuleManager.npDrmGetModuleKeyFunction = NULL; // 0x000050E0
-    g_ModuleManager.unk36 = 0; // 0x000050D4
+    g_ModuleManager.unk36 = NULL; // 0x000050D4
     
     return SCE_KERNEL_RESIDENT;
 }
@@ -285,13 +285,12 @@ s32 ModuleMgrForUser_CDE1C1FE(void)
 
 	// 0x00005B2C - 0x00005B50
 	s32 i;
-	s32 j;
 	u32 count = 0;
-	for (i = 0, j = 0; i < *(unk + 28); i += 4, j += 1)
-		count += *(unk + 32 + j);
+	for (i = 0; (i * 4) < *(unk + 28); i += 1)
+		count += *(unk + 32 + i);
 
 	pspSetK1(oldK1);
-	return ((*(unk + 55) ^ count) == 0); // 0x00005B60
+	return (*(unk + 55) == count); // 0x00005B60
 }
 
 // Subroutine ModuleMgrForKernel_A40EC254 - Address 0x00005B6C
@@ -607,7 +606,7 @@ static s32 _LoadModule(SceModuleMgrParam *modParams)
         } else if (pExecInfo->execAttribute & SCE_EXEC_FILE_GZIP_OVERLAP) { // 0x0000606C
             baseAddr = sceKernelGetBlockHeadAddr(pExecInfo->decompressionMemId); // 0x00006074
             size = pExecInfo->execSize;
-            buf = (pExecInfo->maxAllocSize = UPALIGN64(pExecInfo->execSize)) + baseAddr; // 0x00006098
+            buf = (pExecInfo->maxAllocSize - UPALIGN64(pExecInfo->execSize)) + baseAddr; // 0x00006098
         } else {
             s32 partId = sceKernelAllocPartitionMemory(pExecInfo->partitionId, "SceModmgrGzipBuffer", SCE_KERNEL_SMEM_High, 
                     pExecInfo->execSize, 0); // 0x000062F8
@@ -949,6 +948,7 @@ static s32 _RelocateModule(SceModuleMgrParam *modParams)
 static void cleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo)
 {
 	ClearFreePartitionMemory(gzipMemId);
+
 	if (pExecInfo == NULL) // 0x00006CCC
 		return;
 
@@ -995,6 +995,12 @@ s32 _StartModule(SceModuleMgrParam *modParams, SceModule *pMod, SceSize argSize,
         return SCE_ERROR_KERNEL_ERROR;
     }
     
+	/* 
+	 * UOFW: If pMod has no entry point, _PrologueModule returns SCE_ERROR_OK, with pMod->userModThid == -1.
+	 * This theoretically allows modules to be loaded without having a dedicated module_start() functions.
+	 * No cleanup for such module is performed.
+	 * The SDK specifies that every module needs to have a module_start() fucntion.
+	 */
     if (pMod->userModThid != -1) { //0x0000705C
         g_ModuleManager.userThreadId = pMod->userModThid; // 0x0000706C
         
@@ -1241,33 +1247,87 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
 // sub_00007C34
 s32 allocate_module_block(SceModuleMgrParam *modParams)
 {
-    s32 ret = LoadCoreForKernel_41D10899(modParams->execInfo->fileBase, modParams->execInfo);
-    // 0x00007C68
-    if (ret < 0) {
-        return ret;
-    }
+	s32 status;
+	SceModule *pMod;
+	SceLoadCoreExecFileInfo *pExecInfo;
 
-    // 0x00007C7C
-    if (modParams->threadAttr >= 4) {
-        return SCE_ERROR_KERNEL_ILLEGAL_OBJECT_FORMAT;
-    }
+	pMod = modParams->pMod; // 0x00007C54
 
-    // TODO: Weird function call 0x00007C98
+	pExecInfo = modParams->execInfo; // 0x00007C50
+	status = sceKernelProbeExecutableObject(modParams->execInfo->fileBase, modParams->execInfo); // 0x00007C5C
+	if (status < SCE_ERROR_OK) // 0x00007C68
+		return status;
 
-    // 0x00007CB0
-    if (modParams->eventId & 0x1E00 == 4096) {
-        return -1;
-    }
+	// 0x00007C70 - 0x00007C98
+	switch (pExecInfo->elfType) {
+	case SCE_EXEC_FILE_TYPE_PRX:
+		// 0x00007D0C
+		if ((pExecInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL) { // 0x00007D18
+			status = _CheckKernelOnlyModulePartition(pExecInfo->partitionId); // 0x00007E88 - 0x00007EC40x00007EB0
+			if (status < SCE_ERROR_OK) // 0x00007EBC
+				return status;
+		} else {
+			status = _CheckUserModulePartition(pExecInfo->partitionId);
+			if (status < SCE_ERROR_OK)
+				return status;
+		}
+		if (pExecInfo->isCompressed) { // 0x00007D68
+			void *base = pExecInfo->fileBase; // 0x00007E28
+			pExecInfo->topAddr = pExecInfo->fileBase; // 0x00007E28 & 0x00007E40
+			if (modParams->unk104 != 0 && modParams->position == SCE_KERNEL_SMEM_High) { // 0x00007E24 & 0x00007E30
+				base = sceKernelGetBlockHeadAddr(modParams->unk104); // 0x00007E5C
 
-    // 0x00007CC0
-    if (modParams->pStatus != 1) {
+				pExecInfo->topAddr = base + (modParams->unk112 - UPALIGN64(pExecInfo->largestSegSize)); // 0x00007E68 - 0x00007E84 & 0x00007E40
+			}
+			pMod->memId = pExecInfo->decompressionMemId; // 0x00007E44
+			//pMod->mpIdText = pExecInfo->partitionId; // 0x00007E4C
+			//pMod->mpIdData = pExecInfo->partitionId; // 0x00007E58
+		} else if (modParams->position == SCE_KERNEL_SMEM_Addr) { // 0x00007D78
+			pExecInfo->topAddr = pExecInfo->fileBase; // 0x00007E14
+			pMod->memId = pExecInfo->decompressionMemId; // 0x00007E1C
+		} else { // 0x00007D80
+			u8 blkAllocType = modParams->position; // 0x00007DA8
+			u32 addr = 0; // 0x00007DAC
 
-    }
-    modParams->mpIdText = modParams->threadPriority;
-    modParams->pMod = fd;
+			if (pExecInfo->maxSegAlign > 0x100) { // 0x00007D8C
+				if (modParams->position == SCE_KERNEL_SMEM_Low) { // 0x00007D94
+					blkAllocType = SCE_KERNEL_SMEM_LOWALIGNED; // 0x00007E08
+					addr = pExecInfo->maxSegAlign;
+				}
+				if (modParams->position == SCE_KERNEL_SMEM_High) { // 0x00007D9C
+					blkAllocType = SCE_KERNEL_SMEM_HIGHALIGNED; // 0x00007E00
+					addr = pExecInfo->maxSegAlign;
+				}
+			}
+			SceUID memId = sceKernelAllocPartitionMemory(pExecInfo->partitionId, "SceModmgrModuleBlockAuto",
+				blkAllocType, pExecInfo->largestSegSize, addr); // 0x00007DB0
+			if (memId < 0)
+				return status;
 
-    mpIdText = modParms->unk64
-    return -1;
+			pExecInfo->topAddr = sceKernelGetBlockHeadAddr(memId); // 0x00007DC4
+			pMod->memId = memId; // 0x00007DD0
+		}
+		pMod->mpIdText = pExecInfo->partitionId; // 0x00007E4C (for if part), 0x00007DD8 (for else if part)
+		pMod->mpIdData = pExecInfo->partitionId; // 0x00007E58 (for if part), 0x00007DE0 (for else if part)
+
+		return (pExecInfo->topAddr == NULL) ? SCE_ERROR_KERNEL_NO_MEMORY : SCE_ERROR_OK; // 0x00007DF4
+		break;
+	case SCE_EXEC_FILE_TYPE_ELF:
+		// 0x00007CA0
+		/* Don't permit kernel mode for an ELF file. */
+		if ((pExecInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL)
+			return SCE_ERROR_KERNEL_ERROR;
+
+		if (pExecInfo->isCompressed) { // 0x00007CC0
+			pExecInfo->topAddr = pExecInfo->fileBase; // 0x00007D00
+			pMod->memId = pExecInfo->decompressionMemId; // 0x00007CC4 & 0x00007D08
+		}
+		pMod->mpIdText = pExecInfo->partitionId; // 0x00007CCC
+		pMod->mpIdData = pExecInfo->partitionId; // 0x00007CD4
+		return SCE_ERROR_OK;
+	default: // 0x00007ECC
+		return SCE_ERROR_KERNEL_ILLEGAL_OBJECT_FORMAT;
+	}
 }
 
 // sub_00007ED8
@@ -1390,7 +1450,7 @@ static s32 _PrologueModule(SceModuleMgrParam *modParams, SceModule *pMod)
         modStart = (pMod->moduleBootstart != modStart) ? pMod->moduleBootstart : (u32 *)pMod->entryAddr;
     
     /* No module entry point found */
-    if ((s32)modStart == -1 || modStart == NULL) {
+    if ((s32)modStart == -1 || modStart == NULL) { // 0x000081FC
         pMod->userModThid = -1;
         return SCE_ERROR_OK;
     }

@@ -19,7 +19,7 @@
 * @return SCE_ERROR_OK on success, < 0 on error.
 * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointers can't be accessed from the current context or are NULL.
 */
-// Subroutine sceKernelGetModuleIdList - Address 0x000041E8 - Aliases: ModuleMgrForKernel_303FAB7F
+// Subroutine ModuleMgrForUser_644395E2 - Address 0x000041E8 - Aliases: ModuleMgrForKernel_303FAB7F
 s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
 {
 	s32 oldK1;
@@ -51,7 +51,7 @@ s32 sceKernelGetModuleIdList(SceUID *modIdList, SceSize size, u32 *idCount)
 * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found
 * @return SCE_ERROR_KERNEL_CANNOT_GET_MODULE_INFO if you don't have the right to access information about this module
 */
-// Subroutine sceKernelQueryModuleInfo - Address 0x00004270 - Aliases: ModuleMgrForKernel_22BDBEFF
+// Subroutine ModuleMgrForUser_748CBED9 - Address 0x00004270 - Aliases: ModuleMgrForKernel_22BDBEFF
 s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *pModInfo)
 {
 	s32 oldK1;
@@ -206,7 +206,7 @@ s32 sceKernelGetModuleId(void)
 * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed from the current context.
 * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
 */
-// Subroutine sceKernelGetModuleIdByAddress - Address 0x00004598 - Aliases: ModuleMgrForKernel_433D5287
+// Subroutine ModuleMgrForUser_D8B73127 - Address 0x00004598 - Aliases: ModuleMgrForKernel_433D5287
 s32 sceKernelGetModuleIdByAddress(const void *codeAddr)
 {
 	s32 oldK1;
@@ -250,7 +250,7 @@ s32 sceKernelGetModuleIdByAddress(const void *codeAddr)
 * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed from the current context.
 * @return SCE_ERROR_KERNEL_UNKNOWN_MODULE if module couldn't be found.
 */
-// Subroutine sceKernelGetModuleGPByAddress - Address 0x00004628 
+// Subroutine ModuleMgrForUser_D2FBC957 - Address 0x00004628 
 s32 sceKernelGetModuleGPByAddress(const void *codeAddr, u32 *pGP)
 {
 	s32 oldK1;
