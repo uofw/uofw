@@ -17,17 +17,17 @@ typedef struct PspOpenPSID {
 extern int SysMemForKernel_7FF2F35A(int);
 extern int sceOpenPSIDGetPSID(PspOpenPSID, int);
 
-u32 sub_0045C(int, int, u32);
-void sub_0055C();
-u32 sub_00590(int, int);
-u32 sub_005D8(int *, char *, int);
-u32 sub_00658(char *, char *, int, int *, int);
-u32 sub_00728(char *, int, char *, char *);
-u32 sub_007B4(void *, int);
-u32 sub_007F8(void *, int);
-u32 sub_00840(void *, int);
-u32 sub_008F8(int, char *, int);
-u32 sub_0098C(char *, int);
+u32 sub_0000045C(int, int, u32);
+void sub_0000055C();
+u32 sub_00000590(int, int);
+u32 sub_000005D8(int *, char *, int);
+u32 sub_00000658(char *, char *, int, int *, int);
+u32 sub_00000728(char *, int, char *, char *);
+u32 sub_000007B4(void *, int);
+u32 sub_000007F8(void *, int);
+u32 sub_00000840(void *, int);
+u32 sub_000008F8(int, char *, int);
+u32 sub_0000098C(char *, int);
 
 
 /*
@@ -38,16 +38,18 @@ int g_0xE34;
 int g_0xE38;
 
 /*
- * Address 0x00000000 
+ * Subroutine sceNpCore_57E15796 - Address 0x00000000 
+ * Exported in sceNpCore
  */
 void sceNpCore_57E15796(void) {
 	s32 oldk1 = pspShiftK1();
-	sub_0055C();
+	sub_0000055C();
 	pspSetK1(oldk1);
 }
 
 /*
- * Address 0x0000002C
+ * Subroutine sceNpCore_52440ABF - Address 0x0000002C 
+ * Exported in sceNpCore
  */
 u32 sceNpCore_52440ABF(int address) {
 	s32 oldk1 = pspShiftK1();
@@ -67,7 +69,8 @@ u32 sceNpCore_52440ABF(int address) {
 }
 
 /*
- * Address 0x00000084
+ * Subroutine sceNpCore_243690EE - Address 0x00000084 
+ * Exported in sceNpCore
  */
 u32 sceNpCore_243690EE(int address, int size) {
 	s32 oldk1 = pspShiftK1();
@@ -75,7 +78,7 @@ u32 sceNpCore_243690EE(int address, int size) {
 	if (address != 0) {
 		//0xB8
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_00590(address, size);
+			u32 res = sub_00000590(address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -87,17 +90,18 @@ u32 sceNpCore_243690EE(int address, int size) {
 }
 
 /*
- * Address 0x000000E8 
+ * Subroutine sceNpCore_8AFAB4A0 - Address 0x000000E8 
+ * Exported in sceNpCore
  */
-u32 sceNpCore_8AFAB4A0(int a0, int address, int size) {
+u32 sceNpCore_8AFAB4A0(int arg0, int address, int size) {
 	s32 oldk1 = pspShiftK1();
 	//0x11C
-	if (((a0 < 1) | (size < 1)) == 0) {
+	if (((arg0 < 1) | (size < 1)) == 0) {
 		//0x124
-		if ((((a0 + 12) | a0) & (a0 < 1)) >= 0) {
+		if ((((arg0 + 12) | arg0) & (arg0 < 1)) >= 0) {
 			//0x138
 			if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-				u32 res = sub_005D8((int *) a0, (char *) address, size);
+				u32 res = sub_000005D8((int *) arg0, (char *) address, size);
 				pspSetK1(oldk1);
 				return res;
 			}
@@ -111,19 +115,20 @@ u32 sceNpCore_8AFAB4A0(int a0, int address, int size) {
 }
 
 /*
- * Address 0x00000168 
+ * Subroutine sceNpCore_5145344F - Address 0x00000168 
+ * Exported in sceNpCore
  */
-u32 sceNpCore_5145344F(char *a0, int address, int size, int a3, int t0) {
+u32 sceNpCore_5145344F(char *arg0, int address, int size, int arg3, int t0) {
 	s32 oldk1 = pspShiftK1();
 	//0x194
 	if (address != 0) {
 		//0x19C
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
 			//0x1A4
-			if (a3 != 0) {
+			if (arg3 != 0) {
 				//0x1B8
-				if (((oldk1 << 11) & (((a3 | t0) | a3) | t0)) >= 0) {
-					u32 res = sub_00658(a0, (char *) address, size, (int *) a3,
+				if (((oldk1 << 11) & (((arg3 | t0) | arg3) | t0)) >= 0) {
+					u32 res = sub_00000658(arg0, (char *) address, size, (int *) arg3,
 							t0);
 					pspSetK1(oldk1);
 					return res;
@@ -140,20 +145,21 @@ u32 sceNpCore_5145344F(char *a0, int address, int size, int a3, int t0) {
 }
 
 /*
- * Address 0x000001E8 
+ * Subroutine sceNpCore_9218ACF6 - Address 0x000001E8 
+ * Exported in sceNpCore
  */
-u32 sceNpCore_9218ACF6(int address, int size, int a2, int a3) {
+u32 sceNpCore_9218ACF6(int address, int size, int arg2, int arg3) {
 	s32 oldk1 = pspShiftK1();
 	//0x214
 	if (address != 0) {
 		//0x21C
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
 			//0x224
-			if (a2 != 0) {
+			if (arg2 != 0) {
 				//0x238
-				if (((oldk1 << 11) & (((a2 + a3) | a2) | a3)) >= 0) {
-					u32 res = sub_00728((char *) address, size, (char *) a2,
-							(char *) a3);
+				if (((oldk1 << 11) & (((arg2 + arg3) | arg2) | arg3)) >= 0) {
+					u32 res = sub_00000728((char *) address, size, (char *) arg2,
+							(char *) arg3);
 					pspSetK1(oldk1);
 					return res;
 				}
@@ -169,7 +175,8 @@ u32 sceNpCore_9218ACF6(int address, int size, int a2, int a3) {
 }
 
 /*
- * Address 0x00000268 
+ * Subroutine sceNpCore_B13D27CA - Address 0x00000268 
+ * Exported in sceNpCore
  */
 u32 sceNpCore_B13D27CA(int address, int size) {
 	s32 oldk1 = pspShiftK1();
@@ -177,7 +184,7 @@ u32 sceNpCore_B13D27CA(int address, int size) {
 	if (address != 0) {
 		//0x29C
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_007B4((int *) address, size);
+			u32 res = sub_000007B4((int *) address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -189,7 +196,8 @@ u32 sceNpCore_B13D27CA(int address, int size) {
 }
 
 /*
- * Address 0x000002CC 
+ * Subroutine sceNpCore_0366DAB6 - Address 0x000002CC 
+ * Exported in sceNpCore
  */
 u32 sceNpCore_0366DAB6(int address, int size) {
 	s32 oldk1 = pspShiftK1();
@@ -197,7 +205,7 @@ u32 sceNpCore_0366DAB6(int address, int size) {
 	if (address != 0) {
 		//0x300
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_007F8((int *) address, size);
+			u32 res = sub_000007F8((int *) address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -209,7 +217,8 @@ u32 sceNpCore_0366DAB6(int address, int size) {
 }
 
 /*
- * Address 0x00000330 
+ * Subroutine sceNpCore_E7AED5A3 - Address 0x00000330 
+ * Exported in sceNpCore 
  */
 u32 sceNpCore_E7AED5A3(int address, int size) {
 	s32 oldk1 = pspShiftK1();
@@ -217,7 +226,7 @@ u32 sceNpCore_E7AED5A3(int address, int size) {
 	if (address != 0) {
 		//0x364
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_00840((int *) address, size);
+			u32 res = sub_00000840((int *) address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -229,15 +238,16 @@ u32 sceNpCore_E7AED5A3(int address, int size) {
 }
 
 /*
- * Address 0x00000394 
+ * Subroutine sceNpCore_04096629 - Address 0x00000394 
+ * Exported in sceNpCore (No arg0 check)
  */
-u32 sceNpCore_04096629(int a0, int address, int size) {
+u32 sceNpCore_04096629(int arg0, int address, int size) {
 	s32 oldk1 = pspShiftK1();
 	//0x3C0
 	if (address != 0) {
 		//0x3C8
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_008F8(a0, (char *)address, size);
+			u32 res = sub_000008F8(arg0, (char *)address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -249,15 +259,16 @@ u32 sceNpCore_04096629(int a0, int address, int size) {
 }
 
 /*
- * Address 0x000003F8 
+ * Subroutine sceNpCore_515B65E8 - Address 0x000003F8 
+ * Exported in sceNpCore
  */
-u32 sceNpCore_515B65E8(int a0, int address, int size) {
+u32 sceNpCore_515B65E8(int arg0, int address, int size) {
 	s32 oldk1 = pspShiftK1();
 	//0x424
 	if (address != 0) {
 		//0x42C
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_0045C(a0, address, size);
+			u32 res = sub_0000045C(arg0, address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -270,17 +281,17 @@ u32 sceNpCore_515B65E8(int a0, int address, int size) {
 
 /* 
  * TODO: Resolve address
- * Address 0x0000045C 
+ * Subroutine sub_0000045C - Address 0x0000045C 
  * StringAddress
  * StringSize
  */
-u32 sub_0045C(int a0, int address, u32 size) {
-	char *strPtr = (char *) ((a0 << 3) + 0x0E00);
+u32 sub_0000045C(int arg0, int address, u32 size) {
+	char *strPtr = (char *) ((arg0 << 3) + 0x0E00);
 	u32 retStatus = 0x80550203;
 	u32 tempSize = size;
 	int tempAddress = address;
 	//0x490 - literal
-	if ((a0 < 3) != 0) {
+	if ((arg0 < 3) != 0) {
 		retStatus = strlen(strPtr);
 		//0x4E0
 		retStatus = strncmp("X-I-5-Version", strPtr, retStatus + 1);
@@ -297,7 +308,7 @@ u32 sub_0045C(int a0, int address, u32 size) {
 			retStatus = strlen(strPtr);
 			//0x520
 			if (strncmp("X-I-5-Status", strPtr, retStatus + 1) == 0) {
-				retStatus = sub_0098C((char *)tempAddress, tempSize);
+				retStatus = sub_0000098C((char *)tempAddress, tempSize);
 				return (retStatus == 0) ? 0x8055030E : retStatus;
 			}
 			//0x4A0
@@ -310,9 +321,9 @@ u32 sub_0045C(int a0, int address, u32 size) {
 }
 
 /*
- * Address 0x0000055C
+ * Subroutine sub_0000055C - Address 0x0000055C 
  */
-void sub_0055C(void) {
+void sub_0000055C(void) {
 	int *s0 = (int *) g_0xE30;
 	int res = SysMemForKernel_7FF2F35A(*s0);
 	//0x578
@@ -325,14 +336,14 @@ void sub_0055C(void) {
 
 /*
  * TODO: Resolve address
- * Address 0x00000590 
+ * Subroutine sub_00000590 - Address 0x00000590
  */
-u32 sub_00590(int a0, int a1) {
+u32 sub_00000590(int arg0, int arg1) {
 	int *s0 = (int *) 0x0DE0;
 	u32 res = 0x80550202;
 	//0x5B0
-	if ((*s0 < a1) != 0) {
-		strcpy(((char *)a0), ((const char *)s0)); //(int, int) strcpy 
+	if ((*s0 < arg1) != 0) {
+		strcpy(((char *)arg0), ((const char *)s0)); //(int, int) strcpy 
 		res = *s0;
 	}
 	//0x5C4
@@ -341,15 +352,15 @@ u32 sub_00590(int a0, int a1) {
 
 /*
  * TODO: Resolve address and redo
- * Address 0x000005D8 
+ * Subroutine sub_000005D8 - Address 0x000005D8
  */
-u32 sub_005D8(int *a0, char *str, int a2) {
-	int *s0 = a0;
+u32 sub_000005D8(int *arg0, char *str, int arg2) {
+	int *s0 = arg0;
 	int *s1 = (int *) ((s0[0] << 3) + 0x0D98);
 	//0x60C
-	if (((*a0 + 4) < 9) != 0) {
+	if (((*arg0 + 4) < 9) != 0) {
 		//0x620
-		if ((*str < a2) != 0) {
+		if ((*str < arg2) != 0) {
 			strcpy(str, str + 4);
 			return *((int *) ((s0[1] << 3) + s1));
 		}
@@ -362,15 +373,15 @@ u32 sub_005D8(int *a0, char *str, int a2) {
 
 /*
  * TODO: Resolve address & "t0" as unused 
- * Address 0x00000658 
+ * Subroutine sub_00000658 - Address 0x00000658 
  */
-u32 sub_00658(char *a0, char *str, int len, int *a3, int t0) {
+u32 sub_00000658(char *arg0, char *str, int len, int *arg3, int t0) {
 	t0 = 0; //This is temporary to avoid compilation error
 	char *tempStr = str;
-	char *s1 = a0;
+	char *s1 = arg0;
 	int tempLen = len;
-	char *s3 = (char *) ((a0[0] << 3) + a0);
-	char *s5 = (char *) a3;
+	char *s3 = (char *) ((arg0[0] << 3) + arg0);
+	char *s5 = (char *) arg3;
 	//0x6A4
 	if ((s1[0] < 3) != 0) {
 		int currLen = strlen(s3);
@@ -394,19 +405,19 @@ u32 sub_00658(char *a0, char *str, int len, int *a3, int t0) {
 }
 
 /*
- * Address 0x00000728 
+ * Subroutine sub_00000728 - Address 0x00000728
  */
-u32 sub_00728(char *a0, int a1, char *a2, char *a3) {
-	char *s1 = a3;
-	char *s2 = a2;
+u32 sub_00000728(char *arg0, int arg1, char *arg2, char *arg3) {
+	char *s1 = arg3;
+	char *s2 = arg2;
 	//0x754
-	if ((*((int *) 0x0E20) < a1) != 0) {
-		strcpy(a0, ((char *) 0x0E24));
+	if ((*((int *) 0x0E20) < arg1) != 0) {
+		strcpy(arg0, ((char *) 0x0E24));
 		//0x768
 		if ((*s1 < 3) == 0) {
-			s2[0] = a3[0];
-			s2[1] = a3[1];
-			s2[2] = a3[2];
+			s2[0] = arg3[0];
+			s2[1] = arg3[1];
+			s2[2] = arg3[2];
 			return 0;
 		}
 		//0x7A8
@@ -416,9 +427,9 @@ u32 sub_00728(char *a0, int a1, char *a2, char *a3) {
 }
 
 /*
- * Address 0x000007B4 
+ * Subroutine sub_000007B4 - Address 0x000007B4 
  */
-u32 sub_007B4(void *data, int len) {
+u32 sub_000007B4(void *data, int len) {
 	u32 res = 0x80550202;
 	//0x7D4
 	if ((len < 50) == 0) {
@@ -430,22 +441,22 @@ u32 sub_007B4(void *data, int len) {
 }
 
 /*
- * Address 0x000007F8 
+ * Subroutine sub_000007F8 - Address 0x000007F8 
  */
-u32 sub_007F8(void *a0, int len) {
+u32 sub_000007F8(void *arg0, int len) {
 	char *s0 = ((char *) 0x0D90);
 	//0x818
 	if ((s0[0] < len) != 0) {
-		strcpy(a0, s0 + 4);
+		strcpy(arg0, s0 + 4);
 	}
 	//0x82C
 	return 0x80550202;
 }
 
 /*
- * Address 0x00000840 
+ * Subroutine sub_00000840 - Address 0x00000840
  */
-u32 sub_00840(void *buf, int len) {
+u32 sub_00000840(void *buf, int len) {
 	PspOpenPSID psid;
 	char *s0 = buf; //u8 * s0 = *s3 =  *buf
 	int i = 0;
@@ -471,17 +482,17 @@ u32 sub_00840(void *buf, int len) {
 }
 
 /*
- * Address 0x000008F8 
+ * Subroutine sub_000008F8 - Address 0x000008F8 
  */
-u32 sub_008F8(int a0, char * a1, int len) { //char a1 - > char * a1
-	char *s3 = (char *) ((a0 << 3) + a0);
+u32 sub_000008F8(int arg0, char * arg1, int len) { //char arg1 - > char * arg1
+	char *s3 = (char *) ((arg0 << 3) + arg0);
 	//0x934
-	if ((a0 < 3) != 0) {
+	if ((arg0 < 3) != 0) {
 		int res = strlen(s3); //use res as int instead of unsigned 32.
 		//0x950
 		if ((res < len) != 0) {
-			strcpy(a1, s3);
-			return ((a0 + 1) < 3) < 1;
+			strcpy(arg1, s3);
+			return ((arg0 + 1) < 3) < 1;
 		}
 		//0x96C
 		return 0x80550202;
@@ -491,15 +502,15 @@ u32 sub_008F8(int a0, char * a1, int len) { //char a1 - > char * a1
 }
 
 /*
- * Address 0x0000098C
+ * Subroutine sub_0000098C - Address 0x0000098C
  */
-u32 sub_0098C(char * a0, int a1) { //char a0 -> char * a0
+u32 sub_0000098C(char * arg0, int arg1) { //char arg0 -> char * arg0
 	int data[4];
 	u32 s0 = 0;
-	int s1 = (int)a0 + 0x0E18; //int s1 = a0 + *((int *) 0x0E18);
+	int s1 = (int)arg0 + 0x0E18; //int s1 = arg0 + *((int *) 0x0E18);
 	//0x9B8 - literal
-	if ((a1 < (*((int *) 0x0E18) < 2)) == 0) {
-		u32 res = strncmp(a0, ((const char*) 0x0E1C), 0);//one more arg - temporary 0
+	if ((arg1 < (*((int *) 0x0E18) < 2)) == 0) {
+		u32 res = strncmp(arg0, ((const char*) 0x0E1C), 0);//one more arg - temporary 0
 		//0x9E8
 		if (res != 0) {
 			return res;
@@ -509,7 +520,7 @@ u32 sub_0098C(char * a0, int a1) { //char a0 -> char * a0
 		//0xA10
 		if (s1 != data[0]) {
 			//0xA18
-			if (a0 == 0) {
+			if (arg0 == 0) {
 				return 0x80550201;
 			}
 			//0x9F0
