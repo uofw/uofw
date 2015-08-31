@@ -1,14 +1,16 @@
 #include <common_imp.h>
 
-SCE_MODULE_INFO("sceMlnBridge_MSApp_Driver", 0x1006, 1, 1);
+SCE_MODULE_INFO("sceMlnBridge_MSApp_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 SCE_MODULE_BOOTSTART("sceMlnBridge_msapp_driver_0ED6A564");
 SCE_MODULE_STOP("sceMlnBridge_msapp_driver_C41F1B67");
+SCE_SDK_VERSION(SDK_VERSION);
 
 // Headers
-extern int sceRtc_driver_CEEF238F(void *);
+extern int sceRtc_driver_CEEF238F(void *);	//sceRtcEnd?
+extern int sceKernelGetModel (void);
 
-int sub_000003E0(const char *path, const char *pathType, void *data, int);
-int sub_00000318(char *);
+u32 sub_000003E0(const char *path, const char *pathType, void *data, int);
+u32 sub_00000318(char *path);
 
 /*
   Subroutine sceMlnBridge_msapp_D527DEB0 - Address 0x00000000 
@@ -143,6 +145,12 @@ s32 sceMlnBridge_msapp_CC6037D7(u32 arg0) {
  Subroutine sceMlnBridge_msapp_0398DEFF - Address 0x00000284  
  Exported in sceMlnBridge_msapp
 */
+s32 sceMlnBridge_msapp_0398DEFF() {
+	s32 oldK1 = pspShiftK1();
+	s32 res = sceKernelGetModel();
+	pspSetK1(oldK1);
+	return res; // return res = (u32)0 < (u32)res; => res = !res?
+}
 
 /*
  Subroutine sceMlnBridge_msapp_7AD66017 - Address 0x000002B4 
