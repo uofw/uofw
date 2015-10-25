@@ -24,7 +24,7 @@ s32 sceMlnBridge_msapp_D527DEB0(char *arg0, int arg1) {
 	int arg3 = (int)arg0 + arg1;
 
 	//0x34
-	if (((oldK1 << 11) & ((arg3 | (int)arg0) | arg1)) >= 0) {
+	if (((oldK1) & ((arg3 | (int)arg0) | arg1)) >= 0) {
 		//0x40
 		if ((arg1 < 4) == 0) {
 			*((int *) data) = 0;
