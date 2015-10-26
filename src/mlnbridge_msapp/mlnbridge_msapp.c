@@ -6,8 +6,8 @@ SCE_MODULE_STOP("sceMlnBridge_msapp_driver_C41F1B67");
 SCE_SDK_VERSION(SDK_VERSION);
 
 // Headers
-extern int sceRtc_driver_CEEF238F(void *);	//sceRtcEnd?
-extern int sceKernelGetModel (void);
+extern int sceRtcGetCurrentSecureTick(void *);	//sceRtc_driver_CEEF238F
+extern int sceKernelGetModel(void);
 
 u32 sub_000003E0(const char *path, const char *pathType, void *data, int);
 u32 sub_00000318(char *path);
@@ -21,7 +21,7 @@ s32 sceMlnBridge_msapp_D527DEB0(char *arg0, int arg1) {
 	s32 res = 0x80000023;
 
 	s32 oldK1 = pspShiftK1(); //s1
-	int arg3 = (int)arg0 + arg1;
+	int arg3 = (int)arg0 + arg1; //Recheck
 
 	//0x34
 	if (((oldK1) & ((arg3 | (int)arg0) | arg1)) >= 0) {
@@ -92,7 +92,7 @@ s32 sceMlnBridge_msapp_3811BA77(int address) {
 	s32 oldK1 = pspShiftK1();
 	//0x128
 	if ((((address + 8) | address) & (oldK1 << 11)) >= 0) {
-		res = sceRtc_driver_CEEF238F((int *) address);	// (void *) -> ?
+		res = sceRtcGetCurrentSecureTick((int *) address);	// (void *) -> ?
 	}
 	//0x138
 	pspSetK1(oldK1);
@@ -140,6 +140,24 @@ s32 sceMlnBridge_msapp_CC6037D7(u32 arg0) {
  Subroutine sceMlnBridge_msapp_494B3B0B - Address 0x00000220 
  Exported in sceMlnBridge_msapp
  */
+s32 sceMlnBridge_msapp_494B3B0B() {
+	s32 v0;
+	s32 oldK1 = pspShiftK1();
+	sceKernelGetModel();
+	a0 = (v0 == 0 || v0 == 0xA);
+	a3 = (v0 == 0 || a0 == 0);
+	a0 = -1;
+	a1 = 0;
+	a2 = 3;
+	v1 = 0;
+	if (v0 != 0 && v0 != 0xA) { //checking if model is a PSP Phat?
+		pspSetK1(oldK1);
+		v0 = sceDve_driver_253B69B6(); // This function does not exist for PSP 1000's
+		return v0;
+	}
+	pspSetK1(oldK1);
+	return v0;
+}
  
 /*
  Subroutine sceMlnBridge_msapp_0398DEFF - Address 0x00000284  
@@ -156,6 +174,28 @@ s32 sceMlnBridge_msapp_0398DEFF() {
  Subroutine sceMlnBridge_msapp_7AD66017 - Address 0x000002B4 
  Exported in sceMlnBridge_msapp
 */
+s32 sceMlnBridge_msapp_7AD66017() {
+	s32 res;
+	s32 oldK1 = pspShiftK1();
+	arg0 = v0;
+	arg2 = v0 | 0x7; //arg2 = arg0 | 0x7;
+	v0 = v0 -4;
+	arg2 = ((u32)v0 < (u32)1) | ((u32)arg2 < (u32)1); // a1 | a3; ((u32)v0 < (u32)1) is the same as a1 = (v0 == 4);
+	pspSetK1(oldK1);
+	
+	a1 = 0;
+	if (arg2 != 0) {
+		a1 = 1;
+		v0 = a1;
+	}
+	
+	v1 = 9;
+	a1 = 1;
+	
+	if (arg0 = 9) {
+		v0 = a1;
+	}
+}
 
 /*
  Subroutine sub_00000318 - Address 0x00000318 
