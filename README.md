@@ -10,7 +10,7 @@ This project aims to reverse engineer the basic PSP kernel to provide a free and
  
 ## Installation
 
-You can run components of uOFW by following the directions at [uofw/uofwinst](/uofw/uofwinst/).
+You can run components of uOFW by following the directions at [uofw/uofwinst](https://github.com/uofw/uofwinst).
 
 ## Contributing
 
