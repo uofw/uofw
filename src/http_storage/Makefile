@@ -6,6 +6,6 @@ OBJS = http_storage.o
 
 #DEBUG = 1
 
-LIBS = -lIoFileMgrForKernel -lModuleMgrForKernel -lSysMemForKernel -lSysclibForKernel -lsceChkreg_driver
+LIBS = -lSysMemForKernel -lSysclibForKernel -lIoFileMgrForKernel -lModuleMgrForKernel -lsceChkreg_driver
 
 include ../../lib/build.mak

@@ -26,7 +26,7 @@
 
 SCE_MODULE_INFO("sceHttpStorage_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD, 1, 3);
 SCE_MODULE_STOP("sceHttpStorage_driver_C59AC98A");
-SCE_SDK_VERSION( SDK_VERSION);
+SCE_SDK_VERSION(SDK_VERSION);
 
 extern int sceKernelUnloadModule(int);
 extern int sceKernelStartModule(int, int, int, void *data, int);
