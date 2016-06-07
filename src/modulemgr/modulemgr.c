@@ -271,7 +271,7 @@ s32 ModuleMgrInit(SceSize argc, void *argp)
 
 // Subroutine ModuleMgrForUser_CDE1C1FE - Address 0x00005B10
 // TODO: Figure out structure member unk36 of SceModuleManagerCB
-s32 ModuleMgrForUser_CDE1C1FE(void)
+SceBool ModuleMgrForUser_CDE1C1FE(void)
 {
 	s32 oldK1;
 
@@ -279,7 +279,7 @@ s32 ModuleMgrForUser_CDE1C1FE(void)
 
 	if (g_ModuleManager.unk36 == NULL)
 		//pspSetK1(oldK1) forgotten by Sony
-		return 1;
+		return SCE_TRUE;
 
 	u32 *unk = g_ModuleManager.unk36;
 
