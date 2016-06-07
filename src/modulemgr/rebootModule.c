@@ -57,8 +57,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
 		if (attr == -1) //0x00004874
 			attr = SCE_KERNEL_TH_DEFAULT_ATTR;
 
-		// TODO: Add proper define for 0x1E00
-		switch (pMod->attribute & 0x1E00) {
+		switch (pMod->attribute & SCE_MODULE_PRIVILEGE_LEVELS) {
 		case SCE_MODULE_VSH:
 			threadMode = SCE_KERNEL_TH_VSH_MODE;
 			break;
