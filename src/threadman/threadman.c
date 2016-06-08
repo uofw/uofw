@@ -6,6 +6,13 @@ SCE_MODULE_INFO(
 // TODO: add SCE_MODULE_BOOTSTART, ...
 SCE_SDK_VERSION(SDK_VERSION);
 
+
+typedef struct {
+    int pspCop0State; // 1992
+} SceUnkStruct1;
+
+SceUnkStruct1 g_UnkStruct1; // 0x00019F40
+
 // TODO: Reverse function sub_00000080
 // Subroutine sub_00000080 - Address 0x00000080
 void sub_00000080()
@@ -1366,9 +1373,34 @@ void sceKernelGetKTLS()
 
 // TODO: Reverse function module_bootstart
 // Subroutine module_bootstart - Address 0x00011F68
-void module_bootstart()
+s32 module_bootstart(SceSize argc, void *argp)
 {
-    
+    (void)argc;
+    (void)argp;
+
+    sceKernelCpuSuspendIntr();
+
+    SysMemForKernel_22A114DC(&g_UnkStruct1, 0, 2052);
+
+    // The content of coprocessor register $22 of the CP0 is loaded into general register $a3
+    g_UnkStruct1.pspCop0State = pspCop0StateGet(22); // 0x00011FC0
+
+    sub_00000C50(...);
+
+    sub_00016B40();
+    sub_0000283C(...);
+    sub_00004FBC(...);
+    sub_00006120(...);
+    sub_0000743C(...);
+    sub_000084B4(...);
+    sub_000092F4(...);
+    sub_0000B1B4(...);
+    sub_0000C244(...);
+    sub_0000D474(...);
+    sub_0000E4EC(...);
+    sub_0001121C(...);
+
+    // TODO: Finish this function
 }
 
 // TODO: Reverse function sub_000126AC
@@ -1632,7 +1664,7 @@ void ThreadManForKernel_D366D35A()
 
 // TODO: Reverse function sub_00016B40
 // Subroutine sub_00016B40 - Address 0x00016B40
-void sub_00016B40()
+void sub_00016B40(void)
 {
     
 }
