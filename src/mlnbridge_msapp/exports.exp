@@ -1,4 +1,7 @@
-# Define the exports for the prx
+# Copyright (C) 2011, 2012 The uOFW team
+# See the file COPYING for copying permission.
+
+# Export file automatically generated with prxtool
 PSP_BEGIN_EXPORTS
 
 # These four lines are mandatory (although you can add other functions like module_stop)

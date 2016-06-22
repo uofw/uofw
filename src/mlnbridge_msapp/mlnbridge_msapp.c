@@ -129,7 +129,7 @@ s32 sceMlnBridge_msapp_F02B9478(u32 arg0) {
 s32 sceMlnBridge_msapp_CC6037D7(u32 arg0) {
 	arg0 = 0; // Temporary - to get rid of compiler error
 	s32 res;
-	char mod_path[] = { "flash0:/kd/np_commerce2_store.prx" };
+	char mod_path[] = {"flash0:/kd/np_commerce2_store.prx"};
 	s32 oldK1 = pspShiftK1();
 	res = sub_00000318(mod_path);
 	pspSetK1(oldK1);
@@ -141,22 +141,18 @@ s32 sceMlnBridge_msapp_CC6037D7(u32 arg0) {
  Exported in sceMlnBridge_msapp
  */
 s32 sceMlnBridge_msapp_494B3B0B() {
-	s32 v0;
 	s32 oldK1 = pspShiftK1();
-	sceKernelGetModel();
-	a0 = (v0 == 0 || v0 == 0xA);
-	a3 = (v0 == 0 || a0 == 0);
-	a0 = -1;
-	a1 = 0;
-	a2 = 3;
-	v1 = 0;
-	if (v0 != 0 && v0 != 0xA) { //checking if model is a PSP Phat?
+	s32 model = sceKernelGetModel();
+	s32 res = 0;
+	
+	if (model != 0 && model != 0xA) { //checking if model is a PSP Phat? 
+		res = sceDve_driver_253B69B6(-1, 0, 3); // This function does not exist for PSP 1000's also 4th argument is 0
 		pspSetK1(oldK1);
-		v0 = sceDve_driver_253B69B6(); // This function does not exist for PSP 1000's
-		return v0;
+		return model;
 	}
+	
 	pspSetK1(oldK1);
-	return v0;
+	return SCE_ERROR_OK;
 }
  
 /*
