@@ -36,7 +36,7 @@ typedef struct {
     /** The number of module hashes (most likely used to match different module versions) */
     u32 numHashes; // 4
     /** List containing numHashes hashes, each of the size of 16 bytes. */
-    u32 *pHashList; // 8
+    void *pHashList; // 8
 } OverrideRule; // Size: 12
 
 
@@ -247,9 +247,9 @@ SceBool _CheckOverride(s32 apiType, void *modBuf, SceUID *pFd) // 0x00008568
         /* Scan current override rule for a matching hash. */
         u32 j;
         for (j = 0; j < curRule.numHashes; j++) {
-            u32 curHash = curRule.pHashList[j];
+            u32 *pCurHash = (u32 *)((u32 *)curRule.pHashList)[j];
 
-            s32 res = memcmp(pPspHeader->keyData4, curHash, sizeof pPspHeader->keyData4); // 0x0000865C
+            s32 res = memcmp(pPspHeader->keyData4, pCurHash, sizeof pPspHeader->keyData4); // 0x0000865C
             if (res == 0) {
                 /* We found a matching hash, load module provided by the PSP kernel. */
                 *pFd = sceIoOpen(curRule.overridePath, SCE_O_ENCRYPTED | SCE_O_RDONLY, 0);

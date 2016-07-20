@@ -8,7 +8,7 @@
 #include <modulemgr_init.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_options.h>
-#include <sysmem_sysclib.h>
+#include <sysmem_kdebug.h>
 
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
@@ -472,7 +472,7 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
         return fd;
     }
 
-    status = sceIoIoctl(fd, SCE_GAMEDATA_SET_SECURE_INSTALL_ID, secureInstallId, SCE_SECURE_INSTALL_ID_LEN, NULL, 0); // 0x00000EE4
+    status = sceIoIoctl(fd, SCE_GAMEDATA_SET_SECURE_INSTALL_ID, (void *)secureInstallId, SCE_SECURE_INSTALL_ID_LEN, NULL, 0); // 0x00000EE4
     if (status < SCE_ERROR_OK) { // 0x00000EEC
         sceIoClose(fd); // 0x00000FDC
         pspSetK1(oldK1);
@@ -1568,7 +1568,7 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
 
 // Subroutine ModuleMgrForKernel_30727524 - Address 0x00002D90
 SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff fileOffset, 
-    const char *secureInstallId, s32 flag, SceKernelLMOption *pOption)
+    const char *secureInstallId, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
     SceUID fd;
@@ -1739,7 +1739,7 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
     }
 
     //0x00003260 - 0x000032AC
-    if (status = _checkLMOptionConditions(pOption) < 0) {
+    if ((status = _checkLMOptionConditions(pOption)) < 0) {
         pspSetK1(oldK1);
         return status;
     }
@@ -2563,6 +2563,7 @@ SceUID sceKernelLoadModuleBufferBootInitBtcnf(SceSize size, void *base, s32 flag
     SceModuleMgrParam modParams;
 
     (void)flag;
+    (void)opt;
 
     oldK1 = pspShiftK1(); // 0x000058BC
 

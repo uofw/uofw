@@ -9,6 +9,7 @@
 
 #include <interruptman.h>
 #include <modulemgr_options.h>
+#include <sysmem_sysclib.h>
 #include <sysmem_kernel.h>
 
 #include "modulemgr_int.h"
@@ -85,7 +86,7 @@ static inline s32 _checkMemoryBlockInfoConditions(const SceSysmemMemoryBlockInfo
     u32 offsetLow;
     u32 offsetHigh;
 
-    if (!pspK1DynBufOk(pBlkInfo->addr, pBlkInfo->memSize)) // 0x00000D00
+    if (!pspK1DynBufOk((void *)pBlkInfo->addr, pBlkInfo->memSize)) // 0x00000D00
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
 
     offsetLow = (u32)offset;

@@ -4,7 +4,7 @@
 
 #include <common_imp.h>
 
-#include <loadcore.h>
+//#include <loadcore.h>
 #include <modulemgr_init.h>
 #include <sysmem_sysclib.h>
 
@@ -69,8 +69,7 @@ u32 sceKernelBootFrom(void)
         return SCE_INIT_BOOT_MS; //0x00004CE8 | 0x00004D50
         
     case SCE_EXEC_FILE_APITYPE_MS4:
-        char *fileName = sceKernelInitFileName(); //0x00004D58
-        if (strncmp(fileName, "flash3:", strlen("flash3:")) == 0) //0x00004D6C & 0x00004D7C
+        if (strncmp(sceKernelInitFileName(), "flash3:", strlen("flash3:")) == 0) // 0x00004D58 & 0x00004D6C & 0x00004D7C
             return SCE_INIT_BOOT_FLASH3;
         return SCE_INIT_BOOT_MS;
         
@@ -118,9 +117,8 @@ u32 InitForKernel_9D33A110(void)
     case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: //0x00004F10
         return SCE_INIT_BOOT_MS; //0x00004E30
         
-    case SCE_EXEC_FILE_APITYPE_MS4:
-        char *fileName = sceKernelInitFileName(); //0x00004F14
-        if (strncmp(fileName, "flash3:", strlen("flash3:")) == 0) //0x00004F28 & 0x00004F38
+    case SCE_EXEC_FILE_APITYPE_MS4: 
+        if (strncmp(sceKernelInitFileName(), "flash3:", strlen("flash3:")) == 0) // 0x00004F14 & 0x00004F28 & 0x00004F38
             return SCE_INIT_BOOT_FLASH3;
         return SCE_INIT_BOOT_MS;
         
@@ -156,7 +154,7 @@ u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag,
     
     if (flag < 4) { //0x00004F64
         if (g_init.bootCallbacks1 == NULL) { //0x00004F78
-            result = bootCBFunc(1, 0, NULL); //0x00004FC8
+            result = bootCBFunc((void *)1, 0, NULL); //0x00004FC8
             if (pStatus != NULL) //0x00004FD0
                 *pStatus = result;
             return SCE_ERROR_OK;
@@ -167,7 +165,7 @@ u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag,
         g_init.curBootCallback1->bootCBFunc = NULL; //0x00004FA8
     } else {
         if (g_init.bootCallbacks2 == NULL) { //0x00004FEC
-            result = bootCBFunc(1, 0, NULL); //0x00004FC8
+            result = bootCBFunc((void *)1, 0, NULL); //0x00004FC8
             if (pStatus != NULL) //0x00004FD0
                 *pStatus = result;
             return SCE_ERROR_OK;

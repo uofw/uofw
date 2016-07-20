@@ -8,6 +8,7 @@
 #include <memlmd.h>
 #include <mesgled.h>
 #include <modulemgr.h>
+#include <modulemgr_moduleInfo.h>
 #include "common_imp.h"
 #include "threadman_kernel.h"
 
@@ -668,6 +669,23 @@ typedef struct {
 /** SceModule.status */
 #define SCE_MODULE_USER_MODULE  (0x100)
 
+/** SceModule.status */
+// TODO: Change name to something like *_MCB_STATE
+#define GET_MCB_STATUS(status)              (status & 0xF)
+#define SET_MCB_STATUS(v, m)                (v = (v & ~0xF) | m)
+
+enum ModuleMgrMcbStatus {
+    MCB_STATUS_NOT_LOADED = 0,
+    MCB_STATUS_LOADING = 1,
+    MCB_STATUS_LOADED = 2,
+    MCB_STATUS_RELOCATED = 3,
+    MCB_STATUS_STARTING = 4,
+    MCB_STATUS_STARTED = 5,
+    MCB_STATUS_STOPPING = 6,
+    MCB_STATUS_STOPPED = 7,
+    MCB_STATUS_UNLOADED = 8
+};
+
 /** The SceModule structure represents a loaded module in memory. */
 typedef struct SceModule {
     /** Pointer to the next registered module. Modules are connected via a linked list. */
@@ -729,12 +747,12 @@ typedef struct SceModule {
      * A pointer to a module's rebootBefore entry function. This function is probably executed 
      * before a reboot. 
      */
-	SceKernelThreadEntry moduleRebootBefore; //92
+    SceKernelRebootKernelThreadEntry moduleRebootBefore; //92
     /** 
      * A pointer to a module's rebootPhase entry function. This function is probably executed 
      * during a reboot. 
      */
-	SceKernelThreadEntry moduleRebootPhase; //96
+    SceKernelRebootKernelThreadEntry moduleRebootPhase; //96
     /** 
      * The entry address of the module. It is the offset from the start of the TEXT segment to the 
      * program's entry point. 
@@ -889,7 +907,7 @@ s32 sceKernelLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size
  * @param size The number of entry tables to unlink.
  * @return 
  */
-s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
+s32 sceKernelUnlinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
 
 /**
  * Load a module. This function is used to boot modules during the start of Loadcore. In order for 

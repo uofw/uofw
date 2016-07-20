@@ -6,7 +6,8 @@
 #define	MODULEMGR_MODULEINFO_H
 
 #include "common_header.h"
-#include "modulemgr.h"
+
+#define SCE_KERNEL_MAX_MODULE_SEGMENT       (4) /** The maximum number of segments a module can have. */
 
 /** Holds various information about a module, can be obtained using sceKernelQueryModuleInfo() */
 typedef struct {

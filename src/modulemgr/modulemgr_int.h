@@ -60,8 +60,8 @@ typedef struct {
     SceUID eventId; // 8
     SceUID userThreadId; // 12
     u32 unk16;
-    u32 unk20;
-    u32 unk24;
+    void *unk20;
+    void *unk24;
     u32 unk28;
     s32(*npDrmGetModuleKeyFunction)(SceUID fd, void *, void *); // 32
     SceModule *pModule;
@@ -78,6 +78,7 @@ enum ModuleMgrExecModes {
 extern SceModuleManagerCB g_ModuleManager;
 
 s32 ClearFreePartitionMemory(s32 partitionId);
+s32 _CheckUserModulePartition(SceUID memoryPartitionId);
 s32 _start_exe_thread(SceModuleMgrParam *pModParams);
 
 void ChunkInit(void);

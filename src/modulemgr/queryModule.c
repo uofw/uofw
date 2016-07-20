@@ -3,9 +3,11 @@
 */
 
 #include <common_imp.h>
+#include <interruptman.h>
 #include <loadcore.h>
 #include <modulemgr.h>
 #include <modulemgr_kernel.h>
+#include <sysmem_kernel.h>
 #include <sysmem_sysclib.h>
 
 #include "modulemgr_int.h"
@@ -119,7 +121,8 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *pModInfo)
     }
     pModInfo->nsegment = pMod->nSegments; // 0x000043C8
 
-    for (int i = 0; i < SCE_KERNEL_MAX_MODULE_SEGMENT; i++) { // 0x000043F0
+    s32 i;
+    for (i = 0; i < SCE_KERNEL_MAX_MODULE_SEGMENT; i++) { // 0x000043F0
         pModInfo->segmentAddr[i] = pMod->segmentAddr[i]; // 0x000043E4
         pModInfo->segmentSize[i] = pMod->segmentSize[i]; // 0x000043F4
     }
@@ -223,7 +226,7 @@ SceUID sceKernelGetModuleIdByAddress(const void *addr)
 
     intrState = sceKernelLoadCoreLock(); // 0x000045D8
 
-    pMod = sceKernelFindModuleByAddress(addr); // 0x000045E4
+    pMod = sceKernelFindModuleByAddress((u32)addr); // 0x000045E4
     if (pMod == NULL)
         modId = SCE_ERROR_KERNEL_UNKNOWN_MODULE;
     else
@@ -291,7 +294,7 @@ SceUID sceKernelSearchModuleByName(const char *name)
     pMod = sceKernelFindModuleByName(name); // 0x00005AA8
 
     pspSetK1(oldK1);
-    return (pMod != NULL) ? pMod->modId : SCE_ERROR_KERNEL_UNKNOWN_MODULE;
+    return (pMod != NULL) ? pMod->modId : (SceUID)SCE_ERROR_KERNEL_UNKNOWN_MODULE;
 }
 
 // Subroutine ModuleMgrForKernel_12F99392 - Address 0x00005AE0
@@ -301,5 +304,5 @@ SceUID sceKernelSearchModuleByAddress(const void *addr)
 
     pMod = sceKernelFindModuleByAddress((u32)addr); // 0x00005AE8
 
-    return (pMod != NULL) ? pMod->modId : SCE_ERROR_KERNEL_UNKNOWN_MODULE;
+    return (pMod != NULL) ? pMod->modId : (SceUID)SCE_ERROR_KERNEL_UNKNOWN_MODULE;
 }

@@ -381,7 +381,7 @@ const u32 g_loadCoreExportTable[LOADCORE_EXPORT_TABLE_ENTRIES] = {
     NID_SCE_KERNEL_SET_BOOT_CALLBACK_LEVEL,
     NID_SCE_KERNEL_CHECK_PSP_CONFIG,   
     (u32)sceKernelDeleteModule,
-    (u32)sceKernelUnLinkLibraryEntries,
+    (u32)sceKernelUnlinkLibraryEntries,
     (u32)sceKernelMaskLibraryEntries,
     (u32)sceKernelLoadCoreLock,
     (u32)sceKernelLoadExecutableObject,
@@ -932,7 +932,7 @@ s32 sceKernelLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
 }
 
 //Subroutine LoadCoreForKernel_0295CFCE - Address 0x00001130 
-s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
+s32 sceKernelUnlinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
 {
     void *curStubLibEntryTable;
     
@@ -1170,7 +1170,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
           * its loaded resident libraries.
           */
          if (mod == NULL) {
-             sceKernelUnLinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001F24
+             sceKernelUnlinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001F24
           
              /*
               * In order to unregister the module's resident libraries, we search
@@ -1235,7 +1235,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
              * unregister its resident libraries.
              */
             else if (status == SCE_KERNEL_NO_RESIDENT) { //0x00001954
-                sceKernelUnLinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001C90
+                sceKernelUnlinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001C90
                 
                 exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x00001C98 - 0x00001CA4
                 for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
@@ -1892,7 +1892,7 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
           * SCE_LIB_WEAK_IMPORT, we ignore that linking failure and proceed.
           */
          if (status == EXPORT_LIB_CANNOT_BE_LINKED || !(stubLib->attribute & SCE_LIB_WEAK_IMPORT)) { //0x00003168 & 0x00003178
-             sceKernelUnLinkLibraryEntries(stubLibEntryTable, size); //0x00003214
+             sceKernelUnlinkLibraryEntries(stubLibEntryTable, size); //0x00003214
              FreeLibStubCB(stubLib); //0x0000321C
              return SCE_ERROR_KERNEL_LIBRARY_NOT_FOUND;
          }
@@ -2039,7 +2039,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->stubCount; i++) {        
          switch (lib->entryTable[i]) { 
          case NID_MODULE_REBOOT_PHASE: //0x00003450
-             mod->moduleRebootPhase = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
+             mod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
              break;
          case NID_MODULE_BOOTSTART: //0x000035DC
              mod->moduleBootstart = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003658
@@ -2051,7 +2051,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
              mod->moduleStop = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003610
              break;
          case NID_MODULE_REBOOT_BEFORE: //0x00003478
-             mod->moduleRebootBefore = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
+             mod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
              break;
          }         
     }

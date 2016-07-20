@@ -502,8 +502,8 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     mod->moduleStart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007270
     mod->moduleStop = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007274
     mod->moduleBootstart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007278
-    mod->moduleRebootBefore = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000727C
-    mod->moduleRebootPhase = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007280
+    mod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000727C
+    mod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007280
     mod->textSize = 0; //0x00007284
     mod->dataSize = 0; //0x00007288
     mod->bssSize = 0; //0x0000728C

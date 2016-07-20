@@ -7,7 +7,7 @@
 #include <modulemgr.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_options.h>
-#include <sysmem_sysclib.h>
+#include <sysmem_kdebug.h>
 #include <threadman_kernel.h>
 
 #include "loadModuleChecks_inline.h"
@@ -35,7 +35,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
 
     pUidList = sceKernelGetBlockHeadAddr(uidBlkId); //0x00004754
 
-    u32 i;
+    s32 i;
     SceModule *pMod;
     s32 threadMode;
     for (i = modCount - 1; i >= 0; i--) { //0x00004760
@@ -86,7 +86,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
 
         pspSetGp(pMod->gpValue); //0x00004900
 
-        pMod->userModThid = sceKernelCreateThread("SceModmgrRebootBefore", pMod->moduleRebootBefore, priority,
+        pMod->userModThid = sceKernelCreateThread("SceModmgrRebootBefore", (SceKernelThreadEntry)pMod->moduleRebootBefore, priority,
             stackSize, threadMode | attr, &threadParams); //0x0000491C
 
         pspSetGp(oldGp);
@@ -111,7 +111,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
             continue;
 
         s32 checkSum = sceKernelSegmentChecksum(pMod);
-        if (checkSum == pMod->segmentChecksum)
+        if (checkSum == (s32)pMod->segmentChecksum)
             continue;
 
         pspBreak(SCE_BREAKCODE_ZERO);
@@ -129,7 +129,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
     SceUID uidBlkId;
     SceUID *pUidList;
     SceModule *pMod;
-    s32 modCount;
+    u32 modCount;
     s32 status;
 
     uidBlkId = sceKernelGetModuleListWithAlloc(&modCount); //0x000049F8
@@ -147,8 +147,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
         if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004A58 - 0x00004B04
             continue;
 
-        // TODO: Re-define moduleRebootPhase (it currently is a SceKernelThreadEntry)
-        pMod->moduleRebootPhase(arg1, argp, arg3, arg4); //0x00004B0C
+        pMod->moduleRebootPhase(arg1, (u32)argp, arg3, arg4); //0x00004B0C
 
         if (!sceKernelIsToolMode()) //0x00004B1C
             continue;
@@ -162,7 +161,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
             continue;
 
         s32 checkSum = sceKernelSegmentChecksum(pMod); //0x00004B4C
-        if (checkSum == pMod->segmentChecksum) //0x00004B58
+        if (checkSum == (s32)pMod->segmentChecksum) //0x00004B58
             continue;
 
         pspBreak(SCE_BREAKCODE_ZERO);
@@ -179,7 +178,7 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
     SceUID uidBlkId;
     SceUID *pUidList;
     SceModule *pMod;
-    s32 modCount;
+    u32 modCount;
     s32 status;
 
     uidBlkId = sceKernelGetModuleListWithAlloc(&modCount); //0x00004BA8
@@ -197,8 +196,7 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
         if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004C08,  0x00004CB0
             continue;
 
-        // TODO: Re-define moduleRebootBefore (it currently is a SceKernelThreadEntry)
-        pMod->moduleRebootBefore(argp, arg2, arg3, arg4); //0x00004CB8
+        pMod->moduleRebootBefore((u32)argp, arg2, arg3, arg4); //0x00004CB8
     }
 
     status = ClearFreePartitionMemory(uidBlkId); // 0x00004C24 - 0x00004C60

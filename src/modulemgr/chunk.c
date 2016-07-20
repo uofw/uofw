@@ -3,7 +3,6 @@
 */
 
 #include <common_imp.h>
-#include <modulemgr_init.h>
 
 /* The total number of available chunks. */
 #define SCE_KERNEL_NUM_CHUNKS       (16)

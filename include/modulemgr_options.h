@@ -48,7 +48,7 @@ typedef struct {
     /** Priority of the running thread. */
     s32     priority;
     /** Attribute of the running thread. */
-    u32     attribute
+    u32     attribute;
 } SceKernelSMOption;
 
 #endif	/* MODULEMGR_OPTIONS_H */

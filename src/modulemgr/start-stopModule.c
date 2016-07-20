@@ -12,7 +12,7 @@
 
 static s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, void *argp, s32 *pStatus,
     const SceKernelSMOption *pOption);
-static s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *codeAddr, SceSize args, void *argp, s32 *pStatus,
+static s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *addr, SceSize args, void *argp, s32 *pStatus,
     const SceKernelSMOption *pOption);
 
 // Subroutine ModuleMgrForUser_50F0C1EC - Address 0x00003D98 - Aliases: ModuleMgrForKernel_3FF74DF1
@@ -53,7 +53,7 @@ s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *pMod
     modParams.modeStart = CMD_START_MODULE;
     modParams.modId = modId; // 0x00003ECC
     modParams.argSize = args;
-    modParams.argp = argp;
+    modParams.argp = (void *)argp;
     modParams.pStatus = pModResult;
 
     if (pOption != NULL) { //0x00003EDC
@@ -127,7 +127,7 @@ s32 sceKernelStopModule(SceUID modId, SceSize args, const void *argp, s32 *pModR
     modParams.modId = modId; // 0x000040AC
     modParams.callerModId = pMod->modId; // 0x000040BC
     modParams.argSize = args;
-    modParams.argp = argp;
+    modParams.argp = (void *)argp;
     modParams.pStatus = pModResult;
 
     if (pOption != NULL) { //0x000040C4
@@ -233,7 +233,7 @@ static s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize
     SceModuleMgrParam modParams;
     s32 status2;
 
-    pMod = sceKernelFindModuleByAddress(codeAddr); // 0x000076FC
+    pMod = sceKernelFindModuleByAddress((u32)codeAddr); // 0x000076FC
     if (pMod == NULL || pMod->attribute & SCE_MODULE_ATTR_CANT_STOP) // 0x0000770C & 0x00007720
         return SCE_ERROR_KERNEL_MODULE_CANNOT_STOP;
 
@@ -274,7 +274,7 @@ static s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize
 
 // Subroutine sub_000077F0 - Address 0x000077F0 
 static s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *addr, SceSize args, void *argp, s32 *pStatus,
-    SceKernelSMOption *pOption)
+    const SceKernelSMOption *pOption)
 {
     s32 oldK1;
     s32 status;

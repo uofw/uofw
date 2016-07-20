@@ -12,6 +12,8 @@
 
 typedef s32 (*SceKernelThreadEntry)(SceSize args, void *argp);
 
+typedef s32 (*SceKernelRebootKernelThreadEntry)(s32 arg1, u32 arg2, s32 arg3, s32 arg4);
+
 typedef struct {
     SceSize     size;
     SceUID      stackMpid;

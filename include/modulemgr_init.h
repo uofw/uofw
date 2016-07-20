@@ -211,14 +211,14 @@ typedef struct {
  * 
  * @return The boot medium type. One of ::SceBootMediumType.
  */
-s32 sceKernelBootFrom(void);
+u32 sceKernelBootFrom(void);
 
 /**
  * Get the boot medium of the executable calling this function. For PSP-GO only?
  * 
  * @return The boot medium type. One of ::SceBootMediumType.
  */
-s32 InitForKernel_9D33A110(void);
+u32 InitForKernel_9D33A110(void);
 
 /**
  * Get the application type of a module.
