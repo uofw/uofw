@@ -4,7 +4,6 @@
 
 #include <common_imp.h>
 #include <iofilemgr_kernel.h>
-#include <modulemgr.h>
 #include <modulemgr_init.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_options.h>

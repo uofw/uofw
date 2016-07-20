@@ -24,7 +24,6 @@
 #include <iofilemgr_stdio.h>
 #include <loadcore.h>
 #include <loadexec_kernel.h>
-#include <modulemgr.h>
 #include <modulemgr_init.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_user.h>
@@ -507,7 +506,7 @@ static SceUID LoadModuleAnchorInBtcnf(char *file)
         break;
     case SCE_EXEC_FILE_APITYPE_NPDRM_MS: 
     case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
-        status = sceKernelLoadModuleForLoadExecNpDrm(g_init->apiType, file, g_npDrmData.fileOffset, g_npDrmData.keyData, 0, NULL);
+        status = sceKernelLoadModuleForLoadExecNpDrm(g_init->apiType, file, g_npDrmData.fileOffset, (const char*)g_npDrmData.keyData, 0, NULL);
         uFile = NULL;
         break;
     case SCE_EXEC_FILE_APITYPE_DISC:

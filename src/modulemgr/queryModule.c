@@ -5,7 +5,6 @@
 #include <common_imp.h>
 #include <interruptman.h>
 #include <loadcore.h>
-#include <modulemgr.h>
 #include <modulemgr_kernel.h>
 #include <sysmem_kernel.h>
 #include <sysmem_sysclib.h>

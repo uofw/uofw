@@ -7,7 +7,6 @@
 
 #include <memlmd.h>
 #include <mesgled.h>
-#include <modulemgr.h>
 #include <modulemgr_moduleInfo.h>
 #include "common_imp.h"
 #include "threadman_kernel.h"

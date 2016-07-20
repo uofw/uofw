@@ -3,7 +3,6 @@
 */
 
 #include <common_imp.h>
-#include <modulemgr.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_options.h>
 

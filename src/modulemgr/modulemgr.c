@@ -28,7 +28,6 @@
 #include <interruptman.h>
 #include <iofilemgr_kernel.h>
 #include <loadcore.h>
-#include <modulemgr.h>
 #include <modulemgr_init.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_nids.h>
