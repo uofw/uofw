@@ -42,7 +42,7 @@ extern "C" {
 #endif
     
 /** UMD file system alias name. */
-#define SCE_UMD_ALIAS_NAME			"disc0:"
+#define SCE_UMD_ALIAS_NAME		"disc0:"
 
 /** LBA raw sector access. */
 #define SCE_UMD_LBA_DEVICE_NAME		"umd1:"
@@ -52,7 +52,7 @@ extern "C" {
  */    
 enum SceUmdDiscStates {
     /** The UMD driver has been initiated. */
-    SCE_UMD_INIT	  =	(0),
+    SCE_UMD_INIT      = (0),
     /** A medium has been removed. */
     SCE_UMD_MEDIA_OUT =	(1 << 0),
     /** A medium has been inserted. */
@@ -62,7 +62,7 @@ enum SceUmdDiscStates {
     /** The UMD device is not ready. */
     SCE_UMD_NOT_READY =	(1 << 3),
     /** The UMD device is ready. */
-    SCE_UMD_READY	  =	(1 << 4),
+    SCE_UMD_READY     =	(1 << 4),
     /** The inserted medium is readable. */
     SCE_UMD_READABLE  =	(1 << 5),
 };
@@ -92,9 +92,9 @@ enum SceUmdMediaTypeFormats {
 
 typedef struct {
     /** The size of the used SceUmdDiscInfo version. uiSize = sizeof(SceUmdDiscInfo). */
-	SceSize uiSize;
+    SceSize uiSize;
     /** Defines the media type of the UMD. One of ::SceUmdMediaTypeFormats. */
-	u32 uiMediaType;
+    u32 uiMediaType;
 } SceUmdDiscInfo;
 
 

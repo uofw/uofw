@@ -142,7 +142,7 @@ int sub_0x1000020(){
 
 int sub_0x1000002(int arg)
 {
-	sceKernelLockMutex(meRpc.mutex, 1, 0);
+	sceKernelLockMutex(meRpc.mutex, 1, NULL);
 	int argSr = arg >> 1;
 	int val = *(int*)0xbfc00714;
 	*(int*)0xbfc00710 = arg;
@@ -1044,7 +1044,7 @@ void sceMeFree(void *ptr)
 /**************************sceMeCore_driver****************************/
 int sceMeRpcLock()
 {
-	return sceKernelLockMutex(meRpc.mutex, 1, 0);
+	return sceKernelLockMutex(meRpc.mutex, 1, NULL);
 }
 
 int sceMeRpcUnlock()
@@ -1145,7 +1145,7 @@ int sceMeBootStart(u32 arg)
 		meImage = "flash0:/kd/resource/me_blimg.img";
 	else
 		meImage = "flash0:/kd/resource/meimg.img";
-	SceUID fd = sceIoOpen(meImage, SCE_O_UNKNOWN0|SCE_O_RDONLY, 0);
+	SceUID fd = sceIoOpen(meImage, SCE_O_ENCRYPTED|SCE_O_RDONLY, 0);
 	if (fd < 0){
 		sceMeRpcUnlock();
 		return fd;
@@ -1187,7 +1187,7 @@ int sceMeCore_driver_FA398D71(int cmd, ...)
 {
     va_list ap;
     va_start(ap, cmd);
-	int ret = sceKernelLockMutex(meRpc.mutex, 1, 0);
+	int ret = sceKernelLockMutex(meRpc.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	int* meTable = (int*)0xbfc00600;

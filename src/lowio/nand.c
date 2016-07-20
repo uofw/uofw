@@ -321,7 +321,7 @@ sceNandLock(int mode)
 {
 	int ret;
 
-	if ((ret = sceKernelLockMutex(sceNandInfo.mutex_id, 1, 2) < 0)) //ThreadManForKernel_B011B11F
+    if ((ret = sceKernelLockMutex(sceNandInfo.mutex_id, 1, (u32 *)2) < 0)) //ThreadManForKernel_B011B11F
 		return ret;
 
 	if (!sceNandInfo.clock_enabled) {

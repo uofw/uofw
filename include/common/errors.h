@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -80,7 +80,9 @@
 #define SCE_ERROR_ERRNO_NOT_SUPPORTED                           0x80010086
 #define SCE_ERROR_ERRNO_ENOMEDIUM                               0x80010087 /* No medium was found. */
 
-/* Non-standard error code definitions */
+/* 
+ * Non-standard error code definitions 
+ */
 #define SCE_ERROR_ERRNO_ADDR_OUT_OF_MAIN_MEM                    0x8001B001
 #define SCE_ERROR_ERRNO_INVALID_UNIT_NUM                        0x8001B002
 #define SCE_ERROR_ERRNO_INVALID_FILE_SIZE                       0x8001B003
@@ -88,7 +90,9 @@
 #define SCE_ERROR_ERRNO_NO_CACHE                                0x8001B005
 #define SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE                       0x8001B006
 
-/* Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values. */
+/* 
+ * Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values. 
+ */
 #define SCE_ERROR_ERRNO150_ENAMETOOLONG                         0x80010024
 #define SCE_ERROR_ERRNO150_EADDRINUSE                           0x80010062
 #define SCE_ERROR_ERRNO150_ECONNABORTED                         0x80010067
@@ -380,4 +384,10 @@
 #define SCE_ERROR_ATRAC_BUFFER_IS_EMPTY                         0x80630023
 #define SCE_ERROR_ATRAC_ALL_DATA_DECODED                        0x80630024
 #define SCE_ERROR_CODEC_AUDIO_FATAL                             0x807F00FC
+
+/* 
+ * Error-similar definitions. 
+ */
+#define SCE_KERNEL_VALUE_UNITIALIZED                            (-1)
+#define SCE_KERNEL_PTR_UNITIALIZED                              ((void *)SCE_KERNEL_VALUE_UNITIALIZED)
 

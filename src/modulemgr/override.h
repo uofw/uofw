@@ -7,7 +7,7 @@
 
 #include <common_header.h>
 
-SceBool _CheckOverride(s32 apiType, void *modBuf, SceUID *fd);
+SceBool _CheckOverride(s32 apiType, void *modBuf, SceUID *pFd);
 
 #endif	/* OVERRIDE_H */
 

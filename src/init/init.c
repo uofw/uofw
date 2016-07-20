@@ -101,7 +101,7 @@ static void InitCBInit(SceLoadCoreBootInfo *bootInfo)
     g_init->curBootCallback2 = NULL;
     
     g_npDrmData.size = sizeof(SceNpDrm);
-    g_npDrmData.fileOffset = -1;
+    g_npDrmData.fileOffset = SCE_KERNEL_VALUE_UNITIALIZED;
     
     u32 i;
     for (i = 0; i < sizeof g_npDrmData.keyData; i++)
@@ -496,66 +496,66 @@ static SceUID LoadModuleAnchorInBtcnf(char *file)
     SceUID status;
     
     switch (g_init->apiType) {
-    case SCE_INIT_APITYPE_GAME_EBOOT: 
-    case SCE_INIT_APITYPE_GAME_BOOT: 
-    case SCE_INIT_APITYPE_EMU_EBOOT_MS: 
-    case SCE_INIT_APITYPE_EMU_BOOT_MS: 
-    case SCE_INIT_APITYPE_EMU_EBOOT_EF: 
-    case SCE_INIT_APITYPE_EMU_BOOT_EF:
+    case SCE_EXEC_FILE_APITYPE_GAME_EBOOT: 
+    case SCE_EXEC_FILE_APITYPE_GAME_BOOT: 
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS: 
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS: 
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: 
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF:
         status = sceKernelLoadModuleForLoadExecForUser(g_init->apiType, file, 0, NULL);
         uFile = NULL;
         break;
-    case SCE_INIT_APITYPE_NPDRM_MS: 
-    case SCE_INIT_APITYPE_NPDRM_EF:
+    case SCE_EXEC_FILE_APITYPE_NPDRM_MS: 
+    case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
         status = sceKernelLoadModuleForLoadExecNpDrm(g_init->apiType, file, g_npDrmData.fileOffset, g_npDrmData.keyData, 0, NULL);
         uFile = NULL;
         break;
-    case SCE_INIT_APITYPE_DISC:
+    case SCE_EXEC_FILE_APITYPE_DISC:
         status = sceKernelLoadModuleForLoadExecVSHDisc(file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_DISC_UPDATER:
+    case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
         status = sceKernelLoadModuleForLoadExecVSHDiscUpdater(file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_DISC_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_DISC_DEBUG:
         if (sceKernelIsToolMode() == SCE_FALSE)
             status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         else
             status = sceKernelLoadModuleForLoadExecVSHDiscDebug(file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_DISC_EMU_MS1: 
-    case SCE_INIT_APITYPE_DISC_EMU_EF1: 
-    case SCE_INIT_APITYPE_MLNAPP_MS: 
-    case SCE_INIT_APITYPE_MLNAPP_EF:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: 
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
         status = sceKernelLoadModuleForLoadExecVSHDiscEmu(g_init->apiType, file, 0, NULL);
         uFile = (char *)g_init->discModAddr;
         break;
-    case SCE_INIT_APITYPE_DISC_EMU_MS2: 
-    case SCE_INIT_APITYPE_DISC_EMU_EF2:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
         status = ModuleMgrForKernel_C2A5E6CA(g_init->apiType, file, 0, NULL);
         uFile = (char *)g_init->discModAddr;
         break;
-    case SCE_INIT_APITYPE_MS1: 
-    case SCE_INIT_APITYPE_EF1:
+    case SCE_EXEC_FILE_APITYPE_MS1: 
+    case SCE_EXEC_FILE_APITYPE_EF1:
         status = sceKernelLoadModuleForLoadExecVSHMs1(g_init->apiType, file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_MS2: 
-    case SCE_INIT_APITYPE_EF2:
+    case SCE_EXEC_FILE_APITYPE_MS2: 
+    case SCE_EXEC_FILE_APITYPE_EF2:
         status = sceKernelLoadModuleForLoadExecVSHMs2(g_init->apiType, file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_MS3: 
-    case SCE_INIT_APITYPE_EF3:
+    case SCE_EXEC_FILE_APITYPE_MS3: 
+    case SCE_EXEC_FILE_APITYPE_EF3:
         status = sceKernelLoadModuleForLoadExecVSHMs3(g_init->apiType, file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_MS4: 
-    case SCE_INIT_APITYPE_EF4:
+    case SCE_EXEC_FILE_APITYPE_MS4: 
+    case SCE_EXEC_FILE_APITYPE_EF4:
         status = sceKernelLoadModuleForLoadExecVSHMs4(g_init->apiType, file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_MS5: 
-    case SCE_INIT_APITYPE_EF5:
+    case SCE_EXEC_FILE_APITYPE_MS5: 
+    case SCE_EXEC_FILE_APITYPE_EF5:
         status = sceKernelLoadModuleForLoadExecVSHMs5(g_init->apiType, file, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_MS6: 
-    case SCE_INIT_APITYPE_EF6:
+    case SCE_EXEC_FILE_APITYPE_MS6: 
+    case SCE_EXEC_FILE_APITYPE_EF6:
         status = sceKernelLoadModuleForLoadExecVSHMs6(g_init->apiType, file, 0, NULL);
         break;
     case 0x160: 
@@ -577,27 +577,27 @@ static SceUID LoadModuleBufferAnchorInBtcnf(void *modBuf, s32 opt)
     SceUID status;
     
     switch (g_init->apiType) {
-    case SCE_INIT_APITYPE_USBWLAN: 
+    case SCE_EXEC_FILE_APITYPE_USBWLAN: 
     case 0x132:
         status = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(g_init->apiType, modBuf, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_USBWLAN_DEBUG: 
+    case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: 
     case 0x133:
         if (sceKernelIsToolMode() == SCE_FALSE)
             status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         else
             status = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(g_init->apiType, modBuf, 0, NULL);
         break;
-    case SCE_INIT_APITYPE_KERNEL_1:
+    case SCE_EXEC_FILE_APITYPE_KERNEL_1:
         status = sceKernelLoadModuleBufferForExitVSHKernel(modBuf, 0, NULL, opt);
         break;
-    case SCE_INIT_APITYPE_VSH_1:
+    case SCE_EXEC_FILE_APITYPE_VSH_1:
         status = sceKernelLoadModuleBufferForExitGame(modBuf, 0, NULL, opt);
         break;
-    case SCE_INIT_APITYPE_VSH_2:
+    case SCE_EXEC_FILE_APITYPE_VSH_2:
         status = sceKernelLoadModuleBufferForExitVSHVSH(modBuf, 0, NULL, opt);
         break;
-    case SCE_INIT_APITYPE_KERNEL_REBOOT:
+    case SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT:
         status = sceKernelLoadModuleBufferForRebootKernel(modBuf, 0, NULL, opt);
         break;
     default:
@@ -687,29 +687,29 @@ static void InitThreadEntry(SceSize args, void *argp)
         }
         g_init->apiType = bootInfo->modules[bootInfo->numModules - 1].bootData;
         switch (g_init->apiType) {
-        case SCE_INIT_APITYPE_GAME_EBOOT: case SCE_INIT_APITYPE_GAME_BOOT: case SCE_INIT_APITYPE_EMU_EBOOT_MS: 
-        case SCE_INIT_APITYPE_EMU_BOOT_MS: case SCE_INIT_APITYPE_EMU_EBOOT_EF: case SCE_INIT_APITYPE_EMU_BOOT_EF: 
-        case SCE_INIT_APITYPE_NPDRM_MS: case SCE_INIT_APITYPE_NPDRM_EF:
-        case SCE_INIT_APITYPE_DISC: case SCE_INIT_APITYPE_DISC_DEBUG: case SCE_INIT_APITYPE_DISC_EMU_MS1: 
-        case SCE_INIT_APITYPE_DISC_EMU_MS2: case SCE_INIT_APITYPE_DISC_EMU_EF1: case SCE_INIT_APITYPE_DISC_EMU_EF2:
-        case SCE_INIT_APITYPE_USBWLAN: case SCE_INIT_APITYPE_USBWLAN_DEBUG: case 0x132: case 0x133:
-        case SCE_INIT_APITYPE_MS2: case SCE_INIT_APITYPE_MS3: case SCE_INIT_APITYPE_MS6:
-        case SCE_INIT_APITYPE_EF2: case SCE_INIT_APITYPE_EF3: case SCE_INIT_APITYPE_EF6:
+        case SCE_EXEC_FILE_APITYPE_GAME_EBOOT: case SCE_EXEC_FILE_APITYPE_GAME_BOOT: case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS: 
+        case SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS: case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF: 
+        case SCE_EXEC_FILE_APITYPE_NPDRM_MS: case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
+        case SCE_EXEC_FILE_APITYPE_DISC: case SCE_EXEC_FILE_APITYPE_DISC_DEBUG: case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1: 
+        case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2: case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
+        case SCE_EXEC_FILE_APITYPE_USBWLAN: case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: case 0x132: case 0x133:
+        case SCE_EXEC_FILE_APITYPE_MS2: case SCE_EXEC_FILE_APITYPE_MS3: case SCE_EXEC_FILE_APITYPE_MS6:
+        case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF6:
         case 0x160:
-        case SCE_INIT_APITYPE_MLNAPP_MS: case SCE_INIT_APITYPE_MLNAPP_EF:
+        case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
             g_init->applicationType = SCE_INIT_APPLICATION_GAME;
             break;
-        case SCE_INIT_APITYPE_DISC_UPDATER:
-        case SCE_INIT_APITYPE_MS1:
-        case SCE_INIT_APITYPE_EF1:
+        case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
+        case SCE_EXEC_FILE_APITYPE_MS1:
+        case SCE_EXEC_FILE_APITYPE_EF1:
             g_init->applicationType = SCE_INIT_APPLICATION_UPDATER;
             break;
-        case SCE_INIT_APITYPE_MS4:
-        case SCE_INIT_APITYPE_EF4:
+        case SCE_EXEC_FILE_APITYPE_MS4:
+        case SCE_EXEC_FILE_APITYPE_EF4:
             g_init->applicationType = SCE_INIT_APPLICATION_APP;
             break;
-        case SCE_INIT_APITYPE_MS5:
-        case SCE_INIT_APITYPE_EF5:
+        case SCE_EXEC_FILE_APITYPE_MS5:
+        case SCE_EXEC_FILE_APITYPE_EF5:
             g_init->applicationType = SCE_INIT_APPLICATION_POPS;
             break;
         default:
@@ -718,12 +718,12 @@ static void InitThreadEntry(SceSize args, void *argp)
         }
     }
     switch (g_init->apiType) {
-    case SCE_INIT_APITYPE_EMU_EBOOT_EF: case SCE_INIT_APITYPE_EMU_BOOT_EF: case SCE_INIT_APITYPE_NPDRM_EF: 
-    case SCE_INIT_APITYPE_DISC_EMU_EF1: 
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF: case SCE_EXEC_FILE_APITYPE_NPDRM_EF: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
     case 0x132: case 0x133: 
-    case SCE_INIT_APITYPE_EF2: case SCE_INIT_APITYPE_EF3: case SCE_INIT_APITYPE_EF4: 
-    case SCE_INIT_APITYPE_EF5: case SCE_INIT_APITYPE_EF6: 
-    case SCE_INIT_APITYPE_MLNAPP_EF:
+    case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF4: 
+    case SCE_EXEC_FILE_APITYPE_EF5: case SCE_EXEC_FILE_APITYPE_EF6: 
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
         SysMemForKernel_40B744A4(127);
         break;
     default:
@@ -761,7 +761,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                 foundMod = SCE_TRUE;
                 
                 SceUID protId = bootInfo->modProtId;
-                if (protId != -1) {
+                if (protId != SCE_KERNEL_VALUE_UNITIALIZED) {
                     SceLoadCoreProtectInfo *prot = &bootInfo->protects[protId];
                     mod->modSize = prot->size;
                     mod->modBuf = (u8 *)prot->addr;
@@ -771,7 +771,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                     }
                 }
                 protId = bootInfo->modArgProtId;
-                if (protId != -1) { 
+                if (protId != SCE_KERNEL_VALUE_UNITIALIZED) { 
                     SceLoadCoreProtectInfo *prot = &bootInfo->protects[protId];
                     mod->argPartId = prot->partId;
                     mod->argSize = prot->size;
@@ -903,7 +903,7 @@ static void InitThreadEntry(SceSize args, void *argp)
     }
     
     /* Step3: Init stops and unloads itself now. */
-    sceKernelStopUnloadSelfModuleWithStatusKernel(SCE_KERNEL_NO_RESIDENT, 0, NULL, NULL, NULL);
+    sceKernelStopUnloadSelfModuleWithStatus(SCE_KERNEL_NO_RESIDENT, 0, NULL, NULL, NULL);
 }
 
 #ifdef INSTALLER
@@ -931,7 +931,7 @@ s32 InitInit(SceSize argc __attribute__((unused)), void *argp)
     
     SceLoadCoreBootModuleInfo *modules = bootInfo->modules;
     if (bootInfo->unk24 == 0 && (u32)modules->modBuf <= (SCE_USERSPACE_GAME_ADDR_K0 - 1)) {
-        void *minStart = (void *)-1;
+        void *minStart = (void *)SCE_KERNEL_VALUE_UNITIALIZED;
         void *maxEnd = NULL;
         
         s32 i;

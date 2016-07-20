@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -6,7 +6,6 @@
 #define	THREADMAN_KERNEL_H
 
 #include "common_header.h"
-
 #include "threadman_user.h"
 
 /* Threads */
@@ -18,36 +17,43 @@ typedef struct {
     SceUID      stackMpid;
 } SceKernelThreadOptParam;
 
-#define SCE_KERNEL_TH_SELF                      (0)
+#define SCE_KERNEL_THREAD_ID_SELF               (0) /* UID representing calling thread. */
 
-/* thread priority */
-#define SCE_KERNEL_USER_HIGHEST_PRIORITY        (16)
+/** 
+ * thread priority - lower numbers mean higher priority 
+ */
+#define SCE_KERNEL_INVALID_PRIORITY             (0)
+#define SCE_KERNEL_HIGHEST_PRIORITY_KERNEL      (1)
+#define SCE_KERNEL_HIGHEST_PRIORITY_USER        (16)
 #define SCE_KERNEL_MODULE_INIT_PRIORITY         (32)
-#define SCE_KERNEL_USER_LOWEST_PRIORITY         (111)
+#define SCE_KERNEL_LOWEST_PRIORITY_USER         (111)
+#define SCE_KERNEL_LOWEST_PRIORITY_KERNEL       (126)
 
 /* thread size */
-#define SCE_KERNEL_TH_DEFAULT_SIZE              (4096) /* 4 KB */
+#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (4 * 1024) /* 4 KB */
+#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (256 * 1024) /* 256 KB */
 
 /* thread attributes */
-#define SCE_KERNEL_TH_VSH_MODE                  0xC0000000
-#define SCE_KERNEL_TH_APP_MODE                  0xB0000000
-#define SCE_KERNEL_TH_USB_WLAN_MODE             0xA0000000
-#define SCE_KERNEL_TH_MS_MODE                   0x90000000
-#define SCE_KERNEL_TH_USER_MODE                 0x80000000
-#define SCE_KERNEL_TH_NO_FILLSTACK              0x00100000
-#define SCE_KERNEL_TH_CLEAR_STACK               0x00200000
-#define SCE_KERNEL_TH_LOW_STACK                 0x00400000
-#define SCE_KERNEL_TH_USE_VFPU                  0x00004000
-#define SCE_KERNEL_TH_NEVERUSE_FPU              0x00002000
+#define SCE_KERNEL_TH_VSH_MODE                  (0xC0000000) /* Thread runs in VSH mode. */
+#define SCE_KERNEL_TH_APP_MODE                  (0xB0000000) /* Thread runs in Application mode. */
+#define SCE_KERNEL_TH_USB_WLAN_MODE             (0xA0000000) /* Thread runs in USB_WLAN mode. */
+#define SCE_KERNEL_TH_MS_MODE                   (0x90000000) /* Thread runs in MS mode. */
+#define SCE_KERNEL_TH_USER_MODE                 (0x80000000) /* Thread runs in User mode. */
+#define SCE_KERNEL_TH_NO_FILLSTACK              (0x00100000)
+#define SCE_KERNEL_TH_CLEAR_STACK               (0x00200000) /* Specifies that thread memory area should be cleared to 0 when deleted. */
+#define SCE_KERNEL_TH_LOW_STACK                 (0x00400000) /* Specifies that the stack area is allocated from the lower addresses in memory, not the higher ones. */
+#define SCE_KERNEL_TH_UNK_800000                (0x00800000)
+#define SCE_KERNEL_TH_USE_VFPU                  (0x00004000) /* Specifies that the VFPU is available. */
+#define SCE_KERNEL_TH_NEVERUSE_FPU              (0x00002000)
 
 #define SCE_KERNEL_TH_DEFAULT_ATTR              (0)
 
-SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, int initPriority,
-                             int stackSize, SceUInt attr, SceKernelThreadOptParam *option);
+SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, s32 initPriority,
+                             SceSize stackSize, SceUInt attr, SceKernelThreadOptParam *option);
 int sceKernelDeleteThread(SceUID thid);
 int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
 int sceKernelSuspendThread(SceUID thid);
-int sceKernelExitThread(int status);
+int sceKernelExitThread(s32 status);
 s32 sceKernelExitDeleteThread(s32 exitStatus);
 int sceKernelTerminateDeleteThread(SceUID thid);
 int sceKernelDelayThread(SceUInt delay);
@@ -92,11 +98,33 @@ SceKernelIdListType sceKernelGetThreadmanIdType(SceUID uid);
 
 /* Mutexes */
 
-int sceKernelCreateMutex(char *, int, int, int);
-int sceKernelTryLockMutex(int, int);
-int sceKernelLockMutex(int, int, int);
-int sceKernelUnlockMutex(int, int);
-int sceKernelDeleteMutex(int);
+typedef struct {
+    SceSize     size;
+} SceKernelMutexOptParam;
+
+typedef struct {
+    SceSize     size;
+    char        name[32];
+    SceUInt     attr;
+    s32         initCount;
+    s32         currentCount;
+    SceUID      currentOwner;
+    s32         numWaitThreads;
+} SceKernelMutexInfo;
+
+/* Mutex attributes */
+#define SCE_KERNEL_MA_THFIFO    (SCE_KERNEL_AT_THFIFO)
+#define SCE_KERNEL_MA_THPRI     (SCE_KERNEL_AT_THPRI)
+#define SCE_KERNEL_MA_RECURSIVE (0x0200)
+
+s32 sceKernelCreateMutex(char *, int, int, int);
+s32 sceKernelDeleteMutex(SceUID mutexId);
+s32 sceKernelLockMutex(SceUID mutexId, s32 lockCount, u32 *pTimeout);
+s32 sceKernelLockMutexCB(SceUID mutexId, s32 lockCount, u32 *pTimeout);
+s32 sceKernelTryLockMutex(SceUID mutexId, s32 lockCount);
+s32 sceKernelUnlockMutex(SceUID mutexId, s32 unlockCount);
+s32 sceKernelCancelMutex(SceUID mutexId, s32 newLockCount, s32 *pNumWaitThreads);
+s32 sceKernelReferMutexStatus(SceUID mutexId, SceKernelMutexInfo *pInfo);
 
 /* Event flags */
 

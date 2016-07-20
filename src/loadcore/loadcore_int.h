@@ -2,16 +2,14 @@
    See the file COPYING for copying permission.
 */
 
-
 #ifndef LOADCORE_INT_H
 #define	LOADCORE_INT_H
 
+#include <common_header.h>
 #include <loadcore.h>
 #include <sysmem_kernel.h>
 #include <sysmem_user.h>
 #include "systable.h"
-    
-#define LOADCORE_ERROR                      (-1)
 
 /* For compatibility reasons. Use PSP_MAGIC_LE. */
 #define PSP_MAGIC                           (0x7E505350)  /* "~PSP" */

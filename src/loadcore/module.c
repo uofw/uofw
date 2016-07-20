@@ -108,15 +108,15 @@ SceModule *sceKernelCreateModule(void)
     }
     //0x000068D0 - 0x0000689C
     mod->modId = cb->uid; //0x000068A0
-    mod->moduleStartThreadPriority = LOADCORE_ERROR;
-    mod->moduleStartThreadStacksize = LOADCORE_ERROR;
-    mod->moduleStartThreadAttr = LOADCORE_ERROR;
-    mod->moduleStopThreadPriority = LOADCORE_ERROR;
-    mod->moduleStopThreadStacksize = LOADCORE_ERROR;
-    mod->moduleStopThreadAttr = LOADCORE_ERROR;
-    mod->moduleRebootBeforeThreadPriority = LOADCORE_ERROR;
-    mod->moduleRebootBeforeThreadStacksize = LOADCORE_ERROR;
-    mod->moduleRebootBeforeThreadAttr = LOADCORE_ERROR;   
+    mod->moduleStartThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStartThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStartThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;   
     mod->countRegVal = pspCop0StateGet(COP0_STATE_COUNT);
     
     loadCoreCpuResumeIntr(intrState); //0x000068D4
@@ -495,26 +495,26 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     
     mod->modId = cb->uid; //0x0000725C
-    mod->entryAddr = LOADCORE_ERROR; //0x00007260
+    mod->entryAddr = SCE_KERNEL_VALUE_UNITIALIZED; //0x00007260
     mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
     mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
     mod->terminal = 0; //0x0000726C
-    mod->moduleStart = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007270
-    mod->moduleStop = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007274
-    mod->moduleBootstart = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007278
-    mod->moduleRebootBefore = (SceKernelThreadEntry)LOADCORE_ERROR; //0x0000727C
-    mod->moduleRebootPhase = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007280
+    mod->moduleStart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007270
+    mod->moduleStop = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007274
+    mod->moduleBootstart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007278
+    mod->moduleRebootBefore = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000727C
+    mod->moduleRebootPhase = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007280
     mod->textSize = 0; //0x00007284
     mod->dataSize = 0; //0x00007288
     mod->bssSize = 0; //0x0000728C
     mod->segmentChecksum = 0; //0x00007290
-    mod->unk220 = 0; //0x00007294
+    mod->textSegmentChecksum = 0; //0x00007294
     mod->unk224 = 0; //0x00007298
     mod->status = 0; //0x000072A4
     mod->next = NULL; //0x000072A8
     mod->attribute = 0; //0x000072AC
-    mod->entTop = (void *)LOADCORE_ERROR; //0x000072B0
-    mod->stubTop = (void *)LOADCORE_ERROR; //0x000072B4
+    mod->entTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B0
+    mod->stubTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B4
     
     return cb->uid;
 }

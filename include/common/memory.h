@@ -20,11 +20,11 @@
 #define K3_SIZE                         0x20000000  /* 512 MB */
 
 /* Scratchpad segment base address and size */
-#define SCE_SCRATCHPAD_ADDR				0x00010000  /* Physical memory */
-#define SCE_SCRATCHPAD_ADDR_KU0         0x00010000	/* KU segment 0 (cached) */
-#define SCE_SCRATCHPAD_ADDR_KU1         0x40010000	/* KU segment 1 (uncached) */
+#define SCE_SCRATCHPAD_ADDR		0x00010000  /* Physical memory */
+#define SCE_SCRATCHPAD_ADDR_KU0         0x00010000  /* KU segment 0 (cached) */
+#define SCE_SCRATCHPAD_ADDR_KU1         0x40010000  /* KU segment 1 (uncached) */
 #define SCE_SCRATCHPAD_ADDR_K0          0x80010000  /* K0 segment (cached) */
-#define SCE_SCRATCHPAD_SIZE				0x00004000	/* 16 KB */
+#define SCE_SCRATCHPAD_SIZE		0x00004000  /* 16 KB */
 
 #define REBOOT_BASE_ADDR_K0             0x88600000  /* K0 segment (cached) */
 

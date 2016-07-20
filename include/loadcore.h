@@ -717,7 +717,7 @@ typedef struct SceModule {
 	SceKernelThreadEntry moduleStart; //80
     /** 
      * A pointer to the (required) module's stop entry function. This function is executed during 
-     * the module's startup. 
+     * the module's stopping phase. 
      */
 	SceKernelThreadEntry moduleStop; //84
     /** 
@@ -782,8 +782,8 @@ typedef struct SceModule {
 	u32 countRegVal; //212
     /** The segment checksum of the module's segments. */
     u32 segmentChecksum; //216
-    /** Unknown. */
-    u32 unk220; //220
+    /** TEXT segment checksum of the module. */
+    u32 textSegmentChecksum; //220
     /** Unknown. */
     u32 unk224; //224
 } SceModule; //size = 228

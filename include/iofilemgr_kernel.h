@@ -21,6 +21,7 @@
 #define	SCE_FASYNC      (0x8000)  /*   Reserved: asyncronous i/o */
 #define SCE_FFDEXCL     (0x01000000)        /* exclusive access */
 #define SCE_FPWLOCK     (0x02000000)        /* power control lock */
+#define SCE_FENCRYPTED  (0x04000000)
 #define SCE_FGAMEDATA   (0x40000000)
 
 /* Flags for sceIoOpen() */
@@ -36,7 +37,7 @@
 #define SCE_O_NOWAIT    (SCE_FASYNC)  /*   Reserved: asyncronous i/o */
 #define SCE_O_FDEXCL    (SCE_FFDEXCL) /* exclusive access */
 #define SCE_O_PWLOCK    (SCE_FPWLOCK) /* power control lock */
-#define SCE_O_UNKNOWN0  (0x04000000)
+#define SCE_O_ENCRYPTED (SCE_FENCRYPTED) /* encrypted file (uses Kernel/DNAS/NPDRM-encryption) */
 #define SCE_O_FGAMEDATA (SCE_FGAMEDATA)
 
 /** user read/write/execute permission. */
@@ -293,11 +294,21 @@ SceOff sceIoLseek(SceUID fd, SceOff offset, int whence);
 SceOff sceIoLseekAsync(SceUID fd, SceOff offset, int whence);
 int sceIoLseek32(SceUID fd, int offset, int whence);
 int sceIoLseek32Async(SceUID fd, int offset, int whence);
+
+/* IOCTL */
+
+/* ioctl commands */
+#define SCE_GAMEDATA_SET_SECURE_INSTALL_ID      (0x04100001)
+
 int sceIoIoctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
 int sceIoIoctlAsync(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+
+/* Directory functions */
 int sceIoMkdir(const char *path, SceMode mode);
 int sceIoRmdir(const char *path);
 int sceIoChdir(const char *path);
+
+
 int sceIoGetstat(const char *file, SceIoStat *stat);
 int sceIoChstat(const char *file, SceIoStat *stat, int bits);
 int sceIoSync(const char *device, unsigned int unk);

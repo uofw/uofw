@@ -154,7 +154,7 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
             execInfo->fileBase = execInfo->topAddr; //0x00004064
         }       
     }
-    execInfo->topAddr = (void *)LOADCORE_ERROR; //0x0000406C
+    execInfo->topAddr = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000406C
     execInfo->largestSegSize = 0; //0x00004078
     execInfo->maxSegAlign = 0; //0x0000407C
     
@@ -662,10 +662,10 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                  return SCE_ERROR_KERNEL_ERROR;
              }
         }
-        if ((s32)execInfo->entryAddr != LOADCORE_ERROR) //0x00004B54
+        if ((s32)execInfo->entryAddr != SCE_KERNEL_VALUE_UNITIALIZED) //0x00004B54
             execInfo->entryAddr += (u32)execInfo->topAddr; //0x00004B5C
         
-        if (execInfo->exportsInfo != (void *)LOADCORE_ERROR) //0x00004B74
+        if (execInfo->exportsInfo != (void *)SCE_KERNEL_VALUE_UNITIALIZED) //0x00004B74
             execInfo->exportsInfo += (u32)execInfo->topAddr; //0x00004B7C
         
         if (elfProgHeader->p_type == PT_PRX_RELOC) { //0x00004B88
@@ -1356,7 +1356,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; //0x000058B4
     } else if (execInfo->topAddr == NULL) { //0x000057F0
         return SCE_ERROR_OK; 
-    } else if (execInfo->topAddr == (void *)LOADCORE_ERROR) {//0x00005800
+    } else if (execInfo->topAddr == (void *)SCE_KERNEL_VALUE_UNITIALIZED) {//0x00005800
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
     
