@@ -7,7 +7,6 @@
 
 #include <memlmd.h>
 #include <mesgled.h>
-#include <modulemgr_moduleInfo.h>
 #include "common_imp.h"
 #include "threadman_kernel.h"
 
@@ -560,6 +559,8 @@ typedef struct {
     /** Unknown. */
     u32 unk124;
 } SceLoadCoreBootInfo; //size = 128
+
+#define SCE_KERNEL_MAX_MODULE_SEGMENT   (4) /** The maximum number of segments a module can have. */
 
 /**
  * This structure represents executable file information used to load the file.

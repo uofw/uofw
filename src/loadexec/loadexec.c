@@ -486,7 +486,7 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
         pspSetK1(oldK1);
         return fileId;
     }
-    ret = ModuleMgrForKernel_C3DDABEF(fileId, unkPtr, unkPtr2);
+    ret = sceKernelNpDrmGetModuleKey(fileId, unkPtr, unkPtr2);
     if (ret < 0) {
         sceIoClose(fileId);
         g_loadExecCb = oldD384;

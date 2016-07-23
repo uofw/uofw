@@ -31,7 +31,6 @@
 #include <modulemgr_init.h>
 #include <modulemgr_kernel.h>
 #include <modulemgr_nids.h>
-#include <modulemgr_options.h>
 #include <sysmem_kernel.h>
 #include <sysmem_kdebug.h>
 #include <sysmem_sysclib.h>
