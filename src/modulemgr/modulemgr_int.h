@@ -42,21 +42,21 @@ typedef struct {
     SceUID eventId; // 88
     u32 unk96; // 96
     u32 unk100; // 100
-    SceUID externKernelMemBlockId; // 104
+    SceUID externMemBlockIdKernel; // 104
     SceUID externMemBlockPartitionId; // 108
     SceSize externMemBlockSize; // 112
     u32 unk116; // 116
     void *blockGzip; // 120 
     u32 unk124; // 124
     char secureInstallId[SCE_SECURE_INSTALL_ID_LEN]; // 128
-    SceUID externUserMemBlockId; //144
+    SceUID externMemBlockIdUser; //144
     u32 unk148; // 148
     SceOff memBlockOffset; // 152
 } SceModuleMgrParam; //size = 160
 
 typedef struct {
     SceUID threadId; // 0
-    SceUID semaId; // 4
+    SceUID mutexId; // 4
     SceUID eventId; // 8
     SceUID userThreadId; // 12
     u32 unk16;

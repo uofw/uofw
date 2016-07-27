@@ -23,7 +23,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
     char threadArgs[16];
 
     oldGp = pspGetGp();
-    sceKernelLockMutex(g_ModuleManager.semaId, 1, NULL); //0x00004724
+    sceKernelLockMutex(g_ModuleManager.mutexId, 1, NULL); //0x00004724
 
     memcpy(threadArgs, arg, sizeof threadArgs); //0x00004734
     ((u32 *)threadArgs)[0] = sizeof threadArgs;

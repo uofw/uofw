@@ -142,7 +142,7 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
 
     //0x000006F8 - 0x0000087C
     if ((status = _checkCallConditionUser()) < 0 || (status = _checkPathConditions(path)) < 0
-        || (status = _checkLMOptionConditions(pOption)) < 0) {
+            || (status = _checkLMOptionConditions(pOption)) < 0) {
         pspSetK1(oldK1);
         return status;
     }
@@ -326,7 +326,7 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
         modParams.unk100 = 0x10; // 0x00000BF4
 
     // 0x00000BFC
-    modParams.externUserMemBlockId = blockId;
+    modParams.externMemBlockIdUser = blockId;
     modParams.memBlockOffset = offset;
 
     status = _loadModuleByBufferID(&modParams, NULL); //0x00000C08
@@ -410,7 +410,7 @@ SceUID sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID blockId, Sc
         modParams.unk100 = 0x10; // 0x00000DE4
 
     // 0x00000DEC
-    modParams.externUserMemBlockId = blockId;
+    modParams.externMemBlockIdUser = blockId;
     modParams.memBlockOffset = offset;
 
     status = _loadModuleByBufferID(&modParams, NULL); //0x00000DF8
@@ -1969,7 +1969,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
         modParams.unk100 = 0x10; // 0x000036E0
 
     SceUID nBlockId;
-    modParams.externKernelMemBlockId = blockId; // 0x0000389C
+    modParams.externMemBlockIdKernel = blockId; // 0x0000389C
     modParams.pNewBlockId = &nBlockId; //0x000038C0
 
     status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000038BC

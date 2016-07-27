@@ -70,3 +70,14 @@ static inline void pspClearMemory32(void *ptr, int size) {
          ((u32 *)ptr)[i] = 0;
 }
 
+// TODO: Remove size handling in above's clear  functions.
+//       Replace instances of above functions with this one.
+static inline void pspClearMemory(void *ptr, int size) {
+    if (size % 4 == 0)
+        pspClearMemory32(ptr, size / 4);
+    else if (size % 2 == 0)
+        pspClearMemory16(ptr, size / 2);
+    else
+        pspClearMemory8(ptr, size);
+}
+

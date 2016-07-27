@@ -480,7 +480,7 @@ int sceCodecInitEntry()
         ;
     sub_0110();
     sub_0150(1);
-    g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, 0);
+    g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, NULL);
     if (g_codec.mutexId <= 0)
         return 1;
     sceKernelRegisterSysEventHandler(&g_sysEv);

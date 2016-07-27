@@ -50,6 +50,9 @@ typedef struct {
 
 #define SCE_KERNEL_TH_DEFAULT_ATTR              (0)
 
+#define SCE_KERNEL_AT_THFIFO                    (0x00000000) /* The wait thread is queued using FIFO. */
+#define SCE_KERNEL_AT_THPRI                     (0x00000100) /* The wait thread is queued using the thread priority. */
+
 SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, s32 initPriority,
                              SceSize stackSize, SceUInt attr, SceKernelThreadOptParam *option);
 int sceKernelDeleteThread(SceUID thid);
@@ -119,7 +122,7 @@ typedef struct {
 #define SCE_KERNEL_MA_THPRI     (SCE_KERNEL_AT_THPRI)
 #define SCE_KERNEL_MA_RECURSIVE (0x0200)
 
-s32 sceKernelCreateMutex(char *, int, int, int);
+s32 sceKernelCreateMutex(char *name, s32 attr, s32 initCount, const SceKernelMutexOptParam *pOption);
 s32 sceKernelDeleteMutex(SceUID mutexId);
 s32 sceKernelLockMutex(SceUID mutexId, s32 lockCount, u32 *pTimeout);
 s32 sceKernelLockMutexCB(SceUID mutexId, s32 lockCount, u32 *pTimeout);

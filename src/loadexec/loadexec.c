@@ -1000,7 +1000,7 @@ s32 LoadExecForKernel_A5ECA6E3(void (*arg)())
 s32 LoadExecInit()
 {
     g_loadExecCb = 0;
-    g_loadExecMutex = sceKernelCreateMutex("SceLoadExecMutex", 0x101, 0, 0);
+    g_loadExecMutex = sceKernelCreateMutex("SceLoadExecMutex", 0x101, 0, NULL);
     g_loadExecIsInited = 0;
     g_regExitCbCb = NULL;
     sceKernelSetRebootKernel(rebootKernel);

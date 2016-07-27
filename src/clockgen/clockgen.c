@@ -280,7 +280,7 @@ s32 sceClockgenInit(void)
     sceI2cSetClock(4, 4);
 
     /* Create the mutex and register the sysevent handler */
-    mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, 0);
+    mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, NULL);
 
     if (mutexId < 0)
         return mutexId;

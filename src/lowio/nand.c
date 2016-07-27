@@ -2,6 +2,8 @@
    See the file COPYING for copying permission.
 */
 
+#include <common_imp.h>
+
 typedef struct {
 	u8	user_ecc[3]; //0
 	u8	reserved; //3
@@ -149,7 +151,7 @@ sceNandInit2(void)
 	memset(&sceNandInfo, 0, 0x40); //SysclibForKernel_10F3BB61
 	sceSysregEmcsmBusClockEnable(); //sceSysreg_driver_F97D9D73
 	sceSysregEmcsmIoEnable(); //sceSysreg_driver_9DD1F821
-	sceNandInfo.mutex_id = sceKernelCreateMutex("SceNand", 0x801, 0, 0); //ThreadManForKernel_B7D098C6
+	sceNandInfo.mutex_id = sceKernelCreateMutex("SceNand", 0x801, 0, NULL); //ThreadManForKernel_B7D098C6
 	sceNandInfo.event_id = sceKernelCreateEventFlag("SceNand", 1, 0, 0); //ThreadManForKernel_55C20A00
 	sceNandInfo.clock_enabled = 0;
 	KDebugForKernel_E892D9A1();

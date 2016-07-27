@@ -44,7 +44,7 @@ int interruptHandler(int a0 __attribute__((unused)), int SceMediaEngineRpcWait)
 
 int initRpc()
 {
-	meRpc.mutex = sceKernelCreateMutex("SceMediaEngineRpc", 0x101, 0, 0);
+	meRpc.mutex = sceKernelCreateMutex("SceMediaEngineRpc", 0x101, 0, NULL);
 	if (meRpc.mutex < 0)
 		return meRpc.mutex;
 	meRpc.sema = sceKernelCreateSema("SceMediaEngineAvcPower" , 0x101, 1, 1, 0);
