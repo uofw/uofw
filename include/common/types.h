@@ -50,6 +50,7 @@ typedef volatile int64_t  vs64;
 
 /* ID of most kernel objects */
 typedef s32             SceUID;
+#define SCE_UID_NAME_LEN 31 /* Maximum name length of a kernel object. */
 
 /* Size, unsigned or signed (for memory blocks, etc.) */
 typedef u32             SceSize;

@@ -5,20 +5,22 @@
 /*
  * uofw/src/loadcore/loadcore.c
  * 
- * Loadcore - Basic API for the Module Manager and File Loader of the 
- * Program Loader.
+ * Loadcore - low-level API for the Program Loader.
+ *
+ * The Program Loader loads modules - i.e from flash memory, Memory-Sticks or UMDs -
+ * into memory, relocates modules and manages the loaded modules.
+ * The loader consists of a high-level API provided by the Module Manager and a
+ * low-level API provided by Loadcore.
  * 
- * The Program Loader handles the loading/relocating of modules and
- * manages modules in memory.  It contains two layers, the Module Manager
- * and the File Loader.  The Module Manager performs linking between
- * modules and registers/deletes resident libraries provided by modules.
- * Its basic API is implemented in loadcore.c.
+ * The low-level API is further divided into a Module Linker and a File Loader.
+ * The Module Linker performs linking between modules and manages resident libraries 
+ * provided by modules. It is implemented in loadcore.c.
  * 
- * The File Loader is responsible for loading object files and for
- * registering/deleting modules.  Its basic API is implemented in module.c
+ * The File Loader is responsible for loading object files, managing modules in memory
+ * and for placing relocatable modules in memory.  It is implemented in module.c
  * and loadelf.c
  * 
- * Specific tasks:
+ * loadcore.c - specific tasks:
  *    1) Continue booting the rest of the system modules.  Every module upto
  *       init.prx (including init) will be booted and its resident libraries
  *       will be registered as well as its stub libraries being linked.  
@@ -1203,7 +1205,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
          *         (and similar ones).  Boot the module by calling its entry point.
          */ 
         else {
-            mod->memId = modMemId; //0x000018C0
+            mod->moduleBlockId = modMemId; //0x000018C0
             sceKernelRegisterModule(mod); //0x000018BC
 
             //0x000018C4 - 0x00001904

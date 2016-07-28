@@ -72,7 +72,8 @@ u32 g_HashListIfhandle[][4] = {
     { 0xE03022E8, 0xE1AA30BF, 0x9C6A19DA, 0x98639D7F },
     { 0x2BCA7A19, 0x0C7A8D82, 0x3537FCD6, 0x2F6D849B },
     { 0x03C03988, 0x09517354, 0x440C0B6B, 0xBFEA08B0 },
-    { 0x6DF2D214, 0x767A3E51, 0x2F887742, 0x7F0866A0 }
+    { 0x6DF2D214, 0x767A3E51, 0x2F887742, 0x7F0866A0 },
+    { 0x91BDCA27, 0xF49D9C27, 0x749EB843, 0x9BD611E1 }
 };
 
 // 0x00095DC
@@ -242,17 +243,17 @@ SceBool _CheckOverride(s32 apiType, void *modBuf, SceUID *pFd) // 0x00008568
     /* Search for a matching hash in the override table. */
     u32 i;
     for (i = 0; i < numElements(g_OverrideList); i++) { // 0x00008630, 0x00008684, 0x0000868C
-        OverrideRule curRule = g_OverrideList[i];
+        OverrideRule *pCurRule = &g_OverrideList[i];
 
         /* Scan current override rule for a matching hash. */
         u32 j;
-        for (j = 0; j < curRule.numHashes; j++) {
-            u32 *pCurHash = (u32 *)((u32 *)curRule.pHashList)[j];
+        for (j = 0; j < pCurRule->numHashes; j++) {
+            u32 *pCurHash = (u32 *)&((u32(*)[4])pCurRule->pHashList)[j];
 
             s32 res = memcmp(pPspHeader->keyData4, pCurHash, sizeof pPspHeader->keyData4); // 0x0000865C
             if (res == 0) {
                 /* We found a matching hash, load module provided by the PSP kernel. */
-                *pFd = sceIoOpen(curRule.overridePath, SCE_O_ENCRYPTED | SCE_O_RDONLY, 0);
+                *pFd = sceIoOpen(pCurRule->overridePath, SCE_O_ENCRYPTED | SCE_O_RDONLY, 0);
                 return SCE_TRUE;
             }
         }

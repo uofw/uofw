@@ -3,16 +3,16 @@
 */
 
 /*
- * uOFW/trunk/src/loadcore/loadelf.c
+ * uofw/src/loadcore/loadelf.c
  * 
  * Loadelf represents most of the basic API of the File Loader.  It is
  * responsible for performing checks on loadable ELF files and loading 
  * them.  Loading them also implies taking care of any relocation of the 
  * files if needed.
  * 
- * The File Loader defines two possible loadable file types for modules:
+ * The File Loader defines two possible object file types for modules:
  *    a) a static ELF
- *    b) a relocatable ELF - named PRX (Playstation Relocatable Executable)
+ *    b) a relocatable object file - named PRX (Playstation Relocatable Executable)
  * 
  * PRX comes with a few unique attributes compared to normal ELF's:
  *    a) Customized Program Headers
@@ -23,8 +23,8 @@
  * Module segment order:
  * 
  * A single module needs to have at least three segments and max 
- * SCE_KERNEL_MAX_MODULE_SEGMENT segments.  These segments are located in 
- * sequence and each has a size of 16 bytes:
+ * SCE_KERNEL_MAX_MODULE_SEGMENT segments.  These segments are typically 
+ * located in sequences:
  *    Segment       Description
  * 
  *    TEXT          Includes instruction code and data structures used for

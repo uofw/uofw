@@ -574,9 +574,9 @@ static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
  */
 static void updateUIDName(SceModule *mod)
 {
-    if ((mod->status & 0x2000) == 0 && mod->memId > 0) { //0x000073D0 & 0x000073DC
+    if ((mod->status & 0x2000) == 0 && mod->moduleBlockId > 0) { //0x000073D0 & 0x000073DC
         if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0) {
-            sceKernelRenameUID(mod->memId, (const char *)mod->modName);
+            sceKernelRenameUID(mod->moduleBlockId, (const char *)mod->modName);
             sceKernelRenameUID(mod->modId, (const char *)mod->modName);
         } 
         else {
@@ -584,7 +584,7 @@ static void updateUIDName(SceModule *mod)
              * The module uses KIRK libraries and thus is classified as a system
              * module.
              */
-            sceKernelRenameUID(mod->memId, MODULE_SYSTEM_BLOCK_NAME);
+            sceKernelRenameUID(mod->moduleBlockId, MODULE_SYSTEM_BLOCK_NAME);
             sceKernelRenameUID(mod->modId, MODULE_SYSTEM_MODULE_NAME);
         }
     }

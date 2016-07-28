@@ -50,8 +50,8 @@ typedef struct {
 
 #define SCE_KERNEL_TH_DEFAULT_ATTR              (0)
 
-#define SCE_KERNEL_AT_THFIFO                    (0x00000000) /* The wait thread is queued using FIFO. */
-#define SCE_KERNEL_AT_THPRI                     (0x00000100) /* The wait thread is queued using the thread priority. */
+#define SCE_KERNEL_AT_THFIFO                    (0x00000000) /* Waiting threads are queued on a FIFO basis. */
+#define SCE_KERNEL_AT_THPRI                     (0x00000100) /* Waiting threads are queued based on priority. */
 
 SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, s32 initPriority,
                              SceSize stackSize, SceUInt attr, SceKernelThreadOptParam *option);
@@ -109,7 +109,7 @@ typedef struct {
 
 typedef struct {
     SceSize     size;
-    char        name[32];
+    char        name[SCE_UID_NAME_LEN + 1];
     SceUInt     attr;
     s32         initCount;
     s32         currentCount;
@@ -118,9 +118,9 @@ typedef struct {
 } SceKernelMutexInfo;
 
 /* Mutex attributes */
-#define SCE_KERNEL_MA_THFIFO    (SCE_KERNEL_AT_THFIFO)
-#define SCE_KERNEL_MA_THPRI     (SCE_KERNEL_AT_THPRI)
-#define SCE_KERNEL_MA_RECURSIVE (0x0200)
+#define SCE_KERNEL_MUTEX_ATTR_TH_FIFO       (SCE_KERNEL_AT_THFIFO)
+#define SCE_KERNEL_MUTEX_ATTR_TH_PRI        (SCE_KERNEL_AT_THPRI)
+#define SCE_KERNEL_MUTEX_ATTR_RECURSIVE     (0x0200) /*Allow recursive locks by threads that own the mutex. */
 
 s32 sceKernelCreateMutex(char *name, s32 attr, s32 initCount, const SceKernelMutexOptParam *pOption);
 s32 sceKernelDeleteMutex(SceUID mutexId);
@@ -135,7 +135,7 @@ s32 sceKernelReferMutexStatus(SceUID mutexId, SceKernelMutexInfo *pInfo);
 
 typedef struct {
     SceSize     size;
-    char        name[32];
+    char        name[SCE_UID_NAME_LEN + 1];
     SceUInt     attr;
     SceUInt     initPattern;
     SceUInt     currentPattern;
@@ -180,7 +180,7 @@ int sceKernelCancelMsgPipe(SceUID uid, int *psend, int *precv);
 
 typedef struct {
     SceSize size;
-    char    name[32];
+    char    name[SCE_UID_NAME_LEN + 1];
     SceUInt attr;
     int     bufSize;
     int     freeSize;
@@ -198,7 +198,7 @@ typedef struct {
 
 typedef struct {
     SceSize     size;
-    char        name[32];
+    char        name[SCE_UID_NAME_LEN + 1];
     SceUInt     attr;
     int         initCount;
     int         currentCount;
@@ -249,7 +249,7 @@ typedef s32 (*SceKernelCallbackFunction)(s32 arg1, s32 arg2, void *arg);
 
 typedef struct {
     SceSize size;
-    char name[32];
+    char name[SCE_UID_NAME_LEN + 1];
     SceUID threadId;
     SceKernelCallbackFunction callback;
     void *common;
@@ -278,7 +278,7 @@ int sceKernelCancelVpl(SceUID uid, int *pnum);
 
 typedef struct {
 	SceSize 	size;
-	char 	name[32];
+    char 	name[SCE_UID_NAME_LEN + 1];
 	SceUInt 	attr;
 	int 	poolSize;
 	int 	freeSize;
@@ -303,7 +303,7 @@ int sceKernelCancelFpl(SceUID uid, int *pnum);
 
 typedef struct {
     SceSize 	size;
-    char 	name[32];
+    char 	name[SCE_UID_NAME_LEN + 1];
     SceUInt 	attr;
     int 	blockSize;
     int 	numBlocks;

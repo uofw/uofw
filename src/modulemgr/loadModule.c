@@ -86,7 +86,7 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x000005A0
+    pspClearMemory32(&modParams, sizeof modParams); //0x000005A0
 
     modParams.apiType = apiType; // 0x000005A8
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000005B4
@@ -160,7 +160,7 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00000784
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00000784
 
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000790
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_USER; // 0x0000079C
@@ -229,7 +229,7 @@ SceUID sceKernelLoadModuleByID(SceUID inputId, s32 flag, const SceKernelLMOption
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x0000099C
+    pspClearMemory32(&modParams, sizeof modParams); //0x0000099C
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_USER; // 0x000009C8
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000009C4
@@ -312,7 +312,7 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x00000BAC
+    pspClearMemory32(&modParams, sizeof modParams); //0x00000BAC
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_USER; // 0x00000BC4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000BB8
@@ -396,7 +396,7 @@ SceUID sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID blockId, Sc
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x00000D9C
+    pspClearMemory32(&modParams, sizeof modParams); //0x00000D9C
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_USER; // 0x00000DB4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000DA8
@@ -485,7 +485,7 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00000F34
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00000F34
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_DNAS; // 0x00000F44
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000F50
@@ -581,7 +581,7 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000116C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x0000116C
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_NPDRM; // 0x0000117C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001188
@@ -759,7 +759,7 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
         while (1) {}
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001584
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00001584
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN;
     modParams.modeFinish = CMD_RELOCATE_MODULE;
@@ -822,7 +822,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const S
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000174C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x0000174C
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_DISC;
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001774
@@ -884,7 +884,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, 
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000191C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x0000191C
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_DISC_UPDATER;
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001944
@@ -946,7 +946,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flag, co
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001AEC
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00001AEC
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_DISC_DEBUG;
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001B14
@@ -1009,7 +1009,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001CC4
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00001CC4
 
     modParams.apiType = apiType; //0x00001CCC
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001CE4
@@ -1074,7 +1074,7 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
     }
 
     memset(installId, 0, sizeof installId); //0x00001EA0
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00001EB4
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00001EB4
 
     modParams.apiType = apiType; //0x00001EBC
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001ED4
@@ -1139,7 +1139,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 f
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x000020A4
+    pspClearMemory32(&modParams, sizeof modParams); // 0x000020A4
 
     modParams.apiType = apiType; //0x000020AC
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000020C4
@@ -1202,7 +1202,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000227C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x0000227C
 
     modParams.apiType = apiType; //0x00002284
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000229C
@@ -1267,7 +1267,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
     }
 
     memset(installId, 0, sizeof installId); //0x00002458
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000246C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x0000246C
 
     modParams.apiType = apiType; //0x00002474
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000248C
@@ -1332,7 +1332,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 f
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x0000265C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x0000265C
 
     modParams.apiType = apiType; //0x00002664
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000267C
@@ -1403,7 +1403,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00002854
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00002854
 
     modParams.apiType = apiType; //0x00002860
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002878
@@ -1476,7 +1476,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00002A64
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00002A64
 
     modParams.apiType = apiType; //0x00002A70
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002A88
@@ -1543,7 +1543,7 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
     }
 
     memset(installId, 0, sizeof installId); //0x00002C58
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00002C6C
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00002C6C
 
     modParams.apiType = apiType; //0x00002C74
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002C8C
@@ -1615,7 +1615,7 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00002EA0
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00002EA0
 
     modParams.apiType = apiType; //0x00002EA8
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002EC0
@@ -1685,7 +1685,7 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x000030C4
+    pspClearMemory32(&modParams, sizeof modParams); // 0x000030C4
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_VSH; //0x000030D4
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000030EC
@@ -1755,7 +1755,7 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x000032FC
+    pspClearMemory32(&modParams, sizeof modParams); // 0x000032FC
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_VSH; //0x0000330C
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00003324
@@ -1816,7 +1816,7 @@ SceUID sceKernelLoadModuleForKernel(const char *path, s32 flag, const SceKernelL
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); // 0x00003458
+    pspClearMemory32(&modParams, sizeof modParams); // 0x00003458
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_KERNEL; // 0x00003470
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000347C
@@ -1874,7 +1874,7 @@ SceUID sceKernelLoadModuleByIDForKernel(SceUID inputId, s32 flag, const SceKerne
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003694
+    pspClearMemory32(&modParams, sizeof modParams); //0x00003694
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_KERNEL; // 0x000036AC
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000036A0
@@ -1955,7 +1955,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003844
+    pspClearMemory32(&modParams, sizeof modParams); //0x00003844
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_KERNEL_BLOCK; // 0x00003854
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003860
@@ -2026,7 +2026,7 @@ SceUID sceKernelLoadModuleBootInitConfig(const char *path, s32 flag, const SceKe
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003ABC
+    pspClearMemory32(&modParams, sizeof modParams); //0x00003ABC
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_BOOT_INIT_CONFIG; // 0x00003ACC
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003AD8
@@ -2087,7 +2087,7 @@ SceUID sceKernelLoadModuleDeci(const char *path, s32 flag, const SceKernelLMOpti
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
-    pspClearMemory32(&modParams, sizeof(modParams)); //0x00003CA8
+    pspClearMemory32(&modParams, sizeof modParams); //0x00003CA8
 
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_DECI; // 0x00003CB8
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003CC4
