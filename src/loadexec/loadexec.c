@@ -519,8 +519,8 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
     case SCE_EXEC_FILE_APITYPE_DISC:
     case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
     case SCE_EXEC_FILE_APITYPE_DISC_DEBUG:
-    case SCE_EXEC_FILE_APITYPE_UNK_GAME1:
-    case SCE_EXEC_FILE_APITYPE_UNK_GAME2:
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
         vshParam.key = g_gameStr;
         break;
 
@@ -868,13 +868,13 @@ s32 sceKernelLoadExecBufferVSHUsbWlanDebug(s32 args, void *argp, SceKernelLoadEx
 
 s32 LoadExecForKernel_87C3589C(s32 args, void *argp, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_UNK, args, argp, opt, 0x10000);
+    return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_UNK132, args, argp, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_7CAFE77F(s32 args, void *argp, SceKernelLoadExecVSHParam *opt)
 {
     if (sceKernelIsToolMode() != 0)
-        return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_UNK_DEBUG, args, argp, opt, 0x10000);
+        return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_UNK133, args, argp, opt, 0x10000);
     return SCE_ERROR_KERNEL_NOT_IMPLEMENTED;
 }
 
@@ -945,12 +945,12 @@ s32 LoadExecForKernel_8C4679D3(char *file, SceKernelLoadExecVSHParam *opt)
 
 s32 LoadExecForKernel_B343FDAB(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_EXEC_FILE_APITYPE_UNK_GAME1, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_UNK160, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_1B8AB02E(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_EXEC_FILE_APITYPE_UNK_GAME2, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_UNK161, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_C11E6DF1(char *file, SceKernelLoadExecVSHParam *opt)
@@ -1138,8 +1138,8 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
             case SCE_EXEC_FILE_APITYPE_EF4:
             case SCE_EXEC_FILE_APITYPE_EF5:
             case SCE_EXEC_FILE_APITYPE_EF6:
-            case SCE_EXEC_FILE_APITYPE_UNK_GAME1:
-            case SCE_EXEC_FILE_APITYPE_UNK_GAME2:
+            case SCE_EXEC_FILE_APITYPE_UNK160:
+            case SCE_EXEC_FILE_APITYPE_UNK161:
                 devcmd = 0x208813;
                 iocmd  = 0x208013;
                 break;
@@ -1429,8 +1429,8 @@ s32 runReboot(RunExecParams *opt)
     case SCE_EXEC_FILE_APITYPE_EF5:
     case SCE_EXEC_FILE_APITYPE_EF6:
 
-    case SCE_EXEC_FILE_APITYPE_UNK_GAME1:
-    case SCE_EXEC_FILE_APITYPE_UNK_GAME2:
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
 
     case SCE_EXEC_FILE_APITYPE_EF1:
     case SCE_EXEC_FILE_APITYPE_EF2:
@@ -1444,8 +1444,8 @@ s32 runReboot(RunExecParams *opt)
 
     case SCE_EXEC_FILE_APITYPE_USBWLAN:
     case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG:
-    case SCE_EXEC_FILE_APITYPE_UNK:
-    case SCE_EXEC_FILE_APITYPE_UNK_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_UNK132:
+    case SCE_EXEC_FILE_APITYPE_UNK133:
 
     case SCE_EXEC_FILE_APITYPE_DISC:
     case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
@@ -1458,7 +1458,7 @@ s32 runReboot(RunExecParams *opt)
 
     case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
 
-    case SCE_EXEC_FILE_APITYPE_UNK0x100:
+    case SCE_EXEC_FILE_APITYPE_UNK100:
 
     case SCE_EXEC_FILE_APITYPE_GAME_EBOOT:
     case SCE_EXEC_FILE_APITYPE_GAME_BOOT:

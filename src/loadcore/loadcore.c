@@ -1003,7 +1003,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     
     if ((execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL) { //0x000012A4
         blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, LOADCORE_KERNEL_PRX_BUFFER_NAME, 
-                                                SCE_KERNEL_SMEM_Low, execInfo->largestSegSize, 0); //0x0000134C
+                                                SCE_KERNEL_SMEM_Low, execInfo->modCodeSize, 0); //0x0000134C
         //TODO: Add NULL-pointer check, Sony forgot it.
         *modMemId = blockId;
         execInfo->topAddr = sceKernelGetBlockHeadAddr(blockId); //0x00001360

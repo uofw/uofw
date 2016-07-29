@@ -429,7 +429,7 @@ s32 sceKernelModuleMgrMode(s32 mode)
 // sub_00005C4C
 static s32 _LoadModule(SceModuleMgrParam *pModParams)
 {
-    s64 pos;
+    SceOff pos;
     s32 status;
     SceModule *pMod;
     SceLoadCoreExecFileInfo *pExecInfo;
@@ -592,9 +592,9 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
     }
 
     if (!(pExecInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED)) // 0x00005ED4
-        pExecInfo->maxAllocSize = pspMax(pExecInfo->execSize, pExecInfo->largestSegSize); // 0x00006504
+        pExecInfo->maxAllocSize = pspMax(pExecInfo->execSize, pExecInfo->modCodeSize); // 0x00006504
     else if (!(pExecInfo->execAttribute & SCE_EXEC_FILE_GZIP_OVERLAP)) { // 0x00005EF0
-        pExecInfo->maxAllocSize = pspMax(pExecInfo->largestSegSize, pExecInfo->decSize);
+        pExecInfo->maxAllocSize = pspMax(pExecInfo->modCodeSize, pExecInfo->decSize);
     } else
         pExecInfo->maxAllocSize = pExecInfo->decSize + pExecInfo->overlapSize * 256; // 0x00005F04
 
@@ -822,7 +822,7 @@ static void _FreeMemoryResources(SceUID fd, SceUID blockId, SceModuleMgrParam *p
 }
 
 /*
- * Reset and free the specified memory.
+ * Reset and free the specified memory block.
  */
 s32 ClearFreePartitionMemory(SceUID blockId)
 {
@@ -919,7 +919,7 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
                 || pExecInfo->apiType == SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_MS
                 || pExecInfo->apiType == SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_APP) // 0x000068B0 - 0x000068E8
         {
-            SceSize decSize = (pExecInfo->decSize < pExecInfo->largestSegSize) ? pExecInfo->largestSegSize : pExecInfo->decSize; // 0x00006904
+            SceSize decSize = (pExecInfo->decSize < pExecInfo->modCodeSize) ? pExecInfo->modCodeSize : pExecInfo->decSize; // 0x00006904
             SceSize execSize = (pExecInfo->execSize < decSize) ? decSize : pExecInfo->execSize; // 0x0000690C
             SceSize bufSize = (pModParams->modSize < execSize) ? execSize : pModParams->modSize; // 0x00006918
 
@@ -1042,35 +1042,35 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
         blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
         sceKernelQueryMemoryBlockInfo(pModParams->externMemBlockIdUser, &blkInfo); // 0x00006E28
 
-        if ((pExecInfo->largestSegSize + pModParams->memBlockOffset) < blkInfo.memSize) // 0x00006E38
-            sceKernelMemset((void *)(blkInfo.addr + pExecInfo->largestSegSize + (u32)pModParams->memBlockOffset), 0,
-            blkInfo.memSize - (pExecInfo->largestSegSize + pModParams->memBlockOffset)); // 0x00006D8C
+        if ((pExecInfo->modCodeSize + pModParams->memBlockOffset) < blkInfo.memSize) // 0x00006E38
+            sceKernelMemset((void *)(blkInfo.addr + pExecInfo->modCodeSize + (u32)pModParams->memBlockOffset), 0,
+            blkInfo.memSize - (pExecInfo->modCodeSize + pModParams->memBlockOffset)); // 0x00006D8C
     } else if (pModParams->externMemBlockIdKernel != 0) { // 0x00006B24
         SceBool cutBefore = SCE_FALSE;
         if (pModParams->position == SCE_KERNEL_LM_POS_HIGH) // 0x00006B38
             cutBefore = SCE_TRUE;
 
-        pModParams->unk116 = sceKernelSeparateMemoryBlock(pModParams->externMemBlockIdKernel, cutBefore, pExecInfo->largestSegSize); // 0x00006B48
+        pModParams->unk116 = sceKernelSeparateMemoryBlock(pModParams->externMemBlockIdKernel, cutBefore, pExecInfo->modCodeSize); // 0x00006B48
         if (pModParams->pNewBlockId != NULL) // 0x00006B54
             *(pModParams->pNewBlockId) = pModParams->unk116; // 0x00006B60
 
         SceSysmemMemoryBlockInfo blkInfo;
         blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
         sceKernelQueryMemoryBlockInfo(pModParams->externMemBlockIdKernel, &blkInfo); // 0x00006B74
-        if (pExecInfo->largestSegSize < blkInfo.memSize) // 0x00006B84
-            sceKernelMemset((void *)(blkInfo.addr + pExecInfo->largestSegSize), 0, blkInfo.memSize - pExecInfo->largestSegSize); // 0x00006D8C
+        if (pExecInfo->modCodeSize < blkInfo.memSize) // 0x00006B84
+            sceKernelMemset((void *)(blkInfo.addr + pExecInfo->modCodeSize), 0, blkInfo.memSize - pExecInfo->modCodeSize); // 0x00006D8C
     } else {
         SceSysmemMemoryBlockInfo blkInfo;
         blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
         sceKernelQueryMemoryBlockInfo(pMod->moduleBlockId, &blkInfo); // 0x00006DB0
 
-        if (pExecInfo->largestSegSize < blkInfo.memSize) // 0x00006DC0
-            sceKernelMemset((void *)(blkInfo.addr + pExecInfo->largestSegSize), 0, blkInfo.memSize - pExecInfo->largestSegSize); // 0x00006E08
+        if (pExecInfo->modCodeSize < blkInfo.memSize) // 0x00006DC0
+            sceKernelMemset((void *)(blkInfo.addr + pExecInfo->modCodeSize), 0, blkInfo.memSize - pExecInfo->modCodeSize); // 0x00006E08
 
         if (pExecInfo->isCompressed) { // 0x00006DCC
-            status = sceKernelResizeMemoryBlock(pExecInfo->decompressionMemId, 0, pExecInfo->largestSegSize - pExecInfo->maxAllocSize); // 0x00006DE4
+            status = sceKernelResizeMemoryBlock(pExecInfo->decompressionMemId, 0, pExecInfo->modCodeSize - pExecInfo->maxAllocSize); // 0x00006DE4
             if (status >= 0) // 0x00006DEC
-                pExecInfo->maxAllocSize = pExecInfo->largestSegSize; // 0x00006DFC
+                pExecInfo->maxAllocSize = pExecInfo->modCodeSize; // 0x00006DFC
         }
     }
     
@@ -1108,7 +1108,7 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
 //loc_00006CCC
 /*
  * Performs cleanup of module resources used for the relocation process.
- * Call thus function in an error case for _RelocateModule().
+ * Call this function in an error case for _RelocateModule().
  */
 static void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo)
 {
@@ -1505,7 +1505,7 @@ static s32 allocate_module_block(SceModuleMgrParam *pModParams)
             if (pModParams->externMemBlockIdKernel != 0 && pModParams->position == SCE_KERNEL_LM_POS_HIGH) { // 0x00007E24 & 0x00007E30
                 base = sceKernelGetBlockHeadAddr(pModParams->externMemBlockIdKernel); // 0x00007E5C
 
-                pExecInfo->topAddr = base + (pModParams->externMemBlockSize - UPALIGN64(pExecInfo->largestSegSize)); // 0x00007E68 - 0x00007E84 & 0x00007E40
+                pExecInfo->topAddr = base + (pModParams->externMemBlockSize - UPALIGN64(pExecInfo->modCodeSize)); // 0x00007E68 - 0x00007E84 & 0x00007E40
             }
             pMod->moduleBlockId = pExecInfo->decompressionMemId; // 0x00007E44
             //pMod->mpIdText = pExecInfo->partitionId; // 0x00007E4C
@@ -1529,7 +1529,7 @@ static s32 allocate_module_block(SceModuleMgrParam *pModParams)
             }
             // TODO: Check, where moduleBlockId-partition will be freed in case of an error.
             SceUID moduleBlockId = sceKernelAllocPartitionMemory(pExecInfo->partitionId, "SceModmgrModuleBlockAuto",
-                blkAllocType, pExecInfo->largestSegSize, addr); // 0x00007DB0
+                blkAllocType, pExecInfo->modCodeSize, addr); // 0x00007DB0
             if (moduleBlockId < 0)
                 return status;
 
@@ -1582,8 +1582,8 @@ static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *p
     case SCE_EXEC_FILE_APITYPE_EF4:
     case SCE_EXEC_FILE_APITYPE_EF5:
     case SCE_EXEC_FILE_APITYPE_EF6:
-    case SCE_EXEC_FILE_APITYPE_UNK_GAME1:
-    case SCE_EXEC_FILE_APITYPE_UNK_GAME2:
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
         // 0x00007F14
         if (pPbpHdr->magic[0] != 0 || pPbpHdr->magic[1] != 'P' || pPbpHdr->magic[2] != 'B' || pPbpHdr->magic[3] != 'P') // 0x00007F40
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;

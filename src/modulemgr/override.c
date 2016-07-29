@@ -33,7 +33,7 @@
 typedef struct {
     /** The path of the module that will be loaded instead. */
     char *overridePath; // 0
-    /** The number of module hashes (most likely used to match different module versions) */
+    /** The number of module hashes. */
     u32 numHashes; // 4
     /** List containing numHashes hashes, each of the size of 16 bytes. */
     void *pHashList; // 8

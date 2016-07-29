@@ -74,7 +74,7 @@ enum SceFileExecApiType {
     SCE_EXEC_FILE_APITYPE_MODULE_BOOT_INIT_CONFIG        = 0x052,
     SCE_EXEC_FILE_APITYPE_MODULE_DECI                    = 0x070,
     /** Unknown. */
-    SCE_EXEC_FILE_APITYPE_UNK0x100                       = 0x100,
+    SCE_EXEC_FILE_APITYPE_UNK100                         = 0x100,
     /** GAME EBOOT. */
     SCE_EXEC_FILE_APITYPE_GAME_EBOOT                     = 0x110,
     /** GAME BOOT. */
@@ -110,9 +110,9 @@ enum SceFileExecApiType {
     /** Unknown. */
     SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG                  = 0x131,
     /** Unknown. */
-    SCE_EXEC_FILE_APITYPE_UNK                            = 0x132,
+    SCE_EXEC_FILE_APITYPE_UNK132                         = 0x132,
     /** Unknown. */
-    SCE_EXEC_FILE_APITYPE_UNK_DEBUG                      = 0x133,
+    SCE_EXEC_FILE_APITYPE_UNK133                         = 0x133,
     /** Unknown. */
     SCE_EXEC_FILE_APITYPE_MS1                            = 0x140,
     /** Unknown. */
@@ -138,9 +138,9 @@ enum SceFileExecApiType {
     /** Unknown. */
     SCE_EXEC_FILE_APITYPE_EF6                            = 0x156,
     /** Unknown. */
-    SCE_EXEC_FILE_APITYPE_UNK_GAME1                      = 0x160,
+    SCE_EXEC_FILE_APITYPE_UNK160                         = 0x160,
     /** Unknown. */
-    SCE_EXEC_FILE_APITYPE_UNK_GAME2                      = 0x161,
+    SCE_EXEC_FILE_APITYPE_UNK161                         = 0x161,
     /** Unknown. */
     SCE_EXEC_FILE_APITYPE_MLNAPP_MS                      = 0x170,
     /** Unknown. */

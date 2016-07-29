@@ -594,10 +594,10 @@ typedef struct {
     /** Unknown. */
     u32 unk44;
     /** 
-     * The size of the largest module segment. Should normally be "textSize", but technically can 
-     * be any other segment. 
+     * The total size of the loadable segments of the executable. Contains for example the size
+     * of the .text, .data and .bss segment.
      */
-    SceSize largestSegSize; //48
+    SceSize modCodeSize; //48
     /** The size of the TEXT segment. */
     SceSize textSize; //52
     /** The size of the DATA segment. */

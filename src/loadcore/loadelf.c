@@ -155,7 +155,7 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         }       
     }
     execInfo->topAddr = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000406C
-    execInfo->largestSegSize = 0; //0x00004078
+    execInfo->modCodeSize = 0; //0x00004078
     execInfo->maxSegAlign = 0; //0x0000407C
     
     elfHeader = (Elf32_Ehdr *)buf;
@@ -202,6 +202,8 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                 execInfo->moduleInfoOffset = elfProgHeader->p_paddr & 0x1FFFFFFF; //0x00004184
             }
             execInfo->topAddr = (void *)elfProgHeader->p_vaddr; //0x0000418C
+
+            // TODO: Fix the loop condition: != PT_LOAD -> == PT_LOAD
             if (nSegments > 0 && elfProgHeader->p_type == PT_LOAD) { //0x00004190 & 0x000041A0
                 //0x00004200 - (0x00004244) - 0x0000425C
                 for (i = 0; i < nSegments && elfProgHeader->p_type != PT_LOAD; i++, elfProgHeader++) {
@@ -215,9 +217,9 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                          execInfo->maxSegAlign = elfProgHeader->p_align; //0x00004240
                 }
             }
-            execInfo->largestSegSize = maxAddr - lowAddr; //0x000041B0
+            execInfo->modCodeSize = maxAddr - lowAddr; //0x000041B0
             if (execInfo->elfType == SCE_EXEC_FILE_ELF) { //0x000041B8
-                execInfo->largestSegSize = maxAddr - (lowAddr & 0xFFFFFF00); //0x000041D8
+                execInfo->modCodeSize = maxAddr - (lowAddr & 0xFFFFFF00); //0x000041D8
                 
                 if (execInfo->execSize == 0) //0x000041D4
                     execInfo->execSize = maxOffset; //0x000041E8
@@ -1402,7 +1404,7 @@ static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execI
     u32 i;
     u32 maxSegEnd = 0;
     
-    execInfo->largestSegSize = 0; //0x00006328
+    execInfo->modCodeSize = 0; //0x00006328
     execInfo->topAddr = (void *)header->segAddress[0]; //0x00006334
     execInfo->maxSegAlign = 0; //0x00006338
     
@@ -1417,7 +1419,7 @@ static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execI
                  maxSegEnd = header->segAddress[i] + header->segSize[i];
         }
     }
-    execInfo->largestSegSize = maxSegEnd - (u32)execInfo->topAddr;
+    execInfo->modCodeSize = maxSegEnd - (u32)execInfo->topAddr;
 }
 
 //sub_000063C0

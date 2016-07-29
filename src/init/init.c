@@ -557,8 +557,8 @@ static SceUID LoadModuleAnchorInBtcnf(char *file)
     case SCE_EXEC_FILE_APITYPE_EF6:
         status = sceKernelLoadModuleForLoadExecVSHMs6(g_init->apiType, file, 0, NULL);
         break;
-    case 0x160: 
-    case 0x161:
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
         status = ModuleMgrForKernel_8DD336D4(g_init->apiType, file, 0, NULL);
         break;
     default:
@@ -577,11 +577,11 @@ static SceUID LoadModuleBufferAnchorInBtcnf(void *modBuf, s32 opt)
     
     switch (g_init->apiType) {
     case SCE_EXEC_FILE_APITYPE_USBWLAN: 
-    case 0x132:
+    case SCE_EXEC_FILE_APITYPE_UNK132:
         status = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(g_init->apiType, modBuf, 0, NULL);
         break;
     case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: 
-    case 0x133:
+    case SCE_EXEC_FILE_APITYPE_UNK133:
         if (sceKernelIsToolMode() == SCE_FALSE)
             status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         else
@@ -691,10 +691,11 @@ static void InitThreadEntry(SceSize args, void *argp)
         case SCE_EXEC_FILE_APITYPE_NPDRM_MS: case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
         case SCE_EXEC_FILE_APITYPE_DISC: case SCE_EXEC_FILE_APITYPE_DISC_DEBUG: case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1: 
         case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2: case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
-        case SCE_EXEC_FILE_APITYPE_USBWLAN: case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: case 0x132: case 0x133:
+        case SCE_EXEC_FILE_APITYPE_USBWLAN: case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: case SCE_EXEC_FILE_APITYPE_UNK132: 
+        case SCE_EXEC_FILE_APITYPE_UNK133:
         case SCE_EXEC_FILE_APITYPE_MS2: case SCE_EXEC_FILE_APITYPE_MS3: case SCE_EXEC_FILE_APITYPE_MS6:
         case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF6:
-        case 0x160:
+        case SCE_EXEC_FILE_APITYPE_UNK160:
         case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
             g_init->applicationType = SCE_INIT_APPLICATION_GAME;
             break;
@@ -719,7 +720,7 @@ static void InitThreadEntry(SceSize args, void *argp)
     switch (g_init->apiType) {
     case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF: case SCE_EXEC_FILE_APITYPE_NPDRM_EF: 
     case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
-    case 0x132: case 0x133: 
+    case SCE_EXEC_FILE_APITYPE_UNK132: case SCE_EXEC_FILE_APITYPE_UNK133:
     case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF4: 
     case SCE_EXEC_FILE_APITYPE_EF5: case SCE_EXEC_FILE_APITYPE_EF6: 
     case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
