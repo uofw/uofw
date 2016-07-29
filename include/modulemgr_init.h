@@ -89,8 +89,12 @@ enum SceFileExecApiType {
     SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF                    = 0x115,
     /** NP-DRM Memory-Stick. */
     SCE_EXEC_FILE_APITYPE_NPDRM_MS                       = 0x116, /* Distributed programs and data through the Playstation Store. */
+    /** Unknown. */
+    SCE_EXEC_FILE_APITYPE_UNK117                         = 0x117,
     /** NP-DRM EF. */
     SCE_EXEC_FILE_APITYPE_NPDRM_EF                       = 0x118, /* NP-DRM: PlayStation Network Platform Digital Rights Management */
+    /** Unknown. */
+    SCE_EXEC_FILE_APITYPE_UNK119                         = 0x119,
     /** Executable on a disc. */
     SCE_EXEC_FILE_APITYPE_DISC                           = 0x120,
     /** Updater executable on a disc.*/

@@ -96,7 +96,7 @@ typedef struct {
  */
 typedef struct {
     /** PSF magic value*/
-    u32 magic;
+    u8 magic[4];
     /** PSF header version. */
     u32 version;
     /** File offset in bytes to the table containing the used keys. */
@@ -123,7 +123,8 @@ typedef struct {
     u32 valueOffset;
 } PSFKeyInfo;
 
-/** keys */
+/** PSF Keys */
+
 #define PSF_KEY_APP_VER                 "APP_VER"           /** Version of the application or patch. */
 #define PSF_KEY_ATTRIBUTE               "ATTRIBUTE "
 #define PSF_KEY_BOOTABLE                "BOOTABLE"          /** Whether or not the application is bootable. */
@@ -149,10 +150,7 @@ typedef struct {
 #define PSF_KEY_UPDATER_VER             "UPDATER_VER"       /** The version of the updater. */
 #define PSF_KEY_USE_USB                 "USE_USB"           /** Indicates whether or not the USB accessory is used. */
 
-/** Values */
-
-#define PSF_VALUE_TITLE_MAX_LEN         (128) /* Including '\0'. */
-#define PSF_VALUE_PBOOT_TITLE_MAX_LEN   (128) /* Including '\0'. */
+/** PSF Values */
 
 #define PSF_VALUE_CATEGORY_APPS                     "MA" /** category: Memory Stick application */
 #define PSF_VALUE_CATEGORY_PS1_GAME                 "ME" /** category: PS1 game */
@@ -163,23 +161,26 @@ typedef struct {
 #define PSF_VALUE_CATEGORY_WLAN_GAME                "WG" /** category: External bootable binary */
 #define PSF_VALUE_CATEGORY_SYSTEM_SOFTWARE_UPDATE   "MSTKUPDATE" /** category: System Software update */
 
+#define PSF_VALUE_TITLE_MAX_LEN         (128) /* Including '\0'. */
+#define PSF_VALUE_PBOOT_TITLE_MAX_LEN   (128) /* Including '\0'. */
+
 /* Parental lock level - Lower level means less restrictions. */
-#define PSF_VALUE_PARENTAL_LEVEL_0    (0)
-#define PSF_VALUE_PARENTAL_LEVEL_1    (1)
-#define PSF_VALUE_PARENTAL_LEVEL_2    (2)
-#define PSF_VALUE_PARENTAL_LEVEL_3    (3)
-#define PSF_VALUE_PARENTAL_LEVEL_4    (4)
-#define PSF_VALUE_PARENTAL_LEVEL_5    (5)
-#define PSF_VALUE_PARENTAL_LEVEL_6    (6)
-#define PSF_VALUE_PARENTAL_LEVEL_7    (7)
-#define PSF_VALUE_PARENTAL_LEVEL_8    (8)
-#define PSF_VALUE_PARENTAL_LEVEL_9    (9)
-#define PSF_VALUE_PARENTAL_LEVEL_10   (10)
-#define PSF_VALUE_PARENTAL_LEVEL_11   (11)
+#define PSF_VALUE_PARENTAL_LEVEL_0      (0)
+#define PSF_VALUE_PARENTAL_LEVEL_1      (1)
+#define PSF_VALUE_PARENTAL_LEVEL_2      (2)
+#define PSF_VALUE_PARENTAL_LEVEL_3      (3)
+#define PSF_VALUE_PARENTAL_LEVEL_4      (4)
+#define PSF_VALUE_PARENTAL_LEVEL_5      (5)
+#define PSF_VALUE_PARENTAL_LEVEL_6      (6)
+#define PSF_VALUE_PARENTAL_LEVEL_7      (7)
+#define PSF_VALUE_PARENTAL_LEVEL_8      (8)
+#define PSF_VALUE_PARENTAL_LEVEL_9      (9)
+#define PSF_VALUE_PARENTAL_LEVEL_10     (10)
+#define PSF_VALUE_PARENTAL_LEVEL_11     (11)
 
 #define PSF_VALUE_REGION_ALL_REGIONS    (0x8000)
 
 /* Product number - allowed characters: A-Z, 0-9 */
-#define PSF_VALUE_DISC_ID_MAX_LEN     (16) /* Including '\0'. */
+#define PSF_VALUE_DISC_ID_MAX_LEN       (16) /* Including '\0'. */
 
 #define PSF_VALUE_DRIVER_PATH_MAX_LEN   (64)
