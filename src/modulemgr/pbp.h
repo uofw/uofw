@@ -5,7 +5,7 @@
 #include "common_header.h"
 
 /**
- * A .PBP file - such as EBOOT.PBP - is used to distribute PSP applications, i.e. game software.
+ * A PSP Boot Package (PBP) - such as EBOOT.PBP - is used to distribute PSP applications, i.e. game software.
  * It contains a PSP system file (PARAM.SFO), content information files (ICON0.PNG, ICON1.PMF, PIC0.PNG,
  * PIC1.PNG, SND0.AT3) and files containing executable and linking information (DATA.PSP, DATA.PSAR).
  *
@@ -17,7 +17,7 @@
  */
 
 /*
- *  .PBP file layout: 
+ *  PBP file layout: 
  *
  * +--------------------------------------------+
  * |             PBP header (40 Byte)           |
@@ -30,7 +30,7 @@
  * |           n x Keys & n x Values *          |
  * |      (*)size depends on the used keys      |
  * |--------------------------------------------|
- * |     Content file information (if any)*     |
+ * |    Content information files (if any)*     |
  * |                (*)size >= 0                |
  * |--------------------------------------------|-------------------
  * |      SCE Header (64 Byte) (optional)       |                   |
@@ -89,13 +89,13 @@ typedef struct {
  * This structure represents the PARAM.SFO (PSF) header.
  *
  * The .SFO header belongs to the PARAM.SFO file, a system file which stores 
- * parameters used for display by the PSP™ system software, such as the game title,
+ * parameters used for display by the PSP system software, such as the game title,
  * user age restriction value, etc., as well as parameters used internally, such as 
  * the product number or the disc serial number. The required parameters depend on 
- * the type of the executable file (i.e game, video, audio).
+ * the type of the executable file (i.e. game, video, audio).
  */
 typedef struct {
-    /** PSF magic value*/
+    /** PSF magic value. */
     u8 magic[4];
     /** PSF header version. */
     u32 version;
@@ -126,15 +126,15 @@ typedef struct {
 /** PSF Keys */
 
 #define PSF_KEY_APP_VER                 "APP_VER"           /** Version of the application or patch. */
-#define PSF_KEY_ATTRIBUTE               "ATTRIBUTE "
+#define PSF_KEY_ATTRIBUTE               "ATTRIBUTE"
 #define PSF_KEY_BOOTABLE                "BOOTABLE"          /** Whether or not the application is bootable. */
-#define PSF_KEY_DISC_ID                 "DISC_ID"           /** product number. */
+#define PSF_KEY_DISC_ID                 "DISC_ID"           /** Product number. */
 #define PSF_KEY_CATEGORY                "CATEGORY"          /** System file category. */
 #define PSF_KEY_DISC_NUMBER             "DISC_NUMBER"       /** Disc number within a disc set. */
 #define PSF_KEY_DISC_TOTAL              "DISC_TOTAL"        /** The total number of discs in a disc set. */
 #define PSF_KEY_DISC_VERSION            "DISC_VERSION"      /** The disc version. Format X.YZ (X,Y,Z: 0-9). */
 #define PSF_KEY_DRIVER_PATH             "DRIVER_PATH"       /** Pathname of the device driver. */
-#define PSF_KEY_GAMEDATA_ID             "GAMEDATA_ID"       /** Identifier used in place of the product number to allow patch sharing */
+#define PSF_KEY_GAMEDATA_ID             "GAMEDATA_ID"       /** Identifier used in place of the product number to allow patch sharing. */
 #define PSF_KEY_HRKGMP_VER              "HRKGMP_VER"
 #define PSF_KEY_MEMSIZE                 "MEMSIZE"           /** Add extra RAM for application (not for PSP-100X). */
 #define PSF_KEY_PARENTAL_LEVEL          "PARENTAL_LEVEL"    /** Restriction level for applications. */
