@@ -313,34 +313,6 @@ const u32 g_hashinfo[8] = {
     0x00170200
 };
 
-//0x00008038
-const u32 g_hashData[24] = {
-    0x2CDEEB73, 
-    0xF7E529B9, 
-    0xF85FB599,
-    0xA8B6B2D3,
-    0xA0811E0E,
-    0xF91FE045,
-    0x51339FF7,
-    0xBF9F32B2,
-    0x89F0A05E,
-    0xF413FE28,
-    0x1F24A87E,
-    0x7C1ADFE2,
-    0x3D3203F8,
-    0x4C6E9246,
-    0x4DCA0BCB,
-    0x71A9322A,
-    0x7EAEEDE2,
-    0xC7BACA41,
-    0xC38D13D2,
-    0xE54A1434,
-    0x0FC5364D,
-    0xF2EA99AA,
-    0x7A418AA1,
-    0xFEC29EA1,
-};
-
 /*
  * Loadcore's exported functions and their NIDs.
  */
