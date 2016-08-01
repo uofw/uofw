@@ -24,40 +24,41 @@ script:
   - make -k
 
 after_script:
-  - if [[ $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_BRANCH == 'master' ]]; then
-  -   mkdir gh-pages && cd gh-pages
-  -   git clone "https://github.com/$TRAVIS_REPO_SLUG.git" --branch gh-pages .
-  -   export GIT_ROOT=$TRAVIS_BUILD_DIR
+  - |
+    if [[ $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_BRANCH == 'master' ]]; then
+      mkdir gh-pages && cd gh-pages
+      git clone "https://github.com/$TRAVIS_REPO_SLUG.git" --branch gh-pages .
+      export GIT_ROOT=$TRAVIS_BUILD_DIR
 
-  -   if [[ $(git -C $GIT_ROOT log --pretty=%s -1 $TRAVIS_COMMIT) != *"[docs-skip]"* ]]; then
-  -     doxygen ../docs/Doxyfile
-  -   fi
+      if [[ $(git -C $GIT_ROOT log --pretty=%s -1 $TRAVIS_COMMIT) != *"[docs-skip]"* ]]; then
+        doxygen ../docs/Doxyfile
+      fi
 
-  -   if [[ $(git -C $GIT_ROOT log --pretty=%s -1 $TRAVIS_COMMIT) == *"[exec-build]"* || $(git -C $GIT_ROOT diff-tree --name-only --no-commit-id $TRAVIS_COMMIT $GIT_ROOT/utils) ]]; then
-  -     cd $GIT_ROOT/utils
-  -     mkdir -p ../gh-pages/executables
+      if [[ $(git -C $GIT_ROOT log --pretty=%s -1 $TRAVIS_COMMIT) == *"[exec-build]"* || $(git -C $GIT_ROOT diff-tree --name-only --no-commit-id $TRAVIS_COMMIT $GIT_ROOT/utils) ]]; then
+        cd $GIT_ROOT/utils
+        mkdir -p ../gh-pages/executables
 
-  -     make mrproper all CC=gcc -m32 CXX=g++ -m32
-  -     for file in $(find */ -executable -type f); do
-  -       mv $file "../gh-pages/executables/$(basename $file)-i386"
-  -     done
+        make mrproper all CC=gcc -m32 CXX=g++ -m32
+        for file in $(find */ -executable -type f); do
+          mv $file "../gh-pages/executables/$(basename $file)-i386"
+        done
 
-  -     make mrproper all CC="i686-w64-mingw32-gcc -m32" CXX="i686-w64-mingw32-g++ -m32"
-  -     for file in $(find */ -executable -type f); do
-  -       mv $file "../gh-pages/executables/$(basename $file)-i386.exe"
-  -     done
-  -   fi
+        make mrproper all CC="i686-w64-mingw32-gcc -m32" CXX="i686-w64-mingw32-g++ -m32"
+        for file in $(find */ -executable -type f); do
+          mv $file "../gh-pages/executables/$(basename $file)-i386.exe"
+        done
+      fi
 
-  -   cd $GIT_ROOT/gh-pages
+      cd $GIT_ROOT/gh-pages
 
-  -   git config user.email "travis@example.com"
-  -   git config user.name "uOFW Doc builder"
+      git config user.email "travis@example.com"
+      git config user.name "uOFW Doc builder"
 
-  -   git remote set-url origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
-  -   git checkout gh-pages
-  -   git add .
-  -   git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
+      git remote set-url origin "https://${GH_AUTH}@github.com/$TRAVIS_REPO_SLUG.git"
+      git checkout gh-pages
+      git add .
+      git commit -am "Rebuilt docs for $TRAVIS_COMMIT"
 
-  -   git push origin gh-pages 2>&1 | sed "s/${GH_AUTH}/[secure]/gi"
-  - fi
+      git push origin gh-pages 2>&1 | sed "s/${GH_AUTH}/[secure]/gi"
+    fi
 
