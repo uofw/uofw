@@ -1,6 +1,6 @@
 /* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
-*/
+   */
 
 #ifndef COMMON_INCLUDED
 # error "Only include common_asm.h, common_imp.h or common_header.h!"
@@ -34,71 +34,71 @@
  *
  *  bits 27-16: Facility
  *      One of the below facility codes
- * 
+ *
  *  bits 15-0: Error code
  *      Define the concrete meaning of the error code. The meaning is depending
- *      on the facility code, in other words, if for two error values the 
+ *      on the facility code, in other words, if for two error values the
  *      error code fields are equal, but the facility differs, then the meaning of the
  *      error value might differ as well.
- *      
+ *
  */
 
 /**
  * Definition of facility codes
  */
 
-#define SCE_ERROR_FACILITY_NULL			0x000
-#define SCE_ERROR_FACILITY_ERRNO		0x001
-#define SCE_ERROR_FACILITY_KERNEL		0x002
-#define SCE_ERROR_FACILITY_REGISTRY		0x008
-#define SCE_ERROR_FACILITY_VSH			0x010
-#define SCE_ERROR_FACILITY_UTILITY		0x011
-#define SCE_ERROR_FACILITY_SYSFILE		0x012
-#define SCE_ERROR_FACILITY_MSAPP		0x013
+#define SCE_ERROR_FACILITY_NULL         0x000
+#define SCE_ERROR_FACILITY_ERRNO        0x001
+#define SCE_ERROR_FACILITY_KERNEL       0x002
+#define SCE_ERROR_FACILITY_REGISTRY     0x008
+#define SCE_ERROR_FACILITY_VSH          0x010
+#define SCE_ERROR_FACILITY_UTILITY      0x011
+#define SCE_ERROR_FACILITY_SYSFILE      0x012
+#define SCE_ERROR_FACILITY_MSAPP        0x013
 
-#define SCE_ERROR_FACILITY_UMD			0x021
-#define SCE_ERROR_FACILITY_MEMSTICK		0x022
-#define SCE_ERROR_FACILITY_FLASH		0x023
-#define SCE_ERROR_FACILITY_USB			0x024
-#define SCE_ERROR_FACILITY_SYSCON		0x025
-#define SCE_ERROR_FACILITY_AUDIO		0x026
-#define SCE_ERROR_FACILITY_LFLASH		0x027
-#define SCE_ERROR_FACILITY_LFATFS		0x028
-#define SCE_ERROR_FACILITY_SIRCS		0x029
-#define SCE_ERROR_FACILITY_IRDA			0x02A
-#define SCE_ERROR_FACILITY_POWER		0x02B
-#define SCE_ERROR_FACILITY_AUDIOROUTING	0x02C
-#define SCE_ERROR_FACILITY_MEDIASYNC	0x02D
-#define SCE_ERROR_FACILITY_PERIPH		0x03F
+#define SCE_ERROR_FACILITY_UMD          0x021
+#define SCE_ERROR_FACILITY_MEMSTICK     0x022
+#define SCE_ERROR_FACILITY_FLASH        0x023
+#define SCE_ERROR_FACILITY_USB          0x024
+#define SCE_ERROR_FACILITY_SYSCON       0x025
+#define SCE_ERROR_FACILITY_AUDIO        0x026
+#define SCE_ERROR_FACILITY_LFLASH       0x027
+#define SCE_ERROR_FACILITY_LFATFS       0x028
+#define SCE_ERROR_FACILITY_SIRCS        0x029
+#define SCE_ERROR_FACILITY_IRDA         0x02A
+#define SCE_ERROR_FACILITY_POWER        0x02B
+#define SCE_ERROR_FACILITY_AUDIOROUTING 0x02C
+#define SCE_ERROR_FACILITY_MEDIASYNC    0x02D
+#define SCE_ERROR_FACILITY_PERIPH       0x03F
 
-#define SCE_ERROR_FACILITY_NETWORK		0x041
-#define SCE_ERROR_FACILITY_SAS			0x042
-#define SCE_ERROR_FACILITY_HTTP			0x043
-#define SCE_ERROR_FACILITY_WAVE			0x044
-#define SCE_ERROR_FACILITY_SND			0x045
-#define SCE_ERROR_FACILITY_FONT			0x046
-#define SCE_ERROR_FACILITY_P3DA			0x047
-#define SCE_ERROR_FACILITY_MAGICGATE	0x050
-#define SCE_ERROR_FACILITY_CPHIO		0x051
-#define SCE_ERROR_FACILITY_OPENPSID		0x052
-#define SCE_ERROR_FACILITY_DNAS			0x053
-#define SCE_ERROR_FACILITY_MTP			0x054
-#define SCE_ERROR_FACILITY_NP			0x055
-#define SCE_ERROR_FACILITY_GAMEUPDATE	0x056
-#define SCE_ERROR_FACILITY_FMAC			0x057
-#define SCE_ERROR_FACILITY_FACE			0x058
-#define SCE_ERROR_FACILITY_LIBRARY		0x05F
+#define SCE_ERROR_FACILITY_NETWORK      0x041
+#define SCE_ERROR_FACILITY_SAS          0x042
+#define SCE_ERROR_FACILITY_HTTP         0x043
+#define SCE_ERROR_FACILITY_WAVE         0x044
+#define SCE_ERROR_FACILITY_SND          0x045
+#define SCE_ERROR_FACILITY_FONT         0x046
+#define SCE_ERROR_FACILITY_P3DA         0x047
+#define SCE_ERROR_FACILITY_MAGICGATE    0x050
+#define SCE_ERROR_FACILITY_CPHIO        0x051
+#define SCE_ERROR_FACILITY_OPENPSID     0x052
+#define SCE_ERROR_FACILITY_DNAS         0x053
+#define SCE_ERROR_FACILITY_MTP          0x054
+#define SCE_ERROR_FACILITY_NP           0x055
+#define SCE_ERROR_FACILITY_GAMEUPDATE   0x056
+#define SCE_ERROR_FACILITY_FMAC         0x057
+#define SCE_ERROR_FACILITY_FACE         0x058
+#define SCE_ERROR_FACILITY_LIBRARY      0x05F
 
-#define SCE_ERROR_FACILITY_MPEG			0x061
-#define SCE_ERROR_FACILITY_AVC			0x062
-#define SCE_ERROR_FACILITY_ATRAC		0x063
-#define SCE_ERROR_FACILITY_ASF			0x064
-#define SCE_ERROR_FACILITY_JPEG			0x065
-#define SCE_ERROR_FACILITY_AVI			0x066
-#define SCE_ERROR_FACILITY_MP3			0x067
-#define SCE_ERROR_FACILITY_G729			0x068
-#define SCE_ERROR_FACILITY_AAC			0x069
-#define SCE_ERROR_FACILITY_CODEC		0x07F
+#define SCE_ERROR_FACILITY_MPEG         0x061
+#define SCE_ERROR_FACILITY_AVC          0x062
+#define SCE_ERROR_FACILITY_ATRAC        0x063
+#define SCE_ERROR_FACILITY_ASF          0x064
+#define SCE_ERROR_FACILITY_JPEG         0x065
+#define SCE_ERROR_FACILITY_AVI          0x066
+#define SCE_ERROR_FACILITY_MP3          0x067
+#define SCE_ERROR_FACILITY_G729         0x068
+#define SCE_ERROR_FACILITY_AAC          0x069
+#define SCE_ERROR_FACILITY_CODEC        0x07F
 
 /**
  * Error definitions belonging to SCE_ERROR_FACILITY_NULL
@@ -182,8 +182,8 @@
 #define SCE_ERROR_ERRNO_NOT_SUPPORTED                           0x80010086
 #define SCE_ERROR_ERRNO_ENOMEDIUM                               0x80010087 /* No medium was found. */
 
-/* 
- * Non-standard error code definitions 
+/*
+ * Non-standard error code definitions
  */
 
 #define SCE_ERROR_ERRNO_ADDR_OUT_OF_MAIN_MEM                    0x8001B001
@@ -193,8 +193,8 @@
 #define SCE_ERROR_ERRNO_NO_CACHE                                0x8001B005
 #define SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE                       0x8001B006
 
-/* 
- * Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values. 
+/*
+ * Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values.
  */
 
 #define SCE_ERROR_ERRNO150_ENAMETOOLONG                         0x80010024
@@ -493,8 +493,8 @@
 #define SCE_ERROR_ATRAC_ALL_DATA_DECODED                        0x80630024
 #define SCE_ERROR_CODEC_AUDIO_FATAL                             0x807F00FC
 
-/* 
- * Error-similar definitions. 
+/*
+ * Error-similar definitions.
  */
 #define SCE_KERNEL_VALUE_UNITIALIZED                            (-1)
 #define SCE_KERNEL_PTR_UNITIALIZED                              ((void *)SCE_KERNEL_VALUE_UNITIALIZED)

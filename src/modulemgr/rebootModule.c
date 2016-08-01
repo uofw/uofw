@@ -168,7 +168,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
     }
 
     status = ClearFreePartitionMemory(uidBlkId); // 0x00004A74 - 0x00004AB4
-    return ((status > SCE_ERROR_OK) ? SCE_ERROR_OK : status);
+    return pspMin(status, SCE_ERROR_OK);
 }
 
 // ModuleMgrForKernel_5FC3B3DA - Address 0x00004B6C
@@ -199,5 +199,5 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
     }
 
     status = ClearFreePartitionMemory(uidBlkId); // 0x00004C24 - 0x00004C60
-    return ((status > SCE_ERROR_OK) ? SCE_ERROR_OK : status);
+    return pspMin(status, SCE_ERROR_OK);
 }

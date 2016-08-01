@@ -13,8 +13,6 @@
 #include "modulemgr_int.h"
 #include "override.h"
 
-#define FILE_USER_ACCESS_PERMISSIONS    (SCE_STM_RUSR | SCE_STM_XUSR | SCE_STM_XGRP | SCE_STM_XOTH)
-
 static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKernelLMOption *pOption);
 static void _setupForLoadModuleBuffer(SceModuleMgrParam *pModParams, u32 apiType, void *base, 
     SceSize modSize, u32 unk124);
@@ -63,7 +61,7 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
         return status;
     }
 
-    fd = sceIoOpen(file, SCE_O_FGAMEDATA | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); //0x00000528
+    fd = sceIoOpen(file, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); //0x00000528
     if (fd < 0) { //0x00000534
         pspSetK1(oldK1);
         return fd;
@@ -147,7 +145,7 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00000734
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00000734
     if (fd < 0) { // 0x00000740
         pspSetK1(oldK1);
         return fd;
@@ -300,7 +298,7 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); //0x00000B5C
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); //0x00000B5C
     if (fd < 0) { //0x00000B68
         pspSetK1(oldK1);
         return fd;
@@ -465,7 +463,7 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00000EB8
+    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00000EB8
     if (fd < 0) { // 0x00000EC4
         pspSetK1(oldK1);
         return fd;
@@ -554,7 +552,7 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x000010DC
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000010DC
     if (fd < 0) { // 0x000010E8
         pspSetK1(oldK1);
         return fd;
@@ -650,7 +648,7 @@ SceUID sceKernelLoadModuleMs(const char *path, s32 flag, const SceKernelLMOption
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x0000133C
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000133C
     if (fd < 0) { // 0x00001348
         pspSetK1(oldK1);
         return fd;
@@ -809,7 +807,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const S
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001700
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001700
     if (fd < 0) { // 0x0000170C
         pspSetK1(oldK1);
         return fd;
@@ -871,7 +869,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, 
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x000018D0
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000018D0
     if (fd < 0) { // 0x000018DC
         pspSetK1(oldK1);
         return fd;
@@ -933,7 +931,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flag, co
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001AA0
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001AA0
     if (fd < 0) { // 0x00001AAC
         pspSetK1(oldK1);
         return fd;
@@ -996,7 +994,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001C78
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001C78
     if (fd < 0) { // 0x00001C84
         pspSetK1(oldK1);
         return fd;
@@ -1060,7 +1058,7 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00001E54
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001E54
     if (fd < 0) { // 0x00001E60
         pspSetK1(oldK1);
         return fd;
@@ -1126,7 +1124,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002058
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002058
     if (fd < 0) { // 0x00002064
         pspSetK1(oldK1);
         return fd;
@@ -1189,7 +1187,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002230
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002230
     if (fd < 0) { // 0x0000223C
         pspSetK1(oldK1);
         return fd;
@@ -1253,7 +1251,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x0000240C
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000240C
     if (fd < 0) { // 0x00002418
         pspSetK1(oldK1);
         return fd;
@@ -1319,7 +1317,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002610
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002610
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1383,7 +1381,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x000027F0
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000027F0
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1456,7 +1454,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002A00
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002A00
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1529,7 +1527,7 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002C0C
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002C0C
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1600,7 +1598,7 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00002E40
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002E40
     if (fd < 0) {
         pspSetK1(oldK1);
         return fd;
@@ -1672,7 +1670,7 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00003078
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003078
     if (fd < 0) { // 0x00003084
         pspSetK1(oldK1);
         return fd;
@@ -1798,12 +1796,12 @@ SceUID sceKernelLoadModuleForKernel(const char *path, s32 flag, const SceKernelL
 
     //0x000033D0 - 0x000033F0, 0x00003514 - 0x0000358C
     if ((status = _checkCallConditionKernel()) < 0 || (status = _checkPathConditions(path)) < 0
-        || (status = _checkLMOptionConditions(pOption)) < 0) {
+            || (status = _checkLMOptionConditions(pOption)) < 0) {
         pspSetK1(oldK1);
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x0000340C
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000340C
     if (fd < 0) { // 0x00000740
         pspSetK1(oldK1);
         return fd;
@@ -1942,7 +1940,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
     }
 
     // 0x000037F8
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS);
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO);
     if (fd < 0) { // 0x00003804
         pspSetK1(oldK1);
         return fd;
@@ -2013,7 +2011,7 @@ SceUID sceKernelLoadModuleBootInitConfig(const char *path, s32 flag, const SceKe
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00003A70
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003A70
     if (fd < 0) { // 0x00003A7C
         pspSetK1(oldK1);
         return fd;
@@ -2074,7 +2072,7 @@ SceUID sceKernelLoadModuleDeci(const char *path, s32 flag, const SceKernelLMOpti
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, FILE_USER_ACCESS_PERMISSIONS); // 0x00003C5C
+    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003C5C
     if (fd < 0) { // 0x00003C68
         pspSetK1(oldK1);
         return fd;
@@ -2115,6 +2113,7 @@ SceUID sceKernelLoadModuleBufferForExitGame(void *base, s32 flag, const SceKerne
     SceModuleMgrParam modParams;
 
     (void)flag;
+    (void)opt;
 
     oldK1 = pspShiftK1(); // 0x00005108
 
@@ -2141,7 +2140,7 @@ SceUID sceKernelLoadModuleBufferForExitGame(void *base, s32 flag, const SceKerne
         return status;
     }
 
-    _setupForLoadModuleBuffer(&modParams, SCE_EXEC_FILE_APITYPE_VSH_1, base, 0, opt); // 0x00005190
+    _setupForLoadModuleBuffer(&modParams, SCE_EXEC_FILE_APITYPE_VSH_1, base, 0, 1); // 0x00005190
     status = _loadModuleByBufferID(&modParams, pOption); //0x0000519C
 
     pspSetK1(oldK1);

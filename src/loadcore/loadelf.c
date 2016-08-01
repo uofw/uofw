@@ -24,7 +24,7 @@
  * 
  * A single module needs to have at least three segments and max 
  * SCE_KERNEL_MAX_MODULE_SEGMENT segments.  These segments are typically 
- * located in sequences:
+ * located in consecutive order:
  *    Segment       Description
  * 
  *    TEXT          Includes instruction code and data structures used for

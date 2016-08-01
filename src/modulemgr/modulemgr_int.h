@@ -33,13 +33,14 @@ typedef struct {
     SceUID modId; //52
     SceUID callerModId; //56
     SceSize modSize; //60
-    void *fileBase;
+    void *fileBase; // 64
     SceSize argSize; //68
     void *argp; //72
     u32 unk76; // 76
     u32 unk80; // 80
     s32 *pStatus; // 84
     SceUID eventId; // 88
+    u32 unk92; // 92
     u32 unk96; // 96
     u32 unk100; // 100
     SceUID externMemBlockIdKernel; // 104

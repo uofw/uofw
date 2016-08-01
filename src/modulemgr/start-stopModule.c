@@ -22,6 +22,8 @@ s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *pMod
     s32 status;
     SceModuleMgrParam modParams;
 
+    dbg_fbfill(1, 255, 1);
+
     oldK1 = pspShiftK1();
 
     if (sceKernelIsIntrContext()) { //0x00003DA4
@@ -67,6 +69,9 @@ s32 sceKernelStartModule(SceUID modId, SceSize args, const void *argp, s32 *pMod
         modParams.threadAttr = SCE_KERNEL_TH_DEFAULT_ATTR;
     }
     status = _start_exe_thread(&modParams); //0x00003F04
+
+    //UOFW: It doesn't return to here....
+    //dbg_fbfill(1, 1, 255);
 
     pspSetK1(oldK1);
     return status;
