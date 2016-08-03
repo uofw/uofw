@@ -2,6 +2,18 @@
    See the file COPYING for copying permission.
 */
 
+/** @defgroup KIRK KIRK
+ *  The hardware crypto engine responsible for almost all aspects of the PSP’s security, \n
+ *  including decryption of EBOOTs & PRX’s, savefile and adhoc encryption, and idstorage verification.
+ */
+
+/**
+* @defgroup Crypto
+* @ingroup KIRK
+*
+* @{
+*/
+
 #ifndef KIRK_H
 #define KIRK_H
 
@@ -53,3 +65,6 @@ typedef struct {
 } KirkAESHeader;
 
 #endif /* KIRK_H */
+
+/** @} */
+

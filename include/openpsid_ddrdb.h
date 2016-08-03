@@ -58,7 +58,7 @@ extern "C" {
      * Generate a SHA-1 hash value of the provided data.
      * 
      * @param pSrcData Pointer to data to generate the hash for.
-     * @param size The size of the source data. Max size: SCE_DNAS_USER_DATA_MAX_LEN byte.
+     * @param size The size of the source data. Max size: ::SCE_DNAS_USER_DATA_MAX_LEN byte.
      * @param pDigest Pointer to buffer receiving the hash. Size: ::KIRK_SHA1_DIGEST_LEN.
      *
      * @return 0 on success, otherwise < 0.
