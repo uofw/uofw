@@ -8,7 +8,7 @@
  *  Manages the UMD drive and accessing data on it.	
  */
 
-/** @defgroup Mediaman Mediaman
+/** @defgroup MediaMan Media_Manager
  *  @ingroup UMDDriveManagement
  * 
  *  Mediaman enables users to access the UMD drive. The drive can be accessed through files or sectors. \n

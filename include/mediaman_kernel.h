@@ -6,8 +6,8 @@
 
 #include "mediaman.h"
 
-/** @defgroup MediamanKernel Mediaman Kernel
- *  @ingroup Mediaman
+/** @defgroup MediaManKernel Media_Manager Kernel
+ *  @ingroup MediaMan
  * 
  *  Kernel application API.
  * @{

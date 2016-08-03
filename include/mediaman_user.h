@@ -5,8 +5,8 @@
 #include "common_header.h"
 #include "mediaman.h"
 
-/** @defgroup MediamanUser Mediaman User
- *  @ingroup Mediaman
+/** @defgroup MediaManUser Media_Manager User
+ *  @ingroup MediaMan
  * 
  *  User application API.
  * @{

@@ -2,16 +2,19 @@
    See the file COPYING for copying permission.
 */
 
-#include "common_header.h"
-
 /**
+ * @defgroup UMD_ERROR UMD Errors
  * @ingroup UMDDriveManagement
  * 
+ * uofw/include/umd_error.h \n
+ *
  * @{
  */
 
 #ifndef UMD_ERROR_H
 #define	UMD_ERROR_H
+
+#include "common_header.h"
 
 #ifdef	__cplusplus
 extern "C" {
