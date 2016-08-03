@@ -84,37 +84,37 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00002"></a>00002 <span class="comment">   See the file COPYING for copying permission.</span>
 <a name="l00003"></a>00003 <span class="comment">*/</span>
 <a name="l00004"></a>00004 
-<a name="l00005"></a>00005 <span class="preprocessor">#include &quot;common_header.h&quot;</span>
-<a name="l00006"></a>00006 
-<a name="l00013"></a>00013 <span class="preprocessor">#ifndef UMD_ERROR_H</span>
-<a name="l00014"></a>00014 <span class="preprocessor"></span><span class="preprocessor">#define UMD_ERROR_H</span>
-<a name="l00015"></a>00015 <span class="preprocessor"></span>
-<a name="l00016"></a>00016 <span class="preprocessor">#ifdef  __cplusplus</span>
-<a name="l00017"></a>00017 <span class="preprocessor"></span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> {
-<a name="l00018"></a>00018 <span class="preprocessor">#endif</span>
-<a name="l00019"></a>00019 <span class="preprocessor"></span>
-<a name="l00020"></a>00020 <span class="comment">/*</span>
-<a name="l00021"></a>00021 <span class="comment">    UMD error codes</span>
-<a name="l00022"></a>00022 <span class="comment">    SCE_ERROR_FACILITY_UMD = 0x021</span>
-<a name="l00023"></a>00023 <span class="comment">*/</span>
-<a name="l00024"></a>00024 
-<a name="l00025"></a>00025 <span class="preprocessor">#define SCE_ERROR_UMD_NOT_READY                                 0x80210001  </span>
-<a name="l00026"></a>00026 <span class="preprocessor">#define SCE_ERROR_UMD_LBA_OUT_OF_RANGE                          0x80210002  </span>
-<a name="l00027"></a>00027 <span class="preprocessor">#define SCE_ERROR_UMD_NO_MEDIUM                                 0x80210003  </span>
-<a name="l00028"></a>00028 <span class="preprocessor">#define SCE_ERROR_UMD_UNKNOWN_MEDIUM                            0x80210004  </span>
-<a name="l00029"></a>00029 <span class="preprocessor">#define SCE_ERROR_UMD_HARDWARE_FAILURE                          0x80210005  </span>
-<a name="l00030"></a>00030 <span class="preprocessor">#define SCE_ERROR_UMD_POWER_OFF                                 0x80210006  </span>
-<a name="l00031"></a>00031 <span class="preprocessor">#define SCE_UMD_ERROR_REPLACED                                  0x80210007  </span>
-<a name="l00032"></a>00032 <span class="preprocessor">#define SCE_UMD_ERROR_INVALID_LAYOUT                            0x80210008  </span>
-<a name="l00033"></a>00033 <span class="preprocessor">#define SCE_UMD_READAHEAD_REQ_FULL                              0x80210009  </span>
-<a name="l00034"></a>00034 <span class="preprocessor">#define SCE_UMD_READAHEAD_NOREQ                                 0x80210010  </span>
-<a name="l00035"></a>00035 <span class="preprocessor">#define SCE_UMD_READAHEAD_BUSY                                  0x80210011  </span>
-<a name="l00038"></a>00038 <span class="preprocessor">#ifdef  __cplusplus</span>
-<a name="l00039"></a>00039 <span class="preprocessor"></span>}
-<a name="l00040"></a>00040 <span class="preprocessor">#endif</span>
-<a name="l00041"></a>00041 <span class="preprocessor"></span>
-<a name="l00042"></a>00042 <span class="preprocessor">#endif  </span><span class="comment">/* UMD_ERROR_H */</span>
-<a name="l00043"></a>00043 
+<a name="l00014"></a>00014 <span class="preprocessor">#ifndef UMD_ERROR_H</span>
+<a name="l00015"></a>00015 <span class="preprocessor"></span><span class="preprocessor">#define UMD_ERROR_H</span>
+<a name="l00016"></a>00016 <span class="preprocessor"></span>
+<a name="l00017"></a>00017 <span class="preprocessor">#include &quot;common_header.h&quot;</span>
+<a name="l00018"></a>00018 
+<a name="l00019"></a>00019 <span class="preprocessor">#ifdef  __cplusplus</span>
+<a name="l00020"></a>00020 <span class="preprocessor"></span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> {
+<a name="l00021"></a>00021 <span class="preprocessor">#endif</span>
+<a name="l00022"></a>00022 <span class="preprocessor"></span>
+<a name="l00023"></a>00023 <span class="comment">/*</span>
+<a name="l00024"></a>00024 <span class="comment">    UMD error codes</span>
+<a name="l00025"></a>00025 <span class="comment">    SCE_ERROR_FACILITY_UMD = 0x021</span>
+<a name="l00026"></a>00026 <span class="comment">*/</span>
+<a name="l00027"></a>00027 
+<a name="l00028"></a>00028 <span class="preprocessor">#define SCE_ERROR_UMD_NOT_READY                                 0x80210001  </span>
+<a name="l00029"></a>00029 <span class="preprocessor">#define SCE_ERROR_UMD_LBA_OUT_OF_RANGE                          0x80210002  </span>
+<a name="l00030"></a>00030 <span class="preprocessor">#define SCE_ERROR_UMD_NO_MEDIUM                                 0x80210003  </span>
+<a name="l00031"></a>00031 <span class="preprocessor">#define SCE_ERROR_UMD_UNKNOWN_MEDIUM                            0x80210004  </span>
+<a name="l00032"></a>00032 <span class="preprocessor">#define SCE_ERROR_UMD_HARDWARE_FAILURE                          0x80210005  </span>
+<a name="l00033"></a>00033 <span class="preprocessor">#define SCE_ERROR_UMD_POWER_OFF                                 0x80210006  </span>
+<a name="l00034"></a>00034 <span class="preprocessor">#define SCE_UMD_ERROR_REPLACED                                  0x80210007  </span>
+<a name="l00035"></a>00035 <span class="preprocessor">#define SCE_UMD_ERROR_INVALID_LAYOUT                            0x80210008  </span>
+<a name="l00036"></a>00036 <span class="preprocessor">#define SCE_UMD_READAHEAD_REQ_FULL                              0x80210009  </span>
+<a name="l00037"></a>00037 <span class="preprocessor">#define SCE_UMD_READAHEAD_NOREQ                                 0x80210010  </span>
+<a name="l00038"></a>00038 <span class="preprocessor">#define SCE_UMD_READAHEAD_BUSY                                  0x80210011  </span>
+<a name="l00041"></a>00041 <span class="preprocessor">#ifdef  __cplusplus</span>
+<a name="l00042"></a>00042 <span class="preprocessor"></span>}
+<a name="l00043"></a>00043 <span class="preprocessor">#endif</span>
+<a name="l00044"></a>00044 <span class="preprocessor"></span>
+<a name="l00045"></a>00045 <span class="preprocessor">#endif  </span><span class="comment">/* UMD_ERROR_H */</span>
+<a name="l00046"></a>00046 
 </pre></div></div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -133,7 +133,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Aug 1 2016 10:20:52 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Aug 3 2016 00:15:35 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

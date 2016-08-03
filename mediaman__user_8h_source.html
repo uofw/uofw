@@ -94,37 +94,37 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00019"></a>00019 <span class="preprocessor"></span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> {
 <a name="l00020"></a>00020 <span class="preprocessor">#endif</span>
 <a name="l00021"></a>00021 <span class="preprocessor"></span>
-<a name="l00031"></a>00031 s32 <a class="code" href="group__MediamanKernel.html#gaac59c981fa8416e7b5cea5b5ba1ab5bd">sceUmdActivate</a>(s32 mode, <span class="keyword">const</span> <span class="keywordtype">char</span> *aliasName);
+<a name="l00031"></a>00031 s32 <a class="code" href="group__MediaManKernel.html#gaac59c981fa8416e7b5cea5b5ba1ab5bd">sceUmdActivate</a>(s32 mode, <span class="keyword">const</span> <span class="keywordtype">char</span> *aliasName);
 <a name="l00032"></a>00032 
-<a name="l00041"></a>00041 s32 <a class="code" href="group__MediamanKernel.html#gadc85c46f9fa38a8e54a0c531e9a6c6e9">sceUmdDeactivate</a>(s32 mode, <span class="keyword">const</span> <span class="keywordtype">char</span> *aliasName);
+<a name="l00041"></a>00041 s32 <a class="code" href="group__MediaManKernel.html#gadc85c46f9fa38a8e54a0c531e9a6c6e9">sceUmdDeactivate</a>(s32 mode, <span class="keyword">const</span> <span class="keywordtype">char</span> *aliasName);
 <a name="l00042"></a>00042 
-<a name="l00051"></a>00051 s32 <a class="code" href="group__MediamanKernel.html#ga7ecf059d919608390d2c5cca09fc542a">sceUmdGetDiscInfo</a>(SceUmdDiscInfo *pDiscInfo);
+<a name="l00051"></a>00051 s32 <a class="code" href="group__MediaManKernel.html#ga7ecf059d919608390d2c5cca09fc542a">sceUmdGetDiscInfo</a>(SceUmdDiscInfo *pDiscInfo);
 <a name="l00052"></a>00052 
-<a name="l00062"></a>00062 s32 <a class="code" href="group__MediamanKernel.html#ga29421cc46885237358261b69ed06a345">sceUmdRegisterUMDCallBack</a>(SceUID callbackId);
+<a name="l00062"></a>00062 s32 <a class="code" href="group__MediaManKernel.html#ga29421cc46885237358261b69ed06a345">sceUmdRegisterUMDCallBack</a>(SceUID callbackId);
 <a name="l00063"></a>00063 
-<a name="l00072"></a>00072 s32 <a class="code" href="group__MediamanKernel.html#ga872ac2ff2d9d8322040f1a2ab3cddb61">sceUmdUnRegisterUMDCallBack</a>(SceUID callbackId);
+<a name="l00072"></a>00072 s32 <a class="code" href="group__MediaManKernel.html#ga872ac2ff2d9d8322040f1a2ab3cddb61">sceUmdUnRegisterUMDCallBack</a>(SceUID callbackId);
 <a name="l00073"></a>00073 
-<a name="l00079"></a>00079 s32 <a class="code" href="group__MediamanKernel.html#gadaaa955bc294259b0f1ba65fe701e101">sceUmdCheckMedium</a>(<span class="keywordtype">void</span>);
+<a name="l00079"></a>00079 s32 <a class="code" href="group__MediaManKernel.html#gadaaa955bc294259b0f1ba65fe701e101">sceUmdCheckMedium</a>(<span class="keywordtype">void</span>);
 <a name="l00080"></a>00080 
-<a name="l00091"></a>00091 s32 <a class="code" href="group__MediamanKernel.html#gaaa358f8195083218d63f3890d3d7b663">sceUmdWaitDriveStat</a>(s32 umdState);
+<a name="l00091"></a>00091 s32 <a class="code" href="group__MediaManKernel.html#gaaa358f8195083218d63f3890d3d7b663">sceUmdWaitDriveStat</a>(s32 umdState);
 <a name="l00092"></a>00092 
-<a name="l00104"></a>00104 s32 <a class="code" href="group__MediamanKernel.html#gab3b8e98e425db8df91efd64ef5158123">sceUmdWaitDriveStatWithTimer</a>(u32 umdState, u32 timeout);
+<a name="l00104"></a>00104 s32 <a class="code" href="group__MediaManKernel.html#gab3b8e98e425db8df91efd64ef5158123">sceUmdWaitDriveStatWithTimer</a>(u32 umdState, u32 timeout);
 <a name="l00105"></a>00105 
-<a name="l00117"></a>00117 s32 <a class="code" href="group__MediamanKernel.html#ga4943a1b59c5ededc4eff8f4aa8ffbedc">sceUmdWaitDriveStatCB</a>(u32 umdState, u32 timeout);
+<a name="l00117"></a>00117 s32 <a class="code" href="group__MediaManKernel.html#ga4943a1b59c5ededc4eff8f4aa8ffbedc">sceUmdWaitDriveStatCB</a>(u32 umdState, u32 timeout);
 <a name="l00118"></a>00118 
-<a name="l00124"></a>00124 s32 <a class="code" href="group__MediamanKernel.html#ga6ab6924cf4fc39762f1931810e8d41a3">sceUmdCancelWaitDriveStat</a>(<span class="keywordtype">void</span>);
+<a name="l00124"></a>00124 s32 <a class="code" href="group__MediaManKernel.html#ga6ab6924cf4fc39762f1931810e8d41a3">sceUmdCancelWaitDriveStat</a>(<span class="keywordtype">void</span>);
 <a name="l00125"></a>00125 
-<a name="l00131"></a>00131 s32 <a class="code" href="group__MediamanUser.html#ga7dea991c00c12ad6c0215c45487bba37">sceUmdGetDriveStat</a>(<span class="keywordtype">void</span>);
+<a name="l00131"></a>00131 s32 <a class="code" href="group__MediaManUser.html#ga7dea991c00c12ad6c0215c45487bba37">sceUmdGetDriveStat</a>(<span class="keywordtype">void</span>);
 <a name="l00132"></a>00132 
-<a name="l00138"></a>00138 s32 <a class="code" href="group__MediamanUser.html#ga71073c1052e3135f6cf0f8519bf57ff4">sceUmdGetErrorStat</a>(<span class="keywordtype">void</span>);
+<a name="l00138"></a>00138 s32 <a class="code" href="group__MediaManUser.html#ga71073c1052e3135f6cf0f8519bf57ff4">sceUmdGetErrorStat</a>(<span class="keywordtype">void</span>);
 <a name="l00139"></a>00139 
-<a name="l00145"></a>00145 s32 <a class="code" href="group__MediamanKernel.html#ga7e94ba55577d1d13cf532f2bd15ab14e">sceUmdReplaceProhibit</a>(<span class="keywordtype">void</span>);
+<a name="l00145"></a>00145 s32 <a class="code" href="group__MediaManKernel.html#ga7e94ba55577d1d13cf532f2bd15ab14e">sceUmdReplaceProhibit</a>(<span class="keywordtype">void</span>);
 <a name="l00146"></a>00146 
-<a name="l00152"></a>00152 s32 <a class="code" href="group__MediamanKernel.html#ga0b8170ead09e693ed4a075ffcb0f971d">sceUmdReplacePermit</a>(<span class="keywordtype">void</span>);
+<a name="l00152"></a>00152 s32 <a class="code" href="group__MediaManKernel.html#ga0b8170ead09e693ed4a075ffcb0f971d">sceUmdReplacePermit</a>(<span class="keywordtype">void</span>);
 <a name="l00153"></a>00153 
-<a name="l00159"></a>00159 s32 <a class="code" href="group__MediamanKernel.html#ga57119e635ba1435d1f467762a32da023">sceUmdUseUMDInMsUsbWlan</a>(<span class="keywordtype">void</span>);
+<a name="l00159"></a>00159 s32 <a class="code" href="group__MediaManKernel.html#ga57119e635ba1435d1f467762a32da023">sceUmdUseUMDInMsUsbWlan</a>(<span class="keywordtype">void</span>);
 <a name="l00160"></a>00160 
-<a name="l00166"></a>00166 s32 <a class="code" href="group__MediamanKernel.html#gab56a4bbedf646b320d513da129b339bb">sceUmdUnuseUMDInMsUsbWlan</a>(<span class="keywordtype">void</span>);
+<a name="l00166"></a>00166 s32 <a class="code" href="group__MediaManKernel.html#gab56a4bbedf646b320d513da129b339bb">sceUmdUnuseUMDInMsUsbWlan</a>(<span class="keywordtype">void</span>);
 <a name="l00167"></a>00167 
 <a name="l00168"></a>00168 <span class="preprocessor">#ifdef  __cplusplus</span>
 <a name="l00169"></a>00169 <span class="preprocessor"></span>}
@@ -150,7 +150,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Aug 1 2016 10:20:52 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Aug 3 2016 00:15:35 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
