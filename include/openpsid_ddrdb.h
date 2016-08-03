@@ -33,7 +33,7 @@ extern "C" {
      * 
      * @param pSrcData Pointer to data to decrypt. The decrypted data will be written \n
      *                 back into this buffer.
-     * @param size The size of the data to decrypt. The size needs to be a multiple of :: KIRK_AES_BLOCK_LEN. \n
+     * @param size The size of the data to decrypt. The size needs to be a multiple of ::KIRK_AES_BLOCK_LEN. \n
                    Max size: ::SCE_DNAS_USER_DATA_MAX_LEN.
      *
      * @return 0 on success, otherwise < 0.
@@ -47,7 +47,7 @@ extern "C" {
      * 
      * @param pSrcData Pointer to data to encrypt. The encrypted data will be written 
      *                 back into this buffer.
-     * @param size The size of the data to encrypt. The size needs to be a multiple of :: KIRK_AES_BLOCK_LEN. \n
+     * @param size The size of the data to encrypt. The size needs to be a multiple of ::KIRK_AES_BLOCK_LEN. \n
                    Max size: ::SCE_DNAS_USER_DATA_MAX_LEN.
      *
      * @return 0 on success, otherwise < 0.
@@ -58,7 +58,7 @@ extern "C" {
      * Generate a SHA-1 hash value of the provided data.
      * 
      * @param pSrcData Pointer to data to generate the hash for.
-     * @param size The size of the source data. Max size: ::SCE_DNAS_USER_DATA_MAX_LEN byte.
+     * @param size The size of the source data. Max size: ::SCE_DNAS_USER_DATA_MAX_LEN.
      * @param pDigest Pointer to buffer receiving the hash. Size: ::KIRK_SHA1_DIGEST_LEN.
      *
      * @return 0 on success, otherwise < 0.

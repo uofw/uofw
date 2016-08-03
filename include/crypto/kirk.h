@@ -2,24 +2,26 @@
    See the file COPYING for copying permission.
 */
 
-/** @defgroup KIRK KIRK
- *  The hardware crypto engine responsible for almost all aspects of the PSP’s security, \n
- *  including decryption of EBOOTs & PRX’s, savefile and adhoc encryption, and idstorage verification.
+/** @defgroup Crypto Crypto
+ *  PSP Cryptography modules.
  */
 
 /**
-* @defgroup Crypto
-* @ingroup KIRK
-*
-* @{
-*/
+ * @defgroup KIRK KIRK
+ * @ingroup Crypto
+ *
+ * The hardware crypto engine responsible for almost all aspects of the PSP's security, \n
+ * including decryption of EBOOTs & PRX's, savefile and adhoc encryption, and idstorage verification.
+ *
+ * @{
+ */
 
 #ifndef KIRK_H
 #define KIRK_H
 
 #include <common_header.h>
 
-/** KIRK commands */
+/* KIRK commands */
 
 #define KIRK_CMD_ENCRYPT_AES_CBC_IV_NONE        (0x04)
 #define KIRK_CMD_ENCRYPT_AES_CBC_IV_FUSE        (0x05)
@@ -35,21 +37,21 @@
 #define KIRK_CMD_SIG_VER_ECDSA                  (0x11)
 #define KIRK_CMD_CERT_VER                       (0x12)
 
-/** Specific values for  algorithms used by KIRK. */
+/* Specific values for  algorithms used by KIRK. */
 
-#define KIRK_SHA1_DIGEST_LEN        (20) /** The length (160 bit) of a SHA-1 hash value. */
+#define KIRK_SHA1_DIGEST_LEN        (20) /*!< The length (160 bit) of a SHA-1 hash value. */
 
-#define KIRK_PRN_LEN                (20) /** The length (160 bit) of a computed pseudo-random number. */
+#define KIRK_PRN_LEN                (20) /*!< The length (160 bit) of a computed pseudo-random number. */
 
-#define KIRK_ECDSA_POINT_LEN        (40) /** The length (320 bit) of an elliptic curve point p = (x,y), with len(x) = 160 bit = len(y). */
-#define KIRK_ECDSA_PUBLIC_KEY_LEN   (KIRK_ECDSA_POINT_LEN) /** The length (320 bit) of the public key for ECDSA. */
-#define KIRK_ECDSA_PRIVATE_KEY_LEN  (20) /** The length (256 bit) of the private key for ECDSA. */
-#define KIRK_ECDSA_SRC_DATA_LEN     (20) /** The length (160 bit) of the data to compute the signature for using ECDSA. */
-#define KIRK_ECDSA_SIG_LEN          (40) /** The length (320 bit) of the signature computed by ECDSA. */
+#define KIRK_ECDSA_POINT_LEN        (40) /*!< The length (320 bit) of an elliptic curve point p = (x,y), with len(x) = 160 bit = len(y). */
+#define KIRK_ECDSA_PUBLIC_KEY_LEN   (KIRK_ECDSA_POINT_LEN) /*!< The length (320 bit) of the public key for ECDSA. */
+#define KIRK_ECDSA_PRIVATE_KEY_LEN  (20) /*!< The length (256 bit) of the private key for ECDSA. */
+#define KIRK_ECDSA_SRC_DATA_LEN     (20) /*!< The length (160 bit) of the data to compute the signature for using ECDSA. */
+#define KIRK_ECDSA_SIG_LEN          (40) /*!< The length (320 bit) of the signature computed by ECDSA. */
 
-#define KIRK_AES_BLOCK_LEN          (16) /** The length (128 bit) of a block to encrypt using AES. */
+#define KIRK_AES_BLOCK_LEN          (16) /*!< The length (128 bit) of a block to encrypt using AES. */
 
-#define KIRK_CERT_LEN               (184) /** The length (1472 bit) of the certification to verify. */
+#define KIRK_CERT_LEN               (184) /*!< The length (1472 bit) of the certification to verify. */
 
 
 typedef struct {

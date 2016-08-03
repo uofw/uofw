@@ -3,15 +3,14 @@
 */
 
 /**
-* @defgroup DNAS_ERROR DNAS Errors
-* @ingroup DNAS
-*
-* uofw/include/dnas_error.h \n
-*
-* Defines error codes specifically for the DNAS facility. \n
-*
-* @{
-*/
+ * @defgroup DNAS_ERROR DNAS Errors
+ * @ingroup DNAS
+ *
+ * uofw/include/dnas_error.h \n
+ * Defines error codes specifically for the DNAS facility. \n
+ *
+ * @{
+ */
 
 #ifndef DNAS_ERROR_H
 #define	DNAS_ERROR_H
@@ -27,8 +26,8 @@ extern "C" {
     SCE_ERROR_FACILITY_DNAS = 0x053
 */
 
-#define SCE_DNAS_ERROR_OPERATION_FAILED         0x80530300 /** The requested operation failed. */
-#define SCE_DNAS_ERROR_INVALID_ARGUMENTS        0x80530301 /** The provided arguments are not correct. */
+#define SCE_DNAS_ERROR_OPERATION_FAILED         0x80530300 /*!< The requested operation failed. */
+#define SCE_DNAS_ERROR_INVALID_ARGUMENTS        0x80530301 /*!< The provided arguments are not correct. */
 
 
 #ifdef	__cplusplus

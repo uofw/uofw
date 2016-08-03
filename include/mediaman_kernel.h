@@ -95,7 +95,7 @@ s32 sceUmdDeactivate(s32 mode, const char *aliasName);
  * @param pDiscInfo Pointer to a SceUmdDiscInfo structure to retrieve the disc information.
  * 
  * @return SCE_ERROR_OK on success, otherwise SCE_ERROR_ERRNO_INVALID_ARGUMENT on invalid arguments; 
- *         SCE_ERROR_UMD_NO_MEDIUM if there is no UMD medium inserted.
+ *         SCE_UMD_ERROR_NO_MEDIUM if there is no UMD medium inserted.
  */
 s32 sceUmdGetDiscInfo(SceUmdDiscInfo *pDiscInfo);
 
