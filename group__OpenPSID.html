@@ -141,7 +141,7 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">pSrcData</td><td>Pointer to data to decrypt. The decrypted data will be written <br/>
  back into this buffer. </td></tr>
-    <tr><td class="paramname">size</td><td>The size of the data to decrypt. The size needs to be a multiple of :: KIRK_AES_BLOCK_LEN. <br/>
+    <tr><td class="paramname">size</td><td>The size of the data to decrypt. The size needs to be a multiple of <a class="el" href="group__KIRK.html#ga3a0e82bdc58b2f25b4fc6e6d1b2f6548">KIRK_AES_BLOCK_LEN</a>. <br/>
  Max size: <a class="el" href="group__OpenPSID.html#ga735c1936c7db9b1bd67dfe355e604259">SCE_DNAS_USER_DATA_MAX_LEN</a>.</td></tr>
   </table>
   </dd>
@@ -179,7 +179,7 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">pSrcData</td><td>Pointer to data to encrypt. The encrypted data will be written back into this buffer. </td></tr>
-    <tr><td class="paramname">size</td><td>The size of the data to encrypt. The size needs to be a multiple of :: KIRK_AES_BLOCK_LEN. <br/>
+    <tr><td class="paramname">size</td><td>The size of the data to encrypt. The size needs to be a multiple of <a class="el" href="group__KIRK.html#ga3a0e82bdc58b2f25b4fc6e6d1b2f6548">KIRK_AES_BLOCK_LEN</a>. <br/>
  Max size: <a class="el" href="group__OpenPSID.html#ga735c1936c7db9b1bd67dfe355e604259">SCE_DNAS_USER_DATA_MAX_LEN</a>.</td></tr>
   </table>
   </dd>
@@ -222,8 +222,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">pSrcData</td><td>Pointer to data to generate the hash for. </td></tr>
-    <tr><td class="paramname">size</td><td>The size of the source data. Max size: SCE_DNAS_USER_DATA_MAX_LEN byte. </td></tr>
-    <tr><td class="paramname">pDigest</td><td>Pointer to buffer receiving the hash. Size: ::KIRK_SHA1_DIGEST_LEN.</td></tr>
+    <tr><td class="paramname">size</td><td>The size of the source data. Max size: <a class="el" href="group__OpenPSID.html#ga735c1936c7db9b1bd67dfe355e604259">SCE_DNAS_USER_DATA_MAX_LEN</a>. </td></tr>
+    <tr><td class="paramname">pDigest</td><td>Pointer to buffer receiving the hash. Size: <a class="el" href="group__KIRK.html#gae15e03ff3ec8e95f070ed82e43b8fbdd">KIRK_SHA1_DIGEST_LEN</a>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -249,9 +249,9 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">pKeyData</td><td>Pointer to buffer receiving the computed key pair. <br/>
- The first ::KIRK_ECDSA_PRIVATE_KEY_LEN byte will contain the private key. <br/>
+ The first <a class="el" href="group__KIRK.html#ga9ba419f09267ed1d06dc85cf41460c97">KIRK_ECDSA_PRIVATE_KEY_LEN</a> byte will contain the private key. <br/>
  The rest of the bytes will contain the public key (elliptic curve) point p = (x,y), <br/>
- with the x-value being first. Both coordinates have size ::KIRK_ECDSA_POINT_LEN / 2.</td></tr>
+ with the x-value being first. Both coordinates have size <a class="el" href="group__KIRK.html#ga9961cba8e04fcd7d0a40f474bfc99d86">KIRK_ECDSA_POINT_LEN</a> / 2.</td></tr>
   </table>
   </dd>
 </dl>
@@ -294,8 +294,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">pPrivKey</td><td>Pointer to the private key of a (public,private) key pair usable for ECDSA.</td></tr>
-    <tr><td class="paramname">pBasePoint</td><td>Pointer to a base point of the elliptic curve. Point size: ::KIRK_ECDSA_POINT_LEN </td></tr>
-    <tr><td class="paramname">pNewPoint</td><td>Pointer to a buffer receiving the new curve point. Buffer size: ::KIRK_ECDSA_POINT_LEN</td></tr>
+    <tr><td class="paramname">pBasePoint</td><td>Pointer to a base point of the elliptic curve. Point size: <a class="el" href="group__KIRK.html#ga9961cba8e04fcd7d0a40f474bfc99d86">KIRK_ECDSA_POINT_LEN</a> </td></tr>
+    <tr><td class="paramname">pNewPoint</td><td>Pointer to a buffer receiving the new curve point. Buffer size: <a class="el" href="group__KIRK.html#ga9961cba8e04fcd7d0a40f474bfc99d86">KIRK_ECDSA_POINT_LEN</a></td></tr>
   </table>
   </dd>
 </dl>
@@ -338,11 +338,11 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">pPubKey</td><td>The public key used for validating the (data,signature) pair. <br/>
- Size has to be ::KIRK_ECDSA_PUBLIC_KEY_LEN. </td></tr>
+ Size has to be <a class="el" href="group__KIRK.html#ga7b881996236b4f8bca4bd4b2f3f79ccb">KIRK_ECDSA_PUBLIC_KEY_LEN</a>. </td></tr>
     <tr><td class="paramname">pData</td><td>Pointer to data the signature has to be verified for. <br/>
- Data length: ::KIRK_ECDSA_SRC_DATA_LEN <br/>
+ Data length: <a class="el" href="group__KIRK.html#ga8a16ae8418fb469b5197198d815b3aba">KIRK_ECDSA_SRC_DATA_LEN</a> <br/>
  </td></tr>
-    <tr><td class="paramname">pSig</td><td>Pointer to the signature to verify. Signature length: ::KIRK_ECDSA_SIG_LEN</td></tr>
+    <tr><td class="paramname">pSig</td><td>Pointer to the signature to verify. Signature length: <a class="el" href="group__KIRK.html#ga077106175fc255299ebc1c10f3933880">KIRK_ECDSA_SIG_LEN</a></td></tr>
   </table>
   </dd>
 </dl>
@@ -367,7 +367,7 @@ Functions</h2></td></tr>
 <p>Verify a certificate.</p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">pCert</td><td>Pointer to the certificate to verify. Certificate length: ::KIRK_CERT_LEN.</td></tr>
+    <tr><td class="paramname">pCert</td><td>Pointer to the certificate to verify. Certificate length: <a class="el" href="group__KIRK.html#gaaa589d5023b80b13a0121621e9cd29cd">KIRK_CERT_LEN</a>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -411,8 +411,8 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">pPrivKey</td><td>Pointer to the private key used to generate the signature. <br/>
  CONFIRM: The key has to be AES encrypted before. </td></tr>
-    <tr><td class="paramname">pData</td><td>Pointer to data a signature has to be computed for. Data length: ::KIRK_ECDSA_SRC_DATA_LEN </td></tr>
-    <tr><td class="paramname">pSig</td><td>Pointer to a buffer receiving the signature. Signature length: ::KIRK_ECDSA_SIG_LEN</td></tr>
+    <tr><td class="paramname">pData</td><td>Pointer to data a signature has to be computed for. Data length: <a class="el" href="group__KIRK.html#ga8a16ae8418fb469b5197198d815b3aba">KIRK_ECDSA_SRC_DATA_LEN</a> </td></tr>
+    <tr><td class="paramname">pSig</td><td>Pointer to a buffer receiving the signature. Signature length: <a class="el" href="group__KIRK.html#ga077106175fc255299ebc1c10f3933880">KIRK_ECDSA_SIG_LEN</a></td></tr>
   </table>
   </dd>
 </dl>
@@ -434,11 +434,11 @@ Functions</h2></td></tr>
       </table>
 </div>
 <div class="memdoc">
-<p>Generate a ::KIRK_PRN_LEN large pseudorandom number (PRN).</p>
+<p>Generate a <a class="el" href="group__KIRK.html#ga6eacb86dc57814b6b7b0b1d25e40a039">KIRK_PRN_LEN</a> large pseudorandom number (PRN).</p>
 <dl class="note"><dt><b>Note:</b></dt><dd>The seed is automatically set by the system software.</dd></dl>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">pDstData</td><td>Pointer to buffer receiving the PRN. Size has to be ::KIRK_PRN_LEN.</td></tr>
+    <tr><td class="paramname">pDstData</td><td>Pointer to buffer receiving the PRN. Size has to be <a class="el" href="group__KIRK.html#ga6eacb86dc57814b6b7b0b1d25e40a039">KIRK_PRN_LEN</a>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -476,8 +476,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">pData</td><td>Pointer to data the signature has to be verified for. <br/>
- Data length: ::KIRK_ECDSA_SRC_DATA_LEN. </td></tr>
-    <tr><td class="paramname">pSig</td><td>Pointer to the signature to verify. Signature length: ::KIRK_ECDSA_SIG_LEN.</td></tr>
+ Data length: <a class="el" href="group__KIRK.html#ga8a16ae8418fb469b5197198d815b3aba">KIRK_ECDSA_SRC_DATA_LEN</a>. </td></tr>
+    <tr><td class="paramname">pSig</td><td>Pointer to the signature to verify. Signature length: <a class="el" href="group__KIRK.html#ga077106175fc255299ebc1c10f3933880">KIRK_ECDSA_SIG_LEN</a>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -503,7 +503,7 @@ Functions</h2></td></tr>
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Aug 3 2016 00:15:35 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Aug 3 2016 11:43:40 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
