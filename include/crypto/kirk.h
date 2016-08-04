@@ -2,8 +2,9 @@
    See the file COPYING for copying permission.
 */
 
-/** @defgroup Crypto Crypto
- *  PSP Cryptography modules.
+/** 
+ * @defgroup Crypto Crypto
+ * PSP Cryptography modules.
  */
 
 /**
@@ -37,7 +38,7 @@
 #define KIRK_CMD_SIG_VER_ECDSA                  (0x11)
 #define KIRK_CMD_CERT_VER                       (0x12)
 
-/* Specific values for  algorithms used by KIRK. */
+/* Specific values for algorithms used by KIRK. */
 
 #define KIRK_SHA1_DIGEST_LEN        (20) /*!< The length (160 bit) of a SHA-1 hash value. */
 

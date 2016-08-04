@@ -1,0 +1,57 @@
+/* Copyright (C) 2011 - 2016 The uOFW team
+See the file COPYING for copying permission.
+*/
+
+/**
+* uofw/include/lib_atrac3plus.h
+*
+* library for the ATRAC3/ATRAC3PLUS audio file format.
+*/
+
+#ifndef LIB_ATRAC3PLUS_H
+#define	LIB_ATRAC3PLUS_H
+
+#include "common\errors.h"
+
+/* ATRAC3 driver specific error codes. */
+
+#define SCE_ATRAC_SUCCESS                       SCE_ERROR_OK
+
+#define SCE_ATRAC_ERROR_PARAM_FAIL              (0x80630001)
+#define SCE_ATRAC_ERROR_API_FAIL                (0x80630002)
+#define SCE_ATRAC_ERROR_NO_ATRACID              (0x80630003)
+#define SCE_ATRAC_ERROR_BAD_CODECTYPE           (0x80630004)
+#define SCE_ATRAC_ERROR_BAD_ATRACID             (0x80630005)
+#define SCE_ATRAC_ERROR_UNKNOWN_FORMAT          (0x80630006)
+#define SCE_ATRAC_ERROR_UNMATCH_FORMAT          (0x80630007)
+#define SCE_ATRAC_ERROR_BAD_DATA                (0x80630008)
+#define SCE_ATRAC_ERROR_ALLDATA_IS_ONMEMORY     (0x80630009)
+#define SCE_ATRAC_ERROR_UNSET_DATA              (0x80630010)
+
+#define SCE_ATRAC_ERROR_READSIZE_IS_TOO_SMALL   (0x80630011)
+#define SCE_ATRAC_ERROR_NEED_SECOND_BUFFER      (0x80630012)
+#define SCE_ATRAC_ERROR_READSIZE_OVER_BUFFER    (0x80630013)
+#define SCE_ATRAC_ERROR_NOT_ALIGNED_ADDRESS     (0x80630014)
+#define SCE_ATRAC_ERROR_BAD_SAMPLE              (0x80630015)
+#define SCE_ATRAC_ERROR_WRITEBYTE_FIRST_BUFFER  (0x80630016)
+#define SCE_ATRAC_ERROR_WRITEBYTE_SECOND_BUFFER (0x80630017)
+#define SCE_ATRAC_ERROR_ADD_DATA_IS_TOO_BIG     (0x80630018)
+#define SCE_ATRAC_ERROR_NOT_MONO_DATA           (0x80630019)
+
+#define SCE_ATRAC_ERROR_UNSET_PARAM             (0x80630021)
+#define SCE_ATRAC_ERROR_NONEED_SECOND_BUFFER    (0x80630022)
+#define SCE_ATRAC_ERROR_NODATA_IN_BUFFER        (0x80630023)
+#define SCE_ATRAC_ERROR_ALLDATA_WAS_DECODED     (0x80630024)
+
+#define SCE_ATRAC_ERROR_LOWLEVEL_INIT_ID        (0x80630031)
+#define SCE_ATRAC_ERROR_NOT_LOWLEVEL_INIT_ID    (0x80630032)
+
+#define SCE_ATRAC_ERROR_USED_BY_SAS             (0x80630040)
+
+/* Audio Codec IDs */
+
+#define SCE_ATRAC_AT3PLUS        (0x00001000)
+#define SCE_ATRAC_AT3            (0x00001001)
+
+#endif	/* LIB_ATRAC3PLUS_H */
+
