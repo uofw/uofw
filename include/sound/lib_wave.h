@@ -3,7 +3,7 @@
 */
 
 /**
-* uofw/include/lib_wave.h
+* uofw/include/sound/lib_wave.h
 *
 * lib_wave is a sound library that provides ADPCM (.vag) format fixed-pitch playback \n
 * and 44.1 kHz 16-bit linear PCM format sound output functions.

@@ -3,7 +3,7 @@ See the file COPYING for copying permission.
 */
 
 /**
-* uofw/include/lib_atrac3plus.h
+* uofw/include/sound/lib_atrac3plus.h
 *
 * library for the ATRAC3/ATRAC3PLUS audio file format.
 */

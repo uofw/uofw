@@ -3,9 +3,9 @@
 */
 
 /**
-* uofw/include/utility/utility_screenshot.h
-*
-*/
+ * uofw/include/utility/utility_screenshot.h
+ *
+ */
 
 #ifndef UTILITY_SCREENSHOT_H
 #define	UTILITY_SCREENSHOT_H

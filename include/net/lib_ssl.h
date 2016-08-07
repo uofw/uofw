@@ -8,8 +8,8 @@
  * This library is needed to perform HTTPS connections.
  */
 
-#ifndef LIB_SLL_H
-#define	LIB_SLL_H
+#ifndef LIB_SSL_H
+#define	LIB_SSL_H
 
 #define SCE_SSL_LEAST_STACK_SIZE        (1*1024)		/* 1KiB */
 
@@ -22,5 +22,5 @@
 #define SCE_SSL_ERROR_INVALID_VALUE     0x804351FE
 #define SCE_SSL_ERROR_INVALID_FORMAT    0x80435108
 
-#endif	/* LIB_SLL_H */
+#endif	/* LIB_SSL_H */
 

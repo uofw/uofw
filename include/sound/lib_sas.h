@@ -3,7 +3,7 @@
 */
 
 /**
- * uofw/include/lib_sas.h
+ * uofw/include/sound/lib_sas.h
  *
  * Low-level sound library for the PSPs Software Audio Synthesizer (SAS).
  */
