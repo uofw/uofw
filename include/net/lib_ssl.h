@@ -11,9 +11,9 @@
 #ifndef LIB_SSL_H
 #define	LIB_SSL_H
 
-#define SCE_SSL_LEAST_STACK_SIZE        (1*1024)		/* 1KiB */
+#define SCE_SSL_LEAST_STACK_SIZE        (1*1024)        /* 1KiB */
 
-/* lib_sll specific error codes. */
+/* lib_ssl specific error codes. */
 
 #define SCE_SSL_ERROR_BEFORE_INIT       0x80435001
 #define SCE_SSL_ERROR_ALREADY_INITED    0x80435020
