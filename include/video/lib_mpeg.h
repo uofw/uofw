@@ -3,7 +3,7 @@
 */
 
 /**
-* uofw/include/lib_mpeg.h
+* uofw/include/video/lib_mpeg.h
 *
 * lib_mpeg is a library that can be used for demultiplexing a PSP Movie Format \n
 * (for game) stream (PSMF), and decoding the demultiplexed video and audio streams.

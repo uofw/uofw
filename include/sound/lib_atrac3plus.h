@@ -11,7 +11,7 @@ See the file COPYING for copying permission.
 #ifndef LIB_ATRAC3PLUS_H
 #define	LIB_ATRAC3PLUS_H
 
-#include "common\errors.h"
+#include "../common/errors.h"
 
 /* ATRAC3 driver specific error codes. */
 

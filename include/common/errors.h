@@ -1,10 +1,108 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011 - 2016 The uOFW team
    See the file COPYING for copying permission.
 */
 
 #ifndef COMMON_INCLUDED
 # error "Only include common_asm.h, common_imp.h or common_header.h!"
 #endif
+
+/**
+ * uofw/include/common/errors.h
+ *
+ * Defines error codes used by the system software. Throughout the kernel, error codes
+ * are organized as negative values expressed in hexadecimal notation.
+ */
+
+/**
+ * PSP error value format
+ *
+ *  31  30  29   28 27              16 15                    0
+ * +---+---+-------+------------------+-----------------------+
+ * | E | C | Rsrvd | F A C I L I T Y  |  E R R O R   C O D E  |
+ * +---+---+-------+------------------+-----------------------+
+ *
+ *  bit 31: Error
+ *      1 = Error
+ *      0 = Success
+ *
+ *  bit 30: Critical
+ *      1 = Critical error
+ *      0 = Normal error
+ *
+ *  bits 29-28: Reserved
+ *      always zero
+ *
+ *  bits 27-16: Facility
+ *      One of the below facility codes
+ *
+ *  bits 15-0: Error code
+ *      Define the concrete meaning of the error code. The meaning is depending
+ *      on the facility code, in other words, if for two error values the
+ *      error code fields are equal, but the facility differs, then the meaning of the
+ *      error value might differ as well.
+ *
+ */
+
+/*
+ * Definition of facility codes
+ */
+
+#define SCE_ERROR_FACILITY_NULL         0x000
+#define SCE_ERROR_FACILITY_ERRNO        0x001
+#define SCE_ERROR_FACILITY_KERNEL       0x002
+#define SCE_ERROR_FACILITY_REGISTRY     0x008
+#define SCE_ERROR_FACILITY_VSH          0x010
+#define SCE_ERROR_FACILITY_UTILITY      0x011
+#define SCE_ERROR_FACILITY_SYSFILE      0x012
+#define SCE_ERROR_FACILITY_MSAPP        0x013
+
+#define SCE_ERROR_FACILITY_UMD          0x021
+#define SCE_ERROR_FACILITY_MEMSTICK     0x022
+#define SCE_ERROR_FACILITY_FLASH        0x023
+#define SCE_ERROR_FACILITY_USB          0x024
+#define SCE_ERROR_FACILITY_SYSCON       0x025
+#define SCE_ERROR_FACILITY_AUDIO        0x026
+#define SCE_ERROR_FACILITY_LFLASH       0x027
+#define SCE_ERROR_FACILITY_LFATFS       0x028
+#define SCE_ERROR_FACILITY_SIRCS        0x029
+#define SCE_ERROR_FACILITY_IRDA         0x02A
+#define SCE_ERROR_FACILITY_POWER        0x02B
+#define SCE_ERROR_FACILITY_AUDIOROUTING 0x02C
+#define SCE_ERROR_FACILITY_MEDIASYNC    0x02D
+#define SCE_ERROR_FACILITY_PERIPH       0x03F
+
+#define SCE_ERROR_FACILITY_NETWORK      0x041
+#define SCE_ERROR_FACILITY_SAS          0x042
+#define SCE_ERROR_FACILITY_HTTP         0x043
+#define SCE_ERROR_FACILITY_WAVE         0x044
+#define SCE_ERROR_FACILITY_SND          0x045
+#define SCE_ERROR_FACILITY_FONT         0x046
+#define SCE_ERROR_FACILITY_P3DA         0x047
+#define SCE_ERROR_FACILITY_MAGICGATE    0x050
+#define SCE_ERROR_FACILITY_CPHIO        0x051
+#define SCE_ERROR_FACILITY_OPENPSID     0x052
+#define SCE_ERROR_FACILITY_DNAS         0x053
+#define SCE_ERROR_FACILITY_MTP          0x054
+#define SCE_ERROR_FACILITY_NP           0x055
+#define SCE_ERROR_FACILITY_GAMEUPDATE   0x056
+#define SCE_ERROR_FACILITY_FMAC         0x057
+#define SCE_ERROR_FACILITY_FACE         0x058
+#define SCE_ERROR_FACILITY_LIBRARY      0x05F
+
+#define SCE_ERROR_FACILITY_MPEG         0x061
+#define SCE_ERROR_FACILITY_AVC          0x062
+#define SCE_ERROR_FACILITY_ATRAC        0x063
+#define SCE_ERROR_FACILITY_ASF          0x064
+#define SCE_ERROR_FACILITY_JPEG         0x065
+#define SCE_ERROR_FACILITY_AVI          0x066
+#define SCE_ERROR_FACILITY_MP3          0x067
+#define SCE_ERROR_FACILITY_G729         0x068
+#define SCE_ERROR_FACILITY_AAC          0x069
+#define SCE_ERROR_FACILITY_CODEC        0x07F
+
+/*
+ * Error definitions belonging to SCE_ERROR_FACILITY_NULL
+ */
 
 #define SCE_ERROR_OK                                            0x0
 #define SCE_ERROR_NOT_SUPPORTED                                 0x80000004
@@ -35,6 +133,10 @@
 #define SCE_ERROR_MFILE                                         0x80000218
 #define SCE_ERROR_NOSPC                                         0x8000021C
 #define SCE_ERROR_DFUNC                                         0x800002FF
+
+/*
+ * Error definitions belonging to SCE_ERROR_FACILITY_ERRNO
+ */
 
 #define SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED                 0x80010001
 #define SCE_ERROR_ERRNO_FILE_NOT_FOUND                          0x80010002
@@ -80,7 +182,10 @@
 #define SCE_ERROR_ERRNO_NOT_SUPPORTED                           0x80010086
 #define SCE_ERROR_ERRNO_ENOMEDIUM                               0x80010087 /* No medium was found. */
 
-/* Non-standard error code definitions */
+/*
+* Non-standard error code definitions
+*/
+
 #define SCE_ERROR_ERRNO_ADDR_OUT_OF_MAIN_MEM                    0x8001B001
 #define SCE_ERROR_ERRNO_INVALID_UNIT_NUM                        0x8001B002
 #define SCE_ERROR_ERRNO_INVALID_FILE_SIZE                       0x8001B003
@@ -88,7 +193,10 @@
 #define SCE_ERROR_ERRNO_NO_CACHE                                0x8001B005
 #define SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE                       0x8001B006
 
-/* Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values. */
+/*
+ * Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values.
+ */
+
 #define SCE_ERROR_ERRNO150_ENAMETOOLONG                         0x80010024
 #define SCE_ERROR_ERRNO150_EADDRINUSE                           0x80010062
 #define SCE_ERROR_ERRNO150_ECONNABORTED                         0x80010067
@@ -96,6 +204,10 @@
 #define SCE_ERROR_ERRNO150_ENOMEDIUM                            0x8001007B
 #define SCE_ERROR_ERRNO150_EMEDIUMTYPE                          0x8001007C
 #define SCE_ERROR_ERRNO150_ENOTSUP                              0x8001B000
+
+/*
+ * Error definitions belonging to SCE_ERROR_FACILITY_KERNEL
+ */
 
 #define SCE_ERROR_KERNEL_ERROR                                  0x80020001
 #define SCE_ERROR_KERNEL_NOT_IMPLEMENTED                        0x80020002
@@ -244,46 +356,4 @@
 #define SCE_ERROR_KERNEL_NO_ASYNC_OP                            0x8002032A
 #define SCE_ERROR_KERNEL_NOT_CACHE_ALIGNED                      0x8002044C
 #define SCE_ERROR_KERNEL_MAX_ERROR                              0x8002044D
-
-#define SCE_ERROR_MEMSTICK_DEVCTL_BAD_PARAMS                    0x80220081
-#define SCE_ERROR_MEMSTICK_DEVCTL_TOO_MANY_CALLBACKS            0x80220082
-
-#define SCE_NET_ERROR_RESOLVER_BAD_ID                           0x80410408
-#define SCE_NET_ERROR_RESOLVER_ALREADY_STOPPED                  0x8041040A
-#define SCE_NET_ERROR_RESOLVER_INVALID_HOST                     0x80410414
-#define SCE_ERROR_WLAN_BAD_PARAMS                               0x80410D13
-
-#define SCE_ERROR_HTTP_NOT_INIT                                 0x80431001
-#define SCE_ERROR_HTTP_ALREADY_INIT                             0x80431020
-#define SCE_ERROR_HTTP_NO_MEMORY                                0x80431077
-#define SCE_ERROR_HTTP_SYSTEM_COOKIE_NOT_LOADED                 0x80431078
-#define SCE_ERROR_HTTP_INVALID_PARAMETER                        0x804311FE
-#define SCE_ERROR_SSL_NOT_INIT                                  0x80435001
-#define SCE_ERROR_SSL_ALREADY_INIT                              0x80435020
-#define SCE_ERROR_SSL_OUT_OF_MEMORY                             0x80435022
-#define SCE_ERROR_HTTPS_CERT_ERROR                              0x80435060
-#define SCE_ERROR_HTTPS_HANDSHAKE_ERROR                         0x80435061
-#define SCE_ERROR_HTTPS_IO_ERROR                                0x80435062
-#define SCE_ERROR_HTTPS_INTERNAL_ERROR                          0x80435063
-#define SCE_ERROR_HTTPS_PROXY_ERROR                             0x80435064
-#define SCE_ERROR_SSL_INVALID_PARAMETER                         0x804351FE
-
-#define SCE_ERROR_FONT_INVALID_LIBID                            0x80460002
-#define SCE_ERROR_FONT_INVALID_PARAMETER                        0x80460003
-#define SCE_ERROR_FONT_TOO_MANY_OPEN_FONTS                      0x80460009
-
-#define SCE_ERROR_PSMF_NOT_INITIALIZED                          0x80615001
-#define SCE_ERROR_PSMF_BAD_VERSION                              0x80615002
-#define SCE_ERROR_PSMF_NOT_FOUND                                0x80615025
-#define SCE_ERROR_PSMF_INVALID_ID                               0x80615100
-#define SCE_ERROR_PSMF_INVALID_VALUE                            0x806151FE
-#define SCE_ERROR_PSMF_INVALID_TIMESTAMP                        0x80615500
-#define SCE_ERROR_PSMF_INVALID_PSMF                             0x80615501
-#define SCE_ERROR_PSMFPLAYER_NOT_INITIALIZED                    0x80616001
-#define SCE_ERROR_PSMFPLAYER_NO_MORE_DATA                       0x8061600C
-
-#define SCE_ERROR_AVC_VIDEO_FATAL                               0x80628002
-
-
-#define SCE_ERROR_CODEC_AUDIO_FATAL                             0x807F00FC
 
