@@ -84,52 +84,52 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00002"></a>00002 <span class="comment">   See the file COPYING for copying permission.</span>
 <a name="l00003"></a>00003 <span class="comment">*/</span>
 <a name="l00004"></a>00004 
-<a name="l00019"></a>00019 <span class="preprocessor">#ifndef KIRK_H</span>
-<a name="l00020"></a>00020 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_H</span>
-<a name="l00021"></a>00021 <span class="preprocessor"></span>
-<a name="l00022"></a>00022 <span class="preprocessor">#include &lt;common_header.h&gt;</span>
-<a name="l00023"></a>00023 
-<a name="l00024"></a>00024 <span class="comment">/* KIRK commands */</span>
-<a name="l00025"></a>00025 
-<a name="l00026"></a>00026 <span class="preprocessor">#define KIRK_CMD_ENCRYPT_AES_CBC_IV_NONE        (0x04)</span>
-<a name="l00027"></a>00027 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_ENCRYPT_AES_CBC_IV_FUSE        (0x05)</span>
-<a name="l00028"></a>00028 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_ENCRYPT_AES_CBC_IV_USER        (0x06)</span>
-<a name="l00029"></a>00029 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_DECRYPT_AES_CBC_IV_NONE        (0x07)</span>
-<a name="l00030"></a>00030 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_DECRYPT_AES_CBC_IV_FUSE        (0x08)</span>
-<a name="l00031"></a>00031 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_DECRYPT_AES_CBC_IV_USER        (0x09)</span>
-<a name="l00032"></a>00032 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_HASH_GEN_SHA1                  (0x0B)</span>
-<a name="l00033"></a>00033 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_KEY_GEN_ECDSA                  (0x0C)</span>
-<a name="l00034"></a>00034 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_POINT_MULTIPLICATION_ECDSA     (0x0D)</span>
-<a name="l00035"></a>00035 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_PRN_GEN                        (0x0E)</span>
-<a name="l00036"></a>00036 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_SIG_GEN_ECDSA                  (0x10)</span>
-<a name="l00037"></a>00037 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_SIG_VER_ECDSA                  (0x11)</span>
-<a name="l00038"></a>00038 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_CERT_VER                       (0x12)</span>
-<a name="l00039"></a>00039 <span class="preprocessor"></span>
-<a name="l00040"></a>00040 <span class="comment">/* Specific values for  algorithms used by KIRK. */</span>
-<a name="l00041"></a>00041 
-<a name="l00042"></a><a class="code" href="group__KIRK.html#gae15e03ff3ec8e95f070ed82e43b8fbdd">00042</a> <span class="preprocessor">#define KIRK_SHA1_DIGEST_LEN        (20) </span>
-<a name="l00044"></a><a class="code" href="group__KIRK.html#ga6eacb86dc57814b6b7b0b1d25e40a039">00044</a> <span class="preprocessor">#define KIRK_PRN_LEN                (20) </span>
-<a name="l00046"></a><a class="code" href="group__KIRK.html#ga9961cba8e04fcd7d0a40f474bfc99d86">00046</a> <span class="preprocessor">#define KIRK_ECDSA_POINT_LEN        (40) </span>
-<a name="l00047"></a><a class="code" href="group__KIRK.html#ga7b881996236b4f8bca4bd4b2f3f79ccb">00047</a> <span class="preprocessor">#define KIRK_ECDSA_PUBLIC_KEY_LEN   (KIRK_ECDSA_POINT_LEN) </span>
-<a name="l00048"></a><a class="code" href="group__KIRK.html#ga9ba419f09267ed1d06dc85cf41460c97">00048</a> <span class="preprocessor">#define KIRK_ECDSA_PRIVATE_KEY_LEN  (20) </span>
-<a name="l00049"></a><a class="code" href="group__KIRK.html#ga8a16ae8418fb469b5197198d815b3aba">00049</a> <span class="preprocessor">#define KIRK_ECDSA_SRC_DATA_LEN     (20) </span>
-<a name="l00050"></a><a class="code" href="group__KIRK.html#ga077106175fc255299ebc1c10f3933880">00050</a> <span class="preprocessor">#define KIRK_ECDSA_SIG_LEN          (40) </span>
-<a name="l00052"></a><a class="code" href="group__KIRK.html#ga3a0e82bdc58b2f25b4fc6e6d1b2f6548">00052</a> <span class="preprocessor">#define KIRK_AES_BLOCK_LEN          (16) </span>
-<a name="l00054"></a><a class="code" href="group__KIRK.html#gaaa589d5023b80b13a0121621e9cd29cd">00054</a> <span class="preprocessor">#define KIRK_CERT_LEN               (184) </span>
-<a name="l00057"></a>00057 <span class="preprocessor">typedef struct {</span>
-<a name="l00058"></a>00058 <span class="preprocessor"></span>    SceSize dataSize;
-<a name="l00059"></a>00059 } KirkSHA1Hdr;
-<a name="l00060"></a>00060 
-<a name="l00061"></a>00061 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00062"></a>00062     s32 mode;
-<a name="l00063"></a>00063     s32 unk4;
-<a name="l00064"></a>00064     s32 unk8;
-<a name="l00065"></a>00065     s32 keyIndex;
-<a name="l00066"></a>00066     SceSize dataSize;
-<a name="l00067"></a>00067 } KirkAESHeader;
-<a name="l00068"></a>00068 
-<a name="l00069"></a>00069 <span class="preprocessor">#endif </span><span class="comment">/* KIRK_H */</span>
-<a name="l00070"></a>00070 
+<a name="l00020"></a>00020 <span class="preprocessor">#ifndef KIRK_H</span>
+<a name="l00021"></a>00021 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_H</span>
+<a name="l00022"></a>00022 <span class="preprocessor"></span>
+<a name="l00023"></a>00023 <span class="preprocessor">#include &lt;common_header.h&gt;</span>
+<a name="l00024"></a>00024 
+<a name="l00025"></a>00025 <span class="comment">/* KIRK commands */</span>
+<a name="l00026"></a>00026 
+<a name="l00027"></a>00027 <span class="preprocessor">#define KIRK_CMD_ENCRYPT_AES_CBC_IV_NONE        (0x04)</span>
+<a name="l00028"></a>00028 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_ENCRYPT_AES_CBC_IV_FUSE        (0x05)</span>
+<a name="l00029"></a>00029 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_ENCRYPT_AES_CBC_IV_USER        (0x06)</span>
+<a name="l00030"></a>00030 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_DECRYPT_AES_CBC_IV_NONE        (0x07)</span>
+<a name="l00031"></a>00031 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_DECRYPT_AES_CBC_IV_FUSE        (0x08)</span>
+<a name="l00032"></a>00032 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_DECRYPT_AES_CBC_IV_USER        (0x09)</span>
+<a name="l00033"></a>00033 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_HASH_GEN_SHA1                  (0x0B)</span>
+<a name="l00034"></a>00034 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_KEY_GEN_ECDSA                  (0x0C)</span>
+<a name="l00035"></a>00035 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_POINT_MULTIPLICATION_ECDSA     (0x0D)</span>
+<a name="l00036"></a>00036 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_PRN_GEN                        (0x0E)</span>
+<a name="l00037"></a>00037 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_SIG_GEN_ECDSA                  (0x10)</span>
+<a name="l00038"></a>00038 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_SIG_VER_ECDSA                  (0x11)</span>
+<a name="l00039"></a>00039 <span class="preprocessor"></span><span class="preprocessor">#define KIRK_CMD_CERT_VER                       (0x12)</span>
+<a name="l00040"></a>00040 <span class="preprocessor"></span>
+<a name="l00041"></a>00041 <span class="comment">/* Specific values for algorithms used by KIRK. */</span>
+<a name="l00042"></a>00042 
+<a name="l00043"></a><a class="code" href="group__KIRK.html#gae15e03ff3ec8e95f070ed82e43b8fbdd">00043</a> <span class="preprocessor">#define KIRK_SHA1_DIGEST_LEN        (20) </span>
+<a name="l00045"></a><a class="code" href="group__KIRK.html#ga6eacb86dc57814b6b7b0b1d25e40a039">00045</a> <span class="preprocessor">#define KIRK_PRN_LEN                (20) </span>
+<a name="l00047"></a><a class="code" href="group__KIRK.html#ga9961cba8e04fcd7d0a40f474bfc99d86">00047</a> <span class="preprocessor">#define KIRK_ECDSA_POINT_LEN        (40) </span>
+<a name="l00048"></a><a class="code" href="group__KIRK.html#ga7b881996236b4f8bca4bd4b2f3f79ccb">00048</a> <span class="preprocessor">#define KIRK_ECDSA_PUBLIC_KEY_LEN   (KIRK_ECDSA_POINT_LEN) </span>
+<a name="l00049"></a><a class="code" href="group__KIRK.html#ga9ba419f09267ed1d06dc85cf41460c97">00049</a> <span class="preprocessor">#define KIRK_ECDSA_PRIVATE_KEY_LEN  (20) </span>
+<a name="l00050"></a><a class="code" href="group__KIRK.html#ga8a16ae8418fb469b5197198d815b3aba">00050</a> <span class="preprocessor">#define KIRK_ECDSA_SRC_DATA_LEN     (20) </span>
+<a name="l00051"></a><a class="code" href="group__KIRK.html#ga077106175fc255299ebc1c10f3933880">00051</a> <span class="preprocessor">#define KIRK_ECDSA_SIG_LEN          (40) </span>
+<a name="l00053"></a><a class="code" href="group__KIRK.html#ga3a0e82bdc58b2f25b4fc6e6d1b2f6548">00053</a> <span class="preprocessor">#define KIRK_AES_BLOCK_LEN          (16) </span>
+<a name="l00055"></a><a class="code" href="group__KIRK.html#gaaa589d5023b80b13a0121621e9cd29cd">00055</a> <span class="preprocessor">#define KIRK_CERT_LEN               (184) </span>
+<a name="l00058"></a>00058 <span class="preprocessor">typedef struct {</span>
+<a name="l00059"></a>00059 <span class="preprocessor"></span>    SceSize dataSize;
+<a name="l00060"></a>00060 } KirkSHA1Hdr;
+<a name="l00061"></a>00061 
+<a name="l00062"></a>00062 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00063"></a>00063     s32 mode;
+<a name="l00064"></a>00064     s32 unk4;
+<a name="l00065"></a>00065     s32 unk8;
+<a name="l00066"></a>00066     s32 keyIndex;
+<a name="l00067"></a>00067     SceSize dataSize;
+<a name="l00068"></a>00068 } KirkAESHeader;
+<a name="l00069"></a>00069 
+<a name="l00070"></a>00070 <span class="preprocessor">#endif </span><span class="comment">/* KIRK_H */</span>
+<a name="l00071"></a>00071 
 </pre></div></div><!-- contents -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -148,7 +148,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Aug 3 2016 11:43:40 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Aug 7 2016 22:20:38 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
