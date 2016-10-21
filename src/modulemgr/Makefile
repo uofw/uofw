@@ -2,7 +2,9 @@
 # See the file COPYING for copying permission.
 
 TARGET = modulemgr
-OBJS = dbg.o chunk.o init.o loadModule.o modulemgr.o override.o queryModule.o rebootModule.o start-stopModule.o
+OBJS = chunk.o init.o loadModule.o modulemgr.o override.o queryModule.o rebootModule.o start-stopModule.o
+
+DEBUG = 0
 
 LIBS = -lSysMemForKernel -lKDebugForKernel -lInterruptManagerForKernel -lUtilsForKernel \
        -lSysclibForKernel -lThreadManForKernel -lIoFileMgrForKernel -lLoadCoreForKernel

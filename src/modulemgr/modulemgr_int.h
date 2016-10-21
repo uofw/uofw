@@ -78,6 +78,9 @@ enum ModuleMgrExecModes {
 
 extern SceModuleManagerCB g_ModuleManager;
 
+// DEBUG
+//extern int c;
+
 s32 ClearFreePartitionMemory(s32 partitionId);
 s32 _CheckUserModulePartition(SceUID memoryPartitionId);
 s32 _start_exe_thread(SceModuleMgrParam *pModParams);

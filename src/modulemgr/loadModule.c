@@ -2588,6 +2588,7 @@ SceUID sceKernelLoadModuleBufferBootInitBtcnf(SceSize size, void *base, s32 flag
     }
 
     _setupForLoadModuleBuffer(&modParams, SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_BOOT_INIT_BTCNF, base, size, 1); // 0x0000595C
+
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00005968
 
     pspSetK1(oldK1);

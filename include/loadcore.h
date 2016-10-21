@@ -682,8 +682,7 @@ enum ModuleMgrMcbStatus {
     MCB_STATUS_STARTING = 4,
     MCB_STATUS_STARTED = 5,
     MCB_STATUS_STOPPING = 6,
-    MCB_STATUS_STOPPED = 7,
-    MCB_STATUS_UNLOADED = 8
+    MCB_STATUS_STOPPED = 7
 };
 
 /** The SceModule structure represents a loaded module in memory. */

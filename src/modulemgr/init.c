@@ -150,7 +150,7 @@ char *sceKernelInitFileName(void)
 u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *pStatus)
 {
     s32 result;
-    SceBootCallback *curBootCallback;
+    SceBootCallback *pCurBootCallback;
     
     if (flag < 4) { //0x00004F64
         if (g_init.bootCallbacks1 == NULL) { //0x00004F78
@@ -159,8 +159,8 @@ u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag,
                 *pStatus = result;
             return SCE_ERROR_OK;
         }
-        curBootCallback = g_init.curBootCallback1; //0x00004F80
-        curBootCallback->bootCBFunc = (flag & 0x3) + bootCBFunc; //0x00004F90
+        pCurBootCallback = g_init.curBootCallback1; //0x00004F80
+        pCurBootCallback->bootCBFunc = (flag & 0x3) + bootCBFunc; //0x00004F90
         g_init.curBootCallback1 += 1; //0x00004FA0     
         g_init.curBootCallback1->bootCBFunc = NULL; //0x00004FA8
     } else {
@@ -170,12 +170,12 @@ u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag,
                 *pStatus = result;
             return SCE_ERROR_OK;
         }
-        curBootCallback = g_init.curBootCallback2; //0x00004FF4
-        curBootCallback->bootCBFunc = (flag & 0x3) + bootCBFunc; //0x00005004
+        pCurBootCallback = g_init.curBootCallback2; //0x00004FF4
+        pCurBootCallback->bootCBFunc = (flag & 0x3) + bootCBFunc; //0x00005004
         g_init.curBootCallback2 += 1; //0x00005010
         g_init.curBootCallback2->bootCBFunc = NULL; //0x00004FA8
     }
-    curBootCallback->gp = sceKernelGetModuleGPByAddressForKernel((u32)bootCBFunc); //0x00004F8C & 0x00004FA4
+    pCurBootCallback->gp = sceKernelGetModuleGPByAddressForKernel((u32)bootCBFunc); //0x00004F8C & 0x00004FA4
     return SCE_BOOT_CALLBACK_FUNCTION_QUEUED;
 }
 
