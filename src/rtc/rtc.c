@@ -140,7 +140,7 @@ void primaryCallback (int arg) {
 // TODO: Finish. Fix values/sizeof
 // Subroutine sceRtc_driver_852255B8 - Address 0x0000016C
 // Exported in sceRtc_driver
-s32 sceRtc_driver_852255B8(void) {
+s32 sceRtcSynchronize(void) {
     u32 data[20];   // s0
     //int s1, s2, s3, s4, s5, s6, s7;
     //s32 res;
@@ -170,7 +170,7 @@ s32 sceRtc_driver_852255B8(void) {
 
 // Subroutine sceRtc_driver_929620CE - Address 0x0000054C - Aliases: sceRtc_driver_9763C138
 // Exported in sceRtc_driver
-s32 sceRtc_driver_929620CE() {
+s32 sceRtcSetCurrentTick() {
     return SCE_ERROR_OK;
 }
 
@@ -214,7 +214,7 @@ s32 sceRtc_508BA64B(u64 *tick) {
 // Subroutine sceRtc_7D1FBED3 - Address 0x00000B28 - Aliases: sceRtc_driver_E09880CF
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtc_7D1FBED3(u64 *tick) {
+s32 sceRtcSetAlarmTick(u64 *tick) {
     (void)tick;
     return SCE_ERROR_OK;
 }
@@ -224,7 +224,7 @@ s32 sceRtc_7D1FBED3(u64 *tick) {
 // sceRtc_driver_366669D6
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtc_C2DDBEB5(u64 *tick) {
+s32 sceRtcGetAlarmTick(u64 *tick) {
     s32 shiftedK1 = pspGetK1() << 11;
     u64 *oldTick = tick;
     s32 res = SCE_ERROR_INVALID_POINTER;
@@ -509,7 +509,7 @@ s32 sceRtcResume(void) {
 // Subroutine sceRtc_driver_1C1859DF - Address 0x000014BC
 // Exported in sceRtc_driver
 //sceRtc(reset/set/clear)(flags/(upper/lower)ticks)?
-void sceRtc_driver_1C1859DF(void) {
+void sceRtcReset(void) {
     ctx.tickCleared = 0;
     ctx.currPresent = 0;
     ctx.securePresent = 0;
@@ -519,7 +519,7 @@ void sceRtc_driver_1C1859DF(void) {
 // Subroutine sceRtc_driver_DFF30673 - Address 0x000014D8
 // Exported in sceRtc_driver
 //sceRtc(set)(flags/(upper/lower)ticks)?
-s32 sceRtc_driver_DFF30673(u32 a0, u32 a1, u32 a2, u32 a3) {
+s32 sceRtcSetConf(u32 a0, u32 a1, u32 a2, u32 a3) {
     s32 intr = sceKernelCpuSuspendIntr();
     ctx.cUnk = a3;
     ctx.bUnk = a1;
@@ -901,7 +901,7 @@ s32 sceRtcParseDateTime(u64 *destTick, const char *dateString) {
 // Subroutine sceRtc_28E1E988 - Address 0x00002F24 - Aliases: sceRtc_driver_BDA60897
 // Exported in sceRtc
 // Exported in sceRtc_driver
-s32 sceRtc_28E1E988() {
+s32 sceRtcParseRFC3339() {
     return SCE_ERROR_OK;
 
 }
@@ -970,11 +970,8 @@ s32 sceRtcFormatRFC2822LocalTime(char *pszDateTime, const u64 *pUtc) {
     int oldK1 = pspShiftK1();
     s32 res = SCE_ERROR_INVALID_POINTER;
 
-    if((oldK1 & (int)pszDateTime) >= 0) {
-        if((oldK1 & (int)pszDateTime) >= 0) {
+    if(((oldK1 & (int)pszDateTime) >= 0) && ((oldK1 & (int)pszDateTime) >= 0))
             res = sceRtcFormatRFC2822(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
-        }
-    }
 
     pspSetK1(oldK1);
     return res;
@@ -988,11 +985,8 @@ s32 sceRtcFormatRFC3339LocalTime(char *pszDateTime, const u64 *pUtc) {
     int oldK1 = pspShiftK1();
     s32 res = SCE_ERROR_PRIV_REQUIRED;
 
-    if((oldK1 & (int)pszDateTime) >= 0) {
-        if((oldK1 & (int)pUtc) >= 0) {
+    if(((oldK1 & (int)pszDateTime) >= 0) && ((oldK1 & (int)pUtc) >= 0))
             res = sceRtcFormatRFC3339(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
-        }
-    }
 
     pspSetK1(oldK1);
     return res;
