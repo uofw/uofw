@@ -32,8 +32,8 @@ enum pspRtcCheckValidErrors {
  */
 u32 sceRtcGetTickResolution(void);
 
-s32 sceRtc_7D1FBED3(u64 *tick);
-s32 sceRtc_C2DDBEB5(u64 *tick);
+s32 sceRtcSetAlarmTick(u64 *tick);
+s32 sceRtcGetAlarmTick(u64 *tick);
 s32 sceRtcIsAlarmed(void);
 s32 sceRtcRegisterCallback(SceUID id);
 
