@@ -112,12 +112,11 @@ s32 secondaryCallback (int size, u32 *unk, u32 *arg) {
                 //sceKernelNotifyCallback(ctx.rtc_cb, (int)sceRtcIsAlarmed());
                 ctx.szStatus = 0;
             }
-        }
     } else if(size == 1024 / 2) {
             ctx.szStatus = 1;
-    }
-
-    return SCE_ERROR_OK;
+	}
+    
+	return SCE_ERROR_OK;
 }
 
 // DONE! ASM OK! - Branch invertion won't matter here.
@@ -970,7 +969,7 @@ s32 sceRtcFormatRFC2822LocalTime(char *pszDateTime, const u64 *pUtc) {
     int oldK1 = pspShiftK1();
     s32 res = SCE_ERROR_INVALID_POINTER;
 
-    if(((oldK1 & (int)pszDateTime) >= 0) && ((oldK1 & (int)pszDateTime) >= 0))
+   if(pspK1PtrOk(pszDateTime) && pspK1PtrOk(pszDateTime))
             res = sceRtcFormatRFC2822(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
 
     pspSetK1(oldK1);
@@ -985,7 +984,7 @@ s32 sceRtcFormatRFC3339LocalTime(char *pszDateTime, const u64 *pUtc) {
     int oldK1 = pspShiftK1();
     s32 res = SCE_ERROR_PRIV_REQUIRED;
 
-    if(((oldK1 & (int)pszDateTime) >= 0) && ((oldK1 & (int)pUtc) >= 0))
+	if(pspK1PtrOk(pszDateTime) && pspK1PtrOk(pszDateTime))
             res = sceRtcFormatRFC3339(pszDateTime, pUtc, ctx.dUnk + ctx.cUnk);
 
     pspSetK1(oldK1);
