@@ -109,6 +109,10 @@ typedef struct {
 enum SceCtrlPadButtons {
     /** Select button. */
     SCE_CTRL_SELECT         = 0x1,
+    /** DS3 L3 button. */
+    SCE_CTRL_L3             = 0x2,
+    /** DS3 R3 button. */
+    SCE_CTRL_R3             = 0x4,
     /** Start button. */
     SCE_CTRL_START          = 0x8,
     /** Up D-Pad button. */
@@ -119,10 +123,14 @@ enum SceCtrlPadButtons {
     SCE_CTRL_DOWN           = 0x40,
     /** Left D-Pad button. */
     SCE_CTRL_LEFT           = 0x80,
-    /** Left trigger. */
+    /** Left trigger. This accounts for the DS3 L2 trigger as well. */
     SCE_CTRL_LTRIGGER       = 0x100,
-    /** Right trigger. */
+    /** Right trigger. This accounts for the DS3 R2 trigger as well. */
     SCE_CTRL_RTRIGGER       = 0x200,
+    /** DS3 L1 trigger. */
+    SCE_CTRL_L1TRIGGER      = 0x400,
+    /** DS3 R1 trigger. */
+    SCE_CTRL_R1TRIGGER      = 0x800,
     /** Triangle button. */
     SCE_CTRL_TRIANGLE       = 0x1000,
     /** Circle button. */
@@ -177,7 +185,7 @@ enum SceCtrlPadPollMode {
 enum SceCtrlExternalInputMode {
 	/** No external input data. */
 	SCE_CTRL_EXTERNAL_INPUT_PSP = 0,
-	/** Input data of the PS3's DUALSHOCK®3 controller is used. */
+	/** Input data of the PS3's DUALSHOCKï¿½3 controller is used. */
 	SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 = 1,
 	/** Unknown. */
 	SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2 = 2
