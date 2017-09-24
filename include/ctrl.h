@@ -31,8 +31,12 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Rx;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Ry;
     /** Reserved. */
-    u8 rsrv[6];
+    u8 rsrv[4];
 } SceCtrlData;
 
 /** 
@@ -51,24 +55,46 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Rx;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Ry;
     /** Reserved. */
-    u8 rsrv[6];
-    /** Unknown. */
-    s32 unk1;
-    /** Unknown. */
-    s32 unk2;
-    /** Unknown. */
-    s32 unk3;
-    /** Unknown. */
-    s32 unk4;
-    /** Unknown. */
-    s32 unk5;
-    /** Unknown. */
-    s32 unk6;
-    /** Unknown. */
-    s32 unk7;
-    /** Unknown. */
-    s32 unk8;
+    u8 rsrv[4];
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad right.
+    * Byte 3: D-Pad left.    
+    */
+    s32 DPadSenseA;
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad up.
+    * Byte 3: D-Pad down.    
+    */
+    s32 DPadSenseB;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Triangle.
+    * Byte 3: Circle.    
+    */
+    s32 GPadSenseA;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Cross.
+    * Byte 3: Square.    
+    */
+    s32 GPadSenseB;
+    /** Axis pressure sensitivity.
+    * Byte 1: L1.
+    * Byte 3: R1.    
+    */
+    s32 AxisSenseA;
+    /** Axis pressure sensitivity.
+    * Byte 1: L2.
+    * Byte 3: R2.    
+    */
+    s32 AxisSenseB;
+    /** DS3 sixaxis. This is the return value for tilting the x-axis. */
+    s32 TiltA;
+    /** DS3 sixaxis. This is the return value for tilting the y-axis. */
+    s32 TiltB;
 } SceCtrlDataExt;
 
 /** 
