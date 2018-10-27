@@ -32,9 +32,9 @@ typedef struct {
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
     /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
-    u8 Rx;
+    u8 rX;
     /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
-    u8 Ry;
+    u8 rY;
     /** Reserved. */
     u8 rsrv[4];
 } SceCtrlData;
@@ -56,9 +56,9 @@ typedef struct {
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
     /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
-    u8 Rx;
+    u8 rX;
     /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
-    u8 Ry;
+    u8 rY;
     /** Reserved. */
     u8 rsrv[4];
     /** D-pad pressure sensitivity.
@@ -210,7 +210,7 @@ enum SceCtrlPadPollMode {
 /** External input data sources. */
 enum SceCtrlExternalInputMode {
 	/** No external input data. */
-	SCE_CTRL_EXTERNAL_INPUT_PSP = 0,
+	SCE_CTRL_EXTERNAL_INPUT_NONE = 0,
 	/** Input data of the PS3's DUALSHOCK�3 controller is used. */
 	SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 = 1,
 	/** Unknown. */
