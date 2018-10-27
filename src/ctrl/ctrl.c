@@ -1628,14 +1628,14 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
 
                  ctrlKernelBufExt->timeStamp = 0;
                  ctrlKernelBufExt->buttons = 0;
-                 ctrlKernelBufExt->unk1 = 0;
-                 ctrlKernelBufExt->unk2 = 0;
-                 ctrlKernelBufExt->unk3 = 0;
-                 ctrlKernelBufExt->unk4 = 0;
-                 ctrlKernelBufExt->unk5 = 0;
-                 ctrlKernelBufExt->unk6 = 0;
-                 ctrlKernelBufExt->unk7 = 0;
-                 ctrlKernelBufExt->unk8 = 0;
+                 ctrlKernelBufExt->DPadSenseA = 0;
+                 ctrlKernelBufExt->DPadSenseB = 0;
+                 ctrlKernelBufExt->GPadSenseA = 0;
+                 ctrlKernelBufExt->GPadSenseB = 0;
+                 ctrlKernelBufExt->AxisSenseA = 0;
+                 ctrlKernelBufExt->AxisSenseB = 0;
+                 ctrlKernelBufExt->TiltA = 0;
+                 ctrlKernelBufExt->TiltB = 0;
                  ctrlKernelBufExt->aX = CTRL_ANALOG_PAD_CENTER_VALUE;
                  ctrlKernelBufExt->aY = CTRL_ANALOG_PAD_CENTER_VALUE;
                  ctrlKernelBufExt->rsrv[0] = -128;
@@ -1694,14 +1694,14 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
              for (j = 0; j < sizeof ctrlUserBufExt->rsrv; j++)
                   ctrlUserBufExt->rsrv[j] = ctrlKernelBufExt->rsrv[j];
 
-             ctrlUserBufExt->unk1 = ctrlKernelBufExt->unk1;
-             ctrlUserBufExt->unk2 = ctrlKernelBufExt->unk2;
-             ctrlUserBufExt->unk3 = ctrlKernelBufExt->unk3;
-             ctrlUserBufExt->unk4 = ctrlKernelBufExt->unk4;
-             ctrlUserBufExt->unk5 = ctrlKernelBufExt->unk5;
-             ctrlUserBufExt->unk6 = ctrlKernelBufExt->unk6;
-             ctrlUserBufExt->unk7 = ctrlKernelBufExt->unk7;
-             ctrlUserBufExt->unk8 = ctrlKernelBufExt->unk8;
+             ctrlUserBufExt->DPadSenseA = ctrlKernelBufExt->DPadSenseA;
+             ctrlUserBufExt->DPadSenseB = ctrlKernelBufExt->DPadSenseB;
+             ctrlUserBufExt->GPadSenseA = ctrlKernelBufExt->GPadSenseA;
+             ctrlUserBufExt->GPadSenseB = ctrlKernelBufExt->GPadSenseB;
+             ctrlUserBufExt->AxisSenseA = ctrlKernelBufExt->AxisSenseA;
+             ctrlUserBufExt->AxisSenseB = ctrlKernelBufExt->AxisSenseB;
+             ctrlUserBufExt->TiltA = ctrlKernelBufExt->TiltA;
+             ctrlUserBufExt->TiltB = ctrlKernelBufExt->TiltB;
 
              ctrlUserBufExt->buttons &= ~SCE_CTRL_INTERCEPTED;
              ctrlUserBufExt->buttons &= g_ctrl.maskSupportButtons;
@@ -2083,30 +2083,30 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
 			   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP) {
                    data->rsrv[0] = -128;
                    data->rsrv[1] = -128;
-                   data->rsrv[4] = 0;
-                   data->rsrv[5] = 0;
-                   data->unk1 = 0;
-                   data->unk2 = 0;
-                   data->unk3 = 0;
-                   data->unk4 = 0;
-                   data->unk5 = 0;
-                   data->unk6 = 0;
-                   data->unk7 = 0;
-                   data->unk8 = 0;
+                   /*data->rsrv[4] = 0;
+                   data->rsrv[5] = 0;*/
+                   data->DPadSenseA = 0;
+                   data->DPadSenseB = 0;
+                   data->GPadSenseA = 0;
+                   data->GPadSenseB = 0;
+                   data->AxisSenseA = 0;
+                   data->AxisSenseB = 0;
+                   data->TiltA = 0;
+                   data->TiltB = 0;
                }
                else {
                    data->rsrv[0] = ctrlBuf->rsrv[0];
                    data->rsrv[1] = ctrlBuf->rsrv[1];
-                   data->rsrv[4] = ctrlBuf->rsrv[4];
-                   data->rsrv[5] = ctrlBuf->rsrv[5];
-                   data->unk1 = ctrlBuf->unk1;
-                   data->unk2 = ctrlBuf->unk2;
-                   data->unk3 = ctrlBuf->unk3;
-                   data->unk4 = ctrlBuf->unk4;
-                   data->unk5 = ctrlBuf->unk5;
-                   data->unk6 = ctrlBuf->unk6;
-                   data->unk7 = ctrlBuf->unk7;
-                   data->unk8 = ctrlBuf->unk8;
+                   /*data->rsrv[4] = ctrlBuf->rsrv[4];
+                   data->rsrv[5] = ctrlBuf->rsrv[5];*/
+                   data->DPadSenseA = ctrlBuf->DPadSenseA;
+                   data->DPadSenseB = ctrlBuf->DPadSenseB;
+                   data->GPadSenseA = ctrlBuf->GPadSenseA;
+                   data->GPadSenseB = ctrlBuf->GPadSenseB;
+                   data->AxisSenseA = ctrlBuf->AxisSenseA;
+                   data->AxisSenseB = ctrlBuf->AxisSenseB;
+                   data->TiltA = ctrlBuf->TiltA;
+                   data->TiltB = ctrlBuf->TiltB;
                }
                data += 1;
            }

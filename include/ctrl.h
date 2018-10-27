@@ -703,10 +703,10 @@ s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 u
 
 /**
  * Get the button mask settings applied to PSP buttons.
- * 
+ *
  * @param buttons The buttons to check for. One or more buttons of ::SceCtrlPadButtons.
- * 
- * @return The button mask mode for the given buttons. One of ::SceCtrlPadButtonMaskMode. 
+ *
+ * @return The button mask mode for the given buttons. One of ::SceCtrlPadButtonMaskMode.
  */
 u32 sceCtrlGetButtonIntercept(u32 buttons);
 
