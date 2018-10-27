@@ -31,8 +31,12 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Rx;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Ry;
     /** Reserved. */
-    u8 rsrv[6];
+    u8 rsrv[4];
 } SceCtrlData;
 
 /** 
@@ -51,24 +55,46 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Rx;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 Ry;
     /** Reserved. */
-    u8 rsrv[6];
-    /** Unknown. */
-    s32 unk1;
-    /** Unknown. */
-    s32 unk2;
-    /** Unknown. */
-    s32 unk3;
-    /** Unknown. */
-    s32 unk4;
-    /** Unknown. */
-    s32 unk5;
-    /** Unknown. */
-    s32 unk6;
-    /** Unknown. */
-    s32 unk7;
-    /** Unknown. */
-    s32 unk8;
+    u8 rsrv[4];
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad right.
+    * Byte 3: D-Pad left.    
+    */
+    s32 DPadSenseA;
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad up.
+    * Byte 3: D-Pad down.    
+    */
+    s32 DPadSenseB;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Triangle.
+    * Byte 3: Circle.    
+    */
+    s32 GPadSenseA;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Cross.
+    * Byte 3: Square.    
+    */
+    s32 GPadSenseB;
+    /** Axis pressure sensitivity.
+    * Byte 1: L1.
+    * Byte 3: R1.    
+    */
+    s32 AxisSenseA;
+    /** Axis pressure sensitivity.
+    * Byte 1: L2.
+    * Byte 3: R2.    
+    */
+    s32 AxisSenseB;
+    /** DS3 sixaxis. This is the return value for tilting the x-axis. */
+    s32 TiltA;
+    /** DS3 sixaxis. This is the return value for tilting the y-axis. */
+    s32 TiltB;
 } SceCtrlDataExt;
 
 /** 
@@ -109,6 +135,10 @@ typedef struct {
 enum SceCtrlPadButtons {
     /** Select button. */
     SCE_CTRL_SELECT         = 0x1,
+    /** DS3 L3 button. */
+    SCE_CTRL_L3             = 0x2,
+    /** DS3 R3 button. */
+    SCE_CTRL_R3             = 0x4,
     /** Start button. */
     SCE_CTRL_START          = 0x8,
     /** Up D-Pad button. */
@@ -119,10 +149,14 @@ enum SceCtrlPadButtons {
     SCE_CTRL_DOWN           = 0x40,
     /** Left D-Pad button. */
     SCE_CTRL_LEFT           = 0x80,
-    /** Left trigger. */
+    /** Left trigger. This accounts for the DS3 L2 trigger as well. */
     SCE_CTRL_LTRIGGER       = 0x100,
-    /** Right trigger. */
+    /** Right trigger. This accounts for the DS3 R2 trigger as well. */
     SCE_CTRL_RTRIGGER       = 0x200,
+    /** DS3 L1 trigger. */
+    SCE_CTRL_L1TRIGGER      = 0x400,
+    /** DS3 R1 trigger. */
+    SCE_CTRL_R1TRIGGER      = 0x800,
     /** Triangle button. */
     SCE_CTRL_TRIANGLE       = 0x1000,
     /** Circle button. */
@@ -177,7 +211,7 @@ enum SceCtrlPadPollMode {
 enum SceCtrlExternalInputMode {
 	/** No external input data. */
 	SCE_CTRL_EXTERNAL_INPUT_PSP = 0,
-	/** Input data of the PS3's DUALSHOCK®3 controller is used. */
+	/** Input data of the PS3's DUALSHOCKï¿½3 controller is used. */
 	SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 = 1,
 	/** Unknown. */
 	SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2 = 2
