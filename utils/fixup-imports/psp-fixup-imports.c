@@ -613,7 +613,9 @@ int fixup_functions(void)
 	int count;
 
     if(g_stubtext == NULL || g_nid == NULL) // no imported functions
+    {
         return 1;
+    }
 
 	count = g_stubtext->iSize / 8;
 	pText = (unsigned int *) g_stubtext->pData;
