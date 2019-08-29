@@ -25,7 +25,7 @@ sceGeListUpdateStallAddr:
     bnez  $t2, not_running
     lw    $t9, %lo(g_GeLogHandler)($t9) # logging function
 
-    ## when dl->unk8 == 2: store stall address at 0xBD40010C and change dl->stall
+    ## when dl->state == 2 (SCE_GE_DL_SIGNAL_PAUSE): store stall address at 0xBD40010C (HW_GE_STALLADDR) and change dl->stall
     sw    $t0, 268($t3) # store stall address at 0xBD40010C
     sync
     bnez  $t9, logging
