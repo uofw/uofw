@@ -1771,11 +1771,12 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
             int *ctx2 = (int *)dl2->ctx;
             dl2->state = SCE_GE_DL_STATE_RUNNING;
             if (ctx2 != NULL && dl2->ctxUpToDate == 0) {
-                int *ctx1 = (int *)dl->ctx;
                 if (dl == NULL || dl->ctx == NULL) {
                     // 323C
                     sceGeSaveContext(dl2->ctx);
                 } else {
+                    int *ctx1 = (int *)dl->ctx;
+
                     // 310C
                     int i;
                     for (i = 0; i < 128; i++) {
