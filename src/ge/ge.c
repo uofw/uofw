@@ -1812,9 +1812,8 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
 
     // 31C8
     if (dl != NULL) {
-        u32 off = dl - &g_displayLists[0];
-        sceKernelSetEventFlag(g_AwQueue.listEvFlagIds[off >> 11],
-                              1 << ((off >> 6) & 0x1F));
+        u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+        sceKernelSetEventFlag(g_AwQueue.listEvFlagIds[idx / 32], 1 << (idx % 32));
     }
 }
 
@@ -2131,10 +2130,10 @@ int sceGeListDeQueue(int dlId)
             dl->state = SCE_GE_DL_STATE_NONE;
             dl->next = NULL;
             g_AwQueue.free_last = dl;
-            sceKernelSetEventFlag(g_AwQueue.listEvFlagIds
-                                  [(u32) (dl - g_displayLists) >>
-                                   11], 1 << (((dl - g_displayLists) >> 6)
-                                              & 0x1F));
+
+            u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+            sceKernelSetEventFlag(g_AwQueue.listEvFlagIds[idx / 32], 1 << (idx % 32));
+
             if (g_GeLogHandler != NULL) {
                 // 3D70
                 g_GeLogHandler(1, dlId);
@@ -2155,9 +2154,10 @@ SceGeListState sceGeListSync(int dlId, int mode)
 {
     int ret;
     SceGeDisplayList *dl = (SceGeDisplayList *) (dlId ^ g_dlMask);
-    u32 off = dl - &g_displayLists[0];
+    u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+
     int oldK1 = pspShiftK1();
-    if (off >= 4096) {
+    if (idx >= 64) {
         // 3EE0
         pspSetK1(oldK1);
         return 0x80000100;
@@ -2168,9 +2168,7 @@ SceGeListState sceGeListSync(int dlId, int mode)
         int oldIntr = sceKernelCpuSuspendIntr();
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
-        ret =
-            sceKernelWaitEventFlag(g_AwQueue.listEvFlagIds[off / 2048],
-                                   1 << ((off / 64) & 0x1F), 0, 0, 0);
+        ret = sceKernelWaitEventFlag(g_AwQueue.listEvFlagIds[idx / 32], 1 << (idx % 32), 0, 0, 0);
         if (ret >= 0)
             ret = SCE_GE_LIST_COMPLETED;
     } else if (mode == 1) {
@@ -2424,8 +2422,7 @@ int sceGeContinue()
                     HW(0xBD400100) = dl->flags | 1;
                     pspSync();
                     g_AwQueue.curRunning = dl;
-                    sceKernelClearEventFlag(g_AwQueue.drawingEvFlagId,
-                                            0xFFFFFFFD);
+                    sceKernelClearEventFlag(g_AwQueue.drawingEvFlagId, 0xFFFFFFFD);
                     if (g_GeLogHandler != NULL) {
                         g_GeLogHandler(4, 0);
                         if (g_GeLogHandler != NULL)
@@ -3328,9 +3325,10 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     }
 
     // 5A28
-    u32 off = dl - g_displayLists;
-    sceKernelClearEventFlag(g_AwQueue.listEvFlagIds[off / 2048],
-                            ~(1 << ((off / 64) & 0x1F)));
+    // clear event flag for this DL
+    u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+    sceKernelClearEventFlag(g_AwQueue.listEvFlagIds[idx / 32], ~(1 << (idx % 32)));
+
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return dlId;
