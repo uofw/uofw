@@ -30,7 +30,7 @@ ipch/
 *.psess
 *.vsp
 *.vspx
-/.vs/uOFW/v15
+/.vs
 /Debug
 /lib/build_mod.mak
 /uOFW.sln
