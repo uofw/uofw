@@ -41,7 +41,9 @@ typedef struct {
 
 /** 
  * This structure is for obtaining button data (button/analog stick information) from the 
- * controller using ::sceCtrlPeekBufferPositiveExtra(), ::sceCtrlReadBufferNegativeExtra() etc...
+ * controller using ::sceCtrlPeekBufferPositive2(), ::sceCtrlReadBufferNegative2() etc....
+ * In addition to PSP controller state it can contain input state of external input devices 
+ * such as a wireless controller.
  */
 typedef struct {
     /** 
@@ -95,7 +97,7 @@ typedef struct {
     s32 TiltA;
     /** DS3 sixaxis. This is the return value for tilting the y-axis. */
     s32 TiltB;
-} SceCtrlDataExt;
+} SceCtrlData2;
 
 /** 
  * This structure is for obtaining button status values from the controller using
@@ -123,7 +125,7 @@ typedef struct {
 	 * Pointer to a transfer function to copy input data into a PSP internal controller buffer. 
 	 * <copyInputData> should return a value >= 0 on success, < 0 otherwise.
 	 */
-	s32(*copyInputData)(void *src, SceCtrlDataExt *dest);
+	s32(*copyInputData)(void *src, SceCtrlData2 *dest);
 } SceCtrlInputDataTransferHandler;
 
 /**
@@ -418,7 +420,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
 
 /**
  * Set up internal controller buffers to receive external input data. Each input mode has its own
- * set of buffers. These buffers are of type ::SceCtrlDataExt. 
+ * set of buffers. These buffers are of type ::SceCtrlData2. 
  * Note: This function has to be called initially in order to obtain external input data via the corresponding 
  * Peek/Read functions.
  * 
@@ -564,8 +566,11 @@ s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs);
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferPositive(). See description for more info.
- * You need to call ::SceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller 
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ * 
+ * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -575,11 +580,14 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferNegative(). See description for more info. 
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -589,11 +597,14 @@ s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferPositive(). See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -603,11 +614,14 @@ s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferNegative(). See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -617,7 +631,7 @@ s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
  * Disable a rapid-fire button event.

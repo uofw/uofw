@@ -473,7 +473,7 @@ static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4);
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp);
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp);
 static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY);
-static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 arg3, u8 mode);
+static s32 _sceCtrlReadBuf(SceCtrlData2 *data, u8 nBufs, u32 arg3, u8 mode);
 
 /* 
  * The controller module's manager. Keeps track of every important
@@ -861,14 +861,14 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples)
 s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
 {
     SceUID poolId;
-	SceCtrlDataExt *ctrlBuf;
+	SceCtrlData2 *ctrlBuf;
 
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 || inputMode != SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2)
         return SCE_ERROR_INVALID_VALUE;
     
 	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
         poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
-                                    2 * sizeof(SceCtrlDataExt) * CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
+                                    2 * sizeof(SceCtrlData2) * CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
 
@@ -953,40 +953,40 @@ s32 sceCtrlReadLatch(SceCtrlLatch *latch)
 
 s32 sceCtrlPeekBufferPositive(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_POSITIVE);
 }
 
 s32 sceCtrlPeekBufferNegative(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_NEGATIVE);
 }
 
 s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_POSITIVE);
 }
 
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_NEGATIVE);
 }
 
-s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs) 
+s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs) 
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
+s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_NEGATIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
+s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
+s32 sceCtrlReadBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_NEGATIVE_EXTRA);
 }
@@ -1539,7 +1539,7 @@ static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp)
 static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY) 
 {
     SceCtrlData *ctrlUserBuf, *ctrlKernelBuf;
-    SceCtrlDataExt *ctrlUserBufExt, *ctrlKernelBufExt;
+    SceCtrlData2 *ctrlUserBufExt, *ctrlKernelBufExt;
     SceKernelButtonCallbackFunction buttonCallback;
     u32 sysTimeLow;
     u32 buttons, curButtons, prevButtons, pressedButtons;
@@ -1549,7 +1549,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
     u8 aXCenterOffset, aXCenterOffset2;
     u8 aYCenterOffset, aYCenterOffset2;
     u8 minIdleReset;
-	s32(*transferInputFunc)(void *, SceCtrlDataExt *);
+	s32(*transferInputFunc)(void *, SceCtrlData2 *);
     s32 status;
     s32 res;
     u32 storeData;
@@ -1617,7 +1617,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
 	/* Check for additionally registered input data transfers. */
 	for (i = 0; i < CTRL_NUM_EXTERNAL_INPUT_MODES; i++) {
 		if (g_ctrl.transferHandler[i] != NULL) {
-			 ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.pCtrlInputBuffers[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
+			 ctrlKernelBufExt = (SceCtrlData2 *)g_ctrl.kernelModeData.pCtrlInputBuffers[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
              ctrlKernelBufExt->timeStamp = sysTimeLow;
 
 			 transferInputFunc = (g_ctrl.transferHandler[i]->copyInputData);
@@ -1685,7 +1685,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
                          g_ctrl.cancelIdleTimer = SCE_TRUE;
                  }
              }
-			 ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.pCtrlInputBuffers[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
+			 ctrlUserBufExt = (SceCtrlData2 *)g_ctrl.userModeData.pCtrlInputBuffers[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
              ctrlUserBufExt->timeStamp = ctrlKernelBufExt->timeStamp;
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons;
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX;
@@ -1956,10 +1956,10 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
  * 
  * Returns the number of read internal controller data buffers.
  */
-static s32 _sceCtrlReadBuf(SceCtrlDataExt *pData, u8 nBufs, u32 inputMode, u8 mode) 
+static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode) 
 {
     SceCtrlInternalData *intDataPtr;
-    SceCtrlDataExt *ctrlBuf;
+    SceCtrlData2 *ctrlBuf;
     s32 oldK1;
     u32 i;
     u32 buttons;
@@ -2037,9 +2037,9 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *pData, u8 nBufs, u32 inputMode, u8 mo
         numReadIntBufs = nBufs;
     }
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE)
-		ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
+		ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     else
-		ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+		ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
 
     if (numReadIntBufs < 0) {
         sceKernelCpuResumeIntr(intrState);
@@ -2073,7 +2073,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *pData, u8 nBufs, u32 inputMode, u8 mo
                for (i = 0; i < sizeof pData->rsrv; i++)
 				   pData->rsrv[i] = 0;
 
-			   pData = (SceCtrlDataExt *)((SceCtrlData *)pData + 1);
+			   pData = (SceCtrlData2 *)((SceCtrlData *)pData + 1);
            }
            /* 
             * We test if the data buffer used to obtain the internal button data 
@@ -2117,9 +2117,9 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *pData, u8 nBufs, u32 inputMode, u8 mo
 			   startBufIndex = 0;
 
 		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_NONE)
-			   ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+			   ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
            else
-			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
+			   ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     }
     sceKernelCpuResumeIntr(intrState);
     pspSetK1(oldK1);
