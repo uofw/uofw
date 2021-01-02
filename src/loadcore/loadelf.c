@@ -918,7 +918,7 @@ static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Re
     for (i = 0; i < fileSize; i += k) {
          type = ELF32_R_TYPE(relocInfo[i].r_info); //0x000052E4
          ofsSegIndex = ELF32_R_OFS_BASE(relocInfo[i].r_info); //0x000052C0
-         addrSegIndex = ELF32_R_ADDR_BASE(relocInfo[i].r_info >> 16); //0x000052C8
+         addrSegIndex = ELF32_R_ADDR_BASE(relocInfo[i].r_info); //0x000052C8
          
          k = 1; //0x000052C4
                  
