@@ -473,7 +473,7 @@ static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4);
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp);
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp);
 static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY);
-static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 arg3, u8 mode);
+static s32 _sceCtrlReadBuf(SceCtrlData2 *data, u8 nBufs, u32 arg3, u8 mode);
 
 /* 
  * The controller module's manager. Keeps track of every important
@@ -492,7 +492,7 @@ SceKernelDeci2Ops g_ctrlDeci2Ops = {
         [5] = (void *)sceCtrlClearRapidFire,
         [6] = (void *)sceCtrlSetButtonEmulation,
         [7] = (void *)sceCtrlSetAnalogEmulation,
-        [8] = (void *)sceCtrlExtendInternalCtrlBuffers
+        [8] = (void *)sceCtrl_driver_E467BEC8
     },
 };
 
@@ -858,17 +858,17 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples)
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
+s32 sceCtrl_driver_E467BEC8(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
 {
     SceUID poolId;
-	SceCtrlDataExt *ctrlBuf;
+	SceCtrlData2 *ctrlBuf;
 
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 || inputMode != SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2)
         return SCE_ERROR_INVALID_VALUE;
     
 	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
         poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
-                                    2 * sizeof(SceCtrlDataExt) * CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
+                                    2 * sizeof(SceCtrlData2) * CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
 
@@ -953,40 +953,40 @@ s32 sceCtrlReadLatch(SceCtrlLatch *latch)
 
 s32 sceCtrlPeekBufferPositive(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, PEEK_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_POSITIVE);
 }
 
 s32 sceCtrlPeekBufferNegative(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, PEEK_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_NEGATIVE);
 }
 
 s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, READ_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_POSITIVE);
 }
 
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlDataExt *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_PSP, READ_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_NEGATIVE);
 }
 
-s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs) 
+s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs) 
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
+s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_NEGATIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
+s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs)
+s32 sceCtrlReadBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
 {
 	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_NEGATIVE_EXTRA);
 }
@@ -1539,7 +1539,7 @@ static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp)
 static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY) 
 {
     SceCtrlData *ctrlUserBuf, *ctrlKernelBuf;
-    SceCtrlDataExt *ctrlUserBufExt, *ctrlKernelBufExt;
+    SceCtrlData2 *ctrlUserBufExt, *ctrlKernelBufExt;
     SceKernelButtonCallbackFunction buttonCallback;
     u32 sysTimeLow;
     u32 buttons, curButtons, prevButtons, pressedButtons;
@@ -1549,7 +1549,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
     u8 aXCenterOffset, aXCenterOffset2;
     u8 aYCenterOffset, aYCenterOffset2;
     u8 minIdleReset;
-	s32(*transferInputFunc)(void *, SceCtrlDataExt *);
+	s32(*transferInputFunc)(void *, SceCtrlData2 *);
     s32 status;
     s32 res;
     u32 storeData;
@@ -1617,7 +1617,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
 	/* Check for additionally registered input data transfers. */
 	for (i = 0; i < CTRL_NUM_EXTERNAL_INPUT_MODES; i++) {
 		if (g_ctrl.transferHandler[i] != NULL) {
-			 ctrlKernelBufExt = (SceCtrlDataExt *)g_ctrl.kernelModeData.pCtrlInputBuffers[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
+			 ctrlKernelBufExt = (SceCtrlData2 *)g_ctrl.kernelModeData.pCtrlInputBuffers[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
              ctrlKernelBufExt->timeStamp = sysTimeLow;
 
 			 transferInputFunc = (g_ctrl.transferHandler[i]->copyInputData);
@@ -1628,14 +1628,14 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
 
                  ctrlKernelBufExt->timeStamp = 0;
                  ctrlKernelBufExt->buttons = 0;
-                 ctrlKernelBufExt->unk1 = 0;
-                 ctrlKernelBufExt->unk2 = 0;
-                 ctrlKernelBufExt->unk3 = 0;
-                 ctrlKernelBufExt->unk4 = 0;
-                 ctrlKernelBufExt->unk5 = 0;
-                 ctrlKernelBufExt->unk6 = 0;
-                 ctrlKernelBufExt->unk7 = 0;
-                 ctrlKernelBufExt->unk8 = 0;
+                 ctrlKernelBufExt->DPadSenseA = 0;
+                 ctrlKernelBufExt->DPadSenseB = 0;
+                 ctrlKernelBufExt->GPadSenseA = 0;
+                 ctrlKernelBufExt->GPadSenseB = 0;
+                 ctrlKernelBufExt->AxisSenseA = 0;
+                 ctrlKernelBufExt->AxisSenseB = 0;
+                 ctrlKernelBufExt->TiltA = 0;
+                 ctrlKernelBufExt->TiltB = 0;
                  ctrlKernelBufExt->aX = CTRL_ANALOG_PAD_CENTER_VALUE;
                  ctrlKernelBufExt->aY = CTRL_ANALOG_PAD_CENTER_VALUE;
                  ctrlKernelBufExt->rsrv[0] = -128;
@@ -1685,7 +1685,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
                          g_ctrl.cancelIdleTimer = SCE_TRUE;
                  }
              }
-			 ctrlUserBufExt = (SceCtrlDataExt *)g_ctrl.userModeData.pCtrlInputBuffers[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
+			 ctrlUserBufExt = (SceCtrlData2 *)g_ctrl.userModeData.pCtrlInputBuffers[i + 1] + g_ctrl.userModeData.curUpdatableBufIndex;
              ctrlUserBufExt->timeStamp = ctrlKernelBufExt->timeStamp;
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons;
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX;
@@ -1694,14 +1694,14 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
              for (j = 0; j < sizeof ctrlUserBufExt->rsrv; j++)
                   ctrlUserBufExt->rsrv[j] = ctrlKernelBufExt->rsrv[j];
 
-             ctrlUserBufExt->unk1 = ctrlKernelBufExt->unk1;
-             ctrlUserBufExt->unk2 = ctrlKernelBufExt->unk2;
-             ctrlUserBufExt->unk3 = ctrlKernelBufExt->unk3;
-             ctrlUserBufExt->unk4 = ctrlKernelBufExt->unk4;
-             ctrlUserBufExt->unk5 = ctrlKernelBufExt->unk5;
-             ctrlUserBufExt->unk6 = ctrlKernelBufExt->unk6;
-             ctrlUserBufExt->unk7 = ctrlKernelBufExt->unk7;
-             ctrlUserBufExt->unk8 = ctrlKernelBufExt->unk8;
+             ctrlUserBufExt->DPadSenseA = ctrlKernelBufExt->DPadSenseA;
+             ctrlUserBufExt->DPadSenseB = ctrlKernelBufExt->DPadSenseB;
+             ctrlUserBufExt->GPadSenseA = ctrlKernelBufExt->GPadSenseA;
+             ctrlUserBufExt->GPadSenseB = ctrlKernelBufExt->GPadSenseB;
+             ctrlUserBufExt->AxisSenseA = ctrlKernelBufExt->AxisSenseA;
+             ctrlUserBufExt->AxisSenseB = ctrlKernelBufExt->AxisSenseB;
+             ctrlUserBufExt->TiltA = ctrlKernelBufExt->TiltA;
+             ctrlUserBufExt->TiltB = ctrlKernelBufExt->TiltB;
 
              ctrlUserBufExt->buttons &= ~SCE_CTRL_INTERCEPTED;
              ctrlUserBufExt->buttons &= g_ctrl.maskSupportButtons;
@@ -1956,10 +1956,10 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
  * 
  * Returns the number of read internal controller data buffers.
  */
-static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mode) 
+static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode) 
 {
     SceCtrlInternalData *intDataPtr;
-    SceCtrlDataExt *ctrlBuf;
+    SceCtrlData2 *ctrlBuf;
     s32 oldK1;
     u32 i;
     u32 buttons;
@@ -1974,13 +1974,13 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
 	if (inputMode > CTRL_NUM_EXTERNAL_INPUT_MODES)
         return SCE_ERROR_INVALID_VALUE;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && (mode & READ_BUFFER_POSITIVE))
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE && (mode & READ_BUFFER_POSITIVE))
         return SCE_ERROR_NOT_SUPPORTED;
 
     oldK1 = pspShiftK1();
 
     /* Protect Kernel memory from User Mode. */
-    if (!pspK1PtrOk(data)) {
+    if (!pspK1PtrOk(pData)) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -1989,7 +1989,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
     else
         intDataPtr = &g_ctrl.kernelModeData;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP && intDataPtr->pCtrlInputBuffers[inputMode] == NULL)
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE && intDataPtr->pCtrlInputBuffers[inputMode] == NULL)
         return SCE_ERROR_NOT_SUPPORTED;
 
     /*
@@ -2036,10 +2036,10 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
         startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS : startBufIndex;
         numReadIntBufs = nBufs;
     }
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_PSP)
-		ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
+	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE)
+		ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     else
-		ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+		ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
 
     if (numReadIntBufs < 0) {
         sceKernelCpuResumeIntr(intrState);
@@ -2051,7 +2051,7 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
      * Read "nBufs" internal controller data buffers and obtain their data.
      */
     while (nBufs-- > 0) {
-           data->timeStamp = ctrlBuf->timeStamp;
+		pData->timeStamp = ctrlBuf->timeStamp;
 
            buttons = ctrlBuf->buttons;
 		   /* Ignore kernel mode buttons in user mode applications. */
@@ -2063,61 +2063,63 @@ static s32 _sceCtrlReadBuf(SceCtrlDataExt *data, u8 nBufs, u32 inputMode, u8 mod
             * logic or negative logic.  "Negative" functions instruct us to use
             * negative logic.
             */
-           data->buttons = (mode & PEEK_BUFFER_NEGATIVE) ? ~buttons : buttons;
-           data->aX = ctrlBuf->aX;
-           data->aY = ctrlBuf->aY;
+		   pData->buttons = (mode & PEEK_BUFFER_NEGATIVE) ? ~buttons : buttons;
+		   pData->aX = ctrlBuf->aX;
+		   pData->aY = ctrlBuf->aY;
+		   pData->rX = 0;
+		   pData->rY = 0;
 
            if (mode < PEEK_BUFFER_POSITIVE_EXTRA) {
-               for (i = 0; i < sizeof data->rsrv; i++)
-                    data->rsrv[i] = 0;
+               for (i = 0; i < sizeof pData->rsrv; i++)
+				   pData->rsrv[i] = 0;
 
-               data = (SceCtrlDataExt *)((SceCtrlData *)data + 1);
+			   pData = (SceCtrlData2 *)((SceCtrlData *)pData + 1);
            }
            /* 
             * We test if the data buffer used to obtain the internal button data 
             * is an extended data buffer and fill it accordingly.
             */
            if (mode >= PEEK_BUFFER_POSITIVE_EXTRA) {
-               data->rsrv[2] = 0;
-               data->rsrv[3] = 0;
-			   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP) {
-                   data->rsrv[0] = -128;
-                   data->rsrv[1] = -128;
-                   data->rsrv[4] = 0;
-                   data->rsrv[5] = 0;
-                   data->unk1 = 0;
-                   data->unk2 = 0;
-                   data->unk3 = 0;
-                   data->unk4 = 0;
-                   data->unk5 = 0;
-                   data->unk6 = 0;
-                   data->unk7 = 0;
-                   data->unk8 = 0;
+			   pData->rsrv[0] = 0;
+			   pData->rsrv[1] = 0;
+			   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_NONE) {
+				   pData->rX = CTRL_ANALOG_PAD_CENTER_VALUE;
+				   pData->rY = CTRL_ANALOG_PAD_CENTER_VALUE;
+				   pData->rsrv[2] = 0;
+				   pData->rsrv[3] = 0;
+				   pData->DPadSenseA = 0;
+				   pData->DPadSenseB = 0;
+				   pData->GPadSenseA = 0;
+				   pData->GPadSenseB = 0;
+				   pData->AxisSenseA = 0;
+				   pData->AxisSenseB = 0;
+				   pData->TiltA = 0;
+				   pData->TiltB = 0;
                }
                else {
-                   data->rsrv[0] = ctrlBuf->rsrv[0];
-                   data->rsrv[1] = ctrlBuf->rsrv[1];
-                   data->rsrv[4] = ctrlBuf->rsrv[4];
-                   data->rsrv[5] = ctrlBuf->rsrv[5];
-                   data->unk1 = ctrlBuf->unk1;
-                   data->unk2 = ctrlBuf->unk2;
-                   data->unk3 = ctrlBuf->unk3;
-                   data->unk4 = ctrlBuf->unk4;
-                   data->unk5 = ctrlBuf->unk5;
-                   data->unk6 = ctrlBuf->unk6;
-                   data->unk7 = ctrlBuf->unk7;
-                   data->unk8 = ctrlBuf->unk8;
+				   pData->rX = ctrlBuf->rX;
+				   pData->rY = ctrlBuf->rY;
+				   pData->rsrv[2] = ctrlBuf->rsrv[2];
+				   pData->rsrv[2] = ctrlBuf->rsrv[3];
+				   pData->DPadSenseA = ctrlBuf->DPadSenseA;
+				   pData->DPadSenseB = ctrlBuf->DPadSenseB;
+				   pData->GPadSenseA = ctrlBuf->GPadSenseA;
+				   pData->GPadSenseB = ctrlBuf->GPadSenseB;
+				   pData->AxisSenseA = ctrlBuf->AxisSenseA;
+				   pData->AxisSenseB = ctrlBuf->AxisSenseB;
+				   pData->TiltA = ctrlBuf->TiltA;
+				   pData->TiltB = ctrlBuf->TiltB;
                }
-               data += 1;
+			   pData += 1;
            }
            startBufIndex++;
 		   if (startBufIndex == CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
 			   startBufIndex = 0;
 
-		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_PSP)
-			   ctrlBuf = (SceCtrlDataExt *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_NONE)
+			   ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
            else
-			   ctrlBuf = (SceCtrlDataExt *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
+			   ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
     }
     sceKernelCpuResumeIntr(intrState);
     pspSetK1(oldK1);

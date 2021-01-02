@@ -85,5 +85,19 @@ s32 memlmd_6192F715(u8 *addr, u32 size);
  */
 s32 memlmd_2F3D7E2D(void);
 
+/**
+* Enables KIRK, then performs a command in asynchronised mode (refreshes
+* CPU D cache for input and output buffer), and disables KIRK.
+*
+* @param outbuff Output buffer.
+* @param outsize Output size.
+* @param inbuff Input buffer.
+* @param insize Input size.
+* @param cmd Number of KIRK command to perform.
+*
+* @return 0 on success.
+*/
+int sceUtilsBufferCopyWithRange(u8* outbuff, int outsize, u8* inbuff, int insize, int cmd);
+
 #endif	/* MEMLMD_H */
 

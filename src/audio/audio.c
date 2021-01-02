@@ -311,14 +311,14 @@ int sceAudioOutput(u32 chanId, int vol, void *buf)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (vol > 0xFFFF)
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, g_audio.chans[chanId].sampleCount * 4)) {
         // 0654
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int ret = audioOutput(&g_audio.chans[chanId], vol, vol, buf);
@@ -331,20 +331,20 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (vol >= 0xFFFF)
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, chan->sampleCount * 4))
     {
         // 07D8
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int ret = audioOutput(chan, vol, vol, buf);
-    if ((u32)ret == SCE_ERROR_AUDIO_OUTPUT_BUSY)
+    if ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY)
     {
         // 0758
         if (chan->unk10 == 0)
@@ -361,7 +361,7 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
                 }
                 oldIntr = sceKernelCpuSuspendIntr();
                 ret = audioOutput(chan, vol, vol, buf);
-            } while ((u32)ret == SCE_ERROR_AUDIO_OUTPUT_BUSY);
+            } while ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY);
             chan->unk10 = 0;
         }
     }
@@ -374,16 +374,16 @@ int sceAudioOutputPanned(u32 chanId, int leftVol, int rightVol, void *buf)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (rightVol > 0xFFFF || leftVol > 0xFFFF)
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, chan->sampleCount * 4))
     {
         // 08D4
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int ret = audioOutput(chan, leftVol, rightVol, buf);
@@ -396,20 +396,20 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if ((leftVol | rightVol) > 0xFFFF)
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, chan->sampleCount * 4))
     {
         // 0A9C
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int ret = audioOutput(chan, leftVol, rightVol, buf);
-    if ((u32)ret == SCE_ERROR_AUDIO_OUTPUT_BUSY)
+    if ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY)
     {
         // 0A08
         if (chan->unk10 == 0)
@@ -426,7 +426,7 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
                 }
                 oldIntr = sceKernelCpuSuspendIntr();
                 ret = audioOutput(chan, leftVol, rightVol, buf);
-            } while ((u32)ret == SCE_ERROR_AUDIO_OUTPUT_BUSY);
+            } while ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY);
             chan->unk10 = 0;
         }
     }
@@ -459,7 +459,7 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
         {
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return SCE_ERROR_AUDIO_NOT_FOUND;
+            return SCE_AUDIO_ERROR_NOT_FOUND;
         }
     }
     else if (channel >= 8 || g_audio.chans[channel].sampleCount != 0)
@@ -467,7 +467,7 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
         // 0B08
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     }
     // 0B38
     if (sampleCount <= 0 || (sampleCount & 0x3F) != 0 || (u32)sampleCount > 0xFFC00000)
@@ -475,7 +475,7 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
         // 0B58
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_INVALID_SIZE;
+        return SCE_AUDIO_ERROR_INVALID_SIZE;
     }
     // 0B6C
     char bytesPerSample = 4;
@@ -487,7 +487,7 @@ int sceAudioChReserve(int channel, int sampleCount, int format)
             // 0BAC
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return SCE_ERROR_AUDIO_INVALID_FORMAT;
+            return SCE_AUDIO_ERROR_INVALID_FORMAT;
         }
     }
     // 0B8C
@@ -510,7 +510,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         // 0E30
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     }
     if (chanId < 0)
     {
@@ -524,7 +524,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         {
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return SCE_ERROR_AUDIO_NOT_FOUND;
+            return SCE_AUDIO_ERROR_NOT_FOUND;
         }
     }
     else if (chanId >= 8 || g_audio.chans[chanId].sampleCount != 0)
@@ -532,7 +532,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         // 0CA4
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     }
     SceAudioChannel *chan = &g_audio.chans[chanId];
     // 0CE4
@@ -541,14 +541,14 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
         // 0DC8
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_INVALID_SIZE;
+        return SCE_AUDIO_ERROR_INVALID_SIZE;
     }
     if (!pspK1StaBufOk(buf, chan->sampleCount * 4))
     {
         // 0DB0
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     char bytesPerSample = 4;
     if (fmt != 0)
@@ -559,7 +559,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
             // 0D98
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return SCE_ERROR_AUDIO_INVALID_FORMAT;
+            return SCE_AUDIO_ERROR_INVALID_FORMAT;
         }
     }
     // 0D28
@@ -586,7 +586,7 @@ int sceAudioChRelease(u32 channel)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (channel >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[channel];
@@ -595,14 +595,14 @@ int sceAudioChRelease(u32 channel)
         // 0EE4
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_NOT_RESERVED;
+        return SCE_AUDIO_ERROR_NOT_RESERVED;
     }
     if (chan->unk10 != 0)
     {
         // 0ECC
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_OUTPUT_BUSY;
+        return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     }
     chan->sampleCount = 0;
     sceKernelCpuResumeIntr(oldIntr);
@@ -614,7 +614,7 @@ int sceAudioGetChannelRestLength(u32 chanId)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     // 0F30
     return ((chan->buf != NULL) ? chan->curSampleCnt : 0) + ((chan->unk10 != 0) ? 0 : chan->sampleCount);
@@ -624,9 +624,9 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     if (sampleCount <= 0 || (sampleCount & 0x3F) != 0 || sampleCount > 0xFFC0)
-        return SCE_ERROR_AUDIO_INVALID_SIZE;
+        return SCE_AUDIO_ERROR_INVALID_SIZE;
     // 0FB8
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -636,14 +636,14 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
         // 1018
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_OUTPUT_BUSY;
+        return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     }
     if (chan->sampleCount == 0)
     {
         // 1000
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_NOT_INITIALIZED;
+        return SCE_AUDIO_ERROR_NOT_INITIALIZED;
     }
     chan->sampleCount = sampleCount & 0xFFFF;
     pspSetK1(oldK1);
@@ -654,9 +654,9 @@ int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if ((rightVol > 0xFFFF) || (leftVol > 0xFFFF))
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[chanId];
@@ -675,7 +675,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[chanId];
@@ -684,7 +684,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_OUTPUT_BUSY;
+        return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     }
     // 1164
     if ((sceKernelGetCompiledSdkVersion() > 0x01FFFFFF && (chan->curSampleCnt == 0 || chan->buf == NULL)) || chan->curSampleCnt == 0) // 1214
@@ -692,7 +692,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_OUTPUT_BUSY;
+        return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     }
     // 11A4
     if (chan->sampleCount == 0)
@@ -700,7 +700,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         // 11FC
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_NOT_RESERVED;
+        return SCE_AUDIO_ERROR_NOT_RESERVED;
     }
     char bytesPerSample = 4;
     if (format != 0)
@@ -711,7 +711,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
             // 11E4
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return SCE_ERROR_AUDIO_INVALID_FORMAT;
+            return SCE_AUDIO_ERROR_INVALID_FORMAT;
         }
     }
     // 11CC
@@ -725,13 +725,13 @@ int sceAudioOutput2ChangeLength(int sampleCount)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (sampleCount < 17 || sampleCount > 4111)
-        return SCE_ERROR_AUDIO_INVALID_SIZE;
+        return SCE_AUDIO_ERROR_INVALID_SIZE;
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.srcChFreq == 0)
     {
         // 1280
         sceKernelCpuResumeIntr(oldIntr);
-        return SCE_ERROR_AUDIO_NOT_RESERVED;
+        return SCE_AUDIO_ERROR_NOT_RESERVED;
     }
     g_audio.srcChSampleCnt = sampleCount;
     sceKernelCpuResumeIntr(oldIntr);
@@ -743,7 +743,7 @@ int sceAudioOutput2GetRestSample(void)
     dbg_printf("Running %s\n", __FUNCTION__);
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
     if (g_audio.srcChFreq == 0)
-        return SCE_ERROR_AUDIO_NOT_RESERVED;
+        return SCE_AUDIO_ERROR_NOT_RESERVED;
     // 12C8
     return (ptr[ 2] != 0 ? g_audio.srcChSampleCnt : 0)
         + (ptr[10] != 0 ? g_audio.srcChSampleCnt : 0);
@@ -753,7 +753,7 @@ int sceAudioGetChannelRestLen(u32 chanId)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (chanId >= 8)
-        return SCE_ERROR_AUDIO_INVALID_CH;
+        return SCE_AUDIO_ERROR_INVALID_CH;
     SceAudioChannel *chan = &g_audio.chans[chanId];
     if (chan->unk10 == 0)
         return chan->curSampleCnt;
@@ -793,9 +793,9 @@ int audioOutput(SceAudioChannel *channel, short leftVol, short rightVol, void *b
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (channel->sampleCount == 0)
-        return SCE_ERROR_AUDIO_NOT_INITIALIZED;
+        return SCE_AUDIO_ERROR_NOT_INITIALIZED;
     if (channel->buf != NULL)
-        return SCE_ERROR_AUDIO_OUTPUT_BUSY;
+        return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     channel->curSampleCnt = channel->sampleCount;
     if (leftVol >= 0)
         channel->leftVol = leftVol;
@@ -828,7 +828,7 @@ int sceAudioSetFrequency(int freq)
         hwFreq = 256;
     else {
         // 1504
-        return SCE_ERROR_AUDIO_INVALID_FREQUENCY;
+        return SCE_AUDIO_ERROR_INVALID_FREQUENCY;
     }
     // 1470
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -1226,7 +1226,7 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
             break;
         default:
             // 1EB4
-            return SCE_ERROR_AUDIO_INVALID_FREQUENCY;
+            return SCE_AUDIO_ERROR_INVALID_FREQUENCY;
         }
     }
     // 1EDC
@@ -1283,7 +1283,7 @@ int sceAudioSRCChRelease(void)
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
     if (g_audio.srcChFreq == 0) {
         sceKernelCpuResumeIntr(oldIntr);
-        return SCE_ERROR_AUDIO_NOT_RESERVED;
+        return SCE_AUDIO_ERROR_NOT_RESERVED;
     }
     // 20C0
     if ((ptr[2] | ptr[10]) != 0) {
@@ -1301,13 +1301,13 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     if (vol > 0xFFFFF)
-        return SCE_ERROR_AUDIO_INVALID_VOLUME;
+        return SCE_AUDIO_ERROR_INVALID_VOLUME;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, g_audio.srcChSampleCnt * g_audio.numChans))
     {
         // 224C
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int ret = audioSRCOutput(vol, buf);
@@ -1351,11 +1351,11 @@ int audioSRCOutput(int vol, void *buf)
     dbg_printf("Running %s\n", __FUNCTION__);
     int *ptr = KUNCACHED(&g_audio.hwBuf[16]);
     if (g_audio.srcChFreq == 0)
-        return SCE_ERROR_AUDIO_NOT_RESERVED;
+        return SCE_AUDIO_ERROR_NOT_RESERVED;
     if (ptr[2] != 0)
     {
         if (ptr[10] != 0)
-            return SCE_ERROR_AUDIO_OUTPUT_BUSY;
+            return SCE_AUDIO_ERROR_OUTPUT_BUSY;
         ptr += 8;
     }
     // 22C4
@@ -1526,13 +1526,13 @@ int sceAudioWaitInputEnd()
     dbg_printf("Running %s\n", __FUNCTION__);
     int ret = 0;
     if (g_audio.inputOrigSampleCnt == 0)
-        return SCE_ERROR_AUDIO_NOT_INITIALIZED;
+        return SCE_AUDIO_ERROR_NOT_INITIALIZED;
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.inputIsWaiting != 0)
     {
         // 27AC
         sceKernelCpuResumeIntr(oldIntr);
-        return SCE_ERROR_AUDIO_INPUT_BUSY;
+        return SCE_AUDIO_ERROR_INPUT_BUSY;
     }
     g_audio.inputIsWaiting = 1;
     sceKernelCpuResumeIntr(oldIntr);
@@ -1552,7 +1552,7 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(param, 24)) {
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int ret = audioInputInit(param->unk0, param->gain, param->unk2, param->unk3, param->unk4, param->unk5);
     pspSetK1(oldK1);
@@ -1586,7 +1586,7 @@ int sceAudioGetInputLength()
     dbg_printf("Running %s\n", __FUNCTION__);
     int origSampleCount = g_audio.inputOrigSampleCnt;
     if (origSampleCount == 0)
-        return SCE_ERROR_AUDIO_NOT_INITIALIZED;
+        return SCE_AUDIO_ERROR_NOT_INITIALIZED;
     return origSampleCount - g_audio.inputCurSampleCnt;
 }
 
@@ -1675,7 +1675,7 @@ int audioInput(int sampleCount, int freq, void *buf)
         return 0x80000001;
     if (sampleCount <= 0 || (sampleCount & 0x3F) != 0) {
         // 2AD8
-        return SCE_ERROR_AUDIO_INVALID_SIZE;
+        return SCE_AUDIO_ERROR_INVALID_SIZE;
     }
     int hwFreq;
     // 2B08
@@ -1694,7 +1694,7 @@ int audioInput(int sampleCount, int freq, void *buf)
         break;
     default:
         // 2B24
-        return SCE_ERROR_AUDIO_INVALID_FREQUENCY;
+        return SCE_AUDIO_ERROR_INVALID_FREQUENCY;
     }
     // 2B30
     if (buf == NULL)
@@ -1709,7 +1709,7 @@ int audioInput(int sampleCount, int freq, void *buf)
     {
         // 2C5C
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_PRIV_REQUIRED;
+        return SCE_AUDIO_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.inputCurSampleCnt != 0)
@@ -1717,7 +1717,7 @@ int audioInput(int sampleCount, int freq, void *buf)
         // 2C44
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return SCE_ERROR_AUDIO_INPUT_BUSY;
+        return SCE_AUDIO_ERROR_INPUT_BUSY;
     }
     g_audio.inputBuf = buf;
     g_audio.inputHwFreq = hwFreq;

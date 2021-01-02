@@ -31,13 +31,19 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rX;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rY;
     /** Reserved. */
-    u8 rsrv[6];
+    u8 rsrv[4];
 } SceCtrlData;
 
 /** 
  * This structure is for obtaining button data (button/analog stick information) from the 
- * controller using ::sceCtrlPeekBufferPositiveExtra(), ::sceCtrlReadBufferNegativeExtra() etc...
+ * controller using ::sceCtrlPeekBufferPositive2(), ::sceCtrlReadBufferNegative2() etc....
+ * In addition to PSP controller state it can contain input state of external input devices 
+ * such as a wireless controller.
  */
 typedef struct {
     /** 
@@ -51,25 +57,47 @@ typedef struct {
     u8 aX;
     /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rX;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rY;
     /** Reserved. */
-    u8 rsrv[6];
-    /** Unknown. */
-    s32 unk1;
-    /** Unknown. */
-    s32 unk2;
-    /** Unknown. */
-    s32 unk3;
-    /** Unknown. */
-    s32 unk4;
-    /** Unknown. */
-    s32 unk5;
-    /** Unknown. */
-    s32 unk6;
-    /** Unknown. */
-    s32 unk7;
-    /** Unknown. */
-    s32 unk8;
-} SceCtrlDataExt;
+    u8 rsrv[4];
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad right.
+    * Byte 3: D-Pad left.    
+    */
+    s32 DPadSenseA;
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad up.
+    * Byte 3: D-Pad down.    
+    */
+    s32 DPadSenseB;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Triangle.
+    * Byte 3: Circle.    
+    */
+    s32 GPadSenseA;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Cross.
+    * Byte 3: Square.    
+    */
+    s32 GPadSenseB;
+    /** Axis pressure sensitivity.
+    * Byte 1: L1.
+    * Byte 3: R1.    
+    */
+    s32 AxisSenseA;
+    /** Axis pressure sensitivity.
+    * Byte 1: L2.
+    * Byte 3: R2.    
+    */
+    s32 AxisSenseB;
+    /** DS3 sixaxis. This is the return value for tilting the x-axis. */
+    s32 TiltA;
+    /** DS3 sixaxis. This is the return value for tilting the y-axis. */
+    s32 TiltB;
+} SceCtrlData2;
 
 /** 
  * This structure is for obtaining button status values from the controller using
@@ -97,7 +125,7 @@ typedef struct {
 	 * Pointer to a transfer function to copy input data into a PSP internal controller buffer. 
 	 * <copyInputData> should return a value >= 0 on success, < 0 otherwise.
 	 */
-	s32(*copyInputData)(void *src, SceCtrlDataExt *dest);
+	s32(*copyInputData)(void *src, SceCtrlData2 *dest);
 } SceCtrlInputDataTransferHandler;
 
 /**
@@ -109,6 +137,10 @@ typedef struct {
 enum SceCtrlPadButtons {
     /** Select button. */
     SCE_CTRL_SELECT         = 0x1,
+    /** DS3 L3 button. */
+    SCE_CTRL_L3             = 0x2,
+    /** DS3 R3 button. */
+    SCE_CTRL_R3             = 0x4,
     /** Start button. */
     SCE_CTRL_START          = 0x8,
     /** Up D-Pad button. */
@@ -119,10 +151,14 @@ enum SceCtrlPadButtons {
     SCE_CTRL_DOWN           = 0x40,
     /** Left D-Pad button. */
     SCE_CTRL_LEFT           = 0x80,
-    /** Left trigger. */
+    /** Left trigger. This accounts for the DS3 L2 trigger as well. */
     SCE_CTRL_LTRIGGER       = 0x100,
-    /** Right trigger. */
+    /** Right trigger. This accounts for the DS3 R2 trigger as well. */
     SCE_CTRL_RTRIGGER       = 0x200,
+    /** DS3 L1 trigger. */
+    SCE_CTRL_L1TRIGGER      = 0x400,
+    /** DS3 R1 trigger. */
+    SCE_CTRL_R1TRIGGER      = 0x800,
     /** Triangle button. */
     SCE_CTRL_TRIANGLE       = 0x1000,
     /** Circle button. */
@@ -176,8 +212,8 @@ enum SceCtrlPadPollMode {
 /** External input data sources. */
 enum SceCtrlExternalInputMode {
 	/** No external input data. */
-	SCE_CTRL_EXTERNAL_INPUT_PSP = 0,
-	/** Input data of the PS3's DUALSHOCK®3 controller is used. */
+	SCE_CTRL_EXTERNAL_INPUT_NONE = 0,
+	/** Input data of the PS3's DUALSHOCKï¿½3 controller is used. */
 	SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 = 1,
 	/** Unknown. */
 	SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2 = 2
@@ -384,7 +420,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
 
 /**
  * Set up internal controller buffers to receive external input data. Each input mode has its own
- * set of buffers. These buffers are of type ::SceCtrlDataExt. 
+ * set of buffers. These buffers are of type ::SceCtrlData2. 
  * Note: This function has to be called initially in order to obtain external input data via the corresponding 
  * Peek/Read functions.
  * 
@@ -396,7 +432,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
  * 
  * @return 0 on success.
  */
-s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource);
+s32 sceCtrl_driver_E467BEC8(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource);
 
 /**
  * Obtain button latch data stored in the internal latch controller buffers. The following button 
@@ -530,8 +566,11 @@ s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs);
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferPositive(). See description for more info.
- * You need to call ::SceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller 
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ * 
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -541,11 +580,14 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferNegative(). See description for more info. 
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -555,11 +597,14 @@ s32 sceCtrlPeekBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferPositive(). See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -569,11 +614,14 @@ s32 sceCtrlPeekBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferNegative(). See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -583,7 +631,7 @@ s32 sceCtrlReadBufferPositiveExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferNegativeExtra(u32 inputMode, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
  * Disable a rapid-fire button event.
@@ -669,10 +717,10 @@ s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 u
 
 /**
  * Get the button mask settings applied to PSP buttons.
- * 
+ *
  * @param buttons The buttons to check for. One or more buttons of ::SceCtrlPadButtons.
- * 
- * @return The button mask mode for the given buttons. One of ::SceCtrlPadButtonMaskMode. 
+ *
+ * @return The button mask mode for the given buttons. One of ::SceCtrlPadButtonMaskMode.
  */
 u32 sceCtrlGetButtonIntercept(u32 buttons);
 
