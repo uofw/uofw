@@ -167,6 +167,10 @@ Macros</h2></td></tr>
 <tr class="separator:ga1f48480d7acf0e5cae8bce256ccf7c4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga3b8302cae9a68bcad9e065de8d81f5cc"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga3b8302cae9a68bcad9e065de8d81f5cc">SET_PROTECT_INFO_TYPE</a>(type,  src)&#160;&#160;&#160;(((type) &amp; 0xFFFF) | (src))</td></tr>
 <tr class="separator:ga3b8302cae9a68bcad9e065de8d81f5cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1137c3afca46a30b114d29b685c62c2c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga1137c3afca46a30b114d29b685c62c2c">SCE_MODULE_USER_MODULE</a>&#160;&#160;&#160;(0x100)</td></tr>
+<tr class="separator:ga1137c3afca46a30b114d29b685c62c2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab75971c78987ec57dce6d6942a629c1a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#gab75971c78987ec57dce6d6942a629c1a">GET_MCB_STATUS</a>(status)&#160;&#160;&#160;(status &amp; 0xF)</td></tr>
+<tr class="separator:gab75971c78987ec57dce6d6942a629c1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -192,8 +196,8 @@ Functions</h2></td></tr>
 <tr class="separator:ga639e2665a0bfc1276b09f0ae597edabe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8f03e8233ed3334f49c9253bb94cbb7f"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga8f03e8233ed3334f49c9253bb94cbb7f">sceKernelLinkLibraryEntries</a> (<a class="el" href="structSceStubLibraryEntryTable.html">SceStubLibraryEntryTable</a> *libStubTable, u32 size)</td></tr>
 <tr class="separator:ga8f03e8233ed3334f49c9253bb94cbb7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga8025675e3f76dd3de33abe290428660c"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga8025675e3f76dd3de33abe290428660c">sceKernelUnLinkLibraryEntries</a> (<a class="el" href="structSceStubLibraryEntryTable.html">SceStubLibraryEntryTable</a> *libStubTable, u32 size)</td></tr>
-<tr class="separator:ga8025675e3f76dd3de33abe290428660c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga73c47b8cd1a287a25358292dc4d3451a"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga73c47b8cd1a287a25358292dc4d3451a">sceKernelUnlinkLibraryEntries</a> (<a class="el" href="structSceStubLibraryEntryTable.html">SceStubLibraryEntryTable</a> *libStubTable, u32 size)</td></tr>
+<tr class="separator:ga73c47b8cd1a287a25358292dc4d3451a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac154c992eeedc2eaa0088776d44a3cae"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#gac154c992eeedc2eaa0088776d44a3cae">sceKernelLoadModuleBootLoadCore</a> (<a class="el" href="structSceLoadCoreBootModuleInfo.html">SceLoadCoreBootModuleInfo</a> *bootModInfo, <a class="el" href="structSceLoadCoreExecFileInfo.html">SceLoadCoreExecFileInfo</a> *execInfo, SceUID *modMemId)</td></tr>
 <tr class="separator:gac154c992eeedc2eaa0088776d44a3cae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga06690dfe9537a4eb1ab8942d4a5e0a1d"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga06690dfe9537a4eb1ab8942d4a5e0a1d">sceKernelLoadCoreLock</a> (void)</td></tr>
@@ -615,6 +619,36 @@ Module loader and library import/export manager. </p>
 
 </div>
 </div>
+<a class="anchor" id="ga1137c3afca46a30b114d29b685c62c2c"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SCE_MODULE_USER_MODULE&#160;&#160;&#160;(0x100)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p><a class="el" href="structSceModule.html#aa0260efbd7c70aa4467b9daf4e232399">SceModule.status</a> </p>
+
+</div>
+</div>
+<a class="anchor" id="gab75971c78987ec57dce6d6942a629c1a"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define GET_MCB_STATUS</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">status</td><td>)</td>
+          <td>&#160;&#160;&#160;(status &amp; 0xF)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p><a class="el" href="structSceModule.html#aa0260efbd7c70aa4467b9daf4e232399">SceModule.status</a> </p>
+
+</div>
+</div>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a class="anchor" id="ga7d752ce6bb887f69ae32d81943d77bf7"></a>
 <div class="memitem">
@@ -880,12 +914,12 @@ Module loader and library import/export manager. </p>
 
 </div>
 </div>
-<a class="anchor" id="ga8025675e3f76dd3de33abe290428660c"></a>
+<a class="anchor" id="ga73c47b8cd1a287a25358292dc4d3451a"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">s32 sceKernelUnLinkLibraryEntries </td>
+          <td class="memname">s32 sceKernelUnlinkLibraryEntries </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="structSceStubLibraryEntryTable.html">SceStubLibraryEntryTable</a> *&#160;</td>
           <td class="paramname"><em>libStubTable</em>, </td>
@@ -1762,7 +1796,7 @@ Module loader and library import/export manager. </p>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 2 2021 14:57:47 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sat Jan 2 2021 15:32:35 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>

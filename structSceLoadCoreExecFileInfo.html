@@ -119,8 +119,8 @@ Data Fields</h2></td></tr>
 <tr class="separator:ac196b9915a75240696b066152fbc1b32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6976573677def34eb4f4bf08a55fb736"><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a6976573677def34eb4f4bf08a55fb736">unk44</a></td></tr>
 <tr class="separator:a6976573677def34eb4f4bf08a55fb736"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a219200bdc11c85fdfc73e9cbeec9f286"><td class="memItemLeft" align="right" valign="top">SceSize&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a219200bdc11c85fdfc73e9cbeec9f286">largestSegSize</a></td></tr>
-<tr class="separator:a219200bdc11c85fdfc73e9cbeec9f286"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c69c57419f031cfa12af0a7d0ef1328"><td class="memItemLeft" align="right" valign="top">SceSize&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a9c69c57419f031cfa12af0a7d0ef1328">modCodeSize</a></td></tr>
+<tr class="separator:a9c69c57419f031cfa12af0a7d0ef1328"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abbf1a4d8ac62ada4a3258f2e5268ad84"><td class="memItemLeft" align="right" valign="top">SceSize&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#abbf1a4d8ac62ada4a3258f2e5268ad84">textSize</a></td></tr>
 <tr class="separator:abbf1a4d8ac62ada4a3258f2e5268ad84"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fbc3f41f75d2a61c9466aa95e31c3d4"><td class="memItemLeft" align="right" valign="top">SceSize&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a1fbc3f41f75d2a61c9466aa95e31c3d4">dataSize</a></td></tr>
@@ -149,8 +149,8 @@ Data Fields</h2></td></tr>
 <tr class="separator:a710673135ebb987832a7dc14f3b543c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a491cc6144ac7ea3dd1de8f2296c35e84"><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a491cc6144ac7ea3dd1de8f2296c35e84">isSignChecked</a></td></tr>
 <tr class="separator:a491cc6144ac7ea3dd1de8f2296c35e84"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a56ecdaaf3a812e48fe696e93b61f14e5"><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a56ecdaaf3a812e48fe696e93b61f14e5">unk104</a></td></tr>
-<tr class="separator:a56ecdaaf3a812e48fe696e93b61f14e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a750747e568ce15a7a181da0bf555396e"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a750747e568ce15a7a181da0bf555396e">secureInstallId</a></td></tr>
+<tr class="separator:a750747e568ce15a7a181da0bf555396e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ace924ebc7bf2e1a85fd8df90bd799da2"><td class="memItemLeft" align="right" valign="top">SceSize&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#ace924ebc7bf2e1a85fd8df90bd799da2">overlapSize</a></td></tr>
 <tr class="separator:ace924ebc7bf2e1a85fd8df90bd799da2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a205522519e2c6b7212d99a67a49cf1a2"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceLoadCoreExecFileInfo.html#a205522519e2c6b7212d99a67a49cf1a2">exportsInfo</a></td></tr>
@@ -337,16 +337,16 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a219200bdc11c85fdfc73e9cbeec9f286"></a>
+<a class="anchor" id="a9c69c57419f031cfa12af0a7d0ef1328"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">SceSize SceLoadCoreExecFileInfo::largestSegSize</td>
+          <td class="memname">SceSize SceLoadCoreExecFileInfo::modCodeSize</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>The size of the largest module segment. Should normally be "textSize", but technically can be any other segment. </p>
+<p>The total size of the loadable segments of the executable. Contains for example the size of the .text, .data and .bss segment. </p>
 
 </div>
 </div>
@@ -532,12 +532,12 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a56ecdaaf3a812e48fe696e93b61f14e5"></a>
+<a class="anchor" id="a750747e568ce15a7a181da0bf555396e"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">u32 SceLoadCoreExecFileInfo::unk104</td>
+          <td class="memname">char* SceLoadCoreExecFileInfo::secureInstallId</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -720,7 +720,7 @@ Data Fields</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 2 2021 14:57:47 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sat Jan 2 2021 15:32:35 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>

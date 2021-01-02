@@ -6,6 +6,8 @@ var searchData=
   ['paramsfosize',['paramSfoSize',['../structSceInit.html#a6d50583a232b7207b677394a01376333',1,'SceInit']]],
   ['partid',['partId',['../structSceLoadCoreProtectInfo.html#a4a599f3279e14da9656be6920474d391',1,'SceLoadCoreProtectInfo']]],
   ['partitionid',['partitionId',['../structSceLoadCoreExecFileInfo.html#a39307c95edda165bfe5561bf53f3d03c',1,'SceLoadCoreExecFileInfo']]],
+  ['position',['position',['../structSceKernelLMOption.html#a246ed16fc3232c9df61d362d7a9166f8',1,'SceKernelLMOption']]],
   ['prev',['prev',['../structSceGeDisplayList.html#a24300bf39135767812522e68290f92ec',1,'SceGeDisplayList']]],
+  ['priority',['priority',['../structSceKernelSMOption.html#a0b0544600ccd2ccc42c7b98f8f3aed6c',1,'SceKernelSMOption']]],
   ['protects',['protects',['../structSceLoadCoreBootInfo.html#abb4b988d15cbb38ccb6d50ee48132eac',1,'SceLoadCoreBootInfo']]]
 ];

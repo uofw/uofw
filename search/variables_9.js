@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['largestsegsize',['largestSegSize',['../structSceLoadCoreExecFileInfo.html#a219200bdc11c85fdfc73e9cbeec9f286',1,'SceLoadCoreExecFileInfo']]],
   ['lastregmod',['lastRegMod',['../structSceLoadCore.html#a8ecef792b64b110fe21331b1ca7f8894',1,'SceLoadCore']]],
   ['len',['len',['../structSceResidentLibraryEntryTable.html#a3b1bbdb5478a79b04955304951cca7dc',1,'SceResidentLibraryEntryTable::len()'],['../structSceStubLibraryEntryTable.html#a16c25b9839a1c3e4e95f8ee4e05bacb6',1,'SceStubLibraryEntryTable::len()']]],
   ['libentrytable',['libEntryTable',['../structSceResidentLibrary.html#ae73503d91e53d0dc8f8112e17767a0db',1,'SceResidentLibrary']]],
