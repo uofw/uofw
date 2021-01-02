@@ -432,7 +432,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
  * 
  * @return 0 on success.
  */
-s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource);
+s32 sceCtrl_driver_E467BEC8(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource);
 
 /**
  * Obtain button latch data stored in the internal latch controller buffers. The following button 
@@ -570,7 +570,7 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
  * before obtaining the data. The read data is the newest transfered data into the internal controller 
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  * 
- * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -587,7 +587,7 @@ s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
  * before obtaining the data. The read data is the newest transfered data into the internal controller
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  *
- * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -604,7 +604,7 @@ s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
  * before obtaining the data. The read data is the newest transfered data into the internal controller
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  *
- * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
@@ -621,7 +621,7 @@ s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
  * before obtaining the data. The read data is the newest transfered data into the internal controller
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  *
- * @remark You need to call ::SceCtrlExtendInternalCtrlBuffers() before initial use of this API or its related ones.
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
  * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
