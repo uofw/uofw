@@ -2100,7 +2100,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
 				   pData->rX = ctrlBuf->rX;
 				   pData->rY = ctrlBuf->rY;
 				   pData->rsrv[2] = ctrlBuf->rsrv[2];
-				   pData->rsrv[2] = ctrlBuf->rsrv[3];
+				   pData->rsrv[3] = ctrlBuf->rsrv[3];
 				   pData->DPadSenseA = ctrlBuf->DPadSenseA;
 				   pData->DPadSenseB = ctrlBuf->DPadSenseB;
 				   pData->GPadSenseA = ctrlBuf->GPadSenseA;
