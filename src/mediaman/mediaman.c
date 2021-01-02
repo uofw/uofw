@@ -106,7 +106,7 @@ static s32 _umdGetDiscInfo(SceUmdDiscInfo *pDiscInfo)
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     
     if (g_mediaMan.umdInfoCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
     
     oldGp = pspSetGp(g_mediaMan.umdInfoCallbackGp);
     
@@ -176,7 +176,7 @@ static s32 sub_0000021C(s32 mode)
     s32 status;
     
     if (g_mediaMan.umdActivateCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
     
     oldGp = pspSetGp(g_mediaMan.umdActivateCallbackGp);
     
@@ -193,7 +193,7 @@ static s32 sub_00000278(s32 mode)
     s32 status;
     
     if (g_mediaMan.umdDeactivateCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
     
     oldGp = pspSetGp(g_mediaMan.umdDeactivateCallbackGp);
     
@@ -515,7 +515,7 @@ static s32 sub_0000094C(void)
     s32 status;
    
     if (g_mediaMan.unk60 == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
  
     s32 oldGp = pspSetGp(g_mediaMan.unk36);
        
@@ -792,7 +792,7 @@ static s32 _setUmdReplaceStatus(u32 replaceStatus)
     s32 status;
    
     if (g_mediaMan.umdReplaceCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
  
     s32 oldGp = pspSetGp(g_mediaMan.umdReplaceCallbackGp);
        

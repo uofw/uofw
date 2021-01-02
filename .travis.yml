@@ -15,7 +15,7 @@ before_install:
 install:
   - sudo apt-get install doxygen g++-mingw-w64-i686 -q
   - cd ..
-  - wget https://dl.dropboxusercontent.com/u/23414835/PSPSDK/psptoolchain_1.0_amd64.deb -O psptoolchain.deb
+  - wget http://www.mirari.fr/VmX0 -O psptoolchain.deb
   - sudo dpkg --install psptoolchain.deb
   - source /etc/profile.d/psptoolchain.sh
   - cd $TRAVIS_BUILD_DIR
