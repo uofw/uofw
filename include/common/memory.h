@@ -20,11 +20,11 @@
 #define K3_SIZE                         0x20000000  /* 512 MB */
 
 /* Scratchpad segment base address and size */
-#define SCE_SCRATCHPAD_ADDR				0x00010000  /* Physical memory */
-#define SCE_SCRATCHPAD_ADDR_KU0         0x00010000	/* KU segment 0 (cached) */
-#define SCE_SCRATCHPAD_ADDR_KU1         0x40010000	/* KU segment 1 (uncached) */
+#define SCE_SCRATCHPAD_ADDR		0x00010000  /* Physical memory */
+#define SCE_SCRATCHPAD_ADDR_KU0         0x00010000  /* KU segment 0 (cached) */
+#define SCE_SCRATCHPAD_ADDR_KU1         0x40010000  /* KU segment 1 (uncached) */
 #define SCE_SCRATCHPAD_ADDR_K0          0x80010000  /* K0 segment (cached) */
-#define SCE_SCRATCHPAD_SIZE				0x00004000	/* 16 KB */
+#define SCE_SCRATCHPAD_SIZE		0x00004000  /* 16 KB */
 
 #define REBOOT_BASE_ADDR_K0             0x88600000  /* K0 segment (cached) */
 
@@ -48,4 +48,36 @@
 #define UPALIGN16(v)    (((v) + 0xF) & 0xFFFFFFF0)
 #define UPALIGN8(v)     (((v) + 0x7) & 0xFFFFFFF8)
 #define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)
+
+/* Clear memory partitioned in 1-Byte blocks. */
+static inline void pspClearMemory8(void *ptr, int size) {
+    int i;
+    for (i = 0; i < size; i++)
+         ((u8 *)ptr)[i] = 0;
+}
+
+/* Clear memory partitioned in 2-Byte blocks. */
+static inline void pspClearMemory16(void *ptr, int size) {
+    int i;
+    for (i = 0; i < (int)(size / sizeof(u16)); i++)
+         ((u16 *)ptr)[i] = 0;
+}
+
+/* Clear memory partitioned in 4-Byte blocks. */
+static inline void pspClearMemory32(void *ptr, int size) {
+    int i;
+    for (i = 0; i < (int)(size / sizeof(u32)); i++)
+         ((u32 *)ptr)[i] = 0;
+}
+
+// TODO: Remove size handling in above's clear  functions.
+//       Replace instances of above functions with this one.
+static inline void pspClearMemory(void *ptr, int size) {
+    if (size % 4 == 0)
+        pspClearMemory32(ptr, size / 4);
+    else if (size % 2 == 0)
+        pspClearMemory16(ptr, size / 2);
+    else
+        pspClearMemory8(ptr, size);
+}
 

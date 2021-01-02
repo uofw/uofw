@@ -16,7 +16,6 @@
 #include <common_imp.h>
 #include <interruptman.h>
 #include <iofilemgr_kernel.h>
-#include <modulemgr.h>
 #include <sysmem_kernel.h>
 #include <sysmem_sysclib.h>
 

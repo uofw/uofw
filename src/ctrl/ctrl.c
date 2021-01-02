@@ -23,10 +23,10 @@
  *
  */
 
+#include <common_imp.h>
 #include <ctrl.h>
 #include <display.h>
 #include <interruptman.h>
-#include <modulemgr.h>
 #include <modulemgr_init.h>
 #include <syscon.h>
 #include <sysmem_kdebug.h>

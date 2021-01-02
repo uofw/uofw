@@ -47,3 +47,4 @@ static inline void dbg_fbfill(u8 r, u8 g, u8 b) {
         *(int*)(0x44000000 + i * 4) = r | (g << 8) | (b << 16);
 }
 
+

@@ -8,8 +8,12 @@ github-pages/
 *.*~
 exports.c
 /lib/libdebug.a
+/lib/build_mod.mak
 
 ## Ignore Visual Studio project files, Visual Studio temporary files, build results.
+
+# Visual Studio project files
+*.sln
 
 # User-specific files
 *.suo
@@ -32,8 +36,6 @@ ipch/
 *.vsp
 *.vspx
 /.vs
+
+# Other VS-generated files
 /Debug
-/lib/build_mod.mak
-/uOFW.sln
-/utils/kprxgen/kprxgen.sln
-/utils/build-exports/PSP-BuildExports.sln

@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -29,6 +29,22 @@ inline static void pspCache(char op, const void *ptr)
 {
     asm __volatile__ ("cache %0, 0(%1)" : : "ri" (op), "r" (ptr));
 }
+
+/*
+ * BREAK instruction
+ *
+ *  31  26 25                  6 5    0
+ * +------+---------------------+------+
+ * |000000|     break code      |001101|
+ * +------+---------------------+------+
+ */
+
+/* break codes */
+#define SCE_BREAKCODE_ZERO			0x00000
+#define SCE_BREAKCODE_ONE           0x00001
+#define SCE_BREAKCODE_DIVZERO		0x00007 /* Divide by zero check. */
+
+#define MAKE_BREAKCODE_INSTR(op)    ((((op) & 0xFFFFF) << 6) | 0xD)
 
 inline static void pspBreak(s32 op)
 {

@@ -155,7 +155,7 @@ int sub_01FC(int arg0, int arg1, int arg2, int arg3)
 {
     int flag1 = 0;
     int flag2 = 0;
-    int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
+    int ret = sceKernelLockMutex(g_codec.mutexId, 1, NULL);
     if (ret < 0)
         return ret;
     char flag = g_codec.flag;
@@ -284,7 +284,7 @@ int sceCodecSetHeadphoneVolume(int arg0)
     int flag = pspMax(arg0 + g_codec.flag2 + 121, 0);
     if (flag >= 128)
         return 0x800001FE;
-    int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
+    int ret = sceKernelLockMutex(g_codec.mutexId, 1, NULL);
     if (ret < 0)
         return ret;
     ret = sub_004C(2, flag | 0x80);
@@ -311,7 +311,7 @@ int sceCodecSetSpeakerVolume(int arg0)
     flag += g_codec.flag2;
     flag = pspMin(flag, 0x7F);
     flag = pspMax(flag, 0);
-    int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
+    int ret = sceKernelLockMutex(g_codec.mutexId, 1, NULL);
     if (ret < 0)
         return ret;
     ret = sub_004C(40, flag | 0x80);
@@ -356,7 +356,7 @@ int sceCodec_driver_FCA6D35B(int freq)
         // 0750
     }
     // 0754
-    int ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
+    int ret = sceKernelLockMutex(g_codec.mutexId, 1, NULL);
     if (ret < 0)
         return ret;
     ret = sub_004C(8, flag);
@@ -403,7 +403,7 @@ int sceCodec_driver_A88FD064(int arg0, int arg1, int arg2, int arg3, int arg4, i
         arg2 = (arg2 << 3) + 1;
     }
     // 08FC
-    ret = sceKernelLockMutex(g_codec.mutexId, 1, 0);
+    ret = sceKernelLockMutex(g_codec.mutexId, 1, NULL);
     if (ret < 0)
         return ret;
     ret = sub_004C(17, 123);
@@ -480,7 +480,7 @@ int sceCodecInitEntry()
         ;
     sub_0110();
     sub_0150(1);
-    g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, 0);
+    g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, NULL);
     if (g_codec.mutexId <= 0)
         return 1;
     sceKernelRegisterSysEventHandler(&g_sysEv);

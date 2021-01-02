@@ -1,6 +1,6 @@
 /* Copyright (C) 2011 - 2016 The uOFW team
    See the file COPYING for copying permission.
-*/
+   */
 
 #ifndef COMMON_INCLUDED
 # error "Only include common_asm.h, common_imp.h or common_header.h!"
@@ -356,4 +356,10 @@
 #define SCE_ERROR_KERNEL_NO_ASYNC_OP                            0x8002032A
 #define SCE_ERROR_KERNEL_NOT_CACHE_ALIGNED                      0x8002044C
 #define SCE_ERROR_KERNEL_MAX_ERROR                              0x8002044D
+
+/*
+ * Error-similar definitions.
+ */
+#define SCE_KERNEL_VALUE_UNITIALIZED                            (-1)
+#define SCE_KERNEL_PTR_UNITIALIZED                              ((void *)SCE_KERNEL_VALUE_UNITIALIZED)
 

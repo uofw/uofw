@@ -29,6 +29,7 @@
  */
 
 #include <sysmem_utils_kernel.h>
+#include <modulemgr_nids.h>
 #include "clibUtils.h"
 #include "module.h"
 
@@ -117,15 +118,15 @@ SceModule *sceKernelCreateModule(void)
     }
     //0x000068D0 - 0x0000689C
     mod->modId = cb->uid; //0x000068A0
-    mod->moduleStartThreadPriority = LOADCORE_ERROR;
-    mod->moduleStartThreadStacksize = LOADCORE_ERROR;
-    mod->moduleStartThreadAttr = LOADCORE_ERROR;
-    mod->moduleStopThreadPriority = LOADCORE_ERROR;
-    mod->moduleStopThreadStacksize = LOADCORE_ERROR;
-    mod->moduleStopThreadAttr = LOADCORE_ERROR;
-    mod->moduleRebootBeforeThreadPriority = LOADCORE_ERROR;
-    mod->moduleRebootBeforeThreadStacksize = LOADCORE_ERROR;
-    mod->moduleRebootBeforeThreadAttr = LOADCORE_ERROR;   
+    mod->moduleStartThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStartThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStartThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;   
     mod->countRegVal = pspCop0StateGet(COP0_STATE_COUNT);
     
     loadCoreCpuResumeIntr(intrState); //0x000068D4
@@ -181,8 +182,8 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
     if (status < SCE_ERROR_OK) //0x000069B8
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     
-    mod->attribute = (execFileInfo->moduleInfo->modAttribute & ~SCE_PRIVILEGED_MODULES) | execFileInfo->modInfoAttribute; //0x000069CC & 0x000069E0
-    if ((mod->attribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_KERNEL)
+    mod->attribute = (execFileInfo->moduleInfo->modAttribute & ~SCE_MODULE_PRIVILEGE_LEVELS) | execFileInfo->modInfoAttribute; //0x000069CC & 0x000069E0
+    if ((mod->attribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL)
         mod->status &= ~SCE_MODULE_USER_MODULE; //0x00006BB4
     else
         mod->status |= SCE_MODULE_USER_MODULE; //0x000069E8
@@ -506,26 +507,26 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     
     mod->modId = cb->uid; //0x0000725C
-    mod->entryAddr = LOADCORE_ERROR; //0x00007260
+    mod->entryAddr = SCE_KERNEL_VALUE_UNITIALIZED; //0x00007260
     mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
     mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
     mod->terminal = 0; //0x0000726C
-    mod->moduleStart = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007270
-    mod->moduleStop = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007274
-    mod->moduleBootstart = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007278
-    mod->moduleRebootBefore = (SceKernelThreadEntry)LOADCORE_ERROR; //0x0000727C
-    mod->moduleRebootPhase = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007280
+    mod->moduleStart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007270
+    mod->moduleStop = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007274
+    mod->moduleBootstart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007278
+    mod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000727C
+    mod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007280
     mod->textSize = 0; //0x00007284
     mod->dataSize = 0; //0x00007288
     mod->bssSize = 0; //0x0000728C
     mod->segmentChecksum = 0; //0x00007290
-    mod->unk220 = 0; //0x00007294
+    mod->textSegmentChecksum = 0; //0x00007294
     mod->unk224 = 0; //0x00007298
     mod->status = 0; //0x000072A4
     mod->next = NULL; //0x000072A8
     mod->attribute = 0; //0x000072AC
-    mod->entTop = (void *)LOADCORE_ERROR; //0x000072B0
-    mod->stubTop = (void *)LOADCORE_ERROR; //0x000072B4
+    mod->entTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B0
+    mod->stubTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B4
     
     return cb->uid;
 }
@@ -585,9 +586,9 @@ static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
  */
 static void updateUIDName(SceModule *mod)
 {
-    if ((mod->status & 0x2000) == 0 && mod->memId > 0) { //0x000073D0 & 0x000073DC
+    if ((mod->status & 0x2000) == 0 && mod->moduleBlockId > 0) { //0x000073D0 & 0x000073DC
         if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0) {
-            sceKernelRenameUID(mod->memId, (const char *)mod->modName);
+            sceKernelRenameUID(mod->moduleBlockId, (const char *)mod->modName);
             sceKernelRenameUID(mod->modId, (const char *)mod->modName);
         } 
         else {
@@ -595,7 +596,7 @@ static void updateUIDName(SceModule *mod)
              * The module uses KIRK libraries and thus is classified as a system
              * module.
              */
-            sceKernelRenameUID(mod->memId, MODULE_SYSTEM_BLOCK_NAME);
+            sceKernelRenameUID(mod->moduleBlockId, MODULE_SYSTEM_BLOCK_NAME);
             sceKernelRenameUID(mod->modId, MODULE_SYSTEM_MODULE_NAME);
         }
     }

@@ -7,8 +7,8 @@
 #include <iofilemgr_kernel.h>
 #include <interruptman.h>
 #include <loadcore.h>
-#include <modulemgr.h>
 #include <modulemgr_init.h>
+#include <modulemgr_kernel.h>
 #include <sysmem_kdebug.h>
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
@@ -248,7 +248,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
 {
     s32 ret;
     s32 oldK1 = pspShiftK1();
-    ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
+    ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
     if (ret < 0) {
         pspSetK1(oldK1);
         return ret;
@@ -322,19 +322,19 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
             // 1220
             if (sceKernelIsDVDMode() == 0 && strcmp(file, g_unencryptedBootPath) == 0) {
                 file = *g_encryptedBootPathPtr;
-                apiType = SCE_INIT_APITYPE_GAME_BOOT;
+                apiType = SCE_EXEC_FILE_APITYPE_GAME_BOOT;
             } else
-                apiType = SCE_INIT_APITYPE_GAME_EBOOT;
+                apiType = SCE_EXEC_FILE_APITYPE_GAME_EBOOT;
         } else {
             s32 apiType2;
             if (strcmp(file, g_unencryptedBootPath) != 0) {
                 // 120C
-                apiType = SCE_INIT_APITYPE_EMU_EBOOT_EF;
-                apiType2 = SCE_INIT_APITYPE_EMU_EBOOT_MS;
+                apiType = SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF;
+                apiType2 = SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS;
             } else {
                 file = *g_encryptedBootPathPtr;
-                apiType = SCE_INIT_APITYPE_EMU_BOOT_EF;
-                apiType2 = SCE_INIT_APITYPE_EMU_BOOT_MS;
+                apiType = SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF;
+                apiType2 = SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS;
             }
             // 10BC
             if (InitForKernel_9D33A110() != 80) // not EF
@@ -380,7 +380,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
         }
         char *name;
         // 112C
-        if (apiType == SCE_INIT_APITYPE_EMU_EBOOT_MS || apiType == SCE_INIT_APITYPE_EMU_BOOT_MS || apiType == SCE_INIT_APITYPE_EMU_EBOOT_EF || apiType == SCE_INIT_APITYPE_EMU_BOOT_EF)
+        if (apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS || apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS || apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF || apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF)
             name = g_umdEmuStr;
         else
             name = g_gameStr;
@@ -416,7 +416,7 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
     s32 oldD384;
 
     s32 oldK1 = pspShiftK1();
-    s32 ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
+    s32 ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
     if (ret < 0) {
         pspSetK1(oldK1);
         return ret;
@@ -486,7 +486,7 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
         pspSetK1(oldK1);
         return fileId;
     }
-    ret = ModuleMgrForKernel_C3DDABEF(fileId, unkPtr, unkPtr2);
+    ret = sceKernelNpDrmGetModuleKey(fileId, unkPtr, unkPtr2);
     if (ret < 0) {
         sceIoClose(fileId);
         g_loadExecCb = oldD384;
@@ -514,36 +514,36 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
 
     // 1414
     switch (sceKernelInitApitype()) {
-    case SCE_INIT_APITYPE_GAME_EBOOT:
-    case SCE_INIT_APITYPE_GAME_BOOT:
-    case SCE_INIT_APITYPE_DISC:
-    case SCE_INIT_APITYPE_DISC_UPDATER:
-    case SCE_INIT_APITYPE_DISC_DEBUG:
-    case SCE_INIT_APITYPE_UNK_GAME1:
-    case SCE_INIT_APITYPE_UNK_GAME2:
+    case SCE_EXEC_FILE_APITYPE_GAME_EBOOT:
+    case SCE_EXEC_FILE_APITYPE_GAME_BOOT:
+    case SCE_EXEC_FILE_APITYPE_DISC:
+    case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
+    case SCE_EXEC_FILE_APITYPE_DISC_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
         vshParam.key = g_gameStr;
         break;
 
-    case SCE_INIT_APITYPE_EMU_EBOOT_MS:
-    case SCE_INIT_APITYPE_EMU_BOOT_MS:
-    case SCE_INIT_APITYPE_EMU_EBOOT_EF:
-    case SCE_INIT_APITYPE_EMU_BOOT_EF:
-    case SCE_INIT_APITYPE_DISC_EMU_MS1:
-    case SCE_INIT_APITYPE_DISC_EMU_MS2:
-    case SCE_INIT_APITYPE_DISC_EMU_EF1:
-    case SCE_INIT_APITYPE_DISC_EMU_EF2:
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS:
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS:
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF:
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
         vshParam.key = g_umdEmuStr;
         break;
 
-    case SCE_INIT_APITYPE_NPDRM_MS:
-    case SCE_INIT_APITYPE_NPDRM_EF:
+    case SCE_EXEC_FILE_APITYPE_NPDRM_MS:
+    case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
         if (sceKernelGetChunk(3) < 0)
             vshParam.key = g_gameStr;
         else
             vshParam.key = g_umdEmuStr;
 
-    case SCE_INIT_APITYPE_MLNAPP_MS:
-    case SCE_INIT_APITYPE_MLNAPP_EF:
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_MS:
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
         vshParam.key = g_mlnAppStr;
         break;
 
@@ -558,9 +558,9 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
     s32 apiType;
     vshParam.opt11 = 0;
     if (InitForKernel_9D33A110() == 80)
-        apiType = SCE_INIT_APITYPE_NPDRM_EF;
+        apiType = SCE_EXEC_FILE_APITYPE_NPDRM_EF;
     else
-        apiType = SCE_INIT_APITYPE_NPDRM_MS;
+        apiType = SCE_EXEC_FILE_APITYPE_NPDRM_MS;
 
     // 1464
     args.apiType = apiType;
@@ -586,7 +586,7 @@ s32 LoadExecForUser_D1FB50DC(void *arg)
     s32 ret, oldVar;
 
     s32 oldK1 = pspShiftK1();
-    ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
+    ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
     if (ret < 0) {
         pspSetK1(oldK1);
         return ret;
@@ -596,7 +596,7 @@ s32 LoadExecForUser_D1FB50DC(void *arg)
     g_loadExecCb = 0;
     if (sceKernelIsIntrContext() == 0) {
         if (pspK1IsUserMode()) {
-            args.apiType = SCE_INIT_APITYPE_VSH_1;
+            args.apiType = SCE_EXEC_FILE_APITYPE_VSH_1;
             args.args = 0;
             args.argp = NULL;
             args.vshParam = &vshParam;
@@ -700,7 +700,7 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
     vshParam.flags |= 0x10000;
     vshParam.opt11 = 0;
 
-    args.apiType = SCE_INIT_APITYPE_VSH_2;
+    args.apiType = SCE_EXEC_FILE_APITYPE_VSH_2;
     args.args = 0;
     args.argp = NULL;
     args.vshParam = &vshParam;
@@ -717,7 +717,7 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
 s32 sceKernelRegisterExitCallback(SceUID cbId) // alias: 4AC57943 in ForUser
 {
     s32 oldK1 = pspShiftK1();
-    s32 mtx = sceKernelLockMutex(g_loadExecMutex, 1, 0);
+    s32 mtx = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
     if (mtx < 0) {
         pspSetK1(oldK1);
         return mtx;
@@ -750,7 +750,7 @@ s32 sceKernelRegisterExitCallback(SceUID cbId) // alias: 4AC57943 in ForUser
 s32 sceKernelInvokeExitCallback()
 {
     s32 ret;
-    ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
+    ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
     if (ret < 0)
         return ret;
 
@@ -815,158 +815,158 @@ s32 sceKernelExitGame()
 // D8320A28
 s32 sceKernelLoadExecVSHDisc(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_DISC, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC, file, opt, 0x10000);
 }
 
 // D4B49C4B
 s32 sceKernelLoadExecVSHDiscUpdater(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_DISC_UPDATER, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC_UPDATER, file, opt, 0x10000);
 }
 
 // 1B305B09
 s32 sceKernelLoadExecVSHDiscDebug(char *file, SceKernelLoadExecVSHParam *opt)
 {
     if (sceKernelIsToolMode() != 0)
-        return loadExecVSH(SCE_INIT_APITYPE_DISC_DEBUG, file, opt, 0x10000);
+        return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC_DEBUG, file, opt, 0x10000);
     return SCE_ERROR_KERNEL_NOT_IMPLEMENTED;
 }
 
 s32 LoadExecForKernel_F9CFCF2F(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_DISC_EMU_MS1, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_077BA314(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_DISC_EMU_MS2, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_E704ECC3(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_DISC_EMU_EF1, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_47A5A49C(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_DISC_EMU_EF2, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2, file, opt, 0x10000);
 }
 
 // BEF585EC
 s32 sceKernelLoadExecBufferVSHUsbWlan(s32 args, void *argp, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSHWithArgs(SCE_INIT_APITYPE_USBWLAN, args, argp, opt, 0x10000);
+    return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_USBWLAN, args, argp, opt, 0x10000);
 }
 
 // 2B8813AF
 s32 sceKernelLoadExecBufferVSHUsbWlanDebug(s32 args, void *argp, SceKernelLoadExecVSHParam *opt)
 {
     if (sceKernelIsToolMode() != 0)
-        return loadExecVSHWithArgs(SCE_INIT_APITYPE_USBWLAN_DEBUG, args, argp, opt, 0x10000);
+        return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG, args, argp, opt, 0x10000);
     return SCE_ERROR_KERNEL_NOT_IMPLEMENTED;
 }
 
 s32 LoadExecForKernel_87C3589C(s32 args, void *argp, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSHWithArgs(SCE_INIT_APITYPE_UNK, args, argp, opt, 0x10000);
+    return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_UNK132, args, argp, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_7CAFE77F(s32 args, void *argp, SceKernelLoadExecVSHParam *opt)
 {
     if (sceKernelIsToolMode() != 0)
-        return loadExecVSHWithArgs(SCE_INIT_APITYPE_UNK_DEBUG, args, argp, opt, 0x10000);
+        return loadExecVSHWithArgs(SCE_EXEC_FILE_APITYPE_UNK133, args, argp, opt, 0x10000);
     return SCE_ERROR_KERNEL_NOT_IMPLEMENTED;
 }
 
 // 4FB44D27
 s32 sceKernelLoadExecVSHMs1(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MS1, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MS1, file, opt, 0x10000);
 }
 
 // D940C83C
 s32 sceKernelLoadExecVSHMs2(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MS2, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MS2, file, opt, 0x10000);
 }
 
 // CC6A47D2
 s32 sceKernelLoadExecVSHMs3(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MS3, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MS3, file, opt, 0x10000);
 }
 
 // 00745486
 s32 sceKernelLoadExecVSHMs4(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MS4, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MS4, file, opt, 0x10000);
 }
 
 // 7CABED9B
 s32 sceKernelLoadExecVSHMs5(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MS5, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MS5, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_A6658F10(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MS6, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MS6, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_16A68007(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_EF1, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_EF1, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_032A7938(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_EF2, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_EF2, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_40564748(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_EF3, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_EF3, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_E1972A24(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_EF4, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_EF4, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_C7C83B1E(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_EF5, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_EF5, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_8C4679D3(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_EF6, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_EF6, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_B343FDAB(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_UNK_GAME1, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_UNK160, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_1B8AB02E(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_UNK_GAME2, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_UNK161, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_C11E6DF1(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MLNAPP_MS, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MLNAPP_MS, file, opt, 0x10000);
 }
 
 s32 LoadExecForKernel_9BD32619(char *file, SceKernelLoadExecVSHParam *opt)
 {
-    return loadExecVSH(SCE_INIT_APITYPE_MLNAPP_EF, file, opt, 0x10000);
+    return loadExecVSH(SCE_EXEC_FILE_APITYPE_MLNAPP_EF, file, opt, 0x10000);
 }
 
 // C3474C2A
 s32 sceKernelExitVSHKernel(SceKernelLoadExecVSHParam *arg)
 {
-    return loadExecKernel(SCE_INIT_APITYPE_KERNEL_1, arg);
+    return loadExecKernel(SCE_EXEC_FILE_APITYPE_KERNEL_1, arg);
 }
 
 s32 LoadExecForKernel_C540E3B3()
@@ -977,7 +977,7 @@ s32 LoadExecForKernel_C540E3B3()
 // 24114598
 s32 sceKernelUnregisterExitCallback()
 {
-    s32 ret = sceKernelLockMutex(g_loadExecMutex, 1, 0);
+    s32 ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
     if (ret < 0)
         return ret;
     g_loadExecCb = 0;
@@ -1000,7 +1000,7 @@ s32 LoadExecForKernel_A5ECA6E3(void (*arg)())
 s32 LoadExecInit()
 {
     g_loadExecCb = 0;
-    g_loadExecMutex = sceKernelCreateMutex("SceLoadExecMutex", 0x101, 0, 0);
+    g_loadExecMutex = sceKernelCreateMutex("SceLoadExecMutex", 0x101, 0, NULL);
     g_loadExecIsInited = 0;
     g_regExitCbCb = NULL;
     sceKernelSetRebootKernel(rebootKernel);
@@ -1010,7 +1010,7 @@ s32 LoadExecInit()
 // 0x20FC
 s32 runExec(RunExecParams *args)
 {
-    if (args->apiType != SCE_INIT_APITYPE_KERNEL_REBOOT) {
+    if (args->apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT) {
         /* Run in a thread */
         s32 ret, threadEnd;
         SceKernelThreadOptParam opt;
@@ -1111,35 +1111,35 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
                 return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
             }
             switch (apiType) {
-            case SCE_INIT_APITYPE_DISC:
-            case SCE_INIT_APITYPE_DISC_UPDATER:
-            case SCE_INIT_APITYPE_DISC_DEBUG:
+            case SCE_EXEC_FILE_APITYPE_DISC:
+            case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
+            case SCE_EXEC_FILE_APITYPE_DISC_DEBUG:
                 devcmd = 0x208811;
                 iocmd  = 0x208011;
                 break;
 
-            case SCE_INIT_APITYPE_DISC_EMU_MS1:
-            case SCE_INIT_APITYPE_DISC_EMU_MS2:
-            case SCE_INIT_APITYPE_DISC_EMU_EF1:
-            case SCE_INIT_APITYPE_DISC_EMU_EF2:
-            case SCE_INIT_APITYPE_MLNAPP_MS:
-            case SCE_INIT_APITYPE_MLNAPP_EF:
+            case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1:
+            case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2:
+            case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1:
+            case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
+            case SCE_EXEC_FILE_APITYPE_MLNAPP_MS:
+            case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
                 devcmd = 0x208814;
                 iocmd  = 0x208014;
                 break;
 
-            case SCE_INIT_APITYPE_MS1:
-            case SCE_INIT_APITYPE_MS2:
-            case SCE_INIT_APITYPE_MS4:
-            case SCE_INIT_APITYPE_MS5:
-            case SCE_INIT_APITYPE_MS6:
-            case SCE_INIT_APITYPE_EF1:
-            case SCE_INIT_APITYPE_EF2:
-            case SCE_INIT_APITYPE_EF4:
-            case SCE_INIT_APITYPE_EF5:
-            case SCE_INIT_APITYPE_EF6:
-            case SCE_INIT_APITYPE_UNK_GAME1:
-            case SCE_INIT_APITYPE_UNK_GAME2:
+            case SCE_EXEC_FILE_APITYPE_MS1:
+            case SCE_EXEC_FILE_APITYPE_MS2:
+            case SCE_EXEC_FILE_APITYPE_MS4:
+            case SCE_EXEC_FILE_APITYPE_MS5:
+            case SCE_EXEC_FILE_APITYPE_MS6:
+            case SCE_EXEC_FILE_APITYPE_EF1:
+            case SCE_EXEC_FILE_APITYPE_EF2:
+            case SCE_EXEC_FILE_APITYPE_EF4:
+            case SCE_EXEC_FILE_APITYPE_EF5:
+            case SCE_EXEC_FILE_APITYPE_EF6:
+            case SCE_EXEC_FILE_APITYPE_UNK160:
+            case SCE_EXEC_FILE_APITYPE_UNK161:
                 devcmd = 0x208813;
                 iocmd  = 0x208013;
                 break;
@@ -1154,7 +1154,7 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
                 pspSetK1(oldK1);
                 return ret;
             }
-            if (apiType == SCE_INIT_APITYPE_DISC_DEBUG) {
+            if (apiType == SCE_EXEC_FILE_APITYPE_DISC_DEBUG) {
                 // 24D0
                 if (sceKernelIsToolMode() != 0) {
                     SceIoStat stat;
@@ -1251,7 +1251,7 @@ s32 loadExecKernel(s32 apiType, SceKernelLoadExecVSHParam *opt)
     s32 ret;
     s32 oldK1 = pspShiftK1();
 
-    if (apiType != SCE_INIT_APITYPE_KERNEL_REBOOT && sceKernelIsIntrContext() != 0) { // 2810
+    if (apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT && sceKernelIsIntrContext() != 0) { // 2810
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
@@ -1322,7 +1322,7 @@ s32 loadExecKernel(s32 apiType, SceKernelLoadExecVSHParam *opt)
 // 0x2844
 s32 rebootKernel(SceKernelLoadExecVSHParam *arg)
 {
-    return loadExecKernel(SCE_INIT_APITYPE_KERNEL_REBOOT, arg);
+    return loadExecKernel(SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT, arg);
 }
 
 // 0x2864
@@ -1363,7 +1363,7 @@ s32 runExecFromThread(u32 args __attribute__((unused)), RunExecParams *opt) // 2
     }
 
     sceKernelSetSystemStatus(0x40000);
-    if (opt->apiType != SCE_INIT_APITYPE_KERNEL_REBOOT) {
+    if (opt->apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT) {
         s32 ret = sceKernelPowerRebootStart(0);
         if (ret < 0)
             return ret;
@@ -1420,60 +1420,60 @@ s32 runReboot(RunExecParams *opt)
     SceKernelRebootArgType argType = SCE_KERNEL_REBOOT_ARGTYPE_NONE;
     SceSysmemMemoryBlockInfo blkInfo;
     switch (opt->apiType) {
-    case SCE_INIT_APITYPE_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_DEBUG:
 
-    case SCE_INIT_APITYPE_MLNAPP_MS:
-    case SCE_INIT_APITYPE_MLNAPP_EF:
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_MS:
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
 
-    case SCE_INIT_APITYPE_EF4:
-    case SCE_INIT_APITYPE_EF5:
-    case SCE_INIT_APITYPE_EF6:
+    case SCE_EXEC_FILE_APITYPE_EF4:
+    case SCE_EXEC_FILE_APITYPE_EF5:
+    case SCE_EXEC_FILE_APITYPE_EF6:
 
-    case SCE_INIT_APITYPE_UNK_GAME1:
-    case SCE_INIT_APITYPE_UNK_GAME2:
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
 
-    case SCE_INIT_APITYPE_EF1:
-    case SCE_INIT_APITYPE_EF2:
+    case SCE_EXEC_FILE_APITYPE_EF1:
+    case SCE_EXEC_FILE_APITYPE_EF2:
 
-    case SCE_INIT_APITYPE_MS4:
-    case SCE_INIT_APITYPE_MS5:
-    case SCE_INIT_APITYPE_MS6:
+    case SCE_EXEC_FILE_APITYPE_MS4:
+    case SCE_EXEC_FILE_APITYPE_MS5:
+    case SCE_EXEC_FILE_APITYPE_MS6:
 
-    case SCE_INIT_APITYPE_MS1:
-    case SCE_INIT_APITYPE_MS2:
+    case SCE_EXEC_FILE_APITYPE_MS1:
+    case SCE_EXEC_FILE_APITYPE_MS2:
 
-    case SCE_INIT_APITYPE_USBWLAN:
-    case SCE_INIT_APITYPE_USBWLAN_DEBUG:
-    case SCE_INIT_APITYPE_UNK:
-    case SCE_INIT_APITYPE_UNK_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_USBWLAN:
+    case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_UNK132:
+    case SCE_EXEC_FILE_APITYPE_UNK133:
 
-    case SCE_INIT_APITYPE_DISC:
-    case SCE_INIT_APITYPE_DISC_UPDATER:
+    case SCE_EXEC_FILE_APITYPE_DISC:
+    case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
 
-    case SCE_INIT_APITYPE_DISC_DEBUG:
-    case SCE_INIT_APITYPE_DISC_EMU_MS1:
-    case SCE_INIT_APITYPE_DISC_EMU_MS2:
-    case SCE_INIT_APITYPE_DISC_EMU_EF1:
-    case SCE_INIT_APITYPE_DISC_EMU_EF2:
+    case SCE_EXEC_FILE_APITYPE_DISC_DEBUG:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
 
-    case SCE_INIT_APITYPE_NPDRM_EF:
+    case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
 
-    case SCE_INIT_APITYPE_UNK0x100:
+    case SCE_EXEC_FILE_APITYPE_UNK100:
 
-    case SCE_INIT_APITYPE_GAME_EBOOT:
-    case SCE_INIT_APITYPE_GAME_BOOT:
-    case SCE_INIT_APITYPE_EMU_EBOOT_MS:
-    case SCE_INIT_APITYPE_EMU_BOOT_MS:
-    case SCE_INIT_APITYPE_EMU_EBOOT_EF:
-    case SCE_INIT_APITYPE_EMU_BOOT_EF:
-    case SCE_INIT_APITYPE_NPDRM_MS:
+    case SCE_EXEC_FILE_APITYPE_GAME_EBOOT:
+    case SCE_EXEC_FILE_APITYPE_GAME_BOOT:
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS:
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS:
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF:
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF:
+    case SCE_EXEC_FILE_APITYPE_NPDRM_MS:
         // (2AE4)
         argType = SCE_KERNEL_REBOOT_ARGTYPE_FILENAME;
         break;
-    case SCE_INIT_APITYPE_VSH_2:
-    case SCE_INIT_APITYPE_KERNEL_REBOOT:
-    case SCE_INIT_APITYPE_KERNEL_1:
-    case SCE_INIT_APITYPE_VSH_1:
+    case SCE_EXEC_FILE_APITYPE_VSH_2:
+    case SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT:
+    case SCE_EXEC_FILE_APITYPE_KERNEL_1:
+    case SCE_EXEC_FILE_APITYPE_VSH_1:
         // 32CC
         argType = SCE_KERNEL_REBOOT_ARGTYPE_KERNEL;
         break;
@@ -1483,7 +1483,7 @@ s32 runReboot(RunExecParams *opt)
 
     // 2AE8
     s32 rand = sceKernelGetInitialRandomValue();
-    if (opt->apiType != SCE_INIT_APITYPE_KERNEL_REBOOT) {
+    if (opt->apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT) {
         // 3218
         s32 ret = sceKernelRebootBeforeForUser(opt->vshParam);
         if (ret < 0)
@@ -1500,7 +1500,7 @@ s32 runReboot(RunExecParams *opt)
             return ret;
     }
     // 2B0C
-    if (opt->apiType != SCE_INIT_APITYPE_KERNEL_REBOOT) {
+    if (opt->apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT) {
         // 31C8
         sceKernelSuspendAllUserThreads();
     }
@@ -1520,7 +1520,7 @@ s32 runReboot(RunExecParams *opt)
     }
 
     // 2B30
-    if (opt->apiType != SCE_INIT_APITYPE_KERNEL_REBOOT) {
+    if (opt->apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT) {
         // 3174
         s32 ret = sceKernelRebootPhaseForKernel(1, opt->vshParam, 0, 0);
         if (ret < 0)
@@ -1561,9 +1561,9 @@ s32 runReboot(RunExecParams *opt)
             // 2FFC
             copyArgsToRebootParam(hwOpt, opt->vshParam);
         } else if (opt->argp != NULL) {
-            if ((opt->apiType == SCE_INIT_APITYPE_DISC_EMU_MS1) || (opt->apiType == SCE_INIT_APITYPE_DISC_EMU_MS2)
-             || (opt->apiType == SCE_INIT_APITYPE_DISC_EMU_EF1) || (opt->apiType == SCE_INIT_APITYPE_DISC_EMU_EF2)
-             || (opt->apiType == SCE_INIT_APITYPE_MLNAPP_MS) || (opt->apiType == SCE_INIT_APITYPE_MLNAPP_EF)) {
+            if ((opt->apiType == SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1) || (opt->apiType == SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2)
+             || (opt->apiType == SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1) || (opt->apiType == SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2)
+             || (opt->apiType == SCE_EXEC_FILE_APITYPE_MLNAPP_MS) || (opt->apiType == SCE_EXEC_FILE_APITYPE_MLNAPP_EF)) {
                 // 2FAC
                 // 2FB0
                 hwOpt->args[0].argp = opt->vshParam->argp;
@@ -1581,8 +1581,8 @@ s32 runReboot(RunExecParams *opt)
                 hwOpt->args[0].type = argType;
                 hwOpt->curArgs = 1;
                 hwOpt->unk36 = 0;
-                if (opt->apiType == SCE_INIT_APITYPE_EMU_EBOOT_MS || opt->apiType == SCE_INIT_APITYPE_EMU_BOOT_MS
-                 || opt->apiType == SCE_INIT_APITYPE_EMU_EBOOT_EF || opt->apiType == SCE_INIT_APITYPE_EMU_BOOT_EF) {
+                if (opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS || opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS
+                 || opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF || opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF) {
                     // 3064
                     SceUID id = sceKernelGetChunk(3);
                     ret = id;
@@ -1595,7 +1595,7 @@ s32 runReboot(RunExecParams *opt)
                     }
                 }
                 // 30AC
-                if ((opt->apiType == SCE_INIT_APITYPE_NPDRM_MS) || (opt->apiType == SCE_INIT_APITYPE_NPDRM_EF)) {
+                if ((opt->apiType == SCE_EXEC_FILE_APITYPE_NPDRM_MS) || (opt->apiType == SCE_EXEC_FILE_APITYPE_NPDRM_EF)) {
                     hwOpt->args[1].argp = opt->npDrmArg;
                     hwOpt->args[1].args = sizeof *opt->npDrmArg;
                     hwOpt->args[1].type = SCE_KERNEL_REBOOT_ARGTYPE_NPDRM;
@@ -1679,7 +1679,7 @@ s32 runReboot(RunExecParams *opt)
     // 2D04
     fixupArgsAddr(hwOpt, opt->vshParam);
     sceKernelSetDdrMemoryProtection(0x88400000, 0x400000, 12);
-    if (opt->apiType == SCE_INIT_APITYPE_DEBUG)
+    if (opt->apiType == SCE_EXEC_FILE_APITYPE_DEBUG)
         return ret;
     sceKernelMemset((void*)0x88600000, 0, 0x200000);
 #ifndef INSTALLER

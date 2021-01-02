@@ -85,7 +85,7 @@ typedef struct
   Elf32_Half	e_shentsize;		/* Section header table entry size */
   Elf32_Half	e_shnum;		/* Section header table entry count */
   Elf32_Half	e_shstrndx;		/* Section header string table index */
-} Elf32_Ehdr;
+} Elf32_Ehdr; // size = 52
 
 /* Fields in the e_ident array.  The EI_* macros are indices into the
    array.  The macros under each EI_* macro are the values the byte
