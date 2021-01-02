@@ -195,8 +195,6 @@ static s32 exe_thread(SceSize args, void *argp)
         /* Return the ID of the successfully loaded module. */
         *(pModParams->pResult) = pModParams->pMod->modId; //0x0000020C
 
-        //dbg_fbfill(255, 255, 0);
-
         if (pModParams->modeFinish == CMD_LOAD_MODULE) //0x00000214
             break;
 
@@ -335,8 +333,6 @@ s32 ModuleMgrInit(SceSize argc, void *argp)
 {
     (void)argc;
     (void)argp;
-
-    //dbg_init(1, FB_NONE, FAT_NONE);
 
     ChunkInit();
 
@@ -667,9 +663,6 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
 
     void *baseAddr = sceKernelGetBlockHeadAddr(pExecInfo->decompressionMemId); // 0x00005FB8
 
-    // Reaches here.
-    //dbg_fbfill(255, 0, 0);
-
     /* Use the specified offset into the supplied target memory partition by the the user. */
     if (pModParams->memBlockOffset != 0) // 0x00005FB0
         baseAddr += (u32)pModParams->memBlockOffset; // 0x00005FC4
@@ -971,8 +964,6 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             }
 
-            //dbg_fbfill2(255, 0, 255);
-
             pExecInfo->topAddr = sceKernelGetBlockHeadAddr(moduleBlockId); // 0x000069A4
             pMod->moduleBlockId = moduleBlockId;
             pMod->mpIdText = pExecInfo->partitionId; // 0x000069C0
@@ -1031,8 +1022,6 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
         }
     }
 
-    //dbg_fbfill4(255, 255, 255);
-
     status = allocate_module_block(pModParams); // 0x00006A2C
     if (status < SCE_ERROR_OK) {
         _CleanupMemory(gzipBlockId, pExecInfo);
@@ -1049,8 +1038,6 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
     gzipBlockId = 0; // 0x00006A9C
 
     if (!pExecInfo->isCompressed) { // 0x00006AA4
-        //dbg_fbfill(255, 255, 0);
-
         ClearFreePartitionMemory(pExecInfo->decompressionMemId);
 
         if (pExecInfo->memBlockId > 0) // 0x00006B04
@@ -1095,21 +1082,15 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
                 pExecInfo->maxAllocSize = pExecInfo->modCodeSize; // 0x00006DFC
         }
     }
-
-    //dbg_fbfill4(255, 0, 255);
     
     if (pModParams->externMemBlockIdUser != 0) // 0x00006B90
         pMod->status = 0x2000; //0x00006B9C
-
-    //dbg_fbfill3(255, 0, 255);
 
     status = sceKernelAssignModule(pMod, pExecInfo); // 0x00006BA0
     if (status < SCE_ERROR_OK) {
         _CleanupMemory(gzipBlockId, pExecInfo);
         return status;
     }
-
-    //dbg_fbfill4(255, 255, 255);
 
     if (pModParams->externMemBlockIdUser != 0) // 0x00006BB4
         pMod->status |= 0x3000; // 0x00006BC4
@@ -1199,8 +1180,6 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
         return SCE_ERROR_KERNEL_ERROR;
     }
 
-    //dbg_fbfill(255, 0, 255);
-
     /*
      * UOFW: If pMod has no entry point, _PrologueModule returns SCE_ERROR_OK, with pMod->userModThid == SCE_KERNEL_VALUE_UNITIALIZED.
      * This theoretically allows modules to be loaded without having a dedicated module_start() functions.
@@ -1216,8 +1195,6 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
         if (status == SCE_ERROR_OK) // 0x00007080
             /* wait for the module_start() function to finish. */
             modStartStatus = sceKernelWaitThreadEnd(pMod->userModThid, NULL); // 0x00007114
-
-        //dbg_fbfill(255, 129, 1); // ORANGE
 
         /* Perform cleanup once module_start() was finished. */
         g_ModuleManager.userThreadId = SCE_KERNEL_VALUE_UNITIALIZED;
@@ -1241,8 +1218,6 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
 
         return modStartStatus;
     }
-
-    //dbg_fbfill(255, 129, 1); // ORANGE
     
     /* The started module is a resident module. */
     SET_MCB_STATUS(pMod->status, MCB_STATUS_STARTED); //0x000070B8
@@ -1443,9 +1418,6 @@ s32 _start_exe_thread(SceModuleMgrParam *pModParams)
     sceKernelWaitEventFlag(g_ModuleManager.eventId, 1, SCE_KERNEL_EW_CLEAR_ALL | SCE_KERNEL_EW_OR, NULL, NULL);
 
     sceKernelUnlockMutex(g_ModuleManager.mutexId, 1);
-
-    // DEBUG: Reached here!
-    //dbg_fbfill(255, 129, 1); // ORANGE
     return result;
 }
 
