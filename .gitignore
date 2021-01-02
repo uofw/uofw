@@ -30,3 +30,9 @@ ipch/
 *.psess
 *.vsp
 *.vspx
+/.vs
+/Debug
+/lib/build_mod.mak
+/uOFW.sln
+/utils/kprxgen/kprxgen.sln
+/utils/build-exports/PSP-BuildExports.sln
