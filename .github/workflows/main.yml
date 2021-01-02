@@ -13,7 +13,6 @@ jobs:
           wget http://www.mirari.fr/VmX0 -O psptoolchain.deb
           sudo dpkg --install psptoolchain.deb
       - name: Build project
-        working-directory: ${{ github.workspace }}
         run: |
           source /etc/profile.d/psptoolchain.sh
           make -k
