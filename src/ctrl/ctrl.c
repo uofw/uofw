@@ -492,7 +492,7 @@ SceKernelDeci2Ops g_ctrlDeci2Ops = {
         [5] = (void *)sceCtrlClearRapidFire,
         [6] = (void *)sceCtrlSetButtonEmulation,
         [7] = (void *)sceCtrlSetAnalogEmulation,
-        [8] = (void *)sceCtrlExtendInternalCtrlBuffers
+        [8] = (void *)sceCtrl_driver_E467BEC8
     },
 };
 
@@ -858,7 +858,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples)
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlExtendInternalCtrlBuffers(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
+s32 sceCtrl_driver_E467BEC8(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
 {
     SceUID poolId;
 	SceCtrlData2 *ctrlBuf;
