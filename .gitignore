@@ -1,5 +1,6 @@
 html/
 nbproject/
+github-pages/
 *.o
 *.elf
 *.prx
