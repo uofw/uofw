@@ -1,4 +1,4 @@
-uOFW [![Build Status](https://travis-ci.org/uofw/uofw.svg?branch=master)](https://travis-ci.org/uofw/uofw)
+uOFW [![CI status](https://github.com/uofw/uofw/workflows/Build%20uOFW/badge.svg?branch=master&event=push)](https://github.com/uofw/uofw/actions?query=branch%3Amaster)
 ====
 
 This project aims to reverse engineer the basic PSP kernel to provide a free and open source vanilla firmware. You can see the current progress at the [Current Modules Status](//github.com/uofw/uofw/wiki/Current-Modules-Status) wiki page.
