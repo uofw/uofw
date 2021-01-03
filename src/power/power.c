@@ -232,6 +232,9 @@ static SceSysconFunc _scePowerLowBatteryCallback; //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
 static s32 _scePowerInitCallback(); //sub_0x0000114C
 
+static s32 _scePowerBatteryEnd(void); // 0x00004498
+static s32 _scePowerBatterySuspend(void); // 0x00004570
+
 ScePowerHandlers g_PowerHandler = {
     .size = sizeof(ScePowerHandlers),
     .tick = scePowerTick, //0x00002F94
@@ -2453,7 +2456,7 @@ s32 scePower_469989AD(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 }
 
 //Subroutine sub_00004498 - Address 0x00004498
-u32 _scePowerBatteryEnd(void)
+s32 _scePowerBatteryEnd(void)
 {
     u32 outBits;
     
@@ -2476,5 +2479,42 @@ u32 _scePowerBatteryEnd(void)
     sceKernelDeleteEventFlag(g_Battery.eventId); //0x00004524
     
     return SCE_ERROR_OK; 
+}
+
+// Subroutine sub_00004570 - Address 0x00004570 
+s32 _scePowerBatterySuspend(void)
+{
+    s32 intrState;
+    u32 eventFlagBits;
+
+    eventFlagBits = 0x40000000; // 0x00004594
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00004590
+
+    if (g_Battery.alarmId > 0) // 0x000045A0
+    {
+        sceKernelCancelAlarm(g_Battery.alarmId); // 0x000045A8
+        g_Battery.alarmId = -1;
+
+        eventFlagBits |= 0x200;
+    }
+
+    if (g_Battery.unk20 != 0) // 0x000045D4
+    {
+        eventFlagBits |= 0x200;
+    }
+
+    // 0x000045D0
+    if (g_Battery.unk28 != 0)
+    {
+        g_Battery.unk28 = 0; // 0x000045D8
+        eventFlagBits |= 0x400; // 0x000045DC
+    }
+
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x2000000); // 0x000045E0
+    sceKernelSetEventFlag(g_Battery.eventId, eventFlagBits); //0x000045EC
+
+    sceKernelCpuResumeIntr(intrState);
+    return SCE_ERROR_OK;
 }
 
