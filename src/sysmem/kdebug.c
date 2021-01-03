@@ -1,69 +1,78 @@
 #include <stdarg.h>
+#include <sysmem_sysclib.h>
 
 #include <common_imp.h>
 
+#include "intr.h"
+#include "start.h"
+
+int kprnt(short *arg0, const char *fmt, va_list ap, int userMode);
+
+// 14434
+char kprnt_outbuf[260];
 // 13BC4
-int (*g_kprintfHandler)(short*, const char*, va_list, int) = kprnt;
+int (*kprinthandler)(short*, const char*, va_list, int) = kprnt;
 // 13BC8
-void *g_kprintfParam = (void*)g_kprintfDefaultParam; // TODO: determine the size of 14434
+void *kprintwork = (void*)kprnt_outbuf;
 // 13BCC
-int g_putcharByBootloader = 1;
+int kprintf_putchar_initial = 1;
 // 13BD0
-int g_dbgEcho = 1;
+int debug_echo_mode = 1;
 
 // 14410
-u32 g_dipsLo;
+u32 gDipLo;
 // 14414
-u32 g_dipsHi;
+u32 gDipHi;
 // 14418
-int g_cpTime;
+u32 g_uiCpTime;
 // 1441C
-int g_checkedDvdMode;
+int gUmdDvdInitialized;
 // 14420
-int g_dvdMode;
+int gIsDvdMode;
 // 14424
-void *g_sm1;
+void *g_pSm1Ops;
 // 14428
-void (*g_dbgPutchar)(short*, int);
+void (*kprintf_putchar_handler)(short*, int);
 // 1442C
-int (*g_dbgWrite)();
+int (*debug_write_handler)();
 // 14430
-int (*g_dbgRead)();
-// 14434
-char g_kprintfDefaultParam[260];
+int (*debug_read_handler)();
 
-int DipswInit(u32 lo, u32 hi, int cpTime)
+int DipswSet(int reg, int val);
+void SetIsDvdMode(void);
+
+int DipswInit(u32 lo, u32 hi, u32 cpTime)
 {
-    g_dipsLo = lo;
-    g_dipsHi = hi;
-    g_cpTime = cpTime;
+    gDipLo = lo;
+    gDipHi = hi;
+    g_uiCpTime = cpTime;
     return 0;
 }
 
 int sceKernelDipsw(u32 reg)
-{   
+{
     if (reg >= 64)
         return 0x80020001;
     if (reg >= 32) {
         // FC00
-        return (g_dipsHi >> (reg - 32)) & 1;
+        return (gDipHi >> (reg - 32)) & 1;
     }
-    return (g_dipsLo >> reg) & 1;
+    return (gDipLo >> reg) & 1;
 }
 
 u32 sceKernelDipswAll()
 {
-    return g_dipsLo;
+    return gDipLo;
 }
 
 u32 sceKernelDipswLow32()
 {
-    return g_dipsLo;
+    return gDipLo;
 }
 
 u32 sceKernelDipswHigh32()
 {
-    return g_dipsHi;
+    return gDipHi;
 }
 
 int sceKernelDipswSet(u32 reg)
@@ -78,53 +87,53 @@ int sceKernelDipswClear(u32 reg)
 
 int sceKernelDipswCpTime(void)
 {
-    return g_cpTime;
+    return g_uiCpTime;
 }
 
 int sceKernelIsToolMode(void)
 {
-    if (((g_dipsLo >> 30) & 1) == 1 || ((g_dipsLo >> 28) & 1) == 1)
+    if (((gDipLo >> 30) & 1) == 1 || ((gDipLo >> 28) & 1) == 1)
         return 1;
     return 0;
 }
 
 int sceKernelIsDevelopmentToolMode()
 {
-    return (g_dipsLo >> 30) & 1;
+    return (gDipLo >> 30) & 1;
 }
 
 int sceKernelIsUMDMode()
-{   
+{
     SetIsDvdMode();
-    return (g_dvdMode == 0);
+    return (gIsDvdMode == 0);
 }
 
 int sceKernelIsDVDMode()
-{   
+{
     SetIsDvdMode();
-    return g_dvdMode;
+    return gIsDvdMode;
 }
 
 int sceKernelSm1RegisterOperations(void *arg)
 {
-    g_sm1 = arg;
+    g_pSm1Ops = arg;
     if (arg != NULL)
     {
-        g_13B40 = *(int*)(arg + 28);
-        g_13B48 = *(int*)(arg + 32);
-        g_13B80 = *(int*)(arg + 52);
-        g_13B84 = *(int*)(arg + 56);
+        g_GetGPI = *(int*)(arg + 28);
+        g_SetGPO = *(int*)(arg + 32);
+        g_GetPTRIG = *(int*)(arg + 52);
+        g_SetPTRIG = *(int*)(arg + 56);
     }
     return 0;
 }
 
 void *sceKernelSm1ReferOperations()
 {
-    return g_sm1;
+    return g_pSm1Ops;
 }
 
 int DipswSet(int reg, int val)
-{   
+{
     int oldK1 = pspShiftK1();
     if (reg < 0 || reg >= 64)
     {
@@ -159,11 +168,11 @@ int DipswSet(int reg, int val)
     // FDB4
     u32 *regPtr;
     if (reg >= 32) {
-        regPtr = &g_dipsHi;
+        regPtr = &gDipHi;
         reg -= 32;
     }
     else
-        regPtr = &g_dipsLo;
+        regPtr = &gDipLo;
 
     // FDCC
     int oldVar = (*regPtr >> reg) & 1;
@@ -177,40 +186,33 @@ int DipswSet(int reg, int val)
 }
 
 void SetIsDvdMode(void)
-{   
-    if (g_checkedDvdMode != 0)
+{
+    if (gUmdDvdInitialized != 0)
         return;
-    g_checkedDvdMode = 1;
-    if (sceKernelIsToolMode() && ((g_dipsLo >> 16) & 1) == 1) {
+    gUmdDvdInitialized = 1;
+    if (sceKernelIsToolMode() && ((gDipLo >> 16) & 1) == 1) {
         // FE5C
-        g_dvdMode = 1;
+        gIsDvdMode = 1;
     }
     else {
         // FE48
-        g_dvdMode = 0;
+        gIsDvdMode = 0;
     }
 }
-
-// 13138
-char g_downHexChars[] = "0123456789abcdef";
-// 1314C
-char g_upHexChars[] = "0123456789ABCDEF";
-// 13160
-char g_null[] = "(null)";
 
 int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
 {
     char str[20];
-    void (*func)(short*, int) = g_dbgPutchar;
+    void (*func)(short*, int) = kprintf_putchar_handler;
     *(short*)(arg0 + 0) = 1;
     int base = 10;
     *(short*)(arg0 + 2) = 0;
     int curArg = 0;
     s64 longVar;
-    if (g_dbgPutchar == NULL || fmt == NULL)
+    if (kprintf_putchar_handler == NULL || fmt == NULL)
         return 0;
     func(arg0, 512);
-    char *hexNumChars = g_downHexChars;
+    char *hexNumChars = "0123456789abcdef";
     int numChars = 0;
     int stringLen;
     // FF00
@@ -243,17 +245,17 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     if (sign == '\0')
                         sign = ' ';
                     continue;
-            
+
                 case '\0':
                     // 0FF94 dup
                     func(arg0, 513);
                     return numChars;
-            
+
                 case '#':
                     // 0FFD8
                     attr |= 8;
                     continue;
-            
+
                 case '*':
                     // 0FFE0
                     argWidth = va_arg(ap, int);
@@ -262,17 +264,17 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         attr |= 0x10;
                     }
                     continue;
-            
+
                 case '-':
                     // 0FFF8
                     attr |= 0x10;
                     continue;
-            
+
                 case '+':
                     // 10000
                     sign = '+';
                     continue;
-            
+
                 case '.':
                     // 1000C
                     fmt++;
@@ -294,12 +296,12 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     // 10068
                     strSize = pspMax(val, -1);
                     continue;
-            
+
                 case '0':
                     // 10080
                     attr |= 0x20;
                     continue;
-            
+
                 case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
                     // 10088
                     int val = 0;
@@ -315,7 +317,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     argWidth = val;
                 }
                     continue;
-            
+
                 case 'D':
                     // 100D8
                     attr |= 1;
@@ -345,12 +347,12 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     }
                     // 10108
                     goto print_num1;
-            
+
                 case 'L':
                     // 104B4
                     attr |= 2;
                     continue;
-            
+
                 case 'O':
                     attr |= 1;
                 case 'o':
@@ -369,7 +371,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         base = 8;
                     }
                     goto print_base;
-            
+
                 case 'U':
                     // 10514
                     attr |= 1;
@@ -389,10 +391,10 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         base = 10;
                     }
                     goto print_base;
-            
+
                 case 'X':
                     // 10558
-                    hexNumChars = g_upHexChars;
+                    hexNumChars = "0123456789ABCDEF";
                 case 'x':
                     // 10564
                     base = 16;
@@ -416,7 +418,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         }
                     }
                     goto print_base;
-            
+
                 case 'c':
                     // 105D8
                     curStr = str;
@@ -424,12 +426,12 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     sign = '\0';
                     *str = (u8)va_arg(ap, int);
                     goto print_str;
-            
+
                 case 'h':
                     // 105F8
                     attr |= 0x4;
                     continue;
-            
+
                 case 'l':
                     // 10600
                     if ((attr & 1) == 0)
@@ -437,7 +439,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     else
                         attr = (attr & 0xFFFFFFFE) | 2;
                     continue;
-            
+
                 case 'n':
                     // 10614
                     if ((attr & 1) == 0)
@@ -470,39 +472,39 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         *ptr = numChars;
                     }
                     break;
-            
+
                 case 'p':
                     // 106A8
                     curArg = va_arg(ap, int);
                     base = 16;
                     // 105A8 dup
                     goto print_base;
-            
+
                 case 's': {
                     // 106C0
-                    char *s = va_arg(ap, char*);
-                    if (s == NULL)
+                    curStr = va_arg(ap, char*);
+                    if (curStr == NULL)
                     {
                         // 10748
-                        s = g_null;
+                        curStr = "(null)";
                     }
                     // 106CC
-                    if (userMode != 0 && !pspK1PtrOk(s))
+                    if (userMode != 0 && !pspK1PtrOk(curStr))
                         return 0x800200D3;
                     // 106E4
                     if (strSize < 0)
                     {
                         // 1072C
-                        stringLen = strlen(s);
+                        stringLen = strlen(curStr);
                     }
                     else
                     {
-                        char *s2 = memchr(s, '\0', strSize);
+                        char *s2 = memchr(curStr, '\0', strSize);
                         stringLen = strSize;
                         if (s2 != NULL)
                         {
-                            stringLen = s2 - s;
-                            if (strSize < s2 - s)
+                            stringLen = s2 - curStr;
+                            if (strSize < s2 - curStr)
                                 stringLen = strSize;
                         }
                     }
@@ -510,7 +512,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     sign = '\0';
                 }
                     goto print_str;
-            
+
                 default:
                     // 10754
                     func(arg0, *fmt);
@@ -543,7 +545,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         *(--curStr) = lastChar;
                         longVar = __udivdi3(longVar, base);
                     } while (longVar != 0);
-                    hexNumChars = g_downHexChars;
+                    hexNumChars = "0123456789abcdef";
                     if (((attr >> 3) & 1) != 0 && base == 8 && lastChar != '0') // 101D4 dup
                         *(--curStr) = '0';
                 }
@@ -567,7 +569,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         *curStr = hexNumChars[curArg % base];
                         lastC = *curStr;
                     } while (strSize != 0);
-                    hexNumChars = g_downHexChars;
+                    hexNumChars = "0123456789abcdef";
                     if (((attr >> 3) & 1) != 0 && base == 8 && lastC != '0') // 101D4 dup
                         *(--curStr) = '0';
                 }
@@ -576,7 +578,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 // 101E8
                 // 101EC
                 stringLen = &str[21] - curStr;
-                
+
                 print_str:
                 // 101F4
                 strSize = stringLen;
@@ -637,7 +639,9 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
     }
 }
 
-int KprintfForUser(const char *fmt, ...) __attribute__((alias("sceKernelPrintf")))
+int sceKernelPrintf(const char *fmt, ...) __attribute__((alias("KprintfForUser")));
+
+int KprintfForUser(const char *fmt, ...)
 {
     va_list ap;
     int oldK1 = pspShiftK1();
@@ -648,8 +652,8 @@ int KprintfForUser(const char *fmt, ...) __attribute__((alias("sceKernelPrintf")
         return 0x800200D3;
     }
     int oldIntr = suspendIntr();
-    if (g_kprintfHandler != NULL && sceKernelDipsw(56) != 0) // 1082C
-        ret = g_kprintfHandler(g_kprintfParam, fmt, ap, 1);
+    if (kprinthandler != NULL && sceKernelDipsw(56) != 0) // 1082C
+        ret = kprinthandler(kprintwork, fmt, ap, 1);
     // 107F4
     resumeIntr(oldIntr);
     va_end(ap);
@@ -664,8 +668,8 @@ int Kprintf(const char *fmt, ...)
     va_start(ap, fmt);
     int ret = 0;
     int oldIntr = suspendIntr();
-    if (g_kprintfHandler != NULL && sceKernelDipsw(56) != 0) // 10900
-        ret = g_kprintfHandler(g_kprintfParam, fmt, ap, 0);
+    if (kprinthandler != NULL && sceKernelDipsw(56) != 0) // 10900
+        ret = kprinthandler(kprintwork, fmt, ap, 0);
     // 108CC
     resumeIntr(oldIntr);
     va_end(ap);
@@ -675,42 +679,42 @@ int Kprintf(const char *fmt, ...)
 
 void (*sceKernelGetDebugPutchar(void))(short*, int)
 {
-    if (g_putcharByBootloader != 0)
+    if (kprintf_putchar_initial != 0)
         return NULL;
-    return g_dbgPutchar;
+    return kprintf_putchar_handler;
 }
 
 void sceKernelRegisterDebugPutchar(void (*func)(short*, int))
 {
-    g_dbgPutchar = func;
-    g_putcharByBootloader = 0;
+    kprintf_putchar_handler = func;
+    kprintf_putchar_initial = 0;
 }
 
 void sceKernelRegisterDebugPutcharByBootloader(void (*func)(short*, int))
 {
-    if (g_putcharByBootloader != 0)
-        g_dbgPutchar = func;
+    if (kprintf_putchar_initial != 0)
+        kprintf_putchar_handler = func;
 }
 
 void sceKernelRegisterKprintfHandler(int (*func)(short*, const char*, va_list, int), void *param)
 {
-    g_kprintfHandler = func;
-    g_kprintfParam = param;
+    kprinthandler = func;
+    kprintwork = param;
 }
 
 int _CheckDebugHandler(void *ptr, u32 size)
 {
     int ret = 0;
-    if ((void*)g_dbgPutchar < ptr || (void*)g_dbgPutchar >= ptr + size)
+    if ((void*)kprintf_putchar_handler < ptr || (void*)kprintf_putchar_handler >= ptr + size)
     {
         // 109C4
-        g_dbgPutchar = NULL;
+        kprintf_putchar_handler = NULL;
         ret = 0x80020001;
     }
     // 109D0
-    if ((void*)g_kprintfHandler < ptr || (void*)g_kprintfHandler >= ptr + size)
-    {   
-        g_kprintfHandler = NULL;
+    if ((void*)kprinthandler < ptr || (void*)kprinthandler >= ptr + size)
+    {
+        kprinthandler = NULL;
         // 109E4
         return 0x80020001;
     }
@@ -719,7 +723,7 @@ int _CheckDebugHandler(void *ptr, u32 size)
 
 int sceKernelDebugWrite()
 {
-    int (*func)() = g_dbgWrite;
+    int (*func)() = debug_write_handler;
     if (func == NULL)
         return 0x80020001;
     return func();
@@ -727,13 +731,13 @@ int sceKernelDebugWrite()
 
 int sceKernelRegisterDebugWrite(int (*func)())
 {
-    g_dbgWrite = func;
+    debug_write_handler = func;
     return 0;
 }
 
 int sceKernelDebugRead()
 {
-    int (*func)() = g_dbgRead;
+    int (*func)() = debug_read_handler;
     if (func == NULL)
         return 0x80020001;
     return func();
@@ -741,18 +745,18 @@ int sceKernelDebugRead()
 
 int sceKernelRegisterDebugRead(int (*func)())
 {
-    g_dbgRead = func;
+    debug_read_handler = func;
     return 0;
 }
 
 int sceKernelDebugEcho(void)
 {
-    return g_dbgEcho;
+    return debug_echo_mode;
 }
 
 int sceKernelDebugEchoSet(int echo)
 {
-    g_dbgEcho = echo;
+    debug_echo_mode = echo;
     return echo;
 }
 

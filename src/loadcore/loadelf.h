@@ -13,7 +13,10 @@
     
 #define SCE_HEADER_BETA_VERSION     (66)
     
+/* For compatibility reasons. Use SCE_MAGIC_LE. */
 #define SCE_MAGIC                   (0x7E534345) /* "~SCE" */
+
+#define SCE_MAGIC_LE				(0x4543537E) /* "~SCE" in Little Endian */
 
 #define SCE_HEADER_SIZE             (64)
 

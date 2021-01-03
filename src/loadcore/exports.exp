@@ -9,7 +9,7 @@ PSP_EXPORT_END
 
 PSP_EXPORT_START(LoadCoreForKernel, 0x0011, 0x0001)
 PSP_EXPORT_FUNC_NID(sceKernelDeleteModule, 0x001B57BB)
-PSP_EXPORT_FUNC_NID(sceKernelUnLinkLibraryEntries, 0x0295CFCE)
+PSP_EXPORT_FUNC_NID(sceKernelUnlinkLibraryEntries, 0x0295CFCE)
 PSP_EXPORT_FUNC_NID(sceKernelMaskLibraryEntries, 0x1915737F)
 PSP_EXPORT_FUNC_NID(sceKernelLoadCoreLock, 0x1999032F)
 PSP_EXPORT_FUNC_NID(sceKernelLoadExecutableObject, 0x1C394885)

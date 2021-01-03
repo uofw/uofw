@@ -169,6 +169,7 @@ int stdoutReset(int flags, SceMode mode)
 void printf_char(void *ctx, int ch)
 {   
     dbg_printf("Calling %s\n", __FUNCTION__);
+    if (ch < 0x200) dbg_printf("print %c\n", ch);
     if (ch == 0x200) {
         *(short*)(ctx + 2) = 0;
         return;
@@ -640,10 +641,10 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     }
     if (sceKernelGetThreadmanIdType(id) == 7)
         return 0x800200D2;
-    SceSysmemUIDControlBlock *blk;
+    SceSysmemUidCB *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return 0x800200D1;
-    if (pspK1IsUserMode() && (blk->parent->attribute & 2) != 0)
+    if (pspK1IsUserMode() && (blk->PARENT0->attr & 2) != 0)
         return 0x800200D1;
     SceKernelMppInfo mpp;
     mpp.size = 56;

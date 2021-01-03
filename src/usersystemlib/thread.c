@@ -3,6 +3,7 @@
 */
 
 #include "usersystemlib_int.h"
+#include <threadman_user.h>
 
 // Kernel_Library_293B45B8
 s32 sceKernelGetThreadId(void)
@@ -25,7 +26,7 @@ s32 _sceKernelCheckThreadStack(void)
         return sceKernelCheckThreadStack();
     }
 
-    available = pspGetSp() - g_thread->frameSize;
+    available = pspGetSp() - g_thread->stackBottom;
 
     if (available < 64) {
         // ThreadManForUser_D13BDE95
@@ -36,10 +37,11 @@ s32 _sceKernelCheckThreadStack(void)
 }
 
 // Kernel_Library_FA835CDE
-void *Kernel_Library_FA835CDE(s32 arg0)
+void *sceKernelGetTlsAddr(SceUID uid)
 {
-    void *ptr;
+    void *addr;
     s32 *k0;
+    s32 res;
 
     // SceThread* ?
     k0 = (s32*)pspGetK0();
@@ -57,23 +59,20 @@ void *Kernel_Library_FA835CDE(s32 arg0)
         return NULL;
     }
 
-    if (arg0 < 0) {
+    if (uid < 0) {
         return NULL;
     }
 
     // range k0[16-31]
-    ptr = (void*)k0[((arg0 >> 3) & 0xF) + 16];
+    addr = (void*)k0[((uid >> 3) & 0xF) + 16];
 
-    // this is why I think that a pointer is returned
-    if (ptr == NULL) { // loc_000004FC
-        s32 ret;
+    if (addr == NULL) { // loc_000004FC
+        res = _sceKernelAllocateTlspl(uid, &addr, 0);
 
-        ret = ThreadManForUser_65F54FFB(arg0, &ptr, 0);
-
-        if (ret < 0) {
+        if (res < 0) {
             return NULL;
         }
     }
 
-    return ptr;
+    return addr;
 }

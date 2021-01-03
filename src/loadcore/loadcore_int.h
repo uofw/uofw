@@ -1,24 +1,21 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
-
 
 #ifndef LOADCORE_INT_H
 #define	LOADCORE_INT_H
 
+#include <common_header.h>
 #include <loadcore.h>
 #include <sysmem_kernel.h>
 #include <sysmem_user.h>
 #include "systable.h"
-    
-#define FALSE                               (0)
 
-#define TRUE                                (1)
-    
-#define LOADCORE_ERROR                      (-1)
+/* For compatibility reasons. Use PSP_MAGIC_LE. */
+#define PSP_MAGIC                           (0x7E505350)  /* "~PSP" */
 
 /* The magic number identifying a file as a PSP object file. */
-#define PSP_MAGIC                           (0x7E505350)  /* "~PSP" */
+#define PSP_MAGIC_LE						(0x5053507E)  /* "~PSP" in Little Endian. */
 
 /* 
  * A test if a specified address is a kernel address. If the sign-bit

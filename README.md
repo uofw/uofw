@@ -1,56 +1,29 @@
-uOFW
+uOFW [![CI status](https://github.com/uofw/uofw/workflows/Build%20uOFW/badge.svg?branch=master&event=push)](https://github.com/uofw/uofw/actions?query=branch%3Amaster)
 ====
 
-The unofficial Official FirmWare, a complete latest PSP firmware reverse engineering project.  
-Project page: http://uofw.psnpt.com/  
-Doxygen documentation: http://uofw.psnpt.com/sdkdoc/  
-For more information: http://dev.psnpt.com/redmine/projects/uofw/wiki  
+This project aims to reverse engineer the basic PSP kernel to provide a free and open source vanilla firmware. You can see the current progress at the [Current Modules Status](//github.com/uofw/uofw/wiki/Current-Modules-Status) wiki page.
 
-Getting started
----------------
+## Documentation
 
-In order to contribute to uOFW, you need advanced knowledge in MIPS ASM and C. Some good MIPS ASM  
-online resources can be found at: 
-http://www.mips.com/products/product-materials/processor/mips-architecture/  
-MIPS ASM Instruction Set Reference: http://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf  
+* [PSP Kernel API Documentation](http://uofw.github.io/uofw/)
+* PSP Hardware and Software information can be found at [uofw/upspd](https://github.com/uofw/upspd).
+ 
+## Installation
 
-In addition, there is a nice MIPS runtime simulator and debugger which can be found at:  
-http://courses.missouristate.edu/kenvollmar/mars/
+You can run components of uOFW by following the directions at [uofw/uofwinst](https://github.com/uofw/uofwinst).
 
-The next step is to improve your reverse engineering skills (if needed). We suggest reading the  
-following excellent guide about reverse engineering for the PSP:  
-http://psnpt.com/joomla/index.php/articles/39-tutorials  
+## Contributing
 
-If you have questions, don't hesitate to ask us!
+This project is far from complete. We welcome everyone to help us.
 
+To get started, please read the [wiki](//github.com/uofw/uofw/wiki). It contains the necessary information to contribute to uOFW.
 
-Additional Information
-----------------------
+## License
 
-While you reverse-engineer parts of the PSP's kernel, you may will find yourself in a position
-where you would like to know more about how Operating Systems work in general. We suggest to check
-out the following webpage: http://wiki.osdev.org/Expanded_Main_Page
+This project is licensed under the MIT license. It includes code from the PSPSDK which is licensed under the BSD license. For more copyright and license information, see [COPYING](COPYING).
 
-If you are looking for more PSP-related resources, you should consider checking out the following links
-below:
+## Questions or need help?
 
-    - http://lan.st/archive/index.php/t-151.html (LAN.st - IdStorage)
-    - http://lan.st/archive/index.php/t-3013.html (LAN.st - General PSP questions)
-    - http://lan.st/archive/index.php/t-372.html (LAN.st - PSP Motherboard information)
-
-    - http://hitmen.c02.at/files/yapspd/psp_doc.pdf.tar.gz (Yet Another laystation Portable Documentation)
-    - http://pspdev1.com/wp-content/uploads/2007/03/moduletutorialv1.pdf (PSP Module Tutorial)
-   
-    - https://www.youtube.com/watch?v=INdUZk4NFIA (24C3 - TyRaNiD on early PSP hacking + Pandorra hack)
-
-Other websites are: 
-    - http://wololo.net
-    - http://ps2dev.org
-
-
-Contact
--------
-
-You can stay in touch with us and discuss project-related topics with us via the following ways:
-    - via IRC on the FreeNode server (irc.freenode.net) (join the channel #uofw)
-    - via e-mail
+You can chat with us the following ways:
+* via IRC on the [FreeNode server](http://webchat.freenode.net/) (irc.freenode.net) - join channel #uofw
+* via e-mail: uofwteam@gmail.com

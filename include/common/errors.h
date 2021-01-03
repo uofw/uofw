@@ -1,10 +1,108 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011 - 2016 The uOFW team
    See the file COPYING for copying permission.
-*/
+   */
 
 #ifndef COMMON_INCLUDED
-# error "Only include common_imp.h or common_header.h!"
+# error "Only include common_asm.h, common_imp.h or common_header.h!"
 #endif
+
+/**
+ * uofw/include/common/errors.h
+ *
+ * Defines error codes used by the system software. Throughout the kernel, error codes
+ * are organized as negative values expressed in hexadecimal notation.
+ */
+
+/**
+ * PSP error value format
+ *
+ *  31  30  29   28 27              16 15                    0
+ * +---+---+-------+------------------+-----------------------+
+ * | E | C | Rsrvd | F A C I L I T Y  |  E R R O R   C O D E  |
+ * +---+---+-------+------------------+-----------------------+
+ *
+ *  bit 31: Error
+ *      1 = Error
+ *      0 = Success
+ *
+ *  bit 30: Critical
+ *      1 = Critical error
+ *      0 = Normal error
+ *
+ *  bits 29-28: Reserved
+ *      always zero
+ *
+ *  bits 27-16: Facility
+ *      One of the below facility codes
+ *
+ *  bits 15-0: Error code
+ *      Define the concrete meaning of the error code. The meaning is depending
+ *      on the facility code, in other words, if for two error values the
+ *      error code fields are equal, but the facility differs, then the meaning of the
+ *      error value might differ as well.
+ *
+ */
+
+/*
+ * Definition of facility codes
+ */
+
+#define SCE_ERROR_FACILITY_NULL         0x000
+#define SCE_ERROR_FACILITY_ERRNO        0x001
+#define SCE_ERROR_FACILITY_KERNEL       0x002
+#define SCE_ERROR_FACILITY_REGISTRY     0x008
+#define SCE_ERROR_FACILITY_VSH          0x010
+#define SCE_ERROR_FACILITY_UTILITY      0x011
+#define SCE_ERROR_FACILITY_SYSFILE      0x012
+#define SCE_ERROR_FACILITY_MSAPP        0x013
+
+#define SCE_ERROR_FACILITY_UMD          0x021
+#define SCE_ERROR_FACILITY_MEMSTICK     0x022
+#define SCE_ERROR_FACILITY_FLASH        0x023
+#define SCE_ERROR_FACILITY_USB          0x024
+#define SCE_ERROR_FACILITY_SYSCON       0x025
+#define SCE_ERROR_FACILITY_AUDIO        0x026
+#define SCE_ERROR_FACILITY_LFLASH       0x027
+#define SCE_ERROR_FACILITY_LFATFS       0x028
+#define SCE_ERROR_FACILITY_SIRCS        0x029
+#define SCE_ERROR_FACILITY_IRDA         0x02A
+#define SCE_ERROR_FACILITY_POWER        0x02B
+#define SCE_ERROR_FACILITY_AUDIOROUTING 0x02C
+#define SCE_ERROR_FACILITY_MEDIASYNC    0x02D
+#define SCE_ERROR_FACILITY_PERIPH       0x03F
+
+#define SCE_ERROR_FACILITY_NETWORK      0x041
+#define SCE_ERROR_FACILITY_SAS          0x042
+#define SCE_ERROR_FACILITY_HTTP         0x043
+#define SCE_ERROR_FACILITY_WAVE         0x044
+#define SCE_ERROR_FACILITY_SND          0x045
+#define SCE_ERROR_FACILITY_FONT         0x046
+#define SCE_ERROR_FACILITY_P3DA         0x047
+#define SCE_ERROR_FACILITY_MAGICGATE    0x050
+#define SCE_ERROR_FACILITY_CPHIO        0x051
+#define SCE_ERROR_FACILITY_OPENPSID     0x052
+#define SCE_ERROR_FACILITY_DNAS         0x053
+#define SCE_ERROR_FACILITY_MTP          0x054
+#define SCE_ERROR_FACILITY_NP           0x055
+#define SCE_ERROR_FACILITY_GAMEUPDATE   0x056
+#define SCE_ERROR_FACILITY_FMAC         0x057
+#define SCE_ERROR_FACILITY_FACE         0x058
+#define SCE_ERROR_FACILITY_LIBRARY      0x05F
+
+#define SCE_ERROR_FACILITY_MPEG         0x061
+#define SCE_ERROR_FACILITY_AVC          0x062
+#define SCE_ERROR_FACILITY_ATRAC        0x063
+#define SCE_ERROR_FACILITY_ASF          0x064
+#define SCE_ERROR_FACILITY_JPEG         0x065
+#define SCE_ERROR_FACILITY_AVI          0x066
+#define SCE_ERROR_FACILITY_MP3          0x067
+#define SCE_ERROR_FACILITY_G729         0x068
+#define SCE_ERROR_FACILITY_AAC          0x069
+#define SCE_ERROR_FACILITY_CODEC        0x07F
+
+/*
+ * Error definitions belonging to SCE_ERROR_FACILITY_NULL
+ */
 
 #define SCE_ERROR_OK                                            0x0
 #define SCE_ERROR_NOT_SUPPORTED                                 0x80000004
@@ -36,6 +134,10 @@
 #define SCE_ERROR_NOSPC                                         0x8000021C
 #define SCE_ERROR_DFUNC                                         0x800002FF
 
+/*
+ * Error definitions belonging to SCE_ERROR_FACILITY_ERRNO
+ */
+
 #define SCE_ERROR_ERRNO_OPERATION_NOT_PERMITTED                 0x80010001
 #define SCE_ERROR_ERRNO_FILE_NOT_FOUND                          0x80010002
 #define SCE_ERROR_ERRNO_FILE_OPEN_ERROR                         0x80010003
@@ -58,33 +160,63 @@
 #define SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE                    0x8001001C
 #define SCE_ERROR_ERRNO_READ_ONLY                               0x8001001E
 #define SCE_ERROR_ERRNO_CLOSED                                  0x80010020
-#define SCE_ERROR_ERRNO_FILE_PATH_TOO_LONG                      0x80010024
+// #define SCE_ERROR_ERRNO_EIDRM                                   0x80010024 -- Note: Keep this undefined.
 #define SCE_ERROR_ERRNO_FILE_PROTOCOL                           0x80010047
 #define SCE_ERROR_ERRNO_DIRECTORY_IS_NOT_EMPTY                  0x8001005A
+#define SCE_ERROR_ERRNO_NAME_TOO_LONG                           0x8001005B /* File name or path name too long */
 #define SCE_ERROR_ERRNO_TOO_MANY_SYMBOLIC_LINKS                 0x8001005C
-#define SCE_ERROR_ERRNO_FILE_ADDR_IN_USE                        0x80010062
-#define SCE_ERROR_ERRNO_CONNECTION_ABORTED                      0x80010067
 #define SCE_ERROR_ERRNO_CONNECTION_RESET                        0x80010068
 #define SCE_ERROR_ERRNO_NO_FREE_BUF_SPACE                       0x80010069
-#define SCE_ERROR_ERRNO_FILE_TIMEOUT                            0x8001006E
+#define SCE_ERROR_ERRNO_ESHUTDOWN                               0x8001006E /* Error sending package after socket was shutdown */
+#define SCE_ERROR_ERRNO_EADDRINUSE                              0x80010070 /* The address is already in use. */
+#define SCE_ERROR_ERRNO_CONNECTION_ABORTED                      0x80010071 /* Connection was aborted by software. */
+#define SCE_ERROR_ERRNO_ETIMEDOUT                               0x80010074 /* Operation timed out. */
 #define SCE_ERROR_ERRNO_IN_PROGRESS                             0x80010077
 #define SCE_ERROR_ERRNO_ALREADY                                 0x80010078
-#define SCE_ERROR_ERRNO_NO_MEDIA                                0x8001007B
-#define SCE_ERROR_ERRNO_INVALID_MEDIUM                          0x8001007C
+#define SCE_ERROR_ERRNO_INVALID_PROTOCOL                        0x8001007B /* Protocol is not supported. */
+#define SCE_ERROR_ERRNO_INVALID_SOCKET_TYPE                     0x8001007C /* Unsupported socket type. */
 #define SCE_ERROR_ERRNO_ADDRESS_NOT_AVAILABLE                   0x8001007D
 #define SCE_ERROR_ERRNO_IS_ALREADY_CONNECTED                    0x8001007F    
 #define SCE_ERROR_ERRNO_NOT_CONNECTED                           0x80010080
 #define SCE_ERROR_ERRNO_FILE_QUOTA_EXCEEDED                     0x80010084
-#define SCE_ERROR_ERRNO_FUNCTION_NOT_SUPPORTED                  0x8001B000
+#define SCE_ERROR_ERRNO_NOT_SUPPORTED                           0x80010086
+#define SCE_ERROR_ERRNO_ENOMEDIUM                               0x80010087 /* No medium was found. */
+
+/*
+* Non-standard error code definitions
+*/
+
 #define SCE_ERROR_ERRNO_ADDR_OUT_OF_MAIN_MEM                    0x8001B001
 #define SCE_ERROR_ERRNO_INVALID_UNIT_NUM                        0x8001B002
 #define SCE_ERROR_ERRNO_INVALID_FILE_SIZE                       0x8001B003
 #define SCE_ERROR_ERRNO_INVALID_FLAG                            0x8001B004
 #define SCE_ERROR_ERRNO_NO_CACHE                                0x8001B005
+#define SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE                       0x8001B006
+
+/*
+ * Flash memory (UMD, MS) up to 1.5.0 mistakenly had returned these values.
+ */
+
+#define SCE_ERROR_ERRNO150_ENAMETOOLONG                         0x80010024
+#define SCE_ERROR_ERRNO150_EADDRINUSE                           0x80010062
+#define SCE_ERROR_ERRNO150_ECONNABORTED                         0x80010067
+#define SCE_ERROR_ERRNO150_ETIMEDOUT                            0x8001006E
+#define SCE_ERROR_ERRNO150_ENOMEDIUM                            0x8001007B
+#define SCE_ERROR_ERRNO150_EMEDIUMTYPE                          0x8001007C
+#define SCE_ERROR_ERRNO150_ENOTSUP                              0x8001B000
+
+/*
+ * Error definitions belonging to SCE_ERROR_FACILITY_KERNEL
+ */
 
 #define SCE_ERROR_KERNEL_ERROR                                  0x80020001
+#define SCE_ERROR_KERNEL_NOT_IMPLEMENTED                        0x80020002
 #define SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT        0x80020064
 #define SCE_ERROR_KERNEL_INTERRUPTS_ALREADY_DISABLED            0x80020066
+#define SCE_ERROR_KERNEL_NO_TIMER                               0x80020096
+#define SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID                       0x80020097
+#define SCE_ERROR_KERNEL_ILLEGAL_PRESCALE                       0x80020099
+#define SCE_ERROR_KERNEL_TIMER_BUSY                             0x8002009A
 #define SCE_ERROR_KERNEL_UNKNOWN_UID                            0x800200CB
 #define SCE_ERROR_KERNEL_UNMATCH_TYPE_UID                       0x800200CC
 #define SCE_ERROR_KERNEL_NOT_EXIST_ID                           0x800200CD
@@ -225,142 +357,9 @@
 #define SCE_ERROR_KERNEL_NOT_CACHE_ALIGNED                      0x8002044C
 #define SCE_ERROR_KERNEL_MAX_ERROR                              0x8002044D
 
-#define SCE_ERROR_UTILITY_INVALID_STATUS                        0x80110001
-#define SCE_ERROR_UTILITY_INVALID_PARAM_ADDR                    0x80110002
-#define SCE_ERROR_UTILITY_IS_UNKNOWN                            0x80110003
-#define SCE_ERROR_UTILITY_INVALID_PARAM_SIZE                    0x80110004
-#define SCE_ERROR_UTILITY_WRONG_TYPE                            0x80110005
-#define SCE_ERROR_UTILITY_MODULE_NOT_FOUND                      0x80110006
-#define SCE_ERROR_SAVEDATA_LOAD_NO_MEMSTICK                     0x80110301
-#define SCE_ERROR_SAVEDATA_LOAD_MEMSTICK_REMOVED                0x80110302
-#define SCE_ERROR_SAVEDATA_LOAD_ACCESS_ERROR                    0x80110305
-#define SCE_ERROR_SAVEDATA_LOAD_DATA_BROKEN                     0x80110306
-#define SCE_ERROR_SAVEDATA_LOAD_NO_DATA                         0x80110307
-#define SCE_ERROR_SAVEDATA_LOAD_BAD_PARAMS                      0x80110308
-#define SCE_ERROR_SAVEDATA_LOAD_NO_UMD                          0x80110309
-#define SCE_ERROR_SAVEDATA_LOAD_INTERNAL_ERROR                  0x80110309
-#define SCE_ERROR_SAVEDATA_RW_NO_MEMSTICK                       0x80110321
-#define SCE_ERROR_SAVEDATA_RW_MEMSTICK_REMOVED                  0x80110322
-#define SCE_ERROR_SAVEDATA_RW_MEMSTICK_FULL                     0x80110323
-#define SCE_ERROR_SAVEDATA_RW_MEMSTICK_PROTECTED                0x80110324
-#define SCE_ERROR_SAVEDATA_RW_ACCESS_ERROR                      0x80110325
-#define SCE_ERROR_SAVEDATA_RW_DATA_BROKEN                       0x80110326
-#define SCE_ERROR_SAVEDATA_RW_NO_DATA                           0x80110327
-#define SCE_ERROR_SAVEDATA_RW_BAD_PARAMS                        0x80110328
-#define SCE_ERROR_SAVEDATA_RW_FILE_NOT_FOUND                    0x80110329
-#define SCE_ERROR_SAVEDATA_RW_CAN_NOT_SUSPEND                   0x8011032A
-#define SCE_ERROR_SAVEDATA_RW_INTERNAL_ERROR                    0x8011032B
-#define SCE_ERROR_SAVEDATA_RW_BAD_STATUS                        0x8011032C
-#define SCE_ERROR_SAVEDATA_RW_SECURE_FILE_FULL                  0x8011032D
-#define SCE_ERROR_SAVEDATA_DELETE_NO_MEMSTICK                   0x80110341
-#define SCE_ERROR_SAVEDATA_DELETE_MEMSTICK_REMOVED              0x80110342
-#define SCE_ERROR_SAVEDATA_DELETE_MEMSTICK_PROTECTED            0x80110344
-#define SCE_ERROR_SAVEDATA_DELETE_ACCESS_ERROR                  0x80110345
-#define SCE_ERROR_SAVEDATA_DELETE_DATA_BROKEN                   0x80110346
-#define SCE_ERROR_SAVEDATA_DELETE_NO_DATA                       0x80110347
-#define SCE_ERROR_SAVEDATA_DELETE_BAD_PARAMS                    0x80110348
-#define SCE_ERROR_SAVEDATA_DELETE_INTERNAL_ERROR                0x8011034B
-#define SCE_ERROR_SAVEDATA_SAVE_NO_MEMSTICK                     0x80110381
-#define SCE_ERROR_SAVEDATA_SAVE_MEMSTICK_REMOVED                0x80110382
-#define SCE_ERROR_SAVEDATA_SAVE_NO_SPACE                        0x80110383
-#define SCE_ERROR_SAVEDATA_SAVE_MEMSTICK_PROTECTED              0x80110384
-#define SCE_ERROR_SAVEDATA_SAVE_ACCESS_ERROR                    0x80110385
-#define SCE_ERROR_SAVEDATA_SAVE_BAD_PARAMS                      0x80110388
-#define SCE_ERROR_SAVEDATA_SAVE_NO_UMD                          0x80110389
-#define SCE_ERROR_SAVEDATA_SAVE_WRONG_UMD                       0x8011038A
-#define SCE_ERROR_SAVEDATA_SAVE_INTERNAL_ERROR                  0x8011038B
-#define SCE_ERROR_SAVEDATA_SIZES_NO_MEMSTICK                    0x801103C1
-#define SCE_ERROR_SAVEDATA_SIZES_MEMSTICK_REMOVED               0x801103C2
-#define SCE_ERROR_SAVEDATA_SIZES_ACCESS_ERROR                   0x801103C5
-#define SCE_ERROR_SAVEDATA_SIZES_DATA_BROKEN                    0x801103C6
-#define SCE_ERROR_SAVEDATA_SIZES_NO_DATA                        0x801103C7
-#define SCE_ERROR_SAVEDATA_SIZES_BAD_PARAMS                     0x801103C8
-#define SCE_ERROR_SAVEDATA_SIZES_INTERNAL_ERROR                 0x801103CB
-#define SCE_ERROR_NETPARAM_BAD_NETCONF                          0x80110601
-#define SCE_ERROR_NETPARAM_BAD_PARAM                            0x80110604
-#define SCE_ERROR_NET_MODULE_BAD_ID                             0x80110801
-#define SCE_ERROR_NET_MODULE_ALREADY_LOADED                     0x80110802
-#define SCE_ERROR_NET_MODULE_NOT_LOADED                         0x80110803
-#define SCE_ERROR_AV_MODULE_BAD_ID                              0x80110901
-#define SCE_ERROR_AV_MODULE_ALREADY_LOADED                      0x80110902
-#define SCE_ERROR_AV_MODULE_NOT_LOADED                          0x80110903
-#define SCE_ERROR_MODULE_BAD_ID                                 0x80111101
-#define SCE_ERROR_MODULE_ALREADY_LOADED                         0x80111102
-#define SCE_ERROR_MODULE_NOT_LOADED                             0x80111103
-#define SCE_ERROR_SCREENSHOT_CONT_MODE_NOT_INIT                 0x80111229
-#define SCE_ERROR_UMD_NOT_READY                                 0x80210001
-#define SCE_ERROR_UMD_LBA_OUT_OF_BOUNDS                         0x80210002
-#define SCE_ERROR_UMD_NO_DISC                                   0x80210003
-#define SCE_ERROR_MEMSTICK_DEVCTL_BAD_PARAMS                    0x80220081
-#define SCE_ERROR_MEMSTICK_DEVCTL_TOO_MANY_CALLBACKS            0x80220082
-#define SCE_ERROR_AUDIO_NOT_INITIALIZED                         0x80260001
-#define SCE_ERROR_AUDIO_OUTPUT_BUSY                             0x80260002
-#define SCE_ERROR_AUDIO_INVALID_CH                              0x80260003
-#define SCE_ERROR_AUDIO_PRIV_REQUIRED                           0x80260004
-#define SCE_ERROR_AUDIO_NOT_FOUND                               0x80260005
-#define SCE_ERROR_AUDIO_INVALID_SIZE                            0x80260006
-#define SCE_ERROR_AUDIO_INVALID_FORMAT                          0x80260007
-#define SCE_ERROR_AUDIO_NOT_RESERVED                            0x80260008
-#define SCE_ERROR_AUDIO_NOT_OUTPUT                              0x80260009
-#define SCE_ERROR_AUDIO_INVALID_FREQUENCY                       0x8026000A
-#define SCE_ERROR_AUDIO_INVALID_VOLUME                          0x8026000B
-#define SCE_ERROR_AUDIO_INPUT_BUSY                              0x80260010
-#define SCE_ERROR_POWER_VMEM_IN_USE                             0x802B0200
-#define SCE_ERROR_NET_RESOLVER_BAD_ID                           0x80410408
-#define SCE_ERROR_NET_RESOLVER_ALREADY_STOPPED                  0x8041040A
-#define SCE_ERROR_NET_RESOLVER_INVALID_HOST                     0x80410414
-#define SCE_ERROR_WLAN_BAD_PARAMS                               0x80410D13
-#define SCE_ERROR_SAS_INVALID_VOICE                             0x80420010
-#define SCE_ERROR_SAS_INVALID_ADSR_CURVE_MODE                   0x80420013
-#define SCE_ERROR_SAS_INVALID_PARAMETER                         0x80420014
-#define SCE_ERROR_SAS_VOICE_PAUSED                              0x80420016
-#define SCE_ERROR_SAS_BUSY                                      0x80420030
-#define SCE_ERROR_SAS_NOT_INIT                                  0x80420100
-#define SCE_ERROR_HTTP_NOT_INIT                                 0x80431001
-#define SCE_ERROR_HTTP_ALREADY_INIT                             0x80431020
-#define SCE_ERROR_HTTP_NO_MEMORY                                0x80431077
-#define SCE_ERROR_HTTP_SYSTEM_COOKIE_NOT_LOADED                 0x80431078
-#define SCE_ERROR_HTTP_INVALID_PARAMETER                        0x804311FE
-#define SCE_ERROR_SSL_NOT_INIT                                  0x80435001
-#define SCE_ERROR_SSL_ALREADY_INIT                              0x80435020
-#define SCE_ERROR_SSL_OUT_OF_MEMORY                             0x80435022
-#define SCE_ERROR_HTTPS_CERT_ERROR                              0x80435060
-#define SCE_ERROR_HTTPS_HANDSHAKE_ERROR                         0x80435061
-#define SCE_ERROR_HTTPS_IO_ERROR                                0x80435062
-#define SCE_ERROR_HTTPS_INTERNAL_ERROR                          0x80435063
-#define SCE_ERROR_HTTPS_PROXY_ERROR                             0x80435064
-#define SCE_ERROR_SSL_INVALID_PARAMETER                         0x804351FE
-#define SCE_ERROR_WAVE_NOT_INIT                                 0x80440001
-#define SCE_ERROR_WAVE_FAILED_EXIT                              0x80440002
-#define SCE_ERROR_WAVE_BAD_VOL                                  0x8044000A
-#define SCE_ERROR_WAVE_INVALID_CHANNEL                          0x80440010
-#define SCE_ERROR_WAVE_INVALID_SAMPLE_COUNT                     0x80440011
-#define SCE_ERROR_FONT_INVALID_LIBID                            0x80460002
-#define SCE_ERROR_FONT_INVALID_PARAMETER                        0x80460003
-#define SCE_ERROR_FONT_TOO_MANY_OPEN_FONTS                      0x80460009
-#define SCE_ERROR_MPEG_BAD_VERSION                              0x80610002
-#define SCE_ERROR_MPEG_NO_MEMORY                                0x80610022
-#define SCE_ERROR_MPEG_INVALID_ADDR                             0x80610103
-#define SCE_ERROR_MPEG_INVALID_VALUE                            0x806101FE
-#define SCE_ERROR_PSMF_NOT_INITIALIZED                          0x80615001
-#define SCE_ERROR_PSMF_BAD_VERSION                              0x80615002
-#define SCE_ERROR_PSMF_NOT_FOUND                                0x80615025
-#define SCE_ERROR_PSMF_INVALID_ID                               0x80615100
-#define SCE_ERROR_PSMF_INVALID_VALUE                            0x806151FE
-#define SCE_ERROR_PSMF_INVALID_TIMESTAMP                        0x80615500
-#define SCE_ERROR_PSMF_INVALID_PSMF                             0x80615501
-#define SCE_ERROR_PSMFPLAYER_NOT_INITIALIZED                    0x80616001
-#define SCE_ERROR_PSMFPLAYER_NO_MORE_DATA                       0x8061600C
-#define SCE_ERROR_MPEG_NO_DATA                                  0x80618001
-#define SCE_ERROR_AVC_VIDEO_FATAL                               0x80628002
-#define SCE_ERROR_ATRAC_NO_ID                                   0x80630003
-#define SCE_ERROR_ATRAC_INVALID_CODEC                           0x80630004
-#define SCE_ERROR_ATRAC_BAD_ID                                  0x80630005
-#define SCE_ERROR_ATRAC_ALL_DATA_LOADED                         0x80630009
-#define SCE_ERROR_ATRAC_NO_DATA                                 0x80630010
-#define SCE_ERROR_ATRAC_SECOND_BUFFER_NEEDED                    0x80630012
-#define SCE_ERROR_ATRAC_SECOND_BUFFER_NOT_NEEDED                0x80630022
-#define SCE_ERROR_ATRAC_BUFFER_IS_EMPTY                         0x80630023
-#define SCE_ERROR_ATRAC_ALL_DATA_DECODED                        0x80630024
-#define SCE_ERROR_CODEC_AUDIO_FATAL                             0x807F00FC
+/*
+ * Error-similar definitions.
+ */
+#define SCE_KERNEL_VALUE_UNITIALIZED                            (-1)
+#define SCE_KERNEL_PTR_UNITIALIZED                              ((void *)SCE_KERNEL_VALUE_UNITIALIZED)
 

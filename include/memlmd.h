@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -10,10 +10,9 @@
 #define	MEMLMD_H
 
 #include "common_header.h"
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
+    
+/** The internal name of the MEMLMD module. */
+#define MEMLMD_MODULE_NAME          "memlmd"
 
 /**	
  * Decrypts a module. Asynced mode.
@@ -25,7 +24,7 @@ extern "C" {
  * 
  * @return 0 on success.
  */
-s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 *newsize);
+s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 * newSize);
 
 /**	
  * Checks the param against a magic value (unknown usage)
@@ -66,7 +65,7 @@ s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr);
  * 
  * @return 0 on success.
  */
-s32 memlmd_CF03556B(u8 *prx, u32 size, u32 *newsize);
+s32 memlmd_CF03556B(u8 *prx, u32 size, u32 * newSize);
 
 /**	
  * Unsign a module. Asynced mode.
@@ -86,10 +85,19 @@ s32 memlmd_6192F715(u8 *addr, u32 size);
  */
 s32 memlmd_2F3D7E2D(void);
 
-
-#ifdef	__cplusplus
-}
-#endif
+/**
+* Enables KIRK, then performs a command in asynchronised mode (refreshes
+* CPU D cache for input and output buffer), and disables KIRK.
+*
+* @param outbuff Output buffer.
+* @param outsize Output size.
+* @param inbuff Input buffer.
+* @param insize Input size.
+* @param cmd Number of KIRK command to perform.
+*
+* @return 0 on success.
+*/
+int sceUtilsBufferCopyWithRange(u8* outbuff, int outsize, u8* inbuff, int insize, int cmd);
 
 #endif	/* MEMLMD_H */
 

@@ -6,16 +6,16 @@
 
 s32 sub_00000208(s32 dlId  __attribute__((unused)), void *stall  __attribute__((unused)))
 {
-	/* The syscall instruction is patched at runtime by ge.prx */
-	asm __volatile__ (
-		".set noat\n"
-    	".set noreorder\n"
-		"jr          $ra\n"
-    	"syscall     0x0\n"
-	);
+    /* The syscall instruction is patched at runtime by ge.prx */
+    asm __volatile__ (
+        ".set noat\n"
+        ".set noreorder\n"
+        "jr          $ra\n"
+        "syscall     0x0\n"
+    );
 
-	/* Never reached */
-	return 0;
+    /* Never reached */
+    return 0;
 }
 
 // sceGe_lazy_31129B95

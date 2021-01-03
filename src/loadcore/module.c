@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -29,14 +29,12 @@
  */
 
 #include <sysmem_utils_kernel.h>
+#include <modulemgr_nids.h>
 #include "clibUtils.h"
 #include "module.h"
 
 #define UID_MODULE_DO_INITIALIZE                (0xD310D2D9)
 #define UID_MODULE_DO_DELETE                    (0x87089863)
-
-#define MODULE_VERSION_MINOR                    (0)
-#define MODULE_VERSION_MAJOR                    (1)
 
 #define MODULE_TEMPORARY_UID_NAME               "SceModuleTmp"
 #define MODULE_UID_TYPE_NAME                    "SceModule"
@@ -46,18 +44,18 @@
 #define MODULE_SYSTEM_BLOCK_NAME                "sceSystemBlock"
 #define MODULE_SYSTEM_MODULE_NAME               "sceSystemModule"
 
-#define HASH_DATA_64_BIT_ELEMENTS               (6)
+#define NUM_MD5_HASHES							(6)
 
-#define MD5_DIGEST_UNSUPPORTED_DEVKIT_VERSION   (0x506FFFF)
+#define BLACKLIST_UNSUPPORTED_DEVKIT_VERSION    (0x506FFFF)
 
 /* ifhandle.prx' module name prior to SDK version 3.70. */
 #define MODULE_IFHANDLE_NAME_OLD                "sceNetIfhandle_Service"
 /* ifhandle.prx' module name since SDK version 3.70. */
 #define MODULE_IFHANDLE_NAME_NEW                "sceNetInterface_Service"
 
-static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                    va_list ap);
-static SceUID module_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                va_list ap);
 static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion);
 static void updateUIDName(SceModule *mod);
@@ -69,13 +67,23 @@ static void updateUIDName(SceModule *mod);
  * and the last function called in the delete process of a
  * module.
  */
-static SceSysmemUIDLookupFunc ModuleFuncs[] = { 
+static SceSysmemUidLookupFunc ModuleFuncs[] = { 
     { .id = UID_MODULE_DO_INITIALIZE, .func = module_do_initialize },
     { .id = UID_MODULE_DO_DELETE,     .func = module_do_delete },
     { .id = 0,                        .func = NULL }
 };
 
-static SceSysmemUIDControlBlock *g_ModuleType; //0x00008404
+//0x00008038
+const u32 g_hashData[NUM_MD5_HASHES * sizeof(u32)] = {
+	0x2CDEEB73, 0xF7E529B9, 0xF85FB599, 0xA8B6B2D3,
+	0xA0811E0E, 0xF91FE045, 0x51339FF7, 0xBF9F32B2,
+	0x89F0A05E, 0xF413FE28, 0x1F24A87E, 0x7C1ADFE2,
+	0x3D3203F8, 0x4C6E9246, 0x4DCA0BCB, 0x71A9322A,
+	0x7EAEEDE2, 0xC7BACA41, 0xC38D13D2, 0xE54A1434,
+	0x0FC5364D, 0xF2EA99AA, 0x7A418AA1, 0xFEC29EA1,
+};
+
+static SceSysmemUidCB *g_ModuleType; //0x00008404
 
 //Subroutine LoadCoreForKernel_2C44F793 - Address 0x00006844
 /*
@@ -88,7 +96,7 @@ SceModule *sceKernelCreateModule(void)
     s32 status;
     s32 intrState;    
     SceModule *mod;
-    SceSysmemUIDControlBlock *cb = NULL;
+    SceSysmemUidCB *cb = NULL;
     
     intrState = loadCoreCpuSuspendIntr();
     
@@ -103,22 +111,22 @@ SceModule *sceKernelCreateModule(void)
         return NULL;
     }
     
-    mod = (SceModule *)((u32 *)cb + g_ModuleType->size);
+    mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     if (mod == NULL) { //0x00006898
         loadCoreCpuResumeIntr(intrState);
         return NULL;
     }
     //0x000068D0 - 0x0000689C
-    mod->modId = cb->UID; //0x000068A0
-    mod->moduleStartThreadPriority = LOADCORE_ERROR;
-	mod->moduleStartThreadStacksize = LOADCORE_ERROR;
-	mod->moduleStartThreadAttr = LOADCORE_ERROR;
-	mod->moduleStopThreadPriority = LOADCORE_ERROR;
-	mod->moduleStopThreadStacksize = LOADCORE_ERROR;
-	mod->moduleStopThreadAttr = LOADCORE_ERROR;
-	mod->moduleRebootBeforeThreadPriority = LOADCORE_ERROR;
-	mod->moduleRebootBeforeThreadStacksize = LOADCORE_ERROR;
-	mod->moduleRebootBeforeThreadAttr = LOADCORE_ERROR;   
+    mod->modId = cb->uid; //0x000068A0
+    mod->moduleStartThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStartThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStartThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleStopThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
+    mod->moduleRebootBeforeThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;   
     mod->countRegVal = pspCop0StateGet(COP0_STATE_COUNT);
     
     loadCoreCpuResumeIntr(intrState); //0x000068D4
@@ -174,8 +182,8 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
     if (status < SCE_ERROR_OK) //0x000069B8
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     
-    mod->attribute = (execFileInfo->moduleInfo->modAttribute & ~SCE_PRIVILEGED_MODULES) | execFileInfo->modInfoAttribute; //0x000069CC & 0x000069E0
-    if ((mod->attribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_KERNEL)
+    mod->attribute = (execFileInfo->moduleInfo->modAttribute & ~SCE_MODULE_PRIVILEGE_LEVELS) | execFileInfo->modInfoAttribute; //0x000069CC & 0x000069E0
+    if ((mod->attribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL)
         mod->status &= ~SCE_MODULE_USER_MODULE; //0x00006BB4
     else
         mod->status |= SCE_MODULE_USER_MODULE; //0x000069E8
@@ -187,21 +195,23 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
       strcmp(execFileInfo->moduleInfo->modName, MODULE_IFHANDLE_NAME_NEW) == 0) //0x00006A0C & 0x00006A20
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     
+	/* Compute MD5-hash of the name of the module to be loaded and check it against a MD5-hash name blacklist. */
     sceKernelUtilsMd5Digest((u8 *)execFileInfo->moduleInfo->modName, strlen(execFileInfo->moduleInfo->modName), digest); //0x00006A70
-    
-    //0x00006A78 - 0x00006ACC
-    for (i = 0; i < HASH_DATA_64_BIT_ELEMENTS; i++) {        
-         //0x00006A98 - 0x00006AB8
-         for (j = 0; j < sizeof digest; j++) {
-              if (digest[j] != *(u8 *)((u64 *)g_hashData + i)) //0x00006AA8
-                  break;
-         }
-         if (j == 16) { //0x00006AC0
-             if ((modDevKitVersion & 0xFFFFFF00) <= MD5_DIGEST_UNSUPPORTED_DEVKIT_VERSION) //0x00006BA4
-                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-             break;
-         }
-    }
+	//0x00006A78 - 0x00006ACC
+	for (i = 0; i < NUM_MD5_HASHES; i++) {
+		u8 *curMD5Hash = (u8 *)&g_hashData[i * (16 / sizeof g_hashData[0])];
+		//0x00006A98 - 0x00006AB8
+		for (j = 0; j < sizeof digest; j++) {
+			if (digest[j] != curMD5Hash[j]) //0x00006AA8
+				break;
+		}
+		/* MD5-hash of module name matches a hash entry in the module blacklist. */
+		if (j == 16) { //0x00006AC0
+			if ((modDevKitVersion & 0xFFFFFF00) <= BLACKLIST_UNSUPPORTED_DEVKIT_VERSION) //0x00006BA4
+				return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+			break;
+		}
+	}
     /* copy over the moduleInfo data of the provided execFileInfo. */
     strncpy(mod->modName, execFileInfo->moduleInfo->modName, SCE_MODULE_NAME_LEN); //0x00006ADC
     mod->terminal = 0; //0x00006AE4
@@ -217,9 +227,9 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
     mod->nSegments = execFileInfo->numSegments; //0x00006B48
     
     for (i = 0; i < SCE_KERNEL_MAX_MODULE_SEGMENT; i++) {
-         mod->segmentAddr[i] = execFileInfo->segmentAddr[i]; //0x00006B60
-         mod->segmentSize[i] = execFileInfo->segmentSize[i]; //0x00006B6C
-         mod->segmentAlign[i] = execFileInfo->segmentAlign[i]; //0x00006B78
+    	mod->segmentAddr[i] = execFileInfo->segmentAddr[i]; //0x00006B60
+        mod->segmentSize[i] = execFileInfo->segmentSize[i]; //0x00006B6C
+        mod->segmentAlign[i] = execFileInfo->segmentAlign[i]; //0x00006B78
     }
     updateUIDName(mod); //0x00006B7C
     
@@ -234,7 +244,8 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
 s32 sceKernelReleaseModule(SceModule *mod)
 {
     u32 intrState;
-    SceModule *curMod = NULL;
+    SceModule *curMod;
+    void *prevMod;
    
     if (mod == NULL) 
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
@@ -242,17 +253,19 @@ s32 sceKernelReleaseModule(SceModule *mod)
     intrState = loadCoreCpuSuspendIntr(); //0x00006BDC
     
     //0x00006BF0 - 0x00006C0C
-    for (curMod = g_loadCore.registeredMods; curMod; curMod = curMod->next) {
-         if (curMod == mod) { //0x00006C00        
-             curMod = curMod->next; //0x00006C34
+    prevMod = &g_loadCore.registeredMods;
+    for (curMod = g_loadCore.registeredMods; curMod; curMod = ((SceModule *)prevMod)->next) {
+        if (curMod == mod) { //0x00006C00        
+            ((SceModule *)prevMod)->next = curMod->next; //0x00006C34
              
-             if (curMod == NULL) 
-                 g_loadCore.lastRegMod = curMod;
+            if (curMod->next == NULL) 
+                g_loadCore.lastRegMod = prevMod;
                 
-             loadCoreCpuResumeIntr(intrState);
-             g_loadCore.regModCount--;
-             return SCE_ERROR_OK;
-        }       
+            loadCoreCpuResumeIntr(intrState);
+            g_loadCore.regModCount--;
+            return SCE_ERROR_OK;
+        }
+        prevMod = curMod; //0x00006C10
     }
     loadCoreCpuResumeIntr(intrState);
     return SCE_ERROR_KERNEL_ERROR;
@@ -290,7 +303,7 @@ s32 sceKernelGetModuleIdListForKernel(SceUID *modIdList, u32 size, u32 *modCount
  * their unique UID list.
  * 
  */
-SceSysmemUIDControlBlock *ModuleServiceInit(void)
+s32 ModuleServiceInit(void)
 {
     return sceKernelCreateUIDtype(MODULE_UID_TYPE_NAME, sizeof(SceModule), ModuleFuncs, 0, &g_ModuleType);
 }
@@ -301,7 +314,7 @@ SceModule *sceKernelGetModuleFromUID(SceUID uid)
     u32 intrState; 
     u32 intrState2;   
     SceModule *mod = NULL;
-    SceSysmemUIDControlBlock *block = NULL;
+    SceSysmemUidCB *block = NULL;
     
     intrState = loadCoreCpuSuspendIntr(); //0x00006D80
     
@@ -315,7 +328,7 @@ SceModule *sceKernelGetModuleFromUID(SceUID uid)
         loadCoreCpuResumeIntr(intrState2); //0x00006E14
     }
     else {
-        mod = (SceModule *)((u32 *)block + g_ModuleType->size);
+        mod = UID_CB_TO_DATA(block, g_ModuleType, SceModule);
     }
     
     loadCoreCpuResumeIntr(intrState); //0x00006DB4
@@ -469,7 +482,7 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
      * array with the UIDs of the loaded modules.
      */
     blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, MODULE_LIST_MEM_BLOCK_NAME, 
-                                            SCE_KERNEL_SMEM_High, g_loadCore.regModCount << 2, NULL); //0x000071CC
+                                            SCE_KERNEL_SMEM_High, g_loadCore.regModCount << 2, 0); //0x000071CC
     if (blockId > 0) { //0x000071CC
         modIdList = sceKernelGetBlockHeadAddr(blockId);
         for (i = 0, curMod = g_loadCore.registeredMods; curMod; curMod = curMod->next, i++)
@@ -484,38 +497,38 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
  * Register the created UIDControlBlock for a new module in the
  * linked-list of the UID type of "module" objects?
  */
-static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                    va_list ap)
 {
     SceModule *mod;
     
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap); //0x00007234
     
-    mod = (SceModule *)((u32 *)cb + g_ModuleType->size);
+    mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     
-    mod->modId = cb->UID; //0x0000725C
-    mod->entryAddr = LOADCORE_ERROR; //0x00007260
+    mod->modId = cb->uid; //0x0000725C
+    mod->entryAddr = SCE_KERNEL_VALUE_UNITIALIZED; //0x00007260
     mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
     mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
     mod->terminal = 0; //0x0000726C
-    mod->moduleStart = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007270
-    mod->moduleStop = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007274
-    mod->moduleBootstart = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007278
-    mod->moduleRebootBefore = (SceKernelThreadEntry)LOADCORE_ERROR; //0x0000727C
-    mod->moduleRebootPhase = (SceKernelThreadEntry)LOADCORE_ERROR; //0x00007280
+    mod->moduleStart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007270
+    mod->moduleStop = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007274
+    mod->moduleBootstart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007278
+    mod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000727C
+    mod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007280
     mod->textSize = 0; //0x00007284
     mod->dataSize = 0; //0x00007288
     mod->bssSize = 0; //0x0000728C
     mod->segmentChecksum = 0; //0x00007290
-    mod->unk220 = 0; //0x00007294
+    mod->textSegmentChecksum = 0; //0x00007294
     mod->unk224 = 0; //0x00007298
     mod->status = 0; //0x000072A4
     mod->next = NULL; //0x000072A8
     mod->attribute = 0; //0x000072AC
-    mod->entTop = (void *)LOADCORE_ERROR; //0x000072B0
-    mod->stubTop = (void *)LOADCORE_ERROR; //0x000072B4
+    mod->entTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B0
+    mod->stubTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B4
     
-    return cb->UID;  
+    return cb->uid;
 }
 
 //sub_000072C0
@@ -523,11 +536,11 @@ static SceUID module_do_initialize(SceSysmemUIDControlBlock *cb, SceSysmemUIDCon
  * Unlink a UIDControlBlock belonging to an unloaded module
  * from the linked-list of the UID type of "module" objects?
  */
-static SceUID module_do_delete(SceSysmemUIDControlBlock *cb, SceSysmemUIDControlBlock *uidWithFunc, s32 funcId, 
+static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap);
-    return cb->UID;
+    return cb->uid;
 }
 
 //sub_000072E8
@@ -573,9 +586,9 @@ static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
  */
 static void updateUIDName(SceModule *mod)
 {
-    if ((mod->status & 0x2000) == 0 && mod->memId > 0) { //0x000073D0 & 0x000073DC
+    if ((mod->status & 0x2000) == 0 && mod->moduleBlockId > 0) { //0x000073D0 & 0x000073DC
         if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0) {
-            sceKernelRenameUID(mod->memId, (const char *)mod->modName);
+            sceKernelRenameUID(mod->moduleBlockId, (const char *)mod->modName);
             sceKernelRenameUID(mod->modId, (const char *)mod->modName);
         } 
         else {
@@ -583,7 +596,7 @@ static void updateUIDName(SceModule *mod)
              * The module uses KIRK libraries and thus is classified as a system
              * module.
              */
-            sceKernelRenameUID(mod->memId, MODULE_SYSTEM_BLOCK_NAME);
+            sceKernelRenameUID(mod->moduleBlockId, MODULE_SYSTEM_BLOCK_NAME);
             sceKernelRenameUID(mod->modId, MODULE_SYSTEM_MODULE_NAME);
         }
     }

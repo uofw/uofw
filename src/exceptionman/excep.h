@@ -3,7 +3,7 @@
 */
 
 void sub_0000();
-void syscallHandler();
+extern u32 syscallHandler;
 void sub_0120();
 void sub_0130();
 void sub_0140();

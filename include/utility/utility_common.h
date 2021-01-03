@@ -1,0 +1,22 @@
+/* Copyright (C) 2011 - 2016 The uOFW team
+   See the file COPYING for copying permission.
+*/
+
+/**
+ * uofw/include/utility/utility_common.h
+ *
+ */
+
+#ifndef UTILITY_COMMON_H
+#define	UTILITY_COMMON_H
+
+#define SCE_UTILITY_COMMON_ERROR_INVALID_STATUS                 0x80110001
+#define SCE_UTILITY_COMMON_ERROR_INVALID_ADDRESS                0x80110002
+#define SCE_UTILITY_COMMON_ERROR_UNKNOWN_UTILITY_TYPE           0x80110003
+#define SCE_UTILITY_COMMON_ERROR_INVALID_PARAM_SIZE             0x80110004
+#define SCE_UTILITY_COMMON_ERROR_DIALOG_TYPE_MISMATCH           0x80110005
+#define SCE_UTILITY_COMMON_ERROR_CANT_OPEN_MODULE               0x80110006
+#define SCE_UTILITY_COMMON_ERROR_STATUS_WAITING			        0x80110007
+
+#endif	/* UTILITY_COMMON_H */
+

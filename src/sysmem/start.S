@@ -1,4 +1,4 @@
-#include "../common/common.S"
+#include "../include/common_asm.h"
 
 loc_00000000:
     move $t9, $ra
@@ -16,12 +16,12 @@ loc_00000000:
     sw $sp, 44($a0)
     sw $fp, 48($a0)
     sw $ra, 52($a0)
-    mfc0 $v0, Status
+    mfc0 $v0, COP0_STATE_STATUS
     lui $t1, 0x2000
     or $t1, $v0, $t1
-    mtc0 $t1, Status
-    nop 
-    nop 
+    mtc0 $t1, COP0_STATE_STATUS
+    nop
+    nop
     cfc1 $t0, $0
     cfc1 $t1, $31
     sw $t0, 56($a0)
@@ -58,9 +58,9 @@ loc_00000000:
     swc1 $29, 180($a0)
     swc1 $30, 184($a0)
     swc1 $31, 188($a0)
-    mtc0 $v0, Status
-    nop 
-    nop 
+    mtc0 $v0, COP0_STATE_STATUS
+    nop
+    nop
     addiu $t8, $a0, 192
     move $t0, $zr
     move $t1, $zr
@@ -71,15 +71,15 @@ loc_00000000:
     move $t6, $zr
     bal sub_00000304
     move $t7, $zr
-    mfc0 $t0, BadVaddr
-    mfc0 $t1, Count
+    mfc0 $t0, COP0_STATE_BAD_VADDR
+    mfc0 $t1, COP0_STATE_COUNT
     move $t2, $zr
-    mfc0 $t3, Compare
-    mfc0 $t4, Status
-    mfc0 $t5, Cause
-    mfc0 $t6, EPC
+    mfc0 $t3, COP0_STATE_COMPARE
+    mfc0 $t4, COP0_STATE_STATUS
+    mfc0 $t5, COP0_STATE_CAUSE
+    mfc0 $t6, COP0_STATE_EPC
     bal sub_00000304
-    mfc0 $t7, PrID
+    mfc0 $t7, COP0_STATE_PRID
     move $t0, $zr
     move $t1, $zr
     move $t2, $zr
@@ -90,13 +90,13 @@ loc_00000000:
     bal sub_00000304
     move $t7, $zr
     mfc0 $t0, $24
-    mfc0 $t1, EBase
+    mfc0 $t1, COP0_STATE_EBASE
     move $t2, $zr
     move $t3, $zr
-    mfc0 $t5, TagLo
-    mfc0 $t6, TagHi
+    mfc0 $t5, COP0_STATE_TAG_LO
+    mfc0 $t6, COP0_STATE_TAG_HI
     bal sub_00000304
-    mfc0 $t7, ErrorPC
+    mfc0 $t7, COP0_STATE_ERROR_PC
     cfc0 $t0, $0
     cfc0 $t1, $1
     cfc0 $t2, $2
@@ -133,16 +133,16 @@ loc_00000000:
     cfc0 $t6, $30
     bal sub_00000304
     cfc0 $t7, $31
-    mfc0 $v0, Status
+    mfc0 $v0, COP0_STATE_STATUS
     lui $t1, 0x4000
     or $t1, $v0, $t1
-    mtc0 $t1, Status
-    nop 
-    nop 
+    mtc0 $t1, COP0_STATE_STATUS
+    nop
+    nop
     mfvc $t0, VFPU_PFXS
     mfvc $t1, VFPU_PFXT
     mfvc $t2, VFPU_PFXD
-    mfvc $t3, VFPU_CC 
+    mfvc $t3, VFPU_CC
     mfvc $t4, VFPU_INF4
     move $t5, $zr
     move $t6, $zr
@@ -189,9 +189,9 @@ loc_00000000:
     sv.q       C710, 464($t8)
     sv.q       C720, 480($t8)
     sv.q       C730, 496($t8)
-    mtc0 $v0, Status
-    nop 
-    nop 
+    mtc0 $v0, COP0_STATE_STATUS
+    nop
+    nop
     jr $t9
     move $v0, $zr
 
@@ -227,12 +227,12 @@ loc_0000032C:
     lw $sp, 44($a0)
     lw $fp, 48($a0)
     lw $t9, 52($a0)
-    mfc0 $t0, Status
+    mfc0 $t0, COP0_STATE_STATUS
     lui $t1, 0x2000
     or $t1, $t0, $t1
-    mtc0 $t1, Status
-    nop 
-    nop 
+    mtc0 $t1, COP0_STATE_STATUS
+    nop
+    nop
     lw $t0, 60($a0)
     ctc1 $t0, $31
     lwc1 $0, 64($a0)
@@ -269,22 +269,22 @@ loc_0000032C:
     lwc1 $31, 188($a0)
     addiu $t8, $a0, 192
     bal sub_00000604
-    nop 
+    nop
     bal sub_00000604
-    nop 
-    mtc0 $t4, Status
-    mtc0 $t5, Cause
-    mtc0 $t6, EPC
+    nop
+    mtc0 $t4, COP0_STATE_STATUS
+    mtc0 $t5, COP0_STATE_CAUSE
+    mtc0 $t6, COP0_STATE_EPC
     bal sub_00000604
-    nop 
+    nop
     bal sub_00000604
-    nop 
-    mtc0 $t1, EBase
-    mtc0 $t4, TagLo
-    mtc0 $t5, TagHi
-    mtc0 $t6, ErrorPC
+    nop
+    mtc0 $t1, COP0_STATE_EBASE
+    mtc0 $t4, COP0_STATE_TAG_LO
+    mtc0 $t5, COP0_STATE_TAG_HI
+    mtc0 $t6, COP0_STATE_ERROR_PC
     bal sub_00000604
-    nop 
+    nop
     ctc0 $t0, $0
     ctc0 $t1, $1
     ctc0 $t2, $2
@@ -320,18 +320,18 @@ loc_0000032C:
     ctc0 $t5, $29
     ctc0 $t6, $30
     ctc0 $t7, $31
-    mfc0 $v0, Status
+    mfc0 $v0, COP0_STATE_STATUS
     lui $t1, 0x4000
     or $t1, $v0, $t1
-    mtc0 $t1, Status
-    nop 
-    nop 
+    mtc0 $t1, COP0_STATE_STATUS
+    nop
+    nop
     bal sub_00000604
-    nop 
+    nop
     mtvc $t0, VFPU_PFXS
     mtvc $t1, VFPU_PFXT
     mtvc $t2, VFPU_PFXD
-    mtvc $t3, VFPU_CC 
+    mtvc $t3, VFPU_CC
     bal sub_00000604
     mtvc $t4, VFPU_INF4
     mtvc $t0, VFPU_RCX0
@@ -374,9 +374,9 @@ loc_0000032C:
     lv.q       C710, 464($t8)
     lv.q       C720, 480($t8)
     lv.q       C730, 496($t8)
-    mtc0 $v0, Status
-    nop 
-    nop 
+    mtc0 $v0, COP0_STATE_STATUS
+    nop
+    nop
     move $ra, $t9
     move $t0, $zr
     move $t1, $zr
@@ -403,37 +403,41 @@ sub_00000604:
     jr $ra
     addiu $t8, $t8, 32
 
+    .globl sceSuspendForKernel_67B59042
 sceSuspendForKernel_67B59042:
-    lui $a0, %hi(g_13BE0)
-    addiu $a0, $a0, %lo(g_13BE0)
+    lui $a0, %hi(g_suspendCtx)
+    addiu $a0, $a0, %lo(g_suspendCtx)
     j loc_00000000
-    nop 
+    nop
 
+    .globl sceSuspendForKernel_B2C9640B
 sceSuspendForKernel_B2C9640B:
     move $a1, $a0
-    lui $a0, %hi(g_13BE0)
-    addiu $a0, $a0, %lo(g_13BE0)
+    lui $a0, %hi(g_suspendCtx)
+    addiu $a0, $a0, %lo(g_suspendCtx)
     j loc_0000032C
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_3FD3D324
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheWritebackAll
 sceKernelDcacheWritebackAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000714
     move $at, $ra
 
+    .globl UtilsForUser_3FD3D324
 UtilsForUser_3FD3D324:
     mfic $v0, $0
     mtic $zr, $0
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 2048
     ext $t0, $t0, 6, 3
     sllv $t1, $t1, $t0
@@ -442,8 +446,8 @@ UtilsForUser_3FD3D324:
 
 loc_000006A0:
     cache 0x10, 0($t0)
-    mfc0 $t2, TagLo
-    mfc0 $t3, TagHi
+    mfc0 $t2, COP0_STATE_TAG_LO
+    mfc0 $t3, COP0_STATE_TAG_HI
     move $t4, $t2
     xor $t5, $t3, $t6
     ext $t5, $t5, 0, 19
@@ -469,34 +473,36 @@ loc_000006F0:
     addiu $t0, $t0, 64
     mtic $zr, $0
     bne $t0, $t1, loc_000006A0
-    nop 
+    nop
     mtic $v0, $0
     move $v0, $zr
     jr $ra
-    sync 
+    sync
 
 loc_00000714:
     jal UtilsForUser_3FD3D324
-    nop 
+    nop
     j UtilsForUser_0939D45C
     move $ra, $at
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_AF3766BB
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheWritebackInvalidateAll
 sceKernelDcacheWritebackInvalidateAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000784
     move $at, $ra
 
+    .globl UtilsForUser_AF3766BB
 UtilsForUser_AF3766BB:
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 2048
     ext $t0, $t0, 6, 3
     sllv $t1, $t1, $t0
@@ -509,37 +515,39 @@ loc_00000768:
     cache 0x14, -64($t0)
     move $v0, $zr
     jr $ra
-    sync 
+    sync
 
 loc_00000784:
     jal UtilsForUser_AF3766BB
-    nop 
+    nop
     j UtilsForUser_485E430A
     move $ra, $at
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForKernel_AA9AF5CF
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheInvalidateAll
 sceKernelDcacheInvalidateAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000804
     move $at, $ra
 
+    .globl UtilsForKernel_AA9AF5CF
 UtilsForKernel_AA9AF5CF:
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 4096
     ext $t0, $t0, 6, 3
     sllv $t1, $t1, $t0
     mfic $v0, $0
     mtic $zr, $0
-    mtc0 $zr, TagLo
-    mtc0 $zr, TagHi
+    mtc0 $zr, COP0_STATE_TAG_LO
+    mtc0 $zr, COP0_STATE_TAG_HI
     move $t0, $zr
 
 loc_000007E8:
@@ -553,24 +561,26 @@ loc_000007E8:
 
 loc_00000804:
     jal UtilsForKernel_AA9AF5CF
-    nop 
+    nop
     j UtilsForKernel_AF0C0173
     move $ra, $at
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_004D4DEE
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheWritebackRange
 sceKernelDcacheWritebackRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_000008F0
     move $at, $ra
 
+    .globl UtilsForUser_004D4DEE
 UtilsForUser_004D4DEE:
     srl $v0, $a1, 16
     bnez $v0, loc_0000087C
@@ -586,7 +596,7 @@ loc_0000085C:
 
 loc_00000868:
     jr $ra
-    sync 
+    sync
 
 loc_00000870:
     lui $v0, 0x8000
@@ -608,8 +618,8 @@ loc_000008A0:
     mtic $zr, $0
     addiu $v0, $v0, 64
     cache 0x10, 8128($v0)
-    mfc0 $t2, TagLo
-    mfc0 $t3, TagHi
+    mfc0 $t2, COP0_STATE_TAG_LO
+    mfc0 $t3, COP0_STATE_TAG_HI
     mtic $v1, $0
     ins $t0, $t2, 13, 19
     subu $t4, $t0, $a0
@@ -628,7 +638,7 @@ loc_000008E0:
     bnez $v0, loc_000008A0
     move $t0, $v0
     jr $ra
-    sync 
+    sync
 
 loc_000008F0:
     move $t6, $a0
@@ -643,17 +653,19 @@ loc_000008F0:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_1B0592A3
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheWritebackInvalidateRange
 sceKernelDcacheWritebackInvalidateRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_000009EC
     move $at, $ra
 
+    .globl UtilsForUser_1B0592A3
 UtilsForUser_1B0592A3:
     srl $v0, $a1, 16
     bnez $v0, loc_00000978
@@ -669,7 +681,7 @@ loc_00000958:
 
 loc_00000964:
     jr $ra
-    sync 
+    sync
 
 loc_0000096C:
     lui $v0, 0x8000
@@ -691,8 +703,8 @@ loc_0000099C:
     mtic $zr, $0
     addiu $v0, $v0, 64
     cache 0x10, 8128($v0)
-    mfc0 $t2, TagLo
-    mfc0 $t3, TagHi
+    mfc0 $t2, COP0_STATE_TAG_LO
+    mfc0 $t3, COP0_STATE_TAG_HI
     mtic $v1, $0
     ins $t0, $t2, 13, 19
     subu $t4, $t0, $a0
@@ -711,7 +723,7 @@ loc_000009DC:
     bnez $v0, loc_0000099C
     move $t0, $v0
     jr $ra
-    sync 
+    sync
 
 loc_000009EC:
     move $t6, $a0
@@ -726,17 +738,19 @@ loc_000009EC:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForKernel_157A383A
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForKernel_BFA98062:
+    .globl sceKernelDcacheInvalidateRange
+sceKernelDcacheInvalidateRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000ADC
     move $at, $ra
 
+    .globl UtilsForKernel_157A383A
 UtilsForKernel_157A383A:
     beqz $a1, loc_00000A68
     or $t0, $a0, $a1
@@ -773,8 +787,8 @@ loc_00000A8C:
     mtic $zr, $0
     move $t0, $v0
     cache 0x10, 0($v0)
-    mfc0 $t2, TagLo
-    mfc0 $t3, TagHi
+    mfc0 $t2, COP0_STATE_TAG_LO
+    mfc0 $t3, COP0_STATE_TAG_HI
     mtic $v1, $0
     ins $t0, $t2, 13, 19
     subu $t4, $t0, $a0
@@ -808,8 +822,9 @@ loc_00000ADC:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForKernel_99134C3F:
-    mfc0 $t0, Config
+    .globl sceKernelDcachePurgeRange
+sceKernelDcachePurgeRange:
+    mfc0 $t0, COP0_STATE_CONFIG
     beqz $a1, loc_00000BA0
     li $t1, 4096
     ext $t0, $t0, 6, 3
@@ -828,8 +843,8 @@ loc_00000B40:
     srl $t0, $a0, 13
     cache 0x10, 0($a0)
     sll $t0, $t0, 13
-    mfc0 $t1, TagLo
-    mfc0 $t2, TagHi
+    mfc0 $t1, COP0_STATE_TAG_LO
+    mfc0 $t2, COP0_STATE_TAG_HI
     ext $t3, $t1, 20, 1
     ext $t4, $t2, 20, 1
     sll $t5, $t1, 13
@@ -840,14 +855,14 @@ loc_00000B40:
     movz $t4, $zr, $t6
     ext $t1, $t3, 20, 1
     ext $t2, $t4, 20, 1
-    mtc0 $t1, TagLo
-    mtc0 $t2, TagHi
+    mtc0 $t1, COP0_STATE_TAG_LO
+    mtc0 $t2, COP0_STATE_TAG_HI
     cache 0x11, 0($a0)
     mtic $v0, $0
     addiu $a0, $a0, 64
     mtic $zr, $0
     bne $a0, $a1, loc_00000B40
-    nop 
+    nop
     mtic $v0, $0
 
 loc_00000BA0:
@@ -867,7 +882,7 @@ loc_00000BB4:
 
 loc_00000BC4:
     cache 0x10, 0($t0)
-    mfc0 $t2, TagLo
+    mfc0 $t2, COP0_STATE_TAG_LO
     ext $t3, $t2, 19, 2
     xori $t3, $t3, 0x3
     bnez $t3, loc_00000BF8
@@ -878,10 +893,10 @@ loc_00000BC4:
     or $t4, $t4, $t5
     bltz $t4, loc_00000BF8
     ins $t2, $zr, 20, 1
-    mtc0 $t2, TagLo
+    mtc0 $t2, COP0_STATE_TAG_LO
 
 loc_00000BF8:
-    mfc0 $t2, TagHi
+    mfc0 $t2, COP0_STATE_TAG_HI
     ext $t3, $t2, 19, 2
     xori $t3, $t3, 0x3
     beqz $t3, loc_00000C28
@@ -892,7 +907,7 @@ loc_00000BF8:
     or $t4, $t4, $t5
     bltz $t4, loc_00000C28
     ins $t2, $zr, 20, 1
-    mtc0 $t2, TagHi
+    mtc0 $t2, COP0_STATE_TAG_HI
 
 loc_00000C28:
     cache 0x11, 0($t0)
@@ -900,34 +915,36 @@ loc_00000C28:
     addiu $t0, $t0, 64
     mtic $zr, $0
     bne $t0, $t1, loc_00000BC4
-    nop 
+    nop
     mtic $v0, $0
     move $v0, $zr
     jr $ra
-    sync 
+    sync
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_740DF7F0
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheProbe
 sceKernelDcacheProbe:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000CD0
     move $at, $ra
 
+    .globl UtilsForUser_740DF7F0
 UtilsForUser_740DF7F0:
     mfic $v0, $0
     mtic $zr, $0
     srl $t0, $a0, 13
     cache 0x10, 0($a0)
     sll $t0, $t0, 13
-    mfc0 $t1, TagLo
-    mfc0 $t2, TagHi
+    mfc0 $t1, COP0_STATE_TAG_LO
+    mfc0 $t2, COP0_STATE_TAG_HI
     mtic $v0, $0
     ext $t3, $t1, 19, 2
     ext $t4, $t2, 19, 2
@@ -944,7 +961,7 @@ UtilsForUser_740DF7F0:
 
 loc_00000CD0:
     jal UtilsForUser_740DF7F0
-    nop 
+    nop
     jal UtilsForKernel_EC86074D
     move $v1, $v0
     move $ra, $at
@@ -954,50 +971,54 @@ loc_00000CD0:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheReadTagForUser
 sceKernelDcacheReadTagForUser:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x10, 0($a0)
-    mfc0 $v0, TagLo
-    mfc0 $v1, TagHi
+    mfc0 $v0, COP0_STATE_TAG_LO
+    mfc0 $v1, COP0_STATE_TAG_HI
     ext $at, $v0, 18, 1
     movn $v0, $zr, $at
     ext $at, $v1, 18, 1
     movn $v1, $zr, $at
     cache 0x12, 0($a0)
-    mfc0 $at, TagLo
+    mfc0 $at, COP0_STATE_TAG_LO
     mtic $t0, $0
     jr $ra
-    nop 
+    nop
 
+    .globl sceKernelDcacheReadTag
 sceKernelDcacheReadTag:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x10, 0($a0)
-    mfc0 $v0, TagLo
-    mfc0 $v1, TagHi
+    mfc0 $v0, COP0_STATE_TAG_LO
+    mfc0 $v1, COP0_STATE_TAG_HI
     cache 0x12, 0($a0)
-    mfc0 $at, TagLo
+    mfc0 $at, COP0_STATE_TAG_LO
     mtic $t0, $0
     jr $ra
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_DBBE9A46
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelDcacheProbeRange
 sceKernelDcacheProbeRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000E50
     move $at, $ra
 
+    .globl UtilsForUser_DBBE9A46
 UtilsForUser_DBBE9A46:
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     beqz $a1, loc_00000E40
     move $v0, $zr
     li $t1, 4096
@@ -1014,7 +1035,7 @@ UtilsForUser_DBBE9A46:
 
 loc_00000DC0:
     cache 0x10, 0($t0)
-    mfc0 $t2, TagLo
+    mfc0 $t2, COP0_STATE_TAG_LO
     ext $t3, $t2, 19, 1
     beqz $t3, loc_00000DF4
     sll $t3, $t2, 13
@@ -1025,10 +1046,10 @@ loc_00000DC0:
     bltz $t4, loc_00000E3C
     ext $t3, $t2, 20, 1
     bnez $t3, loc_00000E48
-    nop 
+    nop
 
 loc_00000DF4:
-    mfc0 $t2, TagHi
+    mfc0 $t2, COP0_STATE_TAG_HI
     ext $t3, $t2, 19, 1
     beqz $t3, loc_00000E24
     sll $t3, $t2, 13
@@ -1039,14 +1060,14 @@ loc_00000DF4:
     bltz $t4, loc_00000E3C
     ext $t3, $t2, 20, 1
     bnez $t3, loc_00000E48
-    nop 
+    nop
 
 loc_00000E24:
     mtic $v1, $0
     addiu $t0, $t0, 64
     mtic $zr, $0
     bne $t0, $t1, loc_00000DC0
-    nop 
+    nop
     li $v0, 1
 
 loc_00000E3C:
@@ -1054,7 +1075,7 @@ loc_00000E3C:
 
 loc_00000E40:
     jr $ra
-    nop 
+    nop
 
 loc_00000E48:
     b loc_00000E3C
@@ -1075,26 +1096,28 @@ loc_00000E50:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_7333E539
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl sceKernelIcacheInvalidateAll
 sceKernelIcacheInvalidateAll:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000EE8
     move $at, $ra
 
+    .globl UtilsForUser_7333E539
 UtilsForUser_7333E539:
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 4096
     ext $t0, $t0, 9, 3
     sllv $t1, $t1, $t0
     mfic $v0, $0
     mtic $zr, $0
-    mtc0 $zr, TagLo
-    mtc0 $zr, TagHi
+    mtc0 $zr, COP0_STATE_TAG_LO
+    mtc0 $zr, COP0_STATE_TAG_HI
     move $t0, $zr
 
 loc_00000ECC:
@@ -1108,26 +1131,28 @@ loc_00000ECC:
 
 loc_00000EE8:
     jal UtilsForUser_485E430A
-    nop 
+    nop
     j UtilsForUser_7333E539
     move $ra, $at
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForKernel_43C9A8DB
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-UtilsForKernel_C2DF770E:
+    .globl sceKernelIcacheInvalidateRange
+sceKernelIcacheInvalidateRange:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00000FF8
     move $at, $ra
 
+    .globl UtilsForKernel_43C9A8DB
 UtilsForKernel_43C9A8DB:
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     beqz $a1, loc_00000F64
     li $t1, 4096
     ext $t0, $t0, 9, 3
@@ -1157,7 +1182,7 @@ loc_00000F6C:
 
 loc_00000F7C:
     cache 0x0, 0($t0)
-    mfc0 $t2, TagLo
+    mfc0 $t2, COP0_STATE_TAG_LO
     ext $t3, $t2, 20, 1
     beqz $t3, loc_00000FAC
     sll $t2, $t2, 13
@@ -1166,11 +1191,11 @@ loc_00000F7C:
     subu $t5, $t2, $a0
     or $t4, $t4, $t5
     bltz $t4, loc_00000FAC
-    nop 
+    nop
     cache 0x8, 0($t2)
 
 loc_00000FAC:
-    mfc0 $t2, TagHi
+    mfc0 $t2, COP0_STATE_TAG_HI
     ext $t3, $t2, 20, 1
     beqz $t3, loc_00000FD8
     sll $t2, $t2, 13
@@ -1179,7 +1204,7 @@ loc_00000FAC:
     subu $t5, $t2, $a0
     or $t4, $t4, $t5
     bltz $t4, loc_00000FD8
-    nop 
+    nop
     cache 0x8, 0($t2)
 
 loc_00000FD8:
@@ -1187,7 +1212,7 @@ loc_00000FD8:
     addiu $t0, $t0, 64
     mtic $zr, $0
     bne $t0, $t1, loc_00000F7C
-    nop 
+    nop
     mtic $v0, $0
     jr $ra
     move $v0, $zr
@@ -1204,28 +1229,30 @@ loc_00000FF8:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     j UtilsForUser_F0155BCA
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
     lui $t0, 0xA000
     or $ra, $t0, $ra
 
+    .globl sceKernelIcacheProbe
 sceKernelIcacheProbe:
     mfc0 $t8, $24
     andi $t8, $t8, 0x1
     bnez $t8, loc_00001098
     move $at, $ra
 
+    .globl UtilsForUser_F0155BCA
 UtilsForUser_F0155BCA:
     mfic $v0, $0
     mtic $zr, $0
-    nop 
+    nop
     cache 0x0, 0($a0)
     move $t5, $a0
     ins $t5, $zr, 0, 13
-    mfc0 $t1, TagLo
-    mfc0 $t2, TagHi
+    mfc0 $t1, COP0_STATE_TAG_LO
+    mfc0 $t2, COP0_STATE_TAG_HI
     mtic $v0, $0
     ext $t3, $t1, 19, 1
     ext $t4, $t2, 19, 1
@@ -1240,7 +1267,7 @@ UtilsForUser_F0155BCA:
 
 loc_00001098:
     jal UtilsForUser_F0155BCA
-    nop 
+    nop
     jal UtilsForKernel_EC86074D
     move $v1, $v0
     move $ra, $at
@@ -1250,41 +1277,44 @@ loc_00001098:
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
+    .globl UtilsForUser_5C7F2B1A
 UtilsForUser_5C7F2B1A:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x0, 0($a0)
-    mfc0 $v0, TagLo
-    mfc0 $v1, TagHi
+    mfc0 $v0, COP0_STATE_TAG_LO
+    mfc0 $v1, COP0_STATE_TAG_HI
     ext $at, $v0, 18, 1
     movn $v0, $zr, $at
     ext $at, $v1, 18, 1
     movn $v1, $zr, $at
     cache 0x2, 0($a0)
-    mfc0 $at, TagLo
+    mfc0 $at, COP0_STATE_TAG_LO
     mtic $t0, $0
     jr $ra
-    nop 
+    nop
 
+    .globl UtilsForKernel_5C7F2B1A
 UtilsForKernel_5C7F2B1A:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x0, 0($a0)
-    mfc0 $v0, TagLo
-    mfc0 $v1, TagHi
+    mfc0 $v0, COP0_STATE_TAG_LO
+    mfc0 $v1, COP0_STATE_TAG_HI
     cache 0x2, 0($a0)
-    mfc0 $at, TagLo
+    mfc0 $at, COP0_STATE_TAG_LO
     mtic $t0, $0
     jr $ra
-    nop 
+    nop
 
 sub_1120:
     move $ra, $t9
-    eret 
+    eret
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForUser_0939D45C
 UtilsForUser_0939D45C:
     lui $t0, 0xA7F0
     lui $t1, 0xA000
@@ -1325,7 +1355,7 @@ loc_000011A0:
     sw $t4, 0($t0)
     addiu $t5, $t5, -1
     bnez $t5, loc_000011A0
-    nop 
+    nop
     lw $zr, 0($t0)
     jr $ra
     move $v0, $zr
@@ -1333,6 +1363,7 @@ loc_000011A0:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForUser_485E430A
 UtilsForUser_485E430A:
     lui $t0, 0xA7F0
     lui $t1, 0xB000
@@ -1373,7 +1404,7 @@ loc_00001240:
     sw $t4, 0($t0)
     addiu $t5, $t5, -1
     bnez $t5, loc_00001240
-    nop 
+    nop
     lw $zr, 0($t0)
     jr $ra
     move $v0, $zr
@@ -1381,6 +1412,7 @@ loc_00001240:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForKernel_AF0C0173
 UtilsForKernel_AF0C0173:
     lui $t0, 0xA7F0
     lui $t1, 0x5000
@@ -1400,7 +1432,7 @@ loc_0000129C:
     sw $t4, 0($t0)
     addiu $t5, $t5, -1
     bnez $t5, loc_0000129C
-    nop 
+    nop
     lw $zr, 0($t0)
     jr $ra
     move $v0, $zr
@@ -1408,33 +1440,36 @@ loc_0000129C:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForUser_601E43E6
 UtilsForUser_601E43E6:
     lui $v0, 0x2000
     lui $v1, 0xA000
     j loc_00001334
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForUser_7C5DC253
 UtilsForUser_7C5DC253:
     lui $v0, 0x3000
     lui $v1, 0xB000
     j loc_00001334
-    nop 
+    nop
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForKernel_F192F2EC
 UtilsForKernel_F192F2EC:
     or $t0, $a0, $a1
     andi $t0, $t0, 0x3F
     bnez $t0, loc_00001328
-    nop 
+    nop
     lui $v0, 0x1000
     lui $v1, 0x9000
     j loc_00001334
-    nop 
+    nop
 
 loc_00001328:
     lui $v0, 0x8002
@@ -1482,7 +1517,7 @@ loc_000013B4:
     beqz $a1, loc_00001454
     sltiu $t2, $a1, 2048
     beqz $t2, loc_000013FC
-    nop 
+    nop
 
 loc_000013C8:
     li $t2, 64
@@ -1537,6 +1572,7 @@ loc_00001458:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForKernel_EC86074D
 UtilsForKernel_EC86074D:
     li $t0, 19532
     lui $t1, 0x4C
@@ -1580,6 +1616,7 @@ loc_000014E0:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
+    .globl UtilsForKernel_2F80288E
 UtilsForKernel_2F80288E:
     li $t0, 19532
     lui $t1, 0x4C
@@ -1623,17 +1660,19 @@ loc_00001550:
 
 loc_0000158C:
     jr $ra
-    nop 
+    nop
 
 sub_1594:
     move $ra, $t9
-    eret 
+    eret
 
+    .globl UtilsForKernel_A6B0A6B8
 UtilsForKernel_A6B0A6B8:
     mfc0 $v0, $24
     jr $ra
-    nop 
+    nop
 
+    .globl UtilsForKernel_39FFB756
 UtilsForKernel_39FFB756:
     lui $t0, 0xBFC0
     ori $t0, $t0, 0xF00
@@ -1648,16 +1687,16 @@ loc_000015BC:
     sw $t3, 0($t0)
     bnez $t2, loc_000015BC
     addiu $t0, $t0, 4
-    sync 
+    sync
     lui $t0, 0xBFC0
     ori $t0, $t0, 0xF00
     jr $t0
-    nop 
+    nop
 
 sub_15E8:
     mfic $t6, $0
     mtic $zr, $0
-    mfc0 $t0, Config
+    mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 2048
     ext $t0, $t0, 6, 3
     sllv $t1, $t1, $t0
@@ -1668,12 +1707,12 @@ loc_00001604:
     cache 0x14, 0($t0)
     addiu $t0, $t0, 64
     bne $t0, $t1, loc_00001604
-    nop 
+    nop
     mfc0 $t0, $24
-    sync 
+    sync
     andi $t0, $t0, 0x1
     beqz $t0, loc_0000168C
-    nop 
+    nop
     lui $t0, 0xA7F0
     lui $t1, 0x7000
     ori $t1, $t1, 0x3F
@@ -1692,23 +1731,23 @@ loc_00001654:
     sw $t4, 0($t0)
     addiu $t5, $t5, -1
     bnez $t5, loc_00001654
-    nop 
+    nop
     lui $t1, 0xF000
     sw $t1, 0($t0)
     lw $zr, 0($t0)
     lui $t1, 0xFFFF
     ori $t1, $t1, 0xFFFF
     sw $t1, 32($t0)
-    sync 
+    sync
 
 loc_0000168C:
     mtc0 $zr, $24
-    nop 
-    nop 
+    nop
+    nop
     mtc0 $a0, $24
-    nop 
-    nop 
-    nop 
+    nop
+    nop
+    nop
     move $v0, $zr
     mfc0 $t0, $24
     xor $t0, $t0, $a0
@@ -1717,19 +1756,20 @@ loc_0000168C:
     li $v0, -1
     andi $t0, $a0, 0x1
     beqz $t0, loc_000016DC
-    nop 
+    nop
     lui $t0, 0xA7F0
     lui $t1, 0xF000
     sw $t1, 0($t0)
     lw $zr, 0($t0)
 
 loc_000016DC:
-    sync 
+    sync
     jr $ra
     mtic $t6, $0
 
+    .globl UtilsForKernel_66463BEC
 UtilsForKernel_66463BEC:
-    sync 
+    sync
     lui $v0, 0xBD00
     andi $a0, $a0, 0x5
     sw $a0, 4($v0)
@@ -1738,11 +1778,13 @@ loc_000016F8:
     lw $v1, 4($v0)
     and $v1, $v1, $a0
     bnez $v1, loc_000016F8
-    nop 
+    nop
     jr $ra
     move $v0, $zr
 
-sub_00001710:
+# 0x1710
+    .globl md5BlockUpdate
+md5BlockUpdate:
     move $at, $ra
     lw $t0, 0($a0)
     lw $t1, 4($a0)
@@ -1751,8 +1793,8 @@ sub_00001710:
     lui $t7, %hi(sub_17B0)
     addiu $t7, $t7, %lo(sub_17B0)
     li $t8, 0
-    lui $t9, %hi(g_13298)
-    addiu $t9, $t9, %lo(g_13298)
+    lui $t9, %hi(g_md5Tbl)
+    addiu $t9, $t9, %lo(g_md5Tbl)
     li $a2, 0
     li $a3, 4
     lui $t6, 0xA0F
@@ -1781,10 +1823,10 @@ loc_00001748:
     addiu $t8, $t8, 1
     andi $v0, $t8, 0xF
     bnez $v0, loc_00001748
-    nop 
+    nop
     addiu $t7, $t7, 16
     jr $t7
-    nop 
+    nop
 
 sub_17B0:
     xor $v0, $t2, $t3
@@ -1810,7 +1852,7 @@ sub_17B0:
     xor $v0, $t1, $t2
     jr $ra
     xor $v0, $v0, $t3
-    nop 
+    nop
     lui $t6, 0xB11
     ori $t6, $t6, 0x161A
     li $a2, 0
@@ -1836,7 +1878,9 @@ sub_17B0:
     jr $ra
     sw $t7, 12($a0)
 
-sub_00001870:
+# 0x1870
+    .globl sha1BlockUpdate
+sha1BlockUpdate:
     addiu $sp, $sp, -64
     sw $ra, 0($sp)
     sw $s0, 4($sp)
@@ -1866,7 +1910,7 @@ sub_00001870:
     lw $s5, 24($sp)
     jr $ra
     addiu $sp, $sp, 64
-    nop 
+    nop
 
 sub_000018E8:
     move $t0, $s0
@@ -1916,9 +1960,9 @@ loc_00001958:
     ori $t8, $t8, 0xC1D6
     j loc_00001A00
     addiu $v0, $v0, 4
-    nop 
-    nop 
-    nop 
+    nop
+    nop
+    nop
 
 loc_000019A0:
     and $t6, $t1, $t2
@@ -1937,8 +1981,8 @@ loc_000019C0:
     ori $t8, $t8, 0xEBA1
     j loc_00001A00
     addiu $v0, $v0, 4
-    nop 
-    nop 
+    nop
+    nop
 
 loc_000019E0:
     and $t6, $t1, $t2
@@ -1968,7 +2012,9 @@ loc_00001A00:
     jr $ra
     addu $s4, $t4, $s4
 
-sub_00001A40:
+# 1A40
+    .globl sha1Digest
+sha1Digest:
     addiu $sp, $sp, -256
     sw $s0, 0($sp)
     sw $s1, 4($sp)
@@ -1981,8 +2027,8 @@ sub_00001A40:
     move $s5, $a0
     sll $s6, $a1, 3
     addiu $a0, $sp, 128
-    lui $t0, %hi(g_13398)
-    addiu $t0, $t0, %lo(g_13398)
+    lui $t0, %hi(g_sha1Tbl)
+    addiu $t0, $t0, %lo(g_sha1Tbl)
     lw $s0, 0($t0)
     andi $t2, $s5, 0xF
     lw $s1, 4($t0)
@@ -1992,11 +2038,11 @@ sub_00001A40:
     lw $s3, 12($t0)
     lw $s4, 16($t0)
     bnez $t2, loc_00001B28
-    nop 
+    nop
     beqz $a1, loc_00001AE8
-    nop 
-    nop 
-    nop 
+    nop
+    nop
+    nop
 
 loc_00001AB0:
     li $t0, 16
@@ -2012,9 +2058,9 @@ loc_00001AB8:
     addiu $t1, $t1, 4
     addiu $a1, $a1, -64
     jal sub_000018E8
-    nop 
+    nop
     bnez $a1, loc_00001AB0
-    nop 
+    nop
 
 loc_00001AE8:
     li $v0, 16
@@ -2033,13 +2079,13 @@ loc_00001AF0:
     jal sub_000018E8
     sw $t0, 0($a0)
     j loc_00001C88
-    nop 
-    nop 
+    nop
+    nop
 
 loc_00001B28:
     sltiu $v0, $a1, 64
     bnez $v0, loc_00001B70
-    nop 
+    nop
     li $t0, 16
     move $t1, $a0
 
@@ -2053,10 +2099,10 @@ loc_00001B3C:
     bnez $t0, loc_00001B3C
     addiu $t1, $t1, 4
     jal sub_000018E8
-    nop 
+    nop
     j loc_00001B28
     addiu $a1, $a1, -64
-    nop 
+    nop
 
 loc_00001B70:
     li $v0, 16
@@ -2074,9 +2120,9 @@ loc_00001B78:
     move $t0, $s5
     move $t2, $a1
     bnez $v0, loc_00001C20
-    nop 
+    nop
     move $t1, $a0
-    nop 
+    nop
 
 loc_00001BB0:
     lbu $t3, 0($t0)
@@ -2098,7 +2144,7 @@ loc_00001BD8:
     bnez $v0, loc_00001BD8
     addiu $t0, $t0, 4
     jal sub_000018E8
-    nop 
+    nop
     addiu $a1, $a1, -64
     li $v0, 16
     move $t0, $a0
@@ -2146,7 +2192,7 @@ loc_00001C68:
 
 loc_00001C80:
     jal sub_000018E8
-    nop 
+    nop
 
 loc_00001C88:
     wsbw $s0, $s0
@@ -2176,7 +2222,9 @@ loc_00001C88:
     jr $ra
     addiu $sp, $sp, 256
 
-sub_00001CF0:
+# 1CF0
+    .globl mt19937UInt
+mt19937UInt:
     lw $a1, 0($a0)
     addiu $a3, $a0, 4
     sltiu $t4, $a1, 624
@@ -2229,77 +2277,83 @@ loc_00001DA0:
     lui $t4, 0x8000
     b loc_00001D28
     sw $zr, 0($a0)
-    nop 
-    nop 
-    nop 
-    nop 
+    nop
+    nop
+    nop
+    nop
 
+    .globl sceKernelGetGPI
 sceKernelGetGPI:
-    lui $v0, %hi(g_13B40)
-    lw $v0, %lo(g_13B40)($v0)
+    lui $v0, %hi(g_GetGPI)
+    lw $v0, %lo(g_GetGPI)($v0)
     beqz $v0, loc_00001DD8
-    lui $a0, %hi(g_13B44)
+    lui $a0, %hi(g_GPIMask)
     jr $v0
-    lw $a0, %lo(g_13B44)($a0)
+    lw $a0, %lo(g_GPIMask)($a0)
 
 loc_00001DD8:
     jr $ra
     move $v0, $zr
 
+    .globl sceKernelSetGPO
 sceKernelSetGPO:
-    lui $v0, %hi(g_13B48)
-    lw $v0, %lo(g_13B48)($v0)
+    lui $v0, %hi(g_SetGPO)
+    lw $v0, %lo(g_SetGPO)($v0)
     beqz $v0, loc_00001DD8
-    lui $v1, %hi(g_13B4C)
-    lw $v1, %lo(g_13B4C)($v1)
+    lui $v1, %hi(g_GPOMask)
+    lw $v1, %lo(g_GPOMask)($v1)
     nor $a1, $zr, $a0
     and $a1, $a1, $v1
     jr $v0
     and $a0, $a0, $v1
 
+    .globl sceKernelGetGPO
 sceKernelGetGPO:
-    lui $v0, %hi(g_13B48)
-    lw $v0, %lo(g_13B48)($v0)
+    lui $v0, %hi(g_SetGPO)
+    lw $v0, %lo(g_SetGPO)($v0)
     beqz $v0, loc_00001DD8
     move $a0, $zr
     jr $v0
     move $a1, $zr
 
+    .globl sceKernelSetGPIMask
 sceKernelSetGPIMask:
-    lui $t0, %hi(g_13B44)
+    lui $t0, %hi(g_GPIMask)
     nor $t1, $zr, $a0
-    lw $v0, %lo(g_13B44)($t0)
+    lw $v0, %lo(g_GPIMask)($t0)
     and $v0, $v0, $t1
     or $v0, $v0, $a1
     jr $ra
-    sw $v0, %lo(g_13B44)($t0)
+    sw $v0, %lo(g_GPIMask)($t0)
 
+    .globl sceKernelSetGPOMask
 sceKernelSetGPOMask:
-    lui $t0, %hi(g_13B4C)
+    lui $t0, %hi(g_GPOMask)
     nor $t1, $zr, $a0
-    lw $v0, %lo(g_13B4C)($t0)
+    lw $v0, %lo(g_GPOMask)($t0)
     and $v0, $v0, $t1
     or $v0, $v0, $a1
     jr $ra
-    sw $v0, %lo(g_13B4C)($t0)
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
-    nop 
+    sw $v0, %lo(g_GPOMask)($t0)
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
+    .globl sceKernelSetPTRIG
 sceKernelSetPTRIG:
-    lui $v0, %hi(g_13B84)
-    lw $v0, %lo(g_13B84)($v0)
+    lui $v0, %hi(g_SetPTRIG)
+    lw $v0, %lo(g_SetPTRIG)($v0)
     beqz $v0, loc_00001E9C
-    lui $v1, %hi(g_13B88)
-    lw $v1, %lo(g_13B88)($v1)
+    lui $v1, %hi(g_PTRIGMask)
+    lw $v1, %lo(g_PTRIGMask)($v1)
     jr $v0
     and $a0, $a0, $v1
 
@@ -2307,36 +2361,41 @@ loc_00001E9C:
     jr $ra
     move $v0, $zr
 
+    .globl sceKernelGetPTRIG
 sceKernelGetPTRIG:
-    lui $v0, %hi(g_13B80)
-    lw $v0, %lo(g_13B80)($v0)
+    lui $v0, %hi(g_GetPTRIG)
+    lw $v0, %lo(g_GetPTRIG)($v0)
     beqz $v0, loc_00001E9C
-    nop 
+    nop
     jr $v0
-    nop 
+    nop
 
+    .globl sceKernelSetPTRIGMask
 sceKernelSetPTRIGMask:
-    lui $v0, %hi(g_13B88)
+    lui $v0, %hi(g_PTRIGMask)
     jr $ra
-    sw $a0, %lo(g_13B88)($v0)
+    sw $a0, %lo(g_PTRIGMask)($v0)
 
+    .globl sceKernelPutUserLog
 sceKernelPutUserLog:
-    lui $v0, %hi(g_13BC0)
-    lw $v0, %lo(g_13BC0)($v0)
+    lui $v0, %hi(g_UserLog)
+    lw $v0, %lo(g_UserLog)($v0)
     beqz $v0, loc_00001EE0
-    nop 
+    nop
     jr $v0
-    nop 
+    nop
 
 loc_00001EE0:
     jr $ra
     move $v0, $zr
 
+    .globl sceKernelRegisterUserLogHandler
 sceKernelRegisterUserLogHandler:
-    lui $v0, %hi(g_13BC0)
+    lui $v0, %hi(g_UserLog)
     jr $ra
-    sw $a0, %lo(g_13BC0)($v0)
+    sw $a0, %lo(g_UserLog)($v0)
 
+    .globl sceKernelDeflateDecompress
 sceKernelDeflateDecompress:
     addiu $sp, $sp, -1344
     sw $s4, 1228($sp)
@@ -2369,7 +2428,7 @@ loc_00001F4C:
     ext $v1, $v0, 30, 2
     beqz $v1, loc_00002500
     ext $t2, $v0, 29, 1
-    lui $t7, %hi(g_133C0)
+    lui $t7, %hi(g_defltTbl)
     addiu $t0, $v1, -2
     beqz $t0, loc_00001FE0
     sh $t2, 1240($sp)
@@ -2377,7 +2436,7 @@ loc_00001F4C:
     addiu $t2, $sp, -108
 
 loc_00001F70:
-    lw $t3, %lo(g_133C0)($t7)
+    lw $t3, %lo(g_defltTbl)($t7)
     addiu $t2, $t2, 4
     addiu $t7, $t7, 4
     bne $t2, $sp, loc_00001F70
@@ -2855,9 +2914,9 @@ loc_00002500:
     not $t1, $t0
     rotr $t1, $t1, 16
     bne $t1, $t0, loc_00002560
-    nop 
+    nop
     beq $v1, $a0, loc_00002550
-    nop 
+    nop
 
 loc_0000253C:
     lbu $t1, 8($a2)
@@ -2880,13 +2939,14 @@ loc_00002560:
 loc_0000256C:
     sltu $s4, $a1, $at
     beqz $s4, loc_000020FC
-    nop 
+    nop
 
 loc_00002578:
     lui $v0, 0x8000
     j loc_000021FC
     ori $v0, $v0, 0x104
 
+    .globl UtilsForKernel_6C6887EE
 UtilsForKernel_6C6887EE:
     addiu $sp, $sp, -2832
     sw $s2, 2816($sp)
@@ -3624,7 +3684,7 @@ loc_00002E60:
     addu $t1, $t1, $a0
     sltu $v1, $t1, $t4
     beqz $v1, loc_00002E54
-    nop 
+    nop
 
 loc_00002E70:
     lbu $v1, 5($a2)
@@ -3633,4 +3693,169 @@ loc_00002E70:
     sb $v1, 0($t3)
     j loc_00002E70
     addiu $a2, $a2, 1
+
+.data
+# 13298
+g_md5Tbl:
+    .word 0xD76AA478
+    .word 0xE8C7B756
+    .word 0x242070DB
+    .word 0xC1BDCEEE
+    .word 0xF57C0FAF
+    .word 0x4787C62A
+    .word 0xA8304613
+    .word 0xFD469501
+    .word 0x698098D8
+    .word 0x8B44F7AF
+    .word 0xFFFF5BB1
+    .word 0x895CD7BE
+    .word 0x6B901122
+    .word 0xFD987193
+    .word 0xA679438E
+    .word 0x49B40821
+    .word 0xF61E2562
+    .word 0xC040B340
+    .word 0x265E5A51
+    .word 0xE9B6C7AA
+    .word 0xD62F105D
+    .word 0x02441453
+    .word 0xD8A1E681
+    .word 0xE7D3FBC8
+    .word 0x21E1CDE6
+    .word 0xC33707D6
+    .word 0xF4D50D87
+    .word 0x455A14ED
+    .word 0xA9E3E905
+    .word 0xFCEFA3F8
+    .word 0x676F02D9
+    .word 0x8D2A4C8A
+    .word 0xFFFA3942
+    .word 0x8771F681
+    .word 0x6D9D6122
+    .word 0xFDE5380C
+    .word 0xA4BEEA44
+    .word 0x4BDECFA9
+    .word 0xF6BB4B60
+    .word 0xBEBFBC70
+    .word 0x289B7EC6
+    .word 0xEAA127FA
+    .word 0xD4EF3085
+    .word 0x04881D05
+    .word 0xD9D4D039
+    .word 0xE6DB99E5
+    .word 0x1FA27CF8
+    .word 0xC4AC5665
+    .word 0xF4292244
+    .word 0x432AFF97
+    .word 0xAB9423A7
+    .word 0xFC93A039
+    .word 0x655B59C3
+    .word 0x8F0CCC92
+    .word 0xFFEFF47D
+    .word 0x85845DD1
+    .word 0x6FA87E4F
+    .word 0xFE2CE6E0
+    .word 0xA3014314
+    .word 0x4E0811A1
+    .word 0xF7537E82
+    .word 0xBD3AF235
+    .word 0x2AD7D2BB
+    .word 0xEB86D391
+
+# 13398
+g_sha1Tbl:
+    .word 0x67452301
+    .word 0xEFCDAB89
+    .word 0x98BADCFE
+    .word 0x10325476
+    .word 0xC3D2E1F0
+
+# 133C0
+g_defltTbl:
+    .word 0x0032FFF9
+    .word 0x131001C4
+    .word 0x0708001B
+    .word 0x050A0609
+    .word 0x030C040B
+    .word 0x010E020D
+    .word 0x0000000F
+    .word 0x00180000
+    .word 0x020000C8
+    .word 0x00000000
+    .word 0x00000000
+    .word 0x00000000
+    .word 0x00000000
+    .word 0x00000000
+    .word 0x00000000
+    .word 0xFFD0FFE7
+    .word 0xFFB0FFC0
+    .word 0xFF90FFA0
+    .word 0xFF70FF80
+    .word 0xFF5FFF60
+    .word 0xFF1FFF3F
+    .word 0xFED7FEFF
+    .word 0xFE57FE97
+    .word 0xFDDBFE17
+    .word 0xFCDBFD5B
+    .word 0xFBD3FC5B
+    .word 0xF9D3FAD3
+    .word 0xF7DDF8D3
+    .word 0xF3DDF5DD
+    .word 0xEFE0F1DD
+    .word 0xFFFFFFFF
+    .word 0x00010000
+    .word 0x00030002
+    .word 0x00060004
+    .word 0x000C0008
+    .word 0x00180010
+    .word 0x00300020
+    .word 0x00600040
+    .word 0x00C00080
+    .word 0x01800100
+    .word 0x03000200
+    .word 0x06000400
+    .word 0x0C000800
+    .word 0x18001000
+    .word 0x30002000
+    .word 0x60004000
+    .word 0xFFFBFFFB
+
+# 13B40
+    .globl g_GetGPI
+g_GetGPI:
+    .word 0
+# 13B44
+g_GPIMask:
+    .word 0xFF
+# 13B48
+    .globl g_SetGPO
+g_SetGPO:
+    .word 0
+# 13B4C
+g_GPOMask:
+    .word 0xFF
+
+# Alignment..
+
+# 13B80
+    .globl g_GetPTRIG
+g_GetPTRIG:
+    .word 0
+# 13B84
+    .globl g_SetPTRIG
+g_SetPTRIG:
+    .word 0
+# 13B88
+g_PTRIGMask:
+    .word 1
+
+# Alignment..
+
+# 13BC0
+g_UserLog:
+    .word 0
+
+# 13BE0
+g_suspendCtx:
+    .space 1024
 

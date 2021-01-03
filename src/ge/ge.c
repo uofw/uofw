@@ -80,7 +80,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 /******************************/
 
 int _sceGeReset();
-int _sceGeInitCallback3(int arg0, int arg1, int arg2);
+int _sceGeInitCallback3(void *arg0, s32 arg1, void *arg2);
 int _sceGeInitCallback4();
 int _sceGeSetRegRadr1(int arg0);
 int _sceGeSetRegRadr2(int arg0);
@@ -350,7 +350,7 @@ int sceGeInit()
     HW(0xBD400308) = 7;
     int i;
     for (i = 0; i < 256; i++) {
-        if (((save_regs[i >> 3] >> (i & 7)) & 1) != 0)
+        if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
             *(curDl++) = i << 24;
         // 03A0
     }
@@ -461,7 +461,7 @@ int sceGeEnd()
 }
 
 // 070C
-int _sceGeInitCallback3(int arg0 __attribute__ ((unused)), int arg1 __attribute__ ((unused)), int arg2 __attribute__ ((unused)))
+int _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribute__ ((unused)), void *arg2 __attribute__ ((unused)))
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
     if (libWork->cmdList != NULL) {
@@ -476,11 +476,11 @@ int _sceGeInitCallback3(int arg0 __attribute__ ((unused)), int arg1 __attribute_
 
 int _sceGeInitCallback4()
 {
-    void *str = sceKernelGetGameInfo();
-    if (str != NULL) {
+    SceKernelGameInfo *info = sceKernelGetGameInfo();
+    if (info != NULL) {
         u32 syscOp = MAKE_SYSCALL(sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr));
         int oldIntr = sceKernelCpuSuspendIntr();
-        if (strcmp(str + 68, sadrupdate_bypass.name) == 0) {
+        if (strcmp(info->gameId, sadrupdate_bypass.name) == 0) {
             u32 *ptr = sadrupdate_bypass.ptr;
             if (ptr[0] == JR_RA && ptr[1] == syscOp) {
                 // 0804
@@ -876,7 +876,7 @@ int sceGeSaveContext(SceGeContext * ctx)
     // 17C8
     int i;
     for (i = 0; i < 256; i++) {
-        if (((save_regs[i >> 3] >> (i & 7)) & 1) != 0)
+        if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
             *(curCmd++) = *cmds;
         // 1804
         cmds++;
@@ -1476,9 +1476,9 @@ int _sceGeQueueInit()
     g_AwQueue.listEvFlagIds[0] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.listEvFlagIds[1] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.syscallId = sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr);
-    void *gameInfo = sceKernelGetGameInfo();
+    SceKernelGameInfo *info = sceKernelGetGameInfo();
     g_AwQueue.patched = 0;
-    if (gameInfo != NULL && strcmp(gameInfo + 68, "ULJM05127") == 0)
+    if (info != NULL && strcmp(info->gameId, "ULJM05127") == 0)
         g_AwQueue.patched = 1;
     return 0;
 }

@@ -1,11 +1,11 @@
-/** Copyright (C) 2011, 2012, 2013 The uOFW team
+/** Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
 #include "common_header.h"
 
 /** @defgroup Controller Controller Module
- *
+ *  Controller (joystick) management.
  * @{	
  */
 
@@ -16,62 +16,88 @@
 typedef void (*SceKernelButtonCallbackFunction)(u32 curButtons, u32 lastButtons, void *opt);
 
 /** 
- * This structure is for obtaining button data (button/stick information) from the 
- * controller using ::sceCtrlPeekBufferPositive(), ::sceCtrlReadBufferNegative() and similar 
- * functions.
+ * This structure is for obtaining button data (button/analog stick information) from the 
+ * controller using ::sceCtrlPeekBufferPositive(), ::sceCtrlReadBufferNegative() etc...
  */
 typedef struct {
     /** 
-     * The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
+     * The time stamp of the time during which sampling was performed. Time unit is microseconds. 
      * Can be used to get the time period of a button pressing event. 
      */ 
-    u32 activeTime;
+    u32 timeStamp;
     /** The currently pressed button. Bitwise OR'ed values of ::SceCtrlPadButtons. */
     u32 buttons;
-    /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
+    /** Analog Stick X-axis offset (0 - 0xFF). Left = 0, Right = 0xFF. */
     u8 aX;
-    /** Analog Stick Y-axis offset (0 - 255). Up = 0, Down = 255. */
+    /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
-    /** Reserved. Values are normally set to 0. */
-    u8 rsrv[6];
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rX;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rY;
+    /** Reserved. */
+    u8 rsrv[4];
 } SceCtrlData;
 
 /** 
- * This structure is for obtaining button data (button/stick information) from the 
- * controller using ::sceCtrlPeekBufferPositiveExtra(), ::sceCtrlReadBufferNegativeExtra()
- * and similar functions.
+ * This structure is for obtaining button data (button/analog stick information) from the 
+ * controller using ::sceCtrlPeekBufferPositive2(), ::sceCtrlReadBufferNegative2() etc....
+ * In addition to PSP controller state it can contain input state of external input devices 
+ * such as a wireless controller.
  */
 typedef struct {
     /** 
-     * The time, how long the D-Pad & the Analog-Pad have been active. Time unit is in microseconds. 
-     * Can be used to get the time period if a button pressing. 
+     * The time stamp of the time during which sampling was performed. Time unit is microseconds. 
+     * Can be used to get the time period of a button pressing event.
      */ 
-    u32 activeTime;
+    u32 timeStamp;
     /** The currently pressed button. Bitwise OR'ed values of ::SceCtrlPadButtons. */
     u32 buttons;
-    /** Analog Stick X-axis offset (0 - 255). Left = 0, Right = 255. */
+    /** Analog Stick X-axis offset (0 - 0xFF). Left = 0, Right = 0xFF. */
     u8 aX;
-    /** Analog Stick Y-axis offset (0 - 255). Up = 0, Down = 255. */
+    /** Analog Stick Y-axis offset (0 - 0xFF). Up = 0, Down = 0xFF. */
     u8 aY;
-    /** Reserved. Values are normally set to 0. */
-    u8 rsrv[6];
-    /** Unknown. */
-    s32 unk1;
-    /** Unknown. */
-    s32 unk2;
-    /** Unknown. */
-    s32 unk3;
-    /** Unknown. */
-    s32 unk4;
-    /** Unknown. */
-    s32 unk5;
-    /** Unknown. */
-    s32 unk6;
-    /** Unknown. */
-    s32 unk7;
-    /** Unknown. */
-    s32 unk8;
-} SceCtrlDataExt;
+    /** DS3 right analog x-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rX;
+    /** DS3 right analog y-axis. Filled with 0 if input source doesn't allow second analog input. */
+    u8 rY;
+    /** Reserved. */
+    u8 rsrv[4];
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad right.
+    * Byte 3: D-Pad left.    
+    */
+    s32 DPadSenseA;
+    /** D-pad pressure sensitivity.
+    * Byte 1: D-Pad up.
+    * Byte 3: D-Pad down.    
+    */
+    s32 DPadSenseB;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Triangle.
+    * Byte 3: Circle.    
+    */
+    s32 GPadSenseA;
+    /** Gamepad pressure sensitivity.
+    * Byte 1: Cross.
+    * Byte 3: Square.    
+    */
+    s32 GPadSenseB;
+    /** Axis pressure sensitivity.
+    * Byte 1: L1.
+    * Byte 3: R1.    
+    */
+    s32 AxisSenseA;
+    /** Axis pressure sensitivity.
+    * Byte 1: L2.
+    * Byte 3: R2.    
+    */
+    s32 AxisSenseB;
+    /** DS3 sixaxis. This is the return value for tilting the x-axis. */
+    s32 TiltA;
+    /** DS3 sixaxis. This is the return value for tilting the y-axis. */
+    s32 TiltB;
+} SceCtrlData2;
 
 /** 
  * This structure is for obtaining button status values from the controller using
@@ -90,66 +116,81 @@ typedef struct {
 } SceCtrlLatch;
 
 /**
- * Unknown structure. 
+ * This structure is used to copy external input data into PSP internal controller buffers. 
  */
 typedef struct {
-    /** Unknown. */
+    /** Unknown. Is set to 0xC by Sony. */
     s32 unk1;
-    /** Unknown. */
-    s32 (*func)(int);
-} SceCtrlUnkStruct;
+    /** 
+	 * Pointer to a transfer function to copy input data into a PSP internal controller buffer. 
+	 * <copyInputData> should return a value >= 0 on success, < 0 otherwise.
+	 */
+	s32(*copyInputData)(void *src, SceCtrlData2 *dest);
+} SceCtrlInputDataTransferHandler;
 
 /**
  * Enumeration for the digital controller buttons in positive logic.
  *
- * @note SCE_CTRL_HOME, SCE_CTRL_WLAN_UP, SCE_CTRL_REMOTE, SCE_CTRL_VOLUP, SCE_CTRL_VOLDOWN, 
+ * @note SCE_CTRL_INTERCEPTED, SCE_CTRL_WLAN_UP, SCE_CTRL_REMOTE, SCE_CTRL_VOLUP, SCE_CTRL_VOLDOWN, 
  *       SCE_CTRL_SCREEN, SCE_CTRL_NOTE, SCE_CTRL_DISC, SCE_CTRL_MS can only be read in kernel mode.
  */
 enum SceCtrlPadButtons {
     /** Select button. */
-    SCE_CTRL_SELECT     = 0x1,
+    SCE_CTRL_SELECT         = 0x1,
+    /** DS3 L3 button. */
+    SCE_CTRL_L3             = 0x2,
+    /** DS3 R3 button. */
+    SCE_CTRL_R3             = 0x4,
     /** Start button. */
-    SCE_CTRL_START      = 0x8,
+    SCE_CTRL_START          = 0x8,
     /** Up D-Pad button. */
-    SCE_CTRL_UP         = 0x10,
+    SCE_CTRL_UP             = 0x10,
     /** Right D-Pad button. */
-    SCE_CTRL_RIGHT      = 0x20,
+    SCE_CTRL_RIGHT          = 0x20,
     /** Down D-Pad button. */
-    SCE_CTRL_DOWN       = 0x40,
+    SCE_CTRL_DOWN           = 0x40,
     /** Left D-Pad button. */
-    SCE_CTRL_LEFT       = 0x80,
-    /** Left trigger. */
-    SCE_CTRL_LTRIGGER   = 0x100,
-    /** Right trigger. */
-    SCE_CTRL_RTRIGGER   = 0x200,
+    SCE_CTRL_LEFT           = 0x80,
+    /** Left trigger. This accounts for the DS3 L2 trigger as well. */
+    SCE_CTRL_LTRIGGER       = 0x100,
+    /** Right trigger. This accounts for the DS3 R2 trigger as well. */
+    SCE_CTRL_RTRIGGER       = 0x200,
+    /** DS3 L1 trigger. */
+    SCE_CTRL_L1TRIGGER      = 0x400,
+    /** DS3 R1 trigger. */
+    SCE_CTRL_R1TRIGGER      = 0x800,
     /** Triangle button. */
-    SCE_CTRL_TRIANGLE   = 0x1000,
+    SCE_CTRL_TRIANGLE       = 0x1000,
     /** Circle button. */
-    SCE_CTRL_CIRCLE     = 0x2000,
+    SCE_CTRL_CIRCLE         = 0x2000,
     /** Cross button. */
-    SCE_CTRL_CROSS      = 0x4000,
+    SCE_CTRL_CROSS          = 0x4000,
     /** Square button. */
-    SCE_CTRL_SQUARE     = 0x8000,
-    /** Home button. In user mode this bit is set if the exit dialog is visible.*/
-    SCE_CTRL_HOME       = 0x10000,
+    SCE_CTRL_SQUARE         = 0x8000,
+    /** 
+     * If this bit is set, then controller input is being intercepted by the 
+     * system software or another application.  For example, this is the case 
+     * when the PSP's HOME menu is being shown. 
+     */
+    SCE_CTRL_INTERCEPTED    = 0x10000,
     /** Hold button. */
-    SCE_CTRL_HOLD       = 0x20000,
+    SCE_CTRL_HOLD           = 0x20000,
     /** W-LAN switch up. */
-    SCE_CTRL_WLAN_UP    = 0x40000,
+    SCE_CTRL_WLAN_UP        = 0x40000,
     /** Remote hold position. */
-    SCE_CTRL_REMOTE     = 0x80000,
+    SCE_CTRL_REMOTE         = 0x80000,
     /** Volume up button. */
-    SCE_CTRL_VOLUP      = 0x100000,
+    SCE_CTRL_VOLUP          = 0x100000,
     /** Volume down button. */
-    SCE_CTRL_VOLDOWN    = 0x200000,
+    SCE_CTRL_VOLDOWN        = 0x200000,
     /** Screen button. */
-    SCE_CTRL_SCREEN     = 0x400000,
+    SCE_CTRL_SCREEN         = 0x400000,
     /** Music Note button. */
-    SCE_CTRL_NOTE       = 0x800000,   	
+    SCE_CTRL_NOTE           = 0x800000,   	
     /** Disc present. */
-    SCE_CTRL_DISC       = 0x1000000,
+    SCE_CTRL_DISC           = 0x1000000,
     /** Memory stick present. */
-    SCE_CTRL_MS         = 0x2000000,
+    SCE_CTRL_MS             = 0x2000000,
 };
 
 /** Controller input modes. */
@@ -166,6 +207,16 @@ enum SceCtrlPadPollMode {
     SCE_CTRL_POLL_INACTIVE = 0,
     /** Controller input is recognized. */
     SCE_CTRL_POLL_ACTIVE = 1,
+};
+
+/** External input data sources. */
+enum SceCtrlExternalInputMode {
+	/** No external input data. */
+	SCE_CTRL_EXTERNAL_INPUT_NONE = 0,
+	/** Input data of the PS3's DUALSHOCK�3 controller is used. */
+	SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 = 1,
+	/** Unknown. */
+	SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2 = 2
 };
 
 /** Button mask settings. */
@@ -256,8 +307,8 @@ u32 sceCtrlGetSamplingCycle(u32 *cycle);
  * 
  * @param cycle The new interval between two samplings of controller attributes in microseconds.
  *              Setting to 0 enables the VBlank-Interrupt-Update process. If you want to set an own
- *              interval for updating the internal controller buffers, cycle has to be greater 5554 
- *              and less than 20001.
+ *              interval for updating the internal controller buffers, cycle has to in the range of 
+ *              5555 - 20000 (the range from about 180 Hz to 50 Hz).
  *              This will disable the VBlank-Interrupt-Update process.
  * 
  * @return The previous cycle on success.
@@ -308,7 +359,7 @@ u32 sceCtrlGetIdleCancelKey(u32 *oneTimeResetButtons, u32 *allTimeResetButtons, 
  * 
  * @par Example:
  * @code
- * //Pressing the select will reset the idle timer. No other button will reset it.
+ * // Pressing the select will reset the idle timer. No other button will reset it.
  * sceCtrlSetIdleCancelKey(0, SCE_CTRL_SELECT, 0, 0);
  * @endcode
  */
@@ -320,28 +371,31 @@ u32 sceCtrlSetIdleCancelKey(u32 oneTimeResetButtons, u32 allTimeResetButtons, u3
  *
  * @param iUnHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *        HOLD mode is inactive. -1 is obtained when the analog stick cannot cancel the idle timer,
- *        otherwise the movement needed by the analog stick to cancel the idle timer.
+ *        otherwise the movement needed by the analog stick (between 0 - 128) to cancel the idle timer.
  * @param iHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *                       HOLD mode is active. -1 is obtained when the analog stick cannot cancel the 
- *                       idle timer, otherwise the movement needed by the analog stick to cancel the idle timer.
+ *                       idle timer, otherwise the movement needed by the analog stick (between 0 - 128) to cancel the idle timer.
  *
  * @return 0 on success.
  */
 s32 sceCtrlGetIdleCancelThreshold(s32 *iUnHoldThreshold, s32 *iHoldThreshold);
 
 /**
- * Set analog stick threshold values canceling the idle timer.
+ * Set analog stick threshold values for cancelling the idle timer. In case SCE_CTRL_INPUT_DIGITAL_ONLY is set as the 
+ * input mode for the controller, analog stick movements will not result in cancelling the idle timer.
  *
  * @param iUnHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *                         HOLD mode is inactive.
  *                         Set between 1 - 128 to specify the movement on either axis.
- *                         Set to 0 for idle timer to be canceled even if the analog stick is not moved.
- *                         Set to -1 for analog stick not canceling idle timer (although it is moved).
+ *                         Set to 0 for idle timer to be canceled even if the analog stick is not moved
+ *                         (that is, the idle timer itself stops running).
+ *                         Set to -1 for analog stick to not cancel the idle timer (although it is moved).
  * @param iHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
  *                       HOLD mode is active.
  *                       Set between 1 - 128 to specify the movement on either axis.
- *                       Set to 0 for idle timer to be canceled even if the analog stick is not moved.
- *                       Set to -1 for analog stick not canceling idle timer (although it is moved).
+ *                       Set to 0 for idle timer to be canceled even if the analog stick is not moved
+ *                       (that is, the idle timer itself stops running).
+ *                       Set to -1 for analog stick to not cancel the idle timer (although it is moved).
  *
  *
  * @return 0 on success.
@@ -365,17 +419,20 @@ s16 sceCtrlGetSuspendingExtraSamples(void);
 s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
 
 /**
- * Extend the 64 internal controller buffers to represent SceCtrlDataExt structures.
- * By default, an internal controller buffer is equivalent to a SceCtrlData structure. This function 
- * has to be called before using the extended read/peekBuffer functions (only the first time).
+ * Set up internal controller buffers to receive external input data. Each input mode has its own
+ * set of buffers. These buffers are of type ::SceCtrlData2. 
+ * Note: This function has to be called initially in order to obtain external input data via the corresponding 
+ * Peek/Read functions.
  * 
- * @param mode Seems to be an index. Pass either 1 or 2.
- * @param arg2 Unknown. Pointer to a ctrlUnkStruct structure?
- * @param arg3 Unknown.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
+ * @param transferHandler Pointer to a SceCtrlInputDataTransferHandler containing a function to copy the <inputSource>
+ *						into the PSP's controller buffers.
+ * @param inputSource Pointer to buffer containing the Controller input data to copy to the PSP's 
+ *					  controller buffers. It is passed as the source argument to the given transfer function.
  * 
  * @return 0 on success.
  */
-s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3);
+s32 sceCtrl_driver_E467BEC8(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource);
 
 /**
  * Obtain button latch data stored in the internal latch controller buffers. The following button 
@@ -383,7 +440,7 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3);
  *      Button is pressed, button is not pressed, button has been newly pressed
  *      and button has been newly released. 
  * Once a button has been, for example, pressed, its value is stored into the specific latch member 
- * (btnMake in this case) until you manually reset the specific latch buffer field.
+ * (buttonMake in this case) until you manually reset the specific latch buffer field.
  * 
  * @param latch Pointer to a SceCtrlLatch structure retrieving the current button latch data.
  * 
@@ -395,9 +452,9 @@ s32 sceCtrlExtendInternalCtrlBuffers(u8 mode, SceCtrlUnkStruct *arg2, s32 arg3);
  * 
  * sceCtrlPeekLatch(&latch);
  * while (1) {
- *        //Cross button pressed
- *        if (latch.btnPress & SCE_CTRL_CROSS) {
- *            //do something
+ *        // Cross button pressed
+ *        if (latch.buttonPress & SCE_CTRL_CROSS) {
+ *            // do something
  *        }
  * }
  * @endcode
@@ -440,9 +497,9 @@ s32 sceCtrlReadLatch(SceCtrlLatch *latch);
  * 
  * while (1) {
  *        sceCtrlPeekBufferPositive(&data, 1); 
- *        //Cross button pressed
+ *        // Cross button pressed
  *        if (data.buttons & SCE_CTRL_CROSS) {
- *            //do something
+ *            // do something
  *        }
  * }
  * @endcode
@@ -471,9 +528,9 @@ s32 sceCtrlPeekBufferPositive(SceCtrlData *data, u8 nBufs);
  * 
  * while (1) {
  *        sceCtrlPeekBufferNegative(&data, 1); 
- *        //Cross button pressed
+ *        // Cross button pressed
  *        if (data.buttons & ~SCE_CTRL_CROSS) {
- *            //do something
+ *            // do something
  *        }
  * }
  * @endcode
@@ -509,10 +566,13 @@ s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs);
 s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferPositive(). See description for more info.
- * You need to call ::SceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller 
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
  * 
- * @param arg1 Pass 1 or 2.
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
+ * 
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in positive logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -520,13 +580,16 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlPeekBufferNegative(). See description for more info. 
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
- * @param arg1 Unknown. Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in negative logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -534,13 +597,16 @@ s32 sceCtrlPeekBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferPositive(). See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
- * @param arg1 Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in positive logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -548,13 +614,16 @@ s32 sceCtrlPeekBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
- * Extended ::sceCtrlReadBufferNegative(). See description for more info.
- * You need to call ::sceCtrlExtendInternalCtrlBuffers() before use.
+ * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * before obtaining the data. The read data is the newest transfered data into the internal controller
+ * buffers and can contain input state provided by external input devices such as a wireless controller.
+ *
+ * @remark You need to call ::sceCtrl_driver_E467BEC8() before initial use of this API or its related ones.
  * 
- * @param arg1 Pass 1 or 2.
+ * @param inputMode Pass a valid element of ::SceCtrlExternalInputMode (either 1 or 2).
  * @param data Pointer to controller data structure in which button information is stored. The obtained
  *             button data is represented in negative logic.
  * @param nBufs The number of internal controller buffers to read. There are 64 internal controller 
@@ -562,79 +631,72 @@ s32 sceCtrlReadBufferPositiveExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
  * 
  * @return The number of read internal controller buffers on success.
  */
-s32 sceCtrlReadBufferNegativeExtra(s32 arg1, SceCtrlDataExt *data, u8 nBufs);
+s32 sceCtrlReadBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs);
 
 /**
  * Disable a rapid-fire button event.
  * 
  * @param slot The slot of the event to clear. Between 0 - 15.
  * 
- * @return 0 on success
+ * @return 0 on success.
  */
 s32 sceCtrlClearRapidFire(u8 slot);
 
 /**
  * Specify a rapid-fire event for one or more buttons.
  * 
- * @param slot The slot used to set the custom values. Between 0 - 15. Multiple slots can be used.
- * @param eventSupportButtons The buttons which potentially can trigger the rapid fire event. This
- *                            usage is restricted for now. In order for the "eventTriggerButtons"
+ * @param slot      The slot used to set the custom values. Between 0 - 15. Up to 16 slots can be used.
+ * @param uiMask    Comparison mask of the button operation for rapid-fire trigger. In order for the <uiTrigger> buttons
  *                            to trigger the event, they need to be included in these buttons. 
  *                            One or more buttons of ::SceCtrlPadButtons. 
- * @param eventTriggerButtons The buttons which will start the rapid fire event for the specified 
- *                            buttons when being pressed.
- * @param buttons The buttons on which the rapid fire event will be applied to. User mode 
- *                buttons only.
- * @param eventOnTime The number of consecutive internal controller buffer updates the buttons will 
- *                    be set to ON.  It will only be applied for the first ON period of a (not canceled) 
- *                    rapid fire event. This "ON-time" will only be applied in the beginning of every new 
- *                    fired event (not being fired immediately before). Set to 0 - 63.
- * @param buttonsOnTime      The number of consecutive internal controller buffer updates the 
- *                           buttons will be set to ON (pressed).  This "ON-time" is set after 
- *                           eventOnTime was applied and the reqButton was turned off. It will be 
- *                           applied for as long as the same rapid fire event is called without a 
- *                           break (i.e. pressing of a different PSP button). Set to 0 - 63. 
- *                           If set to 0, the reqButton will be turned ON for one internal controller 
- *                           buffer update. 
- * @param buttonsOffTime     The number of consecutive internal controller buffer updates the 
- *                           buttons will be set to ON. This "OFF-time" is set after eventOnTime was 
- *                           applied. It will be applied as long as the same rapid fire event is called 
- *                           without a break (i.e. the pressing of a different PSP button). Set to 0 - 63. 
- *                           If  set to 0, the reqButton will be turned OFF for 64 consecutive internal 
- *                           controller buffer updates.
+ * @param uiTrigger The buttons which will start the rapid fire event for the specified 
+ *                  <uiTarget> buttons when being pressed.
+ * @param uiTarget  The buttons for which the rapid-fire event will be applied to. User mode 
+ *                  buttons only. <uiMake> and <uiBreak> define the rapid-fire cycle.
+ * @param uiDelay   Dead time of rapid-fire trigger (sampling count). Specifies the rapid-fire start timing. 
+ *                  It will only be applied for the first ON period of a (not cancelled) rapid-fire event.  
+ *                  Set to 0 - 63.
+ * @param uiMake    The press time for the <uiTarget> buttons.  This "ON-time" is set after 
+ *                  <uiDelay> was applied and the <uiTrigger> buttons were turned OFF. It will be 
+ *                  applied for as long as the same rapid fire event is called without a 
+ *                  break (i.e. pressing of a different PSP button). Set to 0 - 63. 
+ *                  If set to 0, the <uiTarget> button(s) will be turned ON for one sampling count.
+ * @param uiBreak   The release time for <uiTarget> buttons. This "OFF-time" is set after <uiDelay> was 
+ *                  applied. It will be applied as long as the same rapid fire event is called 
+ *                  without a break (i.e. the pressing of a different PSP button). Set to 0 - 63. 
+ *                  If  set to 0, the <uiTarget> button will be turned OFF for 64 consecutive sampling counts.
  * 
  * @return 0 on success.
  * 
  * @par Example:
  * @code
- * //A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
- * //R-button will be turned ON and OFF for 64 internal controller buffer updates in both cases 
- * //(as long as D-Pad-Up is pressed).
- * sceCtrlSetRapidFire(0, 0xFF, SCE_CTRL_UP, SCE_CTRL_RTRIGGER, 63, 63, 63);
+ * // A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
+ * // R-button will be turned ON and OFF for 64 internal controller buffer updates in both cases 
+ * // (as long as D-Pad-Up is pressed).
+ * sceCtrlSetRapidFire(0, SCE_CTRL_UP, SCE_CTRL_UP, SCE_CTRL_RTRIGGER, 63, 63, 63);
  * 
- * //A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
- * //R-button will be turned OFF and ON for 40 internal controller buffer updates in both cases 
- * //(as long as D-Pad-Up is pressed).
+ * // A rapid fire event for the R-button while the D-Pad-Up button is being pressed.
+ * // R-button will be turned OFF and ON for 40 internal controller buffer updates in both cases 
+ * // (as long as D-Pad-Up is pressed).
  * sceCtrlSetRapidFire(0, SCE_CTRL_UP, SCE_CTRL_UP, SCE_CTRL_RTRIGGER, 0, 40, 40);
  * @endcode
  * 
  */
-s32 sceCtrlSetRapidFire(u8 slot, u32 eventSupportButtons, u32 eventTriggerButtons, u32 buttons, u8 eventOnTime, 
-                        u8 buttonsOnTime, u8 buttonsOffTime);
+s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, 
+                        u8 uiMake, u8 uiBreak);
 
 /**
  * Emulate values for the analog pad's X- and Y-axis.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, 
  *             their settings are combined.
- * @param aX New emulated value for the X-axis. Between 0 - 255.
- * @param aY New emulate value for the Y-axis. Between 0 - 255.
- * @param bufUpdates Specifies for how many updates of the internal controller buffers the emulation 
- *                   data will be applied for.
+ * @param aX New emulated value for the X-axis. Between 0 - 0xFF.
+ * @param aY New emulate value for the Y-axis. Between 0 - 0xFF.
+ * @param uiMake Specifies the duration of the emulation. Meassured in sampling counts.
  * 
  * @return 0 on success.
  */
-s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 bufUpdates);
+s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 uiMake);
 
 /**
  * Emulate buttons for the digital pad.
@@ -647,19 +709,18 @@ s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 bufUpdates);
  * @param kernelButtons Emulated buttons of ::SceCtrlPadButtons (you can emulate both user and 
  *                      kernel buttons). The emulated buttons will only be applied for applications 
  *                      running in kernel mode.
- * @param bufUpdates Specifies for how many updates of the internal controller buffers the emulation 
- *                   data will be applied for.
+ * @param uiMake Specifies the duration of the emulation. Meassured in sampling counts.
  * 
  * @return 0 on success.
  */
-s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 bufUpdates);
+s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake);
 
 /**
  * Get the button mask settings applied to PSP buttons.
- * 
+ *
  * @param buttons The buttons to check for. One or more buttons of ::SceCtrlPadButtons.
- * 
- * @return The button mask mode for the given buttons. One of ::SceCtrlPadButtonMaskMode. 
+ *
+ * @return The button mask mode for the given buttons. One of ::SceCtrlPadButtonMaskMode.
  */
 u32 sceCtrlGetButtonIntercept(u32 buttons);
 
@@ -675,11 +736,11 @@ u32 sceCtrlGetButtonIntercept(u32 buttons);
  * 
  * @par Example:
  * @code
- * //Block user mode buttons for User mode applications
+ * // Block user mode buttons for User mode applications
  * sceCtrlSetButtonIntercept(0xFFFF, SCE_CTRL_MASK_IGNORE_BUTTONS);
- * //Do something
+ * // Do something
  * 
- * //Remove block from user mode buttons for User mode applications
+ * // Remove block from user mode buttons for User mode applications
  * sceCtrlSetButtonIntercept(0xFFFF, SCE_CTRL_MASK_NO_MASK);
  * @endcode
  */

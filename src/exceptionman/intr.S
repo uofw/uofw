@@ -1,14 +1,9 @@
-# Copyright (C) 2011, 2012 The uOFW team
-# See the file COPYING for copying permission.
-
-    .text
-    .set noat
-    .set noreorder
+#include "common_asm.h"
 
     .globl suspendIntr
 suspendIntr:
     mfic $v0, $0
-    mtic  $0, $0
+    mtic $zr, $0
     beqz $v0, ret
     nop
     nop

@@ -16,6 +16,21 @@
  * @{
  */
 
+/* Specific error codes for the Audio Driver. */
+
+#define	SCE_AUDIO_ERROR_NOT_INITIALIZED     (0x80260001)
+#define	SCE_AUDIO_ERROR_OUTPUT_BUSY		    (0x80260002)
+#define	SCE_AUDIO_ERROR_INVALID_CH		    (0x80260003)
+#define	SCE_AUDIO_ERROR_PRIV_REQUIRED	    (0x80260004)
+#define	SCE_AUDIO_ERROR_NOT_FOUND		    (0x80260005)
+#define	SCE_AUDIO_ERROR_INVALID_SIZE	    (0x80260006)
+#define	SCE_AUDIO_ERROR_INVALID_FORMAT	    (0x80260007)
+#define	SCE_AUDIO_ERROR_NOT_RESERVED	    (0x80260008)
+#define	SCE_AUDIO_ERROR_NOT_OUTPUT		    (0x80260009)
+#define SCE_AUDIO_ERROR_INVALID_FREQUENCY   (0x8026000A)
+#define SCE_AUDIO_ERROR_INVALID_VOLUME      (0x8026000B)
+#define SCE_AUDIO_ERROR_INPUT_BUSY          (0x80260010)
+
 /** The input parameters structure, used by sceAudioInputInitEx() */
 typedef struct
 {
