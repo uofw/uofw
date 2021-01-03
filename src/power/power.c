@@ -177,7 +177,7 @@ typedef struct {
     u32 unk52;
     u32 unk56;
     u32 unk60;
-    u32 unl64;
+    u32 unk64;
     u32 unk68;
     u32 unk72;
     u32 unk76;
@@ -234,6 +234,8 @@ static s32 _scePowerInitCallback(); //sub_0x0000114C
 
 static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
+static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
+static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
 
 ScePowerHandlers g_PowerHandler = {
     .size = sizeof(ScePowerHandlers),
@@ -2518,3 +2520,56 @@ s32 _scePowerBatterySuspend(void)
     return SCE_ERROR_OK;
 }
 
+// Subroutine sub_0000461C - Address 0x0000461C 
+s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
+{
+    u32 val1;
+    u32 val2;
+
+    val1 = *(u32 *)(arg0 + 36);
+
+    g_Battery.unk92 = -1; // 0x00004644
+    g_Battery.unk60 = val1; // 0x0000464C
+    g_Battery.unk96 = -1; // 0x00004650
+    g_Battery.unk100 = -1; // 0x00004654
+    g_Battery.unk104 = -1; // 0x0000465C
+
+    if (val1 & 0x2) // 0x00004658
+    {
+        g_Battery.unk64 = 1; // 0x0000466C
+        if (g_Battery.unk44 == 0) // 0x00004668
+        {
+            g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
+            g_Battery.unk72 = *(u32*)(arg0 + 44); // 0x000046B0
+            g_Battery.unk84 = *(u32*)(arg0 + 44); // 0x000046B8
+            g_Battery.unk88 = -1; // 0x000046C0
+            g_Battery.unk80 = *(u32*)(arg0 + 48); // 0x000046C8
+
+            g_Battery.unk76 = _scePowerBatteryConvertVoltToRCap(); // 0x000046C4 & 0x000046D0
+        }
+
+        *arg1 &= ~0x7F; // 0x00004678
+        val2 = *arg1 | g_Battery.unk76 | 0x80; // 0x00004684
+    }
+    else
+    {
+        g_Battery.unk84 = -1; // 0x000046D4
+        g_Battery.unk64 = 0; // 0x000046D8
+        g_Battery.unk68 = 0; // 0x000046DC
+        g_Battery.unk72 = -1;
+        g_Battery.unk76 = -1;
+        g_Battery.unk80 = -1;
+        g_Battery.unk88 = -1; // 0x000046EC
+
+        val2 = *arg1 & ~0xFF; // 0x000046F8
+    }
+
+    *arg1 = val2; // 0x00004688
+    return SCE_ERROR_OK;
+}
+
+// Subroutine sub_00005130 - Address 0x00005130
+s32 _scePowerBatteryConvertVoltToRCap(void)
+{
+
+}
