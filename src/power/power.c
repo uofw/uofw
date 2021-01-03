@@ -2458,8 +2458,8 @@ u32 _scePowerBatteryEnd(void)
     u32 outBits;
     
     if (g_Battery.alarmId <= 0) { //0x000044C0
-        sceKernelPollEventFlag(g_Battery.eventId, 0x200, 0x21, &outBits); //0x00004554
-        outBits = ((s32)outBits < 0) ? 0 : outBits; //0x00004564
+        s32 status = sceKernelPollEventFlag(g_Battery.eventId, 0x200, 0x21, &outBits); //0x00004554
+        outBits = ((s32)status < 0) ? 0 : outBits; //0x00004564
     } else {
         sceKernelCancelAlarm(g_Battery.alarmId); //0x000044C8
         outBits = 0x200; //0x000044D0
