@@ -1,38 +1,21 @@
-sub_00000000(...) // at 0x00000000 
+s32 g_8DC0;
+
+sub_00000000(void *buf, int size, int arg2, int poll) // at 0x00000000 
 {
-    t1 = a1;
-    t2 = a2;
-    sp = sp - 16;
-    a1 = a1 + 20;
-    t3 = a3;
-    v0 = 0x10000; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    v1 = 5;
-    *(s32*)(sp + 0) = ra;
-    t0 = 7;
-    a3 = a1;
-    a2 = a0;
-    *(s32*)(v0 - 29248) = a0; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    *(s32*)(a0 + 0) = v1;
-    *(s32*)(a0 + 12) = t2;
-    *(s32*)(a0 + 4) = 0;
-    *(s32*)(a0 + 8) = 0;
-    *(s32*)(a0 + 16) = t1;
-    if (t3 == 0)
-        goto loc_0000005C;
-    v0, v1 = sceUtilsBufferCopyByPollingWithRange(...);
-    ra = *(s32*)(sp + 0);
-
-loc_00000054:		
-    sp = sp + 16;
-    return (v1 << 32) | v0;
-
-loc_0000005C:		
-    a3 = a1;
-    v0, v1 = sceUtilsBufferCopyWithRange(...);
-    ra = *(s32*)(sp + 0);
-    goto loc_00000054;
+    g_8DC0 = buf;
+    *(s32*)(buf + 0) = 5;
+    *(s32*)(buf + 4) = 0;
+    *(s32*)(buf + 8) = 0;
+    *(s32*)(buf + 12) = arg2;
+    *(s32*)(buf + 16) = arg1;
+    if (!poll) {
+    	return sceUtilsBufferCopyWithRange(a0, a1, a0, a1, 7);
+    } else {
+        return sceUtilsBufferCopyByPollingWithRange(a0, a1, a0, a1, 7);
+    }
 }
 
+#if 0
 sub_0000006C(...) // at 0x0000006C 
 {
     a2 = (u32)a2 >> 4;
@@ -5856,6 +5839,7 @@ loc_0000489C:
     s0 = v0;
     goto loc_0000485C;
 }
+#endif
 
 s32 g_8EA4, g_8EA8;
 
@@ -5876,6 +5860,7 @@ int sceMesgd_driver_102DC8AF(void *pOut, int cbIn, void *cbOut) // at 0x00004A0C
     return ret;
 }
 
+#if 0
 sceMesgd_driver_ADD0CB66(...) // at 0x00004B20 
 {
     sp = sp - 48;
@@ -8454,4 +8439,4 @@ loc_00006BC4:
     s1 = a1 - v1;
     goto loc_0000656C;
 }
-
+#endif
