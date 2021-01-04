@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -9,15 +9,15 @@
 #include <sysmem_suspend_kernel.h>
 #include <sysmem_sysevent.h>
 
-SCE_MODULE_INFO("scePower_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | 
-                                    SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 13);
+SCE_MODULE_INFO(
+    "scePower_Service", 
+    SCE_MODULE_KERNEL | 
+    SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 
+    1, 13);
 SCE_MODULE_BOOTSTART("_scePowerModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_scePowerModuleRebootBefore");
 SCE_MODULE_REBOOT_PHASE("_scePowerModuleRebootPhase");
 SCE_SDK_VERSION(SDK_VERSION);
-
-#define FALSE                                           (0)
-#define TRUE                                            (1)
 
 #define BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT         (26)
 #define BARYON_DATA_LOW_BATTERY_CAP_SLOT                (28)
@@ -258,7 +258,7 @@ SceSysEventHandler g_PowerSysEv = {
     .typeMask = SCE_SUSPEND_EVENTS | SCE_RESUME_EVENTS,
     .handler = _scePowerSysEventHandler,
     .gp = 0,
-    .busy = FALSE,
+    .busy = SCE_FALSE,
     .next = NULL,
     .reserved = {
         [0] = 0,
@@ -512,7 +512,7 @@ s32 scePowerInit()
     _scePowerBatterySetParam(batteryReallyLowCap, batteryLowCap); //0x00000310 -- sub_00005BF0
     
     g_Power.isBatteryLow = sceSysconIsLowBattery(); //0x00000318
-    if (g_Power.isBatteryLow == TRUE) //0x00000328
+    if (g_Power.isBatteryLow == SCE_TRUE) //0x00000328
         g_Power.unk516 |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000003D4
     
     if (sceSysconIsAcSupplied) //0x00000330
@@ -562,15 +562,17 @@ static void _scePowerLowBatteryCallback(s32 enable, void *argp)
 }
 
 //sub_0x0000071C
-static s32 _scePowerSysEventHandler(s32 eventId, char *eventName __attribute__((unused)), void *param, 
-                                    s32 *result __attribute__((unused)))
+static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result)
 {
     u16 type;
     u32 val;
     s32 sdkVer;
+
+    (void)eventName;
+    (void)result;
     
     if (eventId == 0x402) { //0x00000730
-        if (_scePowerBatteryIsBusy() == FALSE) //0x00000898 -- sub_00005C08
+        if (_scePowerBatteryIsBusy() == SCE_FALSE) //0x00000898 -- sub_00005C08
             return SCE_ERROR_OK;
         
         return SCE_ERROR_BUSY;
@@ -821,11 +823,11 @@ static void _scePowerIsCallbackBusy(u32 callbackFlag, u32 *callbackId)
                  *callbackId = g_Power.powerCallback[i].callbackId; //0x00000D74
              
              sceKernelCpuResumeIntr(intrState); //0x00000D78
-             return TRUE; //0x00000D84
+             return SCE_TRUE; //0x00000D84
          }
     }
     sceKernelCpuResumeIntr(intrState); //0x00000D28
-    return FALSE; //0x00000D30
+    return SCE_FALSE; //0x00000D30
 }
 
 //Subroutine scePower_driver_2638EF48 - Address 0x00000D88
@@ -859,8 +861,10 @@ u32 scePowerGetBacklightMaximum(void)
 {
     u32 backlightMax;
     
-    backlightMax = (scePowerIsPowerOnline() == TRUE) ? SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_EXTERNAL : 
-                                                       SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL; //0x00000E4C & 0x00000E68
+    backlightMax = (scePowerIsPowerOnline() == SCE_TRUE) 
+        ? SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_EXTERNAL 
+        : SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL; //0x00000E4C & 0x00000E68
+
     if (g_Power.unk528 != 0)
         backlightMax = (g_Power.wlanActivity == SCE_POWER_WLAN_ACTIVATED) ? pspMin(backlightMax, g_Power.unk528) : backlightMax; //0x00000E70 & 0x00000E78
     
@@ -868,13 +872,15 @@ u32 scePowerGetBacklightMaximum(void)
 }
 
 //Subroutine module_start - Address 0x00000E8C
-s32 _scePowerModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _scePowerModuleStart(s32 argc, void *argp)
 {
-    u32 i;
+    (void)argc;
+    (void)argp;
     
     memset(&g_Power, 0, sizeof g_Power); //0x00000EA8
     
     //0x00000EB0 - 0x00000EC4
+    u32 i;
     for (i = 0; i < SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS; i++)
          g_Power.powerCallback[i].callbackId = -1;
     
@@ -933,7 +939,7 @@ u32 scePower_driver_23BDDD8B(void)
 //Subroutine scePower_A85880D0 - Address 0x00001044 - Aliases: scePower_driver_693F6CF0
 u32 scePower_A85880D0(void)
 {
-    s32 pspModel;
+    u32 pspModel;
     
     pspModel = sceKernelGetModel(); //0x0000104C
     if (pspModel == PSP_1000) { //0x00001054
@@ -1582,8 +1588,10 @@ s32 _scePowerUnlock(u32 mode, u32 arg1)
 }
 
 //0x00002EE0
-static void _scePowerPowerSwCallback(s32 enable, void *argp __attribute__((unused)))
+static void _scePowerPowerSwCallback(s32 enable, void *argp)
 {
+    (void)argp;
+
     if (enable != 0) { //0x00002EF4
         sceKernelSetEventFlag(g_PowerSwitch.eventId, 1); //0x00002EFC
         sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x2); //0x00002F08
@@ -1596,8 +1604,10 @@ static void _scePowerPowerSwCallback(s32 enable, void *argp __attribute__((unuse
 }
 
 //0x00002F58
-static void _scePowerHoldSwCallback(s32 enable, void *argp __attribute__((unused)))
+static void _scePowerHoldSwCallback(s32 enable, void *argp)
 {
+    (void)argp;
+
     if (enable != 0) //0x00002F6C
         _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0); //0x00002F64
     else 
@@ -1688,7 +1698,7 @@ u32 scePowerSetIdleCallback(u32 slot, u32 arg1, u32 arg2, u32 arg3, u32 arg4, u3
 }
 
 //0x00003220
-static s32 _scePowerVblankInterrupt(s32 subIntNm __attribute__((unused)), void *arg __attribute__((unused)))
+static s32 _scePowerVblankInterrupt(s32 subIntNm, void *arg)
 {
     s64 sysTime;
     u8 isAcSupplied;
@@ -1697,6 +1707,9 @@ static s32 _scePowerVblankInterrupt(s32 subIntNm __attribute__((unused)), void *
     u32 data;
     u32 diff;
     void (*func)(u32, u32, u32, u32);
+
+    (void)subIntNm;
+    (void)arg;
     
     sysTime = sceKernelGetSystemTimeWide(); //0x00003240
     g_PowerIdle.unk0 = (u32)sysTime; //0x00003258
@@ -2456,11 +2469,12 @@ s32 scePower_469989AD(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
     if (sceKernelGetModel() != PSP_1000 || (sceKernelDipsw(11) == 1)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
         scePowerSetExclusiveWlan(0); //0x00004488
+
     return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468
 }
 
 //Subroutine sub_00004498 - Address 0x00004498
-s32 _scePowerBatteryEnd(void)
+static s32 _scePowerBatteryEnd(void)
 {
     u32 outBits;
     
@@ -2486,7 +2500,7 @@ s32 _scePowerBatteryEnd(void)
 }
 
 // Subroutine sub_00004570 - Address 0x00004570 
-s32 _scePowerBatterySuspend(void)
+static s32 _scePowerBatterySuspend(void)
 {
     s32 intrState;
     u32 eventFlagBits;
@@ -2523,7 +2537,7 @@ s32 _scePowerBatterySuspend(void)
 }
 
 // Subroutine sub_0000461C - Address 0x0000461C 
-s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
+static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 {
     u32 val1;
     u32 val2;
@@ -2573,20 +2587,20 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 }
 
 // Subroutine sub_0x000046FC - Address 0x000046FC
-s32 _scePowerBatteryThread(void)
+static s32 _scePowerBatteryThread(void)
 {
 
 }
 
 // Subroutine sub_00005130 - Address 0x00005130
 // Note: Yep, that's the name used in 5.00, might have been corrected since.
-s32 _scePowerBatteryCalcRivisedRcap(void)
+static s32 _scePowerBatteryCalcRivisedRcap(void)
 {
 
 }
 
  // Subroutine sub_0000524C - Address 0x0000524C
-s32 _scePowerBatteryConvertVoltToRCap(void)
+static s32 _scePowerBatteryConvertVoltToRCap(void)
 {
 
 }
@@ -2616,7 +2630,7 @@ s32 scePowerBatteryPermitCharging(void)
 
 // Subroutine sub_0000544C - Address 0x0000544C
 // TODO: Set param list
-s32 _scePowerBatteryUpdateAcSupply(void)
+static s32 _scePowerBatteryUpdateAcSupply(void)
 {
 
 }
@@ -2635,7 +2649,7 @@ s32 scePowerBatteryDisableUsbCharging(void)
 
 // Subroutine sub_000056A4 - Address 0x000056A4
 // TODO: Check parameter list
-s32 _scePowerBatterySetTTC(void)
+static s32 _scePowerBatterySetTTC(void)
 {
 
 }
@@ -2684,26 +2698,26 @@ s32 scePowerGetBatteryChargeCycle(void)
 
 // Subroutine sub_00005B1C - Address 0x00005B1C
 // TODO: check parameters
-s32 _scePowerBatteryInit(void)
+static s32 _scePowerBatteryInit(void)
 {
 
 }
 
 // Subroutine sub_00005BF0 - Address 0x00005BF0
 // TODO: check parameters
-s32 _scePowerBatterySetParam(void)
+static s32 _scePowerBatterySetParam(void)
 {
 
 }
 
 // Subroutine sub_00005C08 - Address 0x00005C08
-s32 _scePowerBatteryIsBusy(void)
+static s32 _scePowerBatteryIsBusy(void)
 {
 
 }
 
 // Subroutine sub_00005C18 - Address 0x00005C18
-s32 _scePowerBatteryResume(void)
+static s32 _scePowerBatteryResume(void)
 {
 
 }
@@ -2801,7 +2815,7 @@ s32 scePowerGetInnerTemp(void)
 }
 
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
-s32 _scePowerBatteryDelayedPermitCharging(void)
+static s32 _scePowerBatteryDelayedPermitCharging(void)
 {
     g_Battery.alarmId = -1;
     sceKernelSetEventFlag(g_Battery.eventId, 0x200);
@@ -2810,7 +2824,7 @@ s32 _scePowerBatteryDelayedPermitCharging(void)
 }
 
 // Subroutine sub_0x00005ED8 - Address 0x00005ED8
-s32 _scePowerBatterySysconCmdIntr(void)
+static s32 _scePowerBatterySysconCmdIntr(void)
 {
     g_Battery.unk108 = 2;
     return SCE_ERROR_OK;
