@@ -2789,5 +2789,6 @@ s32 _scePowerBatteryDelayedPermitCharging(void)
 // Subroutine sub_0x00005ED8 - Address 0x00005ED8
 s32 _scePowerBatterySysconCmdIntr(void)
 {
-
+    g_Battery.unk108 = 2;
+    return SCE_ERROR_OK;
 }
