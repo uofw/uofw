@@ -2662,7 +2662,10 @@ static s32 _scePowerBatterySetTTC(void)
 }
 
 // Subroutine scePower_B4432BC8 - Address 0x00005774 - Aliases: scePower_driver_67492C52
+//
 // TODO: Figure out meaning behind different batteryChargingStatus values (0 - 3) 
+// Looking at scePowerIsBatteryCharging() it appears [1] means battery is charging, and [0, 2, 3] mean 
+// battery is not charging
 s32 scePowerGetBatteryChargingStatus(void)
 {
     s32 oldK1;
@@ -2684,12 +2687,20 @@ s32 scePowerGetBatteryChargingStatus(void)
 
     if (sceSysconIsAcSupplied()) // 0x000057BC
     {
+        // TODO: Battery charging may be suppressed (the battery is not charging) while the WLAN is in use
+        // Could g_Battery.unk20 here be an indicator for WlanActive?
+
+        // Another case is where we are connected to an external power source and the battery is already fully charged.
+        // In this case, we report the battery as not charging and this info could be accessed in the else part below (?)
+
         if (g_Battery.unk20 != 0) // 0x000057C8
         {
+            // battery not charging
             batteryChargingStatus = 2; // 0x000057CC
         }
         else
         {
+            // If bit 8 (pos 7) is set, then battery is being charged
             batteryChargingStatus =  g_Battery.unk60 >> 7 & 0x1; // 0x000057D0 & 0x000057D4
         }
     }
@@ -2697,14 +2708,18 @@ s32 scePowerGetBatteryChargingStatus(void)
     {
         if (g_Battery.unk32 != 0) // 0x000057F4
         {
+            // Apparently battery not charging
             batteryChargingStatus = 3; // 0x000057F8
         }
         else if (g_Battery.unk28 == 0 || !(g_Battery.unk60 & 0x40) || g_Battery.unk40 == 0) // 0x00005800 & 0x00005810 & 0x0000581C
         {
+            // Aparently battery not charging
             batteryChargingStatus = 0; // 0x00005804
         }
         else
         {
+            // Apparently battery charging, why is that? We are not connected to an external power source
+            // Could this be USB charging and sceSysconIsAcSupplied() does not supply that info (only traditional PSP AC)?
             batteryChargingStatus = 1; // 0x00005820
         }
     }
