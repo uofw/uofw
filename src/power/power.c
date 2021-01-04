@@ -167,7 +167,7 @@ typedef enum  {
 typedef struct {
     u32 eventId; // 0
     u32 threadId; // 4
-    u32 unk8;
+    u32 forceSuspendCapacity; // 8
     u32 lowBatteryCapacity; // 12
     u32 unk16;
     u32 unk20;
@@ -2739,7 +2739,7 @@ s32 scePowerBatteryUpdateInfo(void)
 // Subroutine scePower_E8E4E204 - Address 0x00005D24 - Aliases: scePower_driver_A641CF3F
 s32 scePowerGetForceSuspendCapacity(void)
 {
-
+    return (s32)g_Battery.forceSuspendCapacity;
 }
 
 // Subroutine scePower_B999184C - Address 0x00005D30 - Aliases: scePower_driver_7B908CAA
