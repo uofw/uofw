@@ -2733,7 +2733,15 @@ static s32 _scePowerBatteryResume(void)
 // Subroutine scePower_27F3292C - Address 0x00005CCC - Aliases: scePower_driver_0DA940D2
 s32 scePowerBatteryUpdateInfo(void)
 {
+    s32 intrState;
 
+    intrState = sceKernelCpuSuspendIntr(); // 0x00005CDC
+
+    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005CEC
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005CFC
+
+    sceKernelCpuResumeIntr(intrState); // 0x00005D04
+    return SCE_ERROR_OK;
 }
 
 // Subroutine scePower_E8E4E204 - Address 0x00005D24 - Aliases: scePower_driver_A641CF3F
