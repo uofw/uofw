@@ -189,7 +189,7 @@ typedef struct {
     u32 unk84;
     s32 batteryChargeCycle; // 88
     u32 unk92;
-    u32 unk96;
+    s32 batteryTemp; // 96
     s32 batteryElec; // 100
     s32 batteryVoltage; // 104
     u32 unk108;
@@ -2553,7 +2553,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 
     g_Battery.unk92 = -1; // 0x00004644
     g_Battery.unk60 = val1; // 0x0000464C
-    g_Battery.unk96 = -1; // 0x00004650
+    g_Battery.batteryTemp = -1; // 0x00004650
     g_Battery.batteryElec = -1; // 0x00004654
     g_Battery.batteryVoltage = -1; // 0x0000465C
 
@@ -2688,7 +2688,22 @@ s32 scePowerGetBatteryLifeTime(void)
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
 s32 scePowerGetBatteryTemp(void)
 {
+    if (g_Battery.batteryType != 0) // 0x00005A40
+    {
+        return SCE_ERROR_NOT_SUPPORTED;
+    }
 
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x00005A50
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00005A60
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    return g_Battery.batteryTemp; // 0x00005A68
 }
 
 // Subroutine scePower_862AE1A6 - Address 0x00005A74 - Aliases: scePower_driver_993B8C4A
