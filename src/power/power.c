@@ -2783,7 +2783,10 @@ s32 scePowerGetInnerTemp(void)
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
 s32 _scePowerBatteryDelayedPermitCharging(void)
 {
+    g_Battery.alarmId = -1;
+    sceKernelSetEventFlag(g_Battery.eventId, 0x200);
 
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_0x00005ED8 - Address 0x00005ED8
