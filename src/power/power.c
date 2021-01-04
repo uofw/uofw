@@ -183,7 +183,7 @@ typedef struct {
     u32 unk60;
     ScePowerBatteryAvailabilityStatus batteryAvailabilityStatus; // 64
     u32 unk68;
-    u32 unk72;
+    s32 batteryRemainingCapacity; // 72
     u32 batteryLifePercentage; // 76
     u32 batteryFullCapacity; // 80
     u32 unk84;
@@ -2563,7 +2563,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
         if (g_Battery.batteryType == 0) // 0x00004668
         {
             g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
-            g_Battery.unk72 = *(u32*)(arg0 + 44); // 0x000046B0
+            g_Battery.batteryRemainingCapacity = *(u32*)(arg0 + 44); // 0x000046B0
             g_Battery.unk84 = *(u32*)(arg0 + 44); // 0x000046B8
             g_Battery.batteryChargeCycle = -1; // 0x000046C0
             g_Battery.batteryFullCapacity = *(u32*)(arg0 + 48); // 0x000046C8
@@ -2581,7 +2581,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
         g_Battery.unk84 = -1; // 0x000046D4
         g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED; // 0x000046D8
         g_Battery.unk68 = 0; // 0x000046DC
-        g_Battery.unk72 = -1;
+        g_Battery.batteryRemainingCapacity = -1;
         g_Battery.batteryLifePercentage = -1;
         g_Battery.batteryFullCapacity = -1;
         g_Battery.batteryChargeCycle = -1; // 0x000046EC
@@ -2676,7 +2676,17 @@ s32 scePowerIsSuspendRequired(void)
 // Subroutine scePower_94F5A53F - Address 0x000058DC - Aliases: scePower_driver_41ADFF48
 s32 scePowerGetBatteryRemainCapacity(void)
 {
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x000058EC
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
 
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x000058FC
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    return g_Battery.batteryRemainingCapacity; // 0x00005904
 }
 
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
