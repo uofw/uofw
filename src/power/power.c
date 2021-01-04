@@ -2670,7 +2670,49 @@ s32 scePowerGetBatteryChargingStatus(void)
  // Subroutine scePower_78A1A796 - Address 0x0000582C - Aliases: scePower_driver_88C79735
 s32 scePowerIsSuspendRequired(void)
 {
+    s32 isSuspendRequired;
+    s32 oldK1;
 
+    oldK1 = pspShiftK1(); // 0x00005838
+
+    if (sceSysconIsAcSupplied()) // 0x00005850
+    {
+        pspSetK1(oldK1);
+        return SCE_FALSE; // 0x000058D8
+    }
+
+    if (g_Battery.batteryType == 0) // 0x0000585C
+    {
+        s32 remainingCapacity = scePowerGetBatteryRemainCapacity(); // 0x000058B8
+        if (remainingCapacity <= 0) // 0x000058C0
+        {
+            isSuspendRequired = SCE_FALSE; // 0x000058C4
+        }
+        else
+        {
+            isSuspendRequired = remainingCapacity < g_Battery.forceSuspendCapacity; // 0x000058C8 & 0x000058D0
+        }
+    }
+
+    if (g_Battery.batteryType == 1) // 0x00005864
+    {
+        u8 baryonStatus2 = sceSysconGetBaryonStatus2(); // 0x0000588C
+        if (baryonStatus2 & 0x8) // 0x00005898
+        {
+            isSuspendRequired = SCE_TRUE; // 0x00005890
+        }
+        else
+        {
+            // TODO: Define constant for 3400 batteryVoltage
+            isSuspendRequired = g_Battery.batteryVoltage >= 0 && g_Battery.batteryVoltage < 3400; // 0x0000589C - 0x000058B4
+        }
+    }
+
+    pspSetK1(oldK1);
+
+    // uofw note: if g_Battery.batteryType is neither 0 or 1, isSuspendRequired is unitialized.
+    // That said, perhaps Sony made sure g_Battery.batteryType is only ever either 0 or 1.
+    return isSuspendRequired;
 }
 
 // Subroutine scePower_94F5A53F - Address 0x000058DC - Aliases: scePower_driver_41ADFF48
