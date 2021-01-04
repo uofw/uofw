@@ -52,9 +52,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 /** Cancel LCD-related timer */
 #define SCE_KERNEL_POWER_TICK_LCDONLY               (6)	
 
-#define SCE_POWER_VOLATILE_MEMORY_IN_USE            (0x802B0200)
-#define SCE_POWER_ERROR_ACTIVATING_WLAN             (0x802B0300)
-
 typedef struct {
     u32 unk0;
     u32 unk4;
@@ -846,7 +843,7 @@ s32 scePowerWlanActivate(void)
    
     if ((g_Power.unk529 == 1 && pllFreq > 222) || (g_Power.unk529 == 2 && pllFreq > 266)) { //0x00000DBC - 0x00000DEC
         sub_00004014(); //0x00000DF4 -- unlock mutex
-        return SCE_POWER_ERROR_ACTIVATING_WLAN;
+        return SCE_POWER_ERROR_BAD_PRECONDITION;
     }
     g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVATED; //0x00000E1C
     sub_00004014(); //0x00000E18
@@ -956,7 +953,7 @@ u32 scePowerSetExclusiveWlan(u8 arg1)
 s32 scePowerCheckWlanCondition(u32 freq)
 {
     if ((g_Power.unk529 == 1 && freq > 222) || (g_Power.unk529 == 2 && freq > 266)) //0x000010A0 - 0x000010D4
-        return SCE_POWER_ERROR_ACTIVATING_WLAN;
+        return SCE_POWER_ERROR_BAD_PRECONDITION;
     
     return SCE_ERROR_OK;
 }
@@ -1098,7 +1095,7 @@ s32 scePowerVolatileMemTryLock(s32 mode, void **ptr, s32 *size)
     status = sceKernelPollSema(g_PowerSwitch.semaId, 1); //0x0000148C
     if (status != SCE_ERROR_OK) { //0x00001494
         pspSetK1(oldK1);
-        return (status == SCE_ERROR_KERNEL_SEMA_ZERO) ? SCE_POWER_VOLATILE_MEMORY_IN_USE : status; //0x00001524 - 0x0000153C
+        return (status == SCE_ERROR_KERNEL_SEMA_ZERO) ? SCE_POWER_ERROR_CANNOT_LOCK_VMEM : status; //0x00001524 - 0x0000153C
     }
     
     if (ptr != NULL) //0x0000149C
