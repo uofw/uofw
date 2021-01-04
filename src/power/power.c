@@ -165,10 +165,10 @@ typedef enum  {
 } ScePowerBatteryAvailabilityStatus;
 
 typedef struct {
-    u32 eventId; //0
-    u32 threadId; //4
+    u32 eventId; // 0
+    u32 threadId; // 4
     u32 unk8;
-    u32 unk12;
+    u32 lowBatteryCapacity; // 12
     u32 unk16;
     u32 unk20;
     u32 unk24;
@@ -2745,7 +2745,7 @@ s32 scePowerGetForceSuspendCapacity(void)
 // Subroutine scePower_B999184C - Address 0x00005D30 - Aliases: scePower_driver_7B908CAA
 s32 scePowerGetLowBatteryCapacity(void)
 {
-
+    return (s32)g_Battery.lowBatteryCapacity;
 }
 
 // Subroutine scePower_87440F5E - Address 0x00005D3C - Aliases: scePower_driver_872F4ECE
@@ -2759,13 +2759,13 @@ s32 scePowerIsPowerOnline(void)
     status = sceSysconIsAcSupplied(); // 0x00005D4C
 
     pspSetK1(oldK1);
-    return status;
+    return (s32)status;
 }
 
 // Subroutine scePower_0AFD0D8B - Address 0x00005D68 - Aliases: scePower_driver_8C873AA7
 s32 scePowerIsBatteryExist(void)
 {
-    return g_Battery.batteryAvailabilityStatus != BATTERY_NOT_INSTALLED;
+    return (s32)(g_Battery.batteryAvailabilityStatus != BATTERY_NOT_INSTALLED);
 }
 
 // Subroutine scePower_1E490401 - Address 0x00005D78 - Aliases: scePower_driver_7A9EA6DE
