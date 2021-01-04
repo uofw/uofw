@@ -2662,9 +2662,55 @@ static s32 _scePowerBatterySetTTC(void)
 }
 
 // Subroutine scePower_B4432BC8 - Address 0x00005774 - Aliases: scePower_driver_67492C52
+// TODO: Figure out meaning behind different batteryChargingStatus values (0 - 3) 
 s32 scePowerGetBatteryChargingStatus(void)
 {
+    s32 oldK1;
+    s32 batteryChargingStatus;
 
+    oldK1 = pspShiftK1(); // 0x000057A0
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x0000579C
+    {
+        pspSetK1(oldK1);
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x000057AC
+    {
+        pspSetK1(oldK1);
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    if (sceSysconIsAcSupplied()) // 0x000057BC
+    {
+        if (g_Battery.unk20 != 0) // 0x000057C8
+        {
+            batteryChargingStatus = 2; // 0x000057CC
+        }
+        else
+        {
+            batteryChargingStatus =  g_Battery.unk60 >> 7 & 0x1; // 0x000057D0 & 0x000057D4
+        }
+    }
+    else
+    {
+        if (g_Battery.unk32 != 0) // 0x000057F4
+        {
+            batteryChargingStatus = 3; // 0x000057F8
+        }
+        else if (g_Battery.unk28 == 0 || !(g_Battery.unk60 & 0x40) || g_Battery.unk40 == 0) // 0x00005800 & 0x00005810 & 0x0000581C
+        {
+            batteryChargingStatus = 0; // 0x00005804
+        }
+        else
+        {
+            batteryChargingStatus = 1; // 0x00005820
+        }
+    }
+
+    pspSetK1(oldK1);
+    return batteryChargingStatus;
 }
 
  // Subroutine scePower_78A1A796 - Address 0x0000582C - Aliases: scePower_driver_88C79735
