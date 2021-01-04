@@ -186,7 +186,7 @@ typedef struct {
     u32 unk96;
     u32 unk100;
     u32 unk100;
-    u32 unk104;
+    s32 batteryVoltage;
     u32 unk108;
     u32 unk112;
     u32 unk116;
@@ -2534,7 +2534,7 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
     g_Battery.unk60 = val1; // 0x0000464C
     g_Battery.unk96 = -1; // 0x00004650
     g_Battery.unk100 = -1; // 0x00004654
-    g_Battery.unk104 = -1; // 0x0000465C
+    g_Battery.batteryVoltage = -1; // 0x0000465C
 
     if (val1 & 0x2) // 0x00004658
     {
@@ -2771,7 +2771,21 @@ s32 scePowerGetBatteryLifePercent(void)
 // Subroutine scePower_483CE86B - Address 0x00005E64 - Aliases: scePower_driver_F7DE0E81
 s32 scePowerGetBatteryVolt(void)
 {
+    s32 status;
 
+    status = SCE_POWER_ERROR_NO_BATTERY;
+
+    if (g_Battery.unk64 == 0)
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
+
+    if (g_Battery.unk64 == 1)
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    return g_Battery.batteryVoltage;
 }
 
 // Subroutine scePower_23436A4A - Address 0x00005E98 - Aliases: scePower_driver_C730F432
