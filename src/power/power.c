@@ -3,6 +3,7 @@
 */
 
 #include <common_imp.h>
+#include <power_error.h>
 #include <syscon.h>
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
@@ -2779,7 +2780,7 @@ s32 scePowerGetBatteryVolt(void)
 // Subroutine scePower_23436A4A - Address 0x00005E98 - Aliases: scePower_driver_C730F432
 s32 scePowerGetInnerTemp(void)
 {
-
+    return SCE_POWER_ERROR_0010;
 }
 
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
