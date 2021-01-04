@@ -178,7 +178,7 @@ typedef struct {
     u32 unk64;
     u32 unk68;
     u32 unk72;
-    u32 unk76;
+    u32 batteryLifePercentage; //76
     u32 unk80;
     u32 unk84;
     u32 unk88;
@@ -186,7 +186,7 @@ typedef struct {
     u32 unk96;
     u32 unk100;
     u32 unk100;
-    s32 batteryVoltage;
+    s32 batteryVoltage; //104
     u32 unk108;
     u32 unk112;
     u32 unk116;
@@ -2548,12 +2548,12 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
             g_Battery.unk80 = *(u32*)(arg0 + 48); // 0x000046C8
 
             // Note: In earlier versions, this was
-            // g_Battery.unk76 = _scePowerBatteryConvertVoltToRCap();
-            g_Battery.unk76 = _scePowerBatteryCalcRivisedRcap(); // 0x000046C4 & 0x000046D0
+            // g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap();
+            g_Battery.batteryLifePercentage = _scePowerBatteryCalcRivisedRcap(); // 0x000046C4 & 0x000046D0
         }
 
         *arg1 &= ~0x7F; // 0x00004678
-        val2 = *arg1 | g_Battery.unk76 | 0x80; // 0x00004684
+        val2 = *arg1 | g_Battery.batteryLifePercentage | 0x80; // 0x00004684
     }
     else
     {
@@ -2561,7 +2561,7 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
         g_Battery.unk64 = 0; // 0x000046D8
         g_Battery.unk68 = 0; // 0x000046DC
         g_Battery.unk72 = -1;
-        g_Battery.unk76 = -1;
+        g_Battery.batteryLifePercentage = -1;
         g_Battery.unk80 = -1;
         g_Battery.unk88 = -1; // 0x000046EC
 
@@ -2765,16 +2765,22 @@ s32 scePowerGetBatteryFullCapacity(void)
 // Subroutine scePower_2085D15D - Address 0x00005E30 - Aliases: scePower_driver_31AEA94C
 s32 scePowerGetBatteryLifePercent(void)
 {
+    if (g_Battery.unk64 == 0)
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
 
+    if (g_Battery.unk64 == 1)
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    return g_Battery.batteryLifePercentage;
 }
 
 // Subroutine scePower_483CE86B - Address 0x00005E64 - Aliases: scePower_driver_F7DE0E81
 s32 scePowerGetBatteryVolt(void)
 {
-    s32 status;
-
-    status = SCE_POWER_ERROR_NO_BATTERY;
-
     if (g_Battery.unk64 == 0)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
