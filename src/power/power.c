@@ -1196,7 +1196,7 @@ void _scePowerLock(u32 lockType, u32 arg2)
     if (g_PowerSwitch.unk16 == 0) //0x000016C4
         return SCE_ERROR_OK;
     
-    return sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_EVENT_WAITOR, NULL, NULL); //0x000016DC
+    return sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_KERNEL_EW_OR, NULL, NULL); //0x000016DC
 }
 
 //Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
@@ -1208,7 +1208,7 @@ s32 scePowerWaitRequestCompletion(void)
     
     oldK1 = pspShiftK1(); //0x00001748
     
-    status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_EVENT_WAITOR, &resultBits);
+    status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_KERNEL_EW_OR, &resultBits);
     if (status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) { //0x0000174C & 0x00001764
         pspSetK1(oldK1); //0x000017EC
         return status;
@@ -1219,13 +1219,13 @@ s32 scePowerWaitRequestCompletion(void)
     }
     
     if ((resultBits & 0x20000) == 0) { //0x00001780& 0x00001790
-        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x20000, SCE_EVENT_WAITOR, &resultBits, NULL); //0x00001798
+        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x20000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x00001798
         if (status < SCE_ERROR_OK) { //0x000017A0
             pspSetK1(oldK1); //0x000017EC
             return status;
         }
     }
-    status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_EVENT_WAITOR, &resultBits, NULL); //0x000017B8
+    status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x000017B8
     pspSetK1(oldK1); //0x000017C8
     return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; //0x000017C4
 }
@@ -1238,13 +1238,13 @@ static s32 _scePowerOffThread(void)
     u32 timeOut; //sp + 4
     
 start:    
-    sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x800001F1, SCE_EVENT_WAITOR, &resultBits, NULL); //0x00001844
+    sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x800001F1, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x00001844
     if ((s32)resultBits < 0) //0x00001850
         return SCE_ERROR_OK;
     
     if (resultBits & 0x1) { //0x00001858
         timeOut = 0x1E8480; //0x00001A08 -- 2 seconds
-        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x800001F2, SCE_EVENT_WAITOR, &resultBits, &timeOut); //0x00001A04
+        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x800001F2, SCE_KERNEL_EW_OR, &resultBits, &timeOut); //0x00001A04
         if ((s32)resultBits < 0) //0x00001A10
             return SCE_ERROR_OK;
         
@@ -2485,7 +2485,7 @@ static s32 _scePowerBatteryEnd(void)
     u32 outBits;
     
     if (g_Battery.alarmId <= 0) { //0x000044C0
-        s32 status = sceKernelPollEventFlag(g_Battery.eventId, 0x200, 0x21, &outBits); //0x00004554
+        s32 status = sceKernelPollEventFlag(g_Battery.eventId, 0x200, SCE_KERNEL_EW_CLEAR_PAT | SCE_KERNEL_EW_OR, &outBits); //0x00004554
         outBits = ((s32)status < 0) ? 0 : outBits; //0x00004564
     } else {
         sceKernelCancelAlarm(g_Battery.alarmId); //0x000044C8
