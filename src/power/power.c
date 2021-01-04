@@ -238,6 +238,8 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
 static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(void); // 0x0000544C
 static s32 _scePowerBatterySetTTC(void); // 0x000056A4
+static s32 _scePowerBatteryDelayedPermitCharging(void); // 0x00005EA4
+static s32 _scePowerBatterySysconCmdIntr(void); // 0x00005ED8
 
 ScePowerHandlers g_PowerHandler = {
     .size = sizeof(ScePowerHandlers),
@@ -2776,6 +2778,18 @@ s32 scePowerGetBatteryVolt(void)
 
 // Subroutine scePower_23436A4A - Address 0x00005E98 - Aliases: scePower_driver_C730F432
 s32 scePowerGetInnerTemp(void)
+{
+
+}
+
+// Subroutine sub_0x00005EA4 - Address 0x00005EA4
+s32 _scePowerBatteryDelayedPermitCharging(void)
+{
+
+}
+
+// Subroutine sub_0x00005ED8 - Address 0x00005ED8
+s32 _scePowerBatterySysconCmdIntr(void)
 {
 
 }
