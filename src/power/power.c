@@ -190,8 +190,7 @@ typedef struct {
     s32 batteryChargeCycle; // 88
     u32 unk92;
     u32 unk96;
-    u32 unk100;
-    u32 unk100;
+    s32 batteryElec; // 100
     s32 batteryVoltage; // 104
     u32 unk108;
     u32 unk112;
@@ -2555,7 +2554,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
     g_Battery.unk92 = -1; // 0x00004644
     g_Battery.unk60 = val1; // 0x0000464C
     g_Battery.unk96 = -1; // 0x00004650
-    g_Battery.unk100 = -1; // 0x00004654
+    g_Battery.batteryElec = -1; // 0x00004654
     g_Battery.batteryVoltage = -1; // 0x0000465C
 
     if (val1 & 0x2) // 0x00004658
@@ -2693,19 +2692,43 @@ s32 scePowerGetBatteryTemp(void)
 }
 
 // Subroutine scePower_862AE1A6 - Address 0x00005A74 - Aliases: scePower_driver_993B8C4A
-s32 scePowerGetBatteryElec(void)
+s32 scePowerGetBatteryElec(u32 *pBatteryElec)
 {
+    s32 oldK1;
 
+    oldK1 = pspShiftK1(); // 0x00005A80
+
+    if (g_Battery.batteryType != 0) // 0x00005A90
+    {
+        return SCE_ERROR_NOT_SUPPORTED;
+    }
+
+    if (!pspK1PtrOk(pBatteryElec)) // 0x00005A98
+    {
+        return SCE_ERROR_PRIV_REQUIRED;
+    }
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x00005AA8
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00005AB8
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    // uOFW note: Missing null check
+    *pBatteryElec = g_Battery.batteryElec; // 0x00005AC8
+
+    pspSetK1(oldK1);
+    return SCE_ERROR_OK;
 }
 
 // Subroutine scePower_CB49F5CE - Address 0x00005AD8 - Aliases: scePower_driver_8432901E
 s32 scePowerGetBatteryChargeCycle(void)
 {
-    s32 status;
-
-    status = SCE_ERROR_NOT_SUPPORTED;  // 0x00005AEC
-
-    if (g_Battery.batteryType != 0)
+    if (g_Battery.batteryType != 0) // 0x00005AE8
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }
