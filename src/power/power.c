@@ -2682,7 +2682,63 @@ s32 scePowerGetBatteryRemainCapacity(void)
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
 s32 scePowerGetBatteryLifeTime(void)
 {
+    s32 status;
+    s32 intrState;
 
+    // If an external power supply is available, return 0 since we cannot estimate the remaining batter life.
+    if (sceSysconIsAcSupplied()) // 0x00005920 & 0x00005928
+    {
+        return 0;
+    }
+
+    if (g_Battery.batteryType != 0) // 0x0000593C
+    {
+        // uofw note: Yes, Sony is returning an unitialized local variable here
+        // Presumably status should have been set to SCE_ERROR_NOT_SUPPORTED before 
+        // returning here.
+        return status;
+    }
+
+    s32 remainingCapacity = scePowerGetBatteryRemainCapacity(); // 0x00005944
+    if (remainingCapacity < 0) // 0x00005950
+    {
+        return remainingCapacity; // 0x00005954
+    }
+
+    if (g_Battery.unk28 == 0 && g_Battery.batteryElec >= 0) // 0x0000596C & 0x000059EC
+    {
+        intrState = sceKernelCpuSuspendIntr(); // 0x000059F4
+
+        sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005A04
+        sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005A14
+
+        sceKernelCpuResumeIntr(intrState);
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    if (g_Battery.batteryElec < 0) // 0x00005978
+    {
+        s32 remainingCapacityForRunning = (remainingCapacity - g_Battery.forceSuspendCapacity); // 0x000059A8 & 0x000059AC
+
+        if (g_Battery.batteryElec == -1) // 0x000059C0
+        {
+            pspBreak(SCE_BREAKCODE_DIVZERO); // 0x000059C4
+        }
+
+        // Convert remaining capacity (which is (presumably - based on PS Vita SDK doc) in mAh) into minutes.
+        // rough formula to use here:
+        //    (mAh)/(Amps*1000)*60 = (minutes). 
+        s32 cvtRemainingTime = remainingCapacityForRunning * 60 / ~g_Battery.batteryElec; // 0x000059B0 & 0x000059B4 & 0x000059B4
+
+        if (g_Battery.unk92 >= 0) // 0x000059CC & 0x000059D
+        {
+            cvtRemainingTime = pspMin(cvtRemainingTime, g_Battery.unk92); // 0x000059D8
+        }
+
+        return pspMax(cvtRemainingTime, 1); // 0x000059E0
+    }
+
+    return 0;
 }
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
