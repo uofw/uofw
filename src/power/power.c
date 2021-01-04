@@ -158,6 +158,12 @@ typedef struct {
     u16 unk102;
 } ScePowerFrequency; //size: 104
 
+typedef enum  {
+    BATTERY_NOT_INSTALLED = 0,
+    BATTERY_IS_BEING_DETECTED = 1,
+    BATTERY_AVAILABLE = 2,
+} ScePowerBatteryAvailabilityStatus;
+
 typedef struct {
     u32 eventId; //0
     u32 threadId; //4
@@ -175,7 +181,7 @@ typedef struct {
     u32 unk52;
     u32 unk56;
     u32 unk60;
-    u32 unk64;
+    ScePowerBatteryAvailabilityStatus batteryAvailabilityStatus; // 64
     u32 unk68;
     u32 unk72;
     u32 batteryLifePercentage; // 76
@@ -2536,6 +2542,8 @@ static s32 _scePowerBatterySuspend(void)
     return SCE_ERROR_OK;
 }
 
+#include <ctrl.h>
+
 // Subroutine sub_0000461C - Address 0x0000461C 
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 {
@@ -2552,7 +2560,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 
     if (val1 & 0x2) // 0x00004658
     {
-        g_Battery.unk64 = 1; // 0x0000466C
+        g_Battery.batteryAvailabilityStatus = BATTERY_IS_BEING_DETECTED; // 0x0000466C
         if (g_Battery.batteryType == 0) // 0x00004668
         {
             g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
@@ -2572,7 +2580,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
     else
     {
         g_Battery.unk84 = -1; // 0x000046D4
-        g_Battery.unk64 = 0; // 0x000046D8
+        g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED; // 0x000046D8
         g_Battery.unk68 = 0; // 0x000046DC
         g_Battery.unk72 = -1;
         g_Battery.batteryLifePercentage = -1;
@@ -2761,7 +2769,19 @@ s32 scePowerIsBatteryCharging(void)
 // Subroutine scePower_D3075926 - Address 0x00005DA0 - Aliases: scePower_driver_FA651CE1
 s32 scePowerIsLowBattery(void)
 {
+    s32 status;
+    s32 oldK1;
 
+    status = SCE_ERROR_OK;
+    oldK1 = pspShiftK1(); // 0x00005DC4
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABLE) // 0x00005DC0
+    {
+        status = sceSysconIsLowBattery(); // 0x00005DE0
+    }
+
+    pspSetK1(oldK1);
+    return status;
 }
 
 // Subroutine scePower_driver_071160B1 - Address 0x00005DF0
@@ -2773,12 +2793,12 @@ s32 scePowerGetBatteryType(void)
 // Subroutine scePower_FD18A0FF - Address 0x00005DFC - Aliases: scePower_driver_003B1E03
 s32 scePowerGetBatteryFullCapacity(void)
 {
-    if (g_Battery.unk64 == 0)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.unk64 == 1)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED)
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -2789,12 +2809,12 @@ s32 scePowerGetBatteryFullCapacity(void)
 // Subroutine scePower_2085D15D - Address 0x00005E30 - Aliases: scePower_driver_31AEA94C
 s32 scePowerGetBatteryLifePercent(void)
 {
-    if (g_Battery.unk64 == 0)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.unk64 == 1)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED)
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -2805,12 +2825,12 @@ s32 scePowerGetBatteryLifePercent(void)
 // Subroutine scePower_483CE86B - Address 0x00005E64 - Aliases: scePower_driver_F7DE0E81
 s32 scePowerGetBatteryVolt(void)
 {
-    if (g_Battery.unk64 == 0)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.unk64 == 1)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED)
     {
         return SCE_POWER_ERROR_DETECTING;
     }
