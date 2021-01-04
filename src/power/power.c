@@ -170,7 +170,7 @@ typedef struct {
     u32 unk32;
     u32 alarmId; // 36
     u32 unk40;
-    u32 unk44;
+    u32 batteryType; // 44
     u32 unk48;
     u32 unk52;
     u32 unk56;
@@ -2553,7 +2553,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
     if (val1 & 0x2) // 0x00004658
     {
         g_Battery.unk64 = 1; // 0x0000466C
-        if (g_Battery.unk44 == 0) // 0x00004668
+        if (g_Battery.batteryType == 0) // 0x00004668
         {
             g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
             g_Battery.unk72 = *(u32*)(arg0 + 44); // 0x000046B0
@@ -2767,7 +2767,7 @@ s32 scePowerIsLowBattery(void)
 // Subroutine scePower_driver_071160B1 - Address 0x00005DF0
 s32 scePowerGetBatteryType(void)
 {
-
+    return (s32)g_Battery.batteryType;
 }
 
 // Subroutine scePower_FD18A0FF - Address 0x00005DFC - Aliases: scePower_driver_003B1E03
