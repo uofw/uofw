@@ -187,7 +187,7 @@ typedef struct {
     u32 batteryLifePercentage; // 76
     u32 batteryFullCapacity; // 80
     u32 unk84;
-    u32 unk88;
+    s32 batteryChargeCycle; // 88
     u32 unk92;
     u32 unk96;
     u32 unk100;
@@ -2566,7 +2566,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
             g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
             g_Battery.unk72 = *(u32*)(arg0 + 44); // 0x000046B0
             g_Battery.unk84 = *(u32*)(arg0 + 44); // 0x000046B8
-            g_Battery.unk88 = -1; // 0x000046C0
+            g_Battery.batteryChargeCycle = -1; // 0x000046C0
             g_Battery.batteryFullCapacity = *(u32*)(arg0 + 48); // 0x000046C8
 
             // Note: In earlier versions, this was
@@ -2585,7 +2585,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
         g_Battery.unk72 = -1;
         g_Battery.batteryLifePercentage = -1;
         g_Battery.batteryFullCapacity = -1;
-        g_Battery.unk88 = -1; // 0x000046EC
+        g_Battery.batteryChargeCycle = -1; // 0x000046EC
 
         val2 = *arg1 & ~0xFF; // 0x000046F8
     }
@@ -2701,7 +2701,26 @@ s32 scePowerGetBatteryElec(void)
 // Subroutine scePower_CB49F5CE - Address 0x00005AD8 - Aliases: scePower_driver_8432901E
 s32 scePowerGetBatteryChargeCycle(void)
 {
+    s32 status;
 
+    status = SCE_ERROR_NOT_SUPPORTED;  // 0x00005AEC
+
+    if (g_Battery.batteryType != 0)
+    {
+        return SCE_ERROR_NOT_SUPPORTED;
+    }
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x00005AF8
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
+
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00005B08
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    return g_Battery.batteryChargeCycle; // 0x00005B10
 }
 
 // Subroutine sub_00005B1C - Address 0x00005B1C
