@@ -2751,13 +2751,21 @@ s32 scePowerGetLowBatteryCapacity(void)
 // Subroutine scePower_87440F5E - Address 0x00005D3C - Aliases: scePower_driver_872F4ECE
 s32 scePowerIsPowerOnline(void)
 {
+    s32 status;
+    s32 oldK1;
 
+    oldK1 = pspShiftK1();
+
+    status = sceSysconIsAcSupplied(); // 0x00005D4C
+
+    pspSetK1(oldK1);
+    return status;
 }
 
 // Subroutine scePower_0AFD0D8B - Address 0x00005D68 - Aliases: scePower_driver_8C873AA7
 s32 scePowerIsBatteryExist(void)
 {
-
+    return g_Battery.batteryAvailabilityStatus != BATTERY_NOT_INSTALLED;
 }
 
 // Subroutine scePower_1E490401 - Address 0x00005D78 - Aliases: scePower_driver_7A9EA6DE
