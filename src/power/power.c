@@ -2763,7 +2763,16 @@ s32 scePowerIsBatteryExist(void)
 // Subroutine scePower_1E490401 - Address 0x00005D78 - Aliases: scePower_driver_7A9EA6DE
 s32 scePowerIsBatteryCharging(void)
 {
+    s32 status;
 
+    status = scePowerGetBatteryChargingStatus(); // 0x00005D80
+
+    if (status == 2 || status == 3) // 0x00005D88 & 0x00005D90
+    {
+        status = SCE_FALSE; // 0x00005D94
+    }
+
+    return status;
 }
 
 // Subroutine scePower_D3075926 - Address 0x00005DA0 - Aliases: scePower_driver_FA651CE1
