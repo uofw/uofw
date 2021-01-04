@@ -236,6 +236,8 @@ static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
 static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
+static s32 _scePowerBatteryUpdateAcSupply(void); // 0x0000544C
+static s32 _scePowerBatterySetTTC(void); // 0x000056A4
 
 ScePowerHandlers g_PowerHandler = {
     .size = sizeof(ScePowerHandlers),
@@ -2545,7 +2547,9 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
             g_Battery.unk88 = -1; // 0x000046C0
             g_Battery.unk80 = *(u32*)(arg0 + 48); // 0x000046C8
 
-            g_Battery.unk76 = _scePowerBatteryConvertVoltToRCap(); // 0x000046C4 & 0x000046D0
+            // Note: In earlier versions, this was
+            // g_Battery.unk76 = _scePowerBatteryConvertVoltToRCap();
+            g_Battery.unk76 = _scePowerBatteryCalcRivisedRcap(); // 0x000046C4 & 0x000046D0
         }
 
         *arg1 &= ~0x7F; // 0x00004678
@@ -2568,8 +2572,210 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
     return SCE_ERROR_OK;
 }
 
+// Subroutine sub_0x000046FC - Address 0x000046FC
+s32 _scePowerBatteryThread(void)
+{
+
+}
+
 // Subroutine sub_00005130 - Address 0x00005130
+// Note: Yep, that's the name used in 5.00, might have been corrected since.
+s32 _scePowerBatteryCalcRivisedRcap(void)
+{
+
+}
+
+ // Subroutine sub_0000524C - Address 0x0000524C
 s32 _scePowerBatteryConvertVoltToRCap(void)
+{
+
+}
+
+// TODO:
+// In earlier versions, there was an internal _scePowerGetPolestar2ChargeLed() function here
+// This function calls sceSyscon_driver_D8471760 - sceSysconReadPolestarReg 
+// perhaps it has been inlined? It is called in _scePowerBatteryThread().
+
+// Subroutine scePower_driver_5F5006D2 - Address 0x000052C8
+s32 scePowerGetUsbChargingCapability(void)
+{
+
+}
+
+// Subroutine scePower_driver_10CE273F - Address 0x000052D4
+s32 scePowerBatteryForbidCharging(void)
+{
+
+}
+
+// Subroutine scePower_driver_EF751B4A - Address 0x00005394 
+s32 scePowerBatteryPermitCharging(void)
+{
+
+}
+
+// Subroutine sub_0000544C - Address 0x0000544C
+// TODO: Set param list
+s32 _scePowerBatteryUpdateAcSupply(void)
+{
+
+}
+
+// Subroutine scePower_driver_72D1B53A - Address 0x000054E0
+s32 scePowerBatteryEnableUsbCharging(void)
+{
+
+}
+
+// Subroutine scePower_driver_7EAA4247 - Address 0x00005590
+s32 scePowerBatteryDisableUsbCharging(void)
+{
+
+}
+
+// Subroutine sub_000056A4 - Address 0x000056A4
+// TODO: Check parameter list
+s32 _scePowerBatterySetTTC(void)
+{
+
+}
+
+// Subroutine scePower_B4432BC8 - Address 0x00005774 - Aliases: scePower_driver_67492C52
+s32 scePowerGetBatteryChargingStatus(void)
+{
+
+}
+
+ // Subroutine scePower_78A1A796 - Address 0x0000582C - Aliases: scePower_driver_88C79735
+s32 scePowerIsSuspendRequired(void)
+{
+
+}
+
+// Subroutine scePower_94F5A53F - Address 0x000058DC - Aliases: scePower_driver_41ADFF48
+s32 scePowerGetBatteryRemainCapacity(void)
+{
+
+}
+
+// Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
+s32 scePowerGetBatteryLifeTime(void)
+{
+
+}
+
+// Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
+s32 scePowerGetBatteryTemp(void)
+{
+
+}
+
+// Subroutine scePower_862AE1A6 - Address 0x00005A74 - Aliases: scePower_driver_993B8C4A
+s32 scePowerGetBatteryElec(void)
+{
+
+}
+
+// Subroutine scePower_CB49F5CE - Address 0x00005AD8 - Aliases: scePower_driver_8432901E
+s32 scePowerGetBatteryChargeCycle(void)
+{
+
+}
+
+// Subroutine sub_00005B1C - Address 0x00005B1C
+// TODO: check parameters
+s32 _scePowerBatteryInit(void)
+{
+
+}
+
+// Subroutine sub_00005BF0 - Address 0x00005BF0
+// TODO: check parameters
+s32 _scePowerBatterySetParam(void)
+{
+
+}
+
+// Subroutine sub_00005C08 - Address 0x00005C08
+s32 _scePowerBatteryIsBusy(void)
+{
+
+}
+
+// Subroutine sub_00005C18 - Address 0x00005C18
+s32 _scePowerBatteryResume(void)
+{
+
+}
+
+// Subroutine scePower_27F3292C - Address 0x00005CCC - Aliases: scePower_driver_0DA940D2
+s32 scePowerBatteryUpdateInfo(void)
+{
+
+}
+
+// Subroutine scePower_E8E4E204 - Address 0x00005D24 - Aliases: scePower_driver_A641CF3F
+s32 scePowerGetForceSuspendCapacity(void)
+{
+
+}
+
+// Subroutine scePower_B999184C - Address 0x00005D30 - Aliases: scePower_driver_7B908CAA
+s32 scePowerGetLowBatteryCapacity(void)
+{
+
+}
+
+// Subroutine scePower_87440F5E - Address 0x00005D3C - Aliases: scePower_driver_872F4ECE
+s32 scePowerIsPowerOnline(void)
+{
+
+}
+
+// Subroutine scePower_0AFD0D8B - Address 0x00005D68 - Aliases: scePower_driver_8C873AA7
+s32 scePowerIsBatteryExist(void)
+{
+
+}
+
+// Subroutine scePower_1E490401 - Address 0x00005D78 - Aliases: scePower_driver_7A9EA6DE
+s32 scePowerIsBatteryCharging(void)
+{
+
+}
+
+// Subroutine scePower_D3075926 - Address 0x00005DA0 - Aliases: scePower_driver_FA651CE1
+s32 scePowerIsLowBattery(void)
+{
+
+}
+
+// Subroutine scePower_driver_071160B1 - Address 0x00005DF0
+s32 scePowerGetBatteryType(void)
+{
+
+}
+
+// Subroutine scePower_FD18A0FF - Address 0x00005DFC - Aliases: scePower_driver_003B1E03
+s32 scePowerGetBatteryFullCapacity(void)
+{
+
+}
+
+// Subroutine scePower_2085D15D - Address 0x00005E30 - Aliases: scePower_driver_31AEA94C
+s32 scePowerGetBatteryLifePercent(void)
+{
+
+}
+
+// Subroutine scePower_483CE86B - Address 0x00005E64 - Aliases: scePower_driver_F7DE0E81
+s32 scePowerGetBatteryVolt(void)
+{
+
+}
+
+// Subroutine scePower_23436A4A - Address 0x00005E98 - Aliases: scePower_driver_C730F432
+s32 scePowerGetInnerTemp(void)
 {
 
 }
