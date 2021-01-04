@@ -168,7 +168,7 @@ typedef struct {
     u32 unk24;
     u32 unk28;
     u32 unk32;
-    u32 alarmId; //36
+    u32 alarmId; // 36
     u32 unk40;
     u32 unk44;
     u32 unk48;
@@ -178,15 +178,15 @@ typedef struct {
     u32 unk64;
     u32 unk68;
     u32 unk72;
-    u32 batteryLifePercentage; //76
-    u32 unk80;
+    u32 batteryLifePercentage; // 76
+    u32 batteryFullCapacity; // 80
     u32 unk84;
     u32 unk88;
     u32 unk92;
     u32 unk96;
     u32 unk100;
     u32 unk100;
-    s32 batteryVoltage; //104
+    s32 batteryVoltage; // 104
     u32 unk108;
     u32 unk112;
     u32 unk116;
@@ -2559,7 +2559,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
             g_Battery.unk72 = *(u32*)(arg0 + 44); // 0x000046B0
             g_Battery.unk84 = *(u32*)(arg0 + 44); // 0x000046B8
             g_Battery.unk88 = -1; // 0x000046C0
-            g_Battery.unk80 = *(u32*)(arg0 + 48); // 0x000046C8
+            g_Battery.batteryFullCapacity = *(u32*)(arg0 + 48); // 0x000046C8
 
             // Note: In earlier versions, this was
             // g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap();
@@ -2576,7 +2576,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
         g_Battery.unk68 = 0; // 0x000046DC
         g_Battery.unk72 = -1;
         g_Battery.batteryLifePercentage = -1;
-        g_Battery.unk80 = -1;
+        g_Battery.batteryFullCapacity = -1;
         g_Battery.unk88 = -1; // 0x000046EC
 
         val2 = *arg1 & ~0xFF; // 0x000046F8
@@ -2773,7 +2773,17 @@ s32 scePowerGetBatteryType(void)
 // Subroutine scePower_FD18A0FF - Address 0x00005DFC - Aliases: scePower_driver_003B1E03
 s32 scePowerGetBatteryFullCapacity(void)
 {
+    if (g_Battery.unk64 == 0)
+    {
+        return SCE_POWER_ERROR_NO_BATTERY;
+    }
 
+    if (g_Battery.unk64 == 1)
+    {
+        return SCE_POWER_ERROR_DETECTING;
+    }
+
+    return g_Battery.batteryFullCapacity;
 }
 
 // Subroutine scePower_2085D15D - Address 0x00005E30 - Aliases: scePower_driver_31AEA94C
