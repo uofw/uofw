@@ -227,7 +227,8 @@ static s32 _scePowerInitCallback(); //sub_0x0000114C
 static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
-static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
+static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
+static s32 _scePowerBatteryConvertVoltToRCap(s32 arg0); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
 static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
@@ -2559,7 +2560,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
             g_Battery.batteryFullCapacity = *(u32*)(arg0 + 48); // 0x000046C8
 
             // Note: In earlier versions, this was
-            // g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap();
+            // g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap(*(u32*)(arg0 + 44));
             g_Battery.batteryLifePercentage = _scePowerBatteryCalcRivisedRcap(); // 0x000046C4 & 0x000046D0
         }
 
@@ -2596,10 +2597,52 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
 
 }
 
- // Subroutine sub_0000524C - Address 0x0000524C
-static s32 _scePowerBatteryConvertVoltToRCap(void)
+// Subroutine sub_0000524C - Address 0x0000524C
+//
+// TODO: 
+//  - This function has been chanhed since 5.00. While it still most likely returns the remaining battery capacity
+//    its input have changed. As such, this function name might no longer be correct
+//  - Define constants for these values
+//  - Might these be different values depending on the PSP model used (thus different battery)?
+/* Convert battery voltage to remaining battery capacity (relative) */
+static s32 _scePowerBatteryConvertVoltToRCap(s32 arg0)
 {
+    if (arg0 <= 0 || arg0 < 3100 || arg0 < 3300 || arg0 < 3400) // 0x0000524C - 0x00005268
+    {
+        return 0;
+    }
 
+    if (arg0 < 3500) // 0x00005270
+    {
+        return 2;
+    }
+
+    if (arg0 < 3600) // 0x0000527C
+    {
+        return 4;
+    }
+
+    if (arg0 < 3700) // 0x00005288
+    {
+        return 12;
+    }
+
+    if (arg0 < 3800) // 0x00005294
+    {
+        return 30;
+    }
+
+    if (arg0 < 4000) // 0x000052A0
+    {
+        return 60;
+    }
+
+    if (arg0 < 4050 || arg0 < 4150) // 0x000052AC
+    {
+        return 90;
+    }
+
+    return 100;
 }
 
 // TODO:
