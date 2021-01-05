@@ -186,7 +186,7 @@ typedef struct {
     u32 unk24; // TODO: Perhaps isUsbChargingSupported? Need some more data...
     u32 isUsbChargingEnabled; // 28
     u32 unk32;
-    u32 alarmId; // 36
+    u32 permitChargingDelayAlarmId; // 36
     u32 unk40;
     u32 batteryType; // 44
     u32 unk48;
@@ -2473,13 +2473,13 @@ static s32 _scePowerBatteryEnd(void)
 {
     u32 outBits;
     
-    if (g_Battery.alarmId <= 0) { //0x000044C0
+    if (g_Battery.permitChargingDelayAlarmId <= 0) { //0x000044C0
         s32 status = sceKernelPollEventFlag(g_Battery.eventId, 0x200, SCE_KERNEL_EW_CLEAR_PAT | SCE_KERNEL_EW_OR, &outBits); //0x00004554
         outBits = ((s32)status < 0) ? 0 : outBits; //0x00004564
     } else {
-        sceKernelCancelAlarm(g_Battery.alarmId); //0x000044C8
+        sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); //0x000044C8
         outBits = 0x200; //0x000044D0
-        g_Battery.alarmId = -1;//0x000044DC
+        g_Battery.permitChargingDelayAlarmId = -1;//0x000044DC
     }
     sceKernelClearEventFlag(g_Battery.eventId, ~0xF00); //0x000044E8
     sceKernelSetEventFlag(g_Battery.eventId, 0x80000000); //0x000044F4 -- TODO: 0x80000000 == SCE_POWER_CALLBACKARG_POWER_SWITCH?
@@ -2504,10 +2504,10 @@ static s32 _scePowerBatterySuspend(void)
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00004590
 
-    if (g_Battery.alarmId > 0) // 0x000045A0
+    if (g_Battery.permitChargingDelayAlarmId > 0) // 0x000045A0
     {
-        sceKernelCancelAlarm(g_Battery.alarmId); // 0x000045A8
-        g_Battery.alarmId = -1;
+        sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x000045A8
+        g_Battery.permitChargingDelayAlarmId = -1;
 
         eventFlagBits |= 0x200;
     }
@@ -2616,7 +2616,34 @@ s32 scePowerGetUsbChargingCapability(void)
 // Subroutine scePower_driver_10CE273F - Address 0x000052D4
 s32 scePowerBatteryForbidCharging(void)
 {
+    s32 intrState1;
+    s32 intrState2;
 
+    intrState1 = sceKernelCpuSuspendIntr();  // 0x000052EC
+
+    if (g_Battery.unk20 == 0) // 0x000052F8
+    {
+        if (g_Battery.permitChargingDelayAlarmId > 0) // 0x00005304
+        {
+            sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x0000530C
+            g_Battery.permitChargingDelayAlarmId = 0; // 0x00005318
+        }
+
+        sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x00005320
+        sceKernelSetEventFlag(g_Battery.eventId, 0x100); // 0x0000532C
+    }
+
+    g_Battery.unk20++; // 0x00005344
+
+    intrState2 = sceKernelCpuSuspendIntr(); // 0x00005340
+
+    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005350
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005360
+
+    sceKernelCpuResumeIntr(intrState2); // 0x00005368
+    sceKernelCpuResumeIntr(intrState1); // 0x00005370
+
+    return SCE_ERROR_OK;
 }
 
 // Subroutine scePower_driver_EF751B4A - Address 0x00005394 
@@ -2633,7 +2660,7 @@ s32 scePowerBatteryPermitCharging(void)
         if (g_Battery.unk20 == 0) // 0x000053C8
         {
             sceKernelClearEventFlag(g_Battery.eventId, ~0x100); // 0x00005424
-            g_Battery.alarmId = sceKernelSetAlarm(POWER_DELAY_PERMIT_CHARGING, _scePowerBatteryDelayedPermitCharging, NULL); // 0x0000543C
+            g_Battery.permitChargingDelayAlarmId = sceKernelSetAlarm(POWER_DELAY_PERMIT_CHARGING, _scePowerBatteryDelayedPermitCharging, NULL); // 0x0000543C
         }
     }
 
@@ -2662,10 +2689,10 @@ static s32 _scePowerBatteryUpdateAcSupply(s32 enable)
 
     if (g_Battery.unk20 > 0) // 0x00005494
     {
-        if (g_Battery.alarmId > 0) // 0x000054A0
+        if (g_Battery.permitChargingDelayAlarmId > 0) // 0x000054A0
         {
-            sceKernelCancelAlarm(g_Battery.alarmId); // 0x000054AC
-            g_Battery.alarmId = -1; // 0x000054B4
+            sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x000054AC
+            g_Battery.permitChargingDelayAlarmId = -1; // 0x000054B4
         }
 
         sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x000054BC
@@ -3252,10 +3279,10 @@ static s32 _scePowerBatteryDelayedPermitCharging(void *common)
 {
     (void)common; 
 
-    g_Battery.alarmId = -1;
+    g_Battery.permitChargingDelayAlarmId = -1;
     sceKernelSetEventFlag(g_Battery.eventId, 0x200);
 
-    return SCE_ERROR_OK;
+    return 0; /* Delete this alarm handler. */
 }
 
 // Subroutine sub_0x00005ED8 - Address 0x00005ED8
