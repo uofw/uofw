@@ -53,6 +53,9 @@ SCE_SDK_VERSION(SDK_VERSION);
 /** Cancel LCD-related timer */
 #define SCE_KERNEL_POWER_TICK_LCDONLY               (6)	
 
+/* Permit Charge delay in microseconds */
+#define POWER_DELAY_PERMIT_CHARGING                 (5 * 1000 * 1000)
+
 typedef struct {
     u32 unk0;
     u32 unk4;
@@ -227,7 +230,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
 static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
-static s32 _scePowerBatteryDelayedPermitCharging(void); // 0x00005EA4
+static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param); // 0x00005ED8
 
 ScePowerHandlers g_PowerHandler = {
@@ -2619,7 +2622,30 @@ s32 scePowerBatteryForbidCharging(void)
 // Subroutine scePower_driver_EF751B4A - Address 0x00005394 
 s32 scePowerBatteryPermitCharging(void)
 {
+    s32 intrState1;
+    s32 intrState2;
 
+    intrState1 = sceKernelCpuSuspendIntr(); // 0x000053AC
+
+    if (g_Battery.unk20 > 0)
+    {
+        g_Battery.unk20--; // 0x000053CC
+        if (g_Battery.unk20 == 0) // 0x000053C8
+        {
+            sceKernelClearEventFlag(g_Battery.eventId, ~0x100); // 0x00005424
+            g_Battery.alarmId = sceKernelSetAlarm(POWER_DELAY_PERMIT_CHARGING, _scePowerBatteryDelayedPermitCharging, NULL); // 0x0000543C
+        }
+    }
+
+    intrState2 = sceKernelCpuSuspendIntr(); // 0x000053D0
+
+    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x000053E0
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x000053F0
+
+    sceKernelCpuResumeIntr(intrState2); // 0x000053F8
+    sceKernelCpuResumeIntr(intrState1); // 0x00005400
+
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_0000544C - Address 0x0000544C
@@ -3222,8 +3248,10 @@ s32 scePowerGetInnerTemp(void)
 }
 
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
-static s32 _scePowerBatteryDelayedPermitCharging(void)
+static s32 _scePowerBatteryDelayedPermitCharging(void *common)
 {
+    (void)common; 
+
     g_Battery.alarmId = -1;
     sceKernelSetEventFlag(g_Battery.eventId, 0x200);
 
