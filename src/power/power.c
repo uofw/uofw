@@ -3,6 +3,7 @@
 */
 
 #include <common_imp.h>
+#include <interruptman.h>
 #include <power_error.h>
 #include <syscon.h>
 #include <sysmem_kernel.h>
@@ -204,7 +205,10 @@ typedef struct {
     u32 unk112;
     u32 unk116;
     u32 unk120;
-    u32 unk124;
+    s8 unk124;
+    s8 unk125;
+    s8 unk126;
+    s8 unk127;
     u32 unk128;
     u32 unk132;
     u32 unk136;
@@ -250,7 +254,7 @@ static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(void); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
 static s32 _scePowerBatteryDelayedPermitCharging(void); // 0x00005EA4
-static s32 _scePowerBatterySysconCmdIntr(void); // 0x00005ED8
+static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param); // 0x00005ED8
 
 ScePowerHandlers g_PowerHandler = {
     .size = sizeof(ScePowerHandlers),
@@ -2659,7 +2663,55 @@ s32 scePowerBatteryEnableUsbCharging(void)
 // Subroutine scePower_driver_7EAA4247 - Address 0x00005590
 s32 scePowerBatteryDisableUsbCharging(void)
 {
+    s32 status;
+    s32 intrState1;
+    s32 intrState2;
 
+    if (g_Battery.unk24 == 0) // 0x000055B4
+    {
+        return SCE_ERROR_NOT_SUPPORTED;
+    }
+
+    intrState1 = sceKernelCpuSuspendIntr(); // 0x000055BC
+
+    if (g_Battery.unk28 != 0) // 0x000055C8
+    {
+        g_Battery.unk28 = 0; // 0x000055E8
+
+        if (g_Battery.unk108 == 0) // 0x000055EC
+        {
+            g_Battery.unk124 = 33; // 0x0000567C
+            g_Battery.unk125 = 3; // 0x00005680
+            g_Battery.unk126 = 4; // 0x00005688
+
+            status = sceSysconCmdExecAsync(&g_Battery.unk112, 1, _scePowerBatterySysconCmdIntr, NULL); // 0x00005684
+            if (status < SCE_ERROR_OK) // 0x0000568C
+            {
+                sceKernelSetEventFlag(g_Battery.eventId, 0x400); // 0x00005660
+            }
+            else
+            {
+                g_Battery.unk108 = 1; // 0x00005698
+                g_Battery.unk32 = 0; // 0x000056A0
+            }
+        }
+        else
+        {
+            sceKernelSetEventFlag(g_Battery.eventId, 0x400); // 0x00005660
+        }
+
+        sceKernelClearEventFlag(g_Battery.eventId, ~0x800); // 0x000055FC
+    }
+
+    intrState2 = sceKernelCpuSuspendIntr(); // 0x00005604
+
+    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000);  // 0x00005614
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005624
+
+    sceKernelCpuResumeIntr(intrState2); // 0x0000562C
+    sceKernelCpuResumeIntr(intrState1); // 0x00005634
+
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_000056A4 - Address 0x000056A4
@@ -3155,8 +3207,11 @@ static s32 _scePowerBatteryDelayedPermitCharging(void)
 }
 
 // Subroutine sub_0x00005ED8 - Address 0x00005ED8
-static s32 _scePowerBatterySysconCmdIntr(void)
+static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param)
 {
+    (void)pSysconPacket;
+    (void)param;
+
     g_Battery.unk108 = 2;
     return SCE_ERROR_OK;
 }
