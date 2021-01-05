@@ -202,33 +202,7 @@ typedef struct {
     s32 batteryElec; // 100
     s32 batteryVoltage; // 104
     u32 unk108;
-    u32 unk112;
-    u32 unk116;
-    u32 unk120;
-    s8 unk124;
-    s8 unk125;
-    s8 unk126;
-    s8 unk127;
-    u32 unk128;
-    u32 unk132;
-    u32 unk136;
-    u32 unk140;
-    u32 unk144;
-    u32 unk148;
-    u32 unk152;
-    u32 unk156;
-    u32 unk160;
-    u32 unkl64;
-    u32 unk168;
-    u32 unk172;
-    u32 unk176;
-    u32 unk180;
-    u32 unk184;
-    u32 unk188;
-    u32 unk192;
-    u32 unk196;
-    u32 unk200;
-    u32 unk204;
+    SceSysconPacket powerBatterySysconPacket; // 112
     ScePowerSysconSetParamDataTTC unk208;
 } ScePowerBattery; //size: 216
 
@@ -954,6 +928,7 @@ u32 scePower_driver_23BDDD8B(void)
 }
 
 //Subroutine scePower_A85880D0 - Address 0x00001044 - Aliases: scePower_driver_693F6CF0
+// TODO: Change to scePowerCheckWlanCoexistenceClock()
 u32 scePower_A85880D0(void)
 {
     u32 pspModel;
@@ -2680,11 +2655,11 @@ s32 scePowerBatteryDisableUsbCharging(void)
 
         if (g_Battery.unk108 == 0) // 0x000055EC
         {
-            g_Battery.unk124 = 33; // 0x0000567C
-            g_Battery.unk125 = 3; // 0x00005680
-            g_Battery.unk126 = 4; // 0x00005688
+            g_Battery.powerBatterySysconPacket.tx[0] = 33; // 0x0000567C
+            g_Battery.powerBatterySysconPacket.tx[1] = 3; // 0x00005680
+            g_Battery.powerBatterySysconPacket.tx[2] = 4; // 0x00005688
 
-            status = sceSysconCmdExecAsync(&g_Battery.unk112, 1, _scePowerBatterySysconCmdIntr, NULL); // 0x00005684
+            status = sceSysconCmdExecAsync(&g_Battery.powerBatterySysconPacket, 1, _scePowerBatterySysconCmdIntr, NULL); // 0x00005684
             if (status < SCE_ERROR_OK) // 0x0000568C
             {
                 sceKernelSetEventFlag(g_Battery.eventId, 0x400); // 0x00005660
