@@ -165,6 +165,14 @@ typedef enum  {
 } ScePowerBatteryAvailabilityStatus;
 
 typedef struct {
+    u32 unk0;
+    u8 unk4;
+    u8 unk5;
+    u8 unk6;
+    u8 unk7;
+} ScePowerSysconSetParamDataTTC; // size: 8
+
+typedef struct {
     u32 eventId; // 0
     u32 threadId; // 4
     u32 forceSuspendCapacity; // 8
@@ -217,8 +225,8 @@ typedef struct {
     u32 unk196;
     u32 unk200;
     u32 unk204;
-    u32 unk208;
-} ScePowerBattery; //size: 212
+    ScePowerSysconSetParamDataTTC unk208;
+} ScePowerBattery; //size: 216
 
 typedef struct {
     u32 frequency;
@@ -240,7 +248,7 @@ static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
 static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(void); // 0x0000544C
-static s32 _scePowerBatterySetTTC(void); // 0x000056A4
+static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
 static s32 _scePowerBatteryDelayedPermitCharging(void); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(void); // 0x00005ED8
 
@@ -2655,10 +2663,52 @@ s32 scePowerBatteryDisableUsbCharging(void)
 }
 
 // Subroutine sub_000056A4 - Address 0x000056A4
-// TODO: Check parameter list
-static s32 _scePowerBatterySetTTC(void)
+static s32 _scePowerBatterySetTTC(s32 arg0)
 {
+    s32 status;
+    s32 intrState;
 
+    if (!scePowerGetUsbChargingCapability()) // 0x000056B8
+    {
+        return SCE_ERROR_OK;
+    }
+
+    // uofw note: These conditions below could be all grouped together but if Sony
+    // wants to call _sceSysconGetBaryonVersion() three times, so be it.
+
+    u32 baryonVersion = (u32)_sceSysconGetBaryonVersion(); // 0x000056D4
+    if ((baryonVersion >> 16) & 0xF0 != 0x20) // 0x000056DC - 0x000056E8
+    {
+        return SCE_ERROR_OK; // 0x000056EC
+    }
+
+    baryonVersion = (u32)_sceSysconGetBaryonVersion(); // 0x000056F0
+    if (((baryonVersion >> 16) & 0xFF) < 0x22) // 0x000056F8 - 0x00005700
+    {
+        return SCE_ERROR_OK; // 0x00005704
+    }
+
+    baryonVersion = (u32)_sceSysconGetBaryonVersion(); // 0x00005708
+    if (((baryonVersion >> 16) & 0xFF) >= 0x26) // 0x00005710 - 0x00005718
+    {
+        return SCE_ERROR_OK; // 0x0000571C
+    }
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00005720
+
+    if (arg0 == 0) // 0x00005734
+    {
+        g_Battery.unk208.unk7 = (g_Battery.unk208.unk7 & 0xF8) | 0x4; // 0x00005738 & 0x00005768 - 0x00005770, 0x0000574C
+    }
+    else
+    {
+        g_Battery.unk208.unk7 = (g_Battery.unk208.unk7 & 0xF8) | 0x5; // 0x00005738 - 0x00005740, 0x0000574C
+    }
+
+    sceKernelCpuResumeIntr(intrState); // 0x00005748
+
+    status = sceSysconSendSetParam(4, &g_Battery.unk208); // 0x00005758
+    return status;
 }
 
 // Subroutine scePower_B4432BC8 - Address 0x00005774 - Aliases: scePower_driver_67492C52
