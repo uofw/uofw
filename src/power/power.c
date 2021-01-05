@@ -183,7 +183,7 @@ typedef struct {
     u32 lowBatteryCapacity; // 12
     u32 unk16;
     u32 unk20;
-    u32 unk24; // TODO: Perhaps isUsbChargingSupported? Need some more data...
+    u32 isUsbChargingSupported; // 24
     u32 isUsbChargingEnabled; // 28
     u32 unk32;
     u32 permitChargingDelayAlarmId; // 36
@@ -2610,7 +2610,7 @@ static s32 _scePowerBatteryConvertVoltToRCap(void)
 // Subroutine scePower_driver_5F5006D2 - Address 0x000052C8
 s32 scePowerGetUsbChargingCapability(void)
 {
-
+    return (s32)g_Battery.isUsbChargingSupported;
 }
 
 // Subroutine scePower_driver_10CE273F - Address 0x000052D4
@@ -2709,7 +2709,7 @@ s32 scePowerBatteryEnableUsbCharging(void)
     s32 prevIsUsbEnabled;
     s32 intrState;
 
-    if (g_Battery.unk24 == 0) // 0x00005508
+    if (!g_Battery.isUsbChargingSupported) // 0x00005508
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }
@@ -2744,7 +2744,7 @@ s32 scePowerBatteryDisableUsbCharging(void)
     s32 intrState1;
     s32 intrState2;
 
-    if (g_Battery.unk24 == 0) // 0x000055B4
+    if (!g_Battery.isUsbChargingSupported) // 0x000055B4
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }
