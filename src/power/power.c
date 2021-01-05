@@ -225,7 +225,7 @@ static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
 static s32 _scePowerBatteryConvertVoltToRCap(void); // 0x00005130
-static s32 _scePowerBatteryUpdateAcSupply(void); // 0x0000544C
+static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
 static s32 _scePowerBatteryDelayedPermitCharging(void); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param); // 0x00005ED8
@@ -2623,10 +2623,31 @@ s32 scePowerBatteryPermitCharging(void)
 }
 
 // Subroutine sub_0000544C - Address 0x0000544C
-// TODO: Set param list
-static s32 _scePowerBatteryUpdateAcSupply(void)
+static s32 _scePowerBatteryUpdateAcSupply(s32 enable)
 {
+    s32 intrState;
 
+    if (!enable) // 0x00005464
+    {
+        return SCE_ERROR_OK;
+    }
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00005488
+
+    if (g_Battery.unk20 > 0) // 0x00005494
+    {
+        if (g_Battery.alarmId > 0) // 0x000054A0
+        {
+            sceKernelCancelAlarm(g_Battery.alarmId); // 0x000054AC
+            g_Battery.alarmId = -1; // 0x000054B4
+        }
+
+        sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x000054BC
+        sceKernelSetEventFlag(g_Battery.eventId, 0x100);  // 0x000054C8
+    }
+
+    sceKernelCpuResumeIntr(intrState);
+    return SCE_ERROR_OK;
 }
 
 // Subroutine scePower_driver_72D1B53A - Address 0x000054E0
