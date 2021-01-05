@@ -180,8 +180,8 @@ typedef struct {
     u32 lowBatteryCapacity; // 12
     u32 unk16;
     u32 unk20;
-    u32 unk24;
-    u32 unk28;
+    u32 unk24; // TODO: Perhaps isUsbChargingSupported? Need some more data...
+    u32 isUsbChargingEnabled; // 28
     u32 unk32;
     u32 alarmId; // 36
     u32 unk40;
@@ -2515,9 +2515,9 @@ static s32 _scePowerBatterySuspend(void)
     }
 
     // 0x000045D0
-    if (g_Battery.unk28 != 0)
+    if (g_Battery.isUsbChargingEnabled)
     {
-        g_Battery.unk28 = 0; // 0x000045D8
+        g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x000045D8
         eventFlagBits |= 0x400; // 0x000045DC
     }
 
@@ -2632,7 +2632,35 @@ static s32 _scePowerBatteryUpdateAcSupply(void)
 // Subroutine scePower_driver_72D1B53A - Address 0x000054E0
 s32 scePowerBatteryEnableUsbCharging(void)
 {
+    s32 prevIsUsbEnabled;
+    s32 intrState;
 
+    if (g_Battery.unk24 == 0) // 0x00005508
+    {
+        return SCE_ERROR_NOT_SUPPORTED;
+    }
+
+    if (g_Battery.unk16 != 0) // 0x00005514
+    {
+        return SCE_ERROR_OK;
+    }
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x0000553C
+
+    prevIsUsbEnabled = g_Battery.isUsbChargingEnabled;
+    if (!g_Battery.isUsbChargingEnabled) // 0x00005548
+    {
+        g_Battery.isUsbChargingEnabled = SCE_TRUE; // 0x00005568
+
+        if (!sceSysconIsAcSupplied()) // 0x00005564
+        {
+            sceKernelSetEventFlag(g_Battery.eventId, 0x800); // 0x00005574
+            sceKernelClearEventFlag(g_Battery.eventId, ~0x400); // 0x00005580
+        }
+    }
+
+    sceKernelCpuResumeIntr(intrState); // 0x00005550
+    return prevIsUsbEnabled;
 }
 
 // Subroutine scePower_driver_7EAA4247 - Address 0x00005590
@@ -2649,9 +2677,9 @@ s32 scePowerBatteryDisableUsbCharging(void)
 
     intrState1 = sceKernelCpuSuspendIntr(); // 0x000055BC
 
-    if (g_Battery.unk28 != 0) // 0x000055C8
+    if (g_Battery.isUsbChargingEnabled) // 0x000055C8
     {
-        g_Battery.unk28 = 0; // 0x000055E8
+        g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x000055E8
 
         if (g_Battery.unk108 == 0) // 0x000055EC
         {
@@ -2788,7 +2816,7 @@ s32 scePowerGetBatteryChargingStatus(void)
             // Apparently battery not charging
             batteryChargingStatus = 3; // 0x000057F8
         }
-        else if (g_Battery.unk28 == 0 || !(g_Battery.unk60 & 0x40) || g_Battery.unk40 == 0) // 0x00005800 & 0x00005810 & 0x0000581C
+        else if (!g_Battery.isUsbChargingEnabled || !(g_Battery.unk60 & 0x40) || g_Battery.unk40 == 0) // 0x00005800 & 0x00005810 & 0x0000581C
         {
             // Aparently battery not charging
             batteryChargingStatus = 0; // 0x00005804
@@ -2895,7 +2923,7 @@ s32 scePowerGetBatteryLifeTime(void)
         return remainingCapacity; // 0x00005954
     }
 
-    if (g_Battery.unk28 == 0 && g_Battery.batteryElec >= 0) // 0x0000596C & 0x000059EC
+    if (!g_Battery.isUsbChargingEnabled && g_Battery.batteryElec >= 0) // 0x0000596C & 0x000059EC
     {
         intrState = sceKernelCpuSuspendIntr(); // 0x000059F4
 
