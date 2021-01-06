@@ -2594,7 +2594,112 @@ static s32 _scePowerBatteryThread(void)
 // Note: Yep, that's the name used in 5.00, might have been corrected since.
 static s32 _scePowerBatteryCalcRivisedRcap(void)
 {
+    s32 fsCap;
+    s32 rCap;
+    s32 lCap;
+    s32 fCap;
+    s32 fCapLimit;
 
+    fCap = g_Battery.batteryFullCapacity;
+    fCapLimit = fCap * 0.9; // 0x0000513C - 0x00005164
+    if (fCapLimit < g_Battery.unk84) // 0x0000516C
+    {
+        fCapLimit = g_Battery.unk84 * 0.95; // 0x00005174 - 0x00005194
+    }
+
+    rCap = g_Battery.batteryRemainingCapacity;
+    fsCap = g_Battery.forceSuspendCapacity;
+    lCap = g_Battery.lowBatteryCapacity;
+
+    /* 
+    * If the remaining battery capacity is below the capacity threshold when the PSP is force suspended,
+    * this remaining capacity is not available to the user as a means to run their PSP system. As such, 
+    * we return 0 here as the effective relatively remaining capacity.
+    */
+    if (rCap <= fsCap) // 0x000051A0
+    {
+        return 0;
+    }
+
+    /* Check if the remaining capacity is no larger than the low-battery capacity. */
+    if (rCap <= lCap) // 0x000051B0
+    {
+        /* 
+         * When rCap is in (fsCap, lCap] we use the following formula to compute the relative remaining usable cap:
+         * 
+         *    rCap - fsCap       lCap
+         *  ---------------- x --------
+         *    lCap - fsCap       fCap
+         * 
+         * We thus first compute the value of the remaining usable cap relative to the max remaining usable cap 
+         * possible here (remember: rCap <= lCap). Once we have this ratio (which is in (0, 1]), we multiply it 
+         * with the ratio of lCap to fCup (i.e. lCap is 20% of fCap relatively). As such, our end value is in 
+         * the following range:
+         * 
+         *   (0, lCap / fCap]
+         * 
+         * In other words, if rCap == lCap, then the remaining usable capacity relative to full capacity is [lCap / fCap].
+         * Otherwise, the remaining usable capacity is < [lCap / fCap].
+         * 
+         * 
+         * Why are we using lCap here? If rCap is == lCap, then we get the correct
+         * relative value for rCap / fCap (i.e. if lCap=rCap=400mAh and fCap=1800mAh then we return 22mAh).  From there, we 
+         * get smaller values until we reach [0.XYZ....]. rCap might still be > fsCap (like rCap=85mAh and fsCap=80mAh) but 
+         * at that point the PSP is about to force suspend so the effectively remaining _relative_ capacity for running the PSP 
+         * is 0.XYZ which is rounded to 0.
+         */
+
+        /*
+         * Implementation details: We slightly change the order of operations here to make sure that when we devide two values
+         * our numerator is always >= the denominator so we don't have to deal with floating point values in (0, 1). Instead,
+         * we only use integer arithmetic here. Below you can see the out commented implementation if floating point arithmetic
+         * were to be used.
+         */
+
+         //float actUsableRCapMaxUsableRCapRatio = (remainCap - forceSuspendCap) / (lowCap - forceSuspendCap);
+         //float actUsableRCapFullCapRatio = actUsableRCapMaxUsableRCapRatio * (lowCap / fullCap);
+
+         ///* Make sure return value is in [0, 100] since we return the relatively remaining capacity in percent. */
+         //return pspMax(0, pspMin(actUsableRCapFullCapRatio * 100, 100));
+
+        if ((lCap - fsCap) == 0) // 0x000051C8
+        {
+            pspBreak(SCE_BREAKCODE_DIVZERO); // 0x000051CC
+        }
+
+        u32 relRCap = ((rCap - fsCap) * lCap) / (lCap - fsCap); // 0x000051B8 & 0x000051BC & 0x000051C0 & 0x000051D4
+        relRCap = (relRCap * 100) / fCap; // 0x000051DC & 0x000051E4
+
+        return pspMax(0, pspMin(relRCap, 100));
+    }
+    else
+    {
+        /*
+         * The remaining battery capacity is above the force suspend threshold and larger than the
+         * low-battery capacity.
+         */
+
+        // TODO: Not exactly sure yet what fCapLimit is exactly about...
+        if (fCapLimit == 0) // 0x0000520C
+        {
+            pspBreak(SCE_BREAKCODE_DIVZERO); // 0x00005210
+        }
+
+        u32 relRCap = (rCap * 100) / fCapLimit; // 0x00005208 & 0x00005214 & 0x00005220
+        u32 lowerBound = (lCap * 100) / fCap; // 0x00005218 & 0x0000521C & 0x00005228 & 0x0000522C
+
+        // effectively val2 = pspMax(val2, lowerBound);
+        if (relRCap < lowerBound) // 0x00005234
+        {
+            if (fCap == 0) // 0x51000001
+            {
+                pspBreak(SCE_BREAKCODE_DIVZERO); // 0x00005240
+            }
+            relRCap = lowerBound; // 0x00005244 & 0x000051E8
+        }
+
+        return pspMax(0, pspMin(relRCap, 100)); // 0x00005244 & 0x000051EC & 0x00005204 & 0x000051F4
+    }
 }
 
 // Subroutine sub_0000524C - Address 0x0000524C
