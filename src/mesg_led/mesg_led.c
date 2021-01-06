@@ -1,3 +1,5 @@
+#define KIRK_NOT_INITIALIZED 0xC
+
 // sceMesgLed_driver - used by loadcore (decrypt kernel modules)
 // sceResmap_driver - ???
 // sceDbman_driver - ???
@@ -11,14 +13,14 @@
 // scePauth_driver - ???
 // scePauth - ???
 
-s32 g_8DC0;
+u8 *g_8DC0;
 //s8 g_9114[9*16];
 u8 g_8EE8[336]; //-0x9038
 u8 g_9038[144]; //-0x90c8
 u8 g_9100[336]; //-0x9250
 u8 g_9280[180]; //-0x9334
 
-sub_00000000(void *buf, int size, int keyId, int poll) // at 0x00000000 
+int sub_0000(void *buf, int size, int keyId, int poll) // at 0x00000000 
 {
     g_8DC0 = buf;
     *(s32*)(buf + 0) = 5; // used for AES CBC
@@ -59,23 +61,26 @@ int sub_006C(s8 *a0, s8 *a1, u32 a2) // at 0x0000006C
 // sub_00E0(&g_8A78, &g_8A7C, 81, pOut, cbIn, cbOut, 0, g_8EA8, 0, 2, 0, 0);
 int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int poll, s8 *arg7, u32 arg8, arg9, u8 *arg10, u8 *arg11) // at 0x000000E0
 {
-    *(s32*)(sp + 80) = 0;
+	u8 sp0[40];
+	u8 sp48[20];
+    s32 sp80 = 0;
+    s32 retVal;
     if (pOut == NULL || cbOut == NULL) {
-        t0 = -201;
-        goto loc_00000858;
+        retVal = -201;
+        goto end;
     }
     if (cbIn < 352) {
-        t0 = -202;
-        goto loc_00000858;
+        retVal = -202;
+        goto end;
     }
     if ((u32)pOut & 0x3F != 0) {
-        t0 = -203;
-        goto loc_00000858;
+        retVal = -203;
+        goto end;
     }
     v1 = ((u32)pOut >> 27) & 0x0000001F;
     if (!((0x220202 >> v1) & 1)) {
-        t0 = -204;
-        goto loc_00000858;
+        retVal = -204;
+        goto end;
     }
     // 0190
     for (u32 i = 0; i < 336; i++) {
@@ -83,7 +88,7 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     }
     t0 = 0;
     for (s32 i = 0; i < 4; i++) {
-	    t2 = *(s8*)(arg0 + i);
+	    t2 = arg0[i];
     	t1 = g_8FB8[i];
     	if (t2 != t1) {
     		// 19D0
@@ -94,12 +99,12 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     // 01E4
     if (t0 != 0) {
     	// 19C8
-	    t0 = -301;
-	    goto loc_00000858;
+	    retVal = -301;
+	    goto end;
 	}
     if ((arg9 == 9 || arg9 == 10) && cbIn < 352) {
-	    t0 = -202;
-	    goto loc_00000858;
+	    retVal = -202;
+	    goto end;
 	}
 	// 0208
     if (arg9 == 3) {
@@ -107,8 +112,8 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	// 19A4
     	for (s32 i = 0; i < 24; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    		    t0 = -302;
-        		goto loc_00000858;
+    		    retVal = -302;
+        		goto end;
         	}
         }
     } else if (arg9 == 2) {
@@ -116,8 +121,8 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	// 1970
     	for (s32 i = 0; i < 88; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    		    t0 = -302;
-        		goto loc_00000858;
+    		    retVal = -302;
+        		goto end;
         	}
         }
     } else if (arg9 == 5) {
@@ -125,19 +130,19 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	// 193C
     	for (s32 i = 1; i < 88; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    			t0 = -302;
-    			goto loc_00000858;
+    			retVal = -302;
+    			goto end;
     		}
     	}
     	// 1884
-    	*(s32*)(sp + 80) = g_8EE8[212];
+    	sp80 = g_8EE8[212];
     } else if (arg9 == 6) {
     	// 18F8
     	// 1908
     	for (s32 i = 0; i < 56; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    		    t0 = -302;
-    		    goto loc_00000858;
+    		    retVal = -302;
+    		    goto end;
     		}
     	}
     } else if (arg9 == 7) {
@@ -145,19 +150,19 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	// 18D4
     	for (s32 i = 1; i < 56; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    			t0 = -302;
-        		goto loc_00000858;
+    			retVal = -302;
+        		goto end;
         	}
         }
     	// 1884
-    	*(s32*)(sp + 80) = g_8EE8[212];
+    	sp80 = g_8EE8[212];
     } else if (arg9 == 9) {
     	// 1890
     	// 18A0
     	for (s32 i = 0; i < 48; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    		    t0 = -302;
-        		goto loc_00000858;
+    		    retVal = -302;
+        		goto end;
         	}
         }
     } else if (arg9 == 10) {
@@ -165,38 +170,28 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	// 1864
     	for (s32 i = 1; i < 48; i++) {
     		if (g_8EE8[i + 212] != 0) {
-    			t0 = -302;
-        		goto loc_00000858;
+    			retVal = -302;
+        		goto end;
         	}
         }
     	// 1884
-    	*(s32*)(sp + 80) = g_8EE8[212];
+    	sp80 = g_8EE8[212];
     }
     // 0240
     // 0244
     if (arg7 != NULL && arg8 != 0) {
     	// 1838
     	if (sub_006C(g_8EE8, arg7, arg8) == 1) {
-    		t0 = -305;
-    		goto loc_00000858;
+    		retVal = -305;
+    		goto end;
     	}
     }
     // 0254
-    v1 = t3 - 28952; // Data ref 0x00008EE8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    v0 = *(u8*)(v1 + 179);
-    a0 = *(u8*)(v1 + 178);
-    a1 = *(u8*)(v1 + 177);
-    a2 = *(u8*)(v1 + 176);
-    v0 = v0 << 24;
-    a0 = a0 << 16;
-    v0 = v0 | a0;
-    a1 = a1 << 8;
-    v0 = v0 | a1;
-    v0 = v0 | a2;
-    *cbOut = v0;
-    if ((u32)(cbIn - 336) < (u32)v0) {
-        t0 = -206;
-        goto loc_00000858;
+    u32 cb = g_8EE8[176] | (g_8EE8[177] << 8) | (g_8EE8[178] << 16) | (g_8EE8[179] << 24);
+    *cbOut = cb;
+    if (cbIn - 336 < cb) {
+        retVal = -206;
+        goto end;
     }
     if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
     	// 17E0
@@ -215,15 +210,16 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	}
     }
     // 02E8
-    v0 = sub_00000000(g_9100, 144, keyId, poll);
-    t0 = v0;
-    if (v0 != 0) {
+    retVal = sub_0000(g_9100, 144, keyId, poll);
+    if (retVal != 0) {
     	// 1238
-    	v1 = -104;
-    	if ((s32)t0 >= 0)
-        	goto loc_0000081C;
-    	t0 = -101;
-    	goto loc_00000828;
+    	if (retVal >= 0) {
+    		// 081C
+    		retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -104;
+    		goto reset;
+    	}
+    	retVal = -101;
+    	goto reset;
     }
     if (arg9 == 3 || arg9 == 5 || arg9 == 7 || arg9 == 10) {
     	// 034C
@@ -248,44 +244,46 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	for (u32 i = 0; i < 40; i++) {
     		pOut[i + 260] = 0;
     	}
-    	v0 = 0x10000; // Data ref 0x000093A0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 27744; // Data ref 0x000093A0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     	// 0410
     	for (u32 i = 0; i < 40; i++) {
-    		*(s8*)(sp + i) = g_93A0[i];
+    		sp0[i] = g_93A0[i];
     	}
     	g_8DC0 = pOut;
     	*(s32*)(pOut + 0) = cbIn - 4;
     	if (!poll) {
     		// 17C0
-    		v0 = sceUtilsBufferCopyWithRange(pOut, cbIn, pOut, cbIn, 11);
-    		t0 = v0;
+    		retVal = sceUtilsBufferCopyWithRange(pOut, cbIn, pOut, cbIn, 11);
     	} else {
-    		v0 = sceUtilsBufferCopyByPollingWithRange(pOut, cbIn, pOut, cbIn, 11);
-    		t0 = v0;
+    		retVal = sceUtilsBufferCopyByPollingWithRange(pOut, cbIn, pOut, cbIn, 11);
     	}
     	// 045C
-    	if (v0 != 0)
-        	goto loc_00000810;
+    	if (retVal != 0) {
+    		// 0810
+    		if (retVal < 0) {
+    			// 0908
+    			retVal = -102;
+    			goto reset;
+    		}
+    		// 081C
+    		retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -105;
+    		goto reset;
+    	}
     	// 0468
     	for (u32 i = 0; i < 20; i++) {
-    		*(s8*)(sp + 48 + i) = pOut[i];
+    		sp48[i] = pOut[i];
     	}
-    	v0 = 0x10000; // Data ref 0x00008EE8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28952; // Data ref 0x00008EE8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     	// 0190
     	for (u32 i = 0; i < 32; i++) {
     		pOut[i] = g_8EE8[i];
     	}
-    	a0 = *(u8*)(arg0 + 2);
     	a2 = g_9280;
-    	if (a0 == 22) {
+    	if (arg0[2] == 22) {
     		// 1790
     		// 179C
     		for (u32 i = 0; i < 40; i++) {
     			*(s8*)(a2 + i) = g_7050[i];
     		}
-    	} else if (a0 == 94) {
+    	} else if (arg0[2] == 94) {
     		// 1764
     		// 176C
     		for (u32 i = 0; i < 40; i++) {
@@ -301,23 +299,24 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	// 04F4
     	// 04F8
     	for (u32 i = 0; i < 20; i++) {
-    		*(s8*)(a2 + i) = *(u8*)(sp + 48 + i);
+    		*(s8*)(a2 + i) = sp48[i];
     	}
     	a2 = a2 + 20;
     	// 051C
     	for (u32 i = 0; i < 40; i++) {
-    		*(s8*)(a2 + i) = *(u8*)(sp + i);
+    		*(s8*)(a2 + i) = sp0[i];
     	}
     	if (!poll) {
     		// 1744
-    		v0 = sceUtilsBufferCopyWithRange(NULL, 0, g_9280, 100, 17);
+    		retVal = sceUtilsBufferCopyWithRange(NULL, 0, g_9280, 100, 17);
     	} else {
-    		v0 = sceUtilsBufferCopyByPollingWithRange(NULL, 0, g_9280, 100, 17);
+    		retVal = sceUtilsBufferCopyByPollingWithRange(NULL, 0, g_9280, 100, 17);
     	}
     	// 055C
-    	t0 = -306;
-    	if (v0 != 0)
-        	goto loc_00000828;
+    	if (retVal != 0) {
+    		retVal = -306;
+    		goto reset;
+    	}
     }
     // XXXXXXXXXXXXXXXXX4
     // 0568
@@ -362,10 +361,17 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
         	// 1580
         	g_9100[144 + i] ^= arg10[i];
         }
-        v0 = sceUtilsBufferCopyWithRange(g_9280, 180, g_9100, 336, 3);
-        t0 = v0;
-        if (v0 != 0)
-            goto loc_00000A78;
+        retVal = sceUtilsBufferCopyWithRange(g_9280, 180, g_9100, 336, 3);
+        if (retVal != 0) {
+    		// 0A78
+    		if (retVal >= 0) {
+    			// 081C
+    			retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -304;
+    			goto reset;
+    		}
+    		retVal = -303;
+    		goto reset;
+    	}
         v0 = 0x10000; // Data ref 0x00008FB8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
         a2 = s1;
         a3 = v0 - 28744; // Data ref 0x00008FB8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
@@ -545,15 +551,16 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
         	asm("xor        $v1, $v1, $v0");
         	*(s8*)(t0 + 20) = v1;
         } while (a1 != 0);
-        v0 = sub_0000(s1, 80, keyId, poll);
-        t0 = v0;
-        if (v0 != 0) {
+        retVal = sub_0000(s1, 80, keyId, poll);
+        if (retVal != 0) {
         	// 1238
-        	v1 = -104;
-        	if ((s32)t0 >= 0)
-            	goto loc_0000081C;
-        	t0 = -101;
-        	goto loc_00000828;
+        	if (retVal >= 0) {
+    			// 081C
+    			retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -104;
+    			goto reset;
+    		}
+    		retVal = -101;
+    		goto reset;
         }
         // 124C
         v0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
@@ -868,281 +875,142 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     // 0710
     if (arg9 == 1) {
     	// 0FF8
-    	v0 = 0x10000; // Data ref 0x00009294 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v1 = 0x10000; // Data ref 0x00009110 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28012; // Data ref 0x00009294 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = v1 - 28400; // Data ref 0x00009110 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 100C
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)160;
-	    	*(s8*)(v1 + 0) = a0;
-		} while (v0 != 0);
-    	v1 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	s1 = v1 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = sub_0000(s1, 160, keyId, poll);
-    	v0, v1 = sub_00000000(...);
-    	t0 = v0;
-    	if (v0 != 0)
-        	goto loc_000009B8;
-    	v0 = 0x10000; // Data ref 0x00009110 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28400; // Data ref 0x00009110 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = s1;
-    	a1 = 0;
+    	for (u32 i = 0; i < 160; i++) {
+    		g_9294[i] = g_9110[i];
+    	}
+    	retVal = sub_0000(g_9280, 160, keyId, poll);
+    	if (retVal != 0) {
+    		// 09B8
+    		if (retVal >= 0) {
+    			// 081C
+    			retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -106;
+    			goto reset;
+    		}
+    		retVal = -103;
+    		goto reset;
+    	}
     	// 105C
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)160;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 160; i++) {
+    		g_9110[i] = g_9280[i];
+    	}
     } else if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
     	// 0F0C
-    	v0 = 0x10000; // Data ref 0x00009294 ... 0x00000000 0x00000000 0x00000000 0x00000000
-    	v1 = 0x10000; // Data ref 0x0000915C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28012; // Data ref 0x00009294 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = v1 - 28324; // Data ref 0x0000915C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 0F1C
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)96;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 96; i++) {
+    		g_9294[i] = g_915C[i];
+    	}
     	if (arg9 == 3 || arg9 == 5 || arg9 == 7 || arg9 == 10) {
     		// 0F70
-    		a2 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a3 = 0;
     		// 0F78
-    		do {
-    			v0 = a3 & 0xF;
-    			a0 = a3 + a2;
-    			v0 = arg10 + v0;
-    			a1 = *(u8*)(v0 + 0);
-    			v1 = *(u8*)(a0 + 20);
-    			a3 = a3 + 1;
-    			v0 = (s32)a3 < (s32)96;
-    			asm("xor        $v1, $v1, $a1");
-    			*(s8*)(a0 + 20) = v1;
-    		} while (v0 != 0);
+    		for (s32 i = 0; i < 96; i++) {
+    			g_9280[20 + i] ^= arg10[i & 0xF];
+    		}
     	}
     	// 0FA4
-    	v0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	s1 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = sub_0000(s1, 96, keyId, poll);
-    	t0 = v0;
-    	if (v0 != 0)
-        	goto loc_000009B8;
-    	v0 = 0x10000; // Data ref 0x0000915C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28324; // Data ref 0x0000915C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = s1;
-    	a1 = 0;
+    	retVal = sub_0000(g_9280, 96, keyId, poll);
+    	if (retVal != 0) {
+    		// 09B8
+    		if (retVal >= 0) {
+    			// 081C
+    			retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -106;
+    			goto reset;
+    		}
+    		retVal = -103;
+    		goto reset;
+    	}
     	// 0FD4
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)96;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 96; i++) {
+    		g_915C[i] = g_9280[i];
+    	}
     }
     // XXXXXXXXXXXXXXXXX2
     // 073C
     if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
     	// 0D44
-    	v0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v1 = 0x10000; // Data ref 0x0000916C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = v1 - 28308; // Data ref 0x0000916C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 0D54
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)20;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
-    	v0 = 0x10000; // Data ref 0x00009170 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a0 = v0 - 28304; // Data ref 0x00009170 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = 4;
-    	a1 = 0;
-    	if (arg9 == v0) {
+    	for (u32 i = 0; i < 20; i++) {
+    		g_9280[i] = g_916C[i];
+    	}
+    	if (arg9 == 4) {
     		// 0EE0
-    		v0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a0 = v0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a3 = 103;
     		// 0EEC
-    		do {
-    			v0 = a3 + a0;
-    			v1 = *(u8*)(v0 + 4);
-    			a3 = a3 - 1;
-    			*(s8*)(v0 + 24) = v1;
-    		} while ((s32)a3 >= 0);
+    		for (s32 i = 103; i >= 0; i--) {
+    			g_9100[24 + i] = g_9100[4 + i];
+    		}
     	} else {
     		// 0D84
-    		do {
-    			v0 = *(u8*)(a0 - 20);
-    			a1 = a1 + 1;
-    			v1 = (u32)a1 < (u32)16;
-    			*(s8*)(a0 + 0) = v0;
-    			a0 = a0 + 1;
-    		} while (v1 != 0);
-    		v1 = arg9 - 6;
-    		v0 = 0x10000; // Data ref 0x00009118 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		v1 = (u32)v1 < (u32)2;
-    		a1 = v0 - 28392; // Data ref 0x00009118 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a0 = 0;
-    		if (v1 == 0) {
-    			// 0EC4
-    			do {
-    				v1 = a0 + a1;
-    				a0 = a0 + 1;
-    				v0 = (u32)a0 < (u32)88;
-    				*(s8*)(v1 + 0) = 0;
-    			} while (v0 != 0);
-    		} else {
-    			v0 = 0x10000; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			v1 = 0x10000; // Data ref 0x0000913C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a2 = v0 - 27776; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a3 = v1 - 28356; // Data ref 0x0000913C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a1 = 0;
-
-    			// 0DC8
-    			do {
-    				v0 = a1 + a3;
-    				a0 = *(u8*)(v0 + 0);
-    				v1 = a1 + a2;
-    				a1 = a1 + 1;
-    				v0 = (u32)a1 < (u32)32;
-    				*(s8*)(v1 + 0) = a0;
-    			} while (v0 != 0);
-    			v0 = 0x10000; // Data ref 0x00009150 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			v1 = 0x10000; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a2 = v0 - 28336; // Data ref 0x00009150 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a3 = v1 - 27776; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a1 = 0;
-    			// 0DF8
-    			do {
-    				v0 = a1 + a3;
-    				a0 = *(u8*)(v0 + 0);
-    				v1 = a1 + a2;
-    				a1 = a1 + 1;
-    				v0 = (u32)a1 < (u32)32;
-    				*(s8*)(v1 + 0) = a0;
-    			} while (v0 != 0);
-    			v0 = 0x10000; // Data ref 0x00009118 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a1 = v0 - 28392; // Data ref 0x00009118 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			a0 = 0;
-    			// 0E20
-    			do {
-    				v1 = a0 + a1;
-    				a0 = a0 + 1;
-    				v0 = (u32)a0 < (u32)56;
-    				*(s8*)(v1 + 0) = 0;
-    			} while (v0 != 0);
+    		for (u32 i = 0; i < 16; i++) {
+    			g_9170[i] = g_9170[i - 20];
     		}
-    		v1 = *(s32*)(sp + 80);
+    		if (arg9 != 6 && arg9 != 7) {
+    			// 0EC4
+    			for (u32 i = 0; i < 88; i++) {
+    				g_9118[i] = 0;
+    			}
+    		} else {
+    			// 0DC8
+    			for (u32 i = 0; i < 32; i++) {
+    				g_9380[i] = g_913C[i];
+    			}
+    			// 0DF8
+    			for (u32 i = 0; i < 32; i++) {
+    				g_9150[i] = g_9380[i];
+    			}
+    			// 0E20
+    			for (u32 i = 0; i < 56; i++) {
+    				g_9118[i] = 0;
+    			}
+    		}
     		// 0E38
-    		v0 = 128;
-    		if (v1 == v0)
+    		if (sp80 == 128)
     		{
-        		a0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
         		// 0EB8
-    			v1 = a0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    			*(s8*)(v1 + 24) = v0;
+    			g_9100[24] = 128;
     		}
     	}
     	// 0E48
-    	v1 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = v1 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = 0x10000; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	*(s32*)(a2 - 29248) = v0; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a0 = v0 + 4;
-    	a1 = 0;
+    	g_8DC0 = g_9100;
     	// 0E5C
-    	do {
-    		v0 = *(u8*)(a0 - 4);
-    		a1 = a1 + 1;
-    		v1 = (u32)a1 < (u32)4;
-    		*(s8*)(a0 + 0) = v0;
-    		a0 = a0 + 1;
-    	} while (v1 != 0);
-    	a0 = *(s32*)(a2 - 29248); // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = 332;
-    	v1 = 0x10000; // Data ref 0x00009108 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	*(s32*)(a0 + 0) = v0;
-    	v0 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v1 - 28408; // Data ref 0x00009108 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = v0 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
+    	for (u32 i = 0; i < 4; i++) {
+    		g_9100[4 + i] = g_9100[i];
+    	}
+    	*(s32*)g_8DC0 = 332;
     	// 0E94
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)16;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 16; i++) {
+    		g_9108[i] = g_9038[i];
+    	}
     } else {
-    	v1 = 0x10000; // Data ref 0x00009104 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = v1 - 28412; // Data ref 0x00009104 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 0770
-    	do {
-    		v0 = a1 + a3;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)20;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
-    	a0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v1 = a0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = 0x10000; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	*(s32*)(v0 - 29248) = v1; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = 332;
-    	a3 = v1 + 4;
-    	*(s32*)(a0 - 28416) = v0; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v1 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v1 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
+    	for (u32 i = 0; i < 20; i++) {
+    		g_9280[i] = g_9104[i];
+    	}
+    	g_8DC0 = g_9100;
+    	*(s32*)g_9100 = 332;
     	// 07B4
-    	do {
-    		v0 = a1 + a2;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a1 + a3;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)20;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 20; i++) {
+    		g_9100[4 + i] = g_9038[i];
+    	}
     }
     // XXXXXXXXXXXXXXXXX1
     // 07D0
     if (!poll) {
     	// 0D24
-    	v0 = sceUtilsBufferCopyWithRange(g_9100, 336, g_9100, 336, 11);
+    	retVal = sceUtilsBufferCopyWithRange(g_9100, 336, g_9100, 336, 11);
     } else {
-        v0 = sceUtilsBufferCopyByPollingWithRange(g_9100, 336, g_9100, 336, 11);
+        retVal = sceUtilsBufferCopyByPollingWithRange(g_9100, 336, g_9100, 336, 11);
     }
-    a0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     // 07F8
-    t0 = v0;
-    if (t0 != 0) {
-    	goto loc_00000810;
+    if (retVal != 0) {
+        // 0810
+    	if (retVal < 0) {
+    		// 0908
+    		retVal = -102;
+    		goto reset;
+    	}
+    	// 081C
+    	retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -105;
+    	goto reset;
     }
     t0 = 0;
     // 0910
@@ -1158,8 +1026,8 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     // 0934
     if (t0 != 0) {
     	// 0B14
-    	t0 = -302;
-    	goto loc_00000828;
+    	retVal = -302;
+    	goto reset;
     }
     // XXXXXXXXXXXXXXXXX0
     if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
@@ -1168,10 +1036,17 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	for (s32 i = 0; i < 64; i++) {
     		g_9100[128 + i] ^= g_9038[16 + i];
     	}
-    	v0 = sub_0000(g_916C, 64, keyId, poll);
-    	t0 = v0;
-    	if (v0 != 0)
-        	goto loc_000009B8;
+    	retVal = sub_0000(g_916C, 64, keyId, poll);
+    	if (retVal != 0) {
+    		// 09B8
+    		if (retVal >= 0) {
+    			// 081C
+    			retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -106;
+    			goto reset;
+    		}
+    		retVal = -103;
+    		goto reset;
+    	}
     	// 0B9C
     	for (s32 i = 0; i < 64; i++) {
     	    pOut[64 + i] = g_916C[i] ^ g_9038[80 + i];
@@ -1223,10 +1098,16 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	for (s32 i = 0; i < 112; i++) {
     		g_9100[64 + i] ^= g_9038[20 + i];
     	}
-    	v0 = sub_0000(g_912C, 112, keyId, poll);
-    	t0 = v0;
-    	if (v0 != 0) {
-    		goto loc_000009B8;
+    	retVal = sub_0000(g_912C, 112, keyId, poll);
+    	if (retVal != 0) {
+    		// 09B8
+    		if (retVal >= 0) {
+    			// 081C
+    			retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -106;
+    			goto reset;
+    		}
+    		retVal = -103;
+    		goto reset;
     	}
     	// 09CC
     	// 09DC
@@ -1240,32 +1121,31 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     	if (arg9 == 8) {
     		// 0B1C
     		if (pOut[164] != 1) {
-    		    t0 = -303;
-        		goto loc_00000828;
+    		    retVal = -303;
+        		goto reset;
         	}
     	}
     }
     // 0A38
-    if (*(s32*)(sp + 80) == 128)
+    if (sp80 == 128)
     {
         // 0B00
     	if (pOut[1424] != 0) {
     		// 0B14
-    		t0 = -302;
-    		goto loc_00000828;
+    		retVal = -302;
+    		goto reset;
     	}
     	pOut[1424] |= 0xffffff80;
     }
     // 0A44
     if (!poll) {
     	// 0AE4
-    	v0 = sceUtilsBufferCopyWithRange(pOut, cbIn, pOut + 64, cbIn - 64, 1);
+    	retVal = sceUtilsBufferCopyWithRange(pOut, cbIn, pOut + 64, cbIn - 64, 1);
     } else {
-    	v0 = sceUtilsBufferCopyByPollingWithRange(pOut, cbIn, pOut + 64, cbIn - 64, 1);
+    	retVal = sceUtilsBufferCopyByPollingWithRange(pOut, cbIn, pOut + 64, cbIn - 64, 1);
     }
     // 0A60
-    t0 = v0;
-    if (v0 == 0) {
+    if (retVal == 0) {
     	// 0A98
     	if (*cbOut < 336) {
     		// 0ABC
@@ -1274,38 +1154,31 @@ int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int 
     			pOut[cb + i] = 0;
     		}
     	}
-    	t0 = 0;
-    	goto loc_00000858;
+    	retVal = 0;
+    	goto end;
     }
-    if (*(s32*)(sp + 80) == 128)
-    {
+    if (sp80 == 128) {
         // 0A8C
     	*(s8*)(pOut + 1424) &= 0x7F;
     }
-    goto loc_0000A78;
-
-loc_00000810: // t0
-    v1 = -105;
-    if ((s32)t0 < 0) {
-    	// 0908
-    	t0 = -102;
-    	goto loc_00000828;
+    // 0A78
+    if (retVal >= 0) {
+    	// 081C
+    	retVal = (retVal == KIRK_NOT_INITIALIZED) ? -107 : -304;
+    	goto reset;
     }
+    retVal = -303;
+    goto reset;
 
-loc_0000081C: // t0, v1
-    if (t0 != 0xC)
-        t0 = v1;
-    else
-        t0 = -107;
-
-loc_00000828: // t0
+reset:
+    // 0828
     // 0834
     for (u32 i = 0; i < 336; i++) {
     	pOut[i] = g_8EE8[i];
     }
     *(s32*)(cbOut + 0) = 0;
 
-loc_00000858: // t0
+end:
     // 0860
     for (u32 i = 0; i < 144; i++) {
     	g_9038[i] = 0;
@@ -1322,21 +1195,7 @@ loc_00000858: // t0
     for (u32 i = 0; i < 336; i++) {
     	g_8EE8[i] = 0;
     }
-    return t0;
-
-loc_00000A78: // t0
-    v1 = -304;
-    if ((s32)t0 >= 0)
-        goto loc_0000081C;
-    t0 = -303;
-    goto loc_00000828;
-
-loc_000009B8: // t0	
-    v1 = -106;
-    if ((s32)t0 >= 0)
-        goto loc_0000081C;
-    t0 = -103;
-    goto loc_00000828;
+    return retVal;
 }
 
 #if 0
