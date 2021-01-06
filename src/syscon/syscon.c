@@ -92,6 +92,34 @@ typedef struct {
     u8 hr;
     u8 baryonStatus2;
     SceSysconCallback callbacks[SYSCON_CB_COUNT];
+    /*
+     *  31      24 23         16 15  8 7            0
+     * +----------+-------------+-----+--------------+
+     * |  Unused  |   Version   | Unk |   Unit Type  |
+     * +----------+-------------+-----+--------------+
+     *
+     * Bit 7 - 0:
+     *      The unit type: 0 = dev unit, 1 = retail unit
+     *
+     * Bit 15 - 8:
+     *      Unknown. Value can be != 0x00
+     * 
+     * Bit 16 - 24:
+     *      The actual Baryon hardware version. Possible values below:
+     * 
+     *      PSP 1000 (PSP Fat) series       : 0x01, 0x02, 0x03, 0x04, 0x11, 0x12
+     *      PSP 2000 (PSP Slim) series      : 0x22, 0x23, 0x24
+     *      PSP 3000 (PSP Bright) series    : 0x26, 0x28, 0x2C, 0x2E
+     *      PSP N-1000 (PSP Go) series      : 0x30
+     *      PSP E-1000 (PSP Street) series  : 0x40
+     * 
+     * Bit 31 - 24:
+     *      Seems to be unused. Always 0.
+     * 
+     * Remarks:
+     *      This info has been copied from 
+     *      https://playstationdev.wiki/pspdevwiki/index.php?title=Motherboards#Comparison_Table
+     */
     s32 baryonVersion;
     s8 timeStampStr[16];
     /* Set to 1 if model is PSP 2k or newer. */
