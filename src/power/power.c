@@ -2908,7 +2908,7 @@ s32 scePowerBatteryDisableUsbCharging(void)
 
         if (g_Battery.unk108 == 0) // 0x000055EC
         {
-            g_Battery.powerBatterySysconPacket.tx[0] = 33; // 0x0000567C
+            g_Battery.powerBatterySysconPacket.tx[0] = PSP_SYSCON_CMD_SET_USB_STATUS; // 0x0000567C
             g_Battery.powerBatterySysconPacket.tx[1] = 3; // 0x00005680
             g_Battery.powerBatterySysconPacket.tx[2] = 4; // 0x00005688
 
