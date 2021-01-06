@@ -3266,7 +3266,6 @@ s32 scePowerGetBatteryChargeCycle(void)
 }
 
 // Subroutine sub_00005B1C - Address 0x00005B1C
-// TODO: check parameters
 static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
 {
     memset(&g_Battery, 0, sizeof(ScePowerBattery)); // 0x00005B50
