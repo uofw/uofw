@@ -231,6 +231,7 @@ static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
 static s32 _scePowerBatteryConvertVoltToRCap(s32 arg0); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
+static s32 _scePowerBatteryResume(void); // 0x00005C18
 static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param); // 0x00005ED8
 
@@ -3280,7 +3281,27 @@ static s32 _scePowerBatteryIsBusy(void)
 // Subroutine sub_00005C18 - Address 0x00005C18
 static s32 _scePowerBatteryResume(void)
 {
+    s32 intrState1;
+    s32 intrState2;
 
+    intrState1 = sceKernelCpuSuspendIntr(); // 0x00005C2C
+
+    g_Battery.unk56 = -1; // 0x00005C40
+    g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED; // 0x00005C4C
+    g_Battery.unk16 = 0; // 0x00005C4C
+
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x900); // 0x00005C64
+    sceKernelSetEventFlag(g_Battery.eventId, g_Battery.unk20 == 0 ? 0x20000000 : 0x20000100); // 0x00005C70
+
+    intrState2 = sceKernelCpuSuspendIntr(); // 0x00005C78
+
+    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005C88
+    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005C98
+
+    sceKernelCpuResumeIntr(intrState2); // 0x00005CA0
+    sceKernelCpuResumeIntr(intrState1); // 0x00005CA8
+
+    return SCE_ERROR_OK;
 }
 
 // Subroutine scePower_27F3292C - Address 0x00005CCC - Aliases: scePower_driver_0DA940D2
