@@ -181,7 +181,7 @@ typedef struct {
     u32 threadId; // 4
     u32 forceSuspendCapacity; // 8
     u32 lowBatteryCapacity; // 12
-    u32 unk16;
+    u32 unk16; // 16 TODO: Apparently a [busy] flag, need a bit more data
     u32 unk20;
     u32 isUsbChargingSupported; // 24
     u32 isUsbChargingEnabled; // 28
@@ -231,6 +231,7 @@ static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
 static s32 _scePowerBatteryConvertVoltToRCap(s32 arg0); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
+static s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity); // 0x00005BF0
 static s32 _scePowerBatteryIsBusy(void); // 0x00005C08
 static s32 _scePowerBatteryResume(void); // 0x00005C18
 static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
@@ -3267,10 +3268,12 @@ static s32 _scePowerBatteryInit(void)
 }
 
 // Subroutine sub_00005BF0 - Address 0x00005BF0
-// TODO: check parameters
-static s32 _scePowerBatterySetParam(void)
+static s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
 {
+    g_Battery.lowBatteryCapacity = lowBatteryCapacity; // 0x00005BFC
+    g_Battery.forceSuspendCapacity = forceSuspendCapacity; // 0x00005C04
 
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_00005C08 - Address 0x00005C08
