@@ -79,6 +79,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Data Structures</a> &#124;
+<a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
@@ -93,6 +94,11 @@ Data Structures</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceSysconDebugHandlers.html">SceSysconDebugHandlers</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:gac8ff8fafeeeec34b2e9c0d95a3c54823"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Syscon.html#gac8ff8fafeeeec34b2e9c0d95a3c54823">PSP_SYSCON_BARYON_GET_UNIT_TYPE</a>(v)&#160;&#160;&#160;(v &amp; 0xFF) /* 0 = Dev version, 1 = Retail */</td></tr>
+<tr class="separator:gac8ff8fafeeeec34b2e9c0d95a3c54823"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -411,6 +417,24 @@ Functions</h2></td></tr>
 <dl class="section author"><dt>Author</dt><dd>artart78 </dd></dl>
 <dl class="section version"><dt>Version</dt><dd>6.60</dd></dl>
 <p>The syscon.prx module RE'ing. </p>
+<h2 class="groupheader">Macro Definition Documentation</h2>
+<a class="anchor" id="gac8ff8fafeeeec34b2e9c0d95a3c54823"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PSP_SYSCON_BARYON_GET_UNIT_TYPE</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">v</td><td>)</td>
+          <td>&#160;&#160;&#160;(v &amp; 0xFF) /* 0 = Dev version, 1 = Retail */</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Below are macros to extract Baryon specific info returned by <a class="el" href="group__Syscon.html#gaac84db7bb4eecef179af9491c7d0e18e">_sceSysconGetBaryonVersion()</a> and <a class="el" href="group__Syscon.html#gadf049765c8487e846e6b2ba274a7d0f8">sceSysconGetBaryonVersion()</a>. </p>
+
+</div>
+</div>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a class="anchor" id="ga9db42e3a3b3674679c6d8d502627f366"></a>
 <div class="memitem">
@@ -4208,7 +4232,7 @@ Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 2 2021 19:11:32 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jan 6 2021 17:30:24 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>
