@@ -56,6 +56,9 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Permit Charge delay in microseconds */
 #define POWER_DELAY_PERMIT_CHARGING                 (5 * 1000 * 1000)
 
+/* The (initial) priority of the battery worker thread. */
+#define POWER_BATTERY_WORKER_THREAD_PRIO            (64)
+
 typedef struct {
     u32 unk0;
     u32 unk4;
@@ -178,7 +181,7 @@ typedef struct {
 
 typedef struct {
     u32 eventId; // 0
-    u32 threadId; // 4
+    u32 workerThreadId; // 4
     u32 forceSuspendCapacity; // 8
     u32 lowBatteryCapacity; // 12
     u32 unk16; // 16 TODO: Apparently a [busy] flag, need a bit more data
@@ -227,10 +230,12 @@ static s32 _scePowerInitCallback(); //sub_0x0000114C
 static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
+static s32 _scePowerBatteryThread(SceSize args, void* argp); // 0x000046FC
 static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
 static s32 _scePowerBatteryConvertVoltToRCap(s32 arg0); // 0x00005130
 static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
+static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType); // 0x00005B1C
 static s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity); // 0x00005BF0
 static s32 _scePowerBatteryIsBusy(void); // 0x00005C08
 static s32 _scePowerBatteryResume(void); // 0x00005C18
@@ -2491,8 +2496,8 @@ static s32 _scePowerBatteryEnd(void)
     if (outBits & 0x200) //0x00004504
         sceSysconPermitChargeBattery(); //0x00004544
     
-    sceKernelWaitThreadEnd(g_Battery.threadId, 0); //0x00004510
-    sceKernelDeleteThread(g_Battery.threadId); //0x00004518
+    sceKernelWaitThreadEnd(g_Battery.workerThreadId, 0); //0x00004510
+    sceKernelDeleteThread(g_Battery.workerThreadId); //0x00004518
     sceKernelDeleteEventFlag(g_Battery.eventId); //0x00004524
     
     return SCE_ERROR_OK; 
@@ -2588,7 +2593,7 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 }
 
 // Subroutine sub_0x000046FC - Address 0x000046FC
-static s32 _scePowerBatteryThread(void)
+static s32 _scePowerBatteryThread(SceSize args, void* argp)
 {
 
 }
@@ -3262,9 +3267,24 @@ s32 scePowerGetBatteryChargeCycle(void)
 
 // Subroutine sub_00005B1C - Address 0x00005B1C
 // TODO: check parameters
-static s32 _scePowerBatteryInit(void)
+static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
 {
+    memset(&g_Battery, 0, sizeof(ScePowerBattery)); // 0x00005B50
 
+    g_Battery.permitChargingDelayAlarmId = 1; // 0x00005B74
+    g_Battery.isUsbChargingSupported = isUsbChargingSupported; // 0x00005B78
+    g_Battery.batteryType = batteryType; // 0x00005B7C
+    g_Battery.unk56 = -1; // 0x00005B80
+    g_Battery.batteryFullCapacity = -1; // 0x00005B84
+    g_Battery.batteryChargeCycle = -1; // 0x00005B8C
+
+    g_Battery.eventId = sceKernelCreateEventFlag("ScePowerBattery", 1, 0, NULL); // 0x00005B88
+    g_Battery.workerThreadId = sceKernelCreateThread("ScePowerBattery", _scePowerBatteryThread, POWER_BATTERY_WORKER_THREAD_PRIO, 
+        2084, SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); // 0x00005BB0
+
+    sceKernelStartThread(g_Battery.workerThreadId, 0, NULL); // 0x00005BC4
+
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_00005BF0 - Address 0x00005BF0
