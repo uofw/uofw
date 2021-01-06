@@ -33,17 +33,18 @@ sub_00000000(void *buf, int size, int keyId, int poll) // at 0x00000000
     }
 }
 
-int sub_006C(void *a0, void *a1, u32 a2) // at 0x0000006C 
+// check if there exists i such that a1[i * 16 + 0..i * 16 + 15] == a0[320..320 + 15]
+int sub_006C(s8 *a0, s8 *a1, u32 a2) // at 0x0000006C 
 {
     // 0080
     for (u32 i = 0; i < a2 / 16; i++) {
     	int diff = 0;
     	for (int j = 0; j < 16; j++) {
-        	t3 = *(s8*)(a1 + i * 16 + j);
-    		t2 = *(s8*)(a0 + 320 + j);
-    		if (t3 != t2) {
+        	s8 n1 = a1[i * 16 + j];
+        	s8 n2 = a0[320 + j];
+    		if (n1 != n2) {
         		// 00D8
-        		diff = t3 - t2;
+        		diff = n1 - n2;
         		break;
         	}
         }
@@ -56,11 +57,8 @@ int sub_006C(void *a0, void *a1, u32 a2) // at 0x0000006C
 }
 
 // sub_00E0(&g_8A78, &g_8A7C, 81, pOut, cbIn, cbOut, 0, g_8EA8, 0, 2, 0, 0);
-sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, arg8, arg9, arg10, arg11) // at 0x000000E0
+int sub_00E0(u8 *arg0, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int poll, s8 *arg7, u32 arg8, arg9, u8 *arg10, u8 *arg11) // at 0x000000E0
 {
-    //sp = sp - 176;
-    // saved variables are in sp+128..sp+164
-    // sp+176: arg8, sp+180: arg9, sp+184: arg10, sp+188: arg11
     *(s32*)(sp + 80) = 0;
     if (pOut == NULL || cbOut == NULL) {
         t0 = -201;
@@ -176,7 +174,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     }
     // 0240
     // 0244
-    if (arg7 != 0 && arg8 != 0) {
+    if (arg7 != NULL && arg8 != 0) {
     	// 1838
     	if (sub_006C(g_8EE8, arg7, arg8) == 1) {
     		t0 = -305;
@@ -195,7 +193,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     a1 = a1 << 8;
     v0 = v0 | a1;
     v0 = v0 | a2;
-    *(s32*)(cbOut + 0) = v0;
+    *cbOut = v0;
     if ((u32)(cbIn - 336) < (u32)v0) {
         t0 = -206;
         goto loc_00000858;
@@ -217,9 +215,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     	}
     }
     // 02E8
-    a0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    s1 = a0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    v0 = sub_00000000(s1, 144, arg2, arg6);
+    v0 = sub_00000000(g_9100, 144, keyId, poll);
     t0 = v0;
     if (v0 != 0) {
     	// 1238
@@ -231,321 +227,142 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     }
     if (arg9 == 3 || arg9 == 5 || arg9 == 7 || arg9 == 10) {
     	// 034C
-    	if (arg11 != 0) {
-    		a3 = 0;
+    	if (arg11 != NULL) {
     		// 0358
-    		do {
-    			v1 = arg11;
-    			v0 = a3 & 0xF;
-    			a0 = a3 + s1;
-    			v0 = v1 + v0;
-    			a1 = *(u8*)(v0 + 0);
-    			v1 = *(u8*)(a0 + 0);
-    			a3 = a3 + 1;
-    			v0 = (s32)a3 < (s32)144;
-    			asm("xor        $v1, $v1, $a1");
-    			*(s8*)(a0 + 0) = v1;
-    		} while (v0 != 0);
+    		for (s32 i = 0; i < 144; i++) {
+    			g_9100[i] ^= arg11[i & 0xF];
+    		}
     	}
     }
     // 0388
-    v0 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    v1 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    a2 = v0 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    a3 = v1 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    a1 = 0;
     // 0398
-    do {
-    	v0 = a1 + a3;
-    	a0 = *(u8*)(v0 + 0);
-    	v1 = a1 + a2;
-    	a1 = a1 + 1;
-    	v0 = (u32)a1 < (u32)144;
-    	*(s8*)(v1 + 0) = a0;
-    } while (v0 != 0);
+    for (u32 i = 0; i < 144; i++) {
+    	g_9038[i] = g_9100[i];
+    }
     if (arg9 == 9 || arg9 == 10) {
-    	v0 = 0x10000; // Data ref 0x000093A0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 27744; // Data ref 0x000093A0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 03D0
-    	do {
-    		v0 = pOut + a1;
-    		a0 = *(u8*)(v0 + 260);
-    		v1 = a1 + a2;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)40;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
-    	a0 = 0;
+    	for (u32 i = 0; i < 40; i++) {
+    		g_93A0[i] = pOut[i + 260];
+    	}
     	// 03F0
-    	do {
-    		v1 = pOut + a0;
-    		a0 = a0 + 1;
-    		v0 = (u32)a0 < (u32)40;
-    		*(s8*)(v1 + 260) = 0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 40; i++) {
+    		pOut[i + 260] = 0;
+    	}
     	v0 = 0x10000; // Data ref 0x000093A0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     	a2 = v0 - 27744; // Data ref 0x000093A0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 0410
-    	do {
-    		v0 = a1 + a2;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = sp + a1;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)40;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
-    	v1 = cbIn - 4;
-    	v0 = 0x10000; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	*(s32*)(v0 - 29248) = pOut; // Data ref 0x00008DC0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	*(s32*)(pOut + 0) = v1;
-    	if (arg6 == 0) {
+    	for (u32 i = 0; i < 40; i++) {
+    		*(s8*)(sp + i) = g_93A0[i];
+    	}
+    	g_8DC0 = pOut;
+    	*(s32*)(pOut + 0) = cbIn - 4;
+    	if (!poll) {
     		// 17C0
-    		a0 = pOut;
-    		a1 = cbIn;
-    		a2 = pOut;
-    		a3 = cbIn;
-    		t0 = 11; // Data ref 0x013D1AFD
-    		v0, v1 = sceUtilsBufferCopyWithRange(...);
+    		v0 = sceUtilsBufferCopyWithRange(pOut, cbIn, pOut, cbIn, 11);
     		t0 = v0;
     	} else {
-    		a0 = pOut;
-    		a1 = cbIn;
-    		a2 = pOut;
-    		a3 = cbIn;
-    		t0 = 11;
-    		v0, v1 = sceUtilsBufferCopyByPollingWithRange(...);
+    		v0 = sceUtilsBufferCopyByPollingWithRange(pOut, cbIn, pOut, cbIn, 11);
     		t0 = v0;
     	}
     	// 045C
-    	a1 = 0;
-    	t1 = sp + 48;
     	if (v0 != 0)
         	goto loc_00000810;
     	// 0468
-    	do {
-    		v0 = pOut + a1;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = t1 + a1;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)20;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 20; i++) {
+    		*(s8*)(sp + 48 + i) = pOut[i];
+    	}
     	v0 = 0x10000; // Data ref 0x00008EE8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     	a2 = v0 - 28952; // Data ref 0x00008EE8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
     	// 0190
-    	do {
-    		v0 = a1 + a2;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = pOut + a1;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)32;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 32; i++) {
+    		pOut[i] = g_8EE8[i];
+    	}
     	a0 = *(u8*)(arg0 + 2);
-    	v0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v0 = 22;
-    	cond = (a0 == v0);
-    	v0 = 0x00000; // Data ref 0x00007000 ... 0xE14B3F77 0x52B40A4C 0x56672B67 0x42CF4C82 
-    	if (cond) {
+    	a2 = g_9280;
+    	if (a0 == 22) {
     		// 1790
-    		v0 = 0x00000; // Data ref 0x00007050 ... 0x7E4E5EE3 0x9620A32F 0xA9944375 0xA7830192 
-    		a3 = v0 + 28752; // Data ref 0x00007050 ... 0x7E4E5EE3 0x9620A32F 0xA9944375 0xA7830192 
-    		a1 = 0;
     		// 179C
-    		do {
-    			v0 = a1 + a3;
-    			a0 = *(u8*)(v0 + 0);
-    			v1 = a2 + a1;
-    			a1 = a1 + 1;
-    			v0 = (u32)a1 < (u32)40;
-    			*(s8*)(v1 + 0) = a0;
-    		} while (v0 != 0);
-    		a2 = a2 + 40;
+    		for (u32 i = 0; i < 40; i++) {
+    			*(s8*)(a2 + i) = g_7050[i];
+    		}
+    	} else if (a0 == 94) {
+    		// 1764
+    		// 176C
+    		for (u32 i = 0; i < 40; i++) {
+    			*(s8*)(a2 + i) = g_7028[i];
+    		}
     	} else {
-    		a3 = v0 + 28672; // Data ref 0x00007000 ... 0xE14B3F77 0x52B40A4C 0x56672B67 0x42CF4C82 
-    		v0 = 94;
-    		a1 = 0;
-    		if (a0 == v0) {
-    			// 1764
-    			v0 = 0x00000; // Data ref 0x00007028 ... 0xE2FDDC25 0x54897912 0x24133779 0x810825EC 
-    			a3 = v0 + 28712; // Data ref 0x00007028 ... 0xE2FDDC25 0x54897912 0x24133779 0x810825EC 
-    			// 176C
-    			do {
-    				v0 = a1 + a3;
-    				a0 = *(u8*)(v0 + 0);
-    				v1 = a2 + a1;
-    				a1 = a1 + 1;
-    				v0 = (u32)a1 < (u32)40;
-    				*(s8*)(v1 + 0) = a0;
-    			} while (v0 != 0);
-    			a2 = a2 + 40;
-    		} else {
-    			// 04D4
-    			do {
-    				v0 = a1 + a3;
-    				a0 = *(u8*)(v0 + 0);
-    				v1 = a2 + a1;
-    				a1 = a1 + 1;
-    				v0 = (u32)a1 < (u32)40;
-    				*(s8*)(v1 + 0) = a0;
-    			} while (v0 != 0);
-    			a2 = a2 + 40;
+    		// 04D4
+    		for (u32 i = 0; i < 40; i++) {
+    		    *(s8*)(a2 + i) = g_7000[i];
     		}
     	}
+    	a2 = a2 + 40;
     	// 04F4
-    	a1 = 0;
     	// 04F8
-    	do {
-    		v0 = t1 + a1;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a2 + a1;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)20;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
+    	for (u32 i = 0; i < 20; i++) {
+    		*(s8*)(a2 + i) = *(u8*)(sp + 48 + i);
+    	}
     	a2 = a2 + 20;
-    	a1 = 0;
     	// 051C
-    	do {
-    		v0 = sp + a1;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = a2 + a1;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)40;
-    		*(s8*)(v1 + 0) = a0;
-    	} while (v0 != 0);
-    	a0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	if (arg6 == 0) {
+    	for (u32 i = 0; i < 40; i++) {
+    		*(s8*)(a2 + i) = *(u8*)(sp + i);
+    	}
+    	if (!poll) {
     		// 1744
-    		a2 = a0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a1 = 0;
-    		a0 = 0;
-    		a3 = 100;
-    		t0 = 17; // Data ref 0x01C41AFD
-    		v0, v1 = sceUtilsBufferCopyWithRange(...);
+    		v0 = sceUtilsBufferCopyWithRange(NULL, 0, g_9280, 100, 17);
     	} else {
-    		v1 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a2 = v1 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a0 = 0;
-    		a1 = 0;
-    		a3 = 100;
-    		t0 = 17;
-    		v0, v1 = sceUtilsBufferCopyByPollingWithRange(...);
+    		v0 = sceUtilsBufferCopyByPollingWithRange(NULL, 0, g_9280, 100, 17);
     	}
     	// 055C
     	t0 = -306;
     	if (v0 != 0)
         	goto loc_00000828;
     }
+    // XXXXXXXXXXXXXXXXX4
     // 0568
     if (arg9 == 3) {
     	// 145C
-    	v0 = 0x10000; // Data ref 0x00008FD4 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        a3 = v0 - 28716; // Data ref 0x00008FD4 ... 0x00000000 0x00000000 0x00000000 0x00000000 
         v0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
         a2 = v0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        a1 = 0;
         // 1470
-        do {
-        	v0 = a1 + a3;
-        	a0 = *(u8*)(v0 + 0);
-        	v1 = a2 + a1;
-        	a1 = a1 + 1;
-        	v0 = (u32)a1 < (u32)64;
-        	*(s8*)(v1 + 0) = a0;
-        } while (v0 != 0);
+        for (u32 i = 0; i < 64; i++) {
+        	*(s8*)(a2 + i) = g_8FD4[i];
+        }
         a2 = a2 + 64;
         a0 = 0;
         // 1494
-        do {
-        	v1 = a2 + a0;
-        	a0 = a0 + 1;
-        	v0 = (u32)a0 < (u32)80;
-        	*(s8*)(v1 + 0) = 0;
-        } while (v0 != 0);
+        for (u32 i = 0; i < 80; i++) {
+        	*(s8*)(a2 + i) = 0;
+        }
         a2 = a2 + 32;
-        v0 = 3;
-        *(s8*)(a2 + 0) = v0;
-        v1 = 0x10000; // Data ref 0x00008F68 ... 0x00000000 0x00000000 0x00000000 0x00000000 
+        *(s8*)(a2 + 0) = 3;
         a2 = a2 + 16;
-        v0 = 80;
-        *(s8*)(a2 + 0) = v0;
-        a3 = v1 - 28824; // Data ref 0x00008F68 ... 0x00000000 0x00000000 0x00000000 0x00000000 
+        *(s8*)(a2 + 0) = 80;
         a2 = a2 + 32;
-        a1 = 0;
         // 14D0
-        do {
-        	v0 = a1 + a3;
-        	a0 = *(u8*)(v0 + 0);
-        	v1 = a2 + a1;
-        	a1 = a1 + 1;
-        	v0 = (u32)a1 < (u32)48;
-        	*(s8*)(v1 + 0) = a0;
-        } while (v0 != 0);
-        v0 = 0x10000; // Data ref 0x00008FA8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        a3 = v0 - 28760; // Data ref 0x00008FA8 ... 0x00000000 0x00000000 0x00000000 0x00000000 
+        for (u32 i = 0; i < 48; i++) {
+        	*(s8*)(a2 + i) = g_8F68[i];
+        }
         a2 = a2 + 48;
-        a1 = 0;
         // 14FC
-        do {
-        	v0 = a1 + a3;
-        	a0 = *(u8*)(v0 + 0);
-        	v1 = a2 + a1;
-        	a1 = a1 + 1;
-        	v0 = (u32)a1 < (u32)16;
-        	*(s8*)(v1 + 0) = a0;
-        } while (v0 != 0);
-        v0 = 0x10000; // Data ref 0x00009014 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        a3 = v0 - 28652; // Data ref 0x00009014 ... 0x00000000 0x00000000 0x00000000 0x00000000 
+        for (u32 i = 0; i < 16; i++) {
+        	*(s8*)(a2 + i) = g_8FA8[i];
+        }
         a2 = a2 + 16;
-        a1 = 0;
         // 1528
-        do {
-        	v0 = a1 + a3;
-        	a0 = *(u8*)(v0 + 0);
-        	v1 = a2 + a1;
-        	a1 = a1 + 1;
-        	v0 = (u32)a1 < (u32)16;
-        	*(s8*)(v1 + 0) = a0;
-        } while (v0 != 0);
-        v0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        t1 = v0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        a3 = 0;
+        for (u32 i = 0; i < 16; i++) {
+        	*(s8*)(a2 + i) = g_9014[i];
+        }
         // 1550
-        do {
-        	a0 = arg11;
-        	v1 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        	s1 = v1 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        	t0 = a3 + s1;
-        	a2 = a3 + t1;
-        	a1 = a3 & 0xF;
-        	if (a0 != 0) {
-        		v0 = a0 + a1;
-        		v1 = *(u8*)(a2 + 144);
-        		a0 = *(u8*)(v0 + 0);
-        		asm("xor        $v1, $v1, $a0");
-        		*(s8*)(a2 + 144) = v1;
+        for (s32 i = 0; i < 80; i++) {
+        	if (arg11 != NULL) {
+        		g_9100[144 + i] ^= arg11[i & 0xF];
         	}
         	// 1580
-        	a0 = arg10 + a1;
-        	v1 = *(u8*)(t0 + 144);
-        	v0 = *(u8*)(a0 + 0);
-        	a3 = a3 + 1;
-        	a1 = (s32)a3 < (s32)80;
-        	asm("xor        $v1, $v1, $v0");
-        	*(s8*)(t0 + 144) = v1;
-        } while (a1 != 0);
-        v0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        t0 = 3;
-        a0 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-        a2 = s1;
-        a1 = 180;
-        a3 = 336; // Data ref 0x04B21AFD
-        v0, v1 = sceUtilsBufferCopyWithRange(...);
+        	g_9100[144 + i] ^= arg10[i];
+        }
+        v0 = sceUtilsBufferCopyWithRange(g_9280, 180, g_9100, 336, 3);
         t0 = v0;
         if (v0 != 0)
             goto loc_00000A78;
@@ -728,11 +545,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
         	asm("xor        $v1, $v1, $v0");
         	*(s8*)(t0 + 20) = v1;
         } while (a1 != 0);
-        a0 = s1;
-        a1 = 80;
-        a2 = arg2;
-        a3 = arg6; // Data ref 0x01C40000
-        v0, v1 = sub_00000000(...);
+        v0 = sub_0000(s1, 80, keyId, poll);
         t0 = v0;
         if (v0 != 0) {
         	// 1238
@@ -1051,6 +864,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     		} while (v0 != 0);
     	}
     }
+    // XXXXXXXXXXXXXXXXX3
     // 0710
     if (arg9 == 1) {
     	// 0FF8
@@ -1070,10 +884,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
 		} while (v0 != 0);
     	v1 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     	s1 = v1 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a0 = s1;
-    	a1 = 160;
-    	a2 = arg2;
-    	a3 = arg6; // Data ref 0x01CF0000
+    	v0 = sub_0000(s1, 160, keyId, poll);
     	v0, v1 = sub_00000000(...);
     	t0 = v0;
     	if (v0 != 0)
@@ -1127,11 +938,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     	// 0FA4
     	v0 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     	s1 = v0 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a0 = s1;
-    	a1 = 96;
-    	a2 = arg2;
-    	a3 = arg6; // Data ref 0x03920000
-    	v0, v1 = sub_00000000(...);
+    	v0 = sub_0000(s1, 96, keyId, poll);
     	t0 = v0;
     	if (v0 != 0)
         	goto loc_000009B8;
@@ -1149,6 +956,7 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     		*(s8*)(v1 + 0) = a0;
     	} while (v0 != 0);
     }
+    // XXXXXXXXXXXXXXXXX2
     // 073C
     if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
     	// 0D44
@@ -1204,8 +1012,6 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     				v0 = (u32)a0 < (u32)88;
     				*(s8*)(v1 + 0) = 0;
     			} while (v0 != 0);
-    			v1 = *(s32*)(sp + 80);
-    			goto loc_00000E38;
     		} else {
     			v0 = 0x10000; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
     			v1 = 0x10000; // Data ref 0x0000913C ... 0x00000000 0x00000000 0x00000000 0x00000000 
@@ -1246,8 +1052,8 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     				v0 = (u32)a0 < (u32)56;
     				*(s8*)(v1 + 0) = 0;
     			} while (v0 != 0);
-    			v1 = *(s32*)(sp + 80);
     		}
+    		v1 = *(s32*)(sp + 80);
     		// 0E38
     		v0 = 128;
     		if (v1 == v0)
@@ -1324,8 +1130,9 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     		*(s8*)(v1 + 0) = a0;
     	} while (v0 != 0);
     }
+    // XXXXXXXXXXXXXXXXX1
     // 07D0
-    if (arg6 == 0) {
+    if (!poll) {
     	// 0D24
     	v0 = sceUtilsBufferCopyWithRange(g_9100, 336, g_9100, 336, 11);
     } else {
@@ -1337,306 +1144,143 @@ sub_00E0(u8 *arg0, u8 *arg1, arg2, s8 *pOut, u32 cbIn, u32 *cbOut, arg6, arg7, a
     if (t0 != 0) {
     	goto loc_00000810;
     }
-    v1 = 0x10000; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    v0 = a0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    t1 = 0;
-    a0 = v1 - 28032; // Data ref 0x00009280 ... 0x00000000 0x00000000 0x00000000 0x00000000 
+    t0 = 0;
     // 0910
-    do {
-	    t2 = *(s8*)(v0 + 0);
-    	a3 = *(s8*)(a0 + 0);
-    	t1 = t1 + 1;
-    	a1 = (s32)t1 < (s32)20;
-    	v0 = v0 + 1;
-    	a0 = a0 + 1;
+    for (s32 i = 0; i < 20; i++) {
+	    t2 = g_9100[i];
+    	a3 = g_9280[i];
     	if (t2 != a3) {
     		// 0D1C
     		t0 = t2 - a3;
     		break;
     	}
-    } while (a1 != 0);
+    }
     // 0934
     if (t0 != 0) {
     	// 0B14
     	t0 = -302;
     	goto loc_00000828;
     }
+    // XXXXXXXXXXXXXXXXX0
     if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
     	// 0B34
-    	v0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v1 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	t0 = v1 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = 0;
     	// 0B44
-    	do {
-    		a1 = a3 + a2;
-    		v0 = a3 + t0;
-    		a0 = *(u8*)(v0 + 16);
-    		v1 = *(u8*)(a1 + 128);
-    		a3 = a3 + 1;
-    		v0 = (s32)a3 < (s32)64;
-    		asm("xor        $v1, $v1, $a0");
-    		*(s8*)(a1 + 128) = v1;
-    	} while (v0 != 0);
-    	v0 = 0x10000; // Data ref 0x0000916C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	s1 = v0 - 28308; // Data ref 0x0000916C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = arg2;
-    	a0 = s1;
-    	a1 = 64;
-    	a3 = arg6; // Data ref 0x028E0000
-    	v0, v1 = sub_00000000(...);
+    	for (s32 i = 0; i < 64; i++) {
+    		g_9100[128 + i] ^= g_9038[16 + i];
+    	}
+    	v0 = sub_0000(g_916C, 64, keyId, poll);
     	t0 = v0;
     	if (v0 != 0)
         	goto loc_000009B8;
-    	v0 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	t0 = s1 - 108;
-    	t1 = v0 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = 0;
     	// 0B9C
-    	do {
-    		v1 = a3 + t0;
-    		a0 = a3 + t1;
-    		v0 = *(u8*)(v1 + 108);
-    		a1 = *(u8*)(a0 + 80);
-    		a2 = pOut + a3;
-    		a3 = a3 + 1;
-    		asm("xor        $v0, $v0, $a1");
-    		v1 = (s32)a3 < (s32)64;
-    		*(s8*)(a2 + 64) = v0;
-    	} while (v1 != 0);
-    	v0 = arg9 - 6;
-    	v0 = (u32)v0 < (u32)2;
-    	a0 = 0;
-    	if (v0 == 0) {
+    	for (s32 i = 0; i < 64; i++) {
+    	    pOut[64 + i] = g_916C[i] ^ g_9038[80 + i];
+    	}
+    	if (arg9 == 6 || arg9 == 7) {
     		// 0C90
-    		do {
-    			v1 = pOut + a0;
-    			a0 = a0 + 1;
-    			v0 = (u32)a0 < (u32)48;
-    			*(s8*)(v1 + 128) = 0;
-    		} while (v0 != 0);
-    		v0 = 1;
-    		*(s8*)(pOut + 160) = v0;
-    		v1 = 0x10000; // Data ref 0x000091C0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a2 = v1 - 28224; // Data ref 0x000091C0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a1 = 0;
-    		// 0CB8
-    		do {
-    			v0 = a1 + a2;
-    			a0 = *(u8*)(v0 + 0);
-    			v1 = pOut + a1;
-    			a1 = a1 + 1;
-    			v0 = (u32)a1 < (u32)16;
-    			*(s8*)(v1 + 176) = a0;
-    		} while (v0 != 0);
-    		a0 = 0;
-    		// 0CD8
-    		do {
-    			v1 = pOut + a0;
-    			a0 = a0 + 1;
-    			v0 = (u32)a0 < (u32)16;
-    			*(s8*)(v1 + 192) = 0;
-    		} while (v0 != 0);
-    		v0 = 0x10000; // Data ref 0x000091D0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a2 = v0 - 28208; // Data ref 0x000091D0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a1 = 0;
-    		// 0CF8
-    		do {
-    			v0 = a1 + a2;
-    			a0 = *(u8*)(v0 + 0);
-    			v1 = pOut + a1;
-    			a1 = a1 + 1;
-    			v0 = (u32)a1 < (u32)128;
-    			*(s8*)(v1 + 208) = a0;
-    		} while (v0 != 0);
-    		v1 = *(s32*)(sp + 80);
-    	} else {
-    		v0 = 0x10000; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a2 = v0 - 27776; // Data ref 0x00009380 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a1 = 0;
-    		// 0BE0
-    		do {
-    			v0 = a1 + a2;
-    			a0 = *(u8*)(v0 + 0);
-    			v1 = pOut + a1;
-    			a1 = a1 + 1;
-    			v0 = (u32)a1 < (u32)32;
-    			*(s8*)(v1 + 128) = a0;
-    		} while (v0 != 0);
-    		a0 = 0;
-    		// 0C00
-    		do {
-    			v1 = pOut + a0;
-    			a0 = a0 + 1;
-    			v0 = (u32)a0 < (u32)16;
-    			*(s8*)(v1 + 160) = 0;
-    		} while (v0 != 0);
-    		v1 = 1;
-    		*(s8*)(pOut + 164) = v1;
-    		v0 = 0x10000; // Data ref 0x000091C0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a2 = v0 - 28224; // Data ref 0x000091C0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		*(s8*)(pOut + 160) = v1;
-    		a1 = 0;
-    		// 0C2C
-    		do {
-    			v0 = a1 + a2;
-    			a0 = *(u8*)(v0 + 0);
-    			v1 = pOut + a1;
-    			a1 = a1 + 1;
-    			v0 = (u32)a1 < (u32)16;
-    			*(s8*)(v1 + 176) = a0;
+    		for (u32 i = 0; i < 48; i++) {
+    			pOut[128 + i] = 0;
     		}
-    		a0 = 0;
+    		pOut[160] = 1;
+    		// 0CB8
+    		for (u32 i = 0; i < 16; i++) {
+    			pOut[176 + i] = g_91C0[i];
+    		}
+    		// 0CD8
+    		for (u32 i = 0; i < 16; i++) {
+    			pOut[192 + i] = 0;
+    		}
+    		// 0CF8
+    		for (u32 i = 0; i < 128; i++) {
+    			pOut[208 + i] = g_91D0[i];
+    		}
+    	} else {
+    		// 0BE0
+    		for (u32 i = 0; i < 32; i++) {
+    			pOut[128 + i] = g_9380[i];
+    		}
+    		// 0C00
+    		for (u32 i = 0; i < 16; i++) {
+    			pOut[160 + i] = 0;
+    		}
+    		pOut[164] = 1;
+    		pOut[160] = 1;
+    		// 0C2C
+    		for (u32 i = 0; i < 16; i++) {
+    			pOut[176 + i] = g_91C0[i];
+    		}
     		// 0C4C
-    		do {
-    			v1 = pOut + a0;
-    			a0 = a0 + 1;
-    			v0 = (u32)a0 < (u32)16;
-    			*(s8*)(v1 + 192) = 0;
-    		} while (v0 != 0);
-    		v0 = 0x10000; // Data ref 0x000091D0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a2 = v0 - 28208; // Data ref 0x000091D0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    		a1 = 0;
+    		for (u32 i = 0; i < 16; i++) {
+    			pOut[192 + i] = 0;
+    		}
     		// 0C6C
-    		do {
-    			v0 = a1 + a2;
-    			a0 = *(u8*)(v0 + 0);
-    			v1 = pOut + a1;
-    			a1 = a1 + 1;
-    			v0 = (u32)a1 < (u32)128;
-    			*(s8*)(v1 + 208) = a0;
-    		} while (v0 != 0);
-    		v1 = *(s32*)(sp + 80);
+    		for (u32 i = 0; i < 128; i++) {
+    			pOut[208 + i] = g_91D0[i];
+    		}
     	}
     } else {
-    	v0 = 0x10000; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	v1 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28416; // Data ref 0x00009100 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	t0 = v1 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = 0;
     	// 0970
-    	do {
-    		a1 = a3 + a2;
-    		v0 = a3 + t0;
-    		a0 = *(u8*)(v0 + 20);
-    		v1 = *(u8*)(a1 + 64);
-    		a3 = a3 + 1;
-    		v0 = (s32)a3 < (s32)112;
-    		asm("xor        $v1, $v1, $a0");
-    		*(s8*)(a1 + 64) = v1;
-    	} while (v0 != 0);
-    	v0 = 0x10000; // Data ref 0x0000912C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	s1 = v0 - 28372; // Data ref 0x0000912C ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = arg2;
-    	a0 = s1;
-    	a1 = 112;
-    	a3 = arg6; // Data ref 0x020A0000
-    	v0, v1 = sub_00000000(...);
+    	for (s32 i = 0; i < 112; i++) {
+    		g_9100[64 + i] ^= g_9038[20 + i];
+    	}
+    	v0 = sub_0000(g_912C, 112, keyId, poll);
     	t0 = v0;
     	if (v0 != 0) {
     		goto loc_000009B8;
     	}
     	// 09CC
-    	v0 = 0x10000; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	t0 = s1 - 44;
-    	t1 = v0 - 28616; // Data ref 0x00009038 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a3 = 0;
     	// 09DC
-    	do {
-    		v1 = a3 + t0;
-    		a0 = a3 + t1;
-    		v0 = *(u8*)(v1 + 44);
-    		a1 = *(u8*)(a0 + 32);
-    		a2 = pOut + a3;
-    		a3 = a3 + 1;
-    		asm("xor        $v0, $v0, $a1");
-    		v1 = (s32)a3 < (s32)112;
-    		*(s8*)(a2 + 64) = v0;
-    	} while (v1 != 0);
-    	v0 = 0x10000; // Data ref 0x000091B0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a2 = v0 - 28240; // Data ref 0x000091B0 ... 0x00000000 0x00000000 0x00000000 0x00000000 
-    	a1 = 0;
+    	for (s32 i = 0; i < 112; i++) {
+    	    pOut[64 + i] = g_912C[i] ^ g_9038[i];
+    	}
     	// 0A10
-    	do {
-    		v0 = a1 + a2;
-    		a0 = *(u8*)(v0 + 0);
-    		v1 = pOut + a1;
-    		a1 = a1 + 1;
-    		v0 = (u32)a1 < (u32)160;
-    		*(s8*)(v1 + 176) = a0;
-    	} while (v0 != 0);
-    	v0 = 8;
-    	v1 = *(s32*)(sp + 80);
-    	if (arg9 == v0) {
+    	for (u32 i = 0; i < 160; i++) {
+    		pOut[176 + i] = g_91B0[i];
+    	}
+    	if (arg9 == 8) {
     		// 0B1C
-    		v1 = *(u8*)(pOut + 164);
-    		v0 = 1;
-    		t0 = -303;
-    		if (v1 != v0)
+    		if (pOut[164] != 1) {
+    		    t0 = -303;
         		goto loc_00000828;
-    		v1 = *(s32*)(sp + 80);
+        	}
     	}
     }
     // 0A38
-    v0 = 128;
-    if (v1 == v0)
+    if (*(s32*)(sp + 80) == 128)
     {
-        v1 = *(u8*)(pOut + 1424);
         // 0B00
-    	v0 = -128;
-    	if (v1 != 0) {
+    	if (pOut[1424] != 0) {
     		// 0B14
     		t0 = -302;
     		goto loc_00000828;
     	}
-    	v0 = v1 | v0;
-    	*(s8*)(pOut + 1424) = v0;
+    	pOut[1424] |= 0xffffff80;
     }
     // 0A44
-    a2 = pOut + 64;
-    if (arg6 == 0) {
+    if (!poll) {
     	// 0AE4
-    	a3 = cbIn - 64;
-    	a1 = cbIn;
-    	a0 = pOut;
-    	t0 = 1; // Data ref 0x02151AFD
-    	v0, v1 = sceUtilsBufferCopyWithRange(...);
+    	v0 = sceUtilsBufferCopyWithRange(pOut, cbIn, pOut + 64, cbIn - 64, 1);
     } else {
-    	a3 = cbIn - 64;
-    	a1 = cbIn;
-    	a0 = pOut;
-    	t0 = 1; // Data ref 0x020A1AFF
-    	v0, v1 = sceUtilsBufferCopyByPollingWithRange(...);
+    	v0 = sceUtilsBufferCopyByPollingWithRange(pOut, cbIn, pOut + 64, cbIn - 64, 1);
     }
     // 0A60
     t0 = v0;
     if (v0 == 0) {
     	// 0A98
-    	v1 = *(s32*)(cbOut + 0);
-    	t0 = 0;
-    	if ((u32)v1 >= (u32)336)
-        	goto loc_00000858;
-    	if (v1 == 336)
-        	goto loc_00000858;
-    	a0 = 0;
-    	// 0ABC
-    	do {
-    		v0 = pOut + v1 + a0;
-    		*(s8*)(v0 + 0) = 0;
-    		a0 = a0 + 1;
-    	} while ((u32)a0 < (u32)(336 - *(s32*)cbOut));
+    	if (*cbOut < 336) {
+    		// 0ABC
+    		u32 cb = *cbOut;
+    		for (u32 i = 0; i < 336 - cb; i++) {
+    			pOut[cb + i] = 0;
+    		}
+    	}
     	t0 = 0;
     	goto loc_00000858;
     }
-    a0 = *(s32*)(sp + 80);
-    v0 = 128;
-    if (a0 == v0)
+    if (*(s32*)(sp + 80) == 128)
     {
-        v0 = *(u8*)(pOut + 1424);
         // 0A8C
-    	v0 = v0 & 0x7F;
-    	*(s8*)(pOut + 1424) = v0;
+    	*(s8*)(pOut + 1424) &= 0x7F;
     }
     goto loc_0000A78;
 
@@ -1680,14 +1324,14 @@ loc_00000858: // t0
     }
     return t0;
 
-loc_00000A78:		
+loc_00000A78: // t0
     v1 = -304;
     if ((s32)t0 >= 0)
         goto loc_0000081C;
     t0 = -303;
     goto loc_00000828;
 
-loc_000009B8:		
+loc_000009B8: // t0	
     v1 = -106;
     if ((s32)t0 >= 0)
         goto loc_0000081C;
