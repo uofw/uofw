@@ -117,7 +117,7 @@ typedef struct {
      *      Seems to be unused. Always 0.
      * 
      * Remarks:
-     *      This info has been copied from 
+     *      This info has been taken from 
      *      https://playstationdev.wiki/pspdevwiki/index.php?title=Motherboards#Comparison_Table
      */
     s32 baryonVersion;
