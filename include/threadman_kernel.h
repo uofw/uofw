@@ -32,8 +32,8 @@ typedef struct {
 #define SCE_KERNEL_LOWEST_PRIORITY_KERNEL       (126)
 
 /* thread size */
-#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (4 * 1024) /* 4 KB */
-#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (256 * 1024) /* 256 KB */
+#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (SCE_KERNEL_4KiB) /* 4 KB */
+#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (SCE_KERNEL_256KiB) /* 256 KB */
 
 /* thread attributes */
 #define SCE_KERNEL_TH_VSH_MODE                  (0xC0000000) /* Thread runs in VSH mode. */

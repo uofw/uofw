@@ -3280,7 +3280,7 @@ static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
 
     g_Battery.eventId = sceKernelCreateEventFlag("ScePowerBattery", 1, 0, NULL); // 0x00005B88
     g_Battery.workerThreadId = sceKernelCreateThread("ScePowerBattery", _scePowerBatteryThread, POWER_BATTERY_WORKER_THREAD_PRIO, 
-        2084, SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); // 0x00005BB0
+        2 * SCE_KERNEL_1KiB, SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); // 0x00005BB0
 
     sceKernelStartThread(g_Battery.workerThreadId, 0, NULL); // 0x00005BC4
 
