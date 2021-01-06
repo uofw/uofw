@@ -109,9 +109,9 @@
  * and sceSysconGetBaryonVersion().  
  */
 
-#define PSP_SYSCON_BARYON_GET_UNIT_TYPE(v)  (v & 0xFF) /* 0 = Dev version, 1 = Retail */
-#define PSP_SYSCON_BARYON_GET_VERSION_MAJOR(v)  ((v >> 20) & 0xF)
-#define PSP_SYSCON_BARYON_GET_VERSION_MINOR(v)  ((v >> 16) & 0xF)
+#define PSP_SYSCON_BARYON_GET_UNIT_TYPE(v)      ((v) & 0xFF) /* 0 = Dev version, 1 = Retail */
+#define PSP_SYSCON_BARYON_GET_VERSION_MAJOR(v)  (((v) >> 20) & 0xF)
+#define PSP_SYSCON_BARYON_GET_VERSION_MINOR(v)  (((v) >> 16) & 0xF)
 
 
 /** 
