@@ -6,7 +6,8 @@ SCE_MODULE_INFO("sceChkreg", SCE_MODULE_KERNEL | SCE_MODULE_KIRK_SEMAPHORE_LIB |
                               | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 9);
 SCE_SDK_VERSION(SDK_VERSION);
 
-SceUID g_chkreg_sema; // 0x00001538
+SceUID g_chkreg_sema;    // 0x00001538
+u8 g_buf[KIRK_CERT_LEN]; // 0x00001480
 
 typedef struct {
     u32 unk;     // DAT_00000040
@@ -68,10 +69,8 @@ s32 sub_00000128(s32 arg0, s32 arg1)
 // Subroutine sub_00000190 - Address 0x00000190 -- Done
 s32 sub_00000190(void)
 {
-    u8 buf[KIRK_CERT_LEN];
-
-    if (sceIdStorageLookup(0x100, 0x38, buf, KIRK_CERT_LEN) < 0) {
-        if (sceIdStorageLookup(0x120, 0x38, buf, KIRK_CERT_LEN) < 0)
+    if (sceIdStorageLookup(0x100, 0x38, g_buf, KIRK_CERT_LEN) < 0) { // Read pscode into g_buf from key 0x100
+        if (sceIdStorageLookup(0x120, 0x38, g_buf, KIRK_CERT_LEN) < 0) // Read (backup) pscode into g_buf from key 0x120 if key 0x100 fails
             return SCE_ERROR_NOT_FOUND;
     }
     
@@ -82,9 +81,7 @@ s32 sub_00000190(void)
 // Subroutine sub_0000020C - Address 0x0000020C -- Done
 s32 sub_0000020C(void)
 {
-    u8 buf[KIRK_CERT_LEN];
-
-    if (sceUtilsBufferCopyWithRange(NULL, 0, buf, KIRK_CERT_LEN, KIRK_CMD_CERT_VER) != 0) // Check if valid cert?
+    if (sceUtilsBufferCopyWithRange(NULL, 0, g_buf, KIRK_CERT_LEN, KIRK_CMD_CERT_VER) != 0) // Validate g_buf
         return SCE_ERROR_INVALID_FORMAT;
         
     return 0;
