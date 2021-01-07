@@ -10,22 +10,17 @@ SceUID g_chkreg_sema;    // 0x00001538
 u8 g_buf[KIRK_CERT_LEN]; // 0x00001480
 
 typedef struct {
-    u32 unk;     // DAT_00000040
-    u32 unk1;    // DAT_00000044
-    u32 unk2;    // DAT_00000048
-    u32 unk3;    // DAT_00000b40
-    void *buf;   // DAT_afbf0010
-    u32 unk4;    // DAT_afbf0014
-    u32 unk5;    // DAT_afbf0028
-    u32 unk6;    // DAT_afbf0038
+    u32 unk;          // 0x00000A40
+    u32 unk1;         // 0x00000A44
+    u32 valid_pscode; // 0x00000A48
+    u32 unk3;         // DAT_00000b40
+    void *buf;        // DAT_afbf0010
+    u32 unk4;         // DAT_afbf0014
+    u32 unk5;         // DAT_afbf0028
+    u32 unk6;         // DAT_afbf0038
 } g_chkreg_struct;
 
-typedef struct {
-    u8 *code;
-} g_chkreg_pscode_struct;
-
 g_chkreg_struct g_chkreg = { 0, 0, 0, 0, NULL, 0, 0, 0 };
-g_chkreg_pscode_struct g_chkreg_pscode = { NULL };
 
 // Declarations
 s32 sceIdStorageReadLeaf(u16 key, void *buf);
@@ -74,7 +69,7 @@ s32 sub_00000190(void)
             return SCE_ERROR_NOT_FOUND;
     }
     
-    g_chkreg.unk2 = 1; // Setting some sort of flag?
+    g_chkreg.valid_pscode = 1; // g_buf is valid
     return 0;
 }
 
@@ -93,7 +88,7 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
 {   
     g_chkreg.unk = 0;
     g_chkreg.unk1 = 0;
-    g_chkreg.unk2 = 0;
+    g_chkreg.valid_pscode = 0;
     g_chkreg_sema = sceKernelCreateSema("SceChkreg", 0, 1, 1, NULL);
     return (g_chkreg_sema < 1);
 }
@@ -106,7 +101,7 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
     
     g_chkreg.unk = 0;
     g_chkreg.unk1 = 0;
-    g_chkreg.unk2 = 0;
+    g_chkreg.valid_pscode = 0;
 
     if ((ret = sceKernelWaitSema(g_chkreg_sema, 1, &timeout)) == 0)
         sceKernelDeleteSema(g_chkreg_sema);
@@ -120,14 +115,14 @@ s32 sceChkreg_driver_59F8491D(u8 *code)
     s32 ret = SCE_ERROR_SEMAPHORE;
 
     if ((sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
-        if (((g_chkreg.unk2 != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
-            code[0] = g_chkreg_pscode.code[1];
-            code[1] = g_chkreg_pscode.code[0];
-            code[2] = g_chkreg_pscode.code[3];
-            code[3] = g_chkreg_pscode.code[2];
-            code[4] = g_chkreg_pscode.code[5];
-            code[5] = g_chkreg_pscode.code[4];
-            code[6] = g_chkreg_pscode.code[6] >> 2;
+        if (((g_chkreg.valid_pscode != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
+            code[0] = g_buf[1];
+            code[1] = g_buf[0];
+            code[2] = g_buf[3];
+            code[3] = g_buf[2];
+            code[4] = g_buf[5];
+            code[5] = g_buf[4];
+            code[6] = g_buf[6] >> 2;
             code[7] = 0;
         }
         
@@ -162,9 +157,9 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1) {
         ret = SCE_ERROR_SEMAPHORE;
 
         if ((sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
-            if (((g_chkreg.unk2 != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
-                if (((u32)g_chkreg_pscode.code[6] << 0x18) >> 0x1a == 0x23)
-                    *arg0 = g_chkreg_pscode.code[6] << 6 | g_chkreg_pscode.code[7] >> 2;
+            if (((g_chkreg.valid_pscode != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
+                if (((u32)g_buf[6] << 0x18) >> 0x1a == 0x23)
+                    *arg0 = g_buf[6] << 6 | g_buf[7] >> 2;
                 else
                     ret = SCE_ERROR_INVALID_VALUE;
             }
