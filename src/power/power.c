@@ -4,7 +4,7 @@
 
 #include <common_imp.h>
 #include <interruptman.h>
-#include <power_error.h>
+#include <power_kernel.h>
 #include <syscon.h>
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
@@ -23,27 +23,16 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT         (26)
 #define BARYON_DATA_LOW_BATTERY_CAP_SLOT                (28)
 
-#define SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS            (32)
-#define SCE_POWER_POWER_CALLBACK_MAX_SLOT               (SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS - 1)
-#define SCE_POWER_POWER_CALLBACK_USER_SLOTS             (16)
-#define SCE_POWER_POWER_CALLBACK_MAX_USER_SLOT          (SCE_POWER_POWER_CALLBACK_USER_SLOTS - 1)
+#define POWER_CALLBACK_TOTAL_SLOTS_KERNEL               (32)
+#define POWER_CALLBACK_MAX_SLOT_KERNEL                  (POWER_CALLBACK_TOTAL_SLOTS_KERNEL - 1)
+#define POWER_CALLBACK_TOTAL_SLOTS_USER                 (16)
+#define POWER_CALLBACK_MAX_SLOT_USER          (POWER_CALLBACK_TOTAL_SLOTS_USER - 1)
 
 #define BATTERY_LOW_CAPACITY_VALUE                      (216)
 #define BATTERY_REALLY_LOW_CAPACITY_VALUE               (72)
 
 #define SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL    (3)
 #define SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_EXTERNAL    (4)
-
-#define SCE_POWER_CALLBACKARG_BATTERY_CAP           (0x0000007F) /* Battery remaining capacity [%] (0 to 100) */
-#define SCE_POWER_CALLBACKARG_BATTERYEXIST          (0x00000080) /* Battery equipped state */
-#define SCE_POWER_CALLBACKARG_LOW_BATTERY           (0x00000100) /* Low battery status  */
-#define SCE_POWER_CALLBACKARG_POWER_ONLINE          (0x00001000) /* Power is supplied from external power source (AC adapter) */
-#define SCE_POWER_CALLBACKARG_SUSPENDING            (0x00010000) /* PSP suspend process has started */
-#define SCE_POWER_CALLBACKARG_RESUMING              (0x00020000) /* PSP resume process has started */
-#define SCE_POWER_CALLBACKARG_RESUME_COMP           (0x00040000) /* PSP resume process has completed */
-#define SCE_POWER_CALLBACKARG_STANDINGBY            (0x00080000) /* PSP is in standby state */
-#define SCE_POWER_CALLBACKARG_HOLD_SWITCH           (0x40000000)
-#define SCE_POWER_CALLBACKARG_POWER_SWITCH			(0x80000000)
 
 #define SCE_KERNEL_POWER_LOCK_DEFAULT               (0)
 
@@ -77,7 +66,7 @@ typedef struct {
 } ScePowerCallback;
 
 typedef struct {
-    ScePowerCallback powerCallback[SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS]; // 0 - 511
+    ScePowerCallback powerCallback[POWER_CALLBACK_TOTAL_SLOTS_KERNEL]; // 0 - 511
     s32 baryonVersion; //512
     u32 unk516; //516 -- power status?
     u32 unk520; //520
@@ -642,7 +631,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_04B7766E - Address 0x000008A8 - Aliases: scePower_driver_766CD857
+// Subroutine scePower_04B7766E - Address 0x000008A8 - Aliases: scePower_driver_766CD857
 // TODO: Verify function
 s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
 {
@@ -655,11 +644,11 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
     SceSysmemUIDControlBlock *block;
     
     oldK1 = pspShiftK1(); //0x000008C4
-    if (slot < -1 || slot > SCE_POWER_POWER_CALLBACK_MAX_SLOT) { //0x000008D4
+    if (slot < -1 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x000008D4
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
-    if (pspK1IsUserMode() && slot > SCE_POWER_POWER_CALLBACK_MAX_USER_SLOT) { //0x000008DC & 0x000008E4
+    if (pspK1IsUserMode() && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x000008DC & 0x000008E4
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -683,13 +672,13 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
     
     intrState = sceKernelCpuSuspendIntr(); //0x00000934
     
-    if (slot == -1) { //0x00000940
+    if (slot == SCE_POWER_CALLBACKSLOT_AUTO) { //0x00000940
         if (!pspK1IsUserMode) { //0x000009CC
             sceKernelCpuResumeIntr(intrState);
             pspSetK1(oldK1);
             return SCE_ERROR_NOT_SUPPORTED;
         }
-        for (i = 0; i < SCE_POWER_POWER_CALLBACK_USER_SLOTS; i++) {
+        for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_USER; i++) {
              if (g_Power.powerCallback[i].callbackId < 0) { //0x000009F4
                  g_Power.powerCallback[i].callbackId = cbid; //0x00000A14
                  g_Power.powerCallback[i].unk4 = 0; //0x00000A20
@@ -726,11 +715,11 @@ s32 scePowerUnregisterCallback(s32 slot)
     s32 oldK1;
     
     oldK1 = pspShiftK1(); //0x00000A78
-    if (slot < 0 || slot > SCE_POWER_POWER_CALLBACK_MAX_SLOT) { //0x00000A74
+    if (slot < 0 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x00000A74
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
-    if (pspK1IsUserMode() && slot > SCE_POWER_POWER_CALLBACK_MAX_USER_SLOT) { //0x00000A94 & 0x00000AA0
+    if (pspK1IsUserMode() && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x00000A94 & 0x00000AA0
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -750,11 +739,11 @@ s32 scePowerSetCallbackMode(s32 slot, s32 mode)
     s32 oldK1;
     
     oldK1 = pspShiftK1();
-    if (slot < 0 || slot > SCE_POWER_POWER_CALLBACK_MAX_SLOT) { //0x00000AE8
+    if (slot < 0 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x00000AE8
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
-    if (pspK1IsUserMode && slot > SCE_POWER_POWER_CALLBACK_MAX_USER_SLOT) { //0x00000B08 & 0x00000B14
+    if (pspK1IsUserMode && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x00000B08 & 0x00000B14
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -779,11 +768,11 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *mode)
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-    if (slot < 0 || slot > SCE_POWER_POWER_CALLBACK_MAX_SLOT) { //0x00000B60
+    if (slot < 0 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x00000B60
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
-    if (pspK1IsUserMode && slot > SCE_POWER_POWER_CALLBACK_MAX_USER_SLOT) { //0x00000B68 & 0x00000B7C
+    if (pspK1IsUserMode && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x00000B68 & 0x00000B7C
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -812,7 +801,7 @@ static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFla
     sdkVer = sceKernelGetCompiledSdkVersion();
     g_Power.unk516 = (g_Power.unk516 & ~deleteCallbackFlag) | applyCallbackFlag; //0x00000C24 & 0x00000C2C & 0x00000C34
     
-    for (i = 0; i < SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS; i++) {
+    for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++) {
          if (g_Power.powerCallback[i].callbackId < 0) //0x00000C4C
              continue;
          
@@ -841,7 +830,7 @@ static void _scePowerIsCallbackBusy(u32 callbackFlag, u32 *callbackId)
     
     intrState = sceKernelCpuSuspendIntr(); //0x00000CEC
     
-    for (i = 0; i < SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS; i++) {
+    for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++) {
          if (g_Power.powerCallback[i].callbackId < 0) //0x00000D04
              continue;
          
@@ -915,7 +904,7 @@ s32 _scePowerModuleStart(s32 argc, void *argp)
     
     //0x00000EB0 - 0x00000EC4
     u32 i;
-    for (i = 0; i < SCE_POWER_POWER_CALLBACK_TOTAL_SLOTS; i++)
+    for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++)
          g_Power.powerCallback[i].callbackId = -1;
     
     scePowerInit(); //scePower_driver_9CE06934
