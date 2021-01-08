@@ -9,6 +9,7 @@
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
 #include <sysmem_sysevent.h>
+#include <threadman_kernel.h>
 
 SCE_MODULE_INFO(
     "scePower_Service", 
@@ -59,10 +60,10 @@ typedef struct {
 } SceSysEventParam;
 
 typedef struct {
-    s32 callbackId;
-    s32 unk4;
-    s32 powerStatus;
-    s32 mode;
+    SceUID cbid; // 0
+    s32 unk4; // 4
+    s32 powerStatus; //8
+    s32 mode; // 12 TODO: Perhaps execution mode, synchron = 1, otherwise asynchron? More data needed...
 } ScePowerCallback;
 
 typedef struct {
@@ -231,7 +232,8 @@ enum ScePowerWlanActivity {
 static SceSysconFunc _scePowerAcSupplyCallback; //sub_0x00000650
 static SceSysconFunc _scePowerLowBatteryCallback; //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
-static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFlag, s32 arg2); // sub_00000BE0
+static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2); // sub_00000BE0
+static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
 
 static s32 _scePowerBatteryEnd(void); // 0x00004498
@@ -685,8 +687,8 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
 
         s32 i;
         for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_USER; i++) {
-             if (g_Power.powerCallback[i].callbackId < 0) { //0x000009F4
-                 g_Power.powerCallback[i].callbackId = cbid; //0x00000A14
+             if (g_Power.powerCallback[i].cbid < 0) { //0x000009F4
+                 g_Power.powerCallback[i].cbid = cbid; //0x00000A14
                  g_Power.powerCallback[i].unk4 = 0; //0x00000A20
                  g_Power.powerCallback[i].powerStatus = g_Power.unk516; //0x00000A2C
                  g_Power.powerCallback[i].mode  = 0; //0x00000A28
@@ -706,10 +708,10 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
        return SCE_ERROR_OUT_OF_MEMORY;
     } 
     /* Check if the requested callback slot is available. */
-    else if (g_Power.powerCallback[slot].callbackId < 0) { //0x00000960
+    else if (g_Power.powerCallback[slot].cbid < 0) { //0x00000960
         /* Callback slot is free, let's use it. */
 
-        g_Power.powerCallback[slot].callbackId = cbid; //0x00000994
+        g_Power.powerCallback[slot].cbid = cbid; //0x00000994
         g_Power.powerCallback[slot].unk4 = 0; //0x000009A0
         g_Power.powerCallback[slot].powerStatus = g_Power.unk516; //0x000009A8
         g_Power.powerCallback[slot].mode  = 0; //0x00000A28
@@ -749,10 +751,10 @@ s32 scePowerUnregisterCallback(s32 slot)
     
     pspSetK1(oldK1);
 
-    if (g_Power.powerCallback[slot].callbackId < 0) //0x00000AB0
+    if (g_Power.powerCallback[slot].cbid < 0) //0x00000AB0
         return SCE_ERROR_NOT_FOUND;
     
-    g_Power.powerCallback[slot].callbackId = -1; //0x00000ABC
+    g_Power.powerCallback[slot].cbid = -1; //0x00000ABC
     return SCE_ERROR_OK;
 }
 
@@ -775,7 +777,7 @@ s32 scePowerSetCallbackMode(s32 slot, s32 mode)
     
     pspSetK1(oldK1); //0x00000B18
 
-    if (g_Power.powerCallback[slot].callbackId < 0) //0x00000B24
+    if (g_Power.powerCallback[slot].cbid < 0) //0x00000B24
         return SCE_ERROR_NOT_FOUND;
     
     g_Power.powerCallback[slot].mode = mode; //0x00000B2C
@@ -806,7 +808,7 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *pMode)
     
     pspSetK1(oldK1); //0x00000B78
 
-    if (g_Power.powerCallback[slot].callbackId < 0) //0x00000B9C
+    if (g_Power.powerCallback[slot].cbid < 0) //0x00000B9C
         return SCE_ERROR_NOT_FOUND;
     
     if (pMode != NULL) //0x00000BA4
@@ -816,7 +818,7 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *pMode)
 }
 
 //sub_00000BE0
-static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFlag, s32 arg2)
+static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2)
 {
     s32 intrState;
     s32 notifyCount;
@@ -826,14 +828,14 @@ static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFla
     // uofw note: Return value not used. 
     sceKernelGetCompiledSdkVersion(); // 0x00000C30
 
-    g_Power.unk516 = (g_Power.unk516 & ~deleteCallbackFlag) | applyCallbackFlag; //0x00000C24 & 0x00000C2C & 0x00000C34
+    g_Power.unk516 = (g_Power.unk516 & ~deleteCbFlag) | applyCbFlag; //0x00000C24 & 0x00000C2C & 0x00000C34
     
     u32 i;
     for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++) {
-         if (g_Power.powerCallback[i].callbackId < 0) //0x00000C4C
+         if (g_Power.powerCallback[i].cbid < 0) //0x00000C4C
              continue;
          
-         notifyCount = sceKernelGetCallbackCount(g_Power.powerCallback[i].callbackId); //0x00000C54
+         notifyCount = sceKernelGetCallbackCount(g_Power.powerCallback[i].cbid); //0x00000C54
          if (notifyCount < 0) //0x00000C5C
              continue;
          
@@ -842,7 +844,7 @@ static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFla
          
          g_Power.powerCallback[i].unk4 |= arg2; //0x00000C78
          g_Power.powerCallback[i].powerStatus = g_Power.powerCallback[i].unk4 | g_Power.unk516; //0x00000C7C
-         sceKernelNotifyCallback(g_Power.powerCallback[i].callbackId, 
+         sceKernelNotifyCallback(g_Power.powerCallback[i].cbid, 
                                  g_Power.powerCallback[i].powerStatus & g_Power.callbackArgMask); //0x00000C84
     }
 
@@ -850,31 +852,35 @@ static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFla
 }
 
 //sub_00000CC4
-// TODO: Verify function
-static void _scePowerIsCallbackBusy(u32 callbackFlag, u32 *callbackId)
+static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
 {
     s32 intrState;
     s32 notifyCount;
-    u32 i;
     
     intrState = sceKernelCpuSuspendIntr(); //0x00000CEC
     
+    u32 i;
     for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++) {
-         if (g_Power.powerCallback[i].callbackId < 0) //0x00000D04
+         if (g_Power.powerCallback[i].cbid < 0) //0x00000D04
              continue;
          
-         if ((g_Power.powerCallback[i].powerStatus & callbackFlag) && g_Power.powerCallback[i].mode != 0) { //0x00000D14 & 0x00000D58
-             notifyCount = sceKernelGetCallbackCount(g_Power.powerCallback[i].callbackId); //0x00000D60
+         if ((g_Power.powerCallback[i].powerStatus & cbFlag) && g_Power.powerCallback[i].mode != 0) { //0x00000D14 & 0x00000D58
+             notifyCount = sceKernelGetCallbackCount(g_Power.powerCallback[i].cbid); //0x00000D60
              if (notifyCount <= 0) //0x00000D68
                  continue;
              
-             if (callbackId != NULL)
-                 *callbackId = g_Power.powerCallback[i].callbackId; //0x00000D74
+             /* 
+              * notifyCount > 0: Callback notification has been delayed at least once with the callback 
+              * not being called yet.  Return the ID of the busy callback.
+              */
+             if (pCbid != NULL)
+                 *pCbid = g_Power.powerCallback[i].cbid; //0x00000D74
              
              sceKernelCpuResumeIntr(intrState); //0x00000D78
              return SCE_TRUE; //0x00000D84
          }
     }
+
     sceKernelCpuResumeIntr(intrState); //0x00000D28
     return SCE_FALSE; //0x00000D30
 }
@@ -934,7 +940,7 @@ s32 _scePowerModuleStart(s32 argc, void *argp)
     //0x00000EB0 - 0x00000EC4
     u32 i;
     for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++)
-         g_Power.powerCallback[i].callbackId = -1;
+         g_Power.powerCallback[i].cbid = -1;
     
     scePowerInit(); //scePower_driver_9CE06934
     return SCE_ERROR_OK;

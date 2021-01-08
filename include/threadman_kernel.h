@@ -257,7 +257,12 @@ typedef struct {
     s32 notifyArg;
 } SceKernelCallbackInfo;
 
+SceUID sceKernelCreateCallback(const char* name, SceKernelCallbackFunction callback, void* common);
+int sceKernelDeleteCallback(SceUID cbid);
 int sceKernelNotifyCallback(SceUID cb, int arg2);
+int sceKernelCancelCallback(SceUID cbid);
+int sceKernelGetCallbackCount(SceUID cbid);
+int sceKernelCheckCallback(void);
 int sceKernelReferCallbackStatus(SceUID cb, SceKernelCallbackInfo *status);
 
 /* VPL Functions */
