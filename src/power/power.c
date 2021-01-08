@@ -730,22 +730,24 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
 }
 
 //Subroutine scePower_DB9D28DD - Address 0x00000A64 - Aliases: scePower_DFA8BAF8, scePower_driver_315B8CB6
-// TODO: Verify function
 s32 scePowerUnregisterCallback(s32 slot)
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1(); //0x00000A78
+
     if (slot < 0 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x00000A74
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
+
     if (pspK1IsUserMode() && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x00000A94 & 0x00000AA0
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
     
     pspSetK1(oldK1);
+
     if (g_Power.powerCallback[slot].callbackId < 0) //0x00000AB0
         return SCE_ERROR_NOT_FOUND;
     
