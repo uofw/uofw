@@ -57,9 +57,9 @@ u8 *g_8DC0;
 SceUID g_8DFC;
 void *g_8EA4, *g_8EA8;
 u8 g_8EE8[336]; //-0x9038
-u8 g_9038[144]; //-0x90c8
-u8 g_9100[336]; //-0x9250
-u8 g_9280[180]; //-0x9334
+u8 g_9038[200]; //-0x90c8
+u8 g_9100[384]; //-0x9250
+u8 g_9280[256]; //-0x9334
 u8 g_9380[32]; //-0x93A0
 u8 g_93A0[40]; //-0x93C8
 SceUID g_93F0, g_93F4;
@@ -84,7 +84,7 @@ int sub_006C(u8 *a0, u8 *a1, u32 a2) // at 0x0000006C
 {
     // 0080
     for (u32 i = 0; i < a2 / 16; i++) {
-        if (!memcmp(&a1[i * 16], &a0[320], 16)) {
+        if (memcmp(&a1[i * 16], &a0[320], 16)) {
             return 1;
         }
     }
@@ -120,7 +120,7 @@ int sub_00E0(u8 tag[4], u8 arg1[144], int keyId, u8 *pOut, u32 cbIn, u32 *cbOut,
         g_8EE8[i] = pOut[i];
     }
     // 01E4
-    if (!memcmp(tag, (g_8EE8 + 0xD0), 4)) {
+    if (memcmp(tag, (g_8EE8 + 0xD0), 4)) {
         // 19C8
         retVal = -301;
         goto end;
@@ -738,7 +738,7 @@ int sub_00E0(u8 tag[4], u8 arg1[144], int keyId, u8 *pOut, u32 cbIn, u32 *cbOut,
         goto reset;
     }
     // 0910, 0D1C, 0934
-    if (!memcmp(g_9100, g_9280, 20)) {
+    if (memcmp(g_9100, g_9280, 20)) {
         // 0B14
         retVal = -302;
         goto reset;
@@ -826,7 +826,7 @@ int sub_00E0(u8 tag[4], u8 arg1[144], int keyId, u8 *pOut, u32 cbIn, u32 *cbOut,
         // 09CC
         // 09DC
         for (s32 i = 0; i < 112; i++) {
-            pOut[64 + i] = (g_9100 + 0x2C)[i] ^ g_9038[i];
+            pOut[64 + i] = (g_9100 + 0x2C)[i] ^ g_9038[32 + i];
         }
         // 0A10
         for (u32 i = 0; i < 160; i++) {
