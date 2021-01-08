@@ -1261,11 +1261,11 @@ s32 sceSysconReadGSensorReg(void);
  * Get the battery status cap.
  *
  * @param arg0 Pointer to an unknown s32 where a value will be stored.
- * @param arg1 Pointer to an unknown s32 where a value will be stored.
+ * @param arg1 Pointer to a  s32 where the remaining capacity of the battery will be stored.
  *
  * @return 0 on success.
  */
-s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1);
+s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 * pRemainCap);
 
 /**
  * Get the battery info.

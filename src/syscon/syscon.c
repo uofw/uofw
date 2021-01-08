@@ -2008,7 +2008,7 @@ s32 sceSysconReadGSensorReg(void)
     return 0x80000004;
 }
 
-s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
+s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *pRemainCap)
 {   
     SceSysconPacket packet;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_BATTERY_GET_STATUS_CAP;
@@ -2018,8 +2018,8 @@ s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
         return ret;
     if (arg0 != NULL)
         *arg0 = packet.rx[PSP_SYSCON_RX_DATA(0)];
-    if (arg1 != NULL)
-        *arg1 = (packet.tx[PSP_SYSCON_TX_DATA(3)] << 8) | packet.tx[PSP_SYSCON_TX_DATA(2)];
+    if (pRemainCap != NULL)
+        *pRemainCap = (packet.tx[PSP_SYSCON_TX_DATA(3)] << 8) | packet.tx[PSP_SYSCON_TX_DATA(2)];
     return 0;
 }
 
