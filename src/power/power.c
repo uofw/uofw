@@ -174,8 +174,7 @@ typedef enum  {
     BATTERY_AVAILABLE = 2,
 } ScePowerBatteryAvailabilityStatus;
 
-typedef enum
-{
+typedef enum {
     POWER_BATTERY_THREAD_OP_START = 0,
     POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS = 1,
     POWER_BATTERY_THREAD_OP_SET_CHARGE_LED_STATUS = 3,
@@ -303,6 +302,7 @@ ScePowerFrequency g_PowerFreq; //0x0000C550
 ScePowerBattery g_Battery; //0x0000C5B8
 
 //scePower_driver_9CE06934 - Address 0x00000000
+// TODO: Verify function
 s32 scePowerInit()
 {
     u8 baryonData[512];
@@ -552,6 +552,7 @@ s32 scePowerInit()
 }
 
 //0x00000650
+// TODO: Verify function
 static void _scePowerAcSupplyCallback(s32 enable, void *argp)
 {
     u16 type;
@@ -569,6 +570,7 @@ static void _scePowerAcSupplyCallback(s32 enable, void *argp)
 }
 
 //sub_0x000006C4
+// TODO: Verify function
 static void _scePowerLowBatteryCallback(s32 enable, void *argp)
 {
     if (g_Power.isBatteryLow == enable) //0x000006D8
@@ -584,6 +586,7 @@ static void _scePowerLowBatteryCallback(s32 enable, void *argp)
 }
 
 //sub_0x0000071C
+// TODO: Verify function
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result)
 {
     u16 type;
@@ -640,6 +643,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 }
 
 //Subroutine scePower_04B7766E - Address 0x000008A8 - Aliases: scePower_driver_766CD857
+// TODO: Verify function
 s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
 {
     s32 oldK1;
@@ -716,6 +720,7 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
 }
 
 //Subroutine scePower_DB9D28DD - Address 0x00000A64 - Aliases: scePower_DFA8BAF8, scePower_driver_315B8CB6
+// TODO: Verify function
 s32 scePowerUnregisterCallback(s32 slot)
 {
     s32 oldK1;
@@ -739,6 +744,7 @@ s32 scePowerUnregisterCallback(s32 slot)
 }
 
 //Subroutine scePower_A9D22232 - Address 0x00000AD8 - Aliases: scePower_driver_29E23416
+// TODO: Verify function
 s32 scePowerSetCallbackMode(s32 slot, s32 mode)
 {
     s32 oldK1;
@@ -762,6 +768,7 @@ s32 scePowerSetCallbackMode(s32 slot, s32 mode)
 }
 
 //Subroutine scePower_BAFA3DF0 - Address 0x00000B48 - Aliases: scePower_driver_17EEA285
+// TODO: Verify function
 s32 scePowerGetCallbackMode(s32 slot, s32 *mode)
 {
     s32 oldK1;
@@ -792,6 +799,7 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *mode)
 }
 
 //sub_00000BE0
+// TODO: Verify function
 static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFlag, s32 arg3)
 {
     s32 intrState;
@@ -824,6 +832,7 @@ static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFla
 }
 
 //sub_00000CC4
+// TODO: Verify function
 static void _scePowerIsCallbackBusy(u32 callbackFlag, u32 *callbackId)
 {
     s32 intrState;
@@ -853,6 +862,7 @@ static void _scePowerIsCallbackBusy(u32 callbackFlag, u32 *callbackId)
 }
 
 //Subroutine scePower_driver_2638EF48 - Address 0x00000D88
+// TODO: Verify function
 s32 scePowerWlanActivate(void)
 {
     s32 pllFreq;
@@ -879,6 +889,7 @@ s32 scePowerWlanActivate(void)
 }
 
 //Subroutine scePower_442BFBAC - Address 0x00000E44 - Aliases: scePower_driver_2509FF3B
+// TODO: Verify function
 u32 scePowerGetBacklightMaximum(void)
 {
     u32 backlightMax;
@@ -894,6 +905,7 @@ u32 scePowerGetBacklightMaximum(void)
 }
 
 //Subroutine module_start - Address 0x00000E8C
+// TODO: Verify function
 s32 _scePowerModuleStart(s32 argc, void *argp)
 {
     (void)argc;
@@ -912,6 +924,7 @@ s32 _scePowerModuleStart(s32 argc, void *argp)
 }
 
 //Subroutine syslib_ADF12745 - Address 0x00000EE4
+// TODO: Verify function
 s32 _scePowerModuleRebootPhase(s32 arg1)
 {
     _scePowerFreqRebootPhase(arg1); //0x00000EF0 -- sub_00004038
@@ -937,6 +950,7 @@ s32 _scePowerModuleRebootBefore(u32 *arg1)
 }
 
 //Subroutine scePower_driver_AD5BB433 - Address 0x00000FCC
+// TODO: Verify function
 s32 scePowerEnd(void)
 {
     sceKernelUnregisterSysEventHandler(&g_PowerSysEv); //0x00000FD8
@@ -952,6 +966,7 @@ s32 scePowerEnd(void)
 }
 
 //Subroutine scePower_driver_23BDDD8B - Address 0x00001028
+// TODO: Verify function
 u32 scePower_driver_23BDDD8B(void)
 {
     g_Power.unk520 &= ~SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00001038 
@@ -960,6 +975,7 @@ u32 scePower_driver_23BDDD8B(void)
 
 //Subroutine scePower_A85880D0 - Address 0x00001044 - Aliases: scePower_driver_693F6CF0
 // TODO: Change to scePowerCheckWlanCoexistenceClock()
+// TODO: Verify function
 u32 scePower_A85880D0(void)
 {
     u32 pspModel;
@@ -972,6 +988,7 @@ u32 scePower_A85880D0(void)
 }
 
 //Subroutine scePower_driver_114B75AB - Address 0x0000108C
+// TODO: Verify function
 u32 scePowerSetExclusiveWlan(u8 arg1) 
 {
     g_Power.unk529 = arg1;
@@ -979,6 +996,7 @@ u32 scePowerSetExclusiveWlan(u8 arg1)
 }
 
 //Subroutine scePower_driver_E52B4362 - Address 0x0000109C
+// TODO: Verify function
 s32 scePowerCheckWlanCondition(u32 freq)
 {
     if ((g_Power.unk529 == 1 && freq > 222) || (g_Power.unk529 == 2 && freq > 266)) //0x000010A0 - 0x000010D4
@@ -988,6 +1006,7 @@ s32 scePowerCheckWlanCondition(u32 freq)
 }
 
 //Subroutine scePower_driver_8C6BEFD9 - Address 0x000010EC
+// TODO: Verify function
 u32 scePowerWlanDeactivate(void)
 {
     g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; //0x00001104
@@ -998,24 +1017,28 @@ u32 scePowerWlanDeactivate(void)
 }
 
 //Subroutine scePower_driver_4E32E9B8 - Address 0x00001128
+// TODO: Verify function
 u8 scePowerGetWatchDog(void)
 {
     return g_Power.watchDog; //0x00001130
 }
 
 //Subroutine scePower_2B51FE2F - Address 0x00001134 - Aliases: scePower_driver_CE2032CD
+// TODO: Verify function
 u8 scePowerGetWlanActivity(void)
 {
     return g_Power.wlanActivity; //0x0000113C
 }
 
 //Subroutine scePower_driver_C463E7F2 - Address 0x00001140
+// TODO: Verify function
 u8 scePowerGetLedOffTiming(void)
 {
     return g_Power.ledOffTiming; //0x00001148
 }
 
 //0x0000114C
+// TODO: Verify function
 static u32 _scePowerInitCallback(void)
 {
     s32 appType;
@@ -1028,6 +1051,7 @@ static u32 _scePowerInitCallback(void)
 }
 
 //sub_000011A4
+// TODO: Verify function
 static u32 _scePowerSwInit(void)
 {
     s32 intrState;
@@ -1064,6 +1088,7 @@ static u32 _scePowerSwInit(void)
 }
 
 //Subroutine scePower_23C31FFE - Address 0x000010A4 - Aliases: scePower_driver_CE239543
+// TODO: Verify function
 s32 scePowerVolatileMemLock(s32 mode, void **ptr, s32 *size)
 {
     s32 intrState;
@@ -1104,6 +1129,7 @@ s32 scePowerVolatileMemLock(s32 mode, void **ptr, s32 *size)
 }
 
 //Subroutine scePower_FA97A599 - Address 0x00001400 - Aliases: scePower_driver_A882AEB7
+// TODO: Verify function
 s32 scePowerVolatileMemTryLock(s32 mode, void **ptr, s32 *size)
 {
     s32 intrState;
@@ -1149,6 +1175,7 @@ s32 scePowerVolatileMemTryLock(s32 mode, void **ptr, s32 *size)
 }
 
 //Subroutine scePower_B3EDD801 - Address 0x00001540 - Aliases: scePower_driver_5978B1C2
+// TODO: Verify function
 s32 scePowerVolatileMemUnlock(s32 mode)
 {
     s32 oldK1;
@@ -1181,12 +1208,14 @@ s32 scePowerVolatileMemUnlock(s32 mode)
 }
 
 //Subroutine scePower_driver_6CF50928 - Address 0x00001608
+// TODO: Verify function
 void scePowerLockForKernel(u32 lockType)
 {
     _scePowerLock(lockType, 0); //0x00001610
 }
 
 //sub_00001624
+// TODO: Verify function
 void _scePowerLock(u32 lockType, u32 arg2)
 {
     s32 intrState;
@@ -1217,6 +1246,7 @@ void _scePowerLock(u32 lockType, u32 arg2)
 }
 
 //Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
+// TODO: Verify function
 s32 scePowerWaitRequestCompletion(void)
 {
     s32 oldK1;
@@ -1248,6 +1278,7 @@ s32 scePowerWaitRequestCompletion(void)
 }
 
 //0x000017F0
+// TODO: Verify function
 static s32 _scePowerOffThread(void)
 {
     s32 status;
@@ -1323,6 +1354,7 @@ start:
 }
 
 //sub_00001A94
+// TODO: Verify function
 static s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
 {
     u32 param;
@@ -1340,6 +1372,7 @@ static s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
 }
 
 //sub_00001AE8
+// TODO: Verify function
 static s32 _scePowerSuspendOperation(u32 arg1)
 {
     u8 buf[64];
@@ -1363,6 +1396,7 @@ static s32 _scePowerSuspendOperation(u32 arg1)
 }
 
 //sub_000029B8
+// TODO: Verify function
 static u32 _scePowerOffCommon(void)
 {
     s32 usbPowerType;
@@ -1392,6 +1426,7 @@ static u32 _scePowerOffCommon(void)
 }
 
 //sub_00002AA4
+// TODO: Verify function
 static s32 _scePowerSwEnd(void)
 {
     u32 nBits;
@@ -1418,6 +1453,7 @@ static s32 _scePowerSwEnd(void)
 }
 
 //Subroutine scePower_0CD21B1F - Address 0x00002B58 - Aliases: scePower_driver_73785D34
+// TODO: Verify function
 u32 scePowerSetPowerSwMode(u32 mode)
 {
     g_PowerSwitch.mode = mode & 0x3;
@@ -1425,12 +1461,14 @@ u32 scePowerSetPowerSwMode(u32 mode)
 }
 
 //Subroutine scePower_165CE085 - Address 0x00002B6C - Aliases: scePower_driver_E11CDFFA
+// TODO: Verify function
 u32 scePowerGetPowerSwMode(void)
 {
     return g_PowerSwitch.mode;
 }
 
 //Subroutine scePower_driver_1EC2D4E4 - Address 0x00002B78
+// TODO: Verify function
 u32 scePowerRebootStart(void)
 {
     s32 oldK1;
@@ -1451,6 +1489,7 @@ u32 scePowerRebootStart(void)
 }
 
 //Subroutine scePower_D6D016EF - Address 0x00002BF4
+// TODO: Verify function
 void scePowerLockForUser(u32 lockType) 
 {
     s32 oldK1;
@@ -1463,6 +1502,7 @@ void scePowerLockForUser(u32 lockType)
 }
 
 //Subroutine scePower_CA3D34C1 - Address 0x00002C24
+// TODO: Verify function
 s32 scePowerUnlockForUser(u32 mode)
 {
     s32 oldK1;
@@ -1480,18 +1520,21 @@ s32 scePowerUnlockForUser(u32 mode)
 }
 
 //Subroutine scePower_driver_C3024FE6 - Address 0x00002C68
+// TODO: Verify function
 s32 scePowerUnlockForKernel(u32 mode)
 {
     return _scePowerUnlock(mode, 0); //0x00002C70
 }
 
 //Subroutine scePower_7FA406DD - Address 0x00002C84 - Aliases: scePower_driver_566B8353
+// TODO: Verify function
 s32 scePowerIsRequest(void)
 {
     return (0 < (g_PowerSwitch.unk40 | g_PowerSwitch.unk44));
 }
 
 //Subroutine scePower_DB62C9CF - Address 0x00002CA0 - Aliases: scePower_driver_DB62C9CF
+// TODO: Verify function
 u32 scePowerCancelRequest(void)
 {
     s32 intrState;
@@ -1507,6 +1550,7 @@ u32 scePowerCancelRequest(void)
 }
 
 //Subroutine scePower_2B7C7CF4 - Address 0x00002CDC - Aliases: scePower_driver_9B44CFD9
+// TODO: Verify function
 u32 scePowerRequestStandby(void)
 {
     s32 oldK1;
@@ -1520,6 +1564,7 @@ u32 scePowerRequestStandby(void)
 }
 
 //Subroutine scePower_AC32C9CC - Address 0x00002D18 - Aliases: scePower_driver_5C1333B7
+// TODO: Verify function
 u32 scePowerRequestSuspend(void)
 {
     s32 oldK1;
@@ -1533,12 +1578,14 @@ u32 scePowerRequestSuspend(void)
 }
 
 //Subroutine scePower_driver_D79B0122 - Address 0x00002D54
+// TODO: Verify function
 u32 scePower_driver_D79B0122(void)
 {
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_2875994B - Address 0x00002D5C - Aliases: scePower_driver_D1FFF513
+// TODO: Verify function
 u32 scePowerRequestSuspendTouchAndGo(void)
 {
     s32 oldK1;
@@ -1552,6 +1599,7 @@ u32 scePowerRequestSuspendTouchAndGo(void)
 }
 
 //Subroutine scePower_0442D852 - Address 0x00002D98 - Aliases: scePower_driver_9DAF25A0
+// TODO: Verify function
 s32 scePowerRequestColdReset(u32 mode)
 {
     s32 oldK1;
@@ -1569,12 +1617,14 @@ s32 scePowerRequestColdReset(u32 mode)
 }
 
 //Subroutine scePower_0074EF9B - Address 0x00002DFC - Aliases: scePower_driver_B45C9066
+// TODO: Verify function
 u32 scePowerGetResumeCount(void)
 {
     return g_PowerSwitch.resumeCount; 
 }
 
 //Subroutine scePower_driver_BA566CD0 - Address 0x00002E0C
+// TODO: Verify function
 u32 scePowerSetWakeupCondition(u32 wakeUpCondition)
 {
     g_PowerSwitch.wakeUpCondition = wakeUpCondition;
@@ -1582,6 +1632,7 @@ u32 scePowerSetWakeupCondition(u32 wakeUpCondition)
 }
 
 //Subroutine sub_00002E1C - Address 0x00002E1C
+// TODO: Verify function
 s32 _scePowerUnlock(u32 mode, u32 arg1)
 {
     s32 intrState;
@@ -1611,6 +1662,7 @@ s32 _scePowerUnlock(u32 mode, u32 arg1)
 }
 
 //0x00002EE0
+// TODO: Verify function
 static void _scePowerPowerSwCallback(s32 enable, void *argp)
 {
     (void)argp;
@@ -1627,6 +1679,7 @@ static void _scePowerPowerSwCallback(s32 enable, void *argp)
 }
 
 //0x00002F58
+// TODO: Verify function
 static void _scePowerHoldSwCallback(s32 enable, void *argp)
 {
     (void)argp;
@@ -1638,6 +1691,7 @@ static void _scePowerHoldSwCallback(s32 enable, void *argp)
 }
 
 //Subroutine scePower_EFD3C963 - Address 0x00002F94 - Aliases: scePower_driver_0EFEE60E
+// TODO: Verify function
 u32 scePowerTick(u32 tickType)
 {
     u32 i;
@@ -1659,6 +1713,7 @@ u32 scePowerTick(u32 tickType)
 }
 
 //Subroutine scePower_EDC13FE5 - Address 0x00003008 - Aliases: scePower_driver_DF336CDE
+// TODO: Verify function
 u32 scePowerGetIdleTimer(u32 slot, SceKernelSysClock *sysClock, u32 *arg2) 
 {
     s32 oldK1;
@@ -1690,6 +1745,7 @@ u32 scePowerGetIdleTimer(u32 slot, SceKernelSysClock *sysClock, u32 *arg2)
 }
 
 //Subroutine scePower_driver_1BA2FCAE - Address 0x00003100
+// TODO: Verify function
 u32 scePowerSetIdleCallback(u32 slot, u32 arg1, u32 arg2, u32 arg3, u32 arg4, u32 arg5)
 {
     s32 intrState;
@@ -1721,6 +1777,7 @@ u32 scePowerSetIdleCallback(u32 slot, u32 arg1, u32 arg2, u32 arg3, u32 arg4, u3
 }
 
 //0x00003220
+// TODO: Verify function
 static s32 _scePowerVblankInterrupt(s32 subIntNm, void *arg)
 {
     s64 sysTime;
@@ -1786,6 +1843,7 @@ static s32 _scePowerVblankInterrupt(s32 subIntNm, void *arg)
 }
 
 //sub_000033C4
+// TODO: Verify function
 static u32 _scePowerIdleInit(void)
 {
     u64 sysTime;
@@ -1803,6 +1861,7 @@ static u32 _scePowerIdleInit(void)
 }
 
 //sub_00003438
+// TODO: Verify function
 static u32 _scePowerIdleEnd(void)
 {
     sceKernelReleaseSubIntrHandler(SCE_VBLANK_INT, 0x1A); //0x00003444
@@ -1810,6 +1869,7 @@ static u32 _scePowerIdleEnd(void)
 }
 
 //Subroutine scePower_7F30B3B1 - Address 0x000030F0 - Aliases: scePower_driver_E660E488
+// TODO: Verify function
 u32 scePowerIdleTimerEnable(u32 slot)
 {
     s32 intrState;
@@ -1828,6 +1888,7 @@ u32 scePowerIdleTimerEnable(u32 slot)
 }
 
 //Subroutine scePower_972CE941 - Address 0x000034C8 - Aliases: scePower_driver_961A06A5
+// TODO: Verify function
 u32 scePowerIdleTimerDisable(u32 slot)
 {
     s32 intrState;
@@ -1846,12 +1907,14 @@ u32 scePowerIdleTimerDisable(u32 slot)
 }
 
 //0x00003534
+// TODO: Verify function -- i.e. delete
 static u32 GetGp(void)
 {
    return pspGetGp();
 }
 
 //sub_0000353C
+// TODO: Verify function
 static u32 _scePowerFreqInit(void) 
 {
     float pllFrequency;
@@ -1920,6 +1983,7 @@ static u32 _scePowerFreqInit(void)
 }
 
 //Subroutine scePower_843FBF43 - Address 0x00003350 - Aliases: scePower_driver_BD02C252
+// TODO: Verify function
 s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
 {   
     s32 oldK1;
@@ -1948,6 +2012,7 @@ s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
 }
 
 //Subroutine scePower_B8D7B3FB - Address 0x00003784 - Aliases: scePower_driver_B71A8B2F
+// TODO: Verify function
 s32 scePowerSetBusClockFrequency(s32 busFrequency)
 {
     s32 oldK1;
@@ -1988,6 +2053,7 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
 }
 
 //Subroutine sub_00003898 - Address 0x00003898 
+// TODO: Verify function
 u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
 {
     s32 oldK1;
@@ -2163,6 +2229,7 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
 }
 
 //Subroutine scePower_driver_100A77A1 - Address 0x00003E64
+// TODO: Verify function
 u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
 {
     s32 intrState;
@@ -2231,12 +2298,14 @@ u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
 }
 
 //Subroutine scePower_driver_C520F5DC - Address 0x00003FB8
+// TODO: Verify function
 u32 scePowerGetGeEdramRefreshMode(void)
 {
     return g_PowerFreq.geEdramRefreshMode;
 }
 
 //sub_00003FC4
+// TODO: Verify function
 static u32 _scePowerFreqEnd(void)
 {
     sceKernelDeleteMutex(g_PowerFreq.mutexId); //0x00003FD4
@@ -2244,18 +2313,21 @@ static u32 _scePowerFreqEnd(void)
 }
 
 //sub_00003FEC
+// TODO: Verify function -- i.e. assign proper name
 static u32 sub_00003FEC(void)
 {
    return sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); //0x00004000
 }
 
 //sub_00004014
+// TODO: Verify function -- i.e. assign proper name
 static u32 sub_00004014(void)
 {
     return sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00004024
 }
 
 //sub_00004038
+// TODO: Verify function
 static u32 _scePowerFreqRebootPhase(u32 arg0)
 {
     switch (arg0) {
@@ -2271,6 +2343,7 @@ static u32 _scePowerFreqRebootPhase(u32 arg0)
 }
 
 //sub_00004090
+// TODO: Verify function
 static u32 _scePowerFreqSuspend(void)
 {
     sceClkcGetCpuGear(&g_PowerFreq.clkcCpuGearNumerator, &g_PowerFreq.clkcCpuGearDenominator); //0x000040A8
@@ -2282,6 +2355,7 @@ static u32 _scePowerFreqSuspend(void)
 }
 
 //sub_000040E4
+// TODO: Verify function
 static u32 _scePowerFreqResume(u32 arg0)
 {
     switch (arg0) {
@@ -2298,6 +2372,7 @@ static u32 _scePowerFreqResume(u32 arg0)
 }
 
 //Subroutine scePower_driver_D7DD9D38 - Address 0x0000414C 
+// TODO: Verify function
 s16 scePowerGetCurrentTachyonVoltage(void)
 {
     if (g_PowerFreq.unk56 == 0) //0x00004158
@@ -2306,6 +2381,7 @@ s16 scePowerGetCurrentTachyonVoltage(void)
 }
 
 //Subroutine scePower_driver_BADA8332 - Address 0x00004170
+// TODO: Verify function
 u32 scePowerGetTachyonVoltage(u32 *arg0, u32 *arg1)
 {
     if (arg0 != NULL)
@@ -2317,6 +2393,7 @@ u32 scePowerGetTachyonVoltage(u32 *arg0, u32 *arg1)
 }
 
 //Subroutine scePower_driver_12F8302D - Address 0x00004198
+// TODO: Verify function
 u32 scePowerSetTachyonVoltage(s32 arg0, s32 arg1)
 {
     if (arg0 != -1) //0x0000419C
@@ -2328,6 +2405,7 @@ u32 scePowerSetTachyonVoltage(s32 arg0, s32 arg1)
 }
 
 //Subroutine scePower_driver_9127E5B2 - Address 0x000041BC
+// TODO: Verify function
 u32 scePowerGetCurrentDdrVoltage(void)
 {
     if (g_PowerFreq.unk64 != 0) //0x000041C8
@@ -2336,6 +2414,7 @@ u32 scePowerGetCurrentDdrVoltage(void)
 }
 
 //Subroutine scePower_driver_75906F9A - Address 0x000041E0 
+// TODO: Verify function
 u32 scePowerGetDdrVoltage(s32 *arg0, s32 *arg1)
 {
     if (arg0 != NULL) //0x000041E0
@@ -2347,6 +2426,7 @@ u32 scePowerGetDdrVoltage(s32 *arg0, s32 *arg1)
 }
 
 //Subroutine scePower_driver_018AB235 - Address 0x00004208 
+// TODO: Verify function
 u32 scePowerSetDdrVoltage(s32 arg0, s32 arg1)
 {
     if (arg0 != -1) //0x0000420C
@@ -2358,6 +2438,7 @@ u32 scePowerSetDdrVoltage(s32 arg0, s32 arg1)
 }
 
 //Subroutine scePower_driver_0655D7C3 - Address 0x0000422C 
+// TODO: Verify function
 u32 scePowerGetCurrentDdrStrength()
 {
     if (g_PowerFreq.unk72 != 0) //0x00004238
@@ -2366,6 +2447,7 @@ u32 scePowerGetCurrentDdrStrength()
 }
 
 //Subroutine scePower_driver_16F965C9 - Address 0x00004250 
+// TODO: Verify function
 u32 scePowerGetDdrStrength(s32 *arg0, s32 *arg1) 
 {
     if (arg0 != NULL) //0x00004250
@@ -2377,6 +2459,7 @@ u32 scePowerGetDdrStrength(s32 *arg0, s32 *arg1)
 }
 
 //Subroutine scePower_driver_D13377F7 - Address 0x00004278
+// TODO: Verify function
 u32 scePowerSetDdrStrength(s32 arg0, s32 arg1)
 {
     if (arg0 != -1) //0x0000427C
@@ -2386,6 +2469,7 @@ u32 scePowerSetDdrStrength(s32 arg0, s32 arg1)
 }
 
 //Subroutine scePower_driver_DF904CDE - Address 0x0000429C 
+// TODO: Verify function
 u32 scePowerLimitScCpuClock(s32 lowerLimit, s32 upperLimit)
 {
     if (lowerLimit != -1) //0x000042A0
@@ -2397,6 +2481,7 @@ u32 scePowerLimitScCpuClock(s32 lowerLimit, s32 upperLimit)
 }
 
 //Subroutine scePower_driver_EEFB2ACF - Address 0x000042C0
+// TODO: Verify function
 u32 scePowerLimitScBusClock(s32 lowerLimit, s32 upperLimit)
 {
     if (lowerLimit != -1) //0x000042C4
@@ -2408,6 +2493,7 @@ u32 scePowerLimitScBusClock(s32 lowerLimit, s32 upperLimit)
 }
 
 //Subroutine scePower_driver_B7000C75 - Address 0x000042E4
+// TODO: Verify function
 u32 scePowerLimitPllClock(s32 lowerLimit, s32 upperLimit)
 {
     if (lowerLimit != -1) //0x000042E8
@@ -2419,6 +2505,7 @@ u32 scePowerLimitPllClock(s32 lowerLimit, s32 upperLimit)
 }
 
 //Subroutine scePower_driver_13D7CCE4 - Address 0x00004308
+// TODO: Verify function
 u32 scePowerSetPllUseMask(u32 useMask)
 {
     g_PowerFreq.pllUseMask = useMask;
@@ -2426,42 +2513,49 @@ u32 scePowerSetPllUseMask(u32 useMask)
 }
 
 //Subroutine scePower_FDB5BFE9 - Address 0x00004318 - Aliases: scePower_FEE03A2F, scePower_driver_FDB5BFE9
+// TODO: Verify function
 u32 scePowerGetCpuClockFrequencyInt(void)
 {
     return g_PowerFreq.clkcCpuFrequencyInt;
 }
 
 //Subroutine scePower_B1A52C83 - Address 0x00004324 - Aliases: scePower_driver_DC4395E2
+// TODO: Verify function
 u32 scePowerGetCpuClockFrequencyFloat(void)
 {
     return g_PowerFreq.clkcCpuFrequencyFloat;
 }
 
 //Subroutine scePower_478FE6F5 - Address 0x00004330 - Aliases: scePower_BD681969, scePower_driver_04711DFB
+// TODO: Verify function
 u32 scePowerGetBusClockFrequencyInt(void)
 {
     return g_PowerFreq.clkcBusFrequencyInt;
 }
 
 //Subroutine scePower_9BADB3EB - Address 0x0000433C - Aliases: scePower_driver_1FF8DA3B
+// TODO: Verify function
 u32 scePowerGetBusClockFrequencyFloat(void) 
 {
     return g_PowerFreq.clkcBusFrequencyFloat;
 }
 
 //Subroutine scePower_34F9C463 - Address 0x00004348 - Aliases: scePower_driver_67BD889B
+// TODO: Verify function
 u32 scePowerGetPllClockFrequencyInt(void)
 {
     return g_PowerFreq.pllClockFrequencyInt;
 }
 
 //Subroutine scePower_EA382A27 - Address 0x00004354 - Aliases: scePower_driver_BA8CBCBF
+// TODO: Verify function
 u32 scePowerGetPllClockFrequencyFloat(void)
 {
     return g_PowerFreq.pllClockFrequencyFloat;
 }
 
 //Subroutine scePower_737486F2 - Address 0x00004360
+// TODO: Verify function
 s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
 {
     if (g_PowerFreq.sm1Ops != NULL)
@@ -2470,24 +2564,28 @@ s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 b
 }
 
 //Subroutine scePower_A4E93389 - Address 0x000043CC
+// TODO: Verify function
 s32 scePowerSetClockFrequency280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
     return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
 }
 
 //Subroutine scePower_545A7F3C - Address 0x000043E8
+// TODO: Verify function
 s32 scePowerSetClockFrequency300(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
     return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
 }
 
 //Subroutine scePower_EBD177D6 - Address 0x00004404 - Aliases: scePower_driver_EBD177D6
+// TODO: Verify function
 s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
     return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
 }
 
 //Subroutine scePower_469989AD - Address 0x00004420 - Aliases: scePower_driver_469989AD
+// TODO: Verify function
 s32 scePower_469989AD(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
     if (sceKernelGetModel() != PSP_1000 || (sceKernelDipsw(11) == 1)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
@@ -2497,6 +2595,7 @@ s32 scePower_469989AD(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 }
 
 //Subroutine sub_00004498 - Address 0x00004498
+// TODO: Verify function
 static s32 _scePowerBatteryEnd(void)
 {
     u32 outBits;
@@ -2523,6 +2622,7 @@ static s32 _scePowerBatteryEnd(void)
 }
 
 // Subroutine sub_00004570 - Address 0x00004570 
+// TODO: Verify function
 static s32 _scePowerBatterySuspend(void)
 {
     s32 intrState;
@@ -2559,9 +2659,8 @@ static s32 _scePowerBatterySuspend(void)
     return SCE_ERROR_OK;
 }
 
-#include <ctrl.h>
-
 // Subroutine sub_0000461C - Address 0x0000461C 
+// TODO: Verify function
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 {
     u32 val1;
