@@ -26,7 +26,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define POWER_CALLBACK_TOTAL_SLOTS_KERNEL               (32)
 #define POWER_CALLBACK_MAX_SLOT_KERNEL                  (POWER_CALLBACK_TOTAL_SLOTS_KERNEL - 1)
 #define POWER_CALLBACK_TOTAL_SLOTS_USER                 (16)
-#define POWER_CALLBACK_MAX_SLOT_USER          (POWER_CALLBACK_TOTAL_SLOTS_USER - 1)
+#define POWER_CALLBACK_MAX_SLOT_USER                    (POWER_CALLBACK_TOTAL_SLOTS_USER - 1)
 
 #define BATTERY_LOW_CAPACITY_VALUE                      (216)
 #define BATTERY_REALLY_LOW_CAPACITY_VALUE               (72)
@@ -632,7 +632,6 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 }
 
 // Subroutine scePower_04B7766E - Address 0x000008A8 - Aliases: scePower_driver_766CD857
-// TODO: Verify function
 s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
 {
     s32 oldK1;
@@ -640,14 +639,15 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
     s32 status;
     s32 blockAttr;
     s32 intrState;
-    s32 i;
-    SceSysmemUIDControlBlock *block;
+    SceSysmemUIDControlBlock *pBlock;
     
     oldK1 = pspShiftK1(); //0x000008C4
+
     if (slot < -1 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x000008D4
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
+
     if (pspK1IsUserMode() && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x000008DC & 0x000008E4
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
@@ -659,12 +659,13 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
         return SCE_ERROR_INVALID_ID;
     }
     
-    status = sceKernelGetUIDcontrolBlock(cbid, &block); //0x00000904
+    status = sceKernelGetUIDcontrolBlock(cbid, &pBlock); //0x00000904
     if (status != SCE_ERROR_OK) { //0x0000090C
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-    blockAttr = (pspK1IsUserMode()) ? block->attribute & 0x2 : 2; //0x00000914 - 0x00000928
+
+    blockAttr = (pspK1IsUserMode()) ? pBlock->attribute & 0x2 : 2; // 0x00000914 - 0x00000928
     if (blockAttr == 0) { //0x0000092C
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
@@ -674,10 +675,14 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
     
     if (slot == SCE_POWER_CALLBACKSLOT_AUTO) { //0x00000940
         if (!pspK1IsUserMode) { //0x000009CC
+            /* Don't allow auto slot searching in kernel mode. */
             sceKernelCpuResumeIntr(intrState);
+
             pspSetK1(oldK1);
             return SCE_ERROR_NOT_SUPPORTED;
         }
+
+        s32 i;
         for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_USER; i++) {
              if (g_Power.powerCallback[i].callbackId < 0) { //0x000009F4
                  g_Power.powerCallback[i].callbackId = cbid; //0x00000A14
@@ -686,26 +691,42 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
                  g_Power.powerCallback[i].mode  = 0; //0x00000A28
                  
                  sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.unk520); //0x000009B8
+
                  sceKernelCpuResumeIntr(intrState);
                  pspSetK1(oldK1);
-                 return i;
+                 return i; /* Return the slot used. */
              }             
-       }
+        }
+
+        /* No empty slot was found, return with error. */
+
        sceKernelCpuResumeIntr(intrState);
        pspSetK1(oldK1);
-       return i;
-    }
-    if (g_Power.powerCallback[slot].callbackId < 0) { //0x00000960
+       return SCE_ERROR_OUT_OF_MEMORY;
+    } 
+    /* Check if the requested callback slot is available. */
+    else if (g_Power.powerCallback[slot].callbackId < 0) { //0x00000960
+        /* Callback slot is free, let's use it. */
+
         g_Power.powerCallback[slot].callbackId = cbid; //0x00000994
         g_Power.powerCallback[slot].unk4 = 0; //0x000009A0
         g_Power.powerCallback[slot].powerStatus = g_Power.unk516; //0x000009A8
         g_Power.powerCallback[slot].mode  = 0; //0x00000A28
         
         sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.unk520); //0x000009B8
+
+        status = SCE_ERROR_OK; // 0x0000099C
     }
+    else
+    {
+        /* Requested slot already in use, return with error. */
+        status = SCE_ERROR_ALREADY;
+    }
+
     sceKernelCpuResumeIntr(intrState);
+
     pspSetK1(oldK1);
-    return SCE_ERROR_OK;
+    return status;
 }
 
 //Subroutine scePower_DB9D28DD - Address 0x00000A64 - Aliases: scePower_DFA8BAF8, scePower_driver_315B8CB6
