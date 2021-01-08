@@ -90,6 +90,59 @@ s32 scePowerSetCallbackMode(s32 slot, s32 mode);
 
 s32 scePowerGetCallbackMode(s32 slot, s32 *pMode);
 
+/* Clock frequency functions */
+
+/**
+ * Get the CPU clock frequency.
+ *
+ * @return The CPU clock frequency in MHz.
+ */
+s32 scePowerGetCpuClockFrequencyInt(void);
+
+/**
+ * Get the CPU clock frequency.
+ *
+ * @remark The accuracy is identical to ::scePowerGetCpuClockFrequencyInt().
+ *
+ * @return The CPU clock frequency in MHz.
+ */
+float scePowerGetCpuClockFrequencyFloat(void);
+
+/**
+ * Get the bus clock frequency.
+ *
+ * @remark The bus clock frequency always operates at 1/2 the PLL clock frequency.
+ *
+ * @return The current bus clock frequency in MHz.
+ */
+s32 scePowerGetBusClockFrequencyInt(void);
+
+/**
+ * Get the bus clock frequency.
+ *
+ * @remark The bus clock frequency always operates at 1/2 the PLL clock frequency.
+ * @remark The accuracy is identical to ::scePowerGetBusClockFrequencyInt().
+ *
+ * @return The current bus clock frequency in MHz.
+ */
+float scePowerGetBusClockFrequencyFloat(void);
+
+/**
+ * Get the PLL output clock frequency.
+ *
+ * @return The current PLL output clock frequency in MHz.
+ */
+s32 scePowerGetPllClockFrequencyInt(void);
+
+/**
+ * Get the PLL output clock frequency.
+ *
+ * @remark The accuracy is identical to ::scePowerGetPllClockFrequencyInt().
+ *
+ * @return The current PLL output clock frequency in MHz.
+ */
+float scePowerGetPllClockFrequencyFloat(void);
+
 
  /** @} */
 

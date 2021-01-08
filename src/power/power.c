@@ -127,12 +127,12 @@ typedef struct {
     u32 sm1Ops; //4
     u32 pllOutSelect; //8
     u32 pllUseMask; //12
-    u32 pllClockFrequencyInt; //16
-    u32 clkcCpuFrequencyInt; //20
-    u32 clkcBusFrequencyInt; //24
-    u32 pllClockFrequencyFloat; //28
-    u32 clkcCpuFrequencyFloat; //32
-    u32 clkcBusFrequencyFloat; //36
+    s32 pllClockFrequencyInt; //16
+    s32 cpuClockFrequencyInt; //20
+    s32 busClockFrequencyInt; //24
+    float pllClockFrequencyFloat; //28
+    float cpuClockFrequencyFloat; //32
+    float busClockFrequencyFloat; //36
     u32 clkcCpuGearNumerator; //40
     u32 clkcCpuGearDenominator; //44
     u32 clkcBusGearNumerator; //48
@@ -1968,8 +1968,8 @@ static u32 _scePowerFreqInit(void)
     g_PowerFreq.pllClockFrequencyInt = (s32)clkcCpuFrequency; //0x000035C0
     
     clkcBusFrequency = sceClkcGetBusFrequency(); //0x000035BC
-    g_PowerFreq.clkcBusFrequencyFloat = clkcBusFrequency; //0x000035E4
-    g_PowerFreq.clkcBusFrequencyInt = (s32)clkcBusFrequency; //0x000035DC
+    g_PowerFreq.busClockFrequencyFloat = clkcBusFrequency; //0x000035E4
+    g_PowerFreq.busClockFrequencyInt = (s32)clkcBusFrequency; //0x000035DC
     
     g_PowerFreq.pllUseMask = 0x3F3F; //0x000035D0
     
@@ -2027,8 +2027,8 @@ s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
     
     sceClkcSetCpuFrequency((float)cpuFreq); //0x00003748
     float cpuFreqFloat = sceClkcGetCpuFrequency(); //0x00003750
-    g_PowerFreq.clkcCpuFrequencyFloat = cpuFreqFloat; //0x0000375C
-    g_PowerFreq.clkcCpuFrequencyInt = (s32)cpuFreqFloat; //0x00003768
+    g_PowerFreq.cpuClockFrequencyFloat = cpuFreqFloat; //0x0000375C
+    g_PowerFreq.cpuClockFrequencyInt = (s32)cpuFreqFloat; //0x00003768
     
     sceKernelCpuResumeIntr(intrState); //0x00003764
     pspSetK1(oldK1); //0x0000376C
@@ -2066,8 +2066,8 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
     status = sceClkcSetBusFrequency((float)busFrequency); //0x00003854
     
     float busFrequencyFloat = sceClkcGetBusFrequency(); //0x0000385C
-    g_PowerFreq.clkcBusFrequencyFloat = busFrequencyFloat; //0x00003868
-    g_PowerFreq.clkcBusFrequencyInt = (s32)busFrequencyFloat; //0x00003870
+    g_PowerFreq.busClockFrequencyFloat = busFrequencyFloat; //0x00003868
+    g_PowerFreq.busClockFrequencyInt = (s32)busFrequencyFloat; //0x00003870
     
     scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); //0x0000386C & 0x00003874
     
@@ -2237,8 +2237,8 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
         sceClkcSetBusGear(511, 511); //0x00003CA4
             
         float busFrequencyFloat = sceClkcGetBusFrequency(); //0x00003CAC
-        g_PowerFreq.clkcBusFrequencyFloat = busFrequencyFloat; //0x00003CB8
-        g_PowerFreq.clkcBusFrequencyInt = (u32)busFrequencyFloat; //0x00003CC0
+        g_PowerFreq.busClockFrequencyFloat = busFrequencyFloat; //0x00003CB8
+        g_PowerFreq.busClockFrequencyInt = (u32)busFrequencyFloat; //0x00003CC0
             
         scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); //0x00003948
     } else {
@@ -2271,10 +2271,10 @@ u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
     unk1 = 8;
     unk2 = 6; //0x00003E84
     if (geEdramRefreshMode == 1) { //0x00003E8C
-        if (g_PowerFreq.clkcBusFrequencyInt < 75) { //0x00003EA0
-            if (g_PowerFreq.clkcBusFrequencyInt < 50) { //0x00003F0C
-                if (g_PowerFreq.clkcBusFrequencyInt < 25) { //0x00003F40
-                    res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003F84
+        if (g_PowerFreq.busClockFrequencyInt < 75) { //0x00003EA0
+            if (g_PowerFreq.busClockFrequencyInt < 50) { //0x00003F0C
+                if (g_PowerFreq.busClockFrequencyInt < 25) { //0x00003F40
+                    res = g_PowerFreq.busClockFrequencyInt * 32768; //0x00003F84
                     unk2 = 1; //0x00003F90
                     unk1 = 6; //0x00003F94
                     
@@ -2283,7 +2283,7 @@ u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
                     resHi = resLow + ((res >> 32) & 0xFFFFFFFF); //0x00003FAC
                     resHi = (resHi >> 7); //0x00003FB4
                 } else { //0x00003F48
-                    res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003F4C
+                    res = g_PowerFreq.busClockFrequencyInt * 32768; //0x00003F4C
                     unk2 = 2; //0x00003F58
                     unk1 = 3;
                     
@@ -2294,7 +2294,7 @@ u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
                 }
                 res = resHi - sign; //0x00003F80
             } else { //0x00003F14
-                res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003F18
+                res = g_PowerFreq.busClockFrequencyInt * 32768; //0x00003F18
                 unk2 = 3; //0x00003F1C
                 unk1 = 2;
                     
@@ -2303,7 +2303,7 @@ u32 scePowerSetGeEdramRefreshMode(u32 geEdramRefreshMode)
                 res = (resHi >> 9); //0x00003F3C   
             }
         } else { //0x00003EA8
-            res = g_PowerFreq.clkcBusFrequencyInt * 32768; //0x00003EAC
+            res = g_PowerFreq.busClockFrequencyInt * 32768; //0x00003EAC
             unk1 = 1; //0x00003EB0
                     
             resLow = ((s32)res) - 75; //0x00003EB8
@@ -2537,43 +2537,38 @@ u32 scePowerSetPllUseMask(u32 useMask)
 }
 
 //Subroutine scePower_FDB5BFE9 - Address 0x00004318 - Aliases: scePower_FEE03A2F, scePower_driver_FDB5BFE9
-// TODO: Verify function
-u32 scePowerGetCpuClockFrequencyInt(void)
+s32 scePowerGetCpuClockFrequencyInt(void)
 {
-    return g_PowerFreq.clkcCpuFrequencyInt;
+    return g_PowerFreq.cpuClockFrequencyInt;
 }
 
 //Subroutine scePower_B1A52C83 - Address 0x00004324 - Aliases: scePower_driver_DC4395E2
-// TODO: Verify function
-u32 scePowerGetCpuClockFrequencyFloat(void)
+float scePowerGetCpuClockFrequencyFloat(void)
 {
-    return g_PowerFreq.clkcCpuFrequencyFloat;
+    return g_PowerFreq.cpuClockFrequencyFloat;
 }
 
 //Subroutine scePower_478FE6F5 - Address 0x00004330 - Aliases: scePower_BD681969, scePower_driver_04711DFB
-// TODO: Verify function
-u32 scePowerGetBusClockFrequencyInt(void)
+s32 scePowerGetBusClockFrequencyInt(void)
 {
-    return g_PowerFreq.clkcBusFrequencyInt;
+    return g_PowerFreq.busClockFrequencyInt;
 }
 
 //Subroutine scePower_9BADB3EB - Address 0x0000433C - Aliases: scePower_driver_1FF8DA3B
-// TODO: Verify function
-u32 scePowerGetBusClockFrequencyFloat(void) 
+float scePowerGetBusClockFrequencyFloat(void) 
 {
-    return g_PowerFreq.clkcBusFrequencyFloat;
+    return g_PowerFreq.busClockFrequencyFloat;
 }
 
 //Subroutine scePower_34F9C463 - Address 0x00004348 - Aliases: scePower_driver_67BD889B
 // TODO: Verify function
-u32 scePowerGetPllClockFrequencyInt(void)
+s32 scePowerGetPllClockFrequencyInt(void)
 {
     return g_PowerFreq.pllClockFrequencyInt;
 }
 
 //Subroutine scePower_EA382A27 - Address 0x00004354 - Aliases: scePower_driver_BA8CBCBF
-// TODO: Verify function
-u32 scePowerGetPllClockFrequencyFloat(void)
+float scePowerGetPllClockFrequencyFloat(void)
 {
     return g_PowerFreq.pllClockFrequencyFloat;
 }
