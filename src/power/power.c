@@ -3549,25 +3549,14 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
         return SCE_ERROR_OK;
     }
 
-    // uofw note: These conditions below could be all grouped together but if Sony
-    // wants to call _sceSysconGetBaryonVersion() three times, so be it.
+    // 0x000056D4 - 0x0000571C
 
-    u32 baryonVersion = (u32)_sceSysconGetBaryonVersion(); // 0x000056D4
-    if ((baryonVersion >> 16) & 0xF0 != 0x20) // 0x000056DC - 0x000056E8
+    /* Ony proceed if we are running on a PSP with a supported Baryon version (PS-2000 series). */
+    u8 version = _sceSysconGetBaryonVersion();
+    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 2 &&
+        PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 2 && SP_SYSCON_BARYON_GET_VERSION_MINOR(version) > 6)
     {
-        return SCE_ERROR_OK; // 0x000056EC
-    }
-
-    baryonVersion = (u32)_sceSysconGetBaryonVersion(); // 0x000056F0
-    if (((baryonVersion >> 16) & 0xFF) < 0x22) // 0x000056F8 - 0x00005700
-    {
-        return SCE_ERROR_OK; // 0x00005704
-    }
-
-    baryonVersion = (u32)_sceSysconGetBaryonVersion(); // 0x00005708
-    if (((baryonVersion >> 16) & 0xFF) >= 0x26) // 0x00005710 - 0x00005718
-    {
-        return SCE_ERROR_OK; // 0x0000571C
+        return SCE_ERROR_OK;
     }
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00005720
