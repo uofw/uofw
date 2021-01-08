@@ -69,7 +69,7 @@ typedef struct {
     ScePowerCallback powerCallback[POWER_CALLBACK_TOTAL_SLOTS_KERNEL]; // 0 - 511
     s32 baryonVersion; //512
     u32 unk516; //516 -- power status?
-    u32 unk520; //520
+    u32 callbackArgMask; //520
     u8 isBatteryLow; //524
     u8 wlanActivity; //525
     u8 watchDog; //526
@@ -231,6 +231,7 @@ enum ScePowerWlanActivity {
 static SceSysconFunc _scePowerAcSupplyCallback; //sub_0x00000650
 static SceSysconFunc _scePowerLowBatteryCallback; //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
+static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFlag, s32 arg2); // sub_00000BE0
 static s32 _scePowerInitCallback(); //sub_0x0000114C
 
 static s32 _scePowerBatteryEnd(void); // 0x00004498
@@ -529,7 +530,7 @@ s32 scePowerInit()
     if (sceSysconIsAcSupplied) //0x00000330
         g_Power.unk516 |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x00000348
     
-    g_Power.unk520 = -1; //0x00000350
+    g_Power.callbackArgMask = -1; //0x00000350
     _scePowerIdleInit();//0x0000034C -- sub_000033C4
     
     sceSysconSetAcSupplyCallback(_scePowerAcSupplyCallback, NULL); //0x0000035C
@@ -690,7 +691,7 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
                  g_Power.powerCallback[i].powerStatus = g_Power.unk516; //0x00000A2C
                  g_Power.powerCallback[i].mode  = 0; //0x00000A28
                  
-                 sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.unk520); //0x000009B8
+                 sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.callbackArgMask); //0x000009B8
 
                  sceKernelCpuResumeIntr(intrState);
                  pspSetK1(oldK1);
@@ -713,7 +714,7 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
         g_Power.powerCallback[slot].powerStatus = g_Power.unk516; //0x000009A8
         g_Power.powerCallback[slot].mode  = 0; //0x00000A28
         
-        sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.unk520); //0x000009B8
+        sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.callbackArgMask); //0x000009B8
 
         status = SCE_ERROR_OK; // 0x0000099C
     }
@@ -815,19 +816,19 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *pMode)
 }
 
 //sub_00000BE0
-// TODO: Verify function
-static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFlag, s32 arg3)
+static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFlag, s32 arg2)
 {
     s32 intrState;
-    s32 sdkVer;
     s32 notifyCount;
-    u32 i;
     
     intrState = sceKernelCpuSuspendIntr(); //0x00000C0C
     
-    sdkVer = sceKernelGetCompiledSdkVersion();
+    // uofw note: Return value not used. 
+    sceKernelGetCompiledSdkVersion(); // 0x00000C30
+
     g_Power.unk516 = (g_Power.unk516 & ~deleteCallbackFlag) | applyCallbackFlag; //0x00000C24 & 0x00000C2C & 0x00000C34
     
+    u32 i;
     for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++) {
          if (g_Power.powerCallback[i].callbackId < 0) //0x00000C4C
              continue;
@@ -839,11 +840,12 @@ static void _scePowerNotifyCallback(s32 deleteCallbackFlag, s32 applyCallbackFla
          if (notifyCount == 0) //0x00000C64
              g_Power.powerCallback[i].unk4 = 0;
          
-         g_Power.powerCallback[i].unk4 |= arg3; //0x00000C78
+         g_Power.powerCallback[i].unk4 |= arg2; //0x00000C78
          g_Power.powerCallback[i].powerStatus = g_Power.powerCallback[i].unk4 | g_Power.unk516; //0x00000C7C
          sceKernelNotifyCallback(g_Power.powerCallback[i].callbackId, 
-                                 g_Power.powerCallback[i].powerStatus & g_Power.unk520); //0x00000C84
+                                 g_Power.powerCallback[i].powerStatus & g_Power.callbackArgMask); //0x00000C84
     }
+
     sceKernelCpuResumeIntr(intrState); //0x00000C94
 }
 
@@ -985,7 +987,7 @@ s32 scePowerEnd(void)
 // TODO: Verify function
 u32 scePower_driver_23BDDD8B(void)
 {
-    g_Power.unk520 &= ~SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00001038 
+    g_Power.callbackArgMask &= ~SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00001038 
     return SCE_ERROR_OK;
 }
 
