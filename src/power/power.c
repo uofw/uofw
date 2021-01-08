@@ -782,32 +782,34 @@ s32 scePowerSetCallbackMode(s32 slot, s32 mode)
 }
 
 //Subroutine scePower_BAFA3DF0 - Address 0x00000B48 - Aliases: scePower_driver_17EEA285
-// TODO: Verify function
-s32 scePowerGetCallbackMode(s32 slot, s32 *mode)
+s32 scePowerGetCallbackMode(s32 slot, s32 *pMode)
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1();
     
-    if (!pspK1PtrOk(mode)) { //0x00000B54
+    if (!pspK1PtrOk(pMode)) { //0x00000B54
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
+
     if (slot < 0 || slot > POWER_CALLBACK_MAX_SLOT_KERNEL) { //0x00000B60
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
+
     if (pspK1IsUserMode && slot > POWER_CALLBACK_MAX_SLOT_USER) { //0x00000B68 & 0x00000B7C
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
     
     pspSetK1(oldK1); //0x00000B78
+
     if (g_Power.powerCallback[slot].callbackId < 0) //0x00000B9C
         return SCE_ERROR_NOT_FOUND;
     
-    if (mode != NULL) //0x00000BA4
-        *mode = g_Power.powerCallback[slot].mode; //0x00000BB0
+    if (pMode != NULL) //0x00000BA4
+        *pMode = g_Power.powerCallback[slot].mode; //0x00000BB0
     
     return SCE_ERROR_OK;
 }

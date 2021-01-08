@@ -63,7 +63,7 @@ typedef enum {
  *
  * @return Always SCE_ERROR_OK.
  */
-typedef void (*ScePowerCallback)(int count, int arg, void* common);
+typedef void (*ScePowerCallback)(int count, int arg, void *common);
 
 /**
  * Registers a power service notification callback.
@@ -88,7 +88,7 @@ s32 scePowerUnregisterCallback(s32 slot);
 
 s32 scePowerSetCallbackMode(s32 slot, s32 mode);
 
-s32 scePowerGetCallbackMode(s32 slot, s32* mode);
+s32 scePowerGetCallbackMode(s32 slot, s32 *pMode);
 
 
  /** @} */

@@ -92,7 +92,7 @@ s32 scePowerUnregisterCallback(s32 slot);
 
 s32 scePowerSetCallbackMode(s32 slot, s32 mode);
 
-s32 scePowerGetCallbackMode(s32 slot, s32* mode);
+s32 scePowerGetCallbackMode(s32 slot, s32 *pMode);
 
 
  /** @} */
