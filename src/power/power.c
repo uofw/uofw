@@ -6,6 +6,7 @@
 #include <interruptman.h>
 #include <power_kernel.h>
 #include <syscon.h>
+#include <sysmem_kdebug.h>
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
 #include <sysmem_sysevent.h>
@@ -2579,6 +2580,7 @@ s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 b
 {
     if (g_PowerFreq.sm1Ops != NULL)
         sceKernelDelayThread(60000000); //0x000043BC
+
     return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x0000439C
 }
 
@@ -2604,10 +2606,15 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
 }
 
 //Subroutine scePower_469989AD - Address 0x00004420 - Aliases: scePower_driver_469989AD
-// TODO: Verify function
-s32 scePower_469989AD(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
+s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
-    if (sceKernelGetModel() != PSP_1000 || (sceKernelDipsw(11) == 1)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
+    /* 
+     * Check if the device calling this function is a PSP-100X or a a development tool (DTP-T1000) configured 
+     * to operate as a PSP-100X.
+     */
+    if (sceKernelGetModel() != PSP_1000 
+        || (sceKernelDipsw(PSP_DIPSW_REG_OPERATION_MODE_PSP_1000_OR_LATER) == PSP_DIPSW_OPERATION_MODE_PSP_2000_AND_LATER)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
+        /* If we run as a PSP-2000 device or later, WLAN can be used without limiting the clock frequencies. */
         scePowerSetExclusiveWlan(0); //0x00004488
 
     return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468
