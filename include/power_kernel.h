@@ -172,8 +172,22 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
 
 /* WLAN functions */
 
+/**
+ * Attempts to activate WLAN.
+ * 
+ * @remark Battery charging might be suppressed while WLAN is active.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ */
 s32 scePowerWlanActivate(void);
 
+/**
+ * Deactivates WLAN. 
+ * 
+ * @remark If battery charging was disabled previously due to an active WLAN, charging will be enabled again.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
 s32 scePowerWlanDeactivate(void);
 
 /** Specifies a device type which permits a maximum PLL clock frequency of 222 MHz when WLAN is active. */
