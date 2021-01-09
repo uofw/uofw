@@ -239,6 +239,9 @@ static s32 _scePowerInitCallback(); //sub_0x0000114C
 
 static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency); // 0x00003898
 
+static s32 _scePowerLockPowerFreqMutex(void); // sub_00003FEC
+static s32 _scePowerUnlockPowerFreqMutex(void); // sub_00004014
+
 static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
@@ -896,7 +899,7 @@ s32 scePowerWlanActivate(void)
     s32 cpuFreq;
     s32 busFreq;
     
-    sub_00003FEC(); //0x00000D94 -- sub_00003FEC -- lock mutex
+    _scePowerLockPowerFreqMutex(); //0x00000D94
     
     pllFreq = scePowerGetPllClockFrequencyInt(); //0x00000D9C -- scePower_34F9C463
     cpuFreq = scePowerGetCpuClockFrequencyInt(); //0x00000DA4 -- scePower_FDB5BFE9
@@ -904,11 +907,11 @@ s32 scePowerWlanActivate(void)
    
     if ((g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz && pllFreq > 222) 
         || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && pllFreq > 266)) { //0x00000DBC - 0x00000DEC
-        sub_00004014(); //0x00000DF4 -- unlock mutex
+        _scePowerUnlockPowerFreqMutex();
         return SCE_POWER_ERROR_BAD_PRECONDITION;
     }
     g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVATED; //0x00000E1C
-    sub_00004014(); //0x00000E18
+    _scePowerUnlockPowerFreqMutex(); //0x00000E18
     
     if (g_Power.unk527) //0x00000E24
         scePowerBatteryForbidCharging(); //0x00000E34 -- scePower_driver_10CE273F
@@ -2344,15 +2347,13 @@ static u32 _scePowerFreqEnd(void)
 }
 
 //sub_00003FEC
-// TODO: Verify function -- i.e. assign proper name
-static u32 sub_00003FEC(void)
+static s32 _scePowerLockPowerFreqMutex(void)
 {
    return sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); //0x00004000
 }
 
 //sub_00004014
-// TODO: Verify function -- i.e. assign proper name
-static u32 sub_00004014(void)
+static s32 _scePowerUnlockPowerFreqMutex(void)
 {
     return sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00004024
 }
