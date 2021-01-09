@@ -73,9 +73,9 @@ typedef struct {
     u32 unk516; //516 -- power status?
     u32 callbackArgMask; //520
     u8 isBatteryLow; //524
-    u8 wlanActivity; //525
+    u8 wlanActivity; //525 -- TODO: Perhaps rename to isWlanActivated?
     u8 watchDog; //526
-    u8 unk527;
+    u8 isWlanSuppressChargingEnabled; // 527
     s8 unk528;
     s8 wlanExclusiveClockLimit; // 529
     u8 ledOffTiming;
@@ -335,7 +335,7 @@ s32 scePowerInit()
         memset(baryonData, 0, sizeof baryonData); //0x00000618
         g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz;
         g_Power.watchDog = 0;
-        g_Power.unk527 = 0;
+        g_Power.isWlanSuppressChargingEnabled = SCE_FALSE;
         g_Power.unk528 = 0;
         g_Power.ledOffTiming = 0;
         batteryReallyLowCap = ((u16 *)baryonData)[BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT]; //0x0000062C
@@ -345,7 +345,7 @@ s32 scePowerInit()
     else {
         g_Power.ledOffTiming = baryonData[31]; //0x00000080
         g_Power.watchDog = baryonData[24] & 0x7F; //0x00000088
-        g_Power.unk527 = baryonData[25]; //0x0000008C
+        g_Power.isWlanSuppressChargingEnabled = baryonData[25]; //0x0000008C
         g_Power.unk528 = baryonData[30]; //0x00000090
         g_Power.wlanExclusiveClockLimit = ((s8)baryonData[52] < 0) ? baryonData[52] & 0x7F : SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz; //0x00000098       
         batteryReallyLowCap = BATTERY_REALLY_LOW_CAPACITY_VALUE; //0x00000094
@@ -918,7 +918,7 @@ s32 scePowerWlanActivate(void)
 
     _scePowerUnlockPowerFreqMutex(); //0x00000E18
     
-    if (g_Power.unk527) //0x00000E24
+    if (g_Power.isWlanSuppressChargingEnabled) //0x00000E24
         scePowerBatteryForbidCharging(); //0x00000E34
     
     return SCE_ERROR_OK;
@@ -1045,12 +1045,12 @@ s32 scePowerCheckWlanCondition(u32 freq)
 }
 
 //Subroutine scePower_driver_8C6BEFD9 - Address 0x000010EC
-// TODO: Verify function
 s32 scePowerWlanDeactivate(void)
 {
-    g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; //0x00001104
-    if (g_Power.unk527 != 0)
-        scePowerBatteryPermitCharging(); //0x00001118 -- scePower_driver_EF751B4A
+    g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; // 0x00001104
+
+    if (g_Power.isWlanSuppressChargingEnabled)
+        scePowerBatteryPermitCharging(); // 0x00001118
    
     return SCE_ERROR_OK;
 }
