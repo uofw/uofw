@@ -3,7 +3,9 @@
 */
 
 #include <common_imp.h>
+#include <display.h>
 #include <interruptman.h>
+#include <lowio_sysreg.h>
 #include <power_kernel.h>
 #include <syscon.h>
 #include <sysmem_kdebug.h>
@@ -2222,7 +2224,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         }
         sceDdrChangePllClock(unk1); //0x00003B98
     
-        float pllFrequency = sceSysregPllGetFrequency(); //0x00003BA0
+        float pllFrequency = sceSysregPllGetFrequency(); //0x00003BA0 -- sceSysreg_driver_A5CC6025
         g_PowerFreq.pllClockFrequencyFloat = pllFrequency(); //0x00003BAC
         g_PowerFreq.pllClockFrequencyInt = (u32)pllFrequency; //0x00003BB8
     

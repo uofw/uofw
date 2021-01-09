@@ -1,0 +1,16 @@
+Add the following functions to include/lowio_sysreg.h and to lwoio's export file. Once done, generate a new 
+libsceSysreg_driver library.
+
+Functions to add:
+
+s32 sceClkcSetCpuGear(u32 arg0, u32 arg1); // sceSysreg_driver_3F6F2CC7
+s32 sceClkcSetBusGear(u32 arg0, u32 arg1); // sceSysreg_driver_63E1EE9C
+
+float sceClkcGetBusFrequency(void); // sceSysreg_driver_96D74557
+
+
+Add the following functions to include/lowio_ddr.h and to lowio's export file. Once done, generate a new 
+libsceDdr_driver library:
+
+sceDdrChangePllClock(u32 arg0); // sceDdr_driver_CF07B9E2
+sceDdr_driver_0BAAE4C5(void); // sceDdr_driver_0BAAE4C5
