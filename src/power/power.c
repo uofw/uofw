@@ -892,29 +892,34 @@ static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
 }
 
 //Subroutine scePower_driver_2638EF48 - Address 0x00000D88
-// TODO: Verify function
 s32 scePowerWlanActivate(void)
 {
     s32 pllFreq;
-    s32 cpuFreq;
-    s32 busFreq;
     
-    _scePowerLockPowerFreqMutex(); //0x00000D94
+    _scePowerLockPowerFreqMutex(); // 0x00000D94
     
-    pllFreq = scePowerGetPllClockFrequencyInt(); //0x00000D9C -- scePower_34F9C463
-    cpuFreq = scePowerGetCpuClockFrequencyInt(); //0x00000DA4 -- scePower_FDB5BFE9
-    busFreq = scePowerGetBusClockFrequencyInt(); //0x00000DAC -- scePower_478FE6F5
+    pllFreq = scePowerGetPllClockFrequencyInt(); // 0x00000D9C
+
+    /* 
+     * uofw note: No longer needed since the CPU clock and the bus clock are now derived from the PLL clock. 
+     * Sony appears to have kept them in the source though (ignoring return values) so we do so as well.
+     */
+    scePowerGetCpuClockFrequencyInt(); // 0x00000DA4
+    scePowerGetBusClockFrequencyInt(); // 0x00000DAC
    
     if ((g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz && pllFreq > 222) 
-        || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && pllFreq > 266)) { //0x00000DBC - 0x00000DEC
+        || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && pllFreq > 266)) //0x00000DBC - 0x00000DEC
+    {
         _scePowerUnlockPowerFreqMutex();
         return SCE_POWER_ERROR_BAD_PRECONDITION;
     }
-    g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVATED; //0x00000E1C
+
+    g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVATED; // 0x00000E1C
+
     _scePowerUnlockPowerFreqMutex(); //0x00000E18
     
     if (g_Power.unk527) //0x00000E24
-        scePowerBatteryForbidCharging(); //0x00000E34 -- scePower_driver_10CE273F
+        scePowerBatteryForbidCharging(); //0x00000E34
     
     return SCE_ERROR_OK;
 }
