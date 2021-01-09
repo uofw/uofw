@@ -77,7 +77,7 @@ typedef struct {
     u8 watchDog; //526
     u8 unk527;
     s8 unk528;
-    s8 unk529;
+    s8 wlanExclusiveClockLimit; // 529
     u8 ledOffTiming;
     s16 cpuInitSpeed; //534 -- CPU clock init speed
     s16 busInitSpeed; //536 -- Bus clock init speed
@@ -237,6 +237,8 @@ static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2)
 static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
 
+static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency); // 0x00003898
+
 static s32 _scePowerBatteryEnd(void); // 0x00004498
 static s32 _scePowerBatterySuspend(void); // 0x00004570
 static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1); // 0x0000461C
@@ -328,7 +330,7 @@ s32 scePowerInit()
     status = sceIdStorageLookup(4, 0, baryonData, sizeof baryonData); //0x00000058
     if (status < SCE_ERROR_OK) { //0x00000060
         memset(baryonData, 0, sizeof baryonData); //0x00000618
-        g_Power.unk529 = 1;
+        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz;
         g_Power.watchDog = 0;
         g_Power.unk527 = 0;
         g_Power.unk528 = 0;
@@ -342,13 +344,13 @@ s32 scePowerInit()
         g_Power.watchDog = baryonData[24] & 0x7F; //0x00000088
         g_Power.unk527 = baryonData[25]; //0x0000008C
         g_Power.unk528 = baryonData[30]; //0x00000090
-        g_Power.unk529 = ((s8)baryonData[52] < 0) ? baryonData[52] & 0x7F : 1; //0x00000098       
+        g_Power.wlanExclusiveClockLimit = ((s8)baryonData[52] < 0) ? baryonData[52] & 0x7F : SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz; //0x00000098       
         batteryReallyLowCap = BATTERY_REALLY_LOW_CAPACITY_VALUE; //0x00000094
         batteryLowCap = BATTERY_LOW_CAPACITY_VALUE; //0x0000009C
     }
     appType = sceKernelApplicationType(); //0x000000A8
     if (appType == SCE_INIT_APPLICATION_GAME) { //0x000000B4
-        g_Power.unk529 = 1;
+        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz;
         scePowerSetPllUseMask(60); //0x00000600
     }
     
@@ -463,16 +465,16 @@ s32 scePowerInit()
     
     if (minPllSpeed <= 266 && g_Power.pllInitSpeed < 267) { //0x0000021C & 0x0000022C
         if (minPllSpeed > 222 || g_Power.pllInitSpeed > 222) //0x00000230 & 0x000004F0
-            g_Power.unk529 = 1; //0x00000508
+            g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz; //0x00000508
     }
     else {
-        g_Power.unk529 = 0; //0x00000220 || 0x00000234
+        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_NONE; //0x00000220 || 0x00000234
     }   
     status = sceKernelDipsw(49); //0x00000238
     if (status == 1) { //0x00000244
         g_Power.busInitSpeed = 166;
         g_Power.pllInitSpeed = 333; //0x000004C0
-        g_Power.unk529 = 0;
+        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_NONE;
         g_Power.cpuInitSpeed = 333;
         scePowerLimitScCpuClock(minCpuSpeed, 333);
         scePowerLimitScBusClock(minBusSpeed, 166); //0x000004D4
@@ -900,7 +902,8 @@ s32 scePowerWlanActivate(void)
     cpuFreq = scePowerGetCpuClockFrequencyInt(); //0x00000DA4 -- scePower_FDB5BFE9
     busFreq = scePowerGetBusClockFrequencyInt(); //0x00000DAC -- scePower_478FE6F5
    
-    if ((g_Power.unk529 == 1 && pllFreq > 222) || (g_Power.unk529 == 2 && pllFreq > 266)) { //0x00000DBC - 0x00000DEC
+    if ((g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz && pllFreq > 222) 
+        || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && pllFreq > 266)) { //0x00000DBC - 0x00000DEC
         sub_00004014(); //0x00000DF4 -- unlock mutex
         return SCE_POWER_ERROR_BAD_PRECONDITION;
     }
@@ -955,7 +958,7 @@ s32 _scePowerModuleRebootPhase(s32 arg1)
     _scePowerFreqRebootPhase(arg1); //0x00000EF0 -- sub_00004038
     
     if (arg1 == 1) //0x00000F04
-        scePowerSetClockFrequency(333, 333, 166); //0x00000F20 -- sub_00003898
+        _scePowerSetClockFrequency(333, 333, 166); //0x00000F20 -- sub_00003898
     
     return SCE_ERROR_OK;
 }
@@ -999,24 +1002,26 @@ u32 scePower_driver_23BDDD8B(void)
 }
 
 //Subroutine scePower_A85880D0 - Address 0x00001044 - Aliases: scePower_driver_693F6CF0
-// TODO: Change to scePowerCheckWlanCoexistenceClock()
-// TODO: Verify function
-u32 scePower_A85880D0(void)
+s32 scePowerCheckWlanCoexistenceClock(void)
 {
-    u32 pspModel;
-    
-    pspModel = sceKernelGetModel(); //0x0000104C
-    if (pspModel == PSP_1000) { //0x00001054
-        return (sceKernelDipsw(11) != 1) ? 0 : 1; //0x00001070 & 0x0000107C
-    }
-    return 1;
+    /* 
+     * Determine the maximum allowed clock frequencies when WLAN is active based on the hardware 
+     * we are running on (i.e. PSP-100X only has limited clock speed when WLAN is active).
+     */
+
+    // 0x0000104C - 0x0000107C
+    return (sceKernelGetModel() == PSP_1000)
+        ? (sceKernelDipsw(PSP_DIPSW_REG_OPERATION_MODE_PSP_1000_OR_LATER) != PSP_DIPSW_OPERATION_MODE_PSP_2000_AND_LATER)
+            ? SCE_POWER_WLAN_COEXISTENCE_CLOCK_222MHz /* Device runs as a PSP 1000 */
+            : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz /* Device runs as a PSP 2000+ (set in development tool) */
+        : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz; /* PSP-2000 and later support 333 MHz clock frequency with WLAN. */
 }
 
 //Subroutine scePower_driver_114B75AB - Address 0x0000108C
 // TODO: Verify function
-u32 scePowerSetExclusiveWlan(u8 arg1) 
+s32 scePowerSetExclusiveWlan(u8 clockLimit) 
 {
-    g_Power.unk529 = arg1;
+    g_Power.wlanExclusiveClockLimit = clockLimit;
     return SCE_ERROR_OK; //0x00001098
 }
 
@@ -1024,7 +1029,8 @@ u32 scePowerSetExclusiveWlan(u8 arg1)
 // TODO: Verify function
 s32 scePowerCheckWlanCondition(u32 freq)
 {
-    if ((g_Power.unk529 == 1 && freq > 222) || (g_Power.unk529 == 2 && freq > 266)) //0x000010A0 - 0x000010D4
+    if ((g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz && freq > 222) 
+        || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && freq > 266)) //0x000010A0 - 0x000010D4
         return SCE_POWER_ERROR_BAD_PRECONDITION;
     
     return SCE_ERROR_OK;
@@ -1032,7 +1038,7 @@ s32 scePowerCheckWlanCondition(u32 freq)
 
 //Subroutine scePower_driver_8C6BEFD9 - Address 0x000010EC
 // TODO: Verify function
-u32 scePowerWlanDeactivate(void)
+s32 scePowerWlanDeactivate(void)
 {
     g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; //0x00001104
     if (g_Power.unk527 != 0)
@@ -1070,7 +1076,7 @@ static u32 _scePowerInitCallback(void)
     
     appType = sceKernelApplicationType(); //0x00001154           
     if (appType != SCE_INIT_APPLICATION_VSH && appType != SCE_INIT_APPLICATION_POPS) //0x0000115C - 0x00001174
-        scePowerSetClockFrequency(g_Power.pllInitSpeed, g_Power.cpuInitSpeed, g_Power.busInitSpeed); //0x00001194 -- sub_00003898
+        _scePowerSetClockFrequency(g_Power.pllInitSpeed, g_Power.cpuInitSpeed, g_Power.busInitSpeed); //0x00001194 -- sub_00003898
     
     return SCE_ERROR_OK;
 }
@@ -2079,7 +2085,7 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
 
 //Subroutine sub_00003898 - Address 0x00003898 
 // TODO: Verify function
-u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
+static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
 {
     s32 oldK1;
     u32 frequency; 
@@ -2190,7 +2196,7 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
         }
         if (unk1 == 5 && g_PowerFreq.unk72 == 0) { //0x00003B08 & 0x00003D50
             if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) //0x00003D5C & 0x00003D68
-                sceDdr_driver_0BAAE4C5(); //0x00003D70 -- TODO: Check back for required arguments.
+                sceDdr_driver_0BAAE4C5(); //0x00003D70
             g_PowerFreq.unk72 = 1; //0x00003D84
         }
         sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000002, "start", &sysEventParam, NULL, 0, NULL); //0x00003B30
@@ -2198,8 +2204,8 @@ u32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
     
         u32 intrState = sceKernelCpuSuspendIntr(); //0x00003B40
     
-        sceClkcSetBusGear(511, 511); //0x00003B50
-        sceSysreg_driver_63E1EE9C(511, 511); //0x00003B5C
+        sceClkcSetBusGear(511, 511); //0x00003B50 -- TODO: This is Sysreg's sceClkcSetCpuGear() (sceSysreg_driver_3F6F2CC7)) 
+        sceSysreg_driver_63E1EE9C(511, 511); //0x00003B5C -- TODO: This is Sysregs's sceClkcSetBusGear() (sceSysreg_driver_63E1EE9C)
     
         sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000010, "phase0", &sysEventParam, NULL, 0, NULL); //0x00003B84
         if (g_PowerFreq.sm1Ops != NULL) { //0x00003B90
@@ -2562,7 +2568,6 @@ float scePowerGetBusClockFrequencyFloat(void)
 }
 
 //Subroutine scePower_34F9C463 - Address 0x00004348 - Aliases: scePower_driver_67BD889B
-// TODO: Verify function
 s32 scePowerGetPllClockFrequencyInt(void)
 {
     return g_PowerFreq.pllClockFrequencyInt;
@@ -2575,34 +2580,30 @@ float scePowerGetPllClockFrequencyFloat(void)
 }
 
 //Subroutine scePower_737486F2 - Address 0x00004360
-// TODO: Verify function
 s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
 {
     if (g_PowerFreq.sm1Ops != NULL)
         sceKernelDelayThread(60000000); //0x000043BC
 
-    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x0000439C
+    return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x0000439C
 }
 
 //Subroutine scePower_A4E93389 - Address 0x000043CC
-// TODO: Verify function
 s32 scePowerSetClockFrequency280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
-    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
+    return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
 }
 
 //Subroutine scePower_545A7F3C - Address 0x000043E8
-// TODO: Verify function
 s32 scePowerSetClockFrequency300(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
-    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
+    return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
 }
 
 //Subroutine scePower_EBD177D6 - Address 0x00004404 - Aliases: scePower_driver_EBD177D6
-// TODO: Verify function
 s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
-    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
+    return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency);
 }
 
 //Subroutine scePower_469989AD - Address 0x00004420 - Aliases: scePower_driver_469989AD
@@ -2617,7 +2618,7 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
         /* If we run as a PSP-2000 device or later, WLAN can be used without limiting the clock frequencies. */
         scePowerSetExclusiveWlan(0); //0x00004488
 
-    return scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468
+    return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468
 }
 
 //Subroutine sub_00004498 - Address 0x00004498

@@ -63,13 +63,13 @@ typedef enum {
  *
  * @return Always SCE_ERROR_OK.
  */
-typedef void (*ScePowerCallback)(int count, int arg, void *common);
+typedef void (*ScePowerCallback)(s32 count, s32 arg, void *common);
 
 /**
  * Registers a power service notification callback.
  *
  * @param slot The callback registration slot to use. Specify either a value between 0 - 15 or ::SCE_POWER_CALLBACKSLOT_AUTO.
- * @param cbid The callback UID obtained by ::SceKernelCreateCallback().
+ * @param cbid The callback UID obtained by ::sceKernelCreateCallback().
  *
  * @return SCE_ERROR_OK when @slot was set to ::SCE_POWER_CALLBACKSLOT_AUTO and registration succeeded.
  * @return 0 - 15 on success when specific slot was used.
@@ -93,14 +93,14 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *pMode);
 /* Clock frequency functions */
 
 /**
- * Get the CPU clock frequency.
+ * Gets the CPU clock frequency.
  *
  * @return The CPU clock frequency in MHz.
  */
 s32 scePowerGetCpuClockFrequencyInt(void);
 
 /**
- * Get the CPU clock frequency.
+ * Gets the CPU clock frequency.
  *
  * @remark The accuracy is identical to ::scePowerGetCpuClockFrequencyInt().
  *
@@ -109,7 +109,7 @@ s32 scePowerGetCpuClockFrequencyInt(void);
 float scePowerGetCpuClockFrequencyFloat(void);
 
 /**
- * Get the bus clock frequency.
+ * Gets the bus clock frequency.
  *
  * @remark The bus clock frequency always operates at 1/2 the PLL clock frequency.
  *
@@ -118,7 +118,7 @@ float scePowerGetCpuClockFrequencyFloat(void);
 s32 scePowerGetBusClockFrequencyInt(void);
 
 /**
- * Get the bus clock frequency.
+ * Gets the bus clock frequency.
  *
  * @remark The bus clock frequency always operates at 1/2 the PLL clock frequency.
  * @remark The accuracy is identical to ::scePowerGetBusClockFrequencyInt().
@@ -128,14 +128,14 @@ s32 scePowerGetBusClockFrequencyInt(void);
 float scePowerGetBusClockFrequencyFloat(void);
 
 /**
- * Get the PLL output clock frequency.
+ * Gets the PLL output clock frequency.
  *
  * @return The current PLL output clock frequency in MHz.
  */
 s32 scePowerGetPllClockFrequencyInt(void);
 
 /**
- * Get the PLL output clock frequency.
+ * Gets the PLL output clock frequency.
  *
  * @remark The accuracy is identical to ::scePowerGetPllClockFrequencyInt().
  *
@@ -144,7 +144,7 @@ s32 scePowerGetPllClockFrequencyInt(void);
 float scePowerGetPllClockFrequencyFloat(void);
 
 /**
- * Set clock frequencies.
+ * Sets clock frequencies.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmwares earlier than 2.80.
  *
@@ -154,7 +154,7 @@ float scePowerGetPllClockFrequencyFloat(void);
 s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Set clock frequencies.
+ * Sets clock frequencies.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 2.80.
  *
@@ -164,7 +164,7 @@ s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 b
 s32 scePowerSetClockFrequency280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Set clock frequencies.
+ * Sets clock frequencies.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 3.00.
  *
@@ -174,7 +174,7 @@ s32 scePowerSetClockFrequency280(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
 s32 scePowerSetClockFrequency300(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Set clock frequencies.
+ * Sets clock frequencies.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 3.50.
  *
@@ -184,9 +184,9 @@ s32 scePowerSetClockFrequency300(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
 s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Set clock frequencies.
+ * Sets clock frequencies.
  *
- * @param pllFrequency The PLL clock frequency in MHh. Specify either 190, 222, 266 or 333.
+ * @param pllFrequency The PLL clock frequency in MHz. Specify either 190, 222, 266 or 333.
  * @param cpuFrequency The CPU clock frequency in MHz. Specify a value between 1 - 333. Valid values have
  * to be less than or equal to the value specified for @p pllFrequency.
  * @param busFrequency The bus clock frequency in MHz. Must be exactly 1/2 of @p pllFrequency. In case of
@@ -195,6 +195,27 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
  * @return SCE_ERROR_OK on success, otherwise < 0.
  */
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
+
+/* WLAN functions */
+
+/** Specifies a device type which permits a maximum PLL clock frequency of 222 MHz when WLAN is active. */
+#define SCE_POWER_WLAN_COEXISTENCE_CLOCK_222MHz		0
+/** Specifies a device type which supports PLL clock frequencies of 266 MHz and 333 MHz when WLAN is active. */
+#define SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz		1
+
+/**
+ * Gets the maximum clock frequency allowed when WLAN is active.
+ *
+ * @remark For the PSP-100X, the PLL clock frequency cannot be set to 266 MHz or 333 MHz while WLAN is actice.
+ * However, for the PSP-2000 and later devices, the PLL clock frequency can be set to 266 MHz or 333 MHz while
+ * WLAN is active.
+ *
+ * @return ::SCE_POWER_WLAN_COEXISTENCE_CLOCK_222MHz or ::SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz on success,
+ * otherwise < 0.
+ */
+s32 scePowerCheckWlanCoexistenceClock(void);
+
+u8 scePowerGetWlanActivity(void);
 
 
  /** @} */
