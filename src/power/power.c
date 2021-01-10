@@ -2079,43 +2079,68 @@ s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
 }
 
 //Subroutine scePower_B8D7B3FB - Address 0x00003784 - Aliases: scePower_driver_B71A8B2F
-// TODO: Verify function
 s32 scePowerSetBusClockFrequency(s32 busFrequency)
 {
     s32 oldK1;
     s32 intrState;
     s32 status;
-    s32 pllClockFreq;
     s32 userLevel;
-    
-    pllClockFreq = ((s32)(g_PowerFreq.pllClockFrequencyInt + (g_PowerFreq.pllClockFrequencyInt >> 31))) >> 1;
-    if (busFrequency <= 0 || busFrequency <= pllClockFreq) //0x000037B0 & 0x000037CC
+    s32 actBusFrequency;
+    s32 halfPllClockFreq;
+
+    // 0x000037B8 - 0x000037C4
+    halfPllClockFreq = (g_PowerFreq.pllClockFrequencyInt < 0)
+        ? (g_PowerFreq.pllClockFrequencyInt + 1) / 2
+        : g_PowerFreq.pllClockFrequencyInt / 2;
+
+    /* The bus clock frequency cannot be < 0 or higher than 1/2 PLL clock frequency. */
+    if (busFrequency < PSP_CLOCK_BUS_FREQUENCY_MIN || busFrequency > halfPllClockFreq) // 0x000037B0 & 0x000037CC
+    {
         return SCE_ERROR_INVALID_VALUE;
+    }
+
+    oldK1 = pspShiftK1(); // 0x000037FC
+    intrState = sceKernelCpuSuspendIntr(); // 0x000037F8
+
+    actBusFrequency = busFrequency;
+
+    /* 
+     * The bus clock frequency is derived from the PLL clock frequency and set to 1/2 of  
+     * the PLL clock frequency. As such, the specified bus clock frequency is ignored.
+     * Going forward, the bus clock frequency can no longer be set directly but can only
+     * be set indirectly by setting the PLL frequency.
+     */
+    userLevel = sceKernelGetUserLevel(); // 0x00003800
+    if (userLevel < SCE_USER_LEVEL_VSH) // 0x0000380C
+    {
+        actBusFrequency = halfPllClockFreq; // 0x00003820
+    }
+
+    // 0x00003828 - 0x00003830
+    /* Make sure the bus frequency is inside its limits. */
+    actBusFrequency = pspMax(g_PowerFreq.scBusClockLowerLimit, pspMin(actBusFrequency, g_PowerFreq.scBusClockUpperLimit));
+
+    // 0x00003838 - 0x00003848
+    s32 quarterPllClockFreq = (g_PowerFreq.pllClockFrequencyInt < 0)
+        ? (g_PowerFreq.pllClockFrequencyInt + 3) / 4
+        : g_PowerFreq.pllClockFrequencyInt / 4;
+
+    actBusFrequency = pspMax(actBusFrequency, quarterPllClockFreq); // 0x0000384C
+
+    /* Set the bus clock frequency. */
+    status = sceClkcSetBusFrequency((float)actBusFrequency); // 0x00003854
+
+    /* Obtain the actually set bus clock frequency. */
+    float busFrequencyFloat = sceClkcGetBusFrequency(); // 0x0000385C
+    g_PowerFreq.busClockFrequencyFloat = busFrequencyFloat; // 0x00003868
+    g_PowerFreq.busClockFrequencyInt = (s32)busFrequencyFloat; // 0x00003870
     
-    oldK1 = pspShiftK1(); //0x000037FC
-    intrState = sceKernelCpuSuspendIntr(); //0x000037F8
+    /* The Graphic Engine's eDRAM operates at the bus clock speed. Refresh it now. */
+    scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); // 0x0000386C & 0x00003874
     
-    userLevel = sceKernelGetUserLevel(); //0x00003800
-    if (userLevel < 4) //0x0000380C
-        busFrequency = pllClockFreq; //0x00003820
-    
-    if (busFrequency >= g_PowerFreq.scBusClockLowerLimit) //0x00003828
-        busFrequency = pspMin(busFrequency, g_PowerFreq.scBusClockUpperLimit); //0x00003894
-    else 
-        busFrequency = g_PowerFreq.scBusClockLowerLimit; //0x00003830
-    
-    pllClockFreq = ((s32)(((u32)((s32)g_PowerFreq.pllClockFrequencyInt >> 31)) >> 30 + g_PowerFreq.pllClockFrequencyInt)) >> 2;
-    busFrequency = pspMax(busFrequency, pllClockFreq); //0x0000384C
-    status = sceClkcSetBusFrequency((float)busFrequency); //0x00003854
-    
-    float busFrequencyFloat = sceClkcGetBusFrequency(); //0x0000385C
-    g_PowerFreq.busClockFrequencyFloat = busFrequencyFloat; //0x00003868
-    g_PowerFreq.busClockFrequencyInt = (s32)busFrequencyFloat; //0x00003870
-    
-    scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); //0x0000386C & 0x00003874
-    
-    sceKernelCpuResumeIntr(intrState); //0x0000387C
-    pspSetK1(oldK1); //0x00003884
+    sceKernelCpuResumeIntr(intrState); // 0x0000387C
+
+    pspSetK1(oldK1); // 0x00003884
     return status;
 }
 

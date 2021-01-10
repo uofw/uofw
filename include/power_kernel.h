@@ -148,6 +148,18 @@ s32 scePowerGetPllClockFrequencyInt(void);
 float scePowerGetPllClockFrequencyFloat(void);
 
 /**
+ * Sets the bus clock frequency.
+ * 
+ * @param busFrequency The bus clock frequency in MHz.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @remark This function has been removed from SDK 3.70 and later. If still called,
+ * it will now always try to set the bus clock frequency to 1/2 PLL clock frequency.
+ */
+s32 scePowerSetBusClockFrequency(s32 busFrequency);
+
+/**
  * Sets clock frequencies. 
  * 
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 3.50.
