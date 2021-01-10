@@ -12,7 +12,7 @@ u8 g_buf[KIRK_CERT_LEN]; // 0x00001480
 typedef struct {
     u32 unk;          // 0x00000A40
     u32 unk1;         // 0x00000A44
-    u32 valid_pscode; // 0x00000A48
+    u32 found_pscode; // 0x00000A48
     u32 unk3;         // DAT_00000b40
     void *buf;        // DAT_afbf0010
     u32 unk4;         // DAT_afbf0014
@@ -69,7 +69,7 @@ s32 sub_00000190(void)
             return SCE_ERROR_NOT_FOUND;
     }
     
-    g_chkreg.valid_pscode = 1; // g_buf is valid
+    g_chkreg.found_pscode = 1; // pscode found
     return 0;
 }
 
@@ -82,13 +82,12 @@ s32 sub_0000020C(void)
     return 0;
 }
 
-
 // Subroutine module_start - Address 0x00000248 -- TODO
 s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {   
     g_chkreg.unk = 0;
     g_chkreg.unk1 = 0;
-    g_chkreg.valid_pscode = 0;
+    g_chkreg.found_pscode = 0;
     g_chkreg_sema = sceKernelCreateSema("SceChkreg", 0, 1, 1, NULL);
     return (g_chkreg_sema < 1);
 }
@@ -101,7 +100,7 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
     
     g_chkreg.unk = 0;
     g_chkreg.unk1 = 0;
-    g_chkreg.valid_pscode = 0;
+    g_chkreg.found_pscode = 0;
 
     if ((ret = sceKernelWaitSema(g_chkreg_sema, 1, &timeout)) == 0)
         sceKernelDeleteSema(g_chkreg_sema);
@@ -114,8 +113,8 @@ s32 sceChkreg_driver_59F8491D(u8 *code)
 {
     s32 ret = SCE_ERROR_SEMAPHORE;
 
-    if ((sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
-        if (((g_chkreg.valid_pscode != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
+    if ((sceKernelWaitSema(g_chkreg_sema, 1, NULL)) == 0) {
+        if (((g_chkreg.found_pscode != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
             code[0] = g_buf[1];
             code[1] = g_buf[0];
             code[2] = g_buf[3];
@@ -149,16 +148,16 @@ s32 sceChkreg_driver_54495B19(u32 arg0, u32 arg1)
     return ret;
 }
 
-// Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8 -- TODO
+// Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8 -- Done
 s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1) {
     s32 ret = SCE_ERROR_INVALID_INDEX;
 
     if (arg1 == 0) {
         ret = SCE_ERROR_SEMAPHORE;
 
-        if ((sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
-            if (((g_chkreg.valid_pscode != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
-                if (((u32)g_buf[6] << 0x18) >> 0x1a == 0x23)
+        if ((sceKernelWaitSema(g_chkreg_sema, 1, NULL)) == 0) {
+            if (((g_chkreg.found_pscode != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
+                if ((((u32)g_buf[6] << 0x18) >> 0x1a) == 0x23)
                     *arg0 = g_buf[6] << 6 | g_buf[7] >> 2;
                 else
                     ret = SCE_ERROR_INVALID_VALUE;
@@ -176,11 +175,10 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1) {
 s32 sceChkreg_driver_7939C851(void) {
     s32 ret = 0;
     u8 code[4];
-    u32 unk = 0;
+    u16 unk = 0;
     
     // TODO: Fix this, it doesn't seem right
-    ret = sceChkreg_driver_59F8491D(code);
-    if (ret == 0) {
+    if ((ret = sceChkreg_driver_59F8491D(code)) == 0) {
         ret = 0;
         
         switch(unk) {
