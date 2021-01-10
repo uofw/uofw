@@ -170,6 +170,38 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
  */
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_37MHz		(1 << 0)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_148MHz		(1 << 1)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_190MHz		(1 << 2)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_222MHz		(1 << 3)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_266MHz		(1 << 4)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_333MHz		(1 << 5)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_19MHz		(1 << 8)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_74MHz		(1 << 9)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_96MHz		(1 << 10)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_111MHz		(1 << 11)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_133MHz		(1 << 12)
+#define SCE_POWER_PLL_CLOCK_ROUND_UP_166MHz		(1 << 13)
+
+/**
+ * Sets a use mask for the PLL clock. Allows to set fine-grained 'round up' steps for PLL clock frequencies
+ * set via ::scePowerSetClockFrequency(). The actual PLL clock frequency will be round up to the smallest frequency
+ * which is greater than or equal to the specified PLL clock frequency.
+ * 
+ * @param useMask The mask containing the different round up steps.
+ * 
+ * @par Example: Given the following PLL use mask and custom PLL frequency of 166 MHz
+ * @code
+ * // Pressing the select will reset the idle timer. No other button will reset it.
+ * scePowerSetPllUseMask(SCE_POWER_PLL_CLOCK_ROUND_UP_148MHz | SCE_POWER_PLL_CLOCK_ROUND_UP_190MHz | SCE_POWER_PLL_CLOCK_ROUND_UP_333MHz);
+ * scePowerSetClockFrequency(166, 166, 83);
+ * @endcode
+ * the specified PLL frequency will be round up to 190MHz by the power service.
+ * 
+ * @return Always SCE_ERROR_OK.
+*/
+s32 scePowerSetPllUseMask(s32 useMask);
+
 /* WLAN functions */
 
 /**

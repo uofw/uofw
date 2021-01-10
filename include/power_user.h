@@ -137,8 +137,6 @@ s32 scePowerGetPllClockFrequencyInt(void);
 /**
  * Gets the PLL output clock frequency.
  *
- * @remark The accuracy is identical to ::scePowerGetPllClockFrequencyInt().
- *
  * @return The current PLL output clock frequency in MHz.
  */
 float scePowerGetPllClockFrequencyFloat(void);

@@ -24,6 +24,16 @@ SCE_MODULE_REBOOT_BEFORE("_scePowerModuleRebootBefore");
 SCE_MODULE_REBOOT_PHASE("_scePowerModuleRebootPhase");
 SCE_SDK_VERSION(SDK_VERSION);
 
+#define PSP_CLOCK_PLL_FREQUENCY_MIN                     19
+#define PSP_CLOCK_PLL_FREQUENCY_MAX                     333
+#define PSP_1000_CLOCK_PLL_FREQUENCY_MAX_WLAN_ACTIVE    222
+
+#define PSP_CLOCK_CPU_FREQUENCY_MIN                     1
+#define PSP_CLOCK_CPU_FREQUENCY_MAX                     333
+
+#define PSP_CLOCK_BUS_FREQUENCY_MIN                     1
+#define PSP_CLOCK_BUS_FREQUENCY_MAX                     167
+
 #define BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT         (26)
 #define BARYON_DATA_LOW_BATTERY_CAP_SLOT                (28)
 
@@ -127,9 +137,9 @@ typedef struct {
 
 typedef struct {
     u32 mutexId; //0
-    u32 sm1Ops; //4
+    void *pSm1Ops; //4
     u32 pllOutSelect; //8
-    u32 pllUseMask; //12
+    s32 pllUseMask; //12
     s32 pllClockFrequencyInt; //16
     s32 cpuClockFrequencyInt; //20
     s32 busClockFrequencyInt; //24
@@ -223,9 +233,9 @@ typedef struct {
 } ScePowerBattery; //size: 216
 
 typedef struct {
-    u32 frequency;
-    u32 unk4;
-} ScePowerPllConfiguration; //size: 96
+    u32 frequency; // 0
+    u32 pllUseMaskBit; // 4
+} ScePowerPllConfiguration; //size: 8
 
 enum ScePowerWlanActivity {
     SCE_POWER_WLAN_DEACTIVATED = 0,
@@ -294,7 +304,23 @@ SceSysEventHandler g_PowerSysEv = {
     }  
 }; //0x00007040
 
-const ScePowerPllConfiguration g_pllSettings[12]; //0x00006F70
+#define POWER_PLL_CONFIGURATIONS            (sizeof g_pllSettings / sizeof g_pllSettings[0])
+const ScePowerPllConfiguration g_pllSettings[] = {
+    { .frequency = 19, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_19MHz }, /* 0.057 (~ 1/18) */
+    { .frequency = 37, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_37MHz }, /* 0.111 (1/9) */
+    { .frequency = 74, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_74MHz }, /* 0.222 (2/9)*/
+    { .frequency = 96, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_96MHz }, /* 0.286 (~5/18) */
+    { .frequency = 111, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_111MHz }, /* 0.333 (3/9) */
+    { .frequency = 133, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_133MHz }, /* 0.4 (7/18) */
+    { .frequency = 148, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_148MHz }, /* 0.444 (4/9)  */
+    { .frequency = 166, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_166MHz }, /* 0.5 (9/18) */
+    { .frequency = 190, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_190MHz }, /* 0.571 (5/9) */
+    { .frequency = 222, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_222MHz }, /* 0.667 (6/9) */
+    { .frequency = 266, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_266MHz }, /* 0.8 (7/9) */
+    { .frequency = 333, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_333MHz }, /* 1 (9/9) */
+}; //0x00006F70 -- size 96
+
+
 ScePower g_Power; //0x00007080
 ScePowerSwitch g_PowerSwitch; //0x0000729C
 ScePowerIdle g_PowerIdle; //0x0000C400
@@ -1966,7 +1992,7 @@ static u32 _scePowerFreqInit(void)
     
     memset(&g_PowerFreq, 0, sizeof g_PowerFreq); //0x0000355C
     
-    g_PowerFreq.sm1Ops = sceKernelSm1ReferOperations(); //0x00003564
+    g_PowerFreq.pSm1Ops = sceKernelSm1ReferOperations(); //0x00003564
     g_PowerFreq.scBusClockLowerLimit = 24; //0x00003580
     g_PowerFreq.pllClockLowerLimit = 1; //0x00003584
     g_PowerFreq.pllClockUpperLimit = 333; //0x00003588
@@ -1990,11 +2016,11 @@ static u32 _scePowerFreqInit(void)
     
     g_PowerFreq.pllUseMask = 0x3F3F; //0x000035D0
     
-    if (g_PowerFreq.pllOutSelect == 5) { //0x000035E0
+    if (g_PowerFreq.pllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz) { //0x000035E0
         g_PowerFreq.unk56 = 1; //0x000036B0
         g_PowerFreq.unk64 = 1;
         g_PowerFreq.unk72 = 1;
-    } else if (g_PowerFreq.pllOutSelect == 4) { //0x000035EC
+    } else if (g_PowerFreq.pllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_266MHz) { //0x000035EC
         g_PowerFreq.unk56 = 1; //0x000036A0
         g_PowerFreq.unk64 = 0;
         g_PowerFreq.unk72 = 0;
@@ -2093,179 +2119,295 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
     return status;
 }
 
+
 //Subroutine sub_00003898 - Address 0x00003898 
-// TODO: Verify function
 static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
 {
     s32 oldK1;
-    u32 frequency; 
-    u32 unk1;
+    u32 newPllOutSelect; // $s4
+    s32 actPllFrequency; // $s0
+    s32 actCpuFrequency; // $s1
+    s32 actBusFrequency; // $s2
     s32 status;
-    
-    if ((pllFrequency < 19 || pllFrequency > 333) || cpuFrequency < 1) //0x000038A4 & 0x000038A8 & 0x000038BC & 0x000038E0
+
+    // 0x00003898 - 0x0000391C
+
+    /*
+     * The following clock frequency conditions need to be met:
+     *      1) PLL clock frequency can only be between [19, 333]
+     *      2) CPU clock frequency can only be between [1, 333]
+     *      3) Bus clock frequency can only be between [1, 167]
+     * 
+     * In addition, CPU and bus clock frequencies are derived from the PLL clock frequency.
+     * As such, we get the following additional conditions to be met:
+     * 
+     *      4) The CPU clock frequency cannot be higher than the PLL clock frequency.
+     *      5) The bus clock frequency cannot be higher than 1/2 PLL clock frequency.
+     */
+    if (pllFrequency < PSP_CLOCK_PLL_FREQUENCY_MIN || pllFrequency > PSP_CLOCK_PLL_FREQUENCY_MAX
+        || cpuFrequency < PSP_CLOCK_CPU_FREQUENCY_MIN || cpuFrequency > PSP_CLOCK_CPU_FREQUENCY_MAX
+        || busFrequency < PSP_CLOCK_BUS_FREQUENCY_MIN || busFrequency > PSP_CLOCK_BUS_FREQUENCY_MAX
+        || pllFrequency < cpuFrequency || pllFrequency < 2 * busFrequency)
+    {
         return SCE_ERROR_INVALID_VALUE;
-    
-    if (cpuFrequency > 333 || busFrequency < 1) //0x000038E8 - 0x000038FC
-        return SCE_ERROR_INVALID_VALUE;
-    
-    if (busFrequency > 167 || pllFrequency < cpuFrequency) //0x00003904 & 0x00003910
-        return SCE_ERROR_INVALID_VALUE;
-    
-    if (pllFrequency < (busFrequency * 2)) //0x00003918
-        return SCE_ERROR_INVALID_VALUE;
-    
-    if (pllFrequency >= g_PowerFreq.pllClockLowerLimit) //0x00003968
-        frequency = pspMin(pllFrequency, g_PowerFreq.pllClockUpperLimit); //loc_00003E5C
-    else 
-        frequency = g_PowerFreq.pllClockLowerLimit; //0x00003970
-    
-    //0x00003980 - 0x000039BC
-    unk1 = -1; //0x00003984
+    }
+
+    // 0x00003960 - 0x00003970
+    /* Adjust the specified PLL clock frequency so that it is in [PllLowerLimit, PllUpperLimit]. */
+    actPllFrequency = pspMax(g_PowerFreq.pllClockLowerLimit, pspMin(pllFrequency, g_PowerFreq.pllClockUpperLimit));
+
+    /* 
+     * The PLL actually can only operate at a fixed set of clock frequencies. For example, 
+     * clock frequenies 96, 133, 233, 266, 333. It can be configured through setting the 
+     * [g_PowerFreq.pllUseMask] how many of these clock frequencies will be used to determine
+     * the actual PLL clock frequency given the specified input. This works as follows:
+     * 
+     * Given a clock frequency input f, we scan the PLL clock frequency list (sorted in ascended order)
+     * for the first fixed frequency f_fixed, so that f <= f_fixed.
+     * 
+     * Example: Given a list of fixed frequencies {74, 166, 190, 224, 333} and input 108 MHz,
+     * we will actually attempt to set the PLL clock frequency to 166 MHz.
+     */
+    newPllOutSelect = 0xFFFFFFFF; // 0x00003984
     u32 i;
-    for (i = 0; i < 12; i++) {
-        if (((g_pllSettings[i].unk4 << 1) & g_PowerFreq.pllUseMask) == 0) //0x000039A0
+    for (int i = 0; i < POWER_PLL_CONFIGURATIONS; i++)
+    {
+        /* Filter out all PLL settings which do not match out PLL use mask. */
+        if (!((1 << g_pllSettings[i].pllUseMaskBit) & g_PowerFreq.pllUseMask)) // 0x000039A0
+        {
             continue;
-        
-        if (g_pllSettings[i].frequency >= frequency) { //0x000039B0
-            frequency = g_pllSettings[i].frequency; //0x000039B4
-            unk1 = g_pllSettings[i].unk4; //0x00003E58
+        }
+
+        if (g_pllSettings[i].frequency >= actPllFrequency) // 0x000039B0
+        {
+            actPllFrequency = g_pllSettings[i].frequency; // 0x000039B0
+            newPllOutSelect = g_pllSettings[i].pllUseMaskBit; // 0x00003E58
             break;
         }
     }
-    if (unk1 < 0) { //0x000039C0
-        frequency = 333; //0x000039C4
-        unk1 = 5; //0x00003E50
+
+    // 0x000039C0
+
+    /* 
+     * If no fixed PLL clock frequency was found equal to or above the specified frequency,
+     * we default to use the highest possible clock frequency -- PSP_CLOCK_PLL_FREQUENCY_MAX (333 MHz).
+    */
+    if (newPllOutSelect == 0xFFFFFFFF)
+    {
+        actPllFrequency = PSP_CLOCK_PLL_FREQUENCY_MAX; // 0x000039C4
+        newPllOutSelect = SCE_SYSREG_PLL_OUT_SELECT_333MHz; // 0x00003E50
     }
+
+    // 0x000039D4 - 0x000039DC
+    actCpuFrequency = pspMax(g_PowerFreq.scCpuClockLowerLimit, pspMin(cpuFrequency, g_PowerFreq.scCpuClockUpperLimit));
+    actCpuFrequency = pspMin(actCpuFrequency, actPllFrequency); //0x000039F0
     
-    if (cpuFrequency >= g_PowerFreq.scCpuClockLowerLimit) //0x000039D4
-        cpuFrequency = pspMin(cpuFrequency, g_PowerFreq.scCpuClockUpperLimit); //0x00003E48
-    else 
-        cpuFrequency = g_PowerFreq.scCpuClockLowerLimit; //0x000039DC
+    // 0x000039EC - 0x000039F4
+    actBusFrequency = pspMax(g_PowerFreq.scBusClockLowerLimit, pspMin(busFrequency, g_PowerFreq.scBusClockUpperLimit));
     
-    cpuFrequency = pspMin(cpuFrequency, frequency); //0x000039F0
-    
-    if (busFrequency >= g_PowerFreq.scBusClockLowerLimit) //0x000039EC
-        busFrequency = pspMin(busFrequency, g_PowerFreq.scBusClockUpperLimit); //0x00003E40
-    else 
-        busFrequency = g_PowerFreq.scBusClockLowerLimit; //0x000039F4
-    
-    oldK1 = pspShiftK1(); //0x00003A10
+    oldK1 = pspShiftK1(); // 0x00003A10
     
     status = sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); //0x00003A18 
-    if (status < SCE_ERROR_OK) { //0x00003A20
+    if (status < SCE_ERROR_OK) // //0x00003A20
+    {
         pspSetK1(oldK1);
         return status;
     }
-    
-    status = scePowerGetWlanActivity(); //0x00003A28
-    if (status == SCE_POWER_WLAN_ACTIVATED) { //0x00003A30
-         status = scePowerCheckWlanCondition(frequency); //0x00003A3C
-         if (status < SCE_ERROR_OK) { //0x00003A44
-             u32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00003E08
-             if (sdkVersion > 0x0200000F) { //0x00003E18
-                 sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003DF4
-                 
-                 pspSetK1(oldK1); //0x00003DFC
-                 return status; //0x00003E04
-             }
-             frequency = 222; //0x00003E1C
-             cpuFrequency = 222; //0x00003E24
-             busFrequency = 111; //0x00003E2C
-             unk1 = 4; //0x00003E20
-         }
-    }
-    status = sceKernelGetUserLevel(); //0x00003A4C
-    if (status < 4) //0x00003A58
-        busFrequency = ((s32)((frequency >> 31) + frequency)) >> 31; //0x00003A60 - 0x00003A68
-    
-    scePowerLockForKernel(0); //0x00003A6C
-    
-    if (g_PowerFreq.pllOutSelect != unk1) { //0x00003A78
-        SceSysEventParam sysEventParam;
-        sysEventParam.unk0 = 8;
-        sysEventParam.unk4 = frequency;
-        s32 result = 0;
-        SceSysEventHandler *sysEventHandler = NULL;
-        status = sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000000, "query", &sysEventParam, &result, 1, &sysEventHandler); //0x00003AAC
-        if (status < SCE_ERROR_OK) { //0x00003AB4
-            sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000001, "cancel", &sysEventParam, NULL, 0, NULL); //0x00003DE0
-            scePowerUnlockForKernel(0); //0x00003DE8
+
+    /* WHen WLAN is active, the specified PLL clock frequency might not be applicable. */
+    if (scePowerGetWlanActivity() != SCE_POWER_WLAN_DEACTIVATED
+        && (status = scePowerCheckWlanCondition(actPllFrequency)) < SCE_ERROR_OK) // 0x00003A28 - 0x00003A44
+    {
+        /* 
+         * The specified PLL clock frequency has been set too high. On SDK versions above 2.00, we return an error.
+         * On earlier versions, we "auto-correct" the PLL clock frequency to the highest frequency available when 
+         * WLAN is active.
+         */
+        u32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00003E08
+        if (sdkVersion > 0x0200000F) // 0x00003E18
+        {
             sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003DF4
+
+            pspSetK1(oldK1); //0x00003DFC
+            return status; //0x00003E04
+        }
+
+        // 0x00003E1C - 0x00003E2C
+        actPllFrequency = PSP_1000_CLOCK_PLL_FREQUENCY_MAX_WLAN_ACTIVE;
+        actCpuFrequency = PSP_1000_CLOCK_PLL_FREQUENCY_MAX_WLAN_ACTIVE;
+        actBusFrequency = PSP_1000_CLOCK_PLL_FREQUENCY_MAX_WLAN_ACTIVE / 2;
+
+        newPllOutSelect = SCE_SYSREG_PLL_OUT_SELECT_222MHz;
+    }
+
+    status = sceKernelGetUserLevel(); // 0x00003A4C
+    if (status < SCE_USER_LEVEL_VSH) // 0x00003A58
+    {
+        /* 
+         * The bus clock frequency is automatically derived from the PLL clock frequency and set to operate at 
+         * 1/2 of the PLL clock frequency. 
+         */
+        actBusFrequency = (((u32)actPllFrequency >> 31) + actPllFrequency) >> 1; // 0x00003A60 - 0x00003A68
+    }
+
+    scePowerLockForKernel(0); //0x00003A6C
+
+    /* Check if we need to actually change the speed the PLL clock is operating on. */
+    if (g_PowerFreq.pllOutSelect != newPllOutSelect) // 0x00003A78
+    {
+        /* 
+         * The spcified PLL clock frequency "does not fit" in the current PLL clock frequency 
+         * which is chosen out of a fixed set of frequencies (see comment above). Change the 
+         * PLL clock frequency to the fixed clock frequency we've determined above.
+         */
+
+        SceSysEventParam sysEventParam; // $sp
+        sysEventParam.unk0 = 8;
+        sysEventParam.unk4 = actPllFrequency; // 0x00003AA4
+        s32 result = 0; // $sp + 16
+        SceSysEventHandler *pSysEventBreakHandler = NULL; // $sp + 20
+
+        status = sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000000, "query", &sysEventParam, 
+            &result, 1, &pSysEventBreakHandler); // 0x00003AAC
+
+        if (status < SCE_ERROR_OK) // 0x00003AB4
+        {
+            sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000001, "cancel", &sysEventParam, 
+                NULL, 0, NULL); //0x00003DE0
+
+            scePowerUnlockForKernel(0); // 0x00003DE8
+            sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); // 0x00003DF4
+
             pspSetK1(oldK1);
             return status;
         }
-        
-        if (unk1 == 5 && g_PowerFreq.unk64 == 0) { //0x00003AC0 & 0x00003D88
-            if (g_PowerFreq.unk68 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68) //0x00003D94 & 0x00003DA0
+
+        if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.unk64 == 0) // 0x00003AC0 && 0x00003D88
+        {
+            if (g_PowerFreq.unk68 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68)
+            {
                 sceSysconCtrlVoltage(3, g_PowerFreq.unk68); //0x00003DA8
-            g_PowerFreq.unk64 = 1; //0x00003DB4
+            }
+
+            g_PowerFreq.unk64 = 1; // 0x00003DB4
         }
-        if (unk1 >= 6 && g_PowerFreq.unk56 == 0 && g_PowerFreq.tachyonVoltage >= 0) { //0x00003AD0 & 0x00003AE0 & 0x00003AEC
-            sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonVoltage); //0x00003AF4
-            g_PowerFreq.unk56 = 1; //0x00003B00
+
+        if ((newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_266MHz || newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz) 
+            && g_PowerFreq.unk56 == 0 && g_PowerFreq.tachyonVoltage >= 0) // 0x00003AD0 & 0x00003AEC
+        {
+            sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonVoltage); // 0x00003AF4
+            g_PowerFreq.unk56 = 1; // 0x00003B00
         }
-        if (unk1 == 5 && g_PowerFreq.unk72 == 0) { //0x00003B08 & 0x00003D50
-            if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) //0x00003D5C & 0x00003D68
-                sceDdr_driver_0BAAE4C5(); //0x00003D70
-            g_PowerFreq.unk72 = 1; //0x00003D84
+
+        if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.unk72 == 0) // 0x00003B08 & 0x00003D50
+        {
+            if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D5C & 0x00003D68
+            {
+                sceDdr_driver_0BAAE4C5(); // 0x00003D70
+            }
+
+            g_PowerFreq.unk72 = 1;
         }
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000002, "start", &sysEventParam, NULL, 0, NULL); //0x00003B30
-        sceDisplayWaitVblankStart(); //0x00003B38
-    
-        u32 intrState = sceKernelCpuSuspendIntr(); //0x00003B40
-    
-        sceClkcSetBusGear(511, 511); //0x00003B50 -- TODO: This is Sysreg's sceClkcSetCpuGear() (sceSysreg_driver_3F6F2CC7)) 
-        sceSysreg_driver_63E1EE9C(511, 511); //0x00003B5C -- TODO: This is Sysregs's sceClkcSetBusGear() (sceSysreg_driver_63E1EE9C)
-    
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000010, "phase0", &sysEventParam, NULL, 0, NULL); //0x00003B84
-        if (g_PowerFreq.sm1Ops != NULL) { //0x00003B90
-            void (*func)(u32 unk1, u32 unk2) = (*func)(u32, u32)*(u32 *)(((void *)(g_PowerFreq.sm1Ops)) + 48);
-            func(unk1, -1); //0x00003B94 & 0x00003D3C
+
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000002, "start", &sysEventParam, 
+            NULL, 0, NULL); // 0x00003B30
+
+        sceDisplayWaitVblankStart(); // 0x00003B38
+
+        s32 intrState = sceKernelCpuSuspendIntr(); // 0x00003B40 -- $s6
+
+        /* 
+         * Set the ratio used to derive the CPU clock and bus clock frequencies from the PLL clock frequency.
+         * Here, the ratio is 511/511 = 1, so the new clock speeds are __roughly__:
+         *   CPU clock frequency = PLL clock frequency * [511/511] = PLL clock frequency
+         *   Bus clock frequency = (PLL clock frequency / 2) * [511/511] = 1/2 PLL clock frequency
+         */
+        sceClkcSetCpuGear(511, 511); // 0x00003B50
+        sceClkcSetBusGear(511, 511); // 0x00003B5C
+
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000010, "phase0", &sysEventParam, 
+            NULL, 0, NULL); // 0x00003B84
+
+        if (g_PowerFreq.pSm1Ops != NULL) //0x00003B90
+        {
+            void (*sm1Op)(s32, s32) = (void (*)(s32, s32))*(u32*)(g_PowerFreq.pSm1Ops + 44);
+            sm1Op(newPllOutSelect, -1); // 0x00003D3C
         }
-        sceDdrChangePllClock(unk1); //0x00003B98
-    
-        float pllFrequency = sceSysregPllGetFrequency(); //0x00003BA0 -- sceSysreg_driver_A5CC6025
-        g_PowerFreq.pllClockFrequencyFloat = pllFrequency(); //0x00003BAC
-        g_PowerFreq.pllClockFrequencyInt = (u32)pllFrequency; //0x00003BB8
-    
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000011, "phase1", &sysEventParam, NULL, 0, NULL); //0x00003BD4
-    
-        sceKernelCpuResumeIntr(intrState); //0x00003BDC
-        
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000020, "end", &sysEventParam, NULL, 0, NULL); //0x00003C04
-        
-        if (unk1 != 5 && g_PowerFreq.unk72 == 1) { //0x00003C10 & 0x00003C1C
-            if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk78 != g_PowerFreq.unk76) //0x00003D14 & 0x00003D20
-                sceDdr_driver_0BAAE4C5(); //0x00003D28 -- TODO: Check for arguments.
-            g_PowerFreq.unk72 = 0; //0x00003D34
+
+        /* 
+         * Actually change the PLL clock frequency now. Set it to the determined fixed frequency
+         * (so >= the specified requested frequency).
+         */
+        sceDdrChangePllClock(newPllOutSelect); // 0x00003B98
+        g_PowerFreq.pllOutSelect = newPllOutSelect; // 0x00003BA4
+
+        /* Get the actual PLL clock frequency. */
+        float pllFrequency = sceSysregPllGetFrequency(); // 0x00003BA0
+        g_PowerFreq.pllClockFrequencyFloat = pllFrequency; // 0x00003BAC
+        g_PowerFreq.pllClockFrequencyInt = (s32)pllFrequency; // 0x00003BA8 & 0x00003BB8
+
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000011, "phase1", &sysEventParam, 
+            NULL, 0, NULL); // 0x00003BD4
+
+        sceKernelCpuResumeIntr(intrState); // 0x00003BDC
+
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000020, "end", &sysEventParam, 
+            NULL, 0, NULL); //0x00003C04
+
+        if (newPllOutSelect != 5 && g_PowerFreq.unk72 == 1) // 0x00003C10 & 0x00003C1C
+        {
+            if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D14 & 0x00003D20
+            {
+                sceDdr_driver_0BAAE4C5(); // 0x00003D28
+            }
+            
+            g_PowerFreq.unk72 = 0; // 0x00003D34
         }
-        if (unk1 >= 6 && g_PowerFreq.unk56 == 1 && g_PowerFreq.unk62 >= 0) { //0x00003C28 & 0x00003C3C & 0x00003CFC
-            sceSysconCtrlTachyonVoltage(g_PowerFreq.unk62); //0x00003D04
-            g_PowerFreq.unk56 = 0; //0x00003D10
+
+        if (newPllOutSelect != 4 && newPllOutSelect != 5 && g_PowerFreq.unk56 == 1 && g_PowerFreq.unk62 >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
+        {
+            sceSysconCtrlTachyonVoltage(g_PowerFreq.unk62); // 0x00003D04
+            g_PowerFreq.unk64 = 0; // 0x00003D10
         }
-        if (unk1 != 5 && g_PowerFreq.unk64 == 1) { //0x00003C48 & 0x00003C58
-            if (g_PowerFreq.unk70 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68) //0x00003CD4 & 0x00003CE0
-                sceSysconCtrlVoltage(1, g_PowerFreq.unk70); //0x00003CE8
-            g_PowerFreq.unk64 = 0; //0x00003CF8
+
+        if (newPllOutSelect != 5 && g_PowerFreq.unk64 == 1) // 0x00003C48 & 0x00003C58
+        {
+            if (g_PowerFreq.unk70 >= 0 && g_PowerFreq.unk68 != g_PowerFreq.unk70) // 0x00003CFC
+            {
+                sceSysconCtrlVoltage(3, g_PowerFreq.unk70); // 0x00003CE8
+            }
+
+            g_PowerFreq.unk64 = 0; // 0x00003CF8
         }
     }
-    s32 tmpFrequency = ((s32)((frequency >> 31) + frequency)) >> 1; //	0x00003C68
-    if (tmpFrequency == busFrequency) { //0x00003C6C
-        sceClkcSetBusGear(511, 511); //0x00003CA4
-            
-        float busFrequencyFloat = sceClkcGetBusFrequency(); //0x00003CAC
-        g_PowerFreq.busClockFrequencyFloat = busFrequencyFloat; //0x00003CB8
-        g_PowerFreq.busClockFrequencyInt = (u32)busFrequencyFloat; //0x00003CC0
-            
-        scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); //0x00003948
-    } else {
-        scePowerSetBusClockFrequency(busFrequency); //0x00003C74
+
+    // loc_00003C60
+
+    actPllFrequency = (((u32)actPllFrequency >> 31) + actPllFrequency) >> 1; // 0x00003C60 - 0x00003C68
+    if (actPllFrequency == actBusFrequency) // 0x00003C6C
+    {
+        /*
+         * Set the ratio used to derive bus clock frequency from the PLL clock frequency.
+         * Here, the ratio is 511/511 = 1, so the new clock speeds are __roughly__:
+         *   Bus clock frequency = (PLL clock frequency / 2) * [511/511] = 1/2 PLL clock frequency
+         */
+        sceClkcSetBusGear(511, 511); // 0x00003CA4
+
+        float busFrequencyFloat = sceClkcGetBusFrequency(); // 0x00003CAC
+        g_PowerFreq.busClockFrequencyFloat = busFrequencyFloat; // 0x00003CB8
+        g_PowerFreq.busClockFrequencyInt = (s32)busFrequencyFloat; // 0x00003CC0
+
+        /* The Graphic Engine's eDRAM operates at the bus clock speed. Refresh it now. */
+        scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); // 0x00003948
     }
-    scePowerSetCpuClockFrequency(cpuFrequency); //0x00003C7C
-        
-    scePowerUnlockForKernel(0); //0x00003C84
-    sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003C90
-    pspSetK1(oldK1); //0x00003C98
+
+    /* Now set the CPU clock frequency. */
+    scePowerSetCpuClockFrequency(actCpuFrequency); // 0x00003C7C
+
+    scePowerUnlockForKernel(0); // 0x00003C84
+    sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); // 0x00003C90
+
+    pspSetK1(oldK1); // 0x00003C98
     return SCE_ERROR_OK;
 }
 
@@ -2545,7 +2687,7 @@ u32 scePowerLimitPllClock(s32 lowerLimit, s32 upperLimit)
 
 //Subroutine scePower_driver_13D7CCE4 - Address 0x00004308
 // TODO: Verify function
-u32 scePowerSetPllUseMask(u32 useMask)
+s32 scePowerSetPllUseMask(s32 useMask)
 {
     g_PowerFreq.pllUseMask = useMask;
     return SCE_ERROR_OK;
