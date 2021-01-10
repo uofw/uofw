@@ -6,8 +6,8 @@ SCE_MODULE_INFO("sceChkreg", SCE_MODULE_KERNEL | SCE_MODULE_KIRK_SEMAPHORE_LIB |
                               | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 9);
 SCE_SDK_VERSION(SDK_VERSION);
 
-SceUID g_chkreg_sema;    // 0x00001538
 u8 g_buf[KIRK_CERT_LEN]; // 0x00001480
+SceUID g_chkreg_sema;    // 0x00001538
 
 typedef struct {
     u32 unk;          // 0x00000A40
@@ -84,7 +84,11 @@ s32 sub_0000020C(void)
 
 // Subroutine module_start - Address 0x00000248 -- TODO
 s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
-{   
+{
+    u32 i = 0;
+    for (i = 0; i < KIRK_CERT_LEN; i++)
+        g_buf[i] = 0;
+    
     g_chkreg.unk = 0;
     g_chkreg.unk1 = 0;
     g_chkreg.found_pscode = 0;
@@ -97,6 +101,10 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
 {
     s32 ret = 0;
     SceUInt timeout = 1000000;
+
+    u32 i = 0;
+    for (i = 0; i < KIRK_CERT_LEN; i++)
+        g_buf[i] = 0;
     
     g_chkreg.unk = 0;
     g_chkreg.unk1 = 0;
