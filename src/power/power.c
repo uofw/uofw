@@ -179,8 +179,8 @@ typedef struct {
     s32 isDdrMaxStrength; // 72
     s16 unk76;
     s16 unk78;
-    u32 geEdramRefreshMode; //80
-    u32 oldGeEdramRefreshMode; //84
+    s32 geEdramRefreshMode; //80
+    s32 oldGeEdramRefreshMode; //84
     u16 unk88;
     u16 scCpuClockLowerLimit; //90
     u16 scCpuClockUpperLimit; //92
@@ -2631,8 +2631,7 @@ s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode)
 }
 
 //Subroutine scePower_driver_C520F5DC - Address 0x00003FB8
-// TODO: Verify function
-u32 scePowerGetGeEdramRefreshMode(void)
+s32 scePowerGetGeEdramRefreshMode(void)
 {
     return g_PowerFreq.geEdramRefreshMode;
 }

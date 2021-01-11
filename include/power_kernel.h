@@ -288,7 +288,14 @@ s32 scePowerCheckWlanCondition(u32 freq);
 u8 scePowerGetWlanActivity(void);
 
 /**
- * Set the Graphic Engine's eDRAM refresh mode.
+ * Gets the Grahpic Engine's current eDRAM refresh mode.
+ * 
+ * @return The refresh mode.
+ */
+s32 scePowerGetGeEdramRefreshMode(void);
+
+/**
+ * Sets the Graphic Engine's eDRAM refresh mode.
  * 
  * @param geEdramRefreshMode The refresh mode. Pass either 0 or 1.
  * 
