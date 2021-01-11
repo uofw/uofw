@@ -16,17 +16,17 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 u8 g_buf[KIRK_CERT_LEN]; // 0x00001480
 SceUID g_chkreg_sema;    // 0x00001538
+u32 unk;                 // 0x00001540
 
 typedef struct {
+    u8 buf[0x38];     // 0x00000A04
     u32 unk;          // 0x00000A40
     u32 unk1;         // 0x00000A44
     u32 found_pscode; // 0x00000A48
-    u32 unk3;         // 0x00000b40
-    u8 unk4[0x14];    // 0x000009BC
-    u8 buf[0x38];     // 0xAFBF0010 - 0xAFBF0048
-} g_chkreg_struct;
+    u8 unk2[0x14];    // 0x000009BC
+} g_chkreg_struct;    // 0x00000A00 - 0x00000A80
 
-g_chkreg_struct g_chkreg = { 0, 0, 0, 0, { 0 }, { 0 } };
+g_chkreg_struct g_chkreg = { { 0 }, 0, 0, 0, { 0 } };
 
 // Declarations
 s32 sceIdStorageReadLeaf(u16 key, void *buf);
@@ -225,25 +225,26 @@ s32 sceChkreg_driver_7939C851(void) {
     return ret;
 }
 
-// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- TODO: Cleanup/Verify
+// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- Done
 s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
     s32 ret = 0;
     s32 error = SCE_ERROR_SEMAPHORE;
 
     if ((ret = sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
-        g_chkreg.unk3 = 0x34;
+        unk = 0x34;
         u32 i = 0;
         
         for (i = 0; i < 0x14; i++)
-            g_chkreg.buf[0x4 + i] = g_chkreg.unk4[i];
+            g_chkreg.buf[0x4 + i] = g_chkreg.unk2[i]; // 0xA04 + 0x4 = 0xA08
         
         for (i = 0; i < 0x10; i++)
-            g_chkreg.buf[0x18 + i] = (arg0[i] + 0xD4);
+            g_chkreg.buf[0x18 + i] = (arg0[i] + 0xD4); // 0xA04 + 0x4 + 0x14 = 0xA1C 
         
         for (i = 0; i < 0x10; i++)
-            g_chkreg.buf[0x28 + i] = (arg0[i] + 0x140);
+            g_chkreg.buf[0x28 + i] = (arg0[i] + 0x140); // 0xA04 + 0x4 + 0x14 + 0x10 = 0xA2C
             
         error = 0;
+        
         if ((ret = sceUtilsBufferCopyWithRange(g_chkreg.buf, 0x38, g_chkreg.buf, 0x38, 0xB)) == 0) {
             for (i = 0; i < 0x10; i++)
                 g_chkreg.buf[i] = arg1[i];
