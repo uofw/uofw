@@ -150,13 +150,13 @@ typedef struct {
     u32 clkcCpuGearDenominator; //44
     u32 clkcBusGearNumerator; //48
     u32 clkcBusGearDenominator; //52
-    u32 unk56;
+    u32 isTachyonMaxVoltage; // 56
     s16 tachyonVoltage; //60
     s16 unk62;
-    u32 unk64;
+    u32 isDdrMaxVoltage; // 64
     s16 unk68;
     s16 unk70;
-    s32 unk72;
+    s32 isDdrMaxStrength; // 72
     s16 unk76;
     s16 unk78;
     u32 geEdramRefreshMode; //80
@@ -248,6 +248,8 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2); // sub_00000BE0
 static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
+
+static s32 _scePowerFreqInit(void); // 0x0000353C
 
 static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency); // 0x00003898
 
@@ -1980,9 +1982,28 @@ static u32 GetGp(void)
    return pspGetGp();
 }
 
+/* Defines Power service specific lower and upper limits for clock speeds. */
+
+#define POWER_PLL_CLOCK_LIMIT_LOWER         1
+#define POWER_PLL_CLOCK_LIMIT_UPPER         333
+
+#define POWER_CPU_CLOCK_LIMIT_LOWER         1
+#define POWER_CPU_CLOCK_LIMIT_UPPER         333
+
+#define POWER_BUS_CLOCK_LIMIT_LOWER         24
+#define POWER_BUS_CLOCK_LIMIT_UPPER         166
+
+/* Defines the fixed set of PLL clock frequencies supported by the power service. */
+#define POWER_PLL_OUT_SELECT_SUPPORTED      (SCE_SYSREG_PLL_OUT_SELECT_37MHz | SCE_SYSREG_PLL_OUT_SELECT_148MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_190MHz | SCE_SYSREG_PLL_OUT_SELECT_222MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_266MHz | SCE_SYSREG_PLL_OUT_SELECT_333MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_19MHz | SCE_SYSREG_PLL_OUT_SELECT_74MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_96MHz | SCE_SYSREG_PLL_OUT_SELECT_111MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_133MHz | SCE_SYSREG_PLL_OUT_SELECT_166MHz)
+
 //sub_0000353C
-// TODO: Verify function
-static u32 _scePowerFreqInit(void) 
+/* Initialize the internal power frequency control block. */
+static s32 _scePowerFreqInit(void) 
 {
     float pllFrequency;
     float clkcCpuFrequency;
@@ -1990,62 +2011,97 @@ static u32 _scePowerFreqInit(void)
     s32 tachyonVer;
     u32 fuseConfig;
     
-    memset(&g_PowerFreq, 0, sizeof g_PowerFreq); //0x0000355C
+    memset(&g_PowerFreq, 0, sizeof g_PowerFreq); // 0x0000355C
     
-    g_PowerFreq.pSm1Ops = sceKernelSm1ReferOperations(); //0x00003564
-    g_PowerFreq.scBusClockLowerLimit = 24; //0x00003580
-    g_PowerFreq.pllClockLowerLimit = 1; //0x00003584
-    g_PowerFreq.pllClockUpperLimit = 333; //0x00003588
-    g_PowerFreq.scCpuClockLowerLimit = 1; //0x0000358C
-    g_PowerFreq.scCpuClockUpperLimit = 333; //0x00003590
-    g_PowerFreq.scBusClockUpperLimit = 166; //0x00003598
+    g_PowerFreq.pSm1Ops = sceKernelSm1ReferOperations(); // 0x00003564
+
+    // 0x00003580 - 0x00003598
+    /* Set power service specific clock frequency limits.  */
+    g_PowerFreq.scBusClockLowerLimit = POWER_BUS_CLOCK_LIMIT_LOWER;
+    g_PowerFreq.pllClockLowerLimit = POWER_PLL_CLOCK_LIMIT_LOWER;
+    g_PowerFreq.pllClockUpperLimit = POWER_PLL_CLOCK_LIMIT_UPPER;
+    g_PowerFreq.scCpuClockLowerLimit = POWER_CPU_CLOCK_LIMIT_LOWER;
+    g_PowerFreq.scCpuClockUpperLimit = POWER_CPU_CLOCK_LIMIT_UPPER;
+    g_PowerFreq.scBusClockUpperLimit = POWER_BUS_CLOCK_LIMIT_UPPER;
     
+    // 0x00003594 - 0x000035A8
     pllFrequency = sceSysregPllGetFrequency();
-    g_PowerFreq.pllClockFrequencyFloat = pllFrequency; //0x000035A0
-    g_PowerFreq.pllClockFrequencyInt = (s32)pllFrequency; //0x000035A8
+    g_PowerFreq.pllClockFrequencyFloat = pllFrequency;
+    g_PowerFreq.pllClockFrequencyInt = (s32)pllFrequency;
     
     g_PowerFreq.pllOutSelect = sceSysregPllGetOutSelect(); //0x000035A4 & 0x000035B0
     
-    clkcCpuFrequency = sceClkcGetCpuFrequency(); //0x000035AC
-    g_PowerFreq.pllClockFrequencyFloat = clkcCpuFrequency; //0x000035B8
-    g_PowerFreq.pllClockFrequencyInt = (s32)clkcCpuFrequency; //0x000035C0
+    // 0x000035AC - 0x000035C0
+    clkcCpuFrequency = sceClkcGetCpuFrequency();
+    g_PowerFreq.pllClockFrequencyFloat = clkcCpuFrequency;
+    g_PowerFreq.pllClockFrequencyInt = (s32)clkcCpuFrequency;
     
-    clkcBusFrequency = sceClkcGetBusFrequency(); //0x000035BC
-    g_PowerFreq.busClockFrequencyFloat = clkcBusFrequency; //0x000035E4
-    g_PowerFreq.busClockFrequencyInt = (s32)clkcBusFrequency; //0x000035DC
+    // 0x000035BC - 0x000035DC
+    clkcBusFrequency = sceClkcGetBusFrequency();
+    g_PowerFreq.busClockFrequencyFloat = clkcBusFrequency;
+    g_PowerFreq.busClockFrequencyInt = (s32)clkcBusFrequency;
     
-    g_PowerFreq.pllUseMask = 0x3F3F; //0x000035D0
+    g_PowerFreq.pllUseMask = POWER_PLL_OUT_SELECT_SUPPORTED; // 0x000035D0
     
-    if (g_PowerFreq.pllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz) { //0x000035E0
-        g_PowerFreq.unk56 = 1; //0x000036B0
-        g_PowerFreq.unk64 = 1;
-        g_PowerFreq.unk72 = 1;
-    } else if (g_PowerFreq.pllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_266MHz) { //0x000035EC
-        g_PowerFreq.unk56 = 1; //0x000036A0
-        g_PowerFreq.unk64 = 0;
-        g_PowerFreq.unk72 = 0;
-    } else {
-        g_PowerFreq.unk56 = 0; //0x000035F8
-        g_PowerFreq.unk64 = 0;
-        g_PowerFreq.unk72 = 0;
+    if (g_PowerFreq.pllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz) // 0x000035E0
+    {
+        g_PowerFreq.isTachyonMaxVoltage = SCE_TRUE; //0x000036B0
+        g_PowerFreq.isDdrMaxVoltage = SCE_TRUE;
+        g_PowerFreq.isDdrMaxStrength = SCE_TRUE;
+    } 
+    else if (g_PowerFreq.pllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_266MHz) // 0x000035EC
+    { 
+        g_PowerFreq.isTachyonMaxVoltage = SCE_TRUE; // 0x000036A0
+        g_PowerFreq.isDdrMaxVoltage = SCE_FALSE;
+        g_PowerFreq.isDdrMaxStrength = SCE_FALSE;
+    } 
+    else 
+    {
+        g_PowerFreq.isTachyonMaxVoltage = SCE_FALSE; // 0x000035F8
+        g_PowerFreq.isDdrMaxVoltage = SCE_FALSE;
+        g_PowerFreq.isDdrMaxStrength = SCE_FALSE;
     }
-    g_PowerFreq.unk78 = -1; //0x00003608
+
+    // 0x00003608 - 0x00003618
+    g_PowerFreq.unk78 = -1;
     g_PowerFreq.unk68 = -1;
     g_PowerFreq.unk70 = -1;
     g_PowerFreq.unk76 = -1;
     
-    tachyonVer = sceSysregGetTachyonVersion(); //0x00003614
-    if (tachyonVer >= 0x00140000) { //0x00003628 -- PSP Motherboard at least "TA-079 v1"
-        fuseConfig = sceSysregGetFuseConfig(); //0x00003674
-        g_PowerFreq.unk62 = 0xB00 - ((fuseConfig & 0x3800) >> 3); //0x0000367C & 0x00003680 & 0x0000368C
-        g_PowerFreq.unk60 = (~fuseConfig) & 0x700; //0x00003684 & 0x00003690 & 0x0000369C
-    } else {
+    tachyonVer = sceSysregGetTachyonVersion(); // 0x00003614
+    if (tachyonVer >= 0x00140000) // 0x00003628
+    {
+        /* 
+         * PSP Motherboard at least [TA-079 v1]. Every retail PSP model released has a Tachyon SoC IC 
+         * with at least this version number or higher.
+         */
+
+        fuseConfig = (u32)sceSysregGetFuseConfig(); // 0x00003674
+
+        /* 
+         * (fuseConfig & 0x3800) >> 3) is at most 0x700 -> unk62 has as its minimum 0xB00 - 0x700 = 0x400.
+         * g_PowerFreq.unk62 is between [0x400, 0xB00]
+         * 
+         * (~fuseConfig) & 0x700; is at most 0x700. 
+         * g_PowerFreq.tachyonVoltage is between [0x0, 0x700]
+         * 
+         * TODO: Might expand the comment in the future
+        */
+        g_PowerFreq.unk62 = 0xB00 - ((fuseConfig & 0x3800) >> 3); // 0x0000367C & 0x00003680 & 0x0000368C
+        g_PowerFreq.tachyonVoltage = (~fuseConfig) & 0x700; // 0x00003684 & 0x00003690 & 0x0000369C
+    } 
+    else 
+    {
+        /* Unknown for which PSP hardware this is the case. */
+
         g_PowerFreq.unk62 = 0x400; //0x00003630
-        g_PowerFreq.unk60 = 0; //0x00003634
+        g_PowerFreq.tachyonVoltage = 0; //0x00003634
     }
     
-    scePowerSetGeEdramRefreshMode(1); //0x0000363C
-    g_PowerFreq.mutexId = sceKernelCreateMutex("ScePowerClock", 1, 0, NULL); //0x00003650
+    scePowerSetGeEdramRefreshMode(1); // 0x0000363C
+
+    g_PowerFreq.mutexId = sceKernelCreateMutex("ScePowerClock", 1, 0, NULL); // 0x00003650
+
     return SCE_ERROR_OK;
 }
 
@@ -2188,7 +2244,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
 
     /* 
      * The PLL actually can only operate at a fixed set of clock frequencies. For example, 
-     * clock frequenies 96, 133, 233, 266, 333. It can be configured through setting the 
+     * clock frequencies 96, 133, 233, 266, 333 (in MHz). It can be configured through setting the 
      * [g_PowerFreq.pllUseMask] how many of these clock frequencies will be used to determine
      * the actual PLL clock frequency given the specified input. This works as follows:
      * 
@@ -2286,7 +2342,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
     if (g_PowerFreq.pllOutSelect != newPllOutSelect) // 0x00003A78
     {
         /* 
-         * The spcified PLL clock frequency "does not fit" in the current PLL clock frequency 
+         * The specified PLL clock frequency "does not fit" in the current PLL clock frequency 
          * which is chosen out of a fixed set of frequencies (see comment above). Change the 
          * PLL clock frequency to the fixed clock frequency we've determined above.
          */
@@ -2312,31 +2368,37 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
             return status;
         }
 
-        if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.unk64 == 0) // 0x00003AC0 && 0x00003D88
+        /* Increase the current DDR memory voltage if the PLL clock is set to its maximum frequency. */
+        if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && !g_PowerFreq.isDdrMaxVoltage) // 0x00003AC0 && 0x00003D88
         {
             if (g_PowerFreq.unk68 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68)
             {
                 sceSysconCtrlVoltage(3, g_PowerFreq.unk68); //0x00003DA8
             }
 
-            g_PowerFreq.unk64 = 1; // 0x00003DB4
+            g_PowerFreq.isDdrMaxVoltage = SCE_TRUE; // 0x00003DB4
         }
 
+        /* 
+         * Increase the current Tachyon voltage if the PLL clock is set to operate at a frequency above its
+         * default frequency (222 MHz). 
+         */
         if ((newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_266MHz || newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz) 
-            && g_PowerFreq.unk56 == 0 && g_PowerFreq.tachyonVoltage >= 0) // 0x00003AD0 & 0x00003AEC
+            && !g_PowerFreq.isTachyonMaxVoltage && g_PowerFreq.tachyonVoltage >= 0) // 0x00003AD0 & 0x00003AEC
         {
             sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonVoltage); // 0x00003AF4
-            g_PowerFreq.unk56 = 1; // 0x00003B00
+            g_PowerFreq.isTachyonMaxVoltage = SCE_TRUE; // 0x00003B00
         }
 
-        if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.unk72 == 0) // 0x00003B08 & 0x00003D50
+        /* Increase the current DDR memory strength if the PLL clock is set to its maximum frequency. */
+        if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && !g_PowerFreq.isDdrMaxStrength) // 0x00003B08 & 0x00003D50
         {
             if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D5C & 0x00003D68
             {
-                sceDdr_driver_0BAAE4C5(); // 0x00003D70
+                sceDdr_driver_0BAAE4C5(); // 0x00003D70 -- TODO: still not sure whether arguments are supplied here
             }
 
-            g_PowerFreq.unk72 = 1;
+            g_PowerFreq.isDdrMaxStrength = SCE_TRUE;
         }
 
         sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000002, "start", &sysEventParam, 
@@ -2384,31 +2446,37 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000020, "end", &sysEventParam, 
             NULL, 0, NULL); //0x00003C04
 
-        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.unk72 == 1) // 0x00003C10 & 0x00003C1C
+        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.isDdrMaxStrength) // 0x00003C10 & 0x00003C1C
         {
             if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D14 & 0x00003D20
             {
                 sceDdr_driver_0BAAE4C5(); // 0x00003D28
             }
             
-            g_PowerFreq.unk72 = 0; // 0x00003D34
+            g_PowerFreq.isDdrMaxStrength = SCE_FALSE; // 0x00003D34
         }
 
+        /*
+         * Reduce the current Tachyon voltage if the PLL clock is now operating at its default frequency (222 MHz).
+         */
         if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_266MHz && newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz 
-            && g_PowerFreq.unk56 == 1 && g_PowerFreq.unk62 >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
+            && g_PowerFreq.isTachyonMaxVoltage && g_PowerFreq.unk62 >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
         {
             sceSysconCtrlTachyonVoltage(g_PowerFreq.unk62); // 0x00003D04
-            g_PowerFreq.unk64 = 0; // 0x00003D10
+            g_PowerFreq.isTachyonMaxVoltage = SCE_FALSE; // 0x00003D10
         }
 
-        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_266MHz && g_PowerFreq.unk64 == 1) // 0x00003C48 & 0x00003C58
+        /* Decrease the current DDR memory voltage if the PLL clock is no longer operating at its maximum frequency. */
+        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.isDdrMaxVoltage) // 0x00003C48 & 0x00003C58
         {
             if (g_PowerFreq.unk70 >= 0 && g_PowerFreq.unk68 != g_PowerFreq.unk70) // 0x00003CFC
             {
+                // TODO: The first argument might identify the system component for which voltage is to be changed.
+                // Here, '3' would mean the DDR memory component. If confirmed, macros should be defined.
                 sceSysconCtrlVoltage(3, g_PowerFreq.unk70); // 0x00003CE8
             }
 
-            g_PowerFreq.unk64 = 0; // 0x00003CF8
+            g_PowerFreq.isDdrMaxVoltage = SCE_FALSE; // 0x00003CF8
         }
     }
 
@@ -2587,7 +2655,7 @@ static u32 _scePowerFreqResume(u32 arg0)
 // TODO: Verify function
 s16 scePowerGetCurrentTachyonVoltage(void)
 {
-    if (g_PowerFreq.unk56 == 0) //0x00004158
+    if (g_PowerFreq.isTachyonMaxVoltage == 0) //0x00004158
         return g_PowerFreq.unk62; //0x00004164
     return g_PowerFreq.tachyonVoltage; //0x0000416C
 }
@@ -2620,7 +2688,7 @@ u32 scePowerSetTachyonVoltage(s32 arg0, s32 arg1)
 // TODO: Verify function
 u32 scePowerGetCurrentDdrVoltage(void)
 {
-    if (g_PowerFreq.unk64 != 0) //0x000041C8
+    if (g_PowerFreq.isDdrMaxVoltage != 0) //0x000041C8
         return g_PowerFreq.unk68;
     return g_PowerFreq.unk70; //0x000041DC
 }
@@ -2653,7 +2721,7 @@ u32 scePowerSetDdrVoltage(s32 arg0, s32 arg1)
 // TODO: Verify function
 u32 scePowerGetCurrentDdrStrength()
 {
-    if (g_PowerFreq.unk72 != 0) //0x00004238
+    if (g_PowerFreq.isDdrMaxStrength != 0) //0x00004238
         return g_PowerFreq.unk76;
     return g_PowerFreq.unk78;
 }
