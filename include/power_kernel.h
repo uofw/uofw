@@ -225,8 +225,97 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
  * the specified PLL frequency will be round up to 190MHz by the power service.
  * 
  * @return Always SCE_ERROR_OK.
-*/
+ */
 s32 scePowerSetPllUseMask(s32 useMask);
+
+/* Hardware component power settings */
+
+/**
+ * Gets the current Tachyon voltage.
+ * 
+ * @return The current Tachyon voltage set by the power service.
+ */
+s16 scePowerGetCurrentTachyonVoltage(void);
+
+/**
+ * Gets the possible Tachyon volatge values used by the power service.
+ * 
+ * @param pMaxVoltage Pointer to the s16 variable which is to receive the maximum Tachyon voltage.
+ * @param pDefaultVoltage Pointer to the s16 variable which is to receive the default Tachyon voltage.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerGetTachyonVoltage(s16* pMaxVoltage, s16* pDefaultVoltage);
+
+/**
+ * Sets the possible Tachyon voltages used by the power service.
+ * 
+ * @param maxVoltage The voltage used for the Tachyon SoC IC when the PSP's PLL operates at clock frequencies 
+ * 266 Mhz or 333 MHz.
+ * @param defaultVoltage The voltage used for the Tachyon SoC IC when the PSP's PLL operates at clock 
+ * frequencies 222 MHz or below.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerSetTachyonVoltage(s16 maxVoltage, s16 defaultVoltage);
+
+/**
+ * Gets the current DDR memory voltage. 
+ * 
+ * @return The current DDR memory voltage set by the power service.
+ */
+s16 scePowerGetCurrentDdrVoltage(void);
+
+/**
+ * Gets the possible Tachyon voltage values used by the power service.
+ * 
+ * @param pMaxVoltage Pointer to the s16 variable which is to receive the maximum DDR memory voltage.
+ * @param pDefaultVoltage Pointer to the s16 variable which is to receive the default DDR memory voltage.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerGetDdrVoltage(s16* pMaxVoltage, s32* pDefaultVoltage);
+
+/**
+ * Sets the possible DDR memory voltages used by the power service.
+ * 
+ * @param maxVoltage The voltage used for the DDR memory component when the PSP's PLL operates at clock frequency 
+ * 333 MHz.
+ * @param defaultVoltage The voltage used for the DDR memory component when the PSP's PLL operates at clock 
+ * frequencies 266 MHz or below.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerSetDdrVoltage(s16 maxVoltage, s32 defaultVoltage);
+
+/**
+ * Gets the current DDR memory strength. 
+ * 
+ * @return The current DDR memory strength set by the power service.
+ */
+s16 scePowerGetCurrentDdrStrength(void);
+
+/**
+ * Gets the possible DDR memory strength values used by the power service.
+ * 
+ * @param pMaxStrength Pointer to the s16 variable which is to receive the maximum DDR memory strength value.
+ * @param pDefaultStrength Pointer to the s16 variable which is to receive the default DDR memory voltage.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerGetDdrStrength(s16* pMaxStrength, s16* pDefaultStrength);
+
+/**
+ * Sets the possible DDR memory strength values used by the power service.
+ * 
+ * @param maxStrength The strength value used for the DDR memory component when the PSP's PLL operates at 
+ * clock frequency 333 MHz.
+ * @param defaultStrength The strength value used for the DDR memory component when the PSP's PLL operates at 
+ * clock frequencies 266 MHz and below.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerSetDdrStrength(s16 maxStrength, s16 defaultStrength);
 
 /* WLAN functions */
 

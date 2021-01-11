@@ -171,14 +171,14 @@ typedef struct {
     u32 clkcBusGearNumerator; //48
     u32 clkcBusGearDenominator; //52
     u32 isTachyonMaxVoltage; // 56
-    s16 tachyonVoltage; //60
-    s16 unk62;
+    s16 tachyonMaxVoltage; //60
+    s16 tachyonDefaultVoltage; // 62
     u32 isDdrMaxVoltage; // 64
-    s16 unk68;
-    s16 unk70;
+    s16 ddrMaxVoltage; // 68
+    s16 ddrDefaultVoltage; // 70
     s32 isDdrMaxStrength; // 72
-    s16 unk76;
-    s16 unk78;
+    s16 ddrMaxStrength; // 76
+    s16 ddrDefaultStrength; // 78
     s32 geEdramRefreshMode; //80
     s32 oldGeEdramRefreshMode; //84
     u16 unk88;
@@ -292,7 +292,7 @@ static s32 _scePowerBatteryResume(void); // 0x00005C18
 static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param); // 0x00005ED8
 
-ScePowerHandlers g_PowerHandler = {
+const ScePowerHandlers g_PowerHandler = {
     .size = sizeof(ScePowerHandlers),
     .tick = scePowerTick, //0x00002F94
     .lock = scePowerLockForKernel, //0x00001608
@@ -305,7 +305,7 @@ ScePowerHandlers g_PowerHandler = {
     .memUnlock = scePowerVolatileMemUnlock, //0x00001540
 }; //0x00006F48
 
-SceSysEventHandler g_PowerSysEv = {
+const SceSysEventHandler g_PowerSysEv = {
     .size = sizeof(SceSysEventHandler),
     .name = "ScePower",
     .typeMask = SCE_SUSPEND_EVENTS | SCE_RESUME_EVENTS,
@@ -2064,10 +2064,10 @@ static s32 _scePowerFreqInit(void)
     }
 
     // 0x00003608 - 0x00003618
-    g_PowerFreq.unk78 = -1;
-    g_PowerFreq.unk68 = -1;
-    g_PowerFreq.unk70 = -1;
-    g_PowerFreq.unk76 = -1;
+    g_PowerFreq.ddrDefaultStrength = -1;
+    g_PowerFreq.ddrMaxVoltage = -1;
+    g_PowerFreq.ddrDefaultVoltage = -1;
+    g_PowerFreq.ddrMaxStrength = -1;
     
     tachyonVer = sceSysregGetTachyonVersion(); // 0x00003614
     if (tachyonVer >= 0x00140000) // 0x00003628
@@ -2081,22 +2081,22 @@ static s32 _scePowerFreqInit(void)
 
         /* 
          * (fuseConfig & 0x3800) >> 3) is at most 0x700 -> unk62 has as its minimum 0xB00 - 0x700 = 0x400.
-         * g_PowerFreq.unk62 is between [0x400, 0xB00]
+         * g_PowerFreq.tachyonDefaultVoltage is between [0x400, 0xB00] -> [1024 mV, 2816 mV] 
          * 
          * (~fuseConfig) & 0x700; is at most 0x700. 
-         * g_PowerFreq.tachyonVoltage is between [0x0, 0x700]
+         * g_PowerFreq.tachyonMaxVoltage is between [0x0, 0x700] -> [0 mV, 1792 mV]
          * 
-         * TODO: Might expand the comment in the future
+         * TODO: Might expand the comment in the future.
         */
-        g_PowerFreq.unk62 = 0xB00 - ((fuseConfig & 0x3800) >> 3); // 0x0000367C & 0x00003680 & 0x0000368C
-        g_PowerFreq.tachyonVoltage = (~fuseConfig) & 0x700; // 0x00003684 & 0x00003690 & 0x0000369C
+        g_PowerFreq.tachyonDefaultVoltage = 0xB00 - ((fuseConfig & 0x3800) >> 3); // 0x0000367C & 0x00003680 & 0x0000368C
+        g_PowerFreq.tachyonMaxVoltage = (~fuseConfig) & 0x700; // 0x00003684 & 0x00003690 & 0x0000369C
     } 
     else 
     {
         /* Unknown for which PSP hardware this is the case. */
 
-        g_PowerFreq.unk62 = 0x400; //0x00003630
-        g_PowerFreq.tachyonVoltage = 0; //0x00003634
+        g_PowerFreq.tachyonDefaultVoltage = 0x400; //0x00003630
+        g_PowerFreq.tachyonMaxVoltage = 0; //0x00003634
     }
     
     scePowerSetGeEdramRefreshMode(1); // 0x0000363C
@@ -2372,9 +2372,9 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         /* Increase the current DDR memory voltage if the PLL clock is set to its maximum frequency. */
         if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && !g_PowerFreq.isDdrMaxVoltage) // 0x00003AC0 && 0x00003D88
         {
-            if (g_PowerFreq.unk68 >= 0 && g_PowerFreq.unk70 != g_PowerFreq.unk68)
+            if (g_PowerFreq.ddrMaxVoltage >= 0 && g_PowerFreq.ddrDefaultVoltage != g_PowerFreq.ddrMaxVoltage)
             {
-                sceSysconCtrlVoltage(3, g_PowerFreq.unk68); //0x00003DA8
+                sceSysconCtrlVoltage(3, g_PowerFreq.ddrMaxVoltage); //0x00003DA8
             }
 
             g_PowerFreq.isDdrMaxVoltage = SCE_TRUE; // 0x00003DB4
@@ -2385,16 +2385,16 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
          * default frequency (222 MHz). 
          */
         if ((newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_266MHz || newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz) 
-            && !g_PowerFreq.isTachyonMaxVoltage && g_PowerFreq.tachyonVoltage >= 0) // 0x00003AD0 & 0x00003AEC
+            && !g_PowerFreq.isTachyonMaxVoltage && g_PowerFreq.tachyonMaxVoltage >= 0) // 0x00003AD0 & 0x00003AEC
         {
-            sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonVoltage); // 0x00003AF4
+            sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonMaxVoltage); // 0x00003AF4
             g_PowerFreq.isTachyonMaxVoltage = SCE_TRUE; // 0x00003B00
         }
 
         /* Increase the current DDR memory strength if the PLL clock is set to its maximum frequency. */
         if (newPllOutSelect == SCE_SYSREG_PLL_OUT_SELECT_333MHz && !g_PowerFreq.isDdrMaxStrength) // 0x00003B08 & 0x00003D50
         {
-            if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D5C & 0x00003D68
+            if (g_PowerFreq.ddrMaxStrength >= 0 && g_PowerFreq.ddrMaxStrength != g_PowerFreq.ddrDefaultStrength) // 0x00003D5C & 0x00003D68
             {
                 // TODO: still not sure whether arguments are supplied here.
                 // The ASM for sceDdr_driver_0BAAE4C5() in lowio looks like this:
@@ -2462,7 +2462,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
 
         if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.isDdrMaxStrength) // 0x00003C10 & 0x00003C1C
         {
-            if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D14 & 0x00003D20
+            if (g_PowerFreq.ddrDefaultStrength >= 0 && g_PowerFreq.ddrMaxStrength != g_PowerFreq.ddrDefaultStrength) // 0x00003D14 & 0x00003D20
             {
                 // TODO: still not sure whether arguments are supplied here.
                 // The ASM for sceDdr_driver_0BAAE4C5() in lowio looks like this:
@@ -2487,20 +2487,20 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
          * Reduce the current Tachyon voltage if the PLL clock is now operating at its default frequency (222 MHz).
          */
         if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_266MHz && newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz 
-            && g_PowerFreq.isTachyonMaxVoltage && g_PowerFreq.unk62 >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
+            && g_PowerFreq.isTachyonMaxVoltage && g_PowerFreq.tachyonDefaultVoltage >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
         {
-            sceSysconCtrlTachyonVoltage(g_PowerFreq.unk62); // 0x00003D04
+            sceSysconCtrlTachyonVoltage(g_PowerFreq.tachyonDefaultVoltage); // 0x00003D04
             g_PowerFreq.isTachyonMaxVoltage = SCE_FALSE; // 0x00003D10
         }
 
-        /* Decrease the current DDR memory voltage if the PLL clock is no longer operating at its maximum frequency. */
+        /* Reduce the current DDR memory voltage if the PLL clock is no longer operating at its maximum frequency. */
         if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.isDdrMaxVoltage) // 0x00003C48 & 0x00003C58
         {
-            if (g_PowerFreq.unk70 >= 0 && g_PowerFreq.unk68 != g_PowerFreq.unk70) // 0x00003CFC
+            if (g_PowerFreq.ddrDefaultVoltage >= 0 && g_PowerFreq.ddrMaxVoltage != g_PowerFreq.ddrDefaultVoltage) // 0x00003CFC
             {
                 // TODO: The first argument might identify the system component for which voltage is to be changed.
                 // Here, '3' would mean the DDR memory component. If confirmed, macros should be defined.
-                sceSysconCtrlVoltage(3, g_PowerFreq.unk70); // 0x00003CE8
+                sceSysconCtrlVoltage(3, g_PowerFreq.ddrDefaultVoltage); // 0x00003CE8
             }
 
             g_PowerFreq.isDdrMaxVoltage = SCE_FALSE; // 0x00003CF8
@@ -2702,100 +2702,99 @@ static u32 _scePowerFreqResume(u32 arg0)
 }
 
 //Subroutine scePower_driver_D7DD9D38 - Address 0x0000414C 
-// TODO: Verify function
 s16 scePowerGetCurrentTachyonVoltage(void)
 {
-    if (g_PowerFreq.isTachyonMaxVoltage == 0) //0x00004158
-        return g_PowerFreq.unk62; //0x00004164
-    return g_PowerFreq.tachyonVoltage; //0x0000416C
+    return (g_PowerFreq.isTachyonMaxVoltage)
+        ? g_PowerFreq.tachyonMaxVoltage
+        : g_PowerFreq.tachyonDefaultVoltage;
 }
 
 //Subroutine scePower_driver_BADA8332 - Address 0x00004170
-// TODO: Verify function
-u32 scePowerGetTachyonVoltage(u32 *arg0, u32 *arg1)
+s32 scePowerGetTachyonVoltage(s16 *pMaxVoltage, s16 *pDefaultVoltage)
 {
-    if (arg0 != NULL)
-        *arg0 = g_PowerFreq.tachyonVoltage;
-    if (arg1 != NULL)
-        *arg1 = g_PowerFreq.unk62;
+    if (pMaxVoltage != NULL)
+        *pMaxVoltage = g_PowerFreq.tachyonMaxVoltage;
+
+    if (pDefaultVoltage != NULL)
+        *pDefaultVoltage = g_PowerFreq.tachyonDefaultVoltage;
     
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_12F8302D - Address 0x00004198
-// TODO: Verify function
-u32 scePowerSetTachyonVoltage(s32 arg0, s32 arg1)
+s32 scePowerSetTachyonVoltage(s16 maxVoltage, s16 defaultVoltage)
 {
-    if (arg0 != -1) //0x0000419C
-        g_PowerFreq.tachyonVoltage = arg0;
-    if (arg1 != -1) //0x000041A8
-        g_PowerFreq.unk62 = arg1;
+    if (maxVoltage != -1) //0x0000419C
+        g_PowerFreq.tachyonMaxVoltage = maxVoltage;
+
+    if (defaultVoltage != -1) //0x000041A8
+        g_PowerFreq.tachyonDefaultVoltage = defaultVoltage;
     
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_9127E5B2 - Address 0x000041BC
-// TODO: Verify function
-u32 scePowerGetCurrentDdrVoltage(void)
+s16 scePowerGetCurrentDdrVoltage(void)
 {
-    if (g_PowerFreq.isDdrMaxVoltage != 0) //0x000041C8
-        return g_PowerFreq.unk68;
-    return g_PowerFreq.unk70; //0x000041DC
+    return (g_PowerFreq.isDdrMaxVoltage)
+        ? g_PowerFreq.ddrMaxVoltage
+        : g_PowerFreq.ddrDefaultVoltage;
 }
 
 //Subroutine scePower_driver_75906F9A - Address 0x000041E0 
-// TODO: Verify function
-u32 scePowerGetDdrVoltage(s32 *arg0, s32 *arg1)
+s32 scePowerGetDdrVoltage(s16 *pMaxVoltage, s32 *pDefaultVoltage)
 {
-    if (arg0 != NULL) //0x000041E0
-        *arg0 = g_PowerFreq.unk68;
-    if (arg1 != NULL) //0x000041F0
-        *arg1 = g_PowerFreq.unk70;
+    if (pMaxVoltage != NULL) //0x000041E0
+        *pMaxVoltage = g_PowerFreq.ddrMaxVoltage;
+
+    if (pDefaultVoltage != NULL) //0x000041F0
+        *pDefaultVoltage = g_PowerFreq.ddrDefaultVoltage;
     
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_018AB235 - Address 0x00004208 
-// TODO: Verify function
-u32 scePowerSetDdrVoltage(s32 arg0, s32 arg1)
+s32 scePowerSetDdrVoltage(s16 maxVoltage, s32 defaultVoltage)
 {
-    if (arg0 != -1) //0x0000420C
-        g_PowerFreq.unk68 = arg0;
-    if (arg1 != -1) //0x00004218
-        g_PowerFreq.unk70 = arg1;
+    if (maxVoltage != -1) //0x0000420C
+        g_PowerFreq.ddrMaxVoltage = maxVoltage;
+
+    if (defaultVoltage != -1) //0x00004218
+        g_PowerFreq.ddrDefaultVoltage = defaultVoltage;
     
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_0655D7C3 - Address 0x0000422C 
-// TODO: Verify function
-u32 scePowerGetCurrentDdrStrength()
+s16 scePowerGetCurrentDdrStrength(void)
 {
-    if (g_PowerFreq.isDdrMaxStrength != 0) //0x00004238
-        return g_PowerFreq.unk76;
-    return g_PowerFreq.unk78;
+    return (g_PowerFreq.isDdrMaxStrength)
+        ? g_PowerFreq.ddrMaxStrength
+        : g_PowerFreq.ddrDefaultStrength;
 }
 
 //Subroutine scePower_driver_16F965C9 - Address 0x00004250 
-// TODO: Verify function
-u32 scePowerGetDdrStrength(s32 *arg0, s32 *arg1) 
+s32 scePowerGetDdrStrength(s16 *pMaxStrength, s16 *pDefaultStrength) 
 {
-    if (arg0 != NULL) //0x00004250
-        *arg0 = g_PowerFreq.unk76;
-    if (arg1 != NULL) //0x00004260
-        *arg1 = g_PowerFreq.unk78;
+    if (pMaxStrength != NULL) //0x00004250
+        *pMaxStrength = g_PowerFreq.ddrMaxStrength;
+
+    if (pDefaultStrength != NULL) //0x00004260
+        *pDefaultStrength = g_PowerFreq.ddrDefaultStrength;
     
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_D13377F7 - Address 0x00004278
-// TODO: Verify function
-u32 scePowerSetDdrStrength(s32 arg0, s32 arg1)
+s32 scePowerSetDdrStrength(s16 maxStrength, s16 defaultStrength)
 {
-    if (arg0 != -1) //0x0000427C
-        g_PowerFreq.unk76 = arg0;
-    if (arg1 != -1) //0x00004288
-        g_PowerFreq.unk78 = arg1;
+    if (maxStrength != -1) // 0x0000427C
+        g_PowerFreq.ddrMaxStrength = maxStrength;
+
+    if (defaultStrength != -1) //0x00004288
+        g_PowerFreq.ddrDefaultStrength = defaultStrength;
+
+    return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_DF904CDE - Address 0x0000429C 
