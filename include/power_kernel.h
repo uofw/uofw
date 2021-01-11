@@ -287,6 +287,15 @@ s32 scePowerCheckWlanCondition(u32 freq);
 
 u8 scePowerGetWlanActivity(void);
 
+/**
+ * Set the Graphic Engine's eDRAM refresh mode.
+ * 
+ * @param geEdramRefreshMode The refresh mode. Pass either 0 or 1.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ */
+s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode);
+
 
  /** @} */
 
