@@ -2395,7 +2395,20 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         {
             if (g_PowerFreq.unk76 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D5C & 0x00003D68
             {
-                sceDdr_driver_0BAAE4C5(); // 0x00003D70 -- TODO: still not sure whether arguments are supplied here
+                // TODO: still not sure whether arguments are supplied here.
+                // The ASM for sceDdr_driver_0BAAE4C5() in lowio looks like this:
+                //
+                // li         $a0, 32
+                // sll        $a2, $a1, 5
+                // j          sceDdr_driver_77CD1FB3
+                // li         $a1, 2
+                //
+                // So apparently it takes two arguments, with the first argument being overwritten
+                // locally. Yet...looking at the two calls in power, the second argument makes no
+                // sense. In the second call at address 0x00003D28, $a1 would be 0x01000020 as this
+                // is the value stored into it to provide the second argument to the preceding 
+                // sceKernelSysEventDispatch() call.
+                sceDdr_driver_0BAAE4C5(); // 0x00003D70
             }
 
             g_PowerFreq.isDdrMaxStrength = SCE_TRUE;
@@ -2450,6 +2463,19 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         {
             if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D14 & 0x00003D20
             {
+                // TODO: still not sure whether arguments are supplied here.
+                // The ASM for sceDdr_driver_0BAAE4C5() in lowio looks like this:
+                //
+                // li         $a0, 32
+                // sll        $a2, $a1, 5
+                // j          sceDdr_driver_77CD1FB3
+                // li         $a1, 2
+                //
+                // So apparently it takes two arguments, with the first argument being overwritten
+                // locally. Yet...looking at the two calls in power, the second argument makes no
+                // sense. In the second call at address 0x00003D28, $a1 would be 0x01000020 as this
+                // is the value stored into it to provide the second argument to the preceding 
+                // sceKernelSysEventDispatch() call.
                 sceDdr_driver_0BAAE4C5(); // 0x00003D28
             }
             
@@ -3054,8 +3080,6 @@ static s32 _scePowerBatteryThread(SceSize args, void *argp)
             sceSysconPermitChargeBattery();  // 0x00005028
 
             sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x00005034
-
-            // TODO: Invert code flow
 
             if (!(batteryEventFlag & 0x40000000)) // // 0x00005048
             {

@@ -22,4 +22,4 @@ Add the following functions to include/lowio_ddr.h and to lowio's export file. O
 libsceDdr_driver library:
 
 sceDdrChangePllClock(u32 arg0); // sceDdr_driver_CF07B9E2
-sceDdr_driver_0BAAE4C5(void); // sceDdr_driver_0BAAE4C5
+sceDdr_driver_0BAAE4C5(void); // sceDdr_driver_0BAAE4C5 -- unsure about how many arguments (0/1/2 - help needed)
