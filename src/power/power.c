@@ -2050,31 +2050,36 @@ static u32 _scePowerFreqInit(void)
 }
 
 //Subroutine scePower_843FBF43 - Address 0x00003350 - Aliases: scePower_driver_BD02C252
-// TODO: Verify function
 s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
 {   
     s32 oldK1;
     s32 intrState;
-    s32 cpuFreq;
-     
-    if (cpuFrequency <= 0 || cpuFrequency <= g_PowerFreq.pllClockFrequencyInt) //0x000036E8 & 0x000036F8
+    s32 actCpuFrequency;
+
+    /* The CPU clock frequency cannot be < 1 or higher than the PLL clock frequency. */
+    if (cpuFrequency < PSP_CLOCK_CPU_FREQUENCY_MIN || cpuFrequency > g_PowerFreq.pllClockFrequencyInt) //0x000036E8 & 0x000036F8
+    {
         return SCE_ERROR_INVALID_VALUE;
+    }
+
+    oldK1 = pspShiftK1(); // 0x00003728
+    intrState = sceKernelCpuSuspendIntr(); // 0x00003724
+
+    // 0x00003734 - 0x0000373C
+    /* Make sure the CPU frequency is inside its limits. */
+    actCpuFrequency = pspMax(g_PowerFreq.scCpuClockLowerLimit, pspMin(cpuFrequency, g_PowerFreq.scCpuClockUpperLimit));
+
+    /* Set the CPU clock frequency. */
+    sceClkcSetCpuFrequency((float)actCpuFrequency); // 0x00003748
+
+    /* Obtain the actually set bus clock frequency. */
+    float cpuFreqFloat = sceClkcGetCpuFrequency(); // 0x00003750
+    g_PowerFreq.cpuClockFrequencyFloat = cpuFreqFloat; // 0x0000375C
+    g_PowerFreq.cpuClockFrequencyInt = (s32)cpuFreqFloat; // 0x00003768
     
-    oldK1 = pspShiftK1(); //0x00003728
-    intrState = sceKernelCpuSuspendIntr(); //0x00003724
-    
-    if (cpuFrequency >= g_PowerFreq.scCpuClockLowerLimit) //0x00003734
-        cpuFreq = pspMin(cpuFrequency, g_PowerFreq.scCpuClockUpperLimit); //0x00003780
-    else 
-        cpuFreq = g_PowerFreq.scCpuClockLowerLimit; //0x0000373C
-    
-    sceClkcSetCpuFrequency((float)cpuFreq); //0x00003748
-    float cpuFreqFloat = sceClkcGetCpuFrequency(); //0x00003750
-    g_PowerFreq.cpuClockFrequencyFloat = cpuFreqFloat; //0x0000375C
-    g_PowerFreq.cpuClockFrequencyInt = (s32)cpuFreqFloat; //0x00003768
-    
-    sceKernelCpuResumeIntr(intrState); //0x00003764
-    pspSetK1(oldK1); //0x0000376C
+    sceKernelCpuResumeIntr(intrState); // 0x00003764
+    pspSetK1(oldK1); // 0x0000376C
+
     return SCE_ERROR_OK;
 }
 
@@ -2093,7 +2098,7 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
         ? (g_PowerFreq.pllClockFrequencyInt + 1) / 2
         : g_PowerFreq.pllClockFrequencyInt / 2;
 
-    /* The bus clock frequency cannot be < 0 or higher than 1/2 PLL clock frequency. */
+    /* The bus clock frequency cannot be < 1 or higher than 1/2 PLL clock frequency. */
     if (busFrequency < PSP_CLOCK_BUS_FREQUENCY_MIN || busFrequency > halfPllClockFreq) // 0x000037B0 & 0x000037CC
     {
         return SCE_ERROR_INVALID_VALUE;
@@ -2139,8 +2144,8 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
     scePowerSetGeEdramRefreshMode(scePowerGetGeEdramRefreshMode()); // 0x0000386C & 0x00003874
     
     sceKernelCpuResumeIntr(intrState); // 0x0000387C
-
     pspSetK1(oldK1); // 0x00003884
+
     return status;
 }
 

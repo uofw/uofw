@@ -148,6 +148,20 @@ s32 scePowerGetPllClockFrequencyInt(void);
 float scePowerGetPllClockFrequencyFloat(void);
 
 /**
+ * Sets the CPU clock frequency.
+ *
+ * @param cpuFrequency The CPU clock frequency in MHz. Can bet to a value in range 1 to 333.
+ * Note that it cannot be set to a value higher than the current PLL clock frequency.
+ *
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ *
+ * @remark Even in success case, the CPU might not actually operate the specified clock frequency.
+ * To obtain the actual frequency in use, call either ::scePowerGetBusClockFrequencyInt() or
+ * ::scePowerGetBusClockFrequencyFloat().
+ */
+s32 scePowerSetCpuClockFrequency(s32 cpuFrequency);
+
+/**
  * Sets the bus clock frequency.
  * 
  * @param busFrequency The bus clock frequency in MHz.

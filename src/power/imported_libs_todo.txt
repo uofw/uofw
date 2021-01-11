@@ -3,12 +3,14 @@ libsceSysreg_driver library.
 
 Functions to add:
 
+s32 sceClkcSetCpuFrequency(float cpuFrequency); // sceSysreg_driver_B413B041
 s32 sceClkcSetBusFrequency(float busFrequency); // sceSysreg_driver_85B74FDA
 
 s32 sceClkcSetCpuGear(u32 arg0, u32 arg1); // sceSysreg_driver_3F6F2CC7
 s32 sceClkcSetBusGear(u32 arg0, u32 arg1); // sceSysreg_driver_63E1EE9C
 s32 sceSysregPllGetOutSelect(void); // sceSysreg_driver_187F651D
 
+float sceClkcGetCpuFrequency(void); // sceSysreg_driver_73EBC752
 float sceClkcGetBusFrequency(void); // sceSysreg_driver_96D74557
 
 float sceSysregPllGetBaseFrequency(void); // sceSysreg_driver_6B3A3417
