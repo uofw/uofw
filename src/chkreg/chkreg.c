@@ -13,14 +13,16 @@ typedef struct {
     u32 unk;          // 0x00000A40
     u32 unk1;         // 0x00000A44
     u32 found_pscode; // 0x00000A48
-    u32 unk3;         // DAT_00000b40
-    void *buf;        // DAT_afbf0010
-    u32 unk4;         // DAT_afbf0014
-    u32 unk5;         // DAT_afbf0028
-    u32 unk6;         // DAT_afbf0038
+    u32 unk3;         // 0x00000b40
+    u8 unk4[0x14];    // 0x000009BC
+    u8 buf[0x38];     // 0xAFBF0010 - 0xAFBF0048
 } g_chkreg_struct;
 
-g_chkreg_struct g_chkreg = { 0, 0, 0, 0, NULL, 0, 0, 0 };
+typedef struct {
+
+} g_chkreg_data;
+
+g_chkreg_struct g_chkreg = { 0, 0, 0, 0, { 0 },{ 0 } };
 
 // Declarations
 s32 sceIdStorageReadLeaf(u16 key, void *buf);
@@ -219,7 +221,47 @@ s32 sceChkreg_driver_7939C851(void) {
     return ret;
 }
 
-// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- TODO
-s32 sceChkreg_driver_9C6E1D34(void) {
-    return 0;
+// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- TODO: Cleanup/Verify
+s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
+    s32 ret = 0;
+    s32 error = SCE_ERROR_SEMAPHORE;
+
+    if ((ret = sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
+        g_chkreg.unk3 = 0x34;
+        u32 i = 0;
+        
+        for (i = 0; i < 0x14; i++)
+            g_chkreg.buf[0x4 + i] = g_chkreg.unk4[i];
+        
+        for (i = 0; i < 0x10; i++)
+            g_chkreg.buf[0x18 + i] = (arg0[i] + 0xD4);
+        
+        for (i = 0; i < 0x10; i++)
+            g_chkreg.buf[0x28 + i] = (arg0[i] + 0x140);
+            
+        error = 0;
+        if ((ret = sceUtilsBufferCopyWithRange(g_chkreg.buf, 0x38, g_chkreg.buf, 0x38, 0xB)) == 0) {
+            for (i = 0; i < 0x10; i++)
+                g_chkreg.buf[i] = arg1[i];
+            
+            error = 0;
+        }
+        else {
+            if (ret < 0)
+                error = SCE_ERROR_BUSY;
+            else {
+                error = SCE_ERROR_NOT_INITIALIZED;
+                if (ret != 0xC)
+                    error = SCE_ERROR_NOT_SUPPORTED;
+            }
+        }
+
+        for (i = 0; i < 0x38; i++)
+            g_chkreg.buf[i] = 0;
+        
+        if ((ret = sceKernelSignalSema(g_chkreg_sema, 1)) != 0)
+            error = SCE_ERROR_SEMAPHORE;
+    }
+
+    return error;
 }
