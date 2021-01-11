@@ -34,6 +34,25 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define PSP_CLOCK_BUS_FREQUENCY_MIN                     1
 #define PSP_CLOCK_BUS_FREQUENCY_MAX                     167
 
+/* Defines Power service specific lower and upper limits for clock speeds. */
+
+#define POWER_PLL_CLOCK_LIMIT_LOWER         1
+#define POWER_PLL_CLOCK_LIMIT_UPPER         333
+
+#define POWER_CPU_CLOCK_LIMIT_LOWER         1
+#define POWER_CPU_CLOCK_LIMIT_UPPER         333
+
+#define POWER_BUS_CLOCK_LIMIT_LOWER         24
+#define POWER_BUS_CLOCK_LIMIT_UPPER         166
+
+/* Defines the fixed set of PLL clock frequencies supported by the power service. */
+#define POWER_PLL_OUT_SELECT_SUPPORTED      (SCE_SYSREG_PLL_OUT_SELECT_37MHz | SCE_SYSREG_PLL_OUT_SELECT_148MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_190MHz | SCE_SYSREG_PLL_OUT_SELECT_222MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_266MHz | SCE_SYSREG_PLL_OUT_SELECT_333MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_19MHz | SCE_SYSREG_PLL_OUT_SELECT_74MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_96MHz | SCE_SYSREG_PLL_OUT_SELECT_111MHz | \
+                                             SCE_SYSREG_PLL_OUT_SELECT_133MHz | SCE_SYSREG_PLL_OUT_SELECT_166MHz)
+
 #define BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT         (26)
 #define BARYON_DATA_LOW_BATTERY_CAP_SLOT                (28)
 
@@ -1981,25 +2000,6 @@ static u32 GetGp(void)
 {
    return pspGetGp();
 }
-
-/* Defines Power service specific lower and upper limits for clock speeds. */
-
-#define POWER_PLL_CLOCK_LIMIT_LOWER         1
-#define POWER_PLL_CLOCK_LIMIT_UPPER         333
-
-#define POWER_CPU_CLOCK_LIMIT_LOWER         1
-#define POWER_CPU_CLOCK_LIMIT_UPPER         333
-
-#define POWER_BUS_CLOCK_LIMIT_LOWER         24
-#define POWER_BUS_CLOCK_LIMIT_UPPER         166
-
-/* Defines the fixed set of PLL clock frequencies supported by the power service. */
-#define POWER_PLL_OUT_SELECT_SUPPORTED      (SCE_SYSREG_PLL_OUT_SELECT_37MHz | SCE_SYSREG_PLL_OUT_SELECT_148MHz | \
-                                             SCE_SYSREG_PLL_OUT_SELECT_190MHz | SCE_SYSREG_PLL_OUT_SELECT_222MHz | \
-                                             SCE_SYSREG_PLL_OUT_SELECT_266MHz | SCE_SYSREG_PLL_OUT_SELECT_333MHz | \
-                                             SCE_SYSREG_PLL_OUT_SELECT_19MHz | SCE_SYSREG_PLL_OUT_SELECT_74MHz | \
-                                             SCE_SYSREG_PLL_OUT_SELECT_96MHz | SCE_SYSREG_PLL_OUT_SELECT_111MHz | \
-                                             SCE_SYSREG_PLL_OUT_SELECT_133MHz | SCE_SYSREG_PLL_OUT_SELECT_166MHz)
 
 //sub_0000353C
 /* Initialize the internal power frequency control block. */
