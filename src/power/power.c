@@ -2384,7 +2384,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000020, "end", &sysEventParam, 
             NULL, 0, NULL); //0x00003C04
 
-        if (newPllOutSelect != 5 && g_PowerFreq.unk72 == 1) // 0x00003C10 & 0x00003C1C
+        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.unk72 == 1) // 0x00003C10 & 0x00003C1C
         {
             if (g_PowerFreq.unk78 >= 0 && g_PowerFreq.unk76 != g_PowerFreq.unk78) // 0x00003D14 & 0x00003D20
             {
@@ -2394,13 +2394,14 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
             g_PowerFreq.unk72 = 0; // 0x00003D34
         }
 
-        if (newPllOutSelect != 4 && newPllOutSelect != 5 && g_PowerFreq.unk56 == 1 && g_PowerFreq.unk62 >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
+        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_266MHz && newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz 
+            && g_PowerFreq.unk56 == 1 && g_PowerFreq.unk62 >= 0) // 0x00003C28 & 0x00003C3C & 0x00003CFC
         {
             sceSysconCtrlTachyonVoltage(g_PowerFreq.unk62); // 0x00003D04
             g_PowerFreq.unk64 = 0; // 0x00003D10
         }
 
-        if (newPllOutSelect != 5 && g_PowerFreq.unk64 == 1) // 0x00003C48 & 0x00003C58
+        if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_266MHz && g_PowerFreq.unk64 == 1) // 0x00003C48 & 0x00003C58
         {
             if (g_PowerFreq.unk70 >= 0 && g_PowerFreq.unk68 != g_PowerFreq.unk70) // 0x00003CFC
             {
