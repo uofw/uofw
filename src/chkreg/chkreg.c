@@ -1,3 +1,11 @@
+/* Copyright (C) 2021 The uOFW team
+   See the file COPYING for copying permission.
+*/
+/**
+ * Big thanks to Hykem for most of the info used here.
+ * http://www.emunewz.net/forum/showthread.php?tid=3673
+ */
+
 #include <common_imp.h>
 #include <crypto/kirk.h>
 #include <threadman_kernel.h>
@@ -18,11 +26,7 @@ typedef struct {
     u8 buf[0x38];     // 0xAFBF0010 - 0xAFBF0048
 } g_chkreg_struct;
 
-typedef struct {
-
-} g_chkreg_data;
-
-g_chkreg_struct g_chkreg = { 0, 0, 0, 0, { 0 },{ 0 } };
+g_chkreg_struct g_chkreg = { 0, 0, 0, 0, { 0 }, { 0 } };
 
 // Declarations
 s32 sceIdStorageReadLeaf(u16 key, void *buf);

@@ -1,4 +1,4 @@
-# Copyright (C) 2020 The uOFW team
+# Copyright (C) 2021 The uOFW team
 # See the file COPYING for copying permission.
 
 TARGET = chkreg
