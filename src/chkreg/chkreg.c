@@ -14,9 +14,10 @@ SCE_MODULE_INFO("sceChkreg", SCE_MODULE_KERNEL | SCE_MODULE_KIRK_SEMAPHORE_LIB |
                               | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 9);
 SCE_SDK_VERSION(SDK_VERSION);
 
+u32 g_unk;               // 0x00000B30
 u8 g_buf[KIRK_CERT_LEN]; // 0x00001480
 SceUID g_chkreg_sema;    // 0x00001538
-u32 unk;                 // 0x00001540
+u32 g_unk2;              // 0x00001540
 
 typedef struct {
     u8 buf[0x38];     // 0x00000A04
@@ -39,28 +40,28 @@ s32 sub_00000000(void)
     return 0;
 }
 
-// Subroutine sub_00000128 - Address 0x00000128 -- TODO
+// Subroutine sub_00000128 - Address 0x00000128 -- Cleanup/Verify
 s32 sub_00000128(s32 arg0, s32 arg1)
 {
     u32 unk1 = 0;
     s32 unk2 = 0;
     u32 unk3 = 0;
-    s32 *pUnk = (s32 *)0x130;
     
     if (g_chkreg.unk != 0) {
-        unk2 = 0x3c020000;
+        unk2 = g_unk;
+
         while(1) {
             unk1 = unk3 << 3;
-            unk3 = unk3 + 1;
-            pUnk = pUnk + 2;
+            unk3++;
+            g_unk += 2;
             
-            if ((arg1 == unk2) && (arg0 == *(s32 *)((unk1 | 4) + 0x130)))
+            if ((arg1 == unk2) && (arg0 == (s32)((unk1 | 4) + g_unk)))
                 return 1;
             
             if (g_chkreg.unk <= unk3)
                 break;
                 
-            unk2 = *pUnk;
+            unk2 = g_unk;
         }
     }
 
@@ -231,7 +232,7 @@ s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
     s32 error = SCE_ERROR_SEMAPHORE;
 
     if ((ret = sceKernelWaitSema(g_chkreg_sema, 1, 0)) == 0) {
-        unk = 0x34;
+        g_unk2 = 0x34;
         u32 i = 0;
         
         for (i = 0; i < 0x14; i++)
@@ -244,7 +245,7 @@ s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
             g_chkreg.buf[0x28 + i] = (arg0[i] + 0x140); // 0xA04 + 0x4 + 0x14 + 0x10 = 0xA2C
             
         error = 0;
-        
+
         if ((ret = sceUtilsBufferCopyWithRange(g_chkreg.buf, 0x38, g_chkreg.buf, 0x38, 0xB)) == 0) {
             for (i = 0; i < 0x10; i++)
                 g_chkreg.buf[i] = arg1[i];
