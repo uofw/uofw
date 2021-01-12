@@ -28,35 +28,43 @@
  */
 typedef enum {
 	/** These bits represent the remaining battery capacity in [%].*/
-	SCE_POWER_CALLBACKARG_BATTERY_CAP	= 0x0000007F,
+	SCE_POWER_CALLBACKARG_BATTERY_CAP							= 0x0000007F,
 	/** Indicates a battery has been equipped.  */
-	SCE_POWER_CALLBACKARG_BATTERYEXIST	= 0x00000080,
+	SCE_POWER_CALLBACKARG_BATTERYEXIST							= 0x00000080,
 	/** Indicates the battery is in a low battery state.  */
-	SCE_POWER_CALLBACKARG_LOW_BATTERY	= 0x00000100,
+	SCE_POWER_CALLBACKARG_LOW_BATTERY							= 0x00000100,
 	/** Indicates power is being supplied from an external power source (AC adapter). */
-	SCE_POWER_CALLBACKARG_POWER_ONLINE	= 0x00001000,
+	SCE_POWER_CALLBACKARG_POWER_ONLINE							= 0x00001000,
 	/** 
 	 * Indicates the PSP's suspend process has begun. This happens for example when 
 	 *	- the user quickly presses the HOLD switch 
 	 *	- automatic sleep happens to save power
 	 *	- forced suspension starts due to battery running out
 	 */
-	SCE_POWER_CALLBACKARG_SUSPENDING	= 0x00010000,
+	SCE_POWER_CALLBACKARG_SUSPENDING							= 0x00010000,
 	/** Indicates the PSP's resume process has started. */
-	SCE_POWER_CALLBACKARG_RESUMING		= 0x00020000,
+	SCE_POWER_CALLBACKARG_RESUMING								= 0x00020000,
 	/** Indicates the PSP's resume process has completed. */
-	SCE_POWER_CALLBACKARG_RESUME_COMP	= 0x00040000,
+	SCE_POWER_CALLBACKARG_RESUME_COMP							= 0x00040000,
 	/** 
 	 * Indicates that standby operation has been started by pressing 
 	 * and holding the POWER switch. 
 	 */
-	SCE_POWER_CALLBACKARG_STANDINGBY	= 0x00080000,
-	SCE_POWER_CALLBACKARG_UNK_10000000	= 0x10000000,
-	SCE_POWER_CALLBACKARG_UNK_20000000	= 0x20000000,
-	/** Indicates whether or not the HOLD switch has been locked. */
-	SCE_POWER_CALLBACKARG_HOLD_SWITCH	= 0x40000000,
-	/** Indicates whether or not the POWER switch has been activated. */
-	SCE_POWER_CALLBACKARG_POWER_SWITCH	= 0x80000000
+	SCE_POWER_CALLBACKARG_STANDINGBY							= 0x00080000,
+	/**
+	 * Indicates that the user held the PSP's POWER switch at least two seconds
+	 * to request entering the standby state.
+	 */
+	SCE_POWER_CALLBACKARG_POWER_SWITCH_STANDBY_REQUESTED		= 0x10000000,
+	/**
+	 * Indicates that the user held the PSP's POWER switch less than two seconds
+	 * to request entering the suspend state.
+	 */
+	SCE_POWER_CALLBACKARG_POWER_SWITCH_SUSPEND_REQUESTED		= 0x20000000,
+	/** Indicates HOLD switch has been locked. */
+	SCE_POWER_CALLBACKARG_HOLD_SWITCH							= 0x40000000,
+	/** Indicates POWER switch has been activated. */
+	SCE_POWER_CALLBACKARG_POWER_SWITCH							= 0x80000000
 } ScePowerCallbackArg;
 
 /** 

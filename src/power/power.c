@@ -83,12 +83,17 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* The (initial) priority of the battery worker thread. */
 #define POWER_BATTERY_WORKER_THREAD_PRIO            (64)
 
+#define POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE              0x00000001 /* Indicates that the POWER switch is currently active (i.e. pressed by the user). */
+#define POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE            0x00000002 /* Indicates that the POWER switch is currently inactive (i.e. not pressed by the user). */
 #define POWER_SWITCH_EVENT_REQUEST_STANDBY                  0x00000010 /* Indicates a standby operation has been requested. */
 #define POWER_SWITCH_EVENT_REQUEST_SUSPEND                  0x00000020 /* Indicates a suspend operation has been requested. */
 #define POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO     0x00000040 /* Indicates a suspend-touch-and-go operation has been requested. */
 #define POWER_SWITCH_EVENT_REQUEST_COLD_RESET               0x00000080 /* Indicates a cold-reset operation has been requested. */
+#define POWER_SWITCH_EVENT_100                              0x00000100 /* TODO */
 #define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED            0x00010000 /* Indicates that there are currently no power switch locks in place. */
-#define POWER_SWITCH_EVENT_00040000                         0x00040000 // TOOD
+#define POWER_SWITCH_EVENT_OPERATION_RUNNING                0x00020000 /* Indicates that the power manage is currently running a power switch operation. */
+#define POWER_SWITCH_EVENT_IDLE                             0x00040000 /* Indicates that the power switch manager is not currently running a power switch oepration. */
+#define POWER_SWITCH_EVENT_PROCESSING_TERMINATION           0x80000000 /* Indicates that the power switch manager is shutting down. */
 
 typedef struct {
     u32 unk0;
@@ -121,6 +126,20 @@ typedef struct {
     s16 pllInitSpeed; //538 -- PLL clock init speed (PLL = phase-locked loop ?)
 } ScePower;
 
+typedef enum {
+    HARDWARE_REQUEST_SWITCH_NONE = 0,
+    HARDWARE_REQUEST_SWITCH_STANDBY,
+    HARDWARE_REQUEST_SWITCH_SUSPEND,
+} ScePowerSwitchCurrentHardwareRequestSwitch;
+
+typedef enum {
+    SOFTWARE_REQUEST_SWITCH_NONE = 0,
+    SOFTWARE_REQUEST_SWITCH_STANDBY,
+    SOFTWARE_REQUEST_SWITCH_SUSPEND,
+    SOFTWARE_REQUEST_SWITCH_SUSPEND_TOUCH_AND_GO,
+    SOFTWARE_REQUEST_SWITCH_COLD_RESET,
+} ScePowerSwitchCurrentSoftwareRequestSwitch;
+
 typedef struct {
     s32 eventId; //0
     s32 semaId; //4
@@ -132,8 +151,8 @@ typedef struct {
     u32 startAddr; //28
     u32 memSize; //32
     u32 unk36; //36
-    u32 unk40; //40
-    u32 (*unk44)(u32, u32, u32, u32); //44
+    ScePowerSwitchCurrentHardwareRequestSwitch curHardwareRequestSwitch; //40
+    ScePowerSwitchCurrentSoftwareRequestSwitch curSoftwareRequestSwitch; //44
     u32 unk48; //48 TODO: Perhaps a flag indicating whether locking/unlocking is allowed or - more gnerally - standby/suspension/reboot?
     u32 coldResetMode; // 52
     u32 unk56; // 56
@@ -275,6 +294,8 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2); // sub_00000BE0
 static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
+
+static s32 _scePowerOffThread(SceSize args, void* argp);
 
 static s32 _scePowerLock(s32 lockType, s32 isUserLock); // 00001624
 static s32 _scePowerUnlock(s32 lockType, s32 isUserLock); // 0x00002E1C
@@ -1161,6 +1182,7 @@ static u32 _scePowerInitCallback(void)
 
 //sub_000011A4
 // TODO: Verify function
+/* Initializes the power switch component of the power service. */
 static u32 _scePowerSwInit(void)
 {
     s32 intrState;
@@ -1172,7 +1194,8 @@ static u32 _scePowerSwInit(void)
     g_PowerSwitch.mode = 2; //0x000011E8
     g_PowerSwitch.wakeUpCondition = 8; //0x000011F0
     
-    g_PowerSwitch.eventId = sceKernelCreateEventFlag("ScePowerSw", SCE_KERNEL_EA_MULTI | 0x1, 0x50000, NULL); //0x000011EC & 0x00001210
+    g_PowerSwitch.eventId = sceKernelCreateEventFlag("ScePowerSw", SCE_KERNEL_EA_MULTI | 0x1, 
+        POWER_SWITCH_EVENT_IDLE | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, NULL); //0x000011EC & 0x00001210
     g_PowerSwitch.semaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL); //0x0000120C & 0x0000123C
     g_PowerSwitch.threadId = sceKernelCreateThread("ScePowerMain", _scePowerOffThread, 4, 2048, 
                                                    SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); //0x00001238 & 0x00001250
@@ -1380,9 +1403,9 @@ static s32 _scePowerLock(s32 lockType, s32 isUserLock)
 
         /* 
          * Normally, we return immediately. However, we block the thread when a suspend/standby/reboot process
-         * has already been started.
+         * has already been started. We only proceed when the power switch manager is in the Idle state.
          */
-        return sceKernelWaitEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_00040000,
+        return sceKernelWaitEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE,
             SCE_KERNEL_EW_OR, NULL, NULL); // 0x000016DC
     }
     else
@@ -1506,80 +1529,188 @@ s32 scePowerWaitRequestCompletion(void)
 }
 
 //0x000017F0
-// TODO: Verify function
-static s32 _scePowerOffThread(void)
+/* Processes power switch requests. */
+static s32 _scePowerOffThread(SceSize args, void *argp)
 {
-    s32 status;
-    u32 resultBits; //sp
-    u32 timeOut; //sp + 4
-    
-start:    
-    sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x800001F1, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x00001844
-    if ((s32)resultBits < 0) //0x00001850
-        return SCE_ERROR_OK;
-    
-    if (resultBits & 0x1) { //0x00001858
-        timeOut = 0x1E8480; //0x00001A08 -- 2 seconds
-        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x800001F2, SCE_KERNEL_EW_OR, &resultBits, &timeOut); //0x00001A04
-        if ((s32)resultBits < 0) //0x00001A10
+    u32 powerSwitchWaitFlags;
+    u32 powerSwitchSetFlags; // $sp
+    SceUInt waitTimeout; // $sp + 4
+    s32 status; // $s0
+
+    (void)args;
+    (void)argp;
+
+    for (;;)
+    {
+        powerSwitchWaitFlags = POWER_SWITCH_EVENT_PROCESSING_TERMINATION | POWER_SWITCH_EVENT_100
+            | POWER_SWITCH_EVENT_REQUEST_STANDBY | POWER_SWITCH_EVENT_REQUEST_SUSPEND
+            | POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO | POWER_SWITCH_EVENT_REQUEST_COLD_RESET
+            | POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE;
+
+        sceKernelWaitEventFlag(g_PowerSwitch.eventId, powerSwitchWaitFlags, SCE_KERNEL_EW_OR,
+            &powerSwitchSetFlags, NULL); // 0x00001844
+
+        if (powerSwitchSetFlags & POWER_SWITCH_EVENT_PROCESSING_TERMINATION) // 0x00001850
+        {
             return SCE_ERROR_OK;
-        
-        if (g_PowerSwitch.mode != 0) { //0x00001A20
-            if ((resultBits & 0x2) == 0) //0x00001A34
-                _scePowerNotifyCallback(0, 0, 0x10000000); //0x00001A444
-            else 
-                _scePowerNotifyCallback(0, 0, 0x20000000); //0x00001A38
         }
-        if (g_PowerSwitch.mode & 0x2) { //0x00001A60
-            if ((resultBits & 0x2) == 0) { //0x00001A6C
-                if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT) //0x00001A84
-                    g_PowerSwitch.unk40 = 1; //0x00001A88
+
+        if (powerSwitchSetFlags & POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE) // 0x00001858
+        {
+            // loc_000019E8
+
+            /* 
+             * The POWER switch is currently held by the user. If the user holds it for less than two seconds
+             * we let the PSP system enter [suspend] state. If, however, the user holds the POWER switch
+             * for at least two seconds, we then let the PSP system enter [standby] mode.
+             * 
+             * Below, we are waiting for at most two seconds to determine if we need to enter either the [suspend]
+             * or the [standby] power state.
+             */
+
+            powerSwitchWaitFlags = POWER_SWITCH_EVENT_PROCESSING_TERMINATION | POWER_SWITCH_EVENT_100
+                | POWER_SWITCH_EVENT_REQUEST_STANDBY | POWER_SWITCH_EVENT_REQUEST_SUSPEND
+                | POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO | POWER_SWITCH_EVENT_REQUEST_COLD_RESET
+                | POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE;
+            waitTimeout = 2 * 1000 * 1000; /* 2 seconds timeout */
+            status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, powerSwitchWaitFlags, SCE_KERNEL_EW_OR,
+                &powerSwitchSetFlags, &waitTimeout); // 0x00001A04
+
+            if (powerSwitchSetFlags & POWER_SWITCH_EVENT_PROCESSING_TERMINATION) // 0x00001A10
+            {
+                return SCE_ERROR_OK;
             }
-            else {
-                g_PowerSwitch.unk40 = 2; //0x00001A74
+
+            if (g_PowerSwitch.mode & 0x1) // 0x00001A20
+            {
+                if (powerSwitchSetFlags & POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE) // 0x00001A34
+                {
+                    _scePowerNotifyCallback(0, 0, SCE_POWER_CALLBACKARG_POWER_SWITCH_SUSPEND_REQUESTED);
+                }
+                else
+                {
+                    _scePowerNotifyCallback(0, 0, SCE_POWER_CALLBACKARG_POWER_SWITCH_STANDBY_REQUESTED); // 0x00001A3C - 0x00001A48
+                }
+            }
+
+            // loc_00001A58
+
+            if (g_PowerSwitch.mode & 0x2) // 0x00001A60
+            {
+                /* Check with power state we need to transition to (suspend or standby). */
+
+                if (powerSwitchSetFlags & POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE) // 0x00001A6C
+                {
+                    /* 
+                     * The user held the POWER switch for less than two seconds thus we now enter the 
+                     * [suspend] power state. 
+                     */
+                    g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_SUSPEND; // 0x00001A74
+                }
+                else if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT) // 0x00001A84
+                {
+                    /* 
+                     * The user kept holding the POWER switch for at least two seconds so we now enter the 
+                     * [standby] power state. 
+                     */
+                    g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_STANDBY; // 0x00001A88
+                }
             }
         }
-    }
-    if ((resultBits & 0x10) == 0) { //0x00001864
-        if (resultBits & 0x20) //0x00001998
-            g_PowerSwitch.unk44 = 2; //0x000019A0
-        else if (resultBits & 0x40) //0x000019AC
-            g_PowerSwitch.unk44 = 3; //0x000019B4
-        else if (resultBits & 0x80) //0x000019C0
-            g_PowerSwitch.unk44 = 4; //0x000019C8
-        else if (g_PowerSwitch.unk40 == 0) //0x000019D8
-            goto start;
-    }
-    sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x80000000 | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, 
-        1, &resultBits, NULL); //0x00001880
-    if ((s32)resultBits < 0) //0x00001890
-        return SCE_ERROR_OK;
-    if (resultBits & 0x80) //0x0000189C
-        g_PowerSwitch.unk44 = 4; //0x000018A0
-    
-    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x40000); //0x000018A8
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x20000); //0x000018B8
-    
-    if (g_PowerSwitch.unk48 == 0) { //0x000018C4
-        if (g_PowerSwitch.unk40 == 1 || g_PowerSwitch.unk44 == 1) //0x000018D4 & 0x000018E0
-            _scePowerSuspendOperation(0x101); //0x00001940
-        else if (g_PowerSwitch.unk40 == 2 || g_PowerSwitch.unk44 == 2) {//0x000018F0 & 0x000018FC
-            _scePowerSuspendOperation(0x202); //0x00001940
-            g_PowerSwitch.unk40 = 0; //0x00001958
-            g_PowerSwitch.unk44 = 0; //0x0000195C
+
+        // 0x00001860 & loc_00001864
+
+        if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_STANDBY) // 0x00001864
+        {
+            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_STANDBY; // 0x0000186C
         }
-        else if (g_PowerSwitch.unk44 == 3) { //0x00001908
-            _scePowerSuspendOperation(0x303); //0x00001940
-            g_PowerSwitch.unk40 = 0; //0x00001958
-            g_PowerSwitch.unk44 = 0; //0x0000195C
+        else if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_SUSPEND) // 0x00001868 & 0x00001998
+        {
+            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_SUSPEND; // 0x000019A0
         }
-        else if (g_PowerSwitch.unk44 == 4) //0x00001914
-            _scePowerSuspendOperation(0x404); //0x00001940
+        else if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO) // 0x0000199C & 0x000019AC
+        {
+            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_SUSPEND_TOUCH_AND_GO;
+        }
+        else if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_COLD_RESET) // 0x000019B0 & 0x000019C0
+        {
+            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_COLD_RESET; // 0x000019C8
+        }
+        else if (g_PowerSwitch.curHardwareRequestSwitch == HARDWARE_REQUEST_SWITCH_NONE) // 0x000019D8
+        {
+            /* 
+             * There is currently neither an automatically nor manually requested power switch event which needs
+             * to be processed. Let's wait again until a power switch event is requested.
+             */
+            continue;
+        }
+
+        // 0x00001874
+
+        /* Process the requested power switch. */
+
+        /*
+         * We only proceed with processing the requested power switch when there is no power lock placed
+         * in the system. If power locks (one or more) exists, we wait until all of them have been released.
+         * We make no distinction between automatically generated power switch requests or manually generated
+         * ones. Both types of requests have to wait.
+         */
+        powerSwitchWaitFlags = POWER_SWITCH_EVENT_PROCESSING_TERMINATION | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED;
+        sceKernelWaitEventFlag(g_PowerSwitch.eventId, powerSwitchWaitFlags, SCE_KERNEL_EW_OR, 
+            &powerSwitchSetFlags, NULL); // 0x00001880
+
+        if (powerSwitchSetFlags & POWER_SWITCH_EVENT_PROCESSING_TERMINATION) // 0x00001890
+        {
+            return SCE_ERROR_OK;
+        }
+
+        if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_COLD_RESET) // loc_000018A4
+        {
+            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_COLD_RESET; // 0x000018A0
+        }
+
+        /* 
+         * Indicate that the power switch manager is no longer idle (waiting for requests) and 
+         * is now running a power switch operation.
+         */
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_IDLE); // 0x000018A8
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_OPERATION_RUNNING); // 0x000018B8
+
+        if (g_PowerSwitch.unk48 == 0) // 0x000018C4
+        {
+            if (g_PowerSwitch.curHardwareRequestSwitch == HARDWARE_REQUEST_SWITCH_STANDBY 
+                || g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_STANDBY) // 0x000018D4 & 0x000018E0
+            {
+                _scePowerSuspendOperation(0x101);
+            }
+            else if (g_PowerSwitch.curHardwareRequestSwitch == HARDWARE_REQUEST_SWITCH_SUSPEND 
+                || g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_SUSPEND) // 0x000018F0 & 0x000018FC
+            {
+                _scePowerSuspendOperation(0x202); // 0x000018F4 & 0x00001950
+
+                g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_NONE; // 0x00001958
+                g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_NONE; // 0x0000195C
+            }
+            else if (g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_SUSPEND_TOUCH_AND_GO) // 0x00001908
+            {
+                _scePowerSuspendOperation(0x303); // 0x0000190C & 0x00001950
+
+                g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_NONE; // 0x00001958
+                g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_NONE; // 0x0000195C
+            }
+            else if (g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_COLD_RESET) // 0x00001914
+            {
+                _scePowerSuspendOperation(0x404); // 0x00001918 & 0x00001940
+            }
+        }
+
+        /*
+         * Indicate that the power switch manager has finished running a power switch operation and
+         * is now idle again (that is, waiting for a new power switch request to arrive).
+         */
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_OPERATION_RUNNING); // 0x000018A8
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE); // 0x000018B8
     }
-    
-    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x20000); //0x00001924
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x40000); //0x00001930
-    goto start; //0x00001938
 }
 
 //sub_00001A94
@@ -1624,6 +1755,12 @@ static s32 _scePowerSuspendOperation(u32 arg1)
     scePowerGetLedOffTiming(); //0x00001BC8
 }
 
+// 0x0000280C
+static s32 _scePowerResumePoint(u32 arg0)
+{
+    // TODO
+}
+
 //sub_000029B8
 // TODO: Verify function
 static u32 _scePowerOffCommon(void)
@@ -1660,7 +1797,7 @@ static s32 _scePowerSwEnd(void)
 {
     u32 nBits;
     
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x80000000); //0x00002AC0
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_PROCESSING_TERMINATION); //0x00002AC0
     sceKernelWaitThreadEnd(g_PowerSwitch.threadId, 0); //0x00002ACC
     
     sceKernelRegisterPowerHandlers(NULL); //0x00002AD4
@@ -1711,7 +1848,7 @@ u32 scePowerRebootStart(void)
     intrState = sceKernelCpuSuspendIntr(); //0x00002BAC
     
     sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); //0x00002BC0
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x00040000); //0x00002BCC
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE); //0x00002BCC
     
     sceKernelCpuResumeIntr(intrState); //0x00002BD4
     return SCE_ERROR_OK;
@@ -1721,7 +1858,7 @@ u32 scePowerRebootStart(void)
 // TODO: Verify function
 s32 scePowerIsRequest(void)
 {
-    return (0 < (g_PowerSwitch.unk40 | g_PowerSwitch.unk44));
+    return (0 < (g_PowerSwitch.curHardwareRequestSwitch | g_PowerSwitch.curSoftwareRequestSwitch));
 }
 
 //Subroutine scePower_DB62C9CF - Address 0x00002CA0 - Aliases: scePower_driver_DB62C9CF
@@ -1733,8 +1870,8 @@ u32 scePowerCancelRequest(void)
     
     intrState = sceKernelCpuSuspendIntr();//0x00002CA8
     
-    oldData = g_PowerSwitch.unk40; //0x00002CB8
-    g_PowerSwitch.unk40 = 0;
+    oldData = g_PowerSwitch.curHardwareRequestSwitch; //0x00002CB8
+    g_PowerSwitch.curHardwareRequestSwitch = 0;
     
     sceKernelCpuResumeIntr(intrState);
     return oldData;
@@ -1828,12 +1965,14 @@ static void _scePowerPowerSwCallback(s32 enable, void *argp)
     (void)argp;
 
     if (enable != 0) { //0x00002EF4
-        sceKernelSetEventFlag(g_PowerSwitch.eventId, 1); //0x00002EFC
-        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x2); //0x00002F08
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); //0x00002EFC
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); //0x00002F08
+
         _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWER_SWITCH, 0); //0x00002F14
     } else {
-        sceKernelSetEventFlag(g_PowerSwitch.eventId, 2); //0x00002F38
-        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x1); //0x00002F44
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); //0x00002F38
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); //0x00002F44
+
         _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWER_SWITCH, 0, 0); //0x00002F4C
     }
 }
@@ -3009,7 +3148,7 @@ static s32 _scePowerBatteryEnd(void)
         g_Battery.permitChargingDelayAlarmId = -1;//0x000044DC
     }
     sceKernelClearEventFlag(g_Battery.eventId, ~0xF00); //0x000044E8
-    sceKernelSetEventFlag(g_Battery.eventId, 0x80000000); //0x000044F4 -- TODO: 0x80000000 == SCE_POWER_CALLBACKARG_POWER_SWITCH?
+    sceKernelSetEventFlag(g_Battery.eventId, 0x80000000); //0x000044F4
     
     if (outBits & 0x200) //0x00004504
         sceSysconPermitChargeBattery(); //0x00004544
@@ -3113,6 +3252,9 @@ static s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *arg1)
 // Subroutine sub_0x000046FC - Address 0x000046FC
 static s32 _scePowerBatteryThread(SceSize args, void *argp)
 {
+    (void)args;
+    (void)argp;
+
     s32 isUsbChargingEnabled;
     s32 timeout; // $sp + 4
     s32 batteryEventCheckFlags; // $s2
