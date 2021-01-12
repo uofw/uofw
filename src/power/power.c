@@ -85,7 +85,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* The (initial) priority of the battery worker thread. */
 #define POWER_BATTERY_WORKER_THREAD_PRIO            (64)
 
-/* This constant indicates that there are currently no power locks in place. */
+/* This constant indicates that there are currently no power switch locks in place. */
 #define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED        0x00010000
 #define POWER_SWITCH_EVENT_00040000                     0x00040000 // TOOD
 
@@ -270,7 +270,7 @@ static SceSysconFunc _scePowerAcSupplyCallback; //sub_0x00000650
 static SceSysconFunc _scePowerLowBatteryCallback; //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
 static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2); // sub_00000BE0
-static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
+static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
 
 static s32 _scePowerLock(s32 lockType, s32 isUserLock); // 00001624
@@ -719,11 +719,14 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
         return SCE_ERROR_PRIV_REQUIRED;
     }
     
+    /* Make sure the specified cbid is actually a valid callback ID.  */
     idType = sceKernelGetThreadmanIdType(cbid); //0x000008EC
     if (idType != SCE_KERNEL_TMID_Callback) { //0x000008F8
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_ID;
     }
+
+    /* Verify that no kernel callback was specified when called from user mode.*/
     
     status = sceKernelGetUIDcontrolBlock(cbid, &pBlock); //0x00000904
     if (status != SCE_ERROR_OK) { //0x0000090C
@@ -915,7 +918,7 @@ static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2)
 }
 
 //sub_00000CC4
-static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
+static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
 {
     s32 intrState;
     s32 notifyCount;
