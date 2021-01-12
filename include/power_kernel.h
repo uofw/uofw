@@ -317,6 +317,37 @@ s32 scePowerGetDdrStrength(s16* pMaxStrength, s16* pDefaultStrength);
  */
 s32 scePowerSetDdrStrength(s16 maxStrength, s16 defaultStrength);
 
+/* POWER switch manipulation lock / unlock */
+
+/**
+ * @brief Locks POWER switch manipulation (sets a power off lock).
+ * 
+ * This function delays a power off request until the lock is canceled. It is used in a critical section 
+ * to protect timing when a power interruption would cause a problem. For example, it might be used to prevent 
+ * a power interruption while data is being written to the Memory Stick.
+ * 
+ * @param lockType The power processing lock type. Specify ::SCE_KERNEL_POWER_LOCK_DEFAULT.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @remark Since the user will not be able to turn the power off by operating the POWER/HOLD switch 
+ * during a power locked state, if the ::scePowerLockForKernel() function is used carelessly, it can 
+ * significantly decrease the usability of the PSP™.
+ */
+s32 scePowerLockForKernel(s32 lockType);
+
+/**
+ * @brief Cancels a power off lock.
+ * 
+ * This function cancels a power lock that was previously set with the ::scePowerLockForKernel() API.
+ * 
+ * @param lockType Power processing lock type. Specify ::SCE_KERNEL_POWER_LOCK_DEFAULT.
+ * 
+ * @return The remaining existing power locks (>= 0).
+ */
+s32 scePowerUnlockForKernel(s32 lockType);
+
+
 /* WLAN functions */
 
 /**

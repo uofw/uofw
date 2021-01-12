@@ -220,6 +220,42 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
  */
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
+/* POWER switch manipulation lock / unlock */
+
+/**
+ * @brief Locks POWER switch manipulation (sets a power off lock).
+ *
+ * This function delays a power off request until the lock is canceled. It is used in a critical section
+ * to protect timing when a power interruption would cause a problem. For example, it might be used to prevent
+ * a power interruption while data is being written to the Memory Stick.
+ *
+ * @param lockType The power processing lock type. Specify ::SCE_KERNEL_POWER_LOCK_DEFAULT.
+ *
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ *
+ * @remark Since the user will not be able to turn the power off by operating the POWER/HOLD switch
+ * during a power locked state, if the ::scePowerLockForUser() function is used carelessly, it can
+ * significantly decrease the usability of the PSP™.
+ * 
+ * @remark Normally, ::scePowerLockForUser() returns immediately. However, if a suspend/standby/reboot operation
+ * is already running at the time the lock is being set, the calling thread may be blocked.
+ */
+s32 scePowerLockForUser(s32 lockType);
+
+/**
+ * @brief Cancels a power off lock.
+ *
+ * This function cancels a power lock that was previously set with the ::scePowerLockForUser() API.
+ *
+ * @param lockType Power processing lock type. Specify ::SCE_KERNEL_POWER_LOCK_DEFAULT.
+ *
+ * @return The remaining existing power locks (>= 0).
+ * 
+ * @remark Normally, ::scePowerUnlockForUser() returns immediately. However, if a suspend/standby/reboot operation
+ * is already running at the time the lock is being set, the calling thread may be blocked.
+ */
+s32 scePowerUnlockForUser(s32 lockType);
+
 /* WLAN functions */
 
 /** Specifies a device type which permits a maximum PLL clock frequency of 222 MHz when WLAN is active. */

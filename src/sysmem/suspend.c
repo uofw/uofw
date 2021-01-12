@@ -1,20 +1,7 @@
 #include <common_imp.h>
+#include <sysmem_suspend_kernel.h>
 
 #include "intr.h"
-
-typedef struct
-{
-    int size; // 0
-    int (*tick)(int); // 4
-    int (*lock)(int); // 8
-    int (*unlock)(int); // 12
-    int (*lockForUser)(int); // 16
-    int (*unlockForUser)(int); // 20
-    int (*rebootStart)(int); // 24
-    int (*memLock)(int, void**, int*); // 28
-    int (*memTryLock)(int, void**, int*); // 32
-    int (*memUnlock)(int); // 36
-} ScePowerHandlers;
 
 typedef struct
 {

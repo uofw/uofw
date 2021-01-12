@@ -85,6 +85,10 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* The (initial) priority of the battery worker thread. */
 #define POWER_BATTERY_WORKER_THREAD_PRIO            (64)
 
+/* This constant indicates that there are currently no power locks in place. */
+#define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED        0x00010000
+#define POWER_SWITCH_EVENT_00040000                     0x00040000 // TOOD
+
 typedef struct {
     u32 unk0;
     u32 unk4;
@@ -122,14 +126,14 @@ typedef struct {
     s32 threadId; //8
     u32 mode; //12
     u32 unk16; //16
-    s32 unk20; //20
-    s32 numPowerLock; //24
+    s32 numPowerLocksUser; // 20
+    s32 numPowerLocksKernel; // 24
     u32 startAddr; //28
     u32 memSize; //32
     u32 unk36; //36
     u32 unk40; //40
     u32 (*unk44)(u32, u32, u32, u32); //44
-    u32 unk48; //48
+    u32 unk48; //48 TODO: Perhaps a flag indicating whether locking/unlocking is allowed or - more gnerally - standby/suspension/reboot?
     u32 wakeUpCondition; //60
     u32 resumeCount; //64
 } ScePowerSwitch; //size: 68
@@ -268,6 +272,9 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 static void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2); // sub_00000BE0
 static void _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
+
+static s32 _scePowerLock(s32 lockType, s32 isUserLock); // 00001624
+static s32 _scePowerUnlock(s32 lockType, s32 isUserLock); // 0x00002E1C
 
 static s32 _scePowerFreqInit(void); // 0x0000353C
 
@@ -1170,7 +1177,7 @@ static u32 _scePowerSwInit(void)
     
     scePowerLockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); //0x000012A0 -- scePower_driver_6CF50928
     nPowerLock = sceKernelRegisterPowerHandlers(&g_PowerHandler); //0x000012AC
-    g_PowerSwitch.numPowerLock += nPowerLock; //0x000012BC
+    g_PowerSwitch.numPowerLocksKernel += nPowerLock; //0x000012BC
     
     sceKernelCpuResumeIntr(intrState); //0x000012C0
     return SCE_ERROR_OK;
@@ -1297,41 +1304,160 @@ s32 scePowerVolatileMemUnlock(s32 mode)
 }
 
 //Subroutine scePower_driver_6CF50928 - Address 0x00001608
-// TODO: Verify function
-void scePowerLockForKernel(u32 lockType)
+s32 scePowerLockForKernel(s32 lockType)
 {
-    _scePowerLock(lockType, 0); //0x00001610
+    return _scePowerLock(lockType, SCE_FALSE);
+}
+
+//Subroutine scePower_D6D016EF - Address 0x00002BF4
+s32 scePowerLockForUser(s32 lockType)
+{
+    s32 oldK1;
+    s32 status;
+
+    oldK1 = pspShiftK1();
+
+    status = _scePowerLock(lockType, SCE_TRUE); //0x00002C08
+
+    pspSetK1(oldK1);
+    return status;
 }
 
 //sub_00001624
-// TODO: Verify function
-void _scePowerLock(u32 lockType, u32 arg2)
+static s32 _scePowerLock(s32 lockType, s32 isUserLock)
 {
     s32 intrState;
-    
-    if (lockType != SCE_KERNEL_POWER_LOCK_DEFAULT) //0x00001644
+
+    /* We only support SCE_KERNEL_POWER_LOCK_DEFAULT currently. */
+    if (lockType != SCE_KERNEL_POWER_LOCK_DEFAULT) // 0x00001644
+    {
         return SCE_ERROR_INVALID_MODE;
-    
-    if (g_PowerSwitch.unk48 != 0) //0x00001658
-        return SCE_ERROR_OK;
-    
-    intrState = sceKernelCpuSuspendIntr(); //0x00001680
-    
-    if (g_PowerSwitch.unk20 == 0 && g_PowerSwitch.numPowerLock == 0) //0x00001698
-        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x10000); //0x0000170C
-    
-    if (arg2 == 0) { //0x000016A0
-        g_PowerSwitch.numPowerLock += 1; //0x000016F4
-        sceKernelCpuResumeIntr(intrState);
+    }
+
+    if (g_PowerSwitch.unk48 != 0) // 0x00001658
+    {
         return SCE_ERROR_OK;
     }
-    g_PowerSwitch.unk20 += 1; //0x000016BC
-    
-    sceKernelCpuResumeIntr(intrState);
-    if (g_PowerSwitch.unk16 == 0) //0x000016C4
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00001680
+
+    /* 
+     * If no power lock currently exists in the system, we need to update the internal power switch 
+     * unlocked state.
+     */
+    if (g_PowerSwitch.numPowerLocksUser == 0 && g_PowerSwitch.numPowerLocksKernel == 0) // 0x0000168C & 0x00001698
+    {
+        /* 
+         * Indicate that power switching is now locked. Attempts to suspend/shutdown the system by the user
+         * are now blocked until this lock has been cancelled (assuming no other power locks are in place as well).
+         */
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); // 0x0000170C
+    }
+
+    if (isUserLock)
+    {
+        g_PowerSwitch.numPowerLocksUser++; // 0x000016AC - 0x000016BC
+
+        sceKernelCpuResumeIntr(intrState); // 0x000016B8
+
+        if (g_PowerSwitch.unk16 == 0) // 0x000016C4
+        {
+            return SCE_ERROR_OK;
+        }
+
+        /* 
+         * Normally, we return immediately. However, we block the thread when a suspend/standby/reboot process
+         * has already been started.
+         */
+        return sceKernelWaitEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_00040000,
+            SCE_KERNEL_EW_OR, NULL, NULL); // 0x000016DC
+    }
+    else
+    {
+        // loc_000016EC
+
+        g_PowerSwitch.numPowerLocksKernel++; // 0x000016EC - 0x000016FC
+
+        sceKernelCpuResumeIntr(intrState); // 0x000016F8
         return SCE_ERROR_OK;
-    
-    return sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_KERNEL_EW_OR, NULL, NULL); //0x000016DC
+    }
+}
+
+//Subroutine scePower_driver_C3024FE6 - Address 0x00002C68
+s32 scePowerUnlockForKernel(s32 lockType)
+{
+    return _scePowerUnlock(lockType, SCE_FALSE);
+}
+
+//Subroutine scePower_CA3D34C1 - Address 0x00002C24
+s32 scePowerUnlockForUser(s32 lockType)
+{
+    s32 oldK1;
+    s32 status;
+
+    /* We only support SCE_KERNEL_POWER_LOCK_DEFAULT currently. */
+    if (lockType != SCE_KERNEL_POWER_LOCK_DEFAULT) // 0x00002C3C
+    {
+        return SCE_ERROR_INVALID_MODE;
+    }
+        
+    oldK1 = pspShiftK1();
+
+    status = _scePowerUnlock(lockType, SCE_TRUE); //0x00002C44
+
+    pspSetK1(oldK1);
+    return status;
+}
+
+//Subroutine sub_00002E1C - Address 0x00002E1C
+static s32 _scePowerUnlock(s32 lockType, s32 isUserLock)
+{
+    s32 intrState;
+    s32 numPowerLocks;
+
+    if (g_PowerSwitch.unk48 != 0) // 0x00002E44
+    {
+        return SCE_ERROR_OK;
+    }
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00002E6C
+
+    /* Reduce the existing power locks (either user or kernel) by one. */
+
+    if (isUserLock) // 0x00002E74
+    {
+        numPowerLocks = g_PowerSwitch.numPowerLocksUser;
+        if (numPowerLocks > 0) // 0x00002E80
+        {
+            g_PowerSwitch.numPowerLocksUser = --numPowerLocks; // 0x00002E8C
+        }
+    }
+    else
+    {
+        numPowerLocks = g_PowerSwitch.numPowerLocksKernel;
+        if (numPowerLocks > 0) // 0x00002ECC
+        {
+            g_PowerSwitch.numPowerLocksKernel = --numPowerLocks; // 0x00002EDC
+        }
+    }
+
+    // loc_00002E90
+
+    /* Check if we can unlock power switching. */
+    if (g_PowerSwitch.numPowerLocksUser == 0 && g_PowerSwitch.numPowerLocksKernel == 0) // 0x00002E94 & 0x00002EA0
+    {
+        /* 
+         * No more power locks currently exist in the system, we can now unlock power switching. Any 
+         * power switching request (like user attempting to suspend the PSP) which was made while the 
+         * lock was in place will now be processed. 
+         */
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); // 0x00002EB8
+    }
+
+    sceKernelCpuResumeIntr(intrState); // 0x00002EA8
+
+    /* Return remaining power locks (>= 0). */
+    return numPowerLocks; 
 }
 
 //Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
@@ -1411,7 +1537,8 @@ start:
         else if (g_PowerSwitch.unk40 == 0) //0x000019D8
             goto start;
     }
-    sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x80010000, 1, &resultBits, NULL); //0x00001880
+    sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x80000000 | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, 
+        1, &resultBits, NULL); //0x00001880
     if ((s32)resultBits < 0) //0x00001890
         return SCE_ERROR_OK;
     if (resultBits & 0x80) //0x0000189C
@@ -1565,54 +1692,16 @@ u32 scePowerRebootStart(void)
     
     oldK1 = pspShiftK1(); 
     
-    _scePowerLock(SCE_KERNEL_POWER_LOCK_DEFAULT, 1); //0x00002B98
+    _scePowerLock(SCE_KERNEL_POWER_LOCK_DEFAULT, SCE_TRUE); //0x00002B98
     
     pspSetK1(oldK1); //0x00002BB0
     intrState = sceKernelCpuSuspendIntr(); //0x00002BAC
     
-    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~0x10000); //0x00002BC0
+    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); //0x00002BC0
     sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x00040000); //0x00002BCC
     
     sceKernelCpuResumeIntr(intrState); //0x00002BD4
     return SCE_ERROR_OK;
-}
-
-//Subroutine scePower_D6D016EF - Address 0x00002BF4
-// TODO: Verify function
-void scePowerLockForUser(u32 lockType) 
-{
-    s32 oldK1;
-    
-    oldK1 = pspShiftK1();
-    
-    _scePowerLock(lockType, 1); //0x00002C08
-    
-    pspSetK1(oldK1);
-}
-
-//Subroutine scePower_CA3D34C1 - Address 0x00002C24
-// TODO: Verify function
-s32 scePowerUnlockForUser(u32 mode)
-{
-    s32 oldK1;
-    s32 status;
-    
-    if (mode != 0) //0x00002C3C
-        return SCE_ERROR_INVALID_MODE;
-    
-    oldK1 = pspShiftK1();
-    
-    status = _scePowerUnlock(mode, 1); //0x00002C44
-    
-    pspSetK1(oldK1);
-    return status;
-}
-
-//Subroutine scePower_driver_C3024FE6 - Address 0x00002C68
-// TODO: Verify function
-s32 scePowerUnlockForKernel(u32 mode)
-{
-    return _scePowerUnlock(mode, 0); //0x00002C70
 }
 
 //Subroutine scePower_7FA406DD - Address 0x00002C84 - Aliases: scePower_driver_566B8353
@@ -1718,36 +1807,6 @@ u32 scePowerSetWakeupCondition(u32 wakeUpCondition)
 {
     g_PowerSwitch.wakeUpCondition = wakeUpCondition;
     return SCE_ERROR_OK;
-}
-
-//Subroutine sub_00002E1C - Address 0x00002E1C
-// TODO: Verify function
-s32 _scePowerUnlock(u32 mode, u32 arg1)
-{
-    s32 intrState;
-    s32 numPowerLock;
-    
-    if (g_PowerSwitch.unk48 != 0)
-        return SCE_ERROR_OK;
-    
-    intrState = sceKernelCpuSuspendIntr(); //0x00002E6C
-    
-    if (arg1 != 0) { //0x00002E74
-        numPowerLock = g_PowerSwitch.numPowerLock;
-        if (numPowerLock > 0) //0x00002ECC
-            g_PowerSwitch.numPowerLock = --numPowerLock; //0x00002EDC
-    }
-    else {
-        numPowerLock = g_PowerSwitch.unk20;
-        if (numPowerLock > 0) //0x00002E80
-            g_PowerSwitch.unk20 = --numPowerLock; //0x00002E8C
-    }
-    
-    if (g_PowerSwitch.unk20 == 0 && g_PowerSwitch.numPowerLock == 0) //0x00002E94 & 0x00002EA0
-        sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x10000); //0x00002EB8
-    
-    sceKernelCpuResumeIntr(intrState); //0x00002EA8
-    return numPowerLock;
 }
 
 //0x00002EE0
@@ -2337,7 +2396,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
         actBusFrequency = (((u32)actPllFrequency >> 31) + actPllFrequency) >> 1; // 0x00003A60 - 0x00003A68
     }
 
-    scePowerLockForKernel(0); //0x00003A6C
+    scePowerLockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); //0x00003A6C
 
     /* Check if we need to actually change the speed the PLL clock is operating on. */
     if (g_PowerFreq.pllOutSelect != newPllOutSelect) // 0x00003A78
@@ -2362,7 +2421,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
             sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000001, "cancel", &sysEventParam, 
                 NULL, 0, NULL); //0x00003DE0
 
-            scePowerUnlockForKernel(0); // 0x00003DE8
+            scePowerUnlockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); // 0x00003DE8
             sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); // 0x00003DF4
 
             pspSetK1(oldK1);
@@ -2530,7 +2589,7 @@ static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 bu
     /* Now set the CPU clock frequency. */
     scePowerSetCpuClockFrequency(actCpuFrequency); // 0x00003C7C
 
-    scePowerUnlockForKernel(0); // 0x00003C84
+    scePowerUnlockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); // 0x00003C84
     sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); // 0x00003C90
 
     pspSetK1(oldK1); // 0x00003C98
