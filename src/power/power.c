@@ -2968,8 +2968,8 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency)
 {
     /* 
-     * Check if the device calling this function is a PSP-100X or a a development tool (DTP-T1000) configured 
-     * to operate as a PSP-100X.
+     * Check if the device calling this function is a PSP-100X or a development tool (DTP-T1000) configured 
+     * to operate like a PSP-100X (by limiting the PLL's WLAN coexistency clock).
      */
     if (sceKernelGetModel() != PSP_1000
         || (sceKernelDipsw(PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK) == PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
