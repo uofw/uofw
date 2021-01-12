@@ -16,13 +16,15 @@ void *sceKernelSm1ReferOperations();
 
 void Kprintf(const char *format, ...);
 
+// TODO: Add more boot parameters and apply them throughout uofw.
+
 /** Boot parameter 11 of the PSP Development Tool (DTP-T1000). */
-#define PSP_DIPSW_REG_OPERATION_MODE_PSP_1000_OR_LATER      11
+#define PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK            11
 
 /* Valid values for boot parameter 11. */
 
-#define PSP_DIPSW_OPERATION_MODE_PSP_1000                   0
-#define PSP_DIPSW_OPERATION_MODE_PSP_2000_AND_LATER         1
+#define PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_222MHz         0 /* Corresponds to the PSP-1000 series */
+#define PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz         1 /* COrresponds to the PSP-2000 series and later */
 
 int sceKernelDipsw(u32 reg);
 u32 sceKernelDipswAll();

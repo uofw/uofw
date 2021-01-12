@@ -1077,7 +1077,7 @@ s32 scePowerCheckWlanCoexistenceClock(void)
 
     // 0x0000104C - 0x0000107C
     return (sceKernelGetModel() == PSP_1000)
-        ? (sceKernelDipsw(PSP_DIPSW_REG_OPERATION_MODE_PSP_1000_OR_LATER) != PSP_DIPSW_OPERATION_MODE_PSP_2000_AND_LATER)
+        ? (sceKernelDipsw(PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK) != PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz)
             ? SCE_POWER_WLAN_COEXISTENCE_CLOCK_222MHz /* Device runs as a PSP 1000 */
             : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz /* Device runs as a PSP 2000+ (set in development tool) */
         : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz; /* PSP-2000 and later support 333 MHz clock frequency with WLAN. */
@@ -2971,10 +2971,12 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
      * Check if the device calling this function is a PSP-100X or a a development tool (DTP-T1000) configured 
      * to operate as a PSP-100X.
      */
-    if (sceKernelGetModel() != PSP_1000 
-        || (sceKernelDipsw(PSP_DIPSW_REG_OPERATION_MODE_PSP_1000_OR_LATER) == PSP_DIPSW_OPERATION_MODE_PSP_2000_AND_LATER)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
+    if (sceKernelGetModel() != PSP_1000
+        || (sceKernelDipsw(PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK) == PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
+    {
         /* If we run as a PSP-2000 device or later, WLAN can be used without limiting the clock frequencies. */
         scePowerSetExclusiveWlan(0); //0x00004488
+    }
 
     return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468
 }
