@@ -2974,7 +2974,10 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
     if (sceKernelGetModel() != PSP_1000
         || (sceKernelDipsw(PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK) == PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz)) //0x0000443C & 0x00004444 & 0x0000444C & 0x00004458
     {
-        /* If we run as a PSP-2000 device or later, WLAN can be used without limiting the clock frequencies. */
+        /* 
+         * If we run on a PSP-2000 device or later (or set the boot parameter of the dev tool accordingly) 
+         * WLAN can be used without limiting the clock frequencies. 
+         */
         scePowerSetExclusiveWlan(0); //0x00004488
     }
 
