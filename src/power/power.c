@@ -95,7 +95,12 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define POWER_SWITCH_EVENT_IDLE                             0x00040000 /* Indicates that the power switch manager is not currently running a power switch oepration. */
 #define POWER_SWITCH_EVENT_PROCESSING_TERMINATION           0x80000000 /* Indicates that the power switch manager is shutting down. */
 
-#define POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD            (2 * 1000 * 1000) /* Specifies the duration the user has to hold the POWER switch to generate a standby request. */
+/* 
+ * Specifies the duration the user has to hold the POWER switch 
+ * to generate a standby request. Currently two seconds and represented
+ * in microseconds.
+ */
+#define POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD            (2 * 1000 * 1000)
 
 typedef struct {
     u32 unk0;
