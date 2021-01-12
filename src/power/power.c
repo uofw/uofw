@@ -83,9 +83,12 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* The (initial) priority of the battery worker thread. */
 #define POWER_BATTERY_WORKER_THREAD_PRIO            (64)
 
-/* This constant indicates that there are currently no power switch locks in place. */
-#define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED        0x00010000
-#define POWER_SWITCH_EVENT_00040000                     0x00040000 // TOOD
+#define POWER_SWITCH_EVENT_REQUEST_STANDBY                  0x00000010 /* Indicates a standby operation has been requested. */
+#define POWER_SWITCH_EVENT_REQUEST_SUSPEND                  0x00000020 /* Indicates a suspend operation has been requested. */
+#define POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO     0x00000040 /* Indicates a suspend-touch-and-go operation has been requested. */
+#define POWER_SWITCH_EVENT_REQUEST_COLD_RESET               0x00000080 /* Indicates a cold-reset operation has been requested. */
+#define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED            0x00010000 /* Indicates that there are currently no power switch locks in place. */
+#define POWER_SWITCH_EVENT_00040000                         0x00040000 // TOOD
 
 typedef struct {
     u32 unk0;
@@ -132,6 +135,8 @@ typedef struct {
     u32 unk40; //40
     u32 (*unk44)(u32, u32, u32, u32); //44
     u32 unk48; //48 TODO: Perhaps a flag indicating whether locking/unlocking is allowed or - more gnerally - standby/suspension/reboot?
+    u32 coldResetMode; // 52
+    u32 unk56; // 56
     u32 wakeUpCondition; //60
     u32 resumeCount; //64
 } ScePowerSwitch; //size: 68
@@ -1736,67 +1741,66 @@ u32 scePowerCancelRequest(void)
 }
 
 //Subroutine scePower_2B7C7CF4 - Address 0x00002CDC - Aliases: scePower_driver_9B44CFD9
-// TODO: Verify function
-u32 scePowerRequestStandby(void)
+s32 scePowerRequestStandby(void)
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1();
     
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x10); //0x00002CF8
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_REQUEST_STANDBY); // 0x00002CF8
     
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_AC32C9CC - Address 0x00002D18 - Aliases: scePower_driver_5C1333B7
-// TODO: Verify function
-u32 scePowerRequestSuspend(void)
+s32 scePowerRequestSuspend(void)
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1();
     
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x20); //0x00002D34
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_REQUEST_SUSPEND); // 0x00002D34
     
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_D79B0122 - Address 0x00002D54
-// TODO: Verify function
-u32 scePower_driver_D79B0122(void)
+s32 scePower_driver_D79B0122(void)
 {
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_2875994B - Address 0x00002D5C - Aliases: scePower_driver_D1FFF513
-// TODO: Verify function
-u32 scePowerRequestSuspendTouchAndGo(void)
+s32 scePowerRequestSuspendTouchAndGo(void)
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1();
     
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x40); //0x00002D78
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO); // 0x00002D78
     
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_0442D852 - Address 0x00002D98 - Aliases: scePower_driver_9DAF25A0
-// TODO: Verify function
-s32 scePowerRequestColdReset(u32 mode)
+s32 scePowerRequestColdReset(s32 mode)
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1();
-    
-    if (pspK1IsUserMode() && mode != 0) //0x00002DBC & 0x00002DC8
+
+    if (pspK1IsUserMode() && mode != 0) // 0x00002DBC & 0x00002DC8
+    {
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_MODE;
-    
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, 0x80); //0x00002DD4
+    }
+
+    g_PowerSwitch.coldResetMode = mode;
+
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_REQUEST_COLD_RESET); // 0x00002DD4
     
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
@@ -2272,7 +2276,6 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency)
 
     return status;
 }
-
 
 //Subroutine sub_00003898 - Address 0x00003898 
 static s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
@@ -2947,7 +2950,7 @@ float scePowerGetPllClockFrequencyFloat(void)
 //Subroutine scePower_737486F2 - Address 0x00004360
 s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency) 
 {
-    if (g_PowerFreq.sm1Ops != NULL)
+    if (g_PowerFreq.pSm1Ops != NULL)
         sceKernelDelayThread(60000000); //0x000043BC
 
     return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x0000439C

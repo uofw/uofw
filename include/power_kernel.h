@@ -317,10 +317,49 @@ s32 scePowerGetDdrStrength(s16* pMaxStrength, s16* pDefaultStrength);
  */
 s32 scePowerSetDdrStrength(s16 maxStrength, s16 defaultStrength);
 
-/* POWER switch manipulation lock / unlock */
+/* Power switch request functions */
 
 /**
- * @brief Locks POWER switch manipulation (sets a power off lock).
+ * @brief Requests the PSP system to go into standby.
+ * 
+ * @return Always SCE_ERROR_OK.
+ * 
+ * @remark This function only generates a request. The actual standby operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForKernel())
+ * then the standby operation will be delayed until all power switch locks have been removed.
+ */
+s32 scePowerRequestStandby(void);
+
+/**
+ * @brief Requests the PSP system to suspend.
+ * 
+ * @return Always SCE_ERROR_OK.
+ * 
+ * @remark This function only generates a request. The actual suspend operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForKernel())
+ * then the suspend operation will be delayed until all power switch locks have been removed.
+ */
+s32 scePowerRequestSuspend(void);
+
+s32 scePowerRequestSuspendTouchAndGo(void);
+
+/**
+ * @brief Requests the PSP system to do a cold reset.
+ * 
+ * @param mode Unknown.
+ * 
+ * @return Always SCE_ERROR_OK.
+ * 
+ * @remark This function only generates a request. The actual cold-reset operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForKernel())
+ * then the cold-reset operation will be delayed until all power switch locks have been removed.
+ */
+s32 scePowerRequestColdReset(s32 mode);
+
+/* Power switch manipulation lock / unlock */
+
+/**
+ * @brief Locks Power switch manipulation (sets a power off lock).
  * 
  * This function delays a power off request until the lock is canceled. It is used in a critical section 
  * to protect timing when a power interruption would cause a problem. For example, it might be used to prevent 
@@ -432,6 +471,15 @@ s32 scePowerGetGeEdramRefreshMode(void);
  * @return SCE_ERROR_OK on success, otherwise < 0.
  */
 s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode);
+
+/* Disabled functions */
+
+/**
+ * Dummy function. Does nothing.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePower_driver_D79B0122(void);
 
 
  /** @} */

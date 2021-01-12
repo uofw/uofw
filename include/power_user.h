@@ -220,10 +220,49 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
  */
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
-/* POWER switch manipulation lock / unlock */
+/* Power switch request functions */
 
 /**
- * @brief Locks POWER switch manipulation (sets a power off lock).
+ * @brief Requests the PSP system to go into standby.
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark This function only generates a request. The actual standby operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForUser())
+ * then the standby operation will be delayed until all power switch locks have been removed.
+ */
+s32 scePowerRequestStandby(void);
+
+/**
+ * @brief Requests the PSP system to suspend.
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark This function only generates a request. The actual suspend operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForUser())
+ * then the suspend operation will be delayed until all power switch locks have been removed.
+ */
+s32 scePowerRequestSuspend(void);
+
+s32 scePowerRequestSuspendTouchAndGo(void);
+
+/**
+ * @brief Requests the PSP system to do a cold reset.
+ * 
+ * @param mode Unknown. Only specify 0.
+ *
+ * @return SCE_ERROR_OK on successful request generation, otherwise < 0.
+ *
+ * @remark This function only generates a request. The actual cold-reset operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForUser())
+ * then the cold-reset operation will be delayed until all power switch locks have been removed.
+ */
+s32 scePowerRequestColdReset(s32 mode);
+
+/* Power switch manipulation lock / unlock */
+
+/**
+ * @brief Locks Power switch manipulation (sets a power off lock).
  *
  * This function delays a power off request until the lock is canceled. It is used in a critical section
  * to protect timing when a power interruption would cause a problem. For example, it might be used to prevent
