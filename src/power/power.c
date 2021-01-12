@@ -111,7 +111,7 @@ typedef struct {
     u8 watchDog; //526
     u8 isWlanSuppressChargingEnabled; // 527
     s8 unk528;
-    s8 wlanExclusiveClockLimit; // 529
+    s8 wlanExclusivePllClockLimit; // 529
     u8 ledOffTiming;
     s16 cpuInitSpeed; //534 -- CPU clock init speed
     s16 busInitSpeed; //536 -- Bus clock init speed
@@ -388,7 +388,7 @@ s32 scePowerInit()
     status = sceIdStorageLookup(4, 0, baryonData, sizeof baryonData); //0x00000058
     if (status < SCE_ERROR_OK) { //0x00000060
         memset(baryonData, 0, sizeof baryonData); //0x00000618
-        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz;
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz;
         g_Power.watchDog = 0;
         g_Power.isWlanSuppressChargingEnabled = SCE_FALSE;
         g_Power.unk528 = 0;
@@ -402,13 +402,13 @@ s32 scePowerInit()
         g_Power.watchDog = baryonData[24] & 0x7F; //0x00000088
         g_Power.isWlanSuppressChargingEnabled = baryonData[25]; //0x0000008C
         g_Power.unk528 = baryonData[30]; //0x00000090
-        g_Power.wlanExclusiveClockLimit = ((s8)baryonData[52] < 0) ? baryonData[52] & 0x7F : SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz; //0x00000098       
+        g_Power.wlanExclusivePllClockLimit = ((s8)baryonData[52] < 0) ? baryonData[52] & 0x7F : SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; //0x00000098       
         batteryReallyLowCap = BATTERY_REALLY_LOW_CAPACITY_VALUE; //0x00000094
         batteryLowCap = BATTERY_LOW_CAPACITY_VALUE; //0x0000009C
     }
     appType = sceKernelApplicationType(); //0x000000A8
     if (appType == SCE_INIT_APPLICATION_GAME) { //0x000000B4
-        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz;
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz;
         scePowerSetPllUseMask(60); //0x00000600
     }
     
@@ -523,16 +523,16 @@ s32 scePowerInit()
     
     if (minPllSpeed <= 266 && g_Power.pllInitSpeed < 267) { //0x0000021C & 0x0000022C
         if (minPllSpeed > 222 || g_Power.pllInitSpeed > 222) //0x00000230 & 0x000004F0
-            g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz; //0x00000508
+            g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; //0x00000508
     }
     else {
-        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_NONE; //0x00000220 || 0x00000234
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE; //0x00000220 || 0x00000234
     }   
     status = sceKernelDipsw(49); //0x00000238
     if (status == 1) { //0x00000244
         g_Power.busInitSpeed = 166;
         g_Power.pllInitSpeed = 333; //0x000004C0
-        g_Power.wlanExclusiveClockLimit = SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_NONE;
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE;
         g_Power.cpuInitSpeed = 333;
         scePowerLimitScCpuClock(minCpuSpeed, 333);
         scePowerLimitScBusClock(minBusSpeed, 166); //0x000004D4
@@ -965,9 +965,14 @@ s32 scePowerWlanActivate(void)
     scePowerGetCpuClockFrequencyInt(); // 0x00000DA4
     scePowerGetBusClockFrequencyInt(); // 0x00000DAC
    
-    if ((g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz && pllFreq > 222) 
-        || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && pllFreq > 266)) //0x00000DBC - 0x00000DEC
+    /* Check if the PSP currenty runs at a clock frequency where WLAN cannot be used.  */
+    if ((g_Power.wlanExclusivePllClockLimit == SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz && pllFreq > 222) 
+        || (g_Power.wlanExclusivePllClockLimit == SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_266Mhz && pllFreq > 266)) //0x00000DBC - 0x00000DEC
     {
+        /* 
+         * The PSP is currently operating at a clock frequency where WLAN cannot be activated. In this case, 
+         * the clock frequency needs to be reduced first.
+         */
         _scePowerUnlockPowerFreqMutex();
         return SCE_POWER_ERROR_BAD_PRECONDITION;
     }
@@ -976,10 +981,65 @@ s32 scePowerWlanActivate(void)
 
     _scePowerUnlockPowerFreqMutex(); //0x00000E18
     
+    /* Suppress battery charging while WLAN is on. */
     if (g_Power.isWlanSuppressChargingEnabled) //0x00000E24
         scePowerBatteryForbidCharging(); //0x00000E34
     
     return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_8C6BEFD9 - Address 0x000010EC
+s32 scePowerWlanDeactivate(void)
+{
+    g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; // 0x00001104
+
+    /* Allow battery charging again now that WLAN is turned off. */
+    if (g_Power.isWlanSuppressChargingEnabled)
+        scePowerBatteryPermitCharging(); // 0x00001118
+
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_A85880D0 - Address 0x00001044 - Aliases: scePower_driver_693F6CF0
+s32 scePowerCheckWlanCoexistenceClock(void)
+{
+    /*
+     * Determine the maximum allowed clock frequencies when WLAN is active based on the hardware
+     * we are running on (i.e. PSP-100X only has limited clock speed when WLAN is active).
+     */
+
+     // 0x0000104C - 0x0000107C
+    return (sceKernelGetModel() == PSP_1000)
+        ? (sceKernelDipsw(PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK) != PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz)
+            ? SCE_POWER_WLAN_COEXISTENCE_CLOCK_222MHz /* Device runs as a PSP 1000 */
+            : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz /* Device runs as a PSP 2000+ (set in development tool) */
+        : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz; /* PSP-2000 and later support 333 MHz clock frequency with WLAN. */
+}
+
+//Subroutine scePower_driver_114B75AB - Address 0x0000108C
+s32 scePowerSetExclusiveWlan(u8 pllClockLimit)
+{
+    g_Power.wlanExclusivePllClockLimit = pllClockLimit;
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_driver_E52B4362 - Address 0x0000109C
+s32 scePowerCheckWlanCondition(s32 pllFrequency)
+{
+    if ((g_Power.wlanExclusivePllClockLimit == SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz && pllFrequency > 222)
+        || (g_Power.wlanExclusivePllClockLimit == SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_266Mhz && pllFrequency > 266)) // 0x000010A0 - 0x000010D4
+    {
+        return SCE_POWER_ERROR_BAD_PRECONDITION;
+    }
+
+    return SCE_ERROR_OK;
+}
+
+//Subroutine scePower_2B51FE2F - Address 0x00001134 - Aliases: scePower_driver_CE2032CD
+// TODO: Verify function
+u8 scePowerGetWlanActivity(void)
+{
+    return g_Power.wlanActivity; //0x0000113C
 }
 
 //Subroutine scePower_442BFBAC - Address 0x00000E44 - Aliases: scePower_driver_2509FF3B
@@ -1067,64 +1127,11 @@ u32 scePower_driver_23BDDD8B(void)
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_A85880D0 - Address 0x00001044 - Aliases: scePower_driver_693F6CF0
-s32 scePowerCheckWlanCoexistenceClock(void)
-{
-    /* 
-     * Determine the maximum allowed clock frequencies when WLAN is active based on the hardware 
-     * we are running on (i.e. PSP-100X only has limited clock speed when WLAN is active).
-     */
-
-    // 0x0000104C - 0x0000107C
-    return (sceKernelGetModel() == PSP_1000)
-        ? (sceKernelDipsw(PSP_DIPSW_BIT_PLL_WLAN_COEXISTENCY_CLOCK) != PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz)
-            ? SCE_POWER_WLAN_COEXISTENCE_CLOCK_222MHz /* Device runs as a PSP 1000 */
-            : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz /* Device runs as a PSP 2000+ (set in development tool) */
-        : SCE_POWER_WLAN_COEXISTENCE_CLOCK_333MHz; /* PSP-2000 and later support 333 MHz clock frequency with WLAN. */
-}
-
-//Subroutine scePower_driver_114B75AB - Address 0x0000108C
-// TODO: Verify function
-s32 scePowerSetExclusiveWlan(u8 clockLimit) 
-{
-    g_Power.wlanExclusiveClockLimit = clockLimit;
-    return SCE_ERROR_OK; //0x00001098
-}
-
-//Subroutine scePower_driver_E52B4362 - Address 0x0000109C
-// TODO: Verify function
-s32 scePowerCheckWlanCondition(u32 freq)
-{
-    if ((g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz && freq > 222) 
-        || (g_Power.wlanExclusiveClockLimit == SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz && freq > 266)) //0x000010A0 - 0x000010D4
-        return SCE_POWER_ERROR_BAD_PRECONDITION;
-    
-    return SCE_ERROR_OK;
-}
-
-//Subroutine scePower_driver_8C6BEFD9 - Address 0x000010EC
-s32 scePowerWlanDeactivate(void)
-{
-    g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; // 0x00001104
-
-    if (g_Power.isWlanSuppressChargingEnabled)
-        scePowerBatteryPermitCharging(); // 0x00001118
-   
-    return SCE_ERROR_OK;
-}
-
 //Subroutine scePower_driver_4E32E9B8 - Address 0x00001128
 // TODO: Verify function
 u8 scePowerGetWatchDog(void)
 {
     return g_Power.watchDog; //0x00001130
-}
-
-//Subroutine scePower_2B51FE2F - Address 0x00001134 - Aliases: scePower_driver_CE2032CD
-// TODO: Verify function
-u8 scePowerGetWlanActivity(void)
-{
-    return g_Power.wlanActivity; //0x0000113C
 }
 
 //Subroutine scePower_driver_C463E7F2 - Address 0x00001140
@@ -2978,7 +2985,7 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
          * If we run on a PSP-2000 device or later (or set the boot parameter of the dev tool accordingly) 
          * WLAN can be used without limiting the clock frequencies. 
          */
-        scePowerSetExclusiveWlan(0); //0x00004488
+        scePowerSetExclusiveWlan(SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE); //0x00004488
     }
 
     return _scePowerSetClockFrequency(pllFrequency, cpuFrequency, busFrequency); //0x00004468

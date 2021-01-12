@@ -353,6 +353,9 @@ s32 scePowerUnlockForKernel(s32 lockType);
 /**
  * Attempts to activate WLAN.
  * 
+ * @remark The PSP system's PLL might operate at a clock frequency where WLAN cannot be used. For example, 
+ * the PSP-1000 series cannot use WLAN when it's PLL operates at a clock frequency of either 266 MHz or 333 MHZ.
+ * In such a case WLAN activation fails and the PLL clock frequency needs to be reduced first.
  * @remark Battery charging might be suppressed while WLAN is active.
  * 
  * @return SCE_ERROR_OK on success, otherwise < 0.
@@ -386,11 +389,11 @@ s32 scePowerWlanDeactivate(void);
 s32 scePowerCheckWlanCoexistenceClock(void);
 
 /* Specifies that WLAN can be operated at the maximum PLL clock frequency. */
-#define SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_NONE		0
+#define SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE		0
 /** Specifies that WLAN can only be operated at a PLL clock frequency up to 222 MHz. */
-#define SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_222Mhz		1
+#define SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz		1
 /** Specifies that WLAN can only be operated at a PLL clock frequency up to 266 MHz. */
-#define SCE_POWER_WLAN_EXCLUSIVE_CLOCK_LIMIT_266Mhz		2
+#define SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_266Mhz		2
 
 /**
  * Sets the clock frequency limit at which WLAN can be operated. If WLAN is active this limits the allowed
@@ -401,9 +404,16 @@ s32 scePowerCheckWlanCoexistenceClock(void);
  *
  * @return Always SCE_ERROR_OK.
  */
-s32 scePowerSetExclusiveWlan(u8 clockLimit);
+s32 scePowerSetExclusiveWlan(u8 pllClockLimit);
 
-s32 scePowerCheckWlanCondition(u32 freq);
+/**
+ * Checks if the PSP system is allowed to operate at the given PLL clock frequency when WLAN is active.
+ * 
+ * @param pllFrequency The PLL clock frequency to check for.
+ * 
+ * @return SCE_ERROR_OK if allowed, otherwise < 0.
+ */
+s32 scePowerCheckWlanCondition(s32 pllFrequency);
 
 u8 scePowerGetWlanActivity(void);
 
