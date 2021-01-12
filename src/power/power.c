@@ -95,6 +95,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define POWER_SWITCH_EVENT_IDLE                             0x00040000 /* Indicates that the power switch manager is not currently running a power switch oepration. */
 #define POWER_SWITCH_EVENT_PROCESSING_TERMINATION           0x80000000 /* Indicates that the power switch manager is shutting down. */
 
+#define POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD            (2 * 1000 * 1000) /* Specifies the duration the user has to hold the POWER switch to generate a standby request. */
+
 typedef struct {
     u32 unk0;
     u32 unk4;
@@ -1572,7 +1574,7 @@ static s32 _scePowerOffThread(SceSize args, void *argp)
                 | POWER_SWITCH_EVENT_REQUEST_STANDBY | POWER_SWITCH_EVENT_REQUEST_SUSPEND
                 | POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO | POWER_SWITCH_EVENT_REQUEST_COLD_RESET
                 | POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE;
-            waitTimeout = 2 * 1000 * 1000; /* 2 seconds timeout */
+            waitTimeout = POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD; /* 2 seconds timeout */
             status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, powerSwitchWaitFlags, SCE_KERNEL_EW_OR,
                 &powerSwitchSetFlags, &waitTimeout); // 0x00001A04
 
@@ -1618,7 +1620,7 @@ static s32 _scePowerOffThread(SceSize args, void *argp)
             }
         }
 
-        // 0x00001860 & loc_00001864
+        // loc_00001864
 
         if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_STANDBY) // 0x00001864
         {
