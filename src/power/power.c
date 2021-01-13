@@ -550,6 +550,9 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
     return status;
 }
 
+// scePower_DB9D28DD
+s32 scePowerUnregitserCallback(s32 slot) __attribute__((alias("scePowerUnregisterCallback")));
+
 //Subroutine scePower_DB9D28DD - Address 0x00000A64 - Aliases: scePower_DFA8BAF8, scePower_driver_315B8CB6
 s32 scePowerUnregisterCallback(s32 slot)
 {

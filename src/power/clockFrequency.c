@@ -958,6 +958,9 @@ s32 scePowerSetPllUseMask(s32 useMask)
     return SCE_ERROR_OK;
 }
 
+// scePower_FEE03A2F
+s32 scePowerGetCpuClockFrequency(void) __attribute__((alias("scePowerGetCpuClockFrequencyInt")));
+
 //Subroutine scePower_FDB5BFE9 - Address 0x00004318 - Aliases: scePower_FEE03A2F, scePower_driver_FDB5BFE9
 s32 scePowerGetCpuClockFrequencyInt(void)
 {
@@ -969,6 +972,9 @@ float scePowerGetCpuClockFrequencyFloat(void)
 {
     return g_PowerFreq.cpuClockFrequencyFloat;
 }
+
+// scePower_478FE6F5
+s32 scePowerGetBusClockFrequency(void) __attribute__((alias("scePowerGetBusClockFrequencyInt")));
 
 //Subroutine scePower_478FE6F5 - Address 0x00004330 - Aliases: scePower_BD681969, scePower_driver_04711DFB
 s32 scePowerGetBusClockFrequencyInt(void)
