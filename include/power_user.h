@@ -58,7 +58,7 @@ typedef enum {
  * Power service callback function prototype
  *
  * @param count Number of times the callback has been called.
- * @param arg The callback argument.
+ * @param arg The callback argument. Can contain multiple members of ::ScePowerCallbackArg.
  * @param common Custom callback value. Specified by the same parameter in ::sceKernelCreateCallback().
  *
  * @return Always SCE_ERROR_OK.
