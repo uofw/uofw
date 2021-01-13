@@ -379,7 +379,7 @@ s32 scePowerRequestColdReset(s32 mode);
  * 
  * @remark Since the user will not be able to turn the power off by operating the POWER/HOLD switch 
  * during a power locked state, if the ::scePowerLockForKernel() function is used carelessly, it can 
- * significantly decrease the usability of the PSP™.
+ * significantly decrease the usability of the PSP system.
  */
 s32 scePowerLockForKernel(s32 lockType);
 
