@@ -364,6 +364,13 @@ s32 scePowerRequestSuspendTouchAndGo(void);
  */
 s32 scePowerRequestColdReset(s32 mode);
 
+/**
+ * Gets whether a PSP power switch request (standby/resume/...) is currently registered in the system.
+ * 
+ * @return SCE_TRUE if a power switch request exists, otherwise SCE_FALSE.
+ */
+s32 scePowerIsRequest(void);
+
 /* Power switch manipulation lock / unlock */
 
 /**

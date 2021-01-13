@@ -412,38 +412,6 @@ static s32 _scePowerUnlock(s32 lockType, s32 isUserLock)
     return numPowerLocks;
 }
 
-//Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
-// TODO: Verify function
-s32 scePowerWaitRequestCompletion(void)
-{
-    s32 oldK1;
-    u32 resultBits;
-    s32 status;
-
-    oldK1 = pspShiftK1(); //0x00001748
-
-    status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_KERNEL_EW_OR, &resultBits);
-    if (status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) { //0x0000174C & 0x00001764
-        pspSetK1(oldK1); //0x000017EC
-        return status;
-    }
-    if ((resultBits & 0x1F0) == 0) { //0x0000177C
-        pspSetK1(oldK1); //0x000017EC
-        return SCE_ERROR_OK;
-    }
-
-    if ((resultBits & 0x20000) == 0) { //0x00001780& 0x00001790
-        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x20000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x00001798
-        if (status < SCE_ERROR_OK) { //0x000017A0
-            pspSetK1(oldK1); //0x000017EC
-            return status;
-        }
-    }
-    status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x000017B8
-    pspSetK1(oldK1); //0x000017C8
-    return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; //0x000017C4
-}
-
 //0x000017F0
 /* Processes power switch requests. */
 static s32 _scePowerOffThread(SceSize args, void* argp)
@@ -753,10 +721,10 @@ u32 scePowerRebootStart(void)
 }
 
 //Subroutine scePower_7FA406DD - Address 0x00002C84 - Aliases: scePower_driver_566B8353
-// TODO: Verify function
 s32 scePowerIsRequest(void)
 {
-    return (0 < (g_PowerSwitch.curHardwareRequestSwitch | g_PowerSwitch.curSoftwareRequestSwitch));
+    return g_PowerSwitch.curHardwareRequestSwitch != HARDWARE_REQUEST_SWITCH_NONE
+        || g_PowerSwitch.curSoftwareRequestSwitch != SOFTWARE_REQUEST_SWITCH_NONE;
 }
 
 //Subroutine scePower_DB62C9CF - Address 0x00002CA0 - Aliases: scePower_driver_DB62C9CF
@@ -773,6 +741,38 @@ u32 scePowerCancelRequest(void)
 
     sceKernelCpuResumeIntr(intrState);
     return oldData;
+}
+
+//Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
+// TODO: Verify function
+s32 scePowerWaitRequestCompletion(void)
+{
+    s32 oldK1;
+    u32 resultBits;
+    s32 status;
+
+    oldK1 = pspShiftK1(); //0x00001748
+
+    status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_KERNEL_EW_OR, &resultBits);
+    if (status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) { //0x0000174C & 0x00001764
+        pspSetK1(oldK1); //0x000017EC
+        return status;
+    }
+    if ((resultBits & 0x1F0) == 0) { //0x0000177C
+        pspSetK1(oldK1); //0x000017EC
+        return SCE_ERROR_OK;
+    }
+
+    if ((resultBits & 0x20000) == 0) { //0x00001780& 0x00001790
+        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x20000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x00001798
+        if (status < SCE_ERROR_OK) { //0x000017A0
+            pspSetK1(oldK1); //0x000017EC
+            return status;
+        }
+    }
+    status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x000017B8
+    pspSetK1(oldK1); //0x000017C8
+    return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; //0x000017C4
 }
 
 //Subroutine scePower_2B7C7CF4 - Address 0x00002CDC - Aliases: scePower_driver_9B44CFD9
