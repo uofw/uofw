@@ -34,21 +34,15 @@
 
 #define SCE_KERNEL_POWER_VOLATILE_MEM_DEFAULT       (0) // TODO: Remove
 
-typedef enum 
+/** Defines programmatically generated power switch requests. */
+typedef enum
 {
-    HARDWARE_REQUEST_SWITCH_NONE = 0,
-    HARDWARE_REQUEST_SWITCH_STANDBY,
-    HARDWARE_REQUEST_SWITCH_SUSPEND,
-} ScePowerSwitchHardwareRequestSwitch;
-
-typedef enum 
-{
-    SOFTWARE_REQUEST_SWITCH_NONE = 0,
-    SOFTWARE_REQUEST_SWITCH_STANDBY,
-    SOFTWARE_REQUEST_SWITCH_SUSPEND,
-    SOFTWARE_REQUEST_SWITCH_SUSPEND_TOUCH_AND_GO,
-    SOFTWARE_REQUEST_SWITCH_COLD_RESET,
-} ScePowerSwitchSoftwareRequestSwitch;
+    SOFTWARE_POWER_SWITCH_REQUEST_NONE = 0,
+    SOFTWARE_POWER_SWITCH_REQUEST_STANDBY,
+    SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND,
+    SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND_TOUCH_AND_GO,
+    SOFTWARE_POWER_SWITCH_REQUEST_COLD_RESET
+} ScePowerSoftwarePowerSwitchRequest;
 
 typedef struct 
 {
@@ -62,8 +56,8 @@ typedef struct
     u32 startAddr; //28
     u32 memSize; //32
     u32 unk36; //36
-    ScePowerSwitchHardwareRequestSwitch curHardwareRequestSwitch; //40
-    ScePowerSwitchSoftwareRequestSwitch curSoftwareRequestSwitch; //44
+    ScePowerHardwarePowerSwitchRequest curHardwarePowerSwitchRequest; //40
+    ScePowerSoftwarePowerSwitchRequest curSoftwarePowerSwitchRequest; //44
     u32 unk48; //48 TODO: Perhaps a flag indicating whether locking/unlocking is allowed or - more gnerally - standby/suspension/reboot?
     u32 coldResetMode; // 52
     u32 unk56; // 56
@@ -489,7 +483,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
                      * The user held the POWER switch for less than two seconds thus we now enter the
                      * [suspend] power state.
                      */
-                    g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_SUSPEND; // 0x00001A74
+                    g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_SUSPEND; // 0x00001A74
                 }
                 else if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT) // 0x00001A84
                 {
@@ -497,7 +491,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
                      * The user kept holding the POWER switch for at least two seconds so we now enter the
                      * [standby] power state.
                      */
-                    g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_STANDBY; // 0x00001A88
+                    g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_STANDBY; // 0x00001A88
                 }
             }
         }
@@ -506,21 +500,21 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
 
         if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_STANDBY) // 0x00001864
         {
-            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_STANDBY; // 0x0000186C
+            g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_STANDBY; // 0x0000186C
         }
         else if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_SUSPEND) // 0x00001868 & 0x00001998
         {
-            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_SUSPEND; // 0x000019A0
+            g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND; // 0x000019A0
         }
         else if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO) // 0x0000199C & 0x000019AC
         {
-            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_SUSPEND_TOUCH_AND_GO;
+            g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND_TOUCH_AND_GO;
         }
         else if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_COLD_RESET) // 0x000019B0 & 0x000019C0
         {
-            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_COLD_RESET; // 0x000019C8
+            g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_COLD_RESET; // 0x000019C8
         }
-        else if (g_PowerSwitch.curHardwareRequestSwitch == HARDWARE_REQUEST_SWITCH_NONE) // 0x000019D8
+        else if (g_PowerSwitch.curHardwarePowerSwitchRequest == HARDWARE_POWER_SWITCH_REQUEST_NONE) // 0x000019D8
         {
             /*
              * There is currently neither an automatically nor manually requested power switch event which needs
@@ -550,7 +544,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
 
         if (powerSwitchSetFlags & POWER_SWITCH_EVENT_REQUEST_COLD_RESET) // loc_000018A4
         {
-            g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_COLD_RESET; // 0x000018A0
+            g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_COLD_RESET; // 0x000018A0
         }
 
         /*
@@ -562,27 +556,27 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
 
         if (g_PowerSwitch.unk48 == 0) // 0x000018C4
         {
-            if (g_PowerSwitch.curHardwareRequestSwitch == HARDWARE_REQUEST_SWITCH_STANDBY
-                || g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_STANDBY) // 0x000018D4 & 0x000018E0
+            if (g_PowerSwitch.curHardwarePowerSwitchRequest == HARDWARE_POWER_SWITCH_REQUEST_STANDBY
+                || g_PowerSwitch.curSoftwarePowerSwitchRequest == SOFTWARE_POWER_SWITCH_REQUEST_STANDBY) // 0x000018D4 & 0x000018E0
             {
                 _scePowerSuspendOperation(0x101);
             }
-            else if (g_PowerSwitch.curHardwareRequestSwitch == HARDWARE_REQUEST_SWITCH_SUSPEND
-                || g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_SUSPEND) // 0x000018F0 & 0x000018FC
+            else if (g_PowerSwitch.curHardwarePowerSwitchRequest == HARDWARE_POWER_SWITCH_REQUEST_SUSPEND
+                || g_PowerSwitch.curSoftwarePowerSwitchRequest == SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND) // 0x000018F0 & 0x000018FC
             {
                 _scePowerSuspendOperation(0x202); // 0x000018F4 & 0x00001950
 
-                g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_NONE; // 0x00001958
-                g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_NONE; // 0x0000195C
+                g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_NONE; // 0x00001958
+                g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_NONE; // 0x0000195C
             }
-            else if (g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_SUSPEND_TOUCH_AND_GO) // 0x00001908
+            else if (g_PowerSwitch.curSoftwarePowerSwitchRequest == SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND_TOUCH_AND_GO) // 0x00001908
             {
                 _scePowerSuspendOperation(0x303); // 0x0000190C & 0x00001950
 
-                g_PowerSwitch.curHardwareRequestSwitch = HARDWARE_REQUEST_SWITCH_NONE; // 0x00001958
-                g_PowerSwitch.curSoftwareRequestSwitch = SOFTWARE_REQUEST_SWITCH_NONE; // 0x0000195C
+                g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_NONE; // 0x00001958
+                g_PowerSwitch.curSoftwarePowerSwitchRequest = SOFTWARE_POWER_SWITCH_REQUEST_NONE; // 0x0000195C
             }
-            else if (g_PowerSwitch.curSoftwareRequestSwitch == SOFTWARE_REQUEST_SWITCH_COLD_RESET) // 0x00001914
+            else if (g_PowerSwitch.curSoftwarePowerSwitchRequest == SOFTWARE_POWER_SWITCH_REQUEST_COLD_RESET) // 0x00001914
             {
                 _scePowerSuspendOperation(0x404); // 0x00001918 & 0x00001940
             }
@@ -723,24 +717,23 @@ u32 scePowerRebootStart(void)
 //Subroutine scePower_7FA406DD - Address 0x00002C84 - Aliases: scePower_driver_566B8353
 s32 scePowerIsRequest(void)
 {
-    return g_PowerSwitch.curHardwareRequestSwitch != HARDWARE_REQUEST_SWITCH_NONE
-        || g_PowerSwitch.curSoftwareRequestSwitch != SOFTWARE_REQUEST_SWITCH_NONE;
+    return g_PowerSwitch.curHardwarePowerSwitchRequest != HARDWARE_POWER_SWITCH_REQUEST_NONE
+        || g_PowerSwitch.curSoftwarePowerSwitchRequest != SOFTWARE_POWER_SWITCH_REQUEST_NONE;
 }
 
 //Subroutine scePower_DB62C9CF - Address 0x00002CA0 - Aliases: scePower_driver_DB62C9CF
-// TODO: Verify function
-u32 scePowerCancelRequest(void)
+s32 scePowerCancelRequest(void)
 {
     s32 intrState;
-    u32 oldData;
+    ScePowerHardwarePowerSwitchRequest canceledRequest;
 
-    intrState = sceKernelCpuSuspendIntr();//0x00002CA8
+    intrState = sceKernelCpuSuspendIntr(); // 0x00002CA8
 
-    oldData = g_PowerSwitch.curHardwareRequestSwitch; //0x00002CB8
-    g_PowerSwitch.curHardwareRequestSwitch = 0;
+    canceledRequest = g_PowerSwitch.curHardwarePowerSwitchRequest; // 0x00002CB8
+    g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_NONE;
 
     sceKernelCpuResumeIntr(intrState);
-    return oldData;
+    return (s32)canceledRequest;
 }
 
 //Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
