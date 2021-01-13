@@ -875,33 +875,38 @@ u32 scePowerSetWakeupCondition(u32 wakeUpCondition)
 }
 
 //0x00002EE0
-// TODO: Verify function
+/* 
+ * Listens to POWER switch changes (sent from Syscon) and reports a power service callback. 
+ * Notifies the power service that a suspend/standby operation is in the process of being requested.
+ */
 static void _scePowerPowerSwCallback(s32 enable, void* argp)
 {
     (void)argp;
 
-    if (enable != 0) { //0x00002EF4
-        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); //0x00002EFC
-        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); //0x00002F08
+    if (enable) // 0x00002EF4
+    {
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); // 0x00002EFC
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); // 0x00002F08
 
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWER_SWITCH, 0); //0x00002F14
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWER_SWITCH, 0); // 0x00002F14
     }
-    else {
-        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); //0x00002F38
-        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); //0x00002F44
+    else 
+    {
+        sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); // 0x00002F38
+        sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); // 0x00002F44
 
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWER_SWITCH, 0, 0); //0x00002F4C
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWER_SWITCH, 0, 0); // 0x00002F4C
     }
 }
 
 //0x00002F58
-// TODO: Verify function
+/* Listens to HOLD switch changes (sent from Syscon) and reports a power service callback. */
 static void _scePowerHoldSwCallback(s32 enable, void* argp)
 {
     (void)argp;
 
-    if (enable != 0) //0x00002F6C
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0); //0x00002F64
+    if (enable) // 0x00002F6C
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0); // 0x00002F64
     else
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0, 0); //0x00002F74
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0, 0); // 0x00002F74
 }
