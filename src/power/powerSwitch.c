@@ -129,7 +129,7 @@ u32 _scePowerSwInit(void)
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_23C31FFE - Address 0x000010A4 - Aliases: scePower_driver_CE239543
+//Subroutine scePower_23C31FFE - Address 0x000012E0 - Aliases: scePower_driver_70F42744
 // TODO: Verify function
 s32 scePowerVolatileMemLock(s32 mode, void** ptr, s32* size)
 {

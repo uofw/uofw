@@ -212,7 +212,7 @@ u32 _scePowerIdleEnd(void)
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_7F30B3B1 - Address 0x000030F0 - Aliases: scePower_driver_E660E488
+//Subroutine scePower_7F30B3B1 - Address 0x0000345C - Aliases: scePower_driver_1E3B1FAE
 // TODO: Verify function
 u32 scePowerIdleTimerEnable(u32 slot)
 {

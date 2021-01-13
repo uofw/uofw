@@ -232,7 +232,7 @@ u32 _scePowerFreqEnd(void)
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_843FBF43 - Address 0x00003350 - Aliases: scePower_driver_BD02C252
+//Subroutine scePower_843FBF43 - Address 0x000036BC - Aliases: scePower_driver_53808CBB
 s32 scePowerSetCpuClockFrequency(s32 cpuFrequency)
 {
     s32 oldK1;
