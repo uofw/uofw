@@ -737,35 +737,60 @@ s32 scePowerCancelRequest(void)
 }
 
 //Subroutine scePower_3951AF53 - Address 0x0000171C - Aliases: scePower_driver_3300D85A
-// TODO: Verify function
 s32 scePowerWaitRequestCompletion(void)
 {
     s32 oldK1;
-    u32 resultBits;
     s32 status;
+    u32 powerSwitchRequestFlags;
+    u32 powerSwitchSetFlags;
 
-    oldK1 = pspShiftK1(); //0x00001748
+    oldK1 = pspShiftK1(); // 0x00001748
 
-    status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_KERNEL_EW_OR, &resultBits);
-    if (status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) { //0x0000174C & 0x00001764
-        pspSetK1(oldK1); //0x000017EC
+    status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_KERNEL_EW_OR, &powerSwitchSetFlags); // 0x00001744
+    if (status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) // 0x0000174C & 0x00001764
+    {
+        pspSetK1(oldK1); // 0x000017EC
         return status;
     }
-    if ((resultBits & 0x1F0) == 0) { //0x0000177C
-        pspSetK1(oldK1); //0x000017EC
+
+    powerSwitchRequestFlags = POWER_SWITCH_EVENT_REQUEST_STANDBY | POWER_SWITCH_EVENT_REQUEST_SUSPEND
+        | POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO | POWER_SWITCH_EVENT_REQUEST_COLD_RESET
+        | POWER_SWITCH_EVENT_100;
+
+    /* Check if a progammatically generated power switch request is currently in the system. */
+    if (!(powerSwitchSetFlags & powerSwitchRequestFlags)) // 0x0000177C
+    {
+        /* No programmatically generated requests are in the system so we have nothing to wait on. */
+
+        pspSetK1(oldK1); // 0x000017EC
         return SCE_ERROR_OK;
     }
 
-    if ((resultBits & 0x20000) == 0) { //0x00001780& 0x00001790
-        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x20000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x00001798
-        if (status < SCE_ERROR_OK) { //0x000017A0
-            pspSetK1(oldK1); //0x000017EC
+    /* Check if the registered power switch request is already being processed. */
+    if (!(powerSwitchRequestFlags & POWER_SWITCH_EVENT_OPERATION_RUNNING)) // 0x00001790
+    {
+        /* The registered request is not yet being processed. Wait until the system begins prcessing it. */
+        status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_OPERATION_RUNNING, 
+            SCE_KERNEL_EW_OR, &powerSwitchSetFlags, NULL); // 0x00001798
+
+        if (status < SCE_ERROR_OK) // 0x000017A0
+        {
+            pspSetK1(oldK1); // 0x000017EC
             return status;
         }
     }
-    status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, 0x40000, SCE_KERNEL_EW_OR, &resultBits, NULL); //0x000017B8
-    pspSetK1(oldK1); //0x000017C8
-    return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; //0x000017C4
+
+    /* 
+     * The registered power switch request is currently being processed. Wait until the system 
+     * has completed processing it.
+     */
+    status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE, SCE_KERNEL_EW_OR,
+        &powerSwitchSetFlags, NULL); // 0x000017B8
+
+    /* Registered power switch request has been fully processed. We can return now. */
+
+    pspSetK1(oldK1);
+    return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; // 0x000017C4
 }
 
 //Subroutine scePower_2B7C7CF4 - Address 0x00002CDC - Aliases: scePower_driver_9B44CFD9

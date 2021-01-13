@@ -407,6 +407,18 @@ typedef enum {
  */
 s32 scePowerCancelRequest(void);
 
+/**
+ * @brief Waits until a power switch request registered in the system has been completed.
+ * 
+ * This functions only waits for the completion of a programmatically generated power switch request.
+ * Hardware generated power switch requests (user holding the POWER switch) cannot be waited on for 
+ * completion. If no programmatically generated request has been registered in the system at the time 
+ * this function is called, it returns immediately.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ */
+s32 scePowerWaitRequestCompletion(void);
+
 /* Power switch manipulation lock / unlock */
 
 /**
