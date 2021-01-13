@@ -85,7 +85,6 @@ typedef struct
 static inline s32 _scePowerBatteryThreadErrorObtainBattInfo();
 static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
 static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage); // 0x00005130
-static s32 _scePowerBatteryUpdateAcSupply(s32 enable); // 0x0000544C
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
 static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType); // 0x00005B1C
 static s32 _scePowerBatteryIsBusy(void); // 0x00005C08
@@ -1045,7 +1044,7 @@ s32 scePowerBatteryPermitCharging(void)
 }
 
 // Subroutine sub_0000544C - Address 0x0000544C
-static s32 _scePowerBatteryUpdateAcSupply(s32 enable)
+s32 _scePowerBatteryUpdateAcSupply(s32 enable)
 {
     s32 intrState;
 

@@ -7,7 +7,7 @@
 
 #include <common_header.h>
 
-void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2);
+void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyPowerState);
 
 u32 _scePowerSwInit(void);
 s32 _scePowerSwEnd(void);
@@ -20,6 +20,7 @@ s32 _scePowerBatteryEnd(void);
 s32 _scePowerBatterySuspend(void);
 s32 _scePowerBatteryResume(void);
 s32 _scePowerBatteryUpdatePhase0(void* arg0, u32* arg1);
+s32 _scePowerBatteryUpdateAcSupply(s32 enable);
 s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity);
 
 s32 _scePowerFreqInit(void);

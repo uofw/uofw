@@ -4,6 +4,7 @@
 
 #include <common_imp.h>
 #include <interruptman.h>
+#include <modulemgr_init.h>
 #include <power_kernel.h>
 #include <syscon.h>
 #include <sysmem_kdebug.h>
@@ -49,8 +50,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 typedef struct 
 {
     SceUID cbid; // 0
-    s32 unk4; // 4
-    s32 powerStatus; //8
+    s32 customPowerState; // 4
+    s32 powerState; //8
     s32 mode; // 12 TODO: Perhaps execution mode, synchron = 1, otherwise asynchron? More data needed...
 } ScePowerCallback;
 
@@ -58,7 +59,7 @@ typedef struct
 {
     ScePowerCallback powerCallback[POWER_CALLBACK_TOTAL_SLOTS_KERNEL]; // 0 - 511
     s32 baryonVersion; //512
-    u32 unk516; //516 -- power status?
+    u32 curPowerStateForCallback; // 516
     u32 callbackArgMask; //520
     u8 isBatteryLow; //524
     u8 wlanActivity; //525 -- TODO: Perhaps rename to isWlanActivated?
@@ -78,8 +79,8 @@ enum ScePowerWlanActivity
     SCE_POWER_WLAN_ACTIVATED = 1,
 };
 
-static SceSysconFunc _scePowerAcSupplyCallback; //sub_0x00000650
-static SceSysconFunc _scePowerLowBatteryCallback; //sub_0x000006C4
+static void _scePowerAcSupplyCallback(s32 enable, void* argp); //sub_0x00000650
+static void _scePowerLowBatteryCallback(s32 enable, void* argp); //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
 static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
@@ -342,10 +343,10 @@ s32 scePowerInit()
     
     g_Power.isBatteryLow = sceSysconIsLowBattery(); //0x00000318
     if (g_Power.isBatteryLow == SCE_TRUE) //0x00000328
-        g_Power.unk516 |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000003D4
+        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000003D4
     
     if (sceSysconIsAcSupplied) //0x00000330
-        g_Power.unk516 |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x00000348
+        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x00000348
     
     g_Power.callbackArgMask = -1; //0x00000350
     _scePowerIdleInit();//0x0000034C -- sub_000033C4
@@ -418,24 +419,24 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
                 val = (*(u32 *)(*(u32 *)(param + 4)) + 6) & 0x20; //0x000007CC & 0x000007D0
             
             if (val == 0) //0x000007D4
-                g_Power.unk516 &= ~SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000007D8 & 0x0000087C & 0x000007E4
+                g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000007D8 & 0x0000087C & 0x000007E4
             else
-                g_Power.unk516 |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000007E0 & 0x000007E4
+                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000007E0 & 0x000007E4
             
             if (((*(u32 *)(*(u32 *)(param + 4)) + 6) & 0x1) == 0) //0x000007F0
-                g_Power.unk516 &= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x0000086C & 0x00000874 & 0x00000800
+                g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x0000086C & 0x00000874 & 0x00000800
             else
-                g_Power.unk516 |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x000007FC & 0x00000800
+                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x000007FC & 0x00000800
             
-            g_Power.unk516 &= SCE_POWER_CALLBACKARG_HOLD_SWITCH;
+            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_HOLD_SWITCH;
             
             sdkVer = sceKernelGetCompiledSdkVersion(); //0x00000810
             if (sdkVer <= 0x06000000 && ((*(u32 *)(*(u32 *)(param + 4)) + 9) & 0x2000) == 0) //0x00000820 & 0x00000830
-                g_Power.unk516 |= SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00000844
+                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00000844
             
-            g_Power.unk516 &= SCE_POWER_CALLBACKARG_POWER_SWITCH; //0x00000860
+            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWER_SWITCH; //0x00000860
             
-            _scePowerBatteryUpdatePhase0(*(u32 *)(param + 4), &g_Power.unk516); //0x0000085C -- sub_0000461C
+            _scePowerBatteryUpdatePhase0(*(u32 *)(param + 4), &g_Power.curPowerStateForCallback); //0x0000085C -- sub_0000461C
             return SCE_ERROR_OK;
         }
         if (eventId == 0x00100000) //0x00000790
@@ -507,11 +508,11 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
         for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_USER; i++) {
              if (g_Power.powerCallback[i].cbid < 0) { //0x000009F4
                  g_Power.powerCallback[i].cbid = cbid; //0x00000A14
-                 g_Power.powerCallback[i].unk4 = 0; //0x00000A20
-                 g_Power.powerCallback[i].powerStatus = g_Power.unk516; //0x00000A2C
+                 g_Power.powerCallback[i].customPowerState = 0; //0x00000A20
+                 g_Power.powerCallback[i].powerState = g_Power.curPowerStateForCallback; //0x00000A2C
                  g_Power.powerCallback[i].mode  = 0; //0x00000A28
                  
-                 sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.callbackArgMask); //0x000009B8
+                 sceKernelNotifyCallback(cbid, g_Power.curPowerStateForCallback & g_Power.callbackArgMask); //0x000009B8
 
                  sceKernelCpuResumeIntr(intrState);
                  pspSetK1(oldK1);
@@ -530,11 +531,11 @@ s32 scePowerRegisterCallback(s32 slot, SceUID cbid)
         /* Callback slot is free, let's use it. */
 
         g_Power.powerCallback[slot].cbid = cbid; //0x00000994
-        g_Power.powerCallback[slot].unk4 = 0; //0x000009A0
-        g_Power.powerCallback[slot].powerStatus = g_Power.unk516; //0x000009A8
+        g_Power.powerCallback[slot].customPowerState = 0; //0x000009A0
+        g_Power.powerCallback[slot].powerState = g_Power.curPowerStateForCallback; //0x000009A8
         g_Power.powerCallback[slot].mode  = 0; //0x00000A28
         
-        sceKernelNotifyCallback(cbid, g_Power.unk516 & g_Power.callbackArgMask); //0x000009B8
+        sceKernelNotifyCallback(cbid, g_Power.curPowerStateForCallback & g_Power.callbackArgMask); //0x000009B8
 
         status = SCE_ERROR_OK; // 0x0000099C
     }
@@ -639,7 +640,7 @@ s32 scePowerGetCallbackMode(s32 slot, s32 *pMode)
 }
 
 //sub_00000BE0
-void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2)
+void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyPowerState)
 {
     s32 intrState;
     s32 notifyCount;
@@ -649,7 +650,7 @@ void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2)
     // uofw note: Return value not used. 
     sceKernelGetCompiledSdkVersion(); // 0x00000C30
 
-    g_Power.unk516 = (g_Power.unk516 & ~deleteCbFlag) | applyCbFlag; //0x00000C24 & 0x00000C2C & 0x00000C34
+    g_Power.curPowerStateForCallback = (g_Power.curPowerStateForCallback & ~clearPowerState) | setPowerState; //0x00000C24 & 0x00000C2C & 0x00000C34
     
     u32 i;
     for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++) {
@@ -661,12 +662,12 @@ void _scePowerNotifyCallback(s32 deleteCbFlag, s32 applyCbFlag, s32 arg2)
              continue;
          
          if (notifyCount == 0) //0x00000C64
-             g_Power.powerCallback[i].unk4 = 0;
+             g_Power.powerCallback[i].customPowerState = 0;
          
-         g_Power.powerCallback[i].unk4 |= arg2; //0x00000C78
-         g_Power.powerCallback[i].powerStatus = g_Power.powerCallback[i].unk4 | g_Power.unk516; //0x00000C7C
+         g_Power.powerCallback[i].customPowerState |= cbOnlyPowerState; //0x00000C78
+         g_Power.powerCallback[i].powerState = g_Power.powerCallback[i].customPowerState | g_Power.curPowerStateForCallback; //0x00000C7C
          sceKernelNotifyCallback(g_Power.powerCallback[i].cbid, 
-                                 g_Power.powerCallback[i].powerStatus & g_Power.callbackArgMask); //0x00000C84
+                                 g_Power.powerCallback[i].powerState & g_Power.callbackArgMask); //0x00000C84
     }
 
     sceKernelCpuResumeIntr(intrState); //0x00000C94
@@ -685,7 +686,7 @@ static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
          if (g_Power.powerCallback[i].cbid < 0) //0x00000D04
              continue;
          
-         if ((g_Power.powerCallback[i].powerStatus & cbFlag) && g_Power.powerCallback[i].mode != 0) { //0x00000D14 & 0x00000D58
+         if ((g_Power.powerCallback[i].powerState & cbFlag) && g_Power.powerCallback[i].mode != 0) { //0x00000D14 & 0x00000D58
              notifyCount = sceKernelGetCallbackCount(g_Power.powerCallback[i].cbid); //0x00000D60
              if (notifyCount <= 0) //0x00000D68
                  continue;
