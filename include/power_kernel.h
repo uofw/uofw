@@ -498,7 +498,8 @@ s32 scePowerVolatileMemTryLock(s32 mode, void** ppAddr, SceSize* pSize);
  * 
  * This function relinquishes exlusive access to the memory area reserved for saving volatile memory, 
  * which had been previously obtained by using the ::sceKernelVolatileMemLock() or 
- * ::sceKernelVolatileMemTryLock() APIs back to the kernel.
+ * ::sceKernelVolatileMemTryLock() APIs back to the kernel. The kernel's Utility modules (OSK, game sharing,...)
+ * will have access to it again.
  * 
  * @param mode Currently only specify ::SCE_KERNEL_VOLATILE_MEM_DEFAULT.
  * 

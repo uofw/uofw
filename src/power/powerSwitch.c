@@ -49,7 +49,7 @@ typedef struct
 {
     s32 eventId; //0
     s32 volatileMemorySemaId; //4
-    s32 threadId; //8
+    s32 workerThreadId; // 8
     u32 mode; //12
     u32 unk16; //16
     s32 numPowerLocksUser; // 20
@@ -124,11 +124,11 @@ s32 _scePowerSwInit(void)
     g_PowerSwitch.volatileMemorySemaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL); // 0x0000120C & 0x0000123C
 
     /* Create and start our worker thread responsible for changing power states. */
-    g_PowerSwitch.threadId = sceKernelCreateThread("ScePowerMain", _scePowerOffThread, 
+    g_PowerSwitch.workerThreadId = sceKernelCreateThread("ScePowerMain", _scePowerOffThread, 
         POWER_SWITCH_WORKER_THREAD_INIT_PRIO, 2 * SCE_KERNEL_1KiB, 
         SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); // 0x00001238 & 0x00001250
 
-    sceKernelStartThread(g_PowerSwitch.threadId, 0, NULL); // 0x0000124C   
+    sceKernelStartThread(g_PowerSwitch.workerThreadId, 0, NULL); // 0x0000124C   
 
     sceSysconSetPowerSwitchCallback(_scePowerPowerSwCallback, NULL); // 0x0000125C
     sceSysconSetHoldSwitchCallback(_scePowerHoldSwCallback, NULL); // 0x0000126C
@@ -203,7 +203,7 @@ s32 scePowerVolatileMemLock(s32 mode, void **ppAddr, SceSize *pSize)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K1 && startAddr < SCE_USERSPACE_ADDR_K1)) // 0x000013B0 - 0x000013E4
     {
-        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 15); // 0x000013F0
+        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 0xF); // 0x000013F0
     }
 
     g_PowerSwitch.isVolatileMemoryReservedAreaInUse = SCE_TRUE; //0x000013C8
@@ -279,7 +279,7 @@ s32 scePowerVolatileMemTryLock(s32 mode, void **ppAddr, SceSize *pSize)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K1 && startAddr < SCE_USERSPACE_ADDR_K1)) // 0x000014CC - 0x000014D8 & 0x000014D8 - 0x00001508
     {
-        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 15); // 0x00001514
+        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 0xF); // 0x00001514
     }
 
     g_PowerSwitch.isVolatileMemoryReservedAreaInUse = SCE_TRUE; // 0x000014EC
@@ -740,29 +740,36 @@ static u32 _scePowerOffCommon(void)
 }
 
 //sub_00002AA4
-// TODO: Verify function
 s32 _scePowerSwEnd(void)
 {
-    u32 nBits;
+    u32 startAddr;
 
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_PROCESSING_TERMINATION); //0x00002AC0
-    sceKernelWaitThreadEnd(g_PowerSwitch.threadId, 0); //0x00002ACC
+    /* Tell our power switch worker thread to wrap up. */
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_PROCESSING_TERMINATION); // 0x00002AC0
+    sceKernelWaitThreadEnd(g_PowerSwitch.workerThreadId, NULL); // 0x00002ACC
 
-    sceKernelRegisterPowerHandlers(NULL); //0x00002AD4
-    sceSysconSetPowerSwitchCallback(NULL, NULL); //0x00002AE0
-    sceSysconSetHoldSwitchCallback(NULL, NULL); //0x00002AEC
+    /* Unregister callbacks and power handlers registered in the system. */
+    sceKernelRegisterPowerHandlers(NULL); // 0x00002AD4
+    sceSysconSetPowerSwitchCallback(NULL, NULL); // 0x00002AE0
+    sceSysconSetHoldSwitchCallback(NULL, NULL); // 0x00002AEC
 
-    sceKernelDeleteSema(g_PowerSwitch.volatileMemorySemaId); //0x00002AF4
-    sceKernelDeleteEventFlag(g_PowerSwitch.eventId); //0x00002AFC
+    sceKernelDeleteSema(g_PowerSwitch.volatileMemorySemaId); // 0x00002AF4
+    sceKernelDeleteEventFlag(g_PowerSwitch.eventId); // 0x00002AFC
 
-
-    /* test if address is between 0x087FFFFF and 0x08000000. */
-    if (((g_PowerSwitch.volatileMemoryReservedAreaStartAddr & 0x1F800000) >> 22) == 0x10) { //0x00002B20
-        /* Support 0x0..., 0x1..., 0x4..., 0x5..., 0x8..., 0x9..., 0xA..., 0xB...  */
-        nBits = ((g_PowerSwitch.volatileMemoryReservedAreaStartAddr & 0xE0000000) >> 28); //0x00002B0C
-        if (((s32)0x35 >> nBits) & 0x1) //0x00002B10 & 0x00002B14
-            sceKernelSetDdrMemoryProtection(g_PowerSwitch.volatileMemoryReservedAreaStartAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 0xF); //0x000013F0
+    /* 
+     * Allow user mode applications access to the memory area reserved for volatile memory
+     * if that area is in kernel space (the running power service is responsible for 
+     * "locking" access to that memory area to a single request at a time). 
+     */
+    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K1 && startAddr < SCE_USERSPACE_ADDR_K1)) // 0x00002B08 - 0x00002B20 & 0x00002B40
+    {
+        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 0xF); // 0x00002B48
     }
+
     return SCE_ERROR_OK;
 }
 
