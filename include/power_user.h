@@ -347,6 +347,66 @@ s32 scePowerLockForUser(s32 lockType);
  */
 s32 scePowerUnlockForUser(s32 lockType);
 
+/* Volatile memory lock / unlock  */
+
+/**
+ * @brief Obtains exclusive access to the PSP's RAM area reserved for volatile memory.
+ *
+ * This function enables the application to obtain exclusive access to the memory that is normally
+ * used for saving the contents of the eDRAM on the PSP system chip during suspend/resume processing.
+ * It is a blocking call, meaning that if at the time of the call exclusive access cannot be acquired,
+ * the calling thread is waiting until it can acquire exclusive control.
+ *
+ * @param mode Currently only specify ::SCE_KERNEL_VOLATILE_MEM_DEFAULT.
+ * @param ppAddr Pointer to a void* type variable receiving the starting address of the memory area
+ * reserved for the volatile memory.
+ * @param pSize Pointer to a SceSize variable receiving the size of the memory area reserved for the
+ * volatile memory.
+ *
+ * @return SCE_ERROR_OK if exclusive access was obtained, < 0 on error.
+ *
+ * @see ::scePowerVolatileMemTryLock()
+ * @see ::scePowerVolatileMemUnlock()
+ */
+s32 scePowerVolatileMemLock(s32 mode, void** ppAddr, SceSize* pSize);
+
+/**
+ * @brief Obtains exclusive access to the PSP's RAM area reserved for volatile memory.
+ *
+ * This function enables the application to to obtain exclusive access to the memory that is normally
+ * used for saving the contents of the eDRAM on the PSP system chip during suspend/resume processing.
+ * It is not a blocking call, meaning if exclusive access to the memory area cannot be obtained at the
+ * time of the call, this function immediately returns.
+ *
+ * @param mode Currently only specify ::SCE_KERNEL_VOLATILE_MEM_DEFAULT.
+ * @param ppAddr Pointer to a void* type variable receiving the starting address of the memory area
+ * reserved for the volatile memory.
+ * @param pSize Pointer to a SceSize variable receiving the size of the memory area reserved for the
+ * volatile memory.
+ *
+ * @return SCE_ERROR_OK if exclusive access was obtained, < 0 on error.
+ *
+ * @see ::scePowerVolatileMemLock()
+ * @see ::scePowerVolatileMemUnlock()
+ */
+s32 scePowerVolatileMemTryLock(s32 mode, void** ppAddr, SceSize* pSize);
+
+/**
+ * @brief Relinquishes exclusive access to the PSP's RAM area reserved for volatile memory.
+ *
+ * This function relinquishes exlusive access to the memory reserved for saving volatile memory,
+ * which had been previously obtained by using the ::sceKernelVolatileMemLock() or
+ * ::sceKernelVolatileMemTryLock() APIs back to the kernel.
+ *
+ * @param mode Currently only specify ::SCE_KERNEL_VOLATILE_MEM_DEFAULT.
+ *
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ *
+ * @see scePowerVolatileMemLock()
+ * @see scePowerVolatileMemTryLock()
+ */
+s32 scePowerVolatileMemUnlock(s32 mode);
+
 /* WLAN functions */
 
 /** Specifies a device type which permits a maximum PLL clock frequency of 222 MHz when WLAN is active. */

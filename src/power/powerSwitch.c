@@ -9,6 +9,7 @@
 #include <sysmem_kernel.h>
 #include <sysmem_suspend_kernel.h>
 #include <sysmem_sysclib.h>
+#include <sysmem_utils_kernel.h>
 #include <threadman_kernel.h>
 
 #include "power_int.h"
@@ -32,8 +33,6 @@
  */
 #define POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD            (2 * 1000 * 1000)
 
-#define SCE_KERNEL_POWER_VOLATILE_MEM_DEFAULT       (0) // TODO: Remove
-
 /** Defines programmatically generated power switch requests. */
 typedef enum
 {
@@ -47,15 +46,21 @@ typedef enum
 typedef struct 
 {
     s32 eventId; //0
-    s32 semaId; //4
+    s32 volatileMemorySemaId; //4
     s32 threadId; //8
     u32 mode; //12
     u32 unk16; //16
     s32 numPowerLocksUser; // 20
     s32 numPowerLocksKernel; // 24
-    u32 startAddr; //28
-    u32 memSize; //32
-    u32 unk36; //36
+    /* Start address of the PSP's RAM area reserved for volatile memory. */
+    u32 volatileMemoryReservedAreaStartAddr; //28
+    /* Size of the PSP's RAM area reserved for volatile memory. */
+    u32 volatileMemoryReservedAreaSize; // 32
+    /* 
+     * Indicates whether an application has acquired control over the PSP's RAM area reserved 
+     * for volatile memory. 
+     */
+    u32 isVolatileMemoryReservedAreaInUse; // 36
     ScePowerHardwarePowerSwitchRequest curHardwarePowerSwitchRequest; //40
     ScePowerSoftwarePowerSwitchRequest curSoftwarePowerSwitchRequest; //44
     u32 unk48; //48 TODO: Perhaps a flag indicating whether locking/unlocking is allowed or - more gnerally - standby/suspension/reboot?
@@ -106,7 +111,7 @@ u32 _scePowerSwInit(void)
 
     g_PowerSwitch.eventId = sceKernelCreateEventFlag("ScePowerSw", SCE_KERNEL_EA_MULTI | 0x1,
         POWER_SWITCH_EVENT_IDLE | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, NULL); //0x000011EC & 0x00001210
-    g_PowerSwitch.semaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL); //0x0000120C & 0x0000123C
+    g_PowerSwitch.volatileMemorySemaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL); //0x0000120C & 0x0000123C
     g_PowerSwitch.threadId = sceKernelCreateThread("ScePowerMain", _scePowerOffThread, 4, 2048,
         SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); //0x00001238 & 0x00001250
 
@@ -116,8 +121,8 @@ u32 _scePowerSwInit(void)
 
     partitionInfo.size = 16; //0x00001284
     sceKernelQueryMemoryPartitionInfo(5, &partitionInfo); //0x00001280
-    g_PowerSwitch.memSize = partitionInfo.memSize; //0x00001290
-    g_PowerSwitch.startAddr = partitionInfo.startAddr; //0x00001298
+    g_PowerSwitch.volatileMemoryReservedAreaSize = partitionInfo.memSize; //0x00001290
+    g_PowerSwitch.volatileMemoryReservedAreaStartAddr = partitionInfo.startAddr; //0x00001298
 
     intrState = sceKernelCpuSuspendIntr(); //0x00001294
 
@@ -130,121 +135,188 @@ u32 _scePowerSwInit(void)
 }
 
 //Subroutine scePower_23C31FFE - Address 0x000012E0 - Aliases: scePower_driver_70F42744
-// TODO: Verify function
-s32 scePowerVolatileMemLock(s32 mode, void** ptr, s32* size)
+s32 scePowerVolatileMemLock(s32 mode, void **ppAddr, SceSize *pSize)
 {
     s32 intrState;
     s32 oldK1;
     s32 status;
-    u32 nBits;
+    u32 startAddr;
 
-    if (mode != SCE_KERNEL_POWER_VOLATILE_MEM_DEFAULT) //0x0000130C
+    /* We only support SCE_KERNEL_VOLATILE_MEM_DEFAULT for now. */
+    if (mode != SCE_KERNEL_VOLATILE_MEM_DEFAULT) // 0x0000130C
+    {
         return SCE_ERROR_INVALID_MODE;
+    }
 
-    oldK1 = pspShiftK1(); //0x00001314
+    oldK1 = pspShiftK1(); // 0x00001314
 
-    if (!pspK1PtrOk(ptr) || !pspK1PtrOk(size)) { //0x00001320 & loc_00001364
+    /* 
+     * Verify the supplied pointers aren't located in privileged memory when called 
+     * by a user application. 
+     */
+    if (!pspK1PtrOk(ppAddr) || !pspK1PtrOk(pSize)) // 0x00001320 & loc_00001364
+    {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
 
-    status = sceKernelWaitSema(g_PowerSwitch.semaId, 1, NULL); //0x00001370
-    if (ptr != NULL) //0x00001378
-        *ptr = g_PowerSwitch.startAddr; //0x00001384
-    if (size != NULL) //0x00001388
-        *size = g_PowerSwitch.memSize; //0x00001394
+    /* Block until we can get exclusive control over the RAM area reserved for the volatile memory. */
+    status = sceKernelWaitSema(g_PowerSwitch.volatileMemorySemaId, 1, NULL); // 0x00001370
 
-    intrState = sceKernelCpuSuspendIntr(); //0x00001398
+    /* We acquired exclusive access to the memory area. */
 
-    /* test for 1024 byte alignment. */
-    if (((g_PowerSwitch.startAddr & 0x1F800000) >> 22) == 0x10) { //0x000013B0
-        /* test for 256 byte alignment. */
-        nBits = ((g_PowerSwitch.startAddr & 0xE0000000) >> 28); //0x000013B4 & 0x000013DC
-        if (((s32)0x35 >> nBits) & 0x1) //0x000013E4
-            sceKernelSetDdrMemoryProtection(g_PowerSwitch.startAddr, g_PowerSwitch.memSize, 0xF); //0x000013F0
+    if (ppAddr != NULL) // 0x00001378
+    {
+        *ppAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr; // 0x00001384
     }
-    g_PowerSwitch.unk36 = 1; //0x000013C8
 
-    sceKernelCpuResumeIntrWithSync(intrState); //0x000013C4
+    if (pSize != NULL) // 0x00001388
+    {
+        *pSize = g_PowerSwitch.volatileMemoryReservedAreaSize; // 0x00001394
+    }
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00001398
+
+    /*
+     * If the memory area reserved for the volatile memory resides in RAM reserved for the kernel, 
+     * we need to change the memory protection for it to make it available to user applications.
+     */
+    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K1 && startAddr < SCE_USERSPACE_ADDR_K1)) // 0x000013B0 - 0x000013E4
+    {
+        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 15); // 0x000013F0
+    }
+
+    g_PowerSwitch.isVolatileMemoryReservedAreaInUse = SCE_TRUE; //0x000013C8
+
+    sceKernelCpuResumeIntrWithSync(intrState); // 0x000013C4
+
     pspSetK1(oldK1);
     return status;
 }
 
 //Subroutine scePower_FA97A599 - Address 0x00001400 - Aliases: scePower_driver_A882AEB7
-// TODO: Verify function
-s32 scePowerVolatileMemTryLock(s32 mode, void** ptr, s32* size)
+s32 scePowerVolatileMemTryLock(s32 mode, void **ppAddr, SceSize *pSize)
 {
     s32 intrState;
     s32 oldK1;
     s32 status;
-    u32 nBits;
+    u32 startAddr;
 
-    if (mode != SCE_KERNEL_POWER_VOLATILE_MEM_DEFAULT) //0x0000142C
+    /* We only support SCE_KERNEL_VOLATILE_MEM_DEFAULT for now. */
+    if (mode != SCE_KERNEL_VOLATILE_MEM_DEFAULT) // 0x0000142C
+    {
         return SCE_ERROR_INVALID_MODE;
+    }      
 
-    oldK1 = pspShiftK1(); //0x00001434
+    oldK1 = pspShiftK1(); // 0x00001434
 
-    if (!pspK1PtrOk(ptr) || !pspK1PtrOk(size)) { //0x00001440 & 0x0000144C
+    /*
+     * Verify the supplied pointers aren't located in privileged memory when called
+     * by a user application.
+     */
+    if (!pspK1PtrOk(ppAddr) || !pspK1PtrOk(pSize)) // 0x00001440 & 0x0000144C
+    {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
 
-    status = sceKernelPollSema(g_PowerSwitch.semaId, 1); //0x0000148C
-    if (status != SCE_ERROR_OK) { //0x00001494
+    /* 
+     * Query (without wait) if we can get exclusive access to the RAM area reserved for 
+     * the volatile memory. 
+     */
+    status = sceKernelPollSema(g_PowerSwitch.volatileMemorySemaId, 1); // 0x0000148C
+    if (status != SCE_ERROR_OK) // 0x00001494
+    {
+        /* Exclusive control to the memory area has already been assigned to someone else. */
+
         pspSetK1(oldK1);
-        return (status == SCE_ERROR_KERNEL_SEMA_ZERO) ? SCE_POWER_ERROR_CANNOT_LOCK_VMEM : status; //0x00001524 - 0x0000153C
+        return (status == SCE_ERROR_KERNEL_SEMA_ZERO) 
+            ? SCE_POWER_ERROR_CANNOT_LOCK_VMEM 
+            : status; //0x00001524 - 0x0000153C
     }
 
-    if (ptr != NULL) //0x0000149C
-        *ptr = g_PowerSwitch.startAddr; //0x000014A8
-    if (size != NULL) //0x000014AC
-        *size = g_PowerSwitch.memSize; //0x000014B8
+    /* We acquired exclusive access to the memory area. */
+
+    if (ppAddr != NULL) // 0x0000149C
+    {
+        *ppAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr; // 0x000014A8
+    }
+
+    if (pSize != NULL) // 0x000014AC
+    {
+        *pSize = g_PowerSwitch.volatileMemoryReservedAreaSize; // 0x000014B8
+    }     
 
     intrState = sceKernelCpuSuspendIntr(); //0x000014BC
 
-    /* test for 1024 byte alignment. */
-    if (((g_PowerSwitch.startAddr & 0x1FFFFFC0) >> 6) == 0x10) { //0x000014D4
-        /* test for 256 byte alignment. */
-        nBits = ((g_PowerSwitch.startAddr & 0xFFFFFFF8) >> 3) & 0x1F; //0x000014D8 & 0x00001500
-        if (((s32)0x35 >> nBits) & 0x1) //0x00001508
-            sceKernelSetDdrMemoryProtection(g_PowerSwitch.startAddr, g_PowerSwitch.memSize, 0xF); //0x00001514
+    /*
+     * If the memory area reserved for the volatile memory resides in RAM reserved for the kernel,
+     * we need to change the memory protection for it to make it available to user applications.
+     */
+    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K1 && startAddr < SCE_USERSPACE_ADDR_K1)) // 0x000014CC - 0x000014D8 & 0x000014D8 - 0x00001508
+    {
+        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 15); // 0x00001514
     }
-    g_PowerSwitch.unk36 = 1; //0x000014EC
 
-    sceKernelCpuResumeIntrWithSync(intrState); //0x000014E8
+    g_PowerSwitch.isVolatileMemoryReservedAreaInUse = SCE_TRUE; // 0x000014EC
+
+    sceKernelCpuResumeIntrWithSync(intrState); // 0x000014E8
+
     pspSetK1(oldK1);
     return status;
 }
 
 //Subroutine scePower_B3EDD801 - Address 0x00001540 - Aliases: scePower_driver_5978B1C2
-// TODO: Verify function
 s32 scePowerVolatileMemUnlock(s32 mode)
 {
     s32 oldK1;
     s32 intrState;
     s32 status;
-    u32 nBits;
+    u32 startAddr;
 
-    if (mode != SCE_KERNEL_POWER_VOLATILE_MEM_DEFAULT)
+    /* We only support SCE_KERNEL_VOLATILE_MEM_DEFAULT for now. */
+    if (mode != SCE_KERNEL_VOLATILE_MEM_DEFAULT) // 0x0000156C
+    {
         return SCE_ERROR_INVALID_MODE;
-
-    oldK1 = pspShiftK1(); //0x00001434
-
-    sceKernelDcacheWritebackInvalidateRange(g_PowerSwitch.startAddr, g_PowerSwitch.memSize); //0x0000157C
-
-    intrState = sceKernelCpuSuspendIntr(); //0x00001584
-
-    /* test for 1024 byte alignment. */
-    if (((g_PowerSwitch.startAddr & 0x1FFFFFC0) >> 6) == 0x10) { //0x000015A0 & 0x000015A8
-        /* test for 256 byte alignment. */
-        nBits = ((g_PowerSwitch.startAddr & 0xFFFFFFF8) >> 3) & 0x1F; //0x00001598 & 0x0000159C & 0x000015AC & 0x000015F0
-        if (((s32)0x35 >> nBits) & 0x1) //0x00001508
-            sceKernelSetDdrMemoryProtection(g_PowerSwitch.startAddr, g_PowerSwitch.memSize, 0); //0x000015F8
     }
-    status = sceKernelSignalSema(g_PowerSwitch.semaId, 1); //0x000015B4
-    g_PowerSwitch.unk36 = 0; //0x000015BC
 
-    sceKernelCpuResumeIntrWithSync(intrState); //0x000014E8
+    oldK1 = pspShiftK1(); // 0x00001434
+
+    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+
+    /* Invalidate the cache for the memory area now that we are done using it. */
+    sceKernelDcacheWritebackInvalidateRange(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize); // 0x0000157C
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00001584
+
+    /*
+     * If the memory area reserved for the volatile memory resides in RAM reserved for the kernel,
+     * we previously changed its memory protection upon acquiring exclusive control to it. We now 
+     * need to restore the original memory protections in place.
+     */
+    if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
+        || (startAddr >= SCE_KERNELSPACE_ADDR_K1 && startAddr < SCE_USERSPACE_ADDR_K1)) // 0x00001590 - 0x000015AC & 0x000015F0
+    {
+        sceKernelSetDdrMemoryProtection(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 0); // 0x000015F8
+    }
+
+    /* Relinquish exclusive control over the RAM area reversed for volatile memory. */
+    status = sceKernelSignalSema(g_PowerSwitch.volatileMemorySemaId, 1); // 0x000015B4
+
+    g_PowerSwitch.isVolatileMemoryReservedAreaInUse = SCE_FALSE; // 0x000015BC
+
+    sceKernelCpuResumeIntrWithSync(intrState); // 0x000014E8
+
     pspSetK1(oldK1);
     return status;
 }
@@ -664,16 +736,16 @@ s32 _scePowerSwEnd(void)
     sceSysconSetPowerSwitchCallback(NULL, NULL); //0x00002AE0
     sceSysconSetHoldSwitchCallback(NULL, NULL); //0x00002AEC
 
-    sceKernelDeleteSema(g_PowerSwitch.semaId); //0x00002AF4
+    sceKernelDeleteSema(g_PowerSwitch.volatileMemorySemaId); //0x00002AF4
     sceKernelDeleteEventFlag(g_PowerSwitch.eventId); //0x00002AFC
 
 
     /* test if address is between 0x087FFFFF and 0x08000000. */
-    if (((g_PowerSwitch.startAddr & 0x1F800000) >> 22) == 0x10) { //0x00002B20
+    if (((g_PowerSwitch.volatileMemoryReservedAreaStartAddr & 0x1F800000) >> 22) == 0x10) { //0x00002B20
         /* Support 0x0..., 0x1..., 0x4..., 0x5..., 0x8..., 0x9..., 0xA..., 0xB...  */
-        nBits = ((g_PowerSwitch.startAddr & 0xE0000000) >> 28); //0x00002B0C
+        nBits = ((g_PowerSwitch.volatileMemoryReservedAreaStartAddr & 0xE0000000) >> 28); //0x00002B0C
         if (((s32)0x35 >> nBits) & 0x1) //0x00002B10 & 0x00002B14
-            sceKernelSetDdrMemoryProtection(g_PowerSwitch.startAddr, g_PowerSwitch.memSize, 0xF); //0x000013F0
+            sceKernelSetDdrMemoryProtection(g_PowerSwitch.volatileMemoryReservedAreaStartAddr, g_PowerSwitch.volatileMemoryReservedAreaSize, 0xF); //0x000013F0
     }
     return SCE_ERROR_OK;
 }
