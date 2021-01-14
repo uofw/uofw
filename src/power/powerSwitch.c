@@ -14,6 +14,8 @@
 
 #include "power_int.h"
 
+#define POWER_SWITCH_WORKER_THREAD_INIT_PRIO                4
+
 #define POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE              0x00000001 /* Indicates that the POWER switch is currently active (i.e. pressed by the user). */
 #define POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE            0x00000002 /* Indicates that the POWER switch is currently inactive (i.e. not pressed by the user). */
 #define POWER_SWITCH_EVENT_REQUEST_STANDBY                  0x00000010 /* Indicates a standby operation has been requested. */
@@ -96,41 +98,55 @@ static void _scePowerHoldSwCallback(s32 enable, void* argp);
 ScePowerSwitch g_PowerSwitch; //0x0000729C
 
 //sub_000011A4
-// TODO: Verify function
 /* Initializes the power switch component of the power service. */
-u32 _scePowerSwInit(void)
+s32 _scePowerSwInit(void)
 {
     s32 intrState;
     s32 nPowerLock;
     SceSysmemPartitionInfo partitionInfo;
 
-    memset(&g_PowerSwitch, 0, sizeof g_PowerSwitch); //0x000011C4
+    memset(&g_PowerSwitch, 0, sizeof g_PowerSwitch); // 0x000011C4
 
-    g_PowerSwitch.mode = 2; //0x000011E8
-    g_PowerSwitch.wakeUpCondition = 8; //0x000011F0
+    g_PowerSwitch.mode = 2; // 0x000011E8
+    g_PowerSwitch.wakeUpCondition = 8; // 0x000011F0
 
+    /* 
+     * Initialize the power switch event flag (default: power switch states can happen 
+     * and currently no power switch state is being processed).
+     */
     g_PowerSwitch.eventId = sceKernelCreateEventFlag("ScePowerSw", SCE_KERNEL_EA_MULTI | 0x1,
-        POWER_SWITCH_EVENT_IDLE | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, NULL); //0x000011EC & 0x00001210
-    g_PowerSwitch.volatileMemorySemaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL); //0x0000120C & 0x0000123C
-    g_PowerSwitch.threadId = sceKernelCreateThread("ScePowerMain", _scePowerOffThread, 4, 2048,
-        SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); //0x00001238 & 0x00001250
+        POWER_SWITCH_EVENT_IDLE | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, NULL); // 0x000011EC & 0x00001210
 
-    sceKernelStartThread(g_PowerSwitch.threadId, 0, NULL); //0x0000124C   
-    sceSysconSetPowerSwitchCallback(_scePowerPowerSwCallback, NULL); //0x0000125C
-    sceSysconSetHoldSwitchCallback(_scePowerHoldSwCallback, NULL); //0x0000126C
+    /* 
+     * Initialize the semaphore lock used to control exclusive access to the RAM area 
+     * reserved for volatile memory. We are ready to accept exclusive access requests.
+     */
+    g_PowerSwitch.volatileMemorySemaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL); // 0x0000120C & 0x0000123C
 
-    partitionInfo.size = 16; //0x00001284
-    sceKernelQueryMemoryPartitionInfo(5, &partitionInfo); //0x00001280
-    g_PowerSwitch.volatileMemoryReservedAreaSize = partitionInfo.memSize; //0x00001290
-    g_PowerSwitch.volatileMemoryReservedAreaStartAddr = partitionInfo.startAddr; //0x00001298
+    /* Create and start our worker thread responsible for changing power states. */
+    g_PowerSwitch.threadId = sceKernelCreateThread("ScePowerMain", _scePowerOffThread, 
+        POWER_SWITCH_WORKER_THREAD_INIT_PRIO, 2 * SCE_KERNEL_1KiB, 
+        SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); // 0x00001238 & 0x00001250
 
-    intrState = sceKernelCpuSuspendIntr(); //0x00001294
+    sceKernelStartThread(g_PowerSwitch.threadId, 0, NULL); // 0x0000124C   
 
-    scePowerLockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); //0x000012A0 -- scePower_driver_6CF50928
-    nPowerLock = sceKernelRegisterPowerHandlers(&g_PowerHandler); //0x000012AC
-    g_PowerSwitch.numPowerLocksKernel += nPowerLock; //0x000012BC
+    sceSysconSetPowerSwitchCallback(_scePowerPowerSwCallback, NULL); // 0x0000125C
+    sceSysconSetHoldSwitchCallback(_scePowerHoldSwCallback, NULL); // 0x0000126C
 
-    sceKernelCpuResumeIntr(intrState); //0x000012C0
+    partitionInfo.size = sizeof(SceSysmemPartitionInfo); // 0x00001284
+    sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_VSHELL_PARTITION, &partitionInfo); // 0x00001280
+    g_PowerSwitch.volatileMemoryReservedAreaSize = partitionInfo.memSize; // 0x00001290
+    g_PowerSwitch.volatileMemoryReservedAreaStartAddr = partitionInfo.startAddr; // 0x00001298
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00001294
+
+    scePowerLockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); // 0x000012A0
+
+    nPowerLock = sceKernelRegisterPowerHandlers(&g_PowerHandler); // 0x000012AC
+    g_PowerSwitch.numPowerLocksKernel += nPowerLock; // 0x000012BC
+
+    sceKernelCpuResumeIntr(intrState); // 0x000012C0
+
     return SCE_ERROR_OK;
 }
 

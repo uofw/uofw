@@ -9,7 +9,7 @@
 
 void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyPowerState);
 
-u32 _scePowerSwInit(void);
+s32 _scePowerSwInit(void);
 s32 _scePowerSwEnd(void);
 
 u32 _scePowerIdleInit(void);
