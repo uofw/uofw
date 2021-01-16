@@ -72,7 +72,7 @@ s32 sub_00000000(void) {
     }
     
     return error;
-}*/
+}
 
 // Subroutine sub_00000128 - Address 0x00000128 -- Cleanup/Verify
 s32 sub_00000128(s32 arg0, s32 arg1)
