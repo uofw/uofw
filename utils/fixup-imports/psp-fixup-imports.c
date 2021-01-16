@@ -622,9 +622,7 @@ int fixup_functions(void)
 	pNid = (unsigned int *) g_nid->pData;
 
 	if(g_verbose)
-	{
 		fprintf(stderr, "Import count %d\n", count);
-	}
 
 	while(count > 0)
 	{
