@@ -613,16 +613,16 @@ int fixup_functions(void)
 	int count;
 
     if(g_stubtext == NULL || g_nid == NULL) // no imported functions
-    {
-        return 1;
-    }
+		return 1;
 
 	count = g_stubtext->iSize / 8;
 	pText = (unsigned int *) g_stubtext->pData;
 	pNid = (unsigned int *) g_nid->pData;
 
 	if(g_verbose)
+	{
 		fprintf(stderr, "Import count %d\n", count);
+	}
 
 	while(count > 0)
 	{
