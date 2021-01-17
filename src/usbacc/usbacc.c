@@ -3,6 +3,8 @@
 SCE_MODULE_INFO("sceUSB_Acc_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 3);
 SCE_SDK_VERSION(SDK_VERSION);
 
+#define SCE_ERROR_USB_DRIVER_NOT_FOUND 0x80243005
+
 /** USB driver endpoint */
 struct UsbEndpoint
 {
@@ -128,18 +130,32 @@ s32 sceUsbAcc_internal_2A100C1F(void)
     return 0;
 }
 
-// Subroutine sceUsbAcc_internal_2E251404 - Address 0x000004AC
+// Subroutine sceUsbAcc_internal_2E251404 - Address 0x000004AC -- sceUsbAccRegisterType
 // Exported in sceUsbAcc_internal
-s32 sceUsbAcc_internal_2E251404(void)
+s32 sceUsbAcc_internal_2E251404(u16 type)
 {
-    return 0;
+    s32 error = SCE_ERROR_USB_DRIVER_NOT_FOUND;
+
+    if ((unk1 & type) == 0) {
+        error = 0;
+        unk1 = unk1 | type;
+    }
+    
+    return error;
 }
 
-// Subroutine sceUsbAcc_internal_18B04C82 - Address 0x000004E0
+// Subroutine sceUsbAcc_internal_18B04C82 - Address 0x000004E0 -- sceUsbAccUnregisterType
 // Exported in sceUsbAcc_internal
-s32 sceUsbAcc_internal_18B04C82(void)
+s32 sceUsbAcc_internal_18B04C82(u16 type)
 {
-    return 0;
+    s32 error = SCE_ERROR_USB_DRIVER_NOT_FOUND;
+    
+    if ((unk1 & type) != 0) {
+        error = 0;
+        unk1 = unk1 & ~type;
+    }
+    
+    return error;
 }
 
 // Subroutine module_start - Address 0x00000518
@@ -151,11 +167,12 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
         unk2 = 0;
     }
     
-    return ret;
+    return (ret < 0)? 1: 0;
 }
 
 // Subroutine module_stop - Address 0x00000558
 s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    return sceUsbBus_driver_C1E2A540(&drv);
+    int ret = sceUsbBus_driver_C1E2A540(&drv);
+    return (ret < 0)? 1 : 0;
 }
