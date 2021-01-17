@@ -77,7 +77,7 @@ SceNpDrm g_npDrmData;
 SceLoadCoreBootModuleInfo g_mod;
 
 /* Initialize Init's control block. */
-static void InitCBInit(SceLoadCoreBootInfo *bootInfo)
+static void InitCBInit(const SceLoadCoreBootInfo *bootInfo)
 {   
     if (bootInfo->configFile == NULL)
         g_hasConfigFile = SCE_FALSE;
@@ -326,7 +326,7 @@ static s32 CleanupPhase2(SceLoadCoreBootInfo *bootInfo)
 }
 
 /* Allocate memory for protected modules. */
-static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
+static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
 {
     SceUID partId;
     SceSysmemMemoryBlockInfo blkInfo;
@@ -912,11 +912,11 @@ asm(".word init_patch\n");
 #endif
 
 /* Setup the boot process of the rest of the PSP kernel modules. */
-s32 InitInit(s32 argc __attribute__((unused)), void *argp)
+s32 InitInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     SceUID threadId;
      
-    SceLoadCoreBootInfo *bootInfo = argp;
+    const SceLoadCoreBootInfo *bootInfo = argBlock;
     g_MemBase = bootInfo->memBase;
     g_MemSize = bootInfo->memSize;
     

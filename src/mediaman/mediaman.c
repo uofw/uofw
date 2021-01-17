@@ -439,12 +439,9 @@ u32 sceUmdRegisterDeactivateCallBack(s32 (*deactivateCallback)(s32, void *), voi
     return SCE_ERROR_OK;
 }
 
-s32 sceUmdModuleStart(s32 argc, void *argp)
+s32 sceUmdModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {   
     s32 intrState;
-
-	(void)argc;
-	(void)argp;
     
     memset(&g_mediaMan, 0, sizeof g_mediaMan);
     

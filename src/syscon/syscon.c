@@ -958,7 +958,7 @@ s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
     return 0;
 }
 
-s32 _sceSysconModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceSysconModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     sceSysconInit();
     return 0;

@@ -138,8 +138,8 @@ enum SceModulePrivilegeLevel {
 /**
  * Module entry functions.
  */
-#define SCE_MODULE_BOOTSTART(name)      int module_start(int arglen, void *argp) __attribute__((alias(name))); \
-                                        int module_bootstart(int arglen, void *argp) __attribute__((alias(name)))
+#define SCE_MODULE_BOOTSTART(name)      int module_start(SceSize argSize, const void *argBlock) __attribute__((alias(name))); \
+                                        int module_bootstart(SceSize argSize, const void *argBlock) __attribute__((alias(name)))
 
 #define SCE_MODULE_REBOOT_BEFORE(name)  int module_reboot_before(void) __attribute__((alias(name)))
 #define SCE_MODULE_REBOOT_PHASE(name)   int module_reboot_phase(void) __attribute__((alias(name)))

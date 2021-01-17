@@ -323,11 +323,8 @@ s32 ModuleMgrRebootBefore()
 /*
  * Create the work objects (threads,...) for the module manager.
  */
-s32 ModuleMgrInit(s32 argc, void *argp)
+s32 ModuleMgrInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
-    (void)argc;
-    (void)argp;
-
     ChunkInit();
 
     g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread,

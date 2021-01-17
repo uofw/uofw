@@ -2129,11 +2129,8 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
     return numReadIntBufs;
 }
 
-s32 _sceCtrlModuleStart(s32 argc, void *argp) 
+s32 _sceCtrlModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
-	(void)argc;
-	(void)argp;
-
     sceCtrlInit();    
     return SCE_KERNEL_RESIDENT;
 }

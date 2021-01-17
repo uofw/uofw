@@ -590,7 +590,7 @@ int resetId(SceAtracId *info)
     return 0;
 }
 
-int sceAtracStartEntry(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+int sceAtracStartEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     return (sceAtracReinit(2, 2) < 0);
 }

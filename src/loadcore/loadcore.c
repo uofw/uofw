@@ -673,7 +673,7 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
  * 
  * Returns 0 on success.   
  */
-s32 loadCoreInit(s32 argc __attribute__((unused)), void *argp)
+s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
     u32 i;
     for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
@@ -684,8 +684,8 @@ s32 loadCoreInit(s32 argc __attribute__((unused)), void *argp)
     SceLoadCoreBootInfo *bootInfo = NULL;
     SysMemThreadConfig *sysMemThreadConfig = NULL;         
     
-    bootInfo = ((SceLoadCoreBootInfo **)argp)[0];
-    sysMemThreadConfig = ((SysMemThreadConfig **)argp)[1]; //0x00000B38
+    bootInfo = ((SceLoadCoreBootInfo **)argBlock)[0];
+    sysMemThreadConfig = ((SysMemThreadConfig **)argBlock)[1]; //0x00000B38
     g_MemSize = bootInfo->memSize; //0x00000B44
     g_MemBase = bootInfo->memBase; //0x00000B48
     

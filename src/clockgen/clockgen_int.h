@@ -12,7 +12,7 @@
  *
  * @return SCE_ERROR_OK.
  */
-static int _sceClockgenModuleStart(int args, void *argp);
+static int _sceClockgenModuleStart(SceSize argSize, const void *argBlock);
 
 /**
  * Deinits the module.

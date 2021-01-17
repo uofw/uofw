@@ -81,8 +81,9 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table);
 s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
 s32 resumeSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
 
-int SysMemInit(int args __attribute__((unused)), SysMemConfig *config)
+int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
+    SysMemConfig *config = (SysMemConfig *)argBlock;
     SceSysmemMemoryPartition mainPart;
     SceSysmemPartTable table;
     sceKernelRegisterDebugPutcharByBootloader(config->debugPutchar);
