@@ -20,7 +20,10 @@ SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP |
                                  | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_MODULE_BOOTSTART("_sceGeModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceGeModuleRebootBefore");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattribute-alias"
 SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
+#pragma GCC diagnostic pop
 SCE_SDK_VERSION(SDK_VERSION);
 
 #define HW_GE_RESET     HW(0xBD400000)

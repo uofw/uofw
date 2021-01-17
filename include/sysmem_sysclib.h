@@ -47,7 +47,7 @@ int strtol(const char *nptr, char **endptr, int base);
 u32 strtoul(char *nptr, char **endptr, int base);
 int strncmp(const char *s1, const char *s2, int n);
 char *strncpy(char *dest, const char *src, int n);
-u32 strnlen(const char *s, int maxlen);
+u32 strnlen(const char *s, u32 maxlen);
 u32 strlen(const char *s);
 char *strrchr(char *s, int c);
 char *strpbrk(char *s, const char *accept);

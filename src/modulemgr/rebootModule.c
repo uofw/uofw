@@ -84,9 +84,11 @@ s32 sceKernelRebootBeforeForUser(void *arg)
             threadParams.stackMpid = SCE_KERNEL_PRIMARY_USER_PARTITION;
 
         pspSetGp(pMod->gpValue); //0x00004900
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
         pMod->userModThid = sceKernelCreateThread("SceModmgrRebootBefore", (SceKernelThreadEntry)pMod->moduleRebootBefore, priority,
             stackSize, threadMode | attr, &threadParams); //0x0000491C
+#pragma GCC diagnostic pop
 
         pspSetGp(oldGp);
 

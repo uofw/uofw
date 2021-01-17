@@ -618,8 +618,11 @@ s32 sceCtrlInit(void)
    
     deci2Ops = sceKernelDeci2pReferOperations();
     if (deci2Ops != NULL && deci2Ops->size == 48) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
         func = (void (*)(SceKernelDeci2Ops *))deci2Ops->ops[10];
         func(&g_ctrlDeci2Ops);
+#pragma GCC diagnostic pop
     }
     return SCE_ERROR_OK;
 }
@@ -1968,7 +1971,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
     s32 status;
     s32 intrState;
 
-    if (nBufs >= CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
+	if (nBufs >= CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
         return SCE_ERROR_INVALID_SIZE;
 
 	if (inputMode > CTRL_NUM_EXTERNAL_INPUT_MODES)
@@ -1986,7 +1989,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
     }
     if (pspK1IsUserMode())
         intDataPtr = &g_ctrl.userModeData;
-    else
+	else
         intDataPtr = &g_ctrl.kernelModeData;
 
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE && intDataPtr->pCtrlInputBuffers[inputMode] == NULL)
@@ -2135,11 +2138,8 @@ s32 _sceCtrlModuleStart(s32 argc, void *argp)
     return SCE_KERNEL_RESIDENT;
 }
 
-s32 _sceCtrlModuleRebootBefore(s32 argc, void *argp) 
+s32 _sceCtrlModuleRebootBefore()
 {
-	(void)argc;
-	(void)argp;
-
     sceCtrlEnd();   
     return SCE_KERNEL_STOP_SUCCESS;
 }

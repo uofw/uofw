@@ -2043,7 +2043,7 @@ s32 sceSysconBatteryGetInfo(s32 *info)
 s32 sceSysconGetBattVolt(s32 *volt)
 {   
     u8 version =_sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) != 0x29 &&
+    if ((version & 0xF0) != 0x20 &&
       (version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
@@ -2059,7 +2059,7 @@ s32 sceSysconGetBattVolt(s32 *volt)
 s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
 {
     u8 version = _sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) != 0x29 &&
+    if ((version & 0xF0) != 0x20 &&
       (version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
@@ -2172,7 +2172,7 @@ s32 sceSysconBatteryGetChargeTime(s32 *time)
 s32 _sceSysconBatteryCommon(u32 cmd, s32 *ptr)
 {
     u32 version = _sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) == 0x29 ||
+    if ((version & 0xF0) == 0x20 ||
      (version & 0xFF) == 0x2A ||
      (version & 0xF0) == 0x30 ||
      (version & 0xF0) == 0x40)

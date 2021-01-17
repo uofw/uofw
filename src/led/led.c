@@ -461,13 +461,13 @@ s32 sceLedSetMode(s32 led, s32 mode, SceLedConfiguration *config)
     return SCE_ERROR_OK;
 }
 
-u32 _sceLedModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceLedModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     sceLedInit();
     return SCE_ERROR_OK;
 }
 
-u32 _sceLedModuleRebootBefore(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceLedModuleRebootBefore()
 {
     sceLedEnd();
     return SCE_ERROR_OK;

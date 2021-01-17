@@ -37,8 +37,11 @@ char g_stackCtx[192] = {0};
 // 1640
 SceExceptions ExcepManCB = { { NULL }, { NULL }, NULL, NULL, { { NULL, NULL } }};
 
-int ExcepManInit(void)
+int ExcepManInit(s32 argc, void *argp)
 {
+	(void)argc;
+	(void)argp;
+
     dbg_init(1, FB_HARDWARE, FAT_HARDWARE);
     dbg_printf("-- ExcepManInit()\n");
     int oldIntr = suspendIntr();

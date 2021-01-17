@@ -219,7 +219,7 @@ s32 SysTimerInit(s32 argc __attribute__((unused)), void *argp __attribute__((unu
     return SCE_ERROR_OK;
 }
 
-s32 SysTimerEnd(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 SysTimerEnd()
 {
     s32 oldIntr = sceKernelCpuSuspendIntr();
     

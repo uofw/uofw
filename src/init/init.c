@@ -912,7 +912,7 @@ asm(".word init_patch\n");
 #endif
 
 /* Setup the boot process of the rest of the PSP kernel modules. */
-s32 InitInit(SceSize argc __attribute__((unused)), void *argp)
+s32 InitInit(s32 argc __attribute__((unused)), void *argp)
 {
     SceUID threadId;
      
@@ -948,9 +948,11 @@ s32 InitInit(SceSize argc __attribute__((unused)), void *argp)
         sceKernelMemset32(maxEnd, 0, SCE_USERSPACE_ADDR_K0 - (u32)maxEnd);
     } else
         sceKernelMemset32((void *)REBOOT_BASE_ADDR_K0, 0, SCE_USERSPACE_ADDR_K0 - REBOOT_BASE_ADDR_K0);
-    
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
     SceUID id = sceKernelCreateThread("SceKernelInitThread", (SceKernelThreadEntry)InitThreadEntry, 
             SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL);
+#pragma GCC diagnostic pop
     
     u32 threadArgs[2] = { 
         threadId, 

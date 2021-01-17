@@ -197,7 +197,7 @@ static s32 exe_thread(SceSize args, void *argp)
 
         if (pModParams->modeFinish == CMD_LOAD_MODULE) //0x00000214
             break;
-
+        /* FALLTHRU */
     case CMD_RELOCATE_MODULE: // 0x0000021C
         if (pMod == NULL) {
             pMod = sceKernelCreateModule(); //0x00000448
@@ -233,7 +233,7 @@ static s32 exe_thread(SceSize args, void *argp)
         *(pModParams->pResult) = pModParams->pMod->modId; //0x00000260        
         if (pModParams->modeFinish == CMD_RELOCATE_MODULE) //0x00000268
             break;
-
+        /* FALLTHRU */
     case CMD_START_MODULE: //0x00000270
         pMod = sceKernelGetModuleFromUID(pModParams->modId); //0x00000270
         if (pMod == NULL && (pMod = sceKernelFindModuleByUID(pModParams->modId)) == NULL) //0x00000400
@@ -254,7 +254,7 @@ static s32 exe_thread(SceSize args, void *argp)
 
         if (status < SCE_ERROR_OK || pModParams->modeFinish == CMD_START_MODULE) //0x000002B4 & 0x000002C0
             break;
-
+        /* FALLTHRU */
     case CMD_STOP_MODULE: //0x000002C8
         if (pMod == NULL) { //0x000002C8
             pMod = sceKernelGetModuleFromUID(pModParams->modId);
@@ -279,7 +279,7 @@ static s32 exe_thread(SceSize args, void *argp)
 
         if (status < SCE_ERROR_OK || pModParams->modeFinish == CMD_STOP_MODULE) //0x0000030C & 0x00000318
             break;
-
+        /* FALLTHRU */
     case CMD_UNLOAD_MODULE: //0x00000320
         pMod = sceKernelGetModuleFromUID(pModParams->modId); //0x00000320
         if (pMod == NULL) { // 0x00000328
@@ -309,27 +309,21 @@ static s32 exe_thread(SceSize args, void *argp)
 }
 
 // 0x0000501C
-s32 ModuleMgrRebootPhase(SceSize argc, void *argp)
+s32 ModuleMgrRebootPhase()
 {
-    (void)argc;
-    (void)argp;
-
     return SCE_ERROR_OK;
 }
 
 // 0x00005024
-s32 ModuleMgrRebootBefore(SceSize argc, void *argp)
+s32 ModuleMgrRebootBefore()
 {
-    (void)argc;
-    (void)argp;
-
     return sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
 }
 // 0x00005048
 /*
  * Create the work objects (threads,...) for the module manager.
  */
-s32 ModuleMgrInit(SceSize argc, void *argp)
+s32 ModuleMgrInit(s32 argc, void *argp)
 {
     (void)argc;
     (void)argp;

@@ -321,6 +321,8 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 case 'D':
                     // 100D8
                     attr |= 1;
+                    /* FALLTHRU */
+
                 case 'd':
                 case 'i':
                     // 100DC
@@ -355,6 +357,8 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
 
                 case 'O':
                     attr |= 1;
+                    /* FALLTHRU */
+
                 case 'o':
                     // 104C0
                     if ((attr & 2) == 0)
@@ -375,6 +379,8 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 case 'U':
                     // 10514
                     attr |= 1;
+                    /* FALLTHRU */
+
                 case 'u':
                     // 10518
                     if ((attr & 2) == 0)
@@ -395,6 +401,8 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 case 'X':
                     // 10558
                     hexNumChars = "0123456789ABCDEF";
+                    /* FALLTHRU */
+
                 case 'x':
                     // 10564
                     base = 16;

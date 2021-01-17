@@ -31,7 +31,7 @@ SceThread *g_thread; // 2bc0
 static s32 g_cmdList[CMD_LIST_SIZE]; // 2c00
 
 // module_start
-s32 _UsersystemLibInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _UsersystemLibInit(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
 {
     // InterruptManager_EEE43F47
     sceKernelRegisterUserSpaceIntrStack(

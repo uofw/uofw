@@ -102,8 +102,12 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    sysCallTable->tableSize = SYSCALL_TABLE_SIZE;
    
    //0x000003B0 - 0x000003C8
-   for (i = 0; i < SYSCALL_TABLE_FUNCTION_TABLE_ENTRIES; i++) 
+   for (i = 0; i < SYSCALL_TABLE_FUNCTION_TABLE_ENTRIES; i++) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
         sysCallTable->syscalls[i] = (void (*)())UndefSyscall;
+#pragma GCC diagnostic pop
+   }
     
    //0x000003D0 - 0x000003F8
    initialSysEntTable[0].next = NULL;      
