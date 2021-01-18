@@ -6,6 +6,7 @@ SCE_MODULE_INFO("sceUSB_Acc_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSI
 SCE_SDK_VERSION(SDK_VERSION);
 
 // Error codes are derived from -> https://github.com/xerpi/psp-uvc-usb-video-class/blob/master/include/usb.h
+#define SCE_ERROR_USB_INVALID_ARGUMENT        0x80243002
 #define SCE_ERROR_USB_DRIVER_NOT_FOUND        0x80243005
 #define SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED  0x80243007
 
@@ -124,16 +125,16 @@ struct UsbdDeviceReq
 	void *link;
 };
 
-int sceUsbBus_driver_B1644BE7(struct UsbDriver *drv);     // sceUsbbdRegister
-int sceUsbBus_driver_C1E2A540(struct UsbDriver *drv);     // sceUsbbdUnregister
-int sceUsbBus_driver_23E51D8F(struct UsbdDeviceReq *req); // sceUsbbdReqSend
+int sceUsbbdRegister(struct UsbDriver *drv);    // sceUsbBus_driver_B1644BE7
+int sceUsbbdUnregister(struct UsbDriver *drv);  // sceUsbBus_driver_C1E2A540
+int sceUsbbdReqSend(struct UsbdDeviceReq *req); // sceUsbBus_driver_23E51D8F
 int sceUsbBus_driver_8A3EB5D2(void);
 
 // Globals
 struct UsbDriver g_drv;     // 0x00000CC4
 u8 unk0;                    // 0x00000D53
-u16 unk1;                   // 0x00000D60
-u8 unk2;                    // 0x00000D62
+u16 unk1;                   // 0x00000D50
+u8 unk2;                    // 0x00000D52
 struct UsbdDeviceReq g_req; // 0x00000CAC
 
 // Subroutine sceUsbAccGetAuthStat - Address 0x00000000 - Aliases: sceUsbAcc_79A1C743, sceUsbAcc_driver_79A1C743
@@ -199,7 +200,7 @@ s32 sceUsbAccUnregisterType(u16 type)
 s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     s32 ret = 0;
-    if ((ret = sceUsbBus_driver_B1644BE7(&g_drv)) >= 0) {
+    if ((ret = sceUsbbdRegister(&g_drv)) >= 0) {
         unk1 = 0;
         unk2 = 0;
     }
@@ -210,6 +211,6 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
 // Subroutine module_stop - Address 0x00000558 -- Done
 s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    int ret = sceUsbBus_driver_C1E2A540(&g_drv);
+    int ret = sceUsbbdUnregister(&g_drv);
     return (ret < 0)? 1 : 0;
 }
