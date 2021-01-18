@@ -148,7 +148,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
         if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004A58 - 0x00004B04
             continue;
 
-        pMod->moduleRebootPhase(arg1, (u32)argp, arg3, arg4); //0x00004B0C
+        pMod->moduleRebootPhase(arg1, argp, arg3, arg4); //0x00004B0C
 
         if (!sceKernelIsToolMode()) //0x00004B1C
             continue;
@@ -197,7 +197,7 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
         if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004C08,  0x00004CB0
             continue;
 
-        pMod->moduleRebootBefore((u32)argp, arg2, arg3, arg4); //0x00004CB8
+        pMod->moduleRebootBefore(argp, arg2, arg3, arg4); //0x00004CB8
     }
 
     status = ClearFreePartitionMemory(uidBlkId); // 0x00004C24 - 0x00004C60

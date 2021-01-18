@@ -253,7 +253,7 @@ int _sceClockgenModuleStart(SceSize argSize __attribute__((unused)), const void 
 }
 
 //0x00000320
-s32 _sceClockgenModuleRebootBefore()
+s32 _sceClockgenModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     s32 oldRegSS;
     s32 curRegSS;

@@ -2013,7 +2013,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->stubCount; i++) {        
          switch (lib->entryTable[i]) { 
          case NID_MODULE_REBOOT_PHASE: //0x00003450
-             mod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
+             mod->moduleRebootPhase = (SceKernelRebootPhaseForKernel)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
              break;
          case NID_MODULE_BOOTSTART: //0x000035DC
              mod->moduleBootstart = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003658
@@ -2025,7 +2025,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
              mod->moduleStop = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003610
              break;
          case NID_MODULE_REBOOT_BEFORE: //0x00003478
-             mod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
+             mod->moduleRebootBefore = (SceKernelRebootBeforeForKernel)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
              break;
          }         
     }

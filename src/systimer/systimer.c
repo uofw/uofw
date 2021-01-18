@@ -219,7 +219,7 @@ s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock _
     return SCE_ERROR_OK;
 }
 
-s32 SysTimerEnd()
+s32 SysTimerEnd(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     s32 oldIntr = sceKernelCpuSuspendIntr();
     

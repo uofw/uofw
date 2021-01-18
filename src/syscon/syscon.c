@@ -138,7 +138,7 @@ SceSysconPacket g_GetStatus2Cmd;
 
 SceSyscon g_Syscon;
 
-s32 _sceSysconModuleRebootBefore(void)
+s32 _sceSysconModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     if (g_Syscon.unk376 != 0) {
         sceSyscon_driver_765775EB(0);

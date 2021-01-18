@@ -168,6 +168,10 @@ enum SceLibAttr {
 /** Boot Callback function. */
 typedef s32 (*SceKernelBootCallbackFunction)(void *data, s32 arg, void *opt);
 
+/** Reboot preparation functions */
+typedef s32 (*SceKernelRebootBeforeForKernel)(void *arg1, s32 arg2, s32 arg3, s32 arg4);
+typedef s32 (*SceKernelRebootPhaseForKernel)(s32 arg1, void *arg2, s32 arg3, s32 arg4);
+
 /** 
  * This structure represents a function stub belonging to same privilege-level linked libraries, 
  * i.e. a kernel resident library linked with a kernel stub library. 
@@ -746,12 +750,12 @@ typedef struct SceModule {
      * A pointer to a module's rebootBefore entry function. This function is probably executed 
      * before a reboot. 
      */
-    SceKernelRebootKernelThreadEntry moduleRebootBefore; //92
+    SceKernelRebootBeforeForKernel moduleRebootBefore; //92
     /** 
      * A pointer to a module's rebootPhase entry function. This function is probably executed 
      * during a reboot. 
      */
-    SceKernelRebootKernelThreadEntry moduleRebootPhase; //96
+    SceKernelRebootPhaseForKernel moduleRebootPhase; //96
     /** 
      * The entry address of the module. It is the offset from the start of the TEXT segment to the 
      * program's entry point. 

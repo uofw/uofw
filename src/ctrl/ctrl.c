@@ -2135,7 +2135,7 @@ s32 _sceCtrlModuleStart(SceSize argSize __attribute__((unused)), const void *arg
     return SCE_KERNEL_RESIDENT;
 }
 
-s32 _sceCtrlModuleRebootBefore()
+s32 _sceCtrlModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     sceCtrlEnd();   
     return SCE_KERNEL_STOP_SUCCESS;
