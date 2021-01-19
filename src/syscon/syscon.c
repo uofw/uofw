@@ -732,12 +732,12 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
 s32 sceSysconCmdExec(SceSysconPacket *packet, u32 flags)
 {   
     if (sceKernelIsIntrContext())
-        return 0x80000030;
+        return SCE_ERROR_ILLEGAL_CONTEXT;
 
     if (g_Syscon.pollingMode == 0 && pspMfic() == 0)
-        return 0x80000031;
+        return SCE_ERROR_CPUDI;
     if (g_Syscon.pollingMode != 0 && pspMfic() != 0)
-        return 0x80000031;
+        return SCE_ERROR_CPUDI;
     s32 ret = sceSysconCmdExecAsync(packet, flags, NULL, NULL);
     if (ret < 0)
         return ret;
@@ -837,11 +837,11 @@ s32 sceSysconCmdCancel(SceSysconPacket *packet)
         off = 0;
     }
     SceSysconPacket *cur = g_Syscon.packetList[off];
-    s32 ret = 0x80000025;
+    s32 ret = SCE_ERROR_NOT_FOUND;
     SceSysconPacket *prev = NULL;
     while (cur != NULL) {
         if (cur == packet) {
-            ret = 0x80000021;
+            ret = SCE_ERROR_BUSY;
             if ((cur->status & 0x20000) != 0)
                 goto end;
             if (prev == NULL) {
@@ -877,7 +877,7 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, u32 noWait)
 {
     if (noWait != 0) {
         if (noWait != 1)
-            return 0x80000107;
+            return SCE_ERROR_INVALID_MODE;
         if (packet == NULL) {
             if (g_Syscon.packetList[0] == NULL &&
               g_Syscon.packetList[1] == NULL &&
@@ -890,11 +890,11 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, u32 noWait)
             return 1;
     } else if (g_Syscon.pollingMode == 0) {
         if (sceKernelIsIntrContext() != 0)
-            return 0x80000030;
+            return SCE_ERROR_ILLEGAL_CONTEXT;
         s32 oldIntr = sceKernelCpuSuspendIntr();
         if (oldIntr == 0) {
             sceKernelCpuResumeIntr(0);
-            return 0x80000031;
+            return SCE_ERROR_CPUDI;
         }
         if ((packet->status & 0x80000) != 0) {
             sceKernelCpuResumeIntr(oldIntr);
@@ -942,7 +942,7 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, u32 noWait)
 s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
 {   
     if (ptr == NULL)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     SceSysconPacket packet;
     s32 buf[4];
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
@@ -1415,7 +1415,7 @@ s32 sceSysconGetTimeStamp(s8 *timeStamp)
 {   
     SceSysconPacket packet;
     if (timeStamp == NULL)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_TIMESTAMP;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -1430,11 +1430,11 @@ s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size)
 {   
     SceSysconPacket packet;
     if ((size < 1 || size >= 3) && size != 4 && size != 8)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if ((dst % size) != 0)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     if (dst + size >= 33)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_WRITE_SCRATCHPAD;
     packet.tx[PSP_SYSCON_TX_LEN] = size + 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = (dst << 2) | ((size / 2) != 4 ? size / 2 : 3);
@@ -1446,11 +1446,11 @@ s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size)
 {
     SceSysconPacket packet;
     if ((size < 1 || size >= 3) && size != 4 && size != 8)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if ((src % size) != 0)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     if (src + size > 32)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_SCRATCHPAD;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = (src << 2) | ((size >> 1) != 4) ? (size >> 1) : 3;
@@ -1507,7 +1507,7 @@ s32 sceSysconReceiveSetParam(u32 id, void *param)
 s32 sceSysconCtrlTachyonWDT(s32 wdt)
 {   
     if (wdt >= 0x80)
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
     return _sceSysconCommonWrite(wdt == 0 ? 0 : wdt | 0x80, PSP_SYSCON_CMD_CTRL_TACHYON_WDT, 3);
 }
 
@@ -1517,7 +1517,7 @@ s32 sceSysconResetDevice(u32 reset, u32 mode)
         if (mode != 1) {
             reset = 0x41;
             if (mode != 2)
-                return 0x80000107;
+                return SCE_ERROR_INVALID_MODE;
         }
     } else if (mode != 0)
         reset |= 0x80;
@@ -1602,7 +1602,7 @@ s32 sceSysconGetBaryonVersion(s32 *baryonVersion)
 
 s32 sceSysconGetGValue(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconGetPowerSupplyStatus(s32 *status)
@@ -1612,7 +1612,7 @@ s32 sceSysconGetPowerSupplyStatus(s32 *status)
 
 s32 sceSysconGetFallingDetectTime(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconGetWakeUpFactor(void *factor)
@@ -1630,7 +1630,7 @@ s32 sceSysconGetVideoCable(s32 *cable)
     u32 ver = _sceSysconGetBaryonVersion() >> 16;
     if ((ver & 0xF0) == 0 || (ver & 0xF0) == 0x10) {
         *cable = 0;
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     }
     return _sceSysconCommonRead(cable, PSP_SYSCON_CMD_GET_VIDEO_CABLE);
 }
@@ -1707,10 +1707,10 @@ s32 sceSysconCtrlLED(u32 led, u32 set)
     case 3:
         ledMask = 0x10;
         if (_sceSysconGetPommelType() < 0x300)
-            return 0x80000004;
+            return SCE_ERROR_NOT_SUPPORTED;
         break;
     default:
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     }
     setMask = 0;
     if (set != 0) {
@@ -1726,7 +1726,7 @@ s32 sceSysconCtrlDvePower(s8 power)
 {
     u32 type = _sceSysconGetPommelType();
     if (type < 0x300)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     if (type >= 0x301) {
         s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_DVE_POWER, 3);
         if (ret >= 0)
@@ -1826,18 +1826,18 @@ s32 sceSysconGetPolestarVersion(s32 *polestar)
 s32 sceSysconCtrlVoltage(s32 arg0, s32 arg1)
 {   
     if (_sceSysconGetPommelType() != 0x100 && arg0 >= 4 && arg0 < 6)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     return _sceSysconCommonWrite(((arg1 & 0xFFFF) << 8) | (arg0 & 0xFF), PSP_SYSCON_CMD_CTRL_VOLTAGE, 5);
 }
 
 s32 sceSysconGetGSensorVersion(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconCtrlGSensor(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconGetPowerStatus(s32 *status)
@@ -1901,7 +1901,7 @@ s32 sceSysconCtrlWlanPower(s8 power)
 s32 sceSysconCtrlHddPower(s8 power)
 {
     if (_sceSysconGetPommelType() < 0x500)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_HDD_POWER, 3);
     if (ret >= 0)
         g_Syscon.hddPower = power;
@@ -1922,7 +1922,7 @@ s32 sceSysconCtrlUsbPower(s8 power)
 {   
     u8 version = _sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) == 0 || (version & 0xF0) == 0x10 || ((version & 0xFF) >= 0x20 && (version & 0xFF) < 0x22))
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_USB_POWER, 3);
     if (ret >= 0)
         g_Syscon.usbPower = power;
@@ -1942,7 +1942,7 @@ s32 sceSysconForbidChargeBattery(void)
 s32 sceSysconCtrlTachyonVmePower(s8 power)
 {
     if (_sceSysconGetPommelType() != 0x100)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = sceSysconCtrlPower(2, power);
     if (ret >= 0)
         g_Syscon.tachyonVmePower = power;
@@ -1952,7 +1952,7 @@ s32 sceSysconCtrlTachyonVmePower(s8 power)
 s32 sceSysconCtrlTachyonAwPower(s8 power)
 {
     if (_sceSysconGetPommelType() != 0x100)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = sceSysconCtrlPower(4, power);
     if (ret >= 0)
         g_Syscon.tachyonAwPower = power;
@@ -1962,7 +1962,7 @@ s32 sceSysconCtrlTachyonAwPower(s8 power)
 s32 sceSysconCtrlLcdPower(s8 power)
 {
     if (_sceSysconGetPommelType() >= 0x300)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = sceSysconCtrlPower(0x80000, power);
     if (ret >= 0)
         g_Syscon.lcdPower = power;
@@ -1971,12 +1971,12 @@ s32 sceSysconCtrlLcdPower(s8 power)
 
 s32 sceSysconGetGSensorCarib(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconSetGSensorCarib(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconWritePolestarReg(u8 reg, s16 val)
@@ -2000,12 +2000,12 @@ s32 sceSysconReadPolestarReg(u8 reg, s16 *val)
 
 s32 sceSysconWriteGSensorReg(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconReadGSensorReg(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
@@ -2047,7 +2047,7 @@ s32 sceSysconGetBattVolt(s32 *volt)
       (version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 val;
     s32 ret = _sceSysconCommonRead(&val, PSP_SYSCON_CMD_GET_BATT_VOLT);
     if (ret < 0)
@@ -2063,7 +2063,7 @@ s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
       (version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 val;
     s32 ret = _sceSysconCommonRead(&val, PSP_SYSCON_CMD_GET_BATT_VOLT_AD);
     if (ret < 0)
@@ -2176,7 +2176,7 @@ s32 _sceSysconBatteryCommon(u32 cmd, s32 *ptr)
      (version & 0xFF) == 0x2A ||
      (version & 0xF0) == 0x30 ||
      (version & 0xF0) == 0x40)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     SceSysconPacket packet;
     packet.tx[PSP_SYSCON_TX_CMD] = cmd;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
@@ -2274,7 +2274,7 @@ s32 sub_4150(s32 arg0, s32 arg1, s32 arg2)
     if (ret < 0)
         return ret;
     if (packet.rx[PSP_SYSCON_RX_LEN] != 3)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     return 0;
 }
 

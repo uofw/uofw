@@ -501,7 +501,7 @@ int _sceGeInitCallback4()
 int sceGeGetReg(u32 regId)
 {
     if (regId >= 32)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     int wasEnabled = sceSysregAwRegABusClockEnable();
@@ -519,9 +519,9 @@ int sceGeGetReg(u32 regId)
 int sceGeSetReg(u32 regId, u32 value)
 {
     if (regId >= 32)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     if (regId >= 5 && regId < 14 && (value & 3) != 0)
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
 
     // 092C
     int oldK1 = pspShiftK1();
@@ -540,7 +540,7 @@ int sceGeSetReg(u32 regId, u32 value)
         *(int *)g_pAwRegAdr[regId] = value;
         ret = 0;
     } else
-        ret = 0x80000021;
+        ret = SCE_ERROR_BUSY;
     // 098C
     if (!wasEnabled) {
         // 09CC
@@ -555,7 +555,7 @@ int sceGeSetReg(u32 regId, u32 value)
 int sceGeGetCmd(u32 cmdOff)
 {
     if (cmdOff >= 0xFF)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     int wasEnabled = sceSysregAwRegABusClockEnable();
@@ -573,11 +573,11 @@ int sceGeGetCmd(u32 cmdOff)
 int sceGeSetCmd(u32 cmdOff, u32 cmd)
 {
     if (cmdOff >= 0xFF)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     int wasEnabled = sceSysregAwRegABusClockEnable();
-    int ret = 0x80000021;
+    int ret = SCE_ERROR_BUSY;
     int old100, old108;
     if ((HW(0xBD400100) & 1) == 0) {
         old100 = HW(0xBD400100);
@@ -587,7 +587,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             int addr = (((HW_GE_CMD(SCE_GE_CMD_BASE) << 8) & 0xFF000000) | (cmd & 0x00FFFFFF)) + HW(0xBD400120);
             if (!GE_VALID_ADDR(addr)) {
                 // 0E68 dup
-                ret = 0x80000103;
+                ret = SCE_ERROR_INVALID_POINTER;
             } else {
                 // 0B88
                 if (cmdOff == 9) {
@@ -653,14 +653,14 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         } else if (cmdOff == SCE_GE_CMD_PRIM || cmdOff == SCE_GE_CMD_BEZIER || cmdOff == SCE_GE_CMD_SPLINE) {
             int addr = HW(0xBD400118);
             if (!GE_VALID_ADDR(addr))
-                ret = 0x80000103;
+                ret = SCE_ERROR_INVALID_POINTER;
 
             // 0F14
             if (((HW_GE_CMD(SCE_GE_CMD_VTYPE) >> 11) & 3) != 0)
             {
                 int addr = HW(0xBD40011C);
                 if (!GE_VALID_ADDR(addr))
-                    ret = 0x80000103;
+                    ret = SCE_ERROR_INVALID_POINTER;
             }
             // 0F70
             if ((HW_GE_CMD(SCE_GE_CMD_TME) & 1) != 0) {
@@ -671,7 +671,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
                     int addr = ((HW_GE_CMD(SCE_GE_CMD_TBW0 + i) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_TBP0 + i) & 0x00FFFFFF);
                     if (!GE_VALID_ADDR(addr)) {
                         // 1028
-                        ret = 0x80000103;
+                        ret = SCE_ERROR_INVALID_POINTER;
                     }
                     i++;
                     // 1030
@@ -685,7 +685,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             do {
                 int addr = ((HW_GE_CMD(SCE_GE_CMD_TBW0 + i) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_TBP0 + i) & 0x00FFFFFF);
                 if (!GE_VALID_ADDR(addr))
-                    ret = 0x80000103;   // 1390
+                    ret = SCE_ERROR_INVALID_POINTER;   // 1390
 
                 // 1398
                 i++;
@@ -695,14 +695,14 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             int addr = ((HW_GE_CMD(SCE_GE_CMD_CBW) << 8) & 0xFF000000) | (HW_GE_CMD(SCE_GE_CMD_CBP) & 0x00FFFFFF);
             if (!GE_VALID_ADDR(addr)) {
                 // 0E68 dup
-                ret = 0x80000103;
+                ret = SCE_ERROR_INVALID_POINTER;
             }
         } else if (cmdOff == SCE_GE_CMD_XSTART) {
             int addr1 = ((HW_GE_CMD(SCE_GE_CMD_XBW1) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_XBP1) & 0x00FFFFFF);
             int addr2 = ((HW_GE_CMD(SCE_GE_CMD_XBW2) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_XBP2) & 0x00FFFFFF);
             if (!GE_VALID_ADDR(addr1) || !GE_VALID_ADDR(addr2)) {
                 // 11B8
-                ret = 0x80000103;
+                ret = SCE_ERROR_INVALID_POINTER;
             }
         }
     }
@@ -773,12 +773,12 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
 int sceGeGetMtx(int id, int *mtx)
 {
     if (id < 0 || id >= 12)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(mtx)) {
         // 1588
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int wasEnabled = sceSysregAwRegABusClockEnable();
@@ -815,12 +815,12 @@ int sceGeSetMtx(int id, int *mtx)
 {
     int ret;
     if (id < 0 || id >= 12)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(mtx)) {
         // 16B8
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     SceGeMatrix *curMtx = &mtxtbl[id];
@@ -845,12 +845,12 @@ int sceGeSetMtx(int id, int *mtx)
 int sceGeSaveContext(SceGeContext * ctx)
 {
     if (((int)ctx & 3) != 0)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(ctx, 2048)) {
         // 1AA0
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int aBusWasEnabled = sceSysregAwRegABusClockEnable();
@@ -935,12 +935,12 @@ int sceGeRestoreContext(SceGeContext * ctx)
 {
     int ret = 0;
     if (((int)ctx & 3) != 0)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(ctx, 2048)) {
         // 1C80
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int state = sceSysregAwRegABusClockEnable();
@@ -948,7 +948,7 @@ int sceGeRestoreContext(SceGeContext * ctx)
         // 1C68
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return 0x80000021;
+        return SCE_ERROR_BUSY;
     }
     int old304 = HW(0xBD400304);
     int old308 = HW(0xBD400308);
@@ -1383,13 +1383,13 @@ int sceGeEdramSetSize(int size)
     } else if (size == 0x400000) {
         // 28FC
         if (sceSysregGetTachyonVersion() <= 0x4FFFFF)
-            return 0x80000104;
+            return SCE_ERROR_INVALID_SIZE;
         g_uiEdramSize = size;
         sceGeSetReg(19, 2);
         // 2934 dup
         sceSysregSetAwEdramSize(1);
     } else
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
 
     return 0;
 }
@@ -1404,7 +1404,7 @@ int sceGeEdramSetAddrTranslation(int arg)
     int ret;
     if (arg != 0 && arg != 0x200 && arg != 0x400
         && arg != 0x800 && arg != 0x1000)
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
 
     // 29AC
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -2089,7 +2089,7 @@ int sceGeListDeQueue(int dlId)
     if (dl < g_displayLists || dl >= &g_displayLists[64]) {
         // 3D90
         pspSetK1(oldK1);
-        return 0x80000100;
+        return SCE_ERROR_INVALID_ID;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     if (dl->state != SCE_GE_DL_STATE_NONE) {
@@ -2133,9 +2133,9 @@ int sceGeListDeQueue(int dlId)
             }
             ret = 0;
         } else
-            ret = 0x80000021;
+            ret = SCE_ERROR_BUSY;
     } else
-        ret = 0x80000100;
+        ret = SCE_ERROR_INVALID_ID;
 
     // 3D3C
     sceKernelCpuResumeIntr(oldIntr);
@@ -2152,7 +2152,7 @@ SceGeListState sceGeListSync(int dlId, int mode)
     if (off >= 4096) {
         // 3EE0
         pspSetK1(oldK1);
-        return 0x80000100;
+        return SCE_ERROR_INVALID_ID;
     }
 
     if (mode == 0) {
@@ -2192,11 +2192,11 @@ SceGeListState sceGeListSync(int dlId, int mode)
             break;
 
         default:
-            ret = 0x80000100;
+            ret = SCE_ERROR_INVALID_ID;
             break;
         }
     } else
-        ret = 0x80000107;
+        ret = SCE_ERROR_INVALID_MODE;
 
     // 3DF0
     pspSetK1(oldK1);
@@ -2253,7 +2253,7 @@ SceGeListState sceGeDrawSync(int syncType)
         // 3F8C
         sceKernelCpuResumeIntr(oldIntr);
     } else
-        ret = 0x80000107;
+        ret = SCE_ERROR_INVALID_MODE;
 
     // 3F24
     pspSetK1(oldK1);
@@ -2264,12 +2264,12 @@ int sceGeBreak(u32 resetQueue, void *arg1)
 {
     int ret;
     if (resetQueue >= 2)
-        return 0x80000107;
+        return SCE_ERROR_INVALID_MODE;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(arg1, 16)) {
         // 4368
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     SceGeDisplayList *dl = g_AwQueue.cur;
@@ -2353,24 +2353,24 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             ret = (int)dl ^ g_dlMask;
         } else if (dl->state == SCE_GE_DL_STATE_PAUSED) {
             // 4130
-            ret = 0x80000021;
+            ret = SCE_ERROR_BUSY;
             if (g_AwQueue.sdkVer > 0x02000010) {
                 if (dl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
                     // 4160
                     Kprintf("sceGeBreak(): can't break signal-pausing list\n"); // 64B4
                 } else
-                    ret = 0x80000020;
+                    ret = SCE_ERROR_ALREADY;
             }
         } else if (dl->state == SCE_GE_DL_STATE_QUEUED) {
             // 40FC
             dl->state = SCE_GE_DL_STATE_PAUSED;
             ret = (int)dl ^ g_dlMask;
         } else if (g_AwQueue.sdkVer >= 0x02000000)
-            ret = 0x80000004;
+            ret = SCE_ERROR_NOT_SUPPORTED;
         else
             ret = -1;
     } else
-        ret = 0x80000020;
+        ret = SCE_ERROR_ALREADY;
 
     // 410C
     if (ret == 0 && g_GeLogHandler != NULL)
@@ -2425,7 +2425,7 @@ int sceGeContinue()
                     }
                 } else {
                     // 45A8
-                    ret = 0x80000021;
+                    ret = SCE_ERROR_BUSY;
                 }
             } else {
                 dl->state = SCE_GE_DL_STATE_QUEUED;
@@ -2435,12 +2435,12 @@ int sceGeContinue()
         } else if (dl->state == SCE_GE_DL_STATE_RUNNING) {
             // 4428
             if (g_AwQueue.sdkVer >= 0x02000000)
-                ret = 0x80000020;
+                ret = SCE_ERROR_ALREADY;
             else
                 ret = -1;
         } else {
             if (g_AwQueue.sdkVer >= 0x02000000)
-                ret = 0x80000004;
+                ret = SCE_ERROR_NOT_SUPPORTED;
             else
                 ret = -1;
         }
@@ -2460,7 +2460,7 @@ int sceGeSetCallback(SceGeCallbackData * cb)
         || !pspK1PtrOk(cb->signal_func) || !pspK1PtrOk(cb->finish_func)) {
         // 4604
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 4634
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -2479,7 +2479,7 @@ int sceGeSetCallback(SceGeCallbackData * cb)
     if (i == 16) {
         // 46D8
         pspSetK1(oldK1);
-        return 0x80000022;
+        return SCE_ERROR_OUT_OF_MEMORY;
     }
 
     if (cb->signal_func != NULL)
@@ -2499,14 +2499,14 @@ int sceGeSetCallback(SceGeCallbackData * cb)
 int sceGePutBreakpoint(int *inPtr, int size)
 {
     if (size >= 9)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(inPtr, size * 8)) {
         // 4850 dup
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 477C
     int i;
@@ -2516,7 +2516,7 @@ int sceGePutBreakpoint(int *inPtr, int size)
             // 4850 dup
             pspSetK1(oldK1);
             sceKernelCpuResumeIntr(oldIntr);
-            return 0x80000023;
+            return SCE_ERROR_PRIV_REQUIRED;
         }
     }
     // 47A8
@@ -2546,7 +2546,7 @@ int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
         // 48C0
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 48EC
     SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[0];
@@ -2580,7 +2580,7 @@ int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
         // 49B8
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 49E8
     SceGeDisplayList *dl = g_AwQueue.cur;
@@ -2612,14 +2612,14 @@ int sceGeGetList(int dlId, SceGeDisplayList * outDl, int *outFlag)
     if (!pspK1PtrOk(outDl) || !pspK1PtrOk(outFlag)) {
         // 4A8C
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 4AB8
     SceGeDisplayList *dl = (SceGeDisplayList *) (dlId ^ g_dlMask);
     if (dl < g_displayLists || dl >= &g_displayLists[64]) {
         // 4B40
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000100;
+        return SCE_ERROR_INVALID_ID;
     }
     if (outDl != NULL) {
         int *outPtr = (int *)outDl;
@@ -2655,13 +2655,13 @@ int sceGeGetStack(int stackId, SceGeStack *stack)
         // 4C40
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     }
     if (!pspK1PtrOk(stack)) {
         // 4C2C
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     if (stack != NULL) {
         SceGeStack *inStack = &dl->stack[stackId];
@@ -2686,7 +2686,7 @@ int sceGeDebugBreak()
     if (g_GeDeciBreak.busy != 0) {
         // 4CF4
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000020;
+        return SCE_ERROR_ALREADY;
     }
     g_GeDeciBreak.size2 = 0;
     g_GeDeciBreak.busy = 1;
@@ -2715,7 +2715,7 @@ int sceGeDebugContinue(int arg0)
     if (g_GeDeciBreak.busy == 0) {
         // 50B0
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000021;
+        return SCE_ERROR_BUSY;
     }
     int wasEnabled = sceSysregAwRegABusClockEnable();
     if ((HW(0xBD400304) & 2) != 0) {
@@ -2725,7 +2725,7 @@ int sceGeDebugContinue(int arg0)
             sceSysregAwRegABusClockDisable();
         }
         sceKernelCpuResumeIntr(oldIntr);
-        return 0x80000021;
+        return SCE_ERROR_BUSY;
     }
     int *cmdPtr = (int *)HW_GE_DLIST;
     u32 curCmd = *cmdPtr;
@@ -2906,7 +2906,7 @@ int sceGeUnsetCallback(int cbId)
     if (cbId < 0 || cbId >= 16) {
         // 528C
         pspSetK1(oldK1);
-        return 0x80000100;
+        return SCE_ERROR_INVALID_ID;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     sceKernelDisableSubIntr(25, cbId * 2 + 0);
@@ -3133,7 +3133,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(list) || !pspK1PtrOk(stall) || !pspK1StaBufOk(arg, 16)) {
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 5834
     int ver = sceKernelGetCompiledSdkVersion();
@@ -3154,18 +3154,18 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         ctx = arg->ctx;
         if (!pspK1StaBufOk(ctx, 2048)) {
             pspSetK1(oldK1);
-            return 0x80000023;
+            return SCE_ERROR_PRIV_REQUIRED;
         }
         if (arg->size >= 16) {
             numStacks = arg->numStacks;
             if (numStacks >= 256) {
                 // 5CBC
                 pspSetK1(oldK1);
-                return 0x80000104;
+                return SCE_ERROR_INVALID_SIZE;
             }
             if (!pspK1DynBufOk(arg->stacks, numStacks * 32)) {
                 pspSetK1(oldK1);
-                return 0x80000023;
+                return SCE_ERROR_PRIV_REQUIRED;
             }
         }
     }
@@ -3174,7 +3174,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     if ((((int)list | (int)stall | (int)ctx | (int)stack) & 3) != 0) {
         // 5CAC
         pspSetK1(oldK1);
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     }
     if (g_AwQueue.patched != 0 && pspK1IsUserMode()) {    // 5C94
         g_AwQueue.patched--;
@@ -3194,14 +3194,14 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
                 break;
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return 0x80000021;
+            return SCE_ERROR_BUSY;
         }
         if (dl->ctxUpToDate && stack != NULL && dl->stack == stack && !oldVer) { // 5C44
             Kprintf("_sceGeListEnQueue(): can't enqueue duplicated stack(STACK=0x%08X)\n", stack);  // 0x65FC
             // 5C60
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return 0x80000021;
+            return SCE_ERROR_BUSY;
         }
         dl = dl->next;
         // 5954
@@ -3213,7 +3213,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return 0x80000022;
+        return SCE_ERROR_OUT_OF_MEMORY;
     }
     if (dl->next == NULL) {
         g_AwQueue.last = NULL;
@@ -3231,7 +3231,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return 0x80000022;
+        return SCE_ERROR_OUT_OF_MEMORY;
     }
     dl->ctxUpToDate = 0;
     dl->signal = SCE_GE_DL_SIGNAL_NONE;
@@ -3259,7 +3259,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
                 // 5C0C
                 sceKernelCpuResumeIntr(oldIntr);
                 pspSetK1(oldK1);
-                return 0x800001FE;
+                return SCE_ERROR_INVALID_VALUE;
             }
             dl->state = SCE_GE_DL_STATE_PAUSED;
             g_AwQueue.cur->state = SCE_GE_DL_STATE_QUEUED;

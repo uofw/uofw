@@ -52,7 +52,7 @@ int DipswInit(u32 lo, u32 hi, u32 cpTime)
 int sceKernelDipsw(u32 reg)
 {
     if (reg >= 64)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     if (reg >= 32) {
         // FC00
         return (gDipHi >> (reg - 32)) & 1;
@@ -139,7 +139,7 @@ int DipswSet(int reg, int val)
     {
         // FDA0 dup
         pspSetK1(oldK1);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
 
     if (pspK1IsUserMode())
@@ -161,7 +161,7 @@ int DipswSet(int reg, int val)
         default:
             // FDA0 dup
             pspSetK1(oldK1);
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
         }
     }
     // (FDB0)
@@ -450,7 +450,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                             // 10680
                             int *ptr = va_arg(ap, int*);
                             if (userMode != 0 && !pspK1PtrOk(ptr))
-                                return 0x800200D3;
+                                return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                             // 1069C
                             *ptr = numChars;
                         }
@@ -458,7 +458,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         {
                             short *ptr = va_arg(ap, short*);
                             if (userMode != 0 && !pspK1PtrOk(ptr))
-                                return 0x800200D3;
+                                return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                             // 10674
                             *ptr = numChars;
                         }
@@ -467,7 +467,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     {
                         int *ptr = va_arg(ap, int*);
                         if (userMode != 0 && !pspK1PtrOk(ptr))
-                            return 0x800200D3;
+                            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                         // 10640
                         *ptr = numChars;
                     }
@@ -490,7 +490,7 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     }
                     // 106CC
                     if (userMode != 0 && !pspK1PtrOk(curStr))
-                        return 0x800200D3;
+                        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                     // 106E4
                     if (strSize < 0)
                     {
@@ -649,7 +649,7 @@ int KprintfForUser(const char *fmt, ...)
     va_start(ap, fmt);
     if (!pspK1PtrOk(fmt)) {
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     int oldIntr = suspendIntr();
     if (kprinthandler != NULL && sceKernelDipsw(56) != 0) // 1082C
@@ -709,14 +709,14 @@ int _CheckDebugHandler(void *ptr, u32 size)
     {
         // 109C4
         kprintf_putchar_handler = NULL;
-        ret = 0x80020001;
+        ret = SCE_ERROR_KERNEL_ERROR;
     }
     // 109D0
     if ((void*)kprinthandler < ptr || (void*)kprinthandler >= ptr + size)
     {
         kprinthandler = NULL;
         // 109E4
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
     return ret;
 }
@@ -725,7 +725,7 @@ int sceKernelDebugWrite()
 {
     int (*func)() = debug_write_handler;
     if (func == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     return func();
 }
 
@@ -739,7 +739,7 @@ int sceKernelDebugRead()
 {
     int (*func)() = debug_read_handler;
     if (func == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     return func();
 }
 

@@ -39,7 +39,7 @@ void sub_1DF8(int arg0, int arg1, int arg2, int arg3)
         t1 += a0;
         v1 = t1 < t4;
         if (v1 == 0)
-            return 0x80000104;
+            return SCE_ERROR_INVALID_SIZE;
         // 26E4
         do
         {
@@ -542,7 +542,7 @@ void sub_1DF8(int arg0, int arg1, int arg2, int arg3)
                                 if (t5 != t3)
                                     goto2368 = 1;
                                 else
-                                    return 0x80000108;
+                                    return SCE_ERROR_INVALID_FORMAT;
                             }
                         }
                     }
@@ -817,7 +817,7 @@ void sub_1DF8(int arg0, int arg1, int arg2, int arg3)
                     t9 = t7 < t9;
                     *(int*)(s1 + 2344) = t5;
                     if (t9 == 0)
-                        return 0x80000108;
+                        return SCE_ERROR_INVALID_FORMAT;
                 }
             
                 // 2368
@@ -831,7 +831,7 @@ void sub_1DF8(int arg0, int arg1, int arg2, int arg3)
                     s1 = v0 < t4;
                     a1 = (a1 & 0xFFFFFFFE) | (v0 & 1);
                     if (s1 == 0)
-                        return 0x80000104;
+                        return SCE_ERROR_INVALID_SIZE;
                 }
                 else
                 {
@@ -889,7 +889,7 @@ void sub_1DF8(int arg0, int arg1, int arg2, int arg3)
         t1 -= s1;
         s3 -= s1;
         if (t3 == t4)
-            return 0x80000104;
+            return SCE_ERROR_INVALID_SIZE;
     }
 }
 
@@ -1179,7 +1179,7 @@ int sub_707C(int arg0, int arg1, int arg2, int arg3)
     {
         // 7174
         sub_5174("_loadprx_by_pspbtcnf_bin", 671);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
     if (sub_71A8(sp[1], s0, arg0, arg1, sp[1], arg2, arg3) < 0) // parse pspbtcnf!!
     {

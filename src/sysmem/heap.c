@@ -28,7 +28,7 @@ SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name
     if (part == NULL) {
         // 300C
         resumeIntr(oldIntr);
-        return 0x800200D6;
+        return SCE_ERROR_KERNEL_PARTITION_IN_USE ;
     }
     s32 ret = sceKernelCreateUID(g_HeapType, name, (pspGetK1() >> 31) & 0xFF, &uid);
     if (ret != 0) {
@@ -53,7 +53,7 @@ SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name
         // 2FD0
         sceKernelDeleteUID(uid->uid);
         suspendIntr(oldIntr);
-        return 0x800200DC;
+        return SCE_ERROR_KERNEL_FAILED_ALLOC_HEAPBLOCK;
     }
     block->next = block;
     block->prev = block;
@@ -148,7 +148,7 @@ s32 _FreeHeapMemory(SceSysmemHeap *heap, void *addr)
             }
         }
         if (block == heap->firstBlock)
-            return 0x800200D3;
+            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         block = block->next;
     }
 }
@@ -156,7 +156,7 @@ s32 _FreeHeapMemory(SceSysmemHeap *heap, void *addr)
 int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
 {
     if (info->size < 64)
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     int oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
     int ret = sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid);
@@ -237,10 +237,10 @@ s32 sceKernelQueryLowheapInfo(SceSysmemHeapBlock *block, SceSysmemLowheapInfo *i
 {
     u32 maxInfoSize = info->size;
     if (maxInfoSize < 24)
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     SceSysmemLowheap *lowh = (SceSysmemLowheap *)(block + 1);
     if (lowh->addr != (u32)lowh - 1)
-        return 0x800200DE;
+        return SCE_ERROR_KERNEL_ILLEGAL_CHUNK_ID;
     SceSysmemLowheapBlock *cur = (SceSysmemLowheapBlock *)(lowh + 1);
     u32 infoSize = 24;
     SceSysmemLowheapBlock *last = (void*)lowh + lowh->size - 8;
@@ -313,7 +313,7 @@ int _CreateHeap(void *partition, int size, int attr, SceSysmemHeapBlock **out)
         ptr = _AllocPartitionMemory(partition, 1, size, 0);
     // 36F0
     if (ptr == NULL)
-        return 0x800200DC;
+        return SCE_ERROR_KERNEL_FAILED_ALLOC_HEAPBLOCK;
     *out = ptr;
     ptr->next = ptr;
     ptr->prev = ptr;
