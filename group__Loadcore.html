@@ -176,6 +176,8 @@ Macros</h2></td></tr>
 Typedefs</h2></td></tr>
 <tr class="memitem:ga7d752ce6bb887f69ae32d81943d77bf7"><td class="memItemLeft" align="right" valign="top">typedef s32(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga7d752ce6bb887f69ae32d81943d77bf7">SceKernelBootCallbackFunction</a>) (void *data, s32 arg, void *opt)</td></tr>
 <tr class="separator:ga7d752ce6bb887f69ae32d81943d77bf7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2b68f13bd4ce0515ad12e9f4070e9eee"><td class="memItemLeft" align="right" valign="top">typedef s32(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#ga2b68f13bd4ce0515ad12e9f4070e9eee">SceKernelRebootBeforeForKernel</a>) (void *arg1, s32 arg2, s32 arg3, s32 arg4)</td></tr>
+<tr class="separator:ga2b68f13bd4ce0515ad12e9f4070e9eee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gabc93f0892a9ce1a492817326c5c5c8af"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structSceStubLibrary.html">SceStubLibrary</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#gabc93f0892a9ce1a492817326c5c5c8af">SceStubLibrary</a></td></tr>
 <tr class="separator:gabc93f0892a9ce1a492817326c5c5c8af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaf0200fd1d0b6bcf4be034c4d2ee4c7c6"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structSceResidentLibrary.html">SceResidentLibrary</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Loadcore.html#gaf0200fd1d0b6bcf4be034c4d2ee4c7c6">SceResidentLibrary</a></td></tr>
@@ -660,6 +662,19 @@ Module loader and library import/export manager. </p>
       </table>
 </div><div class="memdoc">
 <p>Boot Callback function. </p>
+
+</div>
+</div>
+<a class="anchor" id="ga2b68f13bd4ce0515ad12e9f4070e9eee"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef s32(* SceKernelRebootBeforeForKernel) (void *arg1, s32 arg2, s32 arg3, s32 arg4)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Reboot preparation functions </p>
 
 </div>
 </div>
@@ -1796,7 +1811,7 @@ Module loader and library import/export manager. </p>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 16 2021 11:29:18 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Jan 19 2021 10:11:22 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>

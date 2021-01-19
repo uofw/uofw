@@ -411,6 +411,7 @@ var searchData=
   ['scekernelqueryinitcb',['sceKernelQueryInitCB',['../group__InitForKernel.html#gaabf6c2be088a2067243832198fcf93b4',1,'modulemgr_init.h']]],
   ['scekernelqueryloadcorecb',['sceKernelQueryLoadCoreCB',['../group__Loadcore.html#ga35b67da694093937b29662cb1fa0bd80',1,'loadcore.h']]],
   ['scekernelrebootargtype',['SceKernelRebootArgType',['../group__LoadExecForKernel.html#gac9d18d1d7a765d64982a548e24e6f98e',1,'loadexec_kernel.h']]],
+  ['scekernelrebootbeforeforkernel',['SceKernelRebootBeforeForKernel',['../group__Loadcore.html#ga2b68f13bd4ce0515ad12e9f4070e9eee',1,'loadcore.h']]],
   ['scekernelreferlwmutexstatus',['sceKernelReferLwMutexStatus',['../group__UsersystemLib.html#ga01f06abbcc06e1ac48c2b9e38e496488',1,'usersystemlib_kernel.h']]],
   ['scekernelregisterchunk',['sceKernelRegisterChunk',['../group__InitForKernel.html#ga7e266fee2396509cef88819e9783b927',1,'modulemgr_init.h']]],
   ['scekernelregisterexitcallback',['sceKernelRegisterExitCallback',['../group__LoadExecForKernel.html#ga804f9442b8e2818f8ff91f01c10675cf',1,'sceKernelRegisterExitCallback(SceUID cbId):&#160;loadexec_kernel.h'],['../group__LoadExecForUser.html#ga804f9442b8e2818f8ff91f01c10675cf',1,'sceKernelRegisterExitCallback(SceUID cbId):&#160;loadexec_user.h']]],

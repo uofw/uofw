@@ -4,6 +4,7 @@ var searchData=
   ['scegedisplaylist',['SceGeDisplayList',['../group__GE.html#gac0884a580ac88cfde3720e17cce33657',1,'ge.h']]],
   ['scekernelbootcallbackfunction',['SceKernelBootCallbackFunction',['../group__Loadcore.html#ga7d752ce6bb887f69ae32d81943d77bf7',1,'loadcore.h']]],
   ['scekernelbuttoncallbackfunction',['SceKernelButtonCallbackFunction',['../group__Controller.html#ga1ad26bea0c0a50b6a26b8a64a8f541f1',1,'ctrl.h']]],
+  ['scekernelrebootbeforeforkernel',['SceKernelRebootBeforeForKernel',['../group__Loadcore.html#ga2b68f13bd4ce0515ad12e9f4070e9eee',1,'loadcore.h']]],
   ['scemodule',['SceModule',['../group__Loadcore.html#ga0cad866437598c858937aaf67e75354b',1,'loadcore.h']]],
   ['sceresidentlibrary',['SceResidentLibrary',['../group__Loadcore.html#gaf0200fd1d0b6bcf4be034c4d2ee4c7c6',1,'loadcore.h']]],
   ['scestublibrary',['SceStubLibrary',['../group__Loadcore.html#gabc93f0892a9ce1a492817326c5c5c8af',1,'loadcore.h']]],
