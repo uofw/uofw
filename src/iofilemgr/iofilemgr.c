@@ -2096,7 +2096,7 @@ int IoFileMgrInit()
     return 0;
 }
 
-int IoFileMgrRebootBefore(void)
+int IoFileMgrRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoDeviceList *cur = g_devList;

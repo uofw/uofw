@@ -12,7 +12,7 @@
  *
  * @return SCE_ERROR_OK.
  */
-static s32 _sceClockgenModuleStart(SceSize args, void *argp);
+static int _sceClockgenModuleStart(SceSize argSize, const void *argBlock);
 
 /**
  * Deinits the module.
@@ -21,7 +21,7 @@ static s32 _sceClockgenModuleStart(SceSize args, void *argp);
  *
  * @return SCE_ERROR_OK.
  */
-static s32 _sceClockgenModuleRebootBefore(SceSize args, void *argp);
+static int _sceClockgenModuleRebootBefore();
 
 /**
  * Event handler function.

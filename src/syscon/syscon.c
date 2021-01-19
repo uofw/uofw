@@ -138,7 +138,7 @@ SceSysconPacket g_GetStatus2Cmd;
 
 SceSyscon g_Syscon;
 
-s32 _sceSysconModuleRebootBefore(void)
+s32 _sceSysconModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     if (g_Syscon.unk376 != 0) {
         sceSyscon_driver_765775EB(0);
@@ -958,7 +958,7 @@ s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
     return 0;
 }
 
-s32 _sceSysconModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceSysconModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     sceSysconInit();
     return 0;
@@ -2043,8 +2043,10 @@ s32 sceSysconBatteryGetInfo(s32 *info)
 s32 sceSysconGetBattVolt(s32 *volt)
 {   
     u8 version =_sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) != 0x29 &&
-      (version & 0xFF) != 0x2A &&
+    /* Note Sony also does the following tautological check:
+         if ((version & 0xF0) == 0x29)
+    */
+    if ((version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
         return 0x80000004;
@@ -2059,8 +2061,10 @@ s32 sceSysconGetBattVolt(s32 *volt)
 s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
 {
     u8 version = _sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) != 0x29 &&
-      (version & 0xFF) != 0x2A &&
+    /* Note Sony also does the following tautological check:
+         if ((version & 0xF0) == 0x29)
+    */
+    if ((version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
         return 0x80000004;
@@ -2172,8 +2176,10 @@ s32 sceSysconBatteryGetChargeTime(s32 *time)
 s32 _sceSysconBatteryCommon(u32 cmd, s32 *ptr)
 {
     u32 version = _sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) == 0x29 ||
-     (version & 0xFF) == 0x2A ||
+    /* Note Sony also does the following tautological check:
+         if ((version & 0xF0) == 0x29)
+    */
+    if ((version & 0xFF) == 0x2A ||
      (version & 0xF0) == 0x30 ||
      (version & 0xF0) == 0x40)
         return 0x80000004;

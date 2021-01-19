@@ -77,7 +77,7 @@ SceNpDrm g_npDrmData;
 SceLoadCoreBootModuleInfo g_mod;
 
 /* Initialize Init's control block. */
-static void InitCBInit(SceLoadCoreBootInfo *bootInfo)
+static void InitCBInit(const SceLoadCoreBootInfo *bootInfo)
 {   
     if (bootInfo->configFile == NULL)
         g_hasConfigFile = SCE_FALSE;
@@ -326,7 +326,7 @@ static s32 CleanupPhase2(SceLoadCoreBootInfo *bootInfo)
 }
 
 /* Allocate memory for protected modules. */
-static void ProtectHandling(SceLoadCoreBootInfo *bootInfo)
+static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
 {
     SceUID partId;
     SceSysmemMemoryBlockInfo blkInfo;
@@ -912,11 +912,11 @@ asm(".word init_patch\n");
 #endif
 
 /* Setup the boot process of the rest of the PSP kernel modules. */
-s32 InitInit(SceSize argc __attribute__((unused)), void *argp)
+s32 InitInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     SceUID threadId;
      
-    SceLoadCoreBootInfo *bootInfo = argp;
+    const SceLoadCoreBootInfo *bootInfo = argBlock;
     g_MemBase = bootInfo->memBase;
     g_MemSize = bootInfo->memSize;
     
@@ -948,9 +948,11 @@ s32 InitInit(SceSize argc __attribute__((unused)), void *argp)
         sceKernelMemset32(maxEnd, 0, SCE_USERSPACE_ADDR_K0 - (u32)maxEnd);
     } else
         sceKernelMemset32((void *)REBOOT_BASE_ADDR_K0, 0, SCE_USERSPACE_ADDR_K0 - REBOOT_BASE_ADDR_K0);
-    
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
     SceUID id = sceKernelCreateThread("SceKernelInitThread", (SceKernelThreadEntry)InitThreadEntry, 
             SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL);
+#pragma GCC diagnostic pop
     
     u32 threadArgs[2] = { 
         threadId, 

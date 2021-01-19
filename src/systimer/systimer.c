@@ -194,7 +194,7 @@ static s32 _sceSTimerGetCount(SceSysTimer *timer);
 static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 
-s32 SysTimerInit(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
@@ -219,7 +219,7 @@ s32 SysTimerInit(s32 argc __attribute__((unused)), void *argp __attribute__((unu
     return SCE_ERROR_OK;
 }
 
-s32 SysTimerEnd(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 SysTimerEnd(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     s32 oldIntr = sceKernelCpuSuspendIntr();
     

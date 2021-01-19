@@ -20,7 +20,10 @@ SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP |
                                  | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_MODULE_BOOTSTART("_sceGeModuleStart");
 SCE_MODULE_REBOOT_BEFORE("_sceGeModuleRebootBefore");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattribute-alias"
 SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
+#pragma GCC diagnostic pop
 SCE_SDK_VERSION(SDK_VERSION);
 
 #define HW_GE_RESET     HW(0xBD400000)
@@ -88,8 +91,8 @@ int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3);
 int _sceGeInterrupt(int arg0, int arg1, int arg2);
 s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
 int _sceGeModuleStart();
-int _sceGeModuleRebootPhase(int unk);
-int _sceGeModuleRebootBefore();
+int _sceGeModuleRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
+int _sceGeModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
 int _sceGeSetBaseRadr(int arg0, int arg1, int arg2);
 int _sceGeEdramResume();
 int _sceGeEdramSuspend();
@@ -1246,14 +1249,14 @@ int _sceGeModuleStart()
     return 0;
 }
 
-int _sceGeModuleRebootPhase(int unk)
+int _sceGeModuleRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
-    if (unk == 1)
+    if (arg0 == 1)
         sceGeBreak(0, NULL);    // 24E4
     return 0;
 }
 
-int _sceGeModuleRebootBefore()
+int _sceGeModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     sceGeEnd();
     return 0;

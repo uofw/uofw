@@ -506,7 +506,7 @@ int sceCodec_driver_FC355DE0()
     return 0;
 }
 
-int sceCodecStopEntry()
+int sceCodecStopEntry(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     sub_01FC(-1, -1, -1, -1);
     sceKernelUnregisterSysEventHandler(&g_sysEv);

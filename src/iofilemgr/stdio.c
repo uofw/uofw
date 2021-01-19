@@ -378,7 +378,9 @@ char *fdgets(char *s, int fd)
                 *curS = '\0';
                 return NULL;
             }
+            /* FALLTHRU */
         case '\n':
+            /* FALLTHRU */
         case '\r':
             // 0748
             if (sceKernelDebugEcho() != 0)
@@ -387,6 +389,7 @@ char *fdgets(char *s, int fd)
             return s;
         case '\t':
             c = ' ';
+            /* FALLTHRU */
         default:
             // 06DC
             if ((look_ctype_table(c) & 0x97) != 0 && curS < end)

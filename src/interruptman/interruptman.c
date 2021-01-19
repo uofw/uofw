@@ -1023,7 +1023,7 @@ s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)())
     return 0;
 }
 
-s32 IntrManTerminate()
+s32 IntrManTerminate(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & 0xFFFF7BFF);

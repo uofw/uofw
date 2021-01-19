@@ -673,7 +673,7 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
  * 
  * Returns 0 on success.   
  */
-s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp) 
+s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
     u32 i;
     for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
@@ -684,8 +684,8 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     SceLoadCoreBootInfo *bootInfo = NULL;
     SysMemThreadConfig *sysMemThreadConfig = NULL;         
     
-    bootInfo = ((SceLoadCoreBootInfo **)argp)[0];
-    sysMemThreadConfig = ((SysMemThreadConfig **)argp)[1]; //0x00000B38
+    bootInfo = ((SceLoadCoreBootInfo **)argBlock)[0];
+    sysMemThreadConfig = ((SysMemThreadConfig **)argBlock)[1]; //0x00000B38
     g_MemSize = bootInfo->memSize; //0x00000B44
     g_MemBase = bootInfo->memBase; //0x00000B48
     
@@ -1740,27 +1740,28 @@ static s32 ReleaseLibEntCB(SceResidentLibrary *lib, SceResidentLibrary **prevLib
 
     if (lib->stubLibs != NULL) { //0x00002E08
         for (curStubLib = *stubLibPtr; curStubLib; curStubLib = *stubLibPtr) { //0x00002E24 - 0x00002EC0  
-             if (!(curStubLib->attribute & SCE_LIB_WEAK_IMPORT)) //0x00002E2C
-                 stubLibPtr = &curStubLib->next; //0x00002E30
-                 continue;
+            if (!(curStubLib->attribute & SCE_LIB_WEAK_IMPORT)) { //0x00002E2C
+                stubLibPtr = &curStubLib->next; //0x00002E30
+                continue;
+            }
             
-             nextStubLib = curStubLib->next; //0x00002E38
-             curStubLib->next = g_loadCore.unLinkedStubLibs; //0x00002E3C
-             g_loadCore.unLinkedStubLibs = curStubLib; //0x00002E44
+            nextStubLib = curStubLib->next; //0x00002E38
+            curStubLib->next = g_loadCore.unLinkedStubLibs; //0x00002E3C
+            g_loadCore.unLinkedStubLibs = curStubLib; //0x00002E44
 
-             //0x00002E58 - 0x00002E70
-             for (i = 0; i < curStubLib->stubCount; i++) {
-                  curStubLib->stubTable[i].sc.returnAddr = SYSCALL_NOT_LINKED;
-                  curStubLib->stubTable[i].sc.syscall = NOP;
-             }
-             curStubLib->status &= ~STUB_LIBRARY_LINKED; //0x00002E84
-             g_UpdateCacheRange(curStubLib->stubTable, curStubLib->stubCount * sizeof(SceStub)); //0x00002E8C
+            //0x00002E58 - 0x00002E70
+            for (i = 0; i < curStubLib->stubCount; i++) {
+                curStubLib->stubTable[i].sc.returnAddr = SYSCALL_NOT_LINKED;
+                curStubLib->stubTable[i].sc.syscall = NOP;
+            }
+            curStubLib->status &= ~STUB_LIBRARY_LINKED; //0x00002E84
+            g_UpdateCacheRange(curStubLib->stubTable, curStubLib->stubCount * sizeof(SceStub)); //0x00002E8C
              
-             aUnLinkVariableStub(lib, (SceStubLibraryEntryTable *)curStubLib->libName, curStubLib->isUserLib); //0x00002EA0
-             if (curStubLib->vStubCount != 0) //0x00002EB0
-                 g_UpdateCacheAll(); //0x00002FBC
+            aUnLinkVariableStub(lib, (SceStubLibraryEntryTable *)curStubLib->libName, curStubLib->isUserLib); //0x00002EA0
+            if (curStubLib->vStubCount != 0) //0x00002EB0
+                g_UpdateCacheAll(); //0x00002FBC
            
-             *stubLibPtr = nextStubLib; //0x00002EB8
+            *stubLibPtr = nextStubLib; //0x00002EB8
         }
         /* 
          * Verify if there are still stub libraries linked with specified
@@ -2012,7 +2013,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->stubCount; i++) {        
          switch (lib->entryTable[i]) { 
          case NID_MODULE_REBOOT_PHASE: //0x00003450
-             mod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
+             mod->moduleRebootPhase = (SceKernelRebootPhaseForKernel)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
              break;
          case NID_MODULE_BOOTSTART: //0x000035DC
              mod->moduleBootstart = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003658
@@ -2024,7 +2025,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
              mod->moduleStop = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003610
              break;
          case NID_MODULE_REBOOT_BEFORE: //0x00003478
-             mod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
+             mod->moduleRebootBefore = (SceKernelRebootBeforeForKernel)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
              break;
          }         
     }
