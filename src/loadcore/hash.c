@@ -16,7 +16,7 @@
  * 
  * Returns the index in the hash table where the array can be found
  */
-u32 getCyclicPolynomialHash(const char *str, u32 radix, u32 hashTableSize)
+__inline__ u32 getCyclicPolynomialHash(const char *str, u32 radix, u32 hashTableSize)
 {
     u32 len;
     u32 hash;
