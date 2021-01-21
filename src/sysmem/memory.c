@@ -50,7 +50,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
     if (seg->sizeLocked) {
         // 53D4
         resumeIntr(oldIntr);
-        return 0x800200DA;
+        return SCE_ERROR_KERNEL_INHIBITED_RESIZE_MEMBLOCK;
     }
     u32 newLeftOff;
     if (leftShift <= 0) {
@@ -197,7 +197,7 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
     // 4FE0
 fail:
     resumeIntr(oldIntr);
-    return 0x800200DB;
+    return SCE_ERROR_KERNEL_FAILED_RESIZE_MEMBLOCK;
 }
 
 s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
@@ -217,19 +217,19 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
     if (memBlock1->part != memBlock2->part || seg1->offset + seg1->size != seg2->offset) {
         // 54B8
         resumeIntr(oldIntr);
-        return 0x800200E1;
+        return SCE_ERROR_KERNEL_MEMBLOCK_FRAGMENTED;
     }
     // 54F0
     if (seg1->sizeLocked || seg2->sizeLocked) {
         // 550C
         resumeIntr(oldIntr);
-        return 0x800200DA;
+        return SCE_ERROR_KERNEL_INHIBITED_RESIZE_MEMBLOCK;
     }
     // 551C
     if (uid1->attr != uid2->attr) {
         // 5674
         resumeIntr(oldIntr);
-        return 0x800200E2;
+        return SCE_ERROR_KERNEL_MEMBLOCK_CANNOT_JOINT;
     }
     SceSysmemUidCB *newUid;
     ret = sceKernelCreateUID(g_MemBlockType, uid1->name, (uid1->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
@@ -280,13 +280,13 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
     if (seg->sizeLocked) {
         // 5A58
         resumeIntr(oldIntr);
-        return 0x800200DA;
+        return SCE_ERROR_KERNEL_INHIBITED_RESIZE_MEMBLOCK;
     }
     u32 cutSegSize = (size + 0xFF) >> 8;
     if (cutSegSize >= seg->size) {
         // 5A44
         resumeIntr(oldIntr);
-        return 0x800200E3;
+        return SCE_ERROR_KERNEL_MEMBLOCK_CANNOT_SEPARATE;
     }
     SceSysmemUidCB *newUid;
     ret = sceKernelCreateUID(g_MemBlockType, uid->name, (uid->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
@@ -367,7 +367,7 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
     if (!pspK1PtrOk((void *)address) || !pspK1PtrOk(partitionId) || !pspK1PtrOk(memoryBlockId)) {
         // 5AC0
         pspSetK1(oldK1);
-        return 0x800200D1;
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     }
     // 5AEC
     s32 oldIntr = suspendIntr();
@@ -425,7 +425,7 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
         // 5C48
         resumeIntr(oldIntr);
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     if (memoryBlockId != NULL) {
         SceSysmemUidCB *uid;
@@ -440,7 +440,7 @@ s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *me
             // 5C20
             resumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return 0x800200D1;
+            return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         }
         *memoryBlockId = memBlockId;
     }
@@ -457,9 +457,9 @@ s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr)
 {
     SceSysmemMemoryBlockInfo info;
     if (infoPtr == NULL)
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     if (infoPtr->size != sizeof(SceSysmemMemoryBlockInfo))
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
     s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
@@ -818,7 +818,7 @@ s32 FreeUsedSeg(SceSysmemMemoryPartition *part, SceSysmemSeg *seg)
 {
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)(((u32)seg >> 8) << 8);
     if (ctlBlk->segCount < 2)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     ctlBlk->usedSeg--;
     seg->isProtected = 0;
     seg->sizeLocked = 0;
@@ -1052,7 +1052,7 @@ s32 _FreePartitionMemory(void *addr)
         // 7010
         while (curCtlBlk != NULL) {
             if (addr == curCtlBlk)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             curCtlBlk = curCtlBlk->next;
         }
     }
@@ -1083,7 +1083,7 @@ s32 sceKernelFreePartitionMemoryForUser(SceUID id)
             // 7148
             resumeIntr(oldIntr);
             pspSetK1(oldK1);
-            return 0x800200D1;
+            return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         }
         ret = sceKernelDeleteUID(id);
     }
@@ -1171,7 +1171,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
                     if (curSeg->offset == segOff) {
                         // 74B8
                         if (curSeg->used == 0)
-                            return 0x80020001;
+                            return SCE_ERROR_KERNEL_ERROR;
                         if (curSeg->isProtected != 0) {
                             // 7570
                             SceSysmemUidCB *curUid = g_MemBlockType->PARENT0;
@@ -1190,7 +1190,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
                             char name[32];
                             sceKernelGetUIDname(foundId, 32, name);
                             AddrToSeg(MpidToCB(1), addr);
-                            return 0x80020001;
+                            return SCE_ERROR_KERNEL_ERROR;
                         }
                         if (curSeg->checkOverflow != 0) {
                             u32 *curPtr = (u32*)(addr + (curSeg->size - 1) * 256);
@@ -1219,7 +1219,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
         // 7480
         curCtlBlk = curCtlBlk->next;
     }
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
@@ -1245,7 +1245,7 @@ s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId
             while (curCtlBlk != NULL) {
                 if (addr == curCtlBlk) {
                     // 7720
-                    return 0x80020001;
+                    return SCE_ERROR_KERNEL_ERROR;
                 }
                 curCtlBlk = curCtlBlk->next;
             }

@@ -192,12 +192,12 @@ s32 sceKernelCallUIDFunction(SceUID id, int funcId, ...)
     if (id < 0) {
         // ACAC (dup)
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     if (uid->uid != id) {
         // ACAC (dup)
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     // ACD8
     SceSysmemUidFunc func = NULL;
@@ -260,7 +260,7 @@ int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, SceSysmemUidFunc *fu
     }
     // AE54
     resumeIntr(oldIntr);
-    return 0x800200CE;
+    return SCE_ERROR_KERNEL_NOT_FOUND_FUNCTION_UID;
 }
 
 s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
@@ -286,20 +286,20 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
                                  SceSysmemUidCB **uidTypeOut)
 {
     if (parentName == NULL || name == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     int oldIntr = suspendIntr();
     if (search_UidType_By_Name(name) != 0)
     {
         // B1A8
         resumeIntr(oldIntr);
-        return 0x800200C8;
+        return SCE_ERROR_KERNEL_UIDTYPE_ALREADY_EXISTS;
     }
     SceSysmemUidCB *parentUidType = search_UidType_By_Name(parentName);
     if (parentUidType == NULL)
     {
         // B194
         resumeIntr(oldIntr);
-        return 0x800200C9;
+        return SCE_ERROR_KERNEL_UIDTYPE_NOT_FOUND;
     }
     SceSysmemUidCB *uidType = AllocSceUIDtypeCB();
     SceSysmemUidCB *metaUidType = AllocSceUIDtypeCB();
@@ -321,7 +321,7 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
             FreeSceUIDnamestr(metaName);
         // B064
         resumeIntr(oldIntr);
-        return 0x80020190;
+        return SCE_ERROR_KERNEL_NO_MEMORY;
     }
     // B0A4
     parentUidType->meta->next.numChild++;
@@ -356,21 +356,21 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
 int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysmemUidCB **outUid)
 {
     if (type == NULL || name == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     int oldIntr = suspendIntr();
     *outUid = NULL;
     SceSysmemUidCB *uid = AllocSceUIDobjectCB(type->childSize * 4);
     if (uid == NULL) {
         // B2F8
         resumeIntr(oldIntr);
-        return 0x80020190;
+        return SCE_ERROR_KERNEL_NO_MEMORY;
     }
     char *nameBuf = AllocSceUIDnamestr(name, "");
     if (nameBuf == NULL) {
         // B2EC
         FreeSceUIDobjectCB(uid);
         resumeIntr(oldIntr);
-        return 0x80020190;
+        return SCE_ERROR_KERNEL_NO_MEMORY;
     }
     uid->attr = k1;
     *outUid = uid;
@@ -393,7 +393,7 @@ SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
 {
     SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if (name == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
     if (typeId == 0) {
@@ -412,13 +412,13 @@ SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
             (u32)typeUid >= part->addr + part->size || typeUid->uid != typeId) {
             // B3A4
             resumeIntr(oldIntr);
-            return 0x800200CB;
+            return SCE_ERROR_KERNEL_UNKNOWN_UID;
         }
         // B3D8
         if (typeUid->meta->meta != g_uidTypeList.metaRoot || typeUid->meta == g_uidTypeList.root) { // B404
             // B3F4
             resumeIntr(oldIntr);
-            return 0x800200C9;
+            return SCE_ERROR_KERNEL_UIDTYPE_NOT_FOUND;
         }
         uid = search_UIDObj_By_Name_With_Type(name, typeUid);
     }
@@ -426,7 +426,7 @@ SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId)
     // B420
     resumeIntr(oldIntr);
     if (uid == NULL)
-        return 0x800200CD;
+        return SCE_ERROR_KERNEL_NOT_EXIST_ID;
     return uid->uid;
 }
 
@@ -574,7 +574,7 @@ s32 sceKernelDeleteUIDtype(SceSysmemUidCB *uid)
     if (uid->PARENT0 != uid || uid->meta->next.next != NULL) {
         // B8B0
         resumeIntr(oldIntr);
-        return 0x800200CA;
+        return SCE_ERROR_KERNEL_UIDTYPE_NOT_EMPTY;
     }
     SceSysmemUidCB *prev = g_uidTypeList.root;
     SceSysmemUidCB *cur = prev->next.next;
@@ -601,7 +601,7 @@ s32 sceKernelGetUIDname(SceUID id, s32 len, char *out)
         (u32)uidType >= part->addr + part->size || uidType->uid != id) {
         // B948
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     // B974
     char *name = uidType->name;
@@ -631,7 +631,7 @@ s32 sceKernelRenameUID(SceUID id, const char *name)
         (u32)uid >= part->addr + part->size || uid->uid != id) {
         // BA48
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     // BA78
     FreeSceUIDnamestr(uid->name);
@@ -639,7 +639,7 @@ s32 sceKernelRenameUID(SceUID id, const char *name)
     if (newName == NULL) {
         // BAAC
         resumeIntr(oldIntr);
-        return 0x80020190;
+        return SCE_ERROR_KERNEL_NO_MEMORY;
     }
     uid->name = newName;
     resumeIntr(oldIntr);
@@ -652,7 +652,7 @@ s32 sceKernelGetUIDtype(SceUID id)
     SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id)
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     // BB2C
     return uid->meta->uid;
 }
@@ -668,7 +668,7 @@ s32 sceKernelGetUIDcontrolBlock(SceUID id, SceSysmemUidCB **uidOut)
     SceSysmemMemoryPartition *part = g_MemInfo.kernel;
     if ((id & 0x80000001) != 1 || (u32)uid < part->addr ||
         (u32)uid >= part->addr + part->size || uid->uid != id)
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     *uidOut = uid;
     return 0;
 }
@@ -682,13 +682,13 @@ s32 sceKernelGetUIDcontrolBlockWithType(SceUID id, SceSysmemUidCB *type, SceSysm
         (u32)uid >= part->addr + part->size || uid->uid != id) {
         // BC50
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     // BC7C
     if (uid->meta != type) {
         // BC98
         resumeIntr(oldIntr);
-        return 0x800200CC;
+        return SCE_ERROR_KERNEL_UNMATCH_TYPE_UID;
     }
     *outUid = uid;
     resumeIntr(oldIntr);
@@ -867,7 +867,7 @@ s32 obj_do_isMemberOf(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribu
 s32 obj_do_doseNotRecognize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
 {
     Kprintf("WARNING: %s of %s not support 0x%x key\n", uid->name, uid->meta->name, va_arg(ap, s32));
-    return 0x800200CE;
+    return SCE_ERROR_KERNEL_NOT_FOUND_FUNCTION_UID;
 }
 
 s32 sceKernelIsHold(SceSysmemUidCB *uid0, SceSysmemUidCB *uid1)
@@ -920,19 +920,19 @@ s32 sceKernelHoldUID(SceUID id0, SceUID id1)
     if (id1 < 1 || id0 < 1 || uid1->uid != id1 || uid0->uid != id0) {
         // C2FC
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     // C338
     if (sceKernelIsKindOf(uid1, g_uidTypeList.basic) == 0 || sceKernelIsKindOf(uid0, g_uidTypeList.basic) == 0) {
         // C36C
         resumeIntr(oldIntr);
-        return 0x800200CE;
+        return SCE_ERROR_KERNEL_NOT_FOUND_FUNCTION_UID;
     }
     // C380
     if (sceKernelIsHold(uid0, uid1) != 0) {
         // C4DC
         resumeIntr(oldIntr);
-        return 0x800200CF;
+        return SCE_ERROR_KERNEL_ALREADY_HOLDER_UID;
     }
     SceSysmemHoldHead **headPtr0 = UID_CB_TO_DATA(uid0, g_uidTypeList.basic, SceSysmemHoldHead *);
     SceSysmemHoldHead **headPtr1 = UID_CB_TO_DATA(uid1, g_uidTypeList.basic, SceSysmemHoldHead *);
@@ -997,7 +997,7 @@ s32 sceKernelHoldUID(SceUID id0, SceUID id1)
         FreeSceUIDHoldElement(elem);
     // C4A4
     resumeIntr(oldIntr);
-    return 0x80020190;
+    return SCE_ERROR_KERNEL_NO_MEMORY;
 }
 
 s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
@@ -1008,13 +1008,13 @@ s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
     if (id1 < 1 || id0 < 1 || uid1->uid != id1 || uid0->uid != id0) {
         // C554
         resumeIntr(oldIntr);
-        return 0x800200CB;
+        return SCE_ERROR_KERNEL_UNKNOWN_UID;
     }
     // C584
     if (sceKernelIsKindOf(uid1, g_uidTypeList.basic) == 0 || sceKernelIsKindOf(uid0, g_uidTypeList.basic) == 0) {
         // C5B8
         resumeIntr(oldIntr);
-        return 0x800200CE;
+        return SCE_ERROR_KERNEL_NOT_FOUND_FUNCTION_UID;
     }
     // C5CC
     SceSysmemHoldHead **headPtr1 = UID_CB_TO_DATA(uid1, g_uidTypeList.basic, SceSysmemHoldHead *);
@@ -1035,7 +1035,7 @@ s32 sceKernelReleaseUID(SceUID id0, SceUID id1)
     if (cur == &head1->hold1) {
         // C608
         resumeIntr(oldIntr);
-        return 0x800200D0;
+        return SCE_ERROR_KERNEL_NOT_HOLDER_UID;
     }
     // C61C
     elem->hold1.next->prev = elem->hold1.prev;

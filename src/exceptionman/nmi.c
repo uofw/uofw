@@ -32,7 +32,7 @@ int sceKernelRegisterNmiHandler(int nmino, void (*func)())
 {
     dbg_printf("exec %s\n", __FUNCTION__);
     if (nmino < 0 || nmino >= 17)
-        return 0x8002003A;
+        return SCE_ERROR_KERNEL_INVALID_NMI;
     int oldIntr = suspendIntr();
     g_nmiHandlers[nmino] = func;
     resumeIntr(oldIntr);
@@ -45,12 +45,12 @@ int sceKernelReleaseNmiHandler(int nmino)
     dbg_printf("exec %s\n", __FUNCTION__);
     int ret = 0;
     if (nmino < 0 || nmino >= 17)
-        return 0x8002003A;
+        return SCE_ERROR_KERNEL_INVALID_NMI;
     int oldIntr = suspendIntr();
     if (g_nmiHandlers[nmino] != NULL)
         g_nmiHandlers[nmino] = NULL;
     else
-        ret = 0x80020068;
+        ret = SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     // 0BFC
     resumeIntr(oldIntr);
     dbg_printf("(end)\n");

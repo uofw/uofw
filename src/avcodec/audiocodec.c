@@ -1,3 +1,5 @@
+#include <common_header.h>
+
 // retValues
 int g_retValues[] = { 0x807F00FC, 0x807F00FD, 0x80000002, 0x807F00FF, 0x807F0001 };
 
@@ -21,10 +23,10 @@ int sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, int codec)
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 0148
     int oldK1 = pspShiftK1();
-    int ret = 0x80000023;
+    int ret = SCE_ERROR_PRIV_REQUIRED;
     if (pspK1StaBufOk(info, 104))
     {
         info->unk0 = 0x05100601;
@@ -47,12 +49,12 @@ int sceAudiocodecInit(SceAudiocodecCodec *info, int codec)
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 0214
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(info, 104) || !pspK1DynBufOk(info->edramAddr, info->neededMem)) {
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 025C
     if (codec == 0x1002)
@@ -84,12 +86,12 @@ int sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, int codec)
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 0344
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(info, 104) || !pspK1DynBufOk(info->edramAddr, info->neededMem)) {
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 038C
     if (codec == 0x1002)
@@ -121,7 +123,7 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 0474
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(info, 104)
@@ -131,7 +133,7 @@ int sceAudiocodecDecode(SceAudiocodecCodec *info, int codec)
         // (04E0)
         // 04E4
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 04F0
     int size;
@@ -173,19 +175,19 @@ int sceAudiocodecGetInfo(SceAudiocodecCodec *info, int codec)
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 05D4
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(info, 104) || !pspK1DynBufOk(info->edramAddr, info->neededMem))
     {
         // 060C
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 0620
     if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, (int*)&info->unk40)) {
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 0660
     int opt;
@@ -226,14 +228,14 @@ int sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, int codec, int *si
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 0744
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(info, 104) || !pspK1StaBufOk(sizeOut, 4))
     {
         // 0770
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 0780
     int size = sub_0A40(info, codec);
@@ -251,13 +253,13 @@ int sceAudiocodecGetEDRAM(SceAudiocodecCodec *info, int codec)
     if (!ADDR_IS_RAM(info))
         return 0x807F0002;
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     // 0808
     int oldK1 = pspShiftK1();
     int ret = 0;
     if (!pspK1StaBufOk(info, 108)) {
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     // 0838
     void *alloc = sceMeMalloc((info->neededMem + 0x3F) | 0x3F)
@@ -282,7 +284,7 @@ int sceAudiocodecReleaseEDRAM(SceAudiocodecInfo *info)
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(info, 108) || !pspK1DynBufOk(info->edramAddr, info->neededMem)) {
         pspSetK1(oldK1);
-        return 0x80000023;
+        return SCE_ERROR_PRIV_REQUIRED;
     }
     if (info->allocMem == NULL || ((int)info->allocMem & 0x1FFFFFFF) > 0x3FFFFF) {
         pspSetK1(oldK1);
@@ -299,7 +301,7 @@ int sceAudiocodecReleaseEDRAM(SceAudiocodecInfo *info)
 int getBufSize(SceAudiocodecCodec *info, int codec)
 {
     if (codec < 0x1000 || codec >= 0x1006)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
 
     switch (codec) // jump table at 0x49C0
     {

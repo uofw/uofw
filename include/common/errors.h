@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 - 2016 The uOFW team
+/* Copyright (C) 2011 - 2021 The uOFW team
    See the file COPYING for copying permission.
    */
 
@@ -211,12 +211,27 @@
 
 #define SCE_ERROR_KERNEL_ERROR                                  0x80020001
 #define SCE_ERROR_KERNEL_NOT_IMPLEMENTED                        0x80020002
+#define SCE_ERROR_KERNEL_SYSCALLTABLE_ALREADY_REGISTERED        0x80020036
+#define SCE_ERROR_KERNEL_INVALID_SYSCALLTABLE                   0x80020037
+#define SCE_ERROR_KERNEL_INVALID_SYSCALL_ID                     0x80020038
+#define SCE_ERROR_KERNEL_SYSCALL_HANDLER_ALREADY_EXISTS         0x80020039
+#define SCE_ERROR_KERNEL_INVALID_NMI                            0x8002003A
 #define SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT        0x80020064
+#define SCE_ERROR_KERNEL_INVALID_INTERRUPT                      0x80020065
 #define SCE_ERROR_KERNEL_INTERRUPTS_ALREADY_DISABLED            0x80020066
+#define SCE_ERROR_KERNEL_HANDLER_ALREADY_EXISTS                 0x80020067
+#define SCE_ERROR_KERNEL_HANDLER_NOTFOUND                       0x80020068
+#define SCE_ERROR_KERNEL_INVALID_INTERRUPT_LEVEL                0x80020069
+#define SCE_ERROR_KERNEL_INVALID_INTERRUPT_ARGUMENT             0x8002006B
+#define SCE_ERROR_KERNEL_INVALID_STACK_ADDRESS                  0x8002006C
+#define SCE_ERROR_KERNEL_STACK_ALREADY_SET                      0x8002006D
 #define SCE_ERROR_KERNEL_NO_TIMER                               0x80020096
 #define SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID                       0x80020097
 #define SCE_ERROR_KERNEL_ILLEGAL_PRESCALE                       0x80020099
 #define SCE_ERROR_KERNEL_TIMER_BUSY                             0x8002009A
+#define SCE_ERROR_KERNEL_UIDTYPE_ALREADY_EXISTS                 0x800200C8
+#define SCE_ERROR_KERNEL_UIDTYPE_NOT_FOUND                      0x800200C9
+#define SCE_ERROR_KERNEL_UIDTYPE_NOT_EMPTY                      0x800200CA
 #define SCE_ERROR_KERNEL_UNKNOWN_UID                            0x800200CB
 #define SCE_ERROR_KERNEL_UNMATCH_TYPE_UID                       0x800200CC
 #define SCE_ERROR_KERNEL_NOT_EXIST_ID                           0x800200CD
@@ -347,13 +362,17 @@
 #define SCE_ERROR_KERNEL_POWER_CANNOT_CANCEL                    0x80020261
 #define SCE_ERROR_KERNEL_TOO_MANY_OPEN_FILES                    0x80020320
 #define SCE_ERROR_KERNEL_NO_SUCH_DEVICE                         0x80020321
+#define SCE_ERROR_KERNEL_XDEV                                   0x80020322
 #define SCE_ERROR_KERNEL_BAD_FILE_DESCRIPTOR                    0x80020323
 #define SCE_ERROR_KERNEL_INVALID_ARGUMENT                       0x80020324
 #define SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION                  0x80020325
+#define SCE_ERROR_KERNEL_ALIAS_USED                             0x80020326
+#define SCE_ERROR_KERNEL_DRIVER_DELETED                         0x80020328
 #define SCE_ERROR_KERNEL_NOCWD                                  0x8002032C
 #define SCE_ERROR_KERNEL_FILENAME_TOO_LONG                      0x8002032D
 #define SCE_ERROR_KERNEL_ASYNC_BUSY                             0x80020329
 #define SCE_ERROR_KERNEL_NO_ASYNC_OP                            0x8002032A
+#define SCE_ERROR_KERNEL_REGDEV                                 0x8002032B
 #define SCE_ERROR_KERNEL_NOT_CACHE_ALIGNED                      0x8002044C
 #define SCE_ERROR_KERNEL_MAX_ERROR                              0x8002044D
 
