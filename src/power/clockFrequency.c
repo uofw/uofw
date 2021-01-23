@@ -92,15 +92,6 @@ typedef struct
     u32 pllUseMaskBit; // 4
 } ScePowerPllConfiguration; //size: 8
 
-// TODO: This should probably be moved into include/sysmem_sysevent.h
-typedef struct
-{
-    u32 unk0;
-    u32 unk4;
-    u32 unk8;
-    u32 unk12;
-} SceSysEventParam;
-
 #define POWER_PLL_CONFIGURATIONS            (sizeof g_pllSettings / sizeof g_pllSettings[0])
 const ScePowerPllConfiguration g_pllSettings[] =
 {
@@ -473,19 +464,20 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
          * PLL clock frequency to the fixed clock frequency we've determined above.
          */
 
-        SceSysEventParam sysEventParam; // $sp
-        sysEventParam.unk0 = 8;
-        sysEventParam.unk4 = actPllFrequency; // 0x00003AA4
+        SceSysEventPllClockFrequencyChangePayload sysEventPllClockFrequencyChangePayload; // $sp
+        sysEventPllClockFrequencyChangePayload.unk0 = 8;
+        sysEventPllClockFrequencyChangePayload.newPllClockFrequency = actPllFrequency; // 0x00003AA4
+
         s32 result = 0; // $sp + 16
         SceSysEventHandler* pSysEventBreakHandler = NULL; // $sp + 20
 
-        status = sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000000, "query", &sysEventParam,
-            &result, 1, &pSysEventBreakHandler); // 0x00003AAC
+        status = sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_QUERY, "query", 
+            &sysEventPllClockFrequencyChangePayload, &result, SCE_TRUE, &pSysEventBreakHandler); // 0x00003AAC
 
         if (status < SCE_ERROR_OK) // 0x00003AB4
         {
-            sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000001, "cancel", &sysEventParam,
-                NULL, 0, NULL); //0x00003DE0
+            sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_CANCELLATION, "cancel", 
+                &sysEventPllClockFrequencyChangePayload, NULL, SCE_FALSE, NULL); //0x00003DE0
 
             scePowerUnlockForKernel(SCE_KERNEL_POWER_LOCK_DEFAULT); // 0x00003DE8
             sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); // 0x00003DF4
@@ -540,8 +532,8 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
             g_PowerFreq.isDdrMaxStrength = SCE_TRUE;
         }
 
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000002, "start", &sysEventParam,
-            NULL, 0, NULL); // 0x00003B30
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_START, "start", 
+            &sysEventPllClockFrequencyChangePayload, NULL, SCE_FALSE, NULL); // 0x00003B30
 
         sceDisplayWaitVblankStart(); // 0x00003B38
 
@@ -556,8 +548,8 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
         sceClkcSetCpuGear(511, 511); // 0x00003B50
         sceClkcSetBusGear(511, 511); // 0x00003B5C
 
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000010, "phase0", &sysEventParam,
-            NULL, 0, NULL); // 0x00003B84
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_PHASE_0, "phase0", 
+            &sysEventPllClockFrequencyChangePayload, NULL, SCE_FALSE, NULL); // 0x00003B84
 
         if (g_PowerFreq.pSm1Ops != NULL) //0x00003B90
         {
@@ -577,13 +569,13 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
         g_PowerFreq.pllClockFrequencyFloat = pllFrequency; // 0x00003BAC
         g_PowerFreq.pllClockFrequencyInt = (s32)pllFrequency; // 0x00003BA8 & 0x00003BB8
 
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000011, "phase1", &sysEventParam,
-            NULL, 0, NULL); // 0x00003BD4
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_PHASE_1, "phase1", 
+            &sysEventPllClockFrequencyChangePayload, NULL, SCE_FALSE, NULL); // 0x00003BD4
 
         sceKernelCpuResumeIntr(intrState); // 0x00003BDC
 
-        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, 0x01000020, "end", &sysEventParam,
-            NULL, 0, NULL); //0x00003C04
+        sceKernelSysEventDispatch(SCE_SPEED_CHANGE_EVENTS, SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_END, "end", 
+            &sysEventPllClockFrequencyChangePayload, NULL, SCE_FALSE, NULL); //0x00003C04
 
         if (newPllOutSelect != SCE_SYSREG_PLL_OUT_SELECT_333MHz && g_PowerFreq.isDdrMaxStrength) // 0x00003C10 & 0x00003C1C
         {

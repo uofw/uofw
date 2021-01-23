@@ -1,4 +1,3 @@
-- _scePowerSetClockFrequency(): update the sceKernelSysEventDispatch() calls to use macros for the event IDs
 - scePowerSetGeEdramRefreshMode(): Look at the used arithmetic (compiler) optimization again and try to re-weite it into a more readable form
 
 - scePowerSetPowerSwMode() / scePowerGetPowerSwMode(): Introduce macros (or a typedef'd struct) for the power switch mode:

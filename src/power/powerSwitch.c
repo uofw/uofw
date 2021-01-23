@@ -844,7 +844,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
          * has indicated that it is not yet ready to be suspended. Notify the system that the power switch request
          * has been denied.
          */
-        sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_QUERY_DENIED, "query", &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x000027B0
+        sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_CANCELLATION, "query", &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x000027B0
 
         sceKernelCpuResumeIntr(intrState); // 0x000027B8
         return status;
@@ -852,7 +852,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     /* The requested PSP device suspension has been greenlit. Notify the system that we will now proceed. */
 
-    status = sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_QUERY_GREENLIT, "query",
+    status = sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_START, "query",
         &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x00001C58
 
     sceKernelCpuResumeIntr(intrState); // 0x00001C64
