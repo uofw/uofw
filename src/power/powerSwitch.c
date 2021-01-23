@@ -776,7 +776,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sysEventResumePlayload.size = sizeof sysEventResumePlayload; //0x00001B8C
     sysEventSuspendPayloadResumeData.size = sizeof sysEventSuspendPayloadResumeData; // 0x00001B90
 
-    sysEventSuspendPayloadResumeData.compiledSdkVersion = SDK_VERSION; // 0x00001B94
+    sysEventSuspendPayloadResumeData.sdkVersion = SDK_VERSION; // 0x00001B94
     sysEventSuspendPayloadResumeData.pSuspendedGameInfo = sceKernelGetGameInfo(); // 0x00001B94 & 0x00001BA4
     sysEventSuspendPayloadResumeData.pInitParamSfo = sceKernelInitParamSfo(&sysEventSuspendPayloadResumeData.paramSfoSize); // 0x00001BA0 & 0x00001BC4
 

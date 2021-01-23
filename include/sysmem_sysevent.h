@@ -110,13 +110,21 @@ typedef struct {
 
 typedef struct {
     SceSize size; // 0
-    u32 compiledSdkVersion; // 4
-
+    u32 sdkVersion; // 4
+    u32 unk8; // 8
+    u32 unk12; // 12
+    u32 unk16; // 16
+    u32 unk20; // 20
+    u32 unk24; // 24
+    u32 unk28; // 28
     s64 systemTimePreSuspendOp; // 32
     s32 pllOutSelect; // 40
     s32 unk44; // 44
     void (*resumePointFunc)(void *); // 48
     SceKernelGameInfo *pSuspendedGameInfo; // 52
+    u32 unk56; // 56
+    u32 unk60; // 60
+    u32 unk64; // 64
     void *pInitParamSfo; // 68
     SceSize paramSfoSize; // 72
 } SceSysEventSuspendPayloadResumData; // size = 128
@@ -126,7 +134,14 @@ typedef struct {
     u32 unk4; // 4
     s64 systemTimePreSuspendOp; // 8
     s64 unk16; // 16
-
+    u32 unk24; // 24
+    u32 unk28; // 28
+    u32 unk32; // 32
+    u32 unk36; // 36
+    u32 unk40; // 40
+    u32 unk44; // 44
+    u32 unk48; // 48
+    u32 unk52; // 52
 } SceSysEventResumePayload; // size = 56
 
 typedef struct SceSysEventHandler {
