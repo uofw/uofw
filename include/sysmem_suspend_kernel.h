@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -23,6 +23,9 @@ typedef struct
 
 int sceKernelRegisterPowerHandlers(ScePowerHandlers* handlers);
 
+int sceKernelDispatchSuspendHandlers(int unk);
+int sceKernelDispatchResumeHandlers(int unk);
+
 #define SCE_KERNEL_POWER_LOCK_DEFAULT       (0)
 int sceKernelPowerLock(int lockType);
 int sceKernelPowerLockForUser(int lockType);
@@ -40,4 +43,7 @@ int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size);
 int sceKernelVolatileMemUnlock(int unk);
 
 int sceKernelPowerRebootStart(int);
+
+int sceSuspendForKernel_67B59042(int arg0);
+int sceSuspendForKernel_B2C9640B(int arg0);
 

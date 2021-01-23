@@ -1529,7 +1529,7 @@ s32 sceSysconResetDevice(u32 reset, u32 mode)
     return ret;
 }
 
-s32 sceSyscon_driver_12518439(u32 arg0)
+s32 sceSysconPowerStandby(u32 arg0)
 {   
     if (((_sceSysconGetBaryonVersion() >> 16) & 0xF0) >= 0x30) {
         *(s8*)(0x13FC0 + 0) = 0x35;

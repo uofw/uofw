@@ -82,7 +82,6 @@ enum ScePowerWlanActivity
 static void _scePowerAcSupplyCallback(s32 enable, void* argp); //sub_0x00000650
 static void _scePowerLowBatteryCallback(s32 enable, void* argp); //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
-static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid); // sub_00000CC4
 static s32 _scePowerInitCallback(); //sub_0x0000114C
 
 const SceSysEventHandler g_PowerSysEv = 
@@ -411,7 +410,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
         return SCE_ERROR_BUSY;
     }
     if (eventId >= 0x403) { //0x0000073C
-        if (eventId == 0x1009) { //0x00000784
+        if (eventId == 0x10009) { //0x00000784
             type = g_Power.baryonVersion >> 16; //0x000007AC
             if ((type & 0xF0) >= 1 && ((type & 0xF0) ^ 0x10) >= 1) //loc_00000880
                 val = (*(u32 *)(*(u32 *)(param + 4)) + 9) & 0x10; //0x00000880 & 0x00000888
@@ -674,7 +673,7 @@ void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyP
 }
 
 //sub_00000CC4
-static s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
+s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID *pCbid)
 {
     s32 intrState;
     s32 notifyCount;
@@ -914,7 +913,7 @@ static u32 _scePowerInitCallback(void)
 
 //sub_00001A94
 // TODO: Verify function
-static s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
+s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
 {
     u32 param;
     s32 status;

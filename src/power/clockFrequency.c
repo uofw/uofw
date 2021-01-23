@@ -791,7 +791,7 @@ u32 _scePowerFreqRebootPhase(u32 arg0)
 
 //sub_00004090
 // TODO: Verify function
-static u32 _scePowerFreqSuspend(void)
+u32 _scePowerFreqSuspend(void)
 {
     sceClkcGetCpuGear(&g_PowerFreq.clkcCpuGearNumerator, &g_PowerFreq.clkcCpuGearDenominator); //0x000040A8
     sceClkcGetBusGear(&g_PowerFreq.clkcBusGearNumerator, &g_PowerFreq.clkcBusGearDenominator); //0x000040B4
@@ -803,7 +803,7 @@ static u32 _scePowerFreqSuspend(void)
 
 //sub_000040E4
 // TODO: Verify function
-static u32 _scePowerFreqResume(u32 arg0)
+u32 _scePowerFreqResume(u32 arg0)
 {
     switch (arg0) {
         case 0: //0x000040F4

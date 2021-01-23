@@ -129,6 +129,18 @@ enum PspSysconLeds {
     PSP_SYSCON_LED_BT
 };
 
+/**
+ * Power state for the PSP Hardware LEDs which can be turned ON/OFF
+ * via ::sceSysconCtrlLED().
+ */
+enum PspSysconLedsPowerState
+{
+    /** Turn off the specified LED. */
+    PSP_SYSCON_LED_POWER_STATE_OFF = 0,
+    /** Turn on the specified LED. */
+    PSP_SYSCON_LED_POWER_STATE_ON
+};
+
 /** A system controller packet, used to run a syscon command. */
 typedef struct SceSysconPacket {
     /** Next packet in the list. */
@@ -822,13 +834,13 @@ s32 sceSysconCtrlTachyonWDT(s32 wdt);
 s32 sceSysconResetDevice(u32 reset, u32 mode);
 
 /**
- * (? related to power, looks a bit like sceSysconPowerSuspend)
+ * Let the PSP enter standby state.
  *
  * @param arg0 Unknown.
  *
  * @return 0.
  */
-s32 sceSyscon_driver_12518439(u32 arg0);
+s32 sceSysconPowerStandby(u32 arg0);
 
 /**
  * Suspend the PSP power.
@@ -992,7 +1004,8 @@ s32 sceSysconCtrlPower(u32 arg0, u32 arg1);
  * Turn a LED on or off.
  *
  * @param led The LED id, one of ::PspSysconLeds.
- * @param set Set this value to 1 if you want the LED to turn on, or 0 if you want it to turn off.
+ * @param set Set this value to one of ::PspSysconLedsPowerState to set the LEDs
+ * power state.
  *
  * @return 0 on success.
  */

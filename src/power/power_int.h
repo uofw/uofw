@@ -8,6 +8,7 @@
 #include <common_header.h>
 
 void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyPowerState);
+s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid);
 
 s32 _scePowerSwInit(void);
 s32 _scePowerSwEnd(void);
@@ -22,9 +23,12 @@ s32 _scePowerBatteryResume(void);
 s32 _scePowerBatteryUpdatePhase0(void* arg0, u32* arg1);
 s32 _scePowerBatteryUpdateAcSupply(s32 enable);
 s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity);
+s32 _scePowerChangeSuspendCap(u32 newSuspendCap);
 
 s32 _scePowerFreqInit(void);
 u32 _scePowerFreqEnd(void);
+u32 _scePowerFreqSuspend(void);
+u32 _scePowerFreqResume(u32 arg0);
 u32 _scePowerFreqRebootPhase(u32 arg0);
 s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 s32 _scePowerLockPowerFreqMutex(void);

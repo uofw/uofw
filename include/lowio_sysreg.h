@@ -103,3 +103,6 @@ s32 sceSysregSpiIoEnable(s32);
 #define SCE_SYSREG_PLL_OUT_SELECT_166MHz	(13)
 s32 sceSysregPllGetOutSelect(void);
 
+u64 sceSysregGetFuseId(void);
+u32 sceSysregGetFuseConfig(void);
+

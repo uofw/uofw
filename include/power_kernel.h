@@ -48,7 +48,7 @@ typedef enum {
 	SCE_POWER_CALLBACKARG_RESUME_COMP							= 0x00040000,
 	/** 
 	 * Indicates that standby operation has been started by pressing 
-	 * and holding the POWER switch. 
+	 * and holding the POWER switch.
 	 */
 	SCE_POWER_CALLBACKARG_STANDINGBY							= 0x00080000,
 	/**

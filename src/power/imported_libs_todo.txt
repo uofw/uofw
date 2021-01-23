@@ -15,6 +15,7 @@ float sceClkcGetBusFrequency(void); // sceSysreg_driver_96D74557
 
 float sceSysregPllGetBaseFrequency(void); // sceSysreg_driver_6B3A3417
 
+s32 sceSysregGetFuseId(void); // sceSysreg_driver_4F46EEDE
 s32 sceSysregGetFuseConfig(void); // sceSysreg_driver_E2A5D1EE
 
 
@@ -23,3 +24,7 @@ libsceDdr_driver library:
 
 sceDdrChangePllClock(u32 arg0); // sceDdr_driver_CF07B9E2
 sceDdr_driver_0BAAE4C5(void); // sceDdr_driver_0BAAE4C5 -- unsure about how many arguments (0/1/2 - help needed)
+
+Syscon:
+
+sceSyscon_driver_12518439() has been renamed to sceSysconPowerStandby() -> lib file needs to be generated again.

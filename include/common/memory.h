@@ -26,6 +26,7 @@
 #define SCE_SCRATCHPAD_ADDR_KU0         0x00010000  /* KU segment 0 (cached) */
 #define SCE_SCRATCHPAD_ADDR_KU1         0x40010000  /* KU segment 1 (uncached) */
 #define SCE_SCRATCHPAD_ADDR_K0          0x80010000  /* K segment 0 (cached) */
+#define SCE_SCRATCHPAD_ADDR_K1          0xA0010000  /* K segment 1 (uncached) */
 #define SCE_SCRATCHPAD_SIZE             SCE_KERNEL_16KiB  /* 16 KiB */
 
 #define REBOOT_BASE_ADDR_K0             0x88600000  /* K0 segment (cached) */

@@ -6,6 +6,8 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
+#include "constant.h"
+
 #define HW(addr) (*(vs32 *)(addr))
 #define HWPTR(addr) ((vs32 *)(addr))
 
@@ -19,5 +21,5 @@
 #define HW_TIMER_3              0xBC500030
 
 #define HW_RESET_VECTOR         0xBFC00000
-#define HW_RESET_VECTOR_SIZE    (0x1000)
+#define HW_RESET_VECTOR_SIZE    SCE_KERNEL_4KiB
 
