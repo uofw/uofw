@@ -3,6 +3,7 @@
 */
 
 #include "common_header.h"
+#include "sysmem_kernel.h"
 
 enum SceSysEventTypes {
     SCE_SUSPEND_EVENTS = 0x0000FF00,
