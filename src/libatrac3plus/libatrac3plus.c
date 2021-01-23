@@ -35,7 +35,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         {
             // 0188
             sceKernelCpuResumeIntr(oldIntr);
-            return 0x80000021;
+            return SCE_ERROR_BUSY;
         }
         curId++;
     }
@@ -80,7 +80,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
             }
             // 0130
             if (g_edramAddr + 0x19000 < count)
-                return 0x80000022;
+                return SCE_ERROR_OUT_OF_MEMORY;
             curId->info.state = -1;
             curId++;
         }
@@ -590,7 +590,7 @@ int resetId(SceAtracId *info)
     return 0;
 }
 
-int sceAtracStartEntry(void)
+int sceAtracStartEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     return (sceAtracReinit(2, 2) < 0);
 }

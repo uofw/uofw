@@ -13,7 +13,7 @@ int sceKernelDcacheInvalidateRangeForUser(const void *p, u32 size)
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
-        ret = 0x800200D3;
+        ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
         ret = sceKernelDcacheInvalidateRange(p, size);
     pspSetK1(oldK1);
@@ -25,7 +25,7 @@ int UtilsForUser_157A383A(const void *p, u32 size)
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
-        ret = 0x800200D3;
+        ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
         ret = UtilsForKernel_157A383A(p, size);
     pspSetK1(oldK1);
@@ -37,7 +37,7 @@ int sceKernelDcachePurgeRangeForUser(const void *p, u32 size)
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
-        ret = 0x800200D3;
+        ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
         ret = sceKernelDcachePurgeRange(p, size);
     pspSetK1(oldK1);
@@ -49,7 +49,7 @@ int sceKernelIcacheInvalidateRangeForUser(const void *p, u32 size)
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
-        ret = 0x800200D3;
+        ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
         ret = sceKernelIcacheInvalidateRange(p, size);
     pspSetK1(oldK1);
@@ -61,7 +61,7 @@ int UtilsForUser_43C9A8DB(const void *p, u32 size)
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
-        ret = 0x800200D3;
+        ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
         ret = UtilsForKernel_43C9A8DB(p, size);
     pspSetK1(oldK1);
@@ -75,7 +75,7 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
      || !pspK1DynBufOk(data, size)
      || ctx == NULL || data == NULL) {
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // ED60
     if (ctx->usComputed != 0)
@@ -89,7 +89,7 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
     {
         // EE34
         pspSetK1(oldK1);
-        return 0x800201BC;
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
     }
     ctx->ullTotalLen += size;
     int numTotal = ctx->usRemains + size;
@@ -130,7 +130,7 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
     if (!pspK1PtrOk(ctx) || !pspK1PtrOk(digest)
      || ctx == NULL || digest == NULL) {
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // EED0
     if (ctx->usComputed == 0)
@@ -140,7 +140,7 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
         {
             // EFE4
             pspSetK1(oldK1);
-            return 0x800201BC;
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
         }
         memset(buf, 0, 64);
         memcpy(buf, ctx->buf, remain);
@@ -177,7 +177,7 @@ int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest)
     {
         // F04C
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // F068
     if (pspK1PtrOk(&ctx)) // ?!?
@@ -202,7 +202,7 @@ int sceKernelUtilsMd5BlockInit(SceKernelUtilsMd5Context *ctx)
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(ctx) || ctx == NULL) {
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     ctx->h[0] = 0x67452301;
     ctx->ullTotalLen = 0;
@@ -223,7 +223,7 @@ int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 
     {
         // F1B8
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // F1E8
     if (ctx->usComputed != 0)
@@ -237,7 +237,7 @@ int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 
     {
         // F2E8
         pspSetK1(oldK1);
-        return 0x800201BC;
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
     }
     ctx->ullTotalLen += size;
     u16 total = remaining + size;
@@ -284,7 +284,7 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
     {
         // F358
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // F384
     if (ctx->usComputed == 0)
@@ -294,7 +294,7 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
         {
             // F500
             pspSetK1(oldK1);
-            return 0x800201BC;
+            return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
         }
         memset(buf, 0, 64);
         memcpy(buf, ctx->buf, ctx->usRemains);
@@ -333,7 +333,7 @@ int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest)
     {
         // F550
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     sha1Digest(data, size, digest);
     pspSetK1(oldK1);
@@ -347,7 +347,7 @@ int sceKernelUtilsSha1BlockInit(SceKernelUtilsSha1Context *ctx)
     {
         // F5F8
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     ctx->ullTotalLen = 0;
     ctx->h[0] = 0x67452301;
@@ -368,7 +368,7 @@ int sceKernelUtilsMt19937Init(SceKernelUtilsMt19937Context *ctx, u32 seed)
     {
         // F6A8
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     ctx->state[0] = seed;
     // F640
@@ -388,7 +388,7 @@ u32 sceKernelUtilsMt19937UInt(SceKernelUtilsMt19937Context *ctx)
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(ctx))
-        ret = 0x800200D3;
+        ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
         ret = mt19937UInt(ctx);
     pspSetK1(oldK1);
@@ -488,15 +488,15 @@ int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *crc32)
     } info;
 
     if (buf == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     if (((char*)src)[2] != 8)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     int ret = sceKernelDeflateDecompress(dest, destSize, buf, &next);
     if (ret < 0)
         return ret;
     memcpy(&info, next, 8);
     if ((u32)ret != info.inSize)
-        return 0x80000108;
+        return SCE_ERROR_INVALID_FORMAT;
     if (crc32 != NULL)
         *crc32 = info.crc32;
     return ret;
@@ -518,10 +518,10 @@ int sceKernelGzipGetInfo(const void *buf, const void **extra, const char **name,
         *compressedData = NULL;
     // F9AC
     if (buf == NULL)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     memcpy(header, buf, 10);
     if (header[0] != 0x1F || header[1] != 0x8B)
-        return 0x80000108;
+        return SCE_ERROR_INVALID_FORMAT;
     // FA14
     char flag = header[3];
     if ((flag & 4) != 0) // FEXTRA
