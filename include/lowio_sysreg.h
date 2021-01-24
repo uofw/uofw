@@ -80,8 +80,12 @@ s32 sceSysregSpiIoEnable(s32);
  * Remarks: 
  * 
  * Note that as of at least 6.60, pllTable[pllOutSelect] now
- * returns the final clock frequency. In other words,
- * pllTable[SCE_SYSREG_PLL_OUT_SELECT_222MHz] now returns 222 instead of 0.667.
+ * returns the final clock frequency:
+ * 
+ *		pllfreq = pllTable[pllOutSelect] MHz 
+ * 
+ * In other words,
+ * pllTable[SCE_SYSREG_PLL_OUT_SELECT_222MHz] now returns 222 instead of 0.667:
  * 
  * That table can be found in the lowio module at address 0x0000C1C0. It's also
  * worth pointing out that the PLL clock frequencies 19 MHz and 148 MHz don't seem
