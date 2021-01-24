@@ -1388,7 +1388,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
             sceSuspendForKernel_B2C9640B(1); // 0x00002804
 
             // Note: In the ASM, an inlined _scePowerResumePoint() directly follows
-            // the call of sceSuspendForKernel_B2C9640B(). Dependinding on that function
+            // the call of sceSuspendForKernel_B2C9640B(). Depending on that function
             // this code might not be executed after all.
             return _scePowerResumePoint(1); // 0x0000280C
         }
@@ -1953,8 +1953,7 @@ s32 scePowerRequestColdReset(s32 mode)
 }
 
 //Subroutine scePower_0074EF9B - Address 0x00002DFC - Aliases: scePower_driver_B45C9066
-// TODO: Verify function
-u32 scePowerGetResumeCount(void)
+s32 scePowerGetResumeCount(void)
 {
     return g_PowerSwitch.resumeCount;
 }

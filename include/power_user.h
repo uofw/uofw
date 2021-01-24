@@ -356,6 +356,17 @@ s32 scePowerCancelRequest(void);
  */
 s32 scePowerWaitRequestCompletion(void);
 
+/* Power state switch misc */
+
+/**
+ * Gets the number of times resume processing was performed for the PSP system (between two cold boots).
+ *
+ * @return The number of times the PSP system was resumed.
+ *
+ * @remark Power state changes caused by calling ::scePowerRequestSuspendTouchAndGo() are counted as well.
+ */
+s32 scePowerGetResumeCount(void);
+
 /* Power switch manipulation lock / unlock */
 
 /**
