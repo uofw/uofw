@@ -75,7 +75,7 @@ typedef struct
     u32 isRebootPowerLockExist; // 48
     u32 coldResetMode; // 52
     u32 unk56; // 56
-    u32 wakeUpCondition; // 60
+    u32 wakeupCondition; // 60
     u32 resumeCount; // 64
 } ScePowerSwitch; //size: 68
 
@@ -143,7 +143,7 @@ s32 _scePowerSwInit(void)
     memset(&g_PowerSwitch, 0, sizeof g_PowerSwitch); // 0x000011C4
 
     g_PowerSwitch.mode = SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_SUPPORTED; // 0x000011E8
-    g_PowerSwitch.wakeUpCondition = 8; // 0x000011F0
+    g_PowerSwitch.wakeupCondition = 8; // 0x000011F0
 
     /* 
      * Initialize the power switch event flag (default: power state switches can happen 
@@ -744,7 +744,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     SceSysEventResumePayload sysEventResumePlayload; // $sp + 64 
     SceSysEventSuspendPayloadResumData sysEventSuspendPayloadResumeData; // $sp + 128
 
-    u32 wakeUpCondition; // sp + 304
+    u32 wakeupCondition; // sp + 304
     u32 suspendQuerySysEventResult; // sp + 308
     SceSysEventHandler *pSuspendQuerySysEventHandler; // sp + 312
     s32 pspClock; // sp + 316
@@ -780,10 +780,10 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sysEventSuspendPayloadResumeData.pSuspendedGameInfo = sceKernelGetGameInfo(); // 0x00001B94 & 0x00001BA4
     sysEventSuspendPayloadResumeData.pInitParamSfo = sceKernelInitParamSfo(&sysEventSuspendPayloadResumeData.paramSfoSize); // 0x00001BA0 & 0x00001BC4
 
-    sysEventSuspendPayload.pWakeUpCondition = &wakeUpCondition; // 0x00001BBC
+    sysEventSuspendPayload.pWakeupCondition = &wakeupCondition; // 0x00001BBC
     sysEventSuspendPayload.pResumeData = &sysEventSuspendPayloadResumeData; // 0x00001BC0
 
-    wakeUpCondition = g_PowerSwitch.wakeUpCondition; // 0x00001BCC
+    wakeupCondition = g_PowerSwitch.wakeupCondition; // 0x00001BCC
 
     ledOffTiming = scePowerGetLedOffTiming(); // 0x00001BC8 & 0x00001BD0
     if (ledOffTiming == 0) // 0x00001BE8 & 0x00001BD8
@@ -1326,7 +1326,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
         else
         {
             /* Suspend the system. */
-            sceSysconPowerSuspend(wakeUpCondition, 0); // 0x0000264C
+            sceSysconPowerSuspend(wakeupCondition, 0); // 0x0000264C
 
             /*
              * Loop forever (until the PSP is actually being suspended at which point no code
@@ -1436,7 +1436,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
         // loc_000024C4
 
         /* Let the system enter standby state.  */
-        sceSysconPowerStandby(wakeUpCondition);  // 0x000024C4
+        sceSysconPowerStandby(wakeupCondition);  // 0x000024C4
 
         /* 
          * Loop forever (until the PSP is actually in standby at which point no code 
@@ -1959,10 +1959,9 @@ s32 scePowerGetResumeCount(void)
 }
 
 //Subroutine scePower_driver_BA566CD0 - Address 0x00002E0C
-// TODO: Verify function
-u32 scePowerSetWakeupCondition(u32 wakeUpCondition)
+s32 scePowerSetWakeupCondition(u32 wakeupCondition)
 {
-    g_PowerSwitch.wakeUpCondition = wakeUpCondition;
+    g_PowerSwitch.wakeupCondition = wakeupCondition;
     return SCE_ERROR_OK;
 }
 

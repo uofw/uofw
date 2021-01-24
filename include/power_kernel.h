@@ -485,6 +485,16 @@ s32 scePowerRebootStart(void);
  */
 s32 scePowerGetResumeCount(void);
 
+/**
+ * Sets the wakeup condition.
+ *
+ * @param wakeUpCondition Unknown. Used in the suspend & resume process of the system.
+ * The default set by the power service is [8].
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerSetWakeupCondition(u32 wakeUpCondition);
+
 /* Power switch manipulation lock / unlock */
 
 /**

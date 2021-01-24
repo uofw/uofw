@@ -1548,7 +1548,7 @@ s32 sceSysconPowerStandby(u32 arg0)
     return 0;
 }
 
-s32 sceSysconPowerSuspend(u32 arg0, u32 arg1)
+s32 sceSysconPowerSuspend(u32 wakeupCondition, u32 arg1)
 {   
     u32 set = 0;
     void *sm1 = sceKernelSm1ReferOperations();
@@ -1563,14 +1563,14 @@ s32 sceSysconPowerSuspend(u32 arg0, u32 arg1)
         *(s8*)(0x13FC0 + 0) = 0x36;
         *(s8*)(0x13FC0 + 5) = -1;
         *(s8*)(0x13FC0 + 1) = 4;
-        *(s8*)(0x13FC0 + 4) = ~(arg0 + (arg0 >> 8) + 58);
-        *(s8*)(0x13FC0 + 2) = arg0;
-        *(s8*)(0x13FC0 + 3) = arg0 >> 8;
+        *(s8*)(0x13FC0 + 4) = ~(wakeupCondition + (wakeupCondition >> 8) + 58);
+        *(s8*)(0x13FC0 + 2) = wakeupCondition;
+        *(s8*)(0x13FC0 + 3) = wakeupCondition >> 8;
     } else {
         *(s8*)(0x13FC0 + 0) = 0x36;
-        *(s8*)(0x13FC0 + 3) = ~(arg0 + 57);
+        *(s8*)(0x13FC0 + 3) = ~(wakeupCondition + 57);
         *(s8*)(0x13FC0 + 1) = 3;
-        *(s8*)(0x13FC0 + 2) = arg0;
+        *(s8*)(0x13FC0 + 2) = wakeupCondition;
     }
     sub_2D08(0x13FC0, set, arg1);
     return 0;

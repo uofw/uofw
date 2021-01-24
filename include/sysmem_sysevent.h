@@ -106,7 +106,7 @@ typedef struct {
     SceSize size; // 0
     u32 isStandbyOrRebootRequested; // 4
     s64 systemTimePreSuspendOp; // 8
-    u32 *pWakeUpCondition; // 16
+    u32 *pWakeupCondition; // 16
     void *pResumeData; // 20
     u32 unk24; // 24
     u32 unk28; // 28

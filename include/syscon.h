@@ -845,12 +845,12 @@ s32 sceSysconPowerStandby(u32 arg0);
 /**
  * Suspend the PSP power.
  *
- * @param arg0 Unknown.
+ * @param wakeUpCondition Unknown.
  * @param arg1 Unknown.
  *
  * @return 0.
  */
-s32 sceSysconPowerSuspend(u32 arg0, u32 arg1);
+s32 sceSysconPowerSuspend(u32 wakeupCondition, u32 arg1);
 
 /**
  * Send a command to the syscon doing nothing.
