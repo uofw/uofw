@@ -325,7 +325,7 @@ s32 scePowerGetDdrStrength(s16* pMaxStrength, s16* pDefaultStrength);
  */
 s32 scePowerSetDdrStrength(s16 maxStrength, s16 defaultStrength);
 
-/* Power switch request functions */
+/* Power state switch request functions */
 
 /** Defines power switch modes. */
 typedef enum {
@@ -493,6 +493,18 @@ s32 scePowerLockForKernel(s32 lockType);
  * @return The remaining existing power locks (>= 0).
  */
 s32 scePowerUnlockForKernel(s32 lockType);
+
+/* Power state switch misc */
+
+/**
+ * @brief Notifies the power service that a reboot process has been started. 
+ * 
+ * This function creates a usermode power lock and prevents the system from being suspended/
+ * going into standby while the reboot process is active.
+ *
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerRebootStart(void);
 
 /* Volatile memory lock / unlock  */
 

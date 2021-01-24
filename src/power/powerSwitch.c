@@ -30,9 +30,9 @@
 #define POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO     0x00000040 /* Indicates a suspend-touch-and-go operation has been requested. */
 #define POWER_SWITCH_EVENT_REQUEST_COLD_RESET               0x00000080 /* Indicates a cold-reset operation has been requested. */
 #define POWER_SWITCH_EVENT_100                              0x00000100 /* TODO */
-#define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED            0x00010000 /* Indicates that there are currently no power switch locks in place. */
-#define POWER_SWITCH_EVENT_OPERATION_RUNNING                0x00020000 /* Indicates that the power manage is currently running a power switch operation. */
-#define POWER_SWITCH_EVENT_IDLE                             0x00040000 /* Indicates that the power switch manager is not currently running a power switch oepration. */
+#define POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED            0x00010000 /* Indicates that there are currently no power state switch locks in place. */
+#define POWER_SWITCH_EVENT_OPERATION_RUNNING                0x00020000 /* Indicates that the power manage is currently running a power state switch operation. */
+#define POWER_SWITCH_EVENT_IDLE                             0x00040000 /* Indicates that the power switch manager is not currently running a power state switch operation. */
 #define POWER_SWITCH_EVENT_PROCESSING_TERMINATION           0x80000000 /* Indicates that the power switch manager is shutting down. */
 
 /*
@@ -70,13 +70,13 @@ typedef struct
      * for volatile memory. 
      */
     u32 isVolatileMemoryReservedAreaInUse; // 36
-    ScePowerHardwarePowerSwitchRequest curHardwarePowerSwitchRequest; //40
-    ScePowerSoftwarePowerSwitchRequest curSoftwarePowerSwitchRequest; //44
-    u32 unk48; //48 TODO: Perhaps a flag indicating whether locking/unlocking is allowed or - more gnerally - standby/suspension/reboot?
+    ScePowerHardwarePowerSwitchRequest curHardwarePowerSwitchRequest; // 40
+    ScePowerSoftwarePowerSwitchRequest curSoftwarePowerSwitchRequest; // 44
+    u32 isRebootPowerLockExist; // 48
     u32 coldResetMode; // 52
     u32 unk56; // 56
-    u32 wakeUpCondition; //60
-    u32 resumeCount; //64
+    u32 wakeUpCondition; // 60
+    u32 resumeCount; // 64
 } ScePowerSwitch; //size: 68
 
 typedef struct
@@ -146,8 +146,8 @@ s32 _scePowerSwInit(void)
     g_PowerSwitch.wakeUpCondition = 8; // 0x000011F0
 
     /* 
-     * Initialize the power switch event flag (default: power switch states can happen 
-     * and currently no power switch state is being processed).
+     * Initialize the power switch event flag (default: power state switches can happen 
+     * and no power state switch is currently being processed by the power service).
      */
     g_PowerSwitch.eventId = sceKernelCreateEventFlag("ScePowerSw", SCE_KERNEL_EA_MULTI | 0x1,
         POWER_SWITCH_EVENT_IDLE | POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED, NULL); // 0x000011EC & 0x00001210
@@ -403,7 +403,7 @@ static s32 _scePowerLock(s32 lockType, s32 isUserLock)
         return SCE_ERROR_INVALID_MODE;
     }
 
-    if (g_PowerSwitch.unk48 != 0) // 0x00001658
+    if (g_PowerSwitch.isRebootPowerLockExist) // 0x00001658
     {
         return SCE_ERROR_OK;
     }
@@ -490,7 +490,7 @@ static s32 _scePowerUnlock(s32 lockType, s32 isUserLock)
     s32 intrState;
     s32 numPowerLocks;
 
-    if (g_PowerSwitch.unk48 != 0) // 0x00002E44
+    if (g_PowerSwitch.isRebootPowerLockExist) // 0x00002E44
     {
         return SCE_ERROR_OK;
     }
@@ -688,7 +688,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
         sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_IDLE); // 0x000018A8
         sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_OPERATION_RUNNING); // 0x000018B8
 
-        if (g_PowerSwitch.unk48 == 0) // 0x000018C4
+        if (!g_PowerSwitch.isRebootPowerLockExist) // 0x000018C4
         {
             if (g_PowerSwitch.curHardwarePowerSwitchRequest == HARDWARE_POWER_SWITCH_REQUEST_STANDBY
                 || g_PowerSwitch.curSoftwarePowerSwitchRequest == SOFTWARE_POWER_SWITCH_REQUEST_STANDBY) // 0x000018D4 & 0x000018E0
@@ -1783,23 +1783,27 @@ s32 scePowerGetPowerSwMode(void)
 }
 
 //Subroutine scePower_driver_1EC2D4E4 - Address 0x00002B78
-// TODO: Verify function
-u32 scePowerRebootStart(void)
+s32 scePowerRebootStart(void)
 {
     s32 oldK1;
     s32 intrState;
 
     oldK1 = pspShiftK1();
 
-    _scePowerLock(SCE_KERNEL_POWER_LOCK_DEFAULT, SCE_TRUE); //0x00002B98
+    /* 
+     * Prevent the PSP system from being suspended/put into standby while a reboot process
+     * is running.
+     */
+    _scePowerLock(SCE_KERNEL_POWER_LOCK_DEFAULT, SCE_TRUE); // 0x00002B98
+    g_PowerSwitch.isRebootPowerLockExist = SCE_TRUE; // 0x00002BA8
 
-    pspSetK1(oldK1); //0x00002BB0
-    intrState = sceKernelCpuSuspendIntr(); //0x00002BAC
+    pspSetK1(oldK1); // 0x00002BB0
+    intrState = sceKernelCpuSuspendIntr(); // 0x00002BAC
 
-    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); //0x00002BC0
-    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE); //0x00002BCC
+    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); // 0x00002BC0
+    sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE); // 0x00002BCC
 
-    sceKernelCpuResumeIntr(intrState); //0x00002BD4
+    sceKernelCpuResumeIntr(intrState); // 0x00002BD4
     return SCE_ERROR_OK;
 }
 

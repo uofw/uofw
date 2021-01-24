@@ -220,7 +220,7 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
  */
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
-/* Power switch request functions */
+/* Power state switch request functions */
 
 /** Defines power switch modes. */
 typedef enum {
