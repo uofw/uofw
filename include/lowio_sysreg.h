@@ -58,6 +58,11 @@ float sceSysregPllGetFrequency(void);
 s32 sceSysregSpiClkSelect(s32, s32);
 s32 sceSysregSpiClkEnable(s32);
 s32 sceSysregSpiIoEnable(s32);
+s32 sceSysregSpiIoDisable(s32);
+
+s32 sceSysregUartIoDisable(s32);
+
+s32 sceSysregGpioIoDisable(s32);
 
 
 

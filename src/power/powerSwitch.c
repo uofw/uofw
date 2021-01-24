@@ -7,6 +7,7 @@
 #include <display.h>
 #include <interruptman.h>
 #include <lowio_ddr.h>
+#include <lowio_gpio.h>
 #include <lowio_sysreg.h>
 #include <modulemgr_init.h>
 #include <power_kernel.h>
@@ -124,7 +125,7 @@ static s32 _scePowerUnlock(s32 lockType, s32 isUserLock);
 static s32 _scePowerOffThread(SceSize args, void* argp);
 static s32 _scePowerSuspendOperation(s32 mode);
 static s32 _scePowerResumePoint(void *pData);
-static u32 _scePowerOffCommon(void);
+static s32 _scePowerOffCommon(void);
 static void _scePowerPowerSwCallback(s32 enable, void* argp);
 static void _scePowerHoldSwCallback(s32 enable, void* argp);
 
@@ -1702,32 +1703,46 @@ static s32 _scePowerResumePoint(void *pData)
 }
 
 //sub_000029B8
-// TODO: Verify function
-static u32 _scePowerOffCommon(void)
+static s32 _scePowerOffCommon(void)
 {
     s32 usbPowerType;
 
-    sceGpioPortClear(0x2000000); //0x000029C8
-    usbPowerType = _sceSysconGetUsbPowerType();
-    if (usbPowerType == 0) //0x000029D8
-        sceGpioPortClear(0x00800000); //0x00002A94
+    sceGpioPortClear(0x02000000); // 0x000029C8
 
-    //0x000029E0 - 0x00002A00
+    usbPowerType = _sceSysconGetUsbPowerType(); // 0x000029D0
+    if (usbPowerType == 0) // 0x000029D8
+    {
+        sceGpioPortClear(0x00800000); // 0x00002A94
+    }   
+
+    // 0x000029E0 - 0x00002A00
     u32 i;
-    for (i = 0; i < 6; i++) {
-        if ((i != 2) && (i != 3)) //0x000029F0
-            sceSysregUartIoDisable(i); //0x00002A84
+    for (i = 0; i < 6; i++) 
+    {
+        if (i != 2 && i != 3) // 0x000029F0
+        {
+            sceSysregUartIoDisable(i); // 0x00002A84
+        } 
     }
-    //0x00002A04 - 0x00002A1C
-    for (i = 0; i < 6; i++) {
-        if (i != 0) //0x00002A08
-            sceSysregSpiIoDisable(i); //0x00002A74
+
+    // 0x00002A04 - 0x00002A1C
+    for (i = 0; i < 6; i++) 
+    {
+        if (i != 0) // 0x00002A08
+        {
+            sceSysregSpiIoDisable(i); // 0x00002A74
+        }      
     }
-    //0x00002A20 - 0x00002A40
-    for (i = 0; i < 32; i++) {
-        if ((i != 3) && (i != 4) && (i != 7)) //0x00002A2C
-            sceSysreg_driver_15DC34BC(i); //0x00002A64
+
+    // 0x00002A20 - 0x00002A40
+    for (i = 0; i < 32; i++) 
+    {
+        if (i != 3 && i != 4 && i != 7) // 0x00002A2C
+        {
+            sceSysregGpioIoDisable(i); // 0x00002A64
+        }
     }
+
     return SCE_ERROR_OK;
 }
 
