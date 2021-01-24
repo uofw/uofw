@@ -142,7 +142,7 @@ s32 _scePowerSwInit(void)
 
     memset(&g_PowerSwitch, 0, sizeof g_PowerSwitch); // 0x000011C4
 
-    g_PowerSwitch.mode = 2; // 0x000011E8
+    g_PowerSwitch.mode = SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_SUPPORTED; // 0x000011E8
     g_PowerSwitch.wakeUpCondition = 8; // 0x000011F0
 
     /* 
@@ -593,7 +593,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
                 return SCE_ERROR_OK;
             }
 
-            if (g_PowerSwitch.mode & 0x1) // 0x00001A20
+            if (g_PowerSwitch.mode & SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_CALLBACK_SUPPORTED) // 0x00001A20
             {
                 if (powerSwitchSetFlags & POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE) // 0x00001A34
                 {
@@ -607,7 +607,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
 
             // loc_00001A58
 
-            if (g_PowerSwitch.mode & 0x2) // 0x00001A60
+            if (g_PowerSwitch.mode & SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_SUPPORTED) // 0x00001A60
             {
                 /* Check with power state we need to transition to (suspend or standby). */
 
@@ -1766,16 +1766,18 @@ s32 _scePowerSwEnd(void)
 }
 
 //Subroutine scePower_0CD21B1F - Address 0x00002B58 - Aliases: scePower_driver_73785D34
-// TODO: Verify function
-u32 scePowerSetPowerSwMode(u32 mode)
+s32 scePowerSetPowerSwMode(u32 mode)
 {
-    g_PowerSwitch.mode = mode & 0x3;
+    g_PowerSwitch.mode = mode & 
+        (SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_NOT_SUPPORTED
+         | SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_CALLBACK_SUPPORTED
+         | SCE_POWER_SWITCH_MODE_HARDWARE_POWER_SWITCH_REQUESTS_SUPPORTED);
+
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_165CE085 - Address 0x00002B6C - Aliases: scePower_driver_E11CDFFA
-// TODO: Verify function
-u32 scePowerGetPowerSwMode(void)
+s32 scePowerGetPowerSwMode(void)
 {
     return g_PowerSwitch.mode;
 }
