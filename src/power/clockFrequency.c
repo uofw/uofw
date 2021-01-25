@@ -78,12 +78,12 @@ typedef struct
     s32 geEdramRefreshMode; //80
     s32 oldGeEdramRefreshMode; //84
     u16 unk88;
-    u16 scCpuClockLowerLimit; //90
-    u16 scCpuClockUpperLimit; //92
-    u16 scBusClockLowerLimit; //94
-    u16 scBusClockUpperLimit; //96
-    u16 pllClockLowerLimit; //98
-    u16 pllClockUpperLimit; //100
+    s16 scCpuClockLowerLimit; // 90
+    s16 scCpuClockUpperLimit; // 92
+    s16 scBusClockLowerLimit; // 94
+    s16 scBusClockUpperLimit; // 96
+    s16 pllClockLowerLimit; // 98
+    s16 pllClockUpperLimit; // 100
     u16 unk102;
 } ScePowerFrequency; //size: 104
 
@@ -907,37 +907,49 @@ s32 scePowerSetDdrStrength(s16 maxStrength, s16 defaultStrength)
 }
 
 //Subroutine scePower_driver_DF904CDE - Address 0x0000429C 
-// TODO: Verify function
-u32 scePowerLimitScCpuClock(s32 lowerLimit, s32 upperLimit)
+s32 scePowerLimitScCpuClock(s16 lowerLimit, s16 upperLimit)
 {
-    if (lowerLimit != -1) //0x000042A0
-        g_PowerFreq.scCpuClockLowerLimit = lowerLimit;
-    if (upperLimit != -1) //0x000042AC
-        g_PowerFreq.scCpuClockUpperLimit = upperLimit;
+    if (lowerLimit != -1) // 0x000042A0
+    {
+        g_PowerFreq.scCpuClockLowerLimit = lowerLimit; // 0x000042A8
+    }
+
+    if (upperLimit != -1) // 0x000042AC
+    {
+        g_PowerFreq.scCpuClockUpperLimit = upperLimit; // 0x000042B4
+    }
 
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_EEFB2ACF - Address 0x000042C0
-// TODO: Verify function
-u32 scePowerLimitScBusClock(s32 lowerLimit, s32 upperLimit)
+s32 scePowerLimitScBusClock(s16 lowerLimit, s16 upperLimit)
 {
-    if (lowerLimit != -1) //0x000042C4
-        g_PowerFreq.scBusClockLowerLimit = lowerLimit;
-    if (upperLimit != -1) //0x000042D0
-        g_PowerFreq.scBusClockUpperLimit = upperLimit;
+    if (lowerLimit != -1) // 0x000042C4
+    {
+        g_PowerFreq.scBusClockLowerLimit = lowerLimit; // 0x000042CC
+    }
+
+    if (upperLimit != -1) // 0x000042D0
+    {
+        g_PowerFreq.scBusClockUpperLimit = upperLimit; // 0x000042D8
+    }
 
     return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_B7000C75 - Address 0x000042E4
-// TODO: Verify function
-u32 scePowerLimitPllClock(s32 lowerLimit, s32 upperLimit)
+s32 scePowerLimitPllClock(s16 lowerLimit, s16 upperLimit)
 {
-    if (lowerLimit != -1) //0x000042E8
-        g_PowerFreq.pllClockLowerLimit = lowerLimit;
-    if (upperLimit != -1) //0x000042F4
-        g_PowerFreq.pllClockUpperLimit = upperLimit;
+    if (lowerLimit != -1) // 0x000042E8
+    {
+        g_PowerFreq.pllClockLowerLimit = lowerLimit; // 0x000042F0
+    }
+
+    if (upperLimit != -1) // 0x000042F4
+    {
+        g_PowerFreq.pllClockUpperLimit = upperLimit; // 0x000042FC
+    }
 
     return SCE_ERROR_OK;
 }

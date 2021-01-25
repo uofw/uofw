@@ -236,6 +236,52 @@ s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequen
  */
 s32 scePowerSetPllUseMask(s32 useMask);
 
+/* Power service exclusive clock frequency limits */
+
+/**
+ * Sets a power service specific PLL clock frequency limit.
+ * 
+ * @param lowerLimit The lower PLL clock frequency limit in MHz. Default is 1MHz.
+ * @param upperLimit The upper PLL clock frequency limit in MHz. Default is 333MHz.
+ * 
+ * @return Always SCE_ERROR_OK.
+ * 
+ * @remark These PLL clock frequency limits are only applied when attempting to set the
+ * PLL clock frequency by calling the ::scePowerSetClockFrequency() API (and its related ones).
+ * Changing the PLL clock frequency via other means will ignore these limits.
+*/
+s32 scePowerLimitPllClock(s16 lowerLimit, s16 upperLimit);
+
+/**
+ * Sets a power service specific CPU clock frequency limit.
+ *
+ * @param lowerLimit The lower CPU clock frequency limit in MHz. Default is 1MHz.
+ * @param upperLimit The upper CPU clock frequency limit in MHz. Default is 333MHz.
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark These CPU clock frequency limits are only applied when attempting to set the
+ * CPU clock frequency by calling either the ::scePowerSetCpuClockFrequency() API
+ * or the ::scePowerSetClockFrequency() API (and its related ones). 
+ * Changing the CPU clock frequency via other means will ignore these limits.
+ */
+s32 scePowerLimitScCpuClock(s16 lowerLimit, s16 upperLimit);
+
+/**
+ * Sets a power service specific bus clock frequency limit.
+ *
+ * @param lowerLimit The lower bus clock frequency limit in MHz. Default is 24MHz.
+ * @param upperLimit The upper bus clock frequency limit in MHz. Default is 166MHz.
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark These bus clock frequency limits are only applied when attempting to set the
+ * bus clock frequency by calling the ::scePowerSetBusClockFrequency() API or the
+ * ::scePowerSetClockFrequency() API (and its related ones).
+ * Changing the bus clock frequency via other means will ignore these limits.
+*/
+s32 scePowerLimitScBusClock(s16 lowerLimit, s16 upperLimit);
+
 /* Hardware component power settings */
 
 /**
