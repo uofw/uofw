@@ -64,6 +64,12 @@ s32 sceSysregUartIoDisable(s32);
 
 s32 sceSysregGpioIoDisable(s32);
 
+s32 sceClkcGetCpuGear(u32 *pNumerator, u32 *pDenominator);
+s32 sceClkcSetCpuGear(u32 numerator, u32 denominator);
+
+s32 sceClkcGetBusGear(u32 *pNumerator, u32 *pDenominator);
+s32 sceClkcSetBusGear(u32 numerator, u32 denominator);
+
 
 
 /*

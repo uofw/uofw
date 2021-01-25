@@ -782,14 +782,14 @@ s32 _scePowerFreqRebootPhase(s32 arg0)
 }
 
 //sub_00004090
-// TODO: Verify function
-u32 _scePowerFreqSuspend(void)
+s32 _scePowerFreqSuspend(void)
 {
-    sceClkcGetCpuGear(&g_PowerFreq.clkcCpuGearNumerator, &g_PowerFreq.clkcCpuGearDenominator); //0x000040A8
-    sceClkcGetBusGear(&g_PowerFreq.clkcBusGearNumerator, &g_PowerFreq.clkcBusGearDenominator); //0x000040B4
+    sceClkcGetCpuGear(&g_PowerFreq.clkcCpuGearNumerator, &g_PowerFreq.clkcCpuGearDenominator); // 0x000040A8
+    sceClkcGetBusGear(&g_PowerFreq.clkcBusGearNumerator, &g_PowerFreq.clkcBusGearDenominator); // 0x000040B4
 
-    g_PowerFreq.oldGeEdramRefreshMode = g_PowerFreq.geEdramRefreshMode; //0x000040CC
-    scePowerSetGeEdramRefreshMode(g_PowerFreq.geEdramRefreshMode); //0x000040C8
+    g_PowerFreq.oldGeEdramRefreshMode = g_PowerFreq.geEdramRefreshMode; // 0x000040CC
+    scePowerSetGeEdramRefreshMode(0); // 0x000040C8
+
     return SCE_ERROR_OK;
 }
 

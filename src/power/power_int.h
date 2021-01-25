@@ -27,7 +27,7 @@ s32 _scePowerChangeSuspendCap(u32 newSuspendCap);
 
 s32 _scePowerFreqInit(void);
 s32 _scePowerFreqEnd(void);
-u32 _scePowerFreqSuspend(void);
+s32 _scePowerFreqSuspend(void);
 u32 _scePowerFreqResume(u32 arg0);
 s32 _scePowerFreqRebootPhase(s32 arg0);
 s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
