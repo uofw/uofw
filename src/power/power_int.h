@@ -26,7 +26,7 @@ s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity);
 s32 _scePowerChangeSuspendCap(u32 newSuspendCap);
 
 s32 _scePowerFreqInit(void);
-u32 _scePowerFreqEnd(void);
+s32 _scePowerFreqEnd(void);
 u32 _scePowerFreqSuspend(void);
 u32 _scePowerFreqResume(u32 arg0);
 u32 _scePowerFreqRebootPhase(u32 arg0);

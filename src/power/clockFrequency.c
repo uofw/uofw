@@ -216,8 +216,7 @@ s32 _scePowerFreqInit(void)
 }
 
 //sub_00003FC4
-// TODO: Verify function
-u32 _scePowerFreqEnd(void)
+s32 _scePowerFreqEnd(void)
 {
     sceKernelDeleteMutex(g_PowerFreq.mutexId); //0x00003FD4
     return SCE_ERROR_OK;
