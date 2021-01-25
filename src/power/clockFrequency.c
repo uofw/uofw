@@ -765,19 +765,20 @@ s32 _scePowerUnlockPowerFreqMutex(void)
 }
 
 //sub_00004038
-// TODO: Verify function
-u32 _scePowerFreqRebootPhase(u32 arg0)
+s32 _scePowerFreqRebootPhase(s32 arg0)
 {
-    switch (arg0) {
-        case 1: //0x00004044
-            sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00004080
-            return SCE_ERROR_OK;
-        case 2: //0x00004050
-            sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); //0x0000406C
-            return SCE_ERROR_OK;
-        default:
-            return SCE_ERROR_OK;
+    // TODO: arg0 seems to be a phase index (like rebootPhase_1 / rebootPhase_2)
+
+    if (arg0 == 1) // 0x00004044
+    {
+        sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); // 0x00004080
     }
+    else if (arg0 == 2) // 0x00004050
+    {
+        sceKernelLockMutex(g_PowerFreq.mutexId, 1, NULL); // 0x0000406C
+    }
+
+    return SCE_ERROR_OK;
 }
 
 //sub_00004090

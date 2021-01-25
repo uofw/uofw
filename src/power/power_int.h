@@ -29,7 +29,7 @@ s32 _scePowerFreqInit(void);
 s32 _scePowerFreqEnd(void);
 u32 _scePowerFreqSuspend(void);
 u32 _scePowerFreqResume(u32 arg0);
-u32 _scePowerFreqRebootPhase(u32 arg0);
+s32 _scePowerFreqRebootPhase(s32 arg0);
 s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 s32 _scePowerLockPowerFreqMutex(void);
 s32 _scePowerUnlockPowerFreqMutex(void);
