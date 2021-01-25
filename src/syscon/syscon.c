@@ -104,7 +104,7 @@ typedef struct {
      * Bit 15 - 8:
      *      Unknown. Value can be != 0x00
      * 
-     * Bit 16 - 23:
+     * Bit 23 - 16:
      *      The actual Baryon hardware version. Possible values below:
      * 
      *      PSP 1000 (PSP Fat) series       : 0x01, 0x02, 0x03, 0x04, 0x11, 0x12
