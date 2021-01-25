@@ -794,20 +794,19 @@ s32 _scePowerFreqSuspend(void)
 }
 
 //sub_000040E4
-// TODO: Verify function
-u32 _scePowerFreqResume(u32 arg0)
+s32 _scePowerFreqResume(u32 resumeStep)
 {
-    switch (arg0) {
-        case 0: //0x000040F4
-            sceClkcSetCpuGear(g_PowerFreq.clkcCpuGearNumerator, g_PowerFreq.clkcCpuGearDenominator); //0x00004130
-            sceClkcSetBusGear(g_PowerFreq.clkcBusGearNumerator, g_PowerFreq.clkcBusGearDenominator); //0x0000413C
-            return SCE_ERROR_OK;
-        case 1: //0x00004100
-            scePowerSetGeEdramRefreshMode(g_PowerFreq.oldGeEdramRefreshMode); //0x0000411C
-            return SCE_ERROR_OK;
-        default:
-            return SCE_ERROR_OK;
+    if (resumeStep == 0) // 0x000040F4
+    {
+        sceClkcSetCpuGear(g_PowerFreq.clkcCpuGearNumerator, g_PowerFreq.clkcCpuGearDenominator); // 0x00004130
+        sceClkcSetBusGear(g_PowerFreq.clkcBusGearNumerator, g_PowerFreq.clkcBusGearDenominator); // 0x0000413C
     }
+    else if (resumeStep == 1) // 0x00004100
+    {
+        scePowerSetGeEdramRefreshMode(g_PowerFreq.oldGeEdramRefreshMode); // 0x0000411C
+    }
+
+    return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_D7DD9D38 - Address 0x0000414C 
