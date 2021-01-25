@@ -6,6 +6,7 @@
 #include <display.h>
 #include <ge.h>
 #include <interruptman.h>
+#include <lowio_ddr.h>
 #include <lowio_sysreg.h>
 #include <power_kernel.h>
 #include <syscon.h>

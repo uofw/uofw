@@ -64,6 +64,12 @@ s32 sceSysregUartIoDisable(s32);
 
 s32 sceSysregGpioIoDisable(s32);
 
+s32 sceClkcSetCpuFrequency(float cpuFrequency);
+float sceClkcGetCpuFrequency(void);
+
+s32 sceClkcSetBusFrequency(float busFrequency);
+float sceClkcGetBusFrequency(void);
+
 s32 sceClkcGetCpuGear(u32 *pNumerator, u32 *pDenominator);
 s32 sceClkcSetCpuGear(u32 numerator, u32 denominator);
 
@@ -117,6 +123,7 @@ s32 sceClkcSetBusGear(u32 numerator, u32 denominator);
 #define SCE_SYSREG_PLL_OUT_SELECT_133MHz	(12)
 #define SCE_SYSREG_PLL_OUT_SELECT_166MHz	(13)
 s32 sceSysregPllGetOutSelect(void);
+float sceSysregPllGetBaseFrequency(void);
 
 u64 sceSysregGetFuseId(void);
 u32 sceSysregGetFuseConfig(void);
