@@ -17,7 +17,16 @@
  *  @{
  */
 
- /* Callbacks */
+/* Power service initialization/termination */
+
+/**
+ * Terminates the power service.
+ *
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerEnd(void);
+
+/* Callbacks */
 
 /** 
  * This constant specifies that a search for a slot number from among the empty slots is to be automatically performed

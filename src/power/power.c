@@ -877,17 +877,17 @@ s32 _scePowerModuleRebootBefore(void *arg0, s32 arg1, s32 arg2, s32 arg3)
 }
 
 //Subroutine scePower_driver_AD5BB433 - Address 0x00000FCC
-// TODO: Verify function
 s32 scePowerEnd(void)
 {
-    sceKernelUnregisterSysEventHandler(&g_PowerSysEv); //0x00000FD8
-    sceSysconSetAcSupplyCallback(NULL, NULL); //0x00000FE4
-    sceSysconSetLowBatteryCallback(NULL, NULL); //0x00000FF0
+    sceKernelUnregisterSysEventHandler((SceSysEventHandler *)&g_PowerSysEv); // 0x00000FD8
+
+    sceSysconSetAcSupplyCallback(NULL, NULL); // 0x00000FE4
+    sceSysconSetLowBatteryCallback(NULL, NULL); // 0x00000FF0
     
-    _scePowerIdleEnd(); //0x00000FF8 -- sub_00003438
-    _scePowerFreqEnd(); //0x00001000 -- sub_00003FC4
-    _scePowerBatteryEnd(); //0x00001008 -- sub_00004498
-    _scePowerSwEnd(); //0x00001010 -- sub_00002AA4
+    _scePowerIdleEnd(); // 0x00000FF8
+    _scePowerFreqEnd(); // 0x00001000
+    _scePowerBatteryEnd(); // 0x00001008
+    _scePowerSwEnd(); // 0x00001010
     
     return SCE_ERROR_OK;
 }
