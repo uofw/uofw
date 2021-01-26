@@ -893,10 +893,9 @@ s32 scePowerEnd(void)
 }
 
 //Subroutine scePower_driver_23BDDD8B - Address 0x00001028
-// TODO: Verify function
-u32 scePower_driver_23BDDD8B(void)
+s32 scePower_driver_23BDDD8B(void)
 {
-    g_Power.callbackArgMask &= ~SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00001038 
+    g_Power.callbackArgMask &= ~SCE_POWER_CALLBACKARG_HOLD_SWITCH; // 0x00001038 
     return SCE_ERROR_OK;
 }
 

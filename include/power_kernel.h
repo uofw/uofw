@@ -113,6 +113,14 @@ s32 scePowerSetCallbackMode(s32 slot, s32 mode);
 
 s32 scePowerGetCallbackMode(s32 slot, s32 *pMode);
 
+/**
+ * Blocks the ::SCE_POWER_CALLBACKARG_HOLD_SWITCH bit from being set in the ::ScePowerCallback
+ * callback argument even if the HOLD switch has been locked.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePower_driver_23BDDD8B(void);
+
 /* Clock frequency functions */
 
 /**
