@@ -55,14 +55,13 @@ typedef struct
     s32 mode; // 12 TODO: Perhaps execution mode, synchron = 1, otherwise asynchron? More data needed...
 } ScePowerCallback;
 
-typedef struct 
-{
+typedef struct {
     ScePowerCallback powerCallback[POWER_CALLBACK_TOTAL_SLOTS_KERNEL]; // 0 - 511
     s32 baryonVersion; //512
     u32 curPowerStateForCallback; // 516
     u32 callbackArgMask; //520
     u8 isBatteryLow; //524
-    u8 wlanActivity; //525 -- TODO: Perhaps rename to isWlanActivated?
+    u8 wlanActivity; // 525
     u8 watchDog; //526
     u8 isWlanSuppressChargingEnabled; // 527
     s8 unk528;
@@ -70,8 +69,8 @@ typedef struct
     u8 ledOffTiming;
     s16 cpuInitSpeed; //534 -- CPU clock init speed
     s16 busInitSpeed; //536 -- Bus clock init speed
-    s16 pllInitSpeed; //538 -- PLL clock init speed (PLL = phase-locked loop ?)
-} ScePower;
+    s16 pllInitSpeed; //538 -- PLL clock init speed
+} ScePower; // size = 540
 
 static void _scePowerAcSupplyCallback(s32 enable, void* argp); //sub_0x00000650
 static void _scePowerLowBatteryCallback(s32 enable, void* argp); //sub_0x000006C4
@@ -809,22 +808,23 @@ u32 scePowerGetBacklightMaximum(void)
 }
 
 //Subroutine module_start - Address 0x00000E8C
-// TODO: Verify function
-s32 _scePowerModuleStart(s32 argc, void *argp)
+s32 _scePowerModuleStart(SceSize argSize, const void *argBlock)
 {
-    (void)argc;
-    (void)argp;
+    (void)argSize;
+    (void)argBlock;
     
-    memset(&g_Power, 0, sizeof g_Power); //0x00000EA8
+    memset(&g_Power, 0, sizeof g_Power); // 0x00000EA8
     
     //0x00000EB0 - 0x00000EC4
     u32 i;
     for (i = 0; i < POWER_CALLBACK_TOTAL_SLOTS_KERNEL; i++)
-         g_Power.powerCallback[i].cbid = -1;
-    
-    scePowerInit(); //scePower_driver_9CE06934
+    {
+        g_Power.powerCallback[i].cbid = -1; // 0x00000EBC
+    }
+         
+    scePowerInit(); // 0x00000EC8
+
     return SCE_ERROR_OK;
-    
 }
 
 //Subroutine syslib_ADF12745 - Address 0x00000EE4
