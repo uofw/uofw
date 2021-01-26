@@ -560,6 +560,13 @@ s32 scePowerGetResumeCount(void);
  */
 s32 scePowerSetWakeupCondition(u32 wakeUpCondition);
 
+/**
+ * Gets the watchdog setting used for a power switch operation.
+ * 
+ * @return The current watchdog.
+ */
+u8 scePowerGetWatchDog(void);
+
 /* Power switch manipulation lock / unlock */
 
 /**

@@ -901,7 +901,6 @@ u32 scePower_driver_23BDDD8B(void)
 }
 
 //Subroutine scePower_driver_4E32E9B8 - Address 0x00001128
-// TODO: Verify function
 u8 scePowerGetWatchDog(void)
 {
     return g_Power.watchDog; //0x00001130
