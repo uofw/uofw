@@ -7,6 +7,17 @@
 
 #include <common_header.h>
 
+/* clock frequency limits */
+
+#define PSP_CLOCK_PLL_FREQUENCY_MIN                     19
+#define PSP_CLOCK_PLL_FREQUENCY_MAX                     333
+
+#define PSP_CLOCK_CPU_FREQUENCY_MIN                     1
+#define PSP_CLOCK_CPU_FREQUENCY_MAX                     333
+
+#define PSP_CLOCK_BUS_FREQUENCY_MIN                     1
+#define PSP_CLOCK_BUS_FREQUENCY_MAX                     166
+
 void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyPowerState);
 s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid);
 

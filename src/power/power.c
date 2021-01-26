@@ -828,14 +828,22 @@ s32 _scePowerModuleStart(SceSize argSize, const void *argBlock)
 }
 
 //Subroutine syslib_ADF12745 - Address 0x00000EE4
-// TODO: Verify function
-s32 _scePowerModuleRebootPhase(s32 arg1)
+s32 _scePowerModuleRebootPhase(s32 arg1, void *arg2, s32 arg3, s32 arg4)
 {
-    _scePowerFreqRebootPhase(arg1); //0x00000EF0 -- sub_00004038
+    (void)arg2;
+    (void)arg3;
+    (void)arg4;
+
+    _scePowerFreqRebootPhase(arg1); // 0x00000EF0
     
-    if (arg1 == 1) //0x00000F04
-        _scePowerSetClockFrequency(333, 333, 166); //0x00000F20 -- sub_00003898
-    
+    if (arg1 == 1) // 0x00000F04
+    {
+        _scePowerSetClockFrequency(
+            PSP_CLOCK_PLL_FREQUENCY_MAX, 
+            PSP_CLOCK_CPU_FREQUENCY_MAX, 
+            PSP_CLOCK_BUS_FREQUENCY_MAX); // 0x00000F20
+    }
+
     return SCE_ERROR_OK;
 }
 

@@ -21,15 +21,7 @@
 
 /* clock frequency limits */
 
-#define PSP_CLOCK_PLL_FREQUENCY_MIN                     19
-#define PSP_CLOCK_PLL_FREQUENCY_MAX                     333
 #define PSP_1000_CLOCK_PLL_FREQUENCY_MAX_WLAN_ACTIVE    222
-
-#define PSP_CLOCK_CPU_FREQUENCY_MIN                     1
-#define PSP_CLOCK_CPU_FREQUENCY_MAX                     333
-
-#define PSP_CLOCK_BUS_FREQUENCY_MIN                     1
-#define PSP_CLOCK_BUS_FREQUENCY_MAX                     167
 
 /* Defines Power service specific lower and upper limits for clock speeds. */
 
@@ -349,7 +341,7 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
      */
     if (pllFrequency < PSP_CLOCK_PLL_FREQUENCY_MIN || pllFrequency > PSP_CLOCK_PLL_FREQUENCY_MAX
         || cpuFrequency < PSP_CLOCK_CPU_FREQUENCY_MIN || cpuFrequency > PSP_CLOCK_CPU_FREQUENCY_MAX
-        || busFrequency < PSP_CLOCK_BUS_FREQUENCY_MIN || busFrequency > PSP_CLOCK_BUS_FREQUENCY_MAX
+        || busFrequency < PSP_CLOCK_BUS_FREQUENCY_MIN || busFrequency > (PSP_CLOCK_BUS_FREQUENCY_MAX + 1)
         || pllFrequency < cpuFrequency || pllFrequency < 2 * busFrequency)
     {
         return SCE_ERROR_INVALID_VALUE;
