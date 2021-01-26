@@ -73,12 +73,6 @@ typedef struct
     s16 pllInitSpeed; //538 -- PLL clock init speed (PLL = phase-locked loop ?)
 } ScePower;
 
-enum ScePowerWlanActivity 
-{
-    SCE_POWER_WLAN_DEACTIVATED = 0,
-    SCE_POWER_WLAN_ACTIVATED = 1,
-};
-
 static void _scePowerAcSupplyCallback(s32 enable, void* argp); //sub_0x00000650
 static void _scePowerLowBatteryCallback(s32 enable, void* argp); //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
@@ -734,7 +728,7 @@ s32 scePowerWlanActivate(void)
         return SCE_POWER_ERROR_BAD_PRECONDITION;
     }
 
-    g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVATED; // 0x00000E1C
+    g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVITY_ON; // 0x00000E1C
 
     _scePowerUnlockPowerFreqMutex(); //0x00000E18
     
@@ -748,7 +742,7 @@ s32 scePowerWlanActivate(void)
 //Subroutine scePower_driver_8C6BEFD9 - Address 0x000010EC
 s32 scePowerWlanDeactivate(void)
 {
-    g_Power.wlanActivity = SCE_POWER_WLAN_DEACTIVATED; // 0x00001104
+    g_Power.wlanActivity = SCE_POWER_WLAN_ACTIVITY_OFF; // 0x00001104
 
     /* Allow battery charging again now that WLAN is turned off. */
     if (g_Power.isWlanSuppressChargingEnabled)
@@ -793,10 +787,9 @@ s32 scePowerCheckWlanCondition(s32 pllFrequency)
 }
 
 //Subroutine scePower_2B51FE2F - Address 0x00001134 - Aliases: scePower_driver_CE2032CD
-// TODO: Verify function
 u8 scePowerGetWlanActivity(void)
 {
-    return g_Power.wlanActivity; //0x0000113C
+    return g_Power.wlanActivity;
 }
 
 //Subroutine scePower_442BFBAC - Address 0x00000E44 - Aliases: scePower_driver_2509FF3B
@@ -810,7 +803,7 @@ u32 scePowerGetBacklightMaximum(void)
         : SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL; //0x00000E4C & 0x00000E68
 
     if (g_Power.unk528 != 0)
-        backlightMax = (g_Power.wlanActivity == SCE_POWER_WLAN_ACTIVATED) ? pspMin(backlightMax, g_Power.unk528) : backlightMax; //0x00000E70 & 0x00000E78
+        backlightMax = (g_Power.wlanActivity == SCE_POWER_WLAN_ACTIVITY_ON) ? pspMin(backlightMax, g_Power.unk528) : backlightMax; //0x00000E70 & 0x00000E78
     
     return backlightMax;
 }

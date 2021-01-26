@@ -483,6 +483,19 @@ s32 scePowerVolatileMemUnlock(s32 mode);
  */
 s32 scePowerCheckWlanCoexistenceClock(void);
 
+/** Defines constants specifying whether WLAN is currently in use. */
+typedef enum {
+	/** This constant specifies that WLAN is currently not in use. */
+	SCE_POWER_WLAN_ACTIVITY_OFF = 0,
+	/** This constant specifies that WLAN is currently in use. */
+	SCE_POWER_WLAN_ACTIVITY_ON
+} ScePowerWlanActivity;
+
+/**
+ * Gets the current WLAN activity status.
+ *
+ * @return One of ::ScePowerWlanActivity.
+ */
 u8 scePowerGetWlanActivity(void);
 
 

@@ -418,7 +418,7 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
     }
 
     /* WHen WLAN is active, the specified PLL clock frequency might not be applicable. */
-    if (scePowerGetWlanActivity() != SCE_POWER_WLAN_DEACTIVATED
+    if (scePowerGetWlanActivity() != SCE_POWER_WLAN_ACTIVITY_OFF
         && (status = scePowerCheckWlanCondition(actPllFrequency)) < SCE_ERROR_OK) // 0x00003A28 - 0x00003A44
     {
         /*
