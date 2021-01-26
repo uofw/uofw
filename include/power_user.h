@@ -168,53 +168,54 @@ s32 scePowerSetCpuClockFrequency(s32 cpuFrequency);
 s32 scePowerSetBusClockFrequency(s32 busFrequency);
 
 /**
- * Sets clock frequencies.
+ * Sets the PLL clock frequency, the CPU clock frequency and the bus clock frequency.
+ * The frequencies are specified in MHz.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmwares earlier than 2.80.
  *
  * @see ::scePowerClockFrequency() for more details.
- *
  */
 s32 scePowerSetClockFrequencyBefore280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Sets clock frequencies.
+ * Sets the PLL clock frequency, the CPU clock frequency and the bus clock frequency.
+ * The frequencies are specified in MHz.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 2.80.
  *
  * @see ::scePowerClockFrequency() for more details.
- *
  */
 s32 scePowerSetClockFrequency280(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Sets clock frequencies.
+ * Sets the PLL clock frequency, the CPU clock frequency and the bus clock frequency.
+ * The frequencies are specified in MHz.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 3.00.
  *
  * @see ::scePowerClockFrequency() for more details.
- *
  */
 s32 scePowerSetClockFrequency300(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Sets clock frequencies.
+ * Sets the PLL clock frequency, the CPU clock frequency and the bus clock frequency.
+ * The frequencies are specified in MHz.
  *
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 3.50.
  *
  * @see ::scePowerClockFrequency() for more details.
- *
  */
 s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
 /**
- * Sets clock frequencies.
+ * Sets the PLL clock frequency, the CPU clock frequency and the bus clock frequency.
+ * The frequencies are specified in MHz.
  *
- * @param pllFrequency The PLL clock frequency in MHz. Specify either 190, 222, 266 or 333.
- * @param cpuFrequency The CPU clock frequency in MHz. Specify a value between 1 - 333. Valid values have
+ * @param pllFrequency The new PLL clock frequency. Specify either 190, 222, 266 or 333.
+ * @param cpuFrequency The new CPU clock frequency. Specify a value between 1 - 333. Valid values have
  * to be less than or equal to the value specified for @p pllFrequency.
- * @param busFrequency The bus clock frequency in MHz. Must be exactly 1/2 of @p pllFrequency. In case of
- * 333 MHZ specified for @p pllFrequency, specify 166.
+ * @param busFrequency The new bus clock frequency. Must be exactly 1/2 of @p pllFrequency. In case of
+ * 333MHZ specified for @p pllFrequency, specify 166MHz.
  *
  * @return SCE_ERROR_OK on success, otherwise < 0.
  */
