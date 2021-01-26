@@ -848,17 +848,32 @@ s32 _scePowerModuleRebootPhase(s32 arg1, void *arg2, s32 arg3, s32 arg4)
 }
 
 //Subroutine module_reboot_before - Address 0x00000F30
-s32 _scePowerModuleRebootBefore(u32 *arg1)
+s32 _scePowerModuleRebootBefore(void *arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    u32 *ptr;
-    
-    ptr = *(arg1 + 11); //0x00000F3C
-    if (ptr != NULL) {
-        *(ptr + 5) = scePowerGetBatteryType(); //0x00000FA0 -- scePower_driver_071160B1
-        scePowerGetTachyonVoltage(ptr + 6, ptr + 7); //0x00000FB0 -- scePower_driver_BADA8332
-        scePowerGetDdrStrength(ptr + 8, ptr + 9); //0x00000FBC -- scePower_driver_16F965C9
+    s32 *pBuf;
+
+    pBuf = *(s32 *)(arg0 + 44); // 0x00000F3C
+    if (pBuf != NULL) // 0x00000F40
+    {
+        pBuf[5] = scePowerGetBatteryType(); // 0x00000FA0 & 0x00000FA8
+
+        scePowerGetTachyonVoltage((s16 *)&pBuf[6], (s16 *)&pBuf[7]); // 0x00000FB0
+        scePowerGetDdrStrength((s16 *)&pBuf[8], (s16 *)&pBuf[9]); // 0x00000FBC
     }
-    return scePowerEnd();
+
+    // uofw note: Below is basically a scePowerEnd() call.
+
+    sceKernelUnregisterSysEventHandler((SceSysEventHandler *)&g_PowerSysEv); // 0x00000F4C
+
+    sceSysconSetAcSupplyCallback(NULL, NULL); // 0x00000F58
+    sceSysconSetLowBatteryCallback(NULL, NULL); // 0x00000F64
+
+    _scePowerIdleEnd(); // 0x00000F6C
+    _scePowerFreqEnd(); // 0x00000F74
+    _scePowerBatteryEnd(); // 0x00000F7C
+    _scePowerSwEnd(); // 0x00000F84 
+
+    return SCE_ERROR_OK;
 }
 
 //Subroutine scePower_driver_AD5BB433 - Address 0x00000FCC
