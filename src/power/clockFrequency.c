@@ -955,7 +955,6 @@ s32 scePowerLimitPllClock(s16 lowerLimit, s16 upperLimit)
 }
 
 //Subroutine scePower_driver_13D7CCE4 - Address 0x00004308
-// TODO: Verify function
 s32 scePowerSetPllUseMask(s32 useMask)
 {
     g_PowerFreq.pllUseMask = useMask;

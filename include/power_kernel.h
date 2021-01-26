@@ -5,6 +5,8 @@
 #ifndef POWER_KERNEL_H
 #define	POWER_KERNEL_H
 
+#include <lowio_sysreg.h>
+
 #include "common_header.h"
 #include "power_error.h"
 
@@ -187,7 +189,6 @@ s32 scePowerSetBusClockFrequency(s32 busFrequency);
  * @remark This is an alias for ::scePowerClockFrequency() on firmware 3.50.
  * 
  * @see ::scePowerClockFrequency() for more details.
- * 
  */
 s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
@@ -198,41 +199,48 @@ s32 scePowerSetClockFrequency350(s32 pllFrequency, s32 cpuFrequency, s32 busFreq
  * @param cpuFrequency The CPU clock frequency in MHz. Specify a value between 1 - 333. Valid values have
  * to be less than or equal to the value specified for @p pllFrequency.
  * @param busFrequency The bus clock frequency in MHz. Must be exactly 1/2 of @p pllFrequency. In case of 
- * 333 MHZ specified for @p pllFrequency, specify 166.
+ * 333MHZ specified for @p pllFrequency, specify 166MHz.
  * 
  * @return SCE_ERROR_OK on success, otherwise < 0.
  */
 s32 scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFrequency);
 
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_37MHz		(1 << 0)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_148MHz		(1 << 1)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_190MHz		(1 << 2)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_222MHz		(1 << 3)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_266MHz		(1 << 4)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_333MHz		(1 << 5)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_19MHz		(1 << 8)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_74MHz		(1 << 9)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_96MHz		(1 << 10)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_111MHz		(1 << 11)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_133MHz		(1 << 12)
-#define SCE_POWER_PLL_CLOCK_ROUND_UP_166MHz		(1 << 13)
+#define SCE_POWER_PLL_USE_MASK_37MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_37MHz)
+#define SCE_POWER_PLL_USE_MASK_148MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_148MHz)
+#define SCE_POWER_PLL_USE_MASK_190MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_190MHz)
+#define SCE_POWER_PLL_USE_MASK_222MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_222MHz)
+#define SCE_POWER_PLL_USE_MASK_266MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_266MHz)
+#define SCE_POWER_PLL_USE_MASK_333MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_333MHz)
+#define SCE_POWER_PLL_USE_MASK_19MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_19MHz)
+#define SCE_POWER_PLL_USE_MASK_74MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_74MHz)
+#define SCE_POWER_PLL_USE_MASK_96MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_96MHz)
+#define SCE_POWER_PLL_USE_MASK_111MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_111MHz)
+#define SCE_POWER_PLL_USE_MASK_133MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_133MHz)
+#define SCE_POWER_PLL_USE_MASK_166MHz			(1 << SCE_SYSREG_PLL_OUT_SELECT_166MHz)
 
 /**
- * Sets a use mask for the PLL clock. Allows to set fine-grained 'round up' steps for PLL clock frequencies
- * set via ::scePowerSetClockFrequency(). The actual PLL clock frequency will be round up to the smallest frequency
- * which is greater than or equal to the specified PLL clock frequency.
+ * @brief Sets a use mask for the PLL clock frequency.
  * 
- * @param useMask The mask containing the different round up steps.
+ * A use mask defines a fixed frequency at which the PLL clock can operate. By setting multiple use masks
+ * 'finer' control over the actually set PLL clock frequency can be obtained. When a new PLL clock frequency
+ * is specified via the ::scePowerSetClockFrequency() API, the actual frequency the PLL clock will be
+ * attempted to be set to depends on the set PLL use masks. The power service will pick the smallest set use mask
+ * which represents a clock frequency which is greater than or equal to the specified clock frequency.
  * 
- * @par Example: Given the following PLL use mask and custom PLL frequency of 166 MHz
+ * @param useMask The mask containing the fixed PLL clock frequencies to consider. Multiple use masks can be
+ * combined together by bitwise or'ing.
+ * 
+ * @par Example: Given the following PLL use mask and custom PLL frequency of 166MHz
  * @code
- * // Pressing the select will reset the idle timer. No other button will reset it.
- * scePowerSetPllUseMask(SCE_POWER_PLL_CLOCK_ROUND_UP_148MHz | SCE_POWER_PLL_CLOCK_ROUND_UP_190MHz | SCE_POWER_PLL_CLOCK_ROUND_UP_333MHz);
+ * scePowerSetPllUseMask(SCE_POWER_PLL_USE_MASK_148MHz | SCE_POWER_PLL_USE_MASK_190MHz | SCE_POWER_PLL_USE_MASK_333MHz);
  * scePowerSetClockFrequency(166, 166, 83);
  * @endcode
- * the specified PLL frequency will be round up to 190MHz by the power service.
+ * the specified PLL frequency will be attempted to be set to 190MHz by the power service.
  * 
  * @return Always SCE_ERROR_OK.
+ * 
+ * @remark If no valid use mask is set (for example by setting @p useMask to 0) then the power service will
+ * attempt to set the PLL clock frequency as high as possible (max 333MHz).
  */
 s32 scePowerSetPllUseMask(s32 useMask);
 
@@ -249,7 +257,7 @@ s32 scePowerSetPllUseMask(s32 useMask);
  * @remark These PLL clock frequency limits are only applied when attempting to set the
  * PLL clock frequency by calling the ::scePowerSetClockFrequency() API (and its related ones).
  * Changing the PLL clock frequency via other means will ignore these limits.
-*/
+ */
 s32 scePowerLimitPllClock(s16 lowerLimit, s16 upperLimit);
 
 /**
@@ -279,7 +287,7 @@ s32 scePowerLimitScCpuClock(s16 lowerLimit, s16 upperLimit);
  * bus clock frequency by calling the ::scePowerSetBusClockFrequency() API or the
  * ::scePowerSetClockFrequency() API (and its related ones).
  * Changing the bus clock frequency via other means will ignore these limits.
-*/
+ */
 s32 scePowerLimitScBusClock(s16 lowerLimit, s16 upperLimit);
 
 /* Hardware component power settings */
