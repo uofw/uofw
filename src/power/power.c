@@ -76,7 +76,7 @@ typedef struct {
 static void _scePowerAcSupplyCallback(s32 enable, void* argp); //sub_0x00000650
 static void _scePowerLowBatteryCallback(s32 enable, void* argp); //sub_0x000006C4
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
-static s32 _scePowerInitCallback(); //sub_0x0000114C
+static s32 _scePowerInitCallback(void *data, s32 arg, void *opt); //sub_0x0000114C
 
 const SceSysEventHandler g_PowerSysEv = 
 {
@@ -347,7 +347,7 @@ s32 scePowerInit()
     sceSysconSetAcSupplyCallback(_scePowerAcSupplyCallback, NULL); //0x0000035C
     sceSysconSetLowBatteryCallback(_scePowerLowBatteryCallback, NULL); //0x0000036C
     sceKernelRegisterSysEventHandler(_scePowerSysEventHandler); //0x00000378
-    sceKernelSetInitCallback(_scePowerInitCallback, 2, 0); //0x0000038C
+    sceKernelSetInitCallback(_scePowerInitCallback, 2, NULL); //0x0000038C
     
     return SCE_ERROR_OK;
 }
@@ -913,14 +913,24 @@ u8 scePowerGetLedOffTiming(void)
 }
 
 //0x0000114C
-// TODO: Verify function
-static u32 _scePowerInitCallback(void)
+/*
+ * Called after the power service was loaded and started by the Init module
+ * (or Init has finished loading and starting the remaining kernel/VSH modules). 
+*/
+static s32 _scePowerInitCallback(void *data, s32 arg, void *opt)
 {
     s32 appType;
+
+    (void)data;
+    (void)arg;
+    (void)opt;
     
-    appType = sceKernelApplicationType(); //0x00001154           
-    if (appType != SCE_INIT_APPLICATION_VSH && appType != SCE_INIT_APPLICATION_POPS) //0x0000115C - 0x00001174
-        _scePowerSetClockFrequency(g_Power.pllInitSpeed, g_Power.cpuInitSpeed, g_Power.busInitSpeed); //0x00001194 -- sub_00003898
+    appType = sceKernelApplicationType(); // 0x00001154   
+    if (appType != SCE_INIT_APPLICATION_VSH && appType != SCE_INIT_APPLICATION_POPS) // 0x0000115C - 0x00001174
+    {
+        /* Set the initial clock frequencies. */
+        _scePowerSetClockFrequency(g_Power.pllInitSpeed, g_Power.cpuInitSpeed, g_Power.busInitSpeed); // 0x00001194
+    } 
     
     return SCE_ERROR_OK;
 }
