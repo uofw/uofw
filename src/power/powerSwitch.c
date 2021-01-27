@@ -789,7 +789,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     ledOffTiming = scePowerGetLedOffTiming(); // 0x00001BC8 & 0x00001BD0
     if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_AUTO) // 0x00001BE8 & 0x00001BD8
     {
-        ledOffTiming = SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH;
+        ledOffTiming = SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR;
     }
 
     // TODO: Seems to determine the power LED flash rate. Larger values
@@ -1002,7 +1002,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
         loc_00001DD8:
 
-            if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH) // 0x00001DD8
+            if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR) // 0x00001DD8
             {
                 // loc_00002778
 
@@ -1034,7 +1034,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
          * generated suspend/standby requests.
          */
 
-        if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH) // 0x00001E08 -- $v0 is always 3 here
+        if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR) // 0x00001E08 -- $v0 is always 3 here
         {
             if (ledFlashInterval == 0) // 0x00002734
             {
@@ -1158,7 +1158,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_FREEZE, "freeze", &sysEventSuspendPayload,
         NULL, SCE_FALSE, NULL); // 0x00001F2C
 
-    if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH) // 0x00001F34 & 0x00001F00
+    if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR) // 0x00001F34 & 0x00001F00
     {
         // loc_000026CC
         

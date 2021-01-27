@@ -582,7 +582,7 @@ u8 scePowerGetWatchDog(void);
 typedef enum {
 	/**
 	 * This constant defines that the default off timing for the power LED during a 
-	 * power state switch is picked. Currently maps to ::SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH.
+	 * power state switch is picked. Currently maps to ::SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR.
 	 */
 	SCE_POWER_LED_OFF_TIMING_AUTO = 0,
 	/** 
@@ -604,7 +604,7 @@ typedef enum {
 	 * in the case of a standby operation, the system might have to wait for all power/volatile memory locks 
 	 * to be relased. During this standby operation delay, the power LED will flash repeatedly.
 	 */
-	SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH = 3
+	SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR = 3
 } ScePowerLedOffTiming;
 
 /**
