@@ -936,21 +936,28 @@ static s32 _scePowerInitCallback(void *data, s32 arg, void *opt)
 }
 
 //sub_00001A94
-// TODO: Verify function
+/* Sends the new battery suspend capacity to Syscon. */
 s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
 {
-    u32 param;
+    u32 param[4];
     s32 status;
     
-    status = sceSysconReceiveSetParam(0, &param); //0x00001AAC
-    if (status < SCE_ERROR_OK) //0x00001ABC
+    status = sceSysconReceiveSetParam(0, &param); // 0x00001AAC
+    if (status < SCE_ERROR_OK) // 0x00001ABC
+    {
         return status;
+    }
+
+    /* Store the new suspend capacity in the first two bytes of our syscon param. */
     
-    *((u8 *)param + 1) = (u8)((newSuspendCap & 0xFFFF) >> 8); //0x00001AB0 & 0x00001AB4 & 0x00001AC4
-    *(u8 *)param = (u8)(newSuspendCap & 0xFFFF); //0x00001AB0 & 0x00001ACC
-    
-    status = sceSysconSendSetParam(0, &param); //0x00001AC8
-    return (status < SCE_ERROR_OK) ? status : SCE_ERROR_OK; //0x00001AD4
+    *((u8 *)param + 1) = (u8)((newSuspendCap & 0xFFFF) >> 8); // 0x00001AB0 & 0x00001AB4 & 0x00001AC4
+    *(u8 *)param = (u8)(newSuspendCap & 0xFFFF); // 0x00001AB0 & 0x00001ACC
+
+    /* Send the new battery suspend capacity to Syscon. */
+    status = sceSysconSendSetParam(0, &param); // 0x00001AC8
+    return (status < SCE_ERROR_OK) 
+        ? status 
+        : SCE_ERROR_OK;
 }
 
 //0x00003534
