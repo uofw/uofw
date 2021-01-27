@@ -336,10 +336,10 @@ s32 scePowerInit()
     
     g_Power.isBatteryLow = sceSysconIsLowBattery(); //0x00000318
     if (g_Power.isBatteryLow == SCE_TRUE) //0x00000328
-        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000003D4
+        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000003D4
     
     if (sceSysconIsAcSupplied) //0x00000330
-        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x00000348
+        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; //0x00000348
     
     g_Power.callbackArgMask = -1; //0x00000350
     _scePowerIdleInit();//0x0000034C -- sub_000033C4
@@ -359,9 +359,9 @@ static void _scePowerAcSupplyCallback(s32 enable, void *argp)
     u16 type;
     
     if (enable == 0) //0x00000668
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWER_ONLINE, 0, 0); //0x0000067C -- sub_00000BE0
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERONLINE, 0, 0); //0x0000067C -- sub_00000BE0
     else
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWER_ONLINE, 0);
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWERONLINE, 0);
     
     type = g_Power.baryonVersion >> 16;
     if ((type & 0xF0) == 0x20) //0x00000694
@@ -379,9 +379,9 @@ static void _scePowerLowBatteryCallback(s32 enable, void *argp)
     
     g_Power.isBatteryLow = enable; //0x000006F0
     if (enable == 0) //0x000006EC
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_LOW_BATTERY, 0, 0); //0x000006F4
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_LOWBATTERY, 0, 0); //0x000006F4
     else
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_LOW_BATTERY, 0);
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_LOWBATTERY, 0);
     
     scePowerBatteryUpdateInfo(); //0x00000708
 }
@@ -412,22 +412,22 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
                 val = (*(u32 *)(*(u32 *)(param + 4)) + 6) & 0x20; //0x000007CC & 0x000007D0
             
             if (val == 0) //0x000007D4
-                g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000007D8 & 0x0000087C & 0x000007E4
+                g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000007D8 & 0x0000087C & 0x000007E4
             else
-                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOW_BATTERY; //0x000007E0 & 0x000007E4
+                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000007E0 & 0x000007E4
             
             if (((*(u32 *)(*(u32 *)(param + 4)) + 6) & 0x1) == 0) //0x000007F0
-                g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x0000086C & 0x00000874 & 0x00000800
+                g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWERONLINE; //0x0000086C & 0x00000874 & 0x00000800
             else
-                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWER_ONLINE; //0x000007FC & 0x00000800
+                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; //0x000007FC & 0x00000800
             
-            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_HOLD_SWITCH;
+            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_HOLDSW;
             
             sdkVer = sceKernelGetCompiledSdkVersion(); //0x00000810
             if (sdkVer <= 0x06000000 && ((*(u32 *)(*(u32 *)(param + 4)) + 9) & 0x2000) == 0) //0x00000820 & 0x00000830
-                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_HOLD_SWITCH; //0x00000844
+                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_HOLDSW; //0x00000844
             
-            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWER_SWITCH; //0x00000860
+            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWERSW; //0x00000860
             
             _scePowerBatteryUpdatePhase0(*(u32 *)(param + 4), &g_Power.curPowerStateForCallback); //0x0000085C -- sub_0000461C
             return SCE_ERROR_OK;
@@ -896,7 +896,7 @@ s32 scePowerEnd(void)
 //Subroutine scePower_driver_23BDDD8B - Address 0x00001028
 s32 scePower_driver_23BDDD8B(void)
 {
-    g_Power.callbackArgMask &= ~SCE_POWER_CALLBACKARG_HOLD_SWITCH; // 0x00001038 
+    g_Power.callbackArgMask &= ~SCE_POWER_CALLBACKARG_HOLDSW; // 0x00001038 
     return SCE_ERROR_OK;
 }
 

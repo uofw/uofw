@@ -598,11 +598,11 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
             {
                 if (powerSwitchSetFlags & POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE) // 0x00001A34
                 {
-                    _scePowerNotifyCallback(0, 0, SCE_POWER_CALLBACKARG_POWER_SWITCH_SUSPEND_REQUESTED);
+                    _scePowerNotifyCallback(0, 0, SCE_POWER_CALLBACKARG_POWERSW_SUSPEND_REQUESTED);
                 }
                 else
                 {
-                    _scePowerNotifyCallback(0, 0, SCE_POWER_CALLBACKARG_POWER_SWITCH_STANDBY_REQUESTED); // 0x00001A3C - 0x00001A48
+                    _scePowerNotifyCallback(0, 0, SCE_POWER_CALLBACKARG_POWERSW_STANDBY_REQUESTED); // 0x00001A3C - 0x00001A48
                 }
             }
 
@@ -1996,14 +1996,14 @@ static void _scePowerPowerSwCallback(s32 enable, void* argp)
         sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); // 0x00002EFC
         sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); // 0x00002F08
 
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWER_SWITCH, 0); // 0x00002F14
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWERSW, 0); // 0x00002F14
     }
     else 
     {
         sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE); // 0x00002F38
         sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE); // 0x00002F44
 
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWER_SWITCH, 0, 0); // 0x00002F4C
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERSW, 0, 0); // 0x00002F4C
     }
 }
 
@@ -2014,7 +2014,7 @@ static void _scePowerHoldSwCallback(s32 enable, void* argp)
     (void)argp;
 
     if (enable) // 0x00002F6C
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0); // 0x00002F64
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_HOLDSW, 0); // 0x00002F64
     else
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_HOLD_SWITCH, 0, 0); // 0x00002F74
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_HOLDSW, 0, 0); // 0x00002F74
 }
