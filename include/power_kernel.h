@@ -575,6 +575,48 @@ s32 scePowerSetWakeupCondition(u32 wakeUpCondition);
  */
 u8 scePowerGetWatchDog(void);
 
+/**
+ * Defines constants specifying the timing for the PSP's power LED to be turned off when a power state 
+ * switch operation (standby/suspend/reboot) is in process.
+ */
+typedef enum {
+	/**
+	 * This constant defines that the default off timing for the power LED during a 
+	 * power state switch is picked. Currently maps to ::SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH.
+	 */
+	SCE_POWER_LED_OFF_TIMING_AUTO = 0,
+	/** 
+	 * This constant defines that the power LED is turned OFF at the beginning of a power state
+	 * switch.
+	 */
+	SCE_POWER_LED_OFF_TIMING_POWER_STATE_SWITCH_START = 1,
+	/**
+	 * This constant defines that the power LED is turned OFF at the end of a power state switch
+	 * (when power is off). Depending on the actual power state switch, the power LED might not be 
+	 * turned off at all (like during a reboot).
+	 */
+	SCE_POWER_LED_OFF_TIMING_POWER_OFF = 2,
+	/**
+	 * This constant defines that the power LED is turned OFF at the end of a power state switch
+	 * (when power is off). Depending on the actual power state switch, the power LED might not be 
+	 * turned off at all (like during a reboot). In addition, the power LED flashes during the
+	 * power state switch operation if the system is busy preparing for the power state switch. I.e.
+	 * in the case of a standby operation, the system might have to wait for all power/volatile memory locks 
+	 * to be relased. During this standby operation delay, the power LED will flash repeatedly.
+	 */
+	SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH = 3
+} ScePowerLedOffTiming;
+
+/**
+ * Gets the off timing for the PSP's power LED for a power state switch operation 
+ * (like standby/suspend/reboot).
+ * 
+ * @return The power LED's off timing used by the power service. One of ::ScePowerLedOffTiming.
+ * 
+ * @see ::ScePowerLedOffTiming
+ */
+u8 scePowerGetLedOffTiming(void);
+
 /* Power switch manipulation lock / unlock */
 
 /**

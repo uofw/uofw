@@ -66,7 +66,8 @@ typedef struct {
     u8 isWlanSuppressChargingEnabled; // 527
     s8 unk528;
     s8 wlanExclusivePllClockLimit; // 529
-    u8 ledOffTiming;
+    u8 ledOffTiming; // 530
+    u8 padding[3];
     s16 cpuInitSpeed; //534 -- CPU clock init speed
     s16 busInitSpeed; //536 -- Bus clock init speed
     s16 pllInitSpeed; //538 -- PLL clock init speed
@@ -906,10 +907,9 @@ u8 scePowerGetWatchDog(void)
 }
 
 //Subroutine scePower_driver_C463E7F2 - Address 0x00001140
-// TODO: Verify function
 u8 scePowerGetLedOffTiming(void)
 {
-    return g_Power.ledOffTiming; //0x00001148
+    return g_Power.ledOffTiming; // 0x00001148
 }
 
 //0x0000114C

@@ -787,9 +787,9 @@ static s32 _scePowerSuspendOperation(s32 mode)
     wakeupCondition = g_PowerSwitch.wakeupCondition; // 0x00001BCC
 
     ledOffTiming = scePowerGetLedOffTiming(); // 0x00001BC8 & 0x00001BD0
-    if (ledOffTiming == 0) // 0x00001BE8 & 0x00001BD8
+    if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_AUTO) // 0x00001BE8 & 0x00001BD8
     {
-        ledOffTiming = 3; // TODO: [3] seems to specify LED should flash during suspend op
+        ledOffTiming = SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH;
     }
 
     // TODO: Seems to determine the power LED flash rate. Larger values
@@ -802,7 +802,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
         if ((suspendMode & 0xF) == 4) // 0x000027E0 -- Cold reboot (0x404)
         {
             sysEventSuspendPayload.isStandbyOrRebootRequested = SCE_TRUE;
-            ledOffTiming = 2; // 0x000027E8 --TODO: [2] seems to indicate power LED is to remain ON for the entire operation
+            ledOffTiming = SCE_POWER_LED_OFF_TIMING_POWER_OFF; // 0x000027E8
         }
     }
     else if ((suspendMode & 0xF) < 2) // 0x00001BF0
@@ -898,7 +898,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     } 
     while (--suspendEventPhase2Event >= SCE_SYSTEM_SUSPEND_EVENT_PHASE2_0);
 
-    if (ledOffTiming == 1) // 0x00001CF4 -- [1] seems to indicate power led is turned OFF the entire suspend op
+    if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_STATE_SWITCH_START) // 0x00001CF4
     {
         // loc_00002788
 
@@ -1002,7 +1002,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
         loc_00001DD8:
 
-            if (ledOffTiming == 3) // 0x00001DD8
+            if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH) // 0x00001DD8
             {
                 // loc_00002778
 
@@ -1019,7 +1019,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
             sceCtrlSetPollingMode(SCE_CTRL_POLL_INACTIVE); // 0x00001DF0
 
-            ledOffTiming = 2; // 0x00001DFC
+            ledOffTiming = SCE_POWER_LED_OFF_TIMING_POWER_OFF; // 0x00001DFC
 
             sceSysconNop(); // 0x00001DF8
 
@@ -1034,7 +1034,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
          * generated suspend/standby requests.
          */
 
-        if (ledOffTiming == 3) // 0x00001E08 -- $v0 is always 3 here
+        if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH) // 0x00001E08 -- $v0 is always 3 here
         {
             if (ledFlashInterval == 0) // 0x00002734
             {
@@ -1158,9 +1158,11 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_FREEZE, "freeze", &sysEventSuspendPayload,
         NULL, SCE_FALSE, NULL); // 0x00001F2C
 
-    if (ledOffTiming == 3) // 0x00001F34 & 0x00001F00
+    if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_FLASH) // 0x00001F34 & 0x00001F00
     {
         // loc_000026CC
+        
+        /* Turn on the power LED so that it will remain on until power is lost (PSP turned off). */
 
         sceSysconSetPollingMode(1); // 0x000026CC
         sceSysconCtrlLED(PSP_SYSCON_LED_POWER, PSP_SYSCON_LED_POWER_STATE_ON); // 0x000026D8
