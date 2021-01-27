@@ -31,6 +31,7 @@ typedef struct
 } ScePowerIdle;
 
 static s32 _scePowerVblankInterrupt(s32 subIntNm, void* arg);
+static s32 GetGp(void);
 
 ScePowerIdle g_PowerIdle; //0x0000C400
 
@@ -248,4 +249,10 @@ u32 scePowerIdleTimerDisable(u32 slot)
 
     sceKernelCpuResumeIntr(intrState);
     return (data >> slot) & 0x1; //0x000031A4
+}
+
+//0x00003534
+static s32 GetGp(void)
+{
+    return pspGetGp();
 }

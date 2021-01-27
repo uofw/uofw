@@ -959,10 +959,3 @@ s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
         ? status 
         : SCE_ERROR_OK;
 }
-
-//0x00003534
-// TODO: Verify function -- i.e. delete
-static u32 GetGp(void)
-{
-   return pspGetGp();
-}
