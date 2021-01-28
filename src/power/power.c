@@ -357,16 +357,17 @@ static void _scePowerAcSupplyCallback(s32 enable, void *argp)
 {
     (void)argp;
 
-    /* Notify the system via callbacks about the new AC power supply state. */
-    if (!enable) // 0x00000668
-    {
-        /* Power is no longer supplied from an AC adapter. */
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERONLINE, 0, 0); // 0x00000670 - 0x0000067C
-    }
-    else
+    /* Generate a new power callback for the AC supply state. */
+
+    if (enable) // 0x00000668
     {
         /* Power is now supplied from an AC adapter. */
         _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWERONLINE, 0); // 0x0000067C & 0x0000066C & 0x0000065C
+    }
+    else
+    {
+        /* Power is no longer supplied from an AC adapter. */
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERONLINE, 0, 0); // 0x00000670 - 0x0000067C
     }
 
     if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion) == 2)
@@ -385,6 +386,8 @@ static void _scePowerAcSupplyCallback(s32 enable, void *argp)
 //sub_0x000006C4
 static void _scePowerLowBatteryCallback(s32 enable, void *argp)
 {
+    (void)argp;
+
     /* We only generate a power callback if the low battery state has changed. */
     if (g_Power.isBatteryLow == (u8)enable) // 0x000006D8
     {
