@@ -383,19 +383,31 @@ static void _scePowerAcSupplyCallback(s32 enable, void *argp)
 }
 
 //sub_0x000006C4
-// TODO: Verify function
 static void _scePowerLowBatteryCallback(s32 enable, void *argp)
 {
-    if (g_Power.isBatteryLow == enable) //0x000006D8
+    /* We only generate a power callback if the low battery state has changed. */
+    if (g_Power.isBatteryLow == (u8)enable) // 0x000006D8
+    {
         return;
+    }
+
+    /* Low battery state has changed. Generate the appropriate power callback. */
     
-    g_Power.isBatteryLow = enable; //0x000006F0
-    if (enable == 0) //0x000006EC
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_LOWBATTERY, 0, 0); //0x000006F4
+    g_Power.isBatteryLow = (u8)enable; //0x000006F0
+
+    if (enable) // 0x000006EC
+    {
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_LOWBATTERY, 0); // 0x00000700 & 0x000006E0 & 0x000006E4
+    }
     else
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_LOWBATTERY, 0);
+    {
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_LOWBATTERY, 0); // 0x000006F4 - 0x00000700
+    }
     
-    scePowerBatteryUpdateInfo(); //0x00000708
+    /* Update power service's power battery control block to reflect the low battery state change. */
+    scePowerBatteryUpdateInfo(); // 0x00000708
+
+    return;
 }
 
 //sub_0x0000071C
