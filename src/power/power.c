@@ -270,12 +270,12 @@ s32 scePowerInit()
     g_Power.pllInitSpeed = (((u16 *)baryonData)[50] == 0) ? g_Power.pllInitSpeed : ((u16 *)baryonData)[50]; //0x00000218
     
     if (minPllSpeed <= 266 && g_Power.pllInitSpeed < 267) { //0x0000021C & 0x0000022C
-        if (minPllSpeed > 222 || g_Power.pllInitSpeed > 222) //0x00000230 & 0x000004F0
-            g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; //0x00000508
+if (minPllSpeed > 222 || g_Power.pllInitSpeed > 222) //0x00000230 & 0x000004F0
+g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; //0x00000508
     }
     else {
-        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE; //0x00000220 || 0x00000234
-    }   
+    g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE; //0x00000220 || 0x00000234
+    }
     status = sceKernelDipsw(49); //0x00000238
     if (status == 1) { //0x00000244
         g_Power.busInitSpeed = 166;
@@ -291,83 +291,95 @@ s32 scePowerInit()
     ddrVoltage2 = -1; //0x00000268
     ddrStrength1 = -1; //0x0000026C
     ddrStrength2 = -1; //0x00000274
-            
+
     if (status < SCE_ERROR_OK) //0x00000270
         memset(powerData, 0, sizeof powerData);
-        
+
     upperBaryonVer = g_Power.baryonVersion >> 16; //0x0000027C
     if ((upperBaryonVer & 0xF0) == 0x10) { //0x00000288
         if ((s8)powerData[20] < 0) //0x00000444
             ddrVoltage1 = (powerData[20] & 0x7F) << 8; //0x00000490
-        
+
         if ((s8)powerData[19] < 0) //0x00000454
             ddrVoltage2 = (powerData[19] & 0x7F) << 8; //0x00000488
-        
+
         if ((s8)powerData[22] < 0) //0x00000478
             ddrStrength1 = (s8)powerData[22] & 0x7F;
-        
+
         if ((s8)powerData[21] < 0) //0x00000474
             ddrStrength2 = (s8)powerData[21] & 0x7F; //0x00000480
     }
     else if ((upperBaryonVer & 0xF0) == 0x20 || (upperBaryonVer & 0xF0) < 0x40 || powerData[24] == 0x40) { //0x00000290 & 0x000002A0 & 0x000002AC
         if ((s8)powerData[24] < 0) //0x000003E8
             ddrVoltage1 = (powerData[24] 0x7F) << 8; //0x00000438
-        
+
         if ((s8)powerData[23] < 0) //0x000003F8
             ddrVoltage2 = (powerData[23] 0x7F) << 8; //0x00000430
-        
+
         if ((s8)powerData[26] < 0) //0x00000420
             ddrStrength1 = (s8)powerData[26] & 0x7F;
-        
+
         if ((s8)powerData[25] < 0) //0x00000428
             ddrStrength2 = (s8)powerData[25] & 0x7F;
     }
     scePowerSetDdrVoltage(ddrVoltage1, ddrVoltage2); //0x000002B8 -- scePower_driver_018AB235
     scePowerSetDdrStrength(ddrStrength1, ddrStrength2); //0x000002C8 -- scePower_driver_D13377F7
-    
-    if ((upperBaryonVer & 0xF0) == 0x29 || (upperBaryonVer & 0xF0) == 0x2A || (upperBaryonVer & 0xF0) == 0x30 || 
-     (upperBaryonVer & 0xF0) == 0x40) //0x000002DC & 0x000002E8 & 0x000002F4 & 0x000002FC
+
+    if ((upperBaryonVer & 0xF0) == 0x29 || (upperBaryonVer & 0xF0) == 0x2A || (upperBaryonVer & 0xF0) == 0x30 ||
+        (upperBaryonVer & 0xF0) == 0x40) //0x000002DC & 0x000002E8 & 0x000002F4 & 0x000002FC
         a1 = 1;
     else
         a1 = 0;
-    
+
     _scePowerBatteryInit(fp, a1); //0x00000304 -- sub_00005B1C
     _scePowerBatterySetParam(batteryReallyLowCap, batteryLowCap); //0x00000310 -- sub_00005BF0
-    
+
     g_Power.isBatteryLow = sceSysconIsLowBattery(); //0x00000318
     if (g_Power.isBatteryLow == SCE_TRUE) //0x00000328
         g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000003D4
-    
+
     if (sceSysconIsAcSupplied) //0x00000330
         g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; //0x00000348
-    
+
     g_Power.callbackArgMask = -1; //0x00000350
     _scePowerIdleInit();//0x0000034C -- sub_000033C4
-    
+
     sceSysconSetAcSupplyCallback(_scePowerAcSupplyCallback, NULL); //0x0000035C
     sceSysconSetLowBatteryCallback(_scePowerLowBatteryCallback, NULL); //0x0000036C
     sceKernelRegisterSysEventHandler(_scePowerSysEventHandler); //0x00000378
     sceKernelSetInitCallback(_scePowerInitCallback, 2, NULL); //0x0000038C
-    
+
     return SCE_ERROR_OK;
 }
 
 //0x00000650
-// TODO: Verify function
 static void _scePowerAcSupplyCallback(s32 enable, void *argp)
 {
-    u16 type;
-    
-    if (enable == 0) //0x00000668
-        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERONLINE, 0, 0); //0x0000067C -- sub_00000BE0
+    (void)argp;
+
+    /* Notify the system via callbacks about the new AC power supply state. */
+    if (!enable) // 0x00000668
+    {
+        /* Power is no longer supplied from an AC adapter. */
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERONLINE, 0, 0); // 0x00000670 - 0x0000067C
+    }
     else
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWERONLINE, 0);
-    
-    type = g_Power.baryonVersion >> 16;
-    if ((type & 0xF0) == 0x20) //0x00000694
-        _scePowerBatteryUpdateAcSupply(enable); //0x000006B4 -- sub_0000544C
-    
-    scePowerBatteryUpdateInfo(); //0x0000069C -- scePower_27F3292C
+    {
+        /* Power is now supplied from an AC adapter. */
+        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_POWERONLINE, 0); // 0x0000067C & 0x0000066C & 0x0000065C
+    }
+
+    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion) == 2)
+    {
+        /* We are running on either a PSP 2000 gen or a PSP 3000 gen. */
+
+        _scePowerBatteryUpdateAcSupply(enable);
+    }
+
+    /* Update power service's power battery control block to reflect the AC power supply change. */
+    scePowerBatteryUpdateInfo(); // 0x0000069C
+
+    return;
 }
 
 //sub_0x000006C4
