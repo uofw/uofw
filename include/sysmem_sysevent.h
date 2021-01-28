@@ -17,7 +17,7 @@ enum SceSysEventTypes {
 #define SCE_SYSTEM_SUSPEND_EVENT_CANCELLATION       0x00000101
 #define SCE_SYSTEM_SUSPEND_EVENT_START              0x00000102
 
-/* Different phases can be used to prioritize work. Phase2_16 is raised first, Phase2_0 last. */
+/* Different phases can be used to prioritize work/set up data. Phase2_16 is raised first, Phase2_0 last. */
 
 #define SCE_SYSTEM_SUSPEND_EVENT_PHASE2_0           0x00000200
 #define SCE_SYSTEM_SUSPEND_EVENT_PHASE2_1           0x00000201
@@ -43,7 +43,7 @@ enum SceSysEventTypes {
 
 #define SCE_SYSTEM_SUSPEND_EVENT_FREEZE             0x00001000
 
-/* Different phases can be used to prioritize work. Phase0_15 is raised first, Phase0_0 last. */
+/* Different phases can be used to prioritize work/set up data. Phase0_15 is raised first, Phase0_0 last. */
 
 #define SCE_SYSTEM_SUSPEND_EVENT_PHASE0_0           0x00004000
 #define SCE_SYSTEM_SUSPEND_EVENT_PHASE0_1           0x00004001
@@ -64,7 +64,7 @@ enum SceSysEventTypes {
 
 /* PSP resume events */
 
-/* Different phases can be used to prioritize work. Phase0_0 is raised first, Phase0_15 last. */
+/* Different phases can be used to prioritize work/set up data. Phase0_0 is raised first, Phase0_15 last. */
 
 #define SCE_SYSTEM_RESUME_EVENT_PHASE0_0            0x00010000
 #define SCE_SYSTEM_RESUME_EVENT_PHASE0_1            0x00010001
@@ -85,11 +85,11 @@ enum SceSysEventTypes {
 
 #define SCE_SYSTEM_RESUME_EVENT_MELT                0x00040000
 
-#define SCE_SYSTEM_RESUME_EVENT_PHASE1_0            0x000100000
-#define SCE_SYSTEM_RESUME_EVENT_PHASE1_1            0x000100001
-#define SCE_SYSTEM_RESUME_EVENT_PHASE1_2            0x000100002
+#define SCE_SYSTEM_RESUME_EVENT_PHASE1_0            0x00100000
+#define SCE_SYSTEM_RESUME_EVENT_PHASE1_1            0x00100001
+#define SCE_SYSTEM_RESUME_EVENT_PHASE1_2            0x00100002
 
-#define SCE_SYSTEN_RESUME_EVENT_COMPLETED           0x000400000  
+#define SCE_SYSTEN_RESUME_EVENT_COMPLETED           0x00400000  
 
 /* PSP clock frequency change events */
 

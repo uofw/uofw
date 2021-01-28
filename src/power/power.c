@@ -414,59 +414,102 @@ static void _scePowerLowBatteryCallback(s32 enable, void *argp)
 }
 
 //sub_0x0000071C
-// TODO: Verify function
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result)
 {
-    u16 type;
-    u32 val;
-    s32 sdkVer;
-
     (void)eventName;
     (void)result;
-    
-    if (eventId == 0x402) { //0x00000730
-        if (_scePowerBatteryIsBusy() == SCE_FALSE) //0x00000898 -- sub_00005C08
-            return SCE_ERROR_OK;
-        
-        return SCE_ERROR_BUSY;
+
+    if (eventId == SCE_SYSTEM_SUSPEND_EVENT_PHASE1_2) // 0x00000730
+    {
+        /* 
+         * Let the system know that the suspend operation should not proceed for now 
+         * as the power service is busy handling the suspension request.
+         */
+        return _scePowerBatteryIsBusy() // 0x0000088C & 0x00000898
+            ? SCE_ERROR_BUSY
+            : SCE_ERROR_OK;
     }
-    if (eventId >= 0x403) { //0x0000073C
-        if (eventId == 0x10009) { //0x00000784
-            type = g_Power.baryonVersion >> 16; //0x000007AC
-            if ((type & 0xF0) >= 1 && ((type & 0xF0) ^ 0x10) >= 1) //loc_00000880
-                val = (*(u32 *)(*(u32 *)(param + 4)) + 9) & 0x10; //0x00000880 & 0x00000888
-            else 
-                val = (*(u32 *)(*(u32 *)(param + 4)) + 6) & 0x20; //0x000007CC & 0x000007D0
-            
-            if (val == 0) //0x000007D4
-                g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000007D8 & 0x0000087C & 0x000007E4
-            else
-                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000007E0 & 0x000007E4
-            
-            if (((*(u32 *)(*(u32 *)(param + 4)) + 6) & 0x1) == 0) //0x000007F0
-                g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWERONLINE; //0x0000086C & 0x00000874 & 0x00000800
-            else
-                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; //0x000007FC & 0x00000800
-            
-            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_HOLDSW;
-            
-            sdkVer = sceKernelGetCompiledSdkVersion(); //0x00000810
-            if (sdkVer <= 0x06000000 && ((*(u32 *)(*(u32 *)(param + 4)) + 9) & 0x2000) == 0) //0x00000820 & 0x00000830
-                g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_HOLDSW; //0x00000844
-            
-            g_Power.curPowerStateForCallback &= SCE_POWER_CALLBACKARG_POWERSW; //0x00000860
-            
-            _scePowerBatteryUpdatePhase0(*(u32 *)(param + 4), &g_Power.curPowerStateForCallback); //0x0000085C -- sub_0000461C
-            return SCE_ERROR_OK;
+
+    // uofw note: The ASM checks "eventId < 0x403" but we can optimize this to "eventId <= 0x401"
+    // so we can use macros instead of a magic number
+    if (eventId <= SCE_SYSTEM_SUSPEND_EVENT_PHASE1_1) // 0x00000738 & 0x0000073C
+    {
+        if (eventId == SCE_SYSTEM_SUSPEND_EVENT_PHASE1_0) // 0x00000748
+        {
+            /* Suspend the battery component of the power service. */
+            _scePowerBatterySuspend(); // 0x00000770
         }
-        if (eventId == 0x00100000) //0x00000790
-            _scePowerBatteryResume(); //0x00000798 -- sub_00005C18
-        
-        return SCE_ERROR_OK;   
+
+        return SCE_ERROR_OK;
     }
-    if (eventId = 0x400) //0x00000748
-        _scePowerBatterySuspend(); //0x00000770 -- sub_00004570
-    
+
+    if (eventId == SCE_SYSTEM_RESUME_EVENT_PHASE0_9) // 0x00000784
+    {
+        SceSysEventResumePayload *pResumePayload = (SceSysEventResumePayload *)param;
+        u32 isLowBattery;
+
+        s32 baryonVersionMajor = PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion); // 0x000007AC & 0x000007B0
+        if (baryonVersionMajor == 0x0 || baryonVersionMajor == 0x1) // 0x000007B4 - 0x000007C4
+        {
+            /* PSP 1000 series */
+
+            isLowBattery = ((u32 *)(pResumePayload->unk4))[6] & 0x20; // 0x000007C8 - 0x000007D0
+        }
+        else
+        {
+            /* PSP 2000 series and newer */
+
+            isLowBattery = ((u32 *)(pResumePayload->unk4))[9] & 0x10; // 0x000007C8 & 0x00000880 - 0x00000888
+        }
+
+        /* Update the low battery status for the power callbacks. */
+
+        if (isLowBattery) // 0x000007D4
+        {
+            g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; // 0x000007E0
+        }
+        else
+        {
+            g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_LOWBATTERY; // 0x00000888 & 0x000007E4
+        }
+
+        /* Update the power supply status for the power callbacks. */
+
+        u32 isPowerOnline = ((u32 *)(pResumePayload->unk4))[6] & 0x1; // 0x000007E8 - 0x000007EC
+        if (isPowerOnline) // 0x000007F0
+        {
+            g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; // 0x000007FC & 0x00000800
+        }
+        else
+        {
+            g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_POWERONLINE; // 0x00000874 & 0x00000800
+        }
+
+        /* Update the HOLD switch lock state for the power callbacks. */
+
+        g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_HOLDSW; // 0x0000080C & 0x00000814
+
+        u32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00000810
+        if (sdkVersion <= 0x06000000 && !(((u32 *)(pResumePayload->unk4))[8] & 0x2000)) // 0x0000081C - 0x00000830
+        {
+            g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_HOLDSW; // 0x0000083C - 0x00000844
+        }
+
+        /* Update the POWER switch status for the power callbacks. */
+        g_Power.curPowerStateForCallback &= ~SCE_POWER_CALLBACKARG_POWERSW; // 0x00000858 & 0x00000860
+
+        /* 
+         * Refresh the power service's internal battery control block with new battery status data 
+         * (such as remaining battery lifetime). 
+         */
+        _scePowerBatteryUpdatePhase0((void *)pResumePayload->unk4, &g_Power.curPowerStateForCallback); // 0x0000085C
+    }
+    else if (eventId == SCE_SYSTEM_RESUME_EVENT_PHASE1_0) // 0x00000790
+    {
+        /* Resume the battery component of the power service now. */
+        _scePowerBatteryResume(); // 0x00000798
+    }
+
     return SCE_ERROR_OK;
 }
 

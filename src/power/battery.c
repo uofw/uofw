@@ -87,7 +87,6 @@ static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
 static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage); // 0x00005130
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
 static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType); // 0x00005B1C
-static s32 _scePowerBatteryIsBusy(void); // 0x00005C08
 static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket* pSysconPacket, void* param); // 0x00005ED8
 
@@ -1476,7 +1475,7 @@ s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
 }
 
 // Subroutine sub_00005C08 - Address 0x00005C08
-static s32 _scePowerBatteryIsBusy(void)
+s32 _scePowerBatteryIsBusy(void)
 {
     return !g_Battery.isIdle;
 }

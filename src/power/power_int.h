@@ -35,6 +35,7 @@ s32 _scePowerBatteryUpdatePhase0(void* arg0, u32* arg1);
 s32 _scePowerBatteryUpdateAcSupply(s32 enable);
 s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity);
 s32 _scePowerChangeSuspendCap(u32 newSuspendCap);
+s32 _scePowerBatteryIsBusy(void);
 
 s32 _scePowerFreqInit(void);
 s32 _scePowerFreqEnd(void);
