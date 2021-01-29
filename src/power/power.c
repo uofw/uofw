@@ -3,6 +3,7 @@
 */
 
 #include <common_imp.h>
+#include <idstorage.h>
 #include <interruptman.h>
 #include <modulemgr_init.h>
 #include <power_kernel.h>
