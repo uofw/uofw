@@ -20,13 +20,20 @@
 /* Power service initialization/termination */
 
 /**
+ * Initializes the power service.
+ * 
+ * @return Always SCE_ERROR_OK.
+ */
+s32 scePowerInit(void);
+
+/**
  * Terminates the power service.
  *
  * @return Always SCE_ERROR_OK.
  */
 s32 scePowerEnd(void);
 
-/* Callbacks */
+/* Power callbacks */
 
 /** 
  * This constant specifies that a search for a slot number from among the empty slots is to be automatically performed
@@ -789,6 +796,28 @@ typedef enum {
  * @return One of ::ScePowerWlanActivity.
  */
 u8 scePowerGetWlanActivity(void);
+
+/* Battery state */
+
+/**
+ * Defines constants indicating whether the type of the equipped battery supports battery state monitoring.
+ * If battery state monitoring is supported, state information such as the full/remaining battery capacity, 
+ * or the current battery voltage/temperatur can be obtained through the power service.
+ */
+typedef enum {
+	/** 
+	 * Describes a battery type which supports battery state monitoring. This type of battery is equipped by
+	 * the PSP-1000, PSP-2000 and PSP-3000 models.
+	 */
+	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED = 0,
+	/**
+	 * Describes a battery type which does not supports battery state monitoring. This type of battery is 
+	 * equipped by the PSP Go and the PSP-E1000 models.
+	 */
+	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
+} ScePowerBatteryType;
+
+/* Misc */
 
 /**
  * Gets the Grahpic Engine's current eDRAM refresh mode.

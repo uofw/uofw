@@ -27,19 +27,35 @@ SCE_MODULE_REBOOT_BEFORE("_scePowerModuleRebootBefore");
 SCE_MODULE_REBOOT_PHASE("_scePowerModuleRebootPhase");
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT         (26)
-#define BARYON_DATA_LOW_BATTERY_CAP_SLOT                (28)
-
 #define POWER_CALLBACK_TOTAL_SLOTS_KERNEL               (32)
 #define POWER_CALLBACK_MAX_SLOT_KERNEL                  (POWER_CALLBACK_TOTAL_SLOTS_KERNEL - 1)
 #define POWER_CALLBACK_TOTAL_SLOTS_USER                 (16)
 #define POWER_CALLBACK_MAX_SLOT_USER                    (POWER_CALLBACK_TOTAL_SLOTS_USER - 1)
 
-#define BATTERY_LOW_CAPACITY_VALUE                      (216)
-#define BATTERY_REALLY_LOW_CAPACITY_VALUE               (72)
+/*
+ * The remaining capacity threshold for the PSP battery at which we treat the battery charge state
+ * at being low enough that we force a PSP device suspension. In mAh. Given a standard PSP battery
+ * with a capacity of 1800 mAh, this threshold is set to 4% of a full charge.
+ */
+#define BATTERY_FORCE_SUSPEND_CAPACITY_THRESHOLD            72
+/* 
+ * The remaining capacity threshold for the PSP battery at which we treat the battery as being
+ * in the [low battery] state. In mAh. Given a standard PSP battery with a capacity of 1800 mAh,
+ * this threshold is set to 12% of a full charge.
+ */
+#define BATTERY_LOW_CAPACITY_THRESHOLD                      216
+
+/* Defines the initial PLL clock frequency (in MHz) on startup for (game) applications. */
+#define PSP_CLOCK_PLL_FREQUENCY_STARTUP_GAME_APP_UPDATER    222
+/* Defines the initial CPU clock frequency (in MHz) on startup for (game) applications. */
+#define PSP_CLOCK_CPU_FREQUENCY_STARTUP_GAME_APP_UPDATER    222
+/* Defines the initial bus clock frequency (in MHz) on startup for (game) applications. */
+#define PSP_CLOCK_BUS_FREQUENCY_STARTUP_GAME_APP_UPDATER    111
 
 #define SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL    (3)
 #define SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_EXTERNAL    (4)
+
+// TODO: Remove
 
 /** Cancel all PSP Hardware timers. */
 #define SCE_KERNEL_POWER_TICK_DEFAULT               (0)     
@@ -48,8 +64,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 /** Cancel LCD-related timer */
 #define SCE_KERNEL_POWER_TICK_LCDONLY               (6)	
 
-typedef struct 
-{
+typedef struct  {
     SceUID cbid; // 0
     s32 customPowerState; // 4
     s32 powerState; //8
@@ -65,13 +80,30 @@ typedef struct {
     u8 wlanActivity; // 525
     u8 watchDog; //526
     u8 isWlanSuppressChargingEnabled; // 527
-    s8 unk528;
+    u8 unk528; // 528
+    /* 
+     * The WLAN exclusive PLL clock frequency limit. If WLAN is active, the PLL clock frequency cannot be set
+     * to a value which is higher than this clock limit. If WLAN is inactive, this clock limit dictates if the
+     * PLL is currently operating at a clock frequency where WLAN can be activated.
+     */
     s8 wlanExclusivePllClockLimit; // 529
     u8 ledOffTiming; // 530
     u8 padding[3];
-    s16 cpuInitSpeed; //534 -- CPU clock init speed
-    s16 busInitSpeed; //536 -- Bus clock init speed
-    s16 pllInitSpeed; //538 -- PLL clock init speed
+    /* 
+     * The initial CPU clock frequency set by the power service when a game, application or updater process
+     * has been launched.
+     */
+    u16 cpuClockInitialFrequencyGameAppUpdater; // 534
+    /*
+     * The initial bus clock frequency set by the power service when a game, application or updater process
+     * has been launched.
+     */
+    u16 busClockInitialFrequencyGameAppUpdater; // 536
+    /*
+     * The initial PLL clock frequency set by the power service when a game, application or updater process
+     * has been launched.
+     */
+    u16 pllClockInitialFrequencyGameAppUpdater; // 538
 } ScePower; // size = 540
 
 static void _scePowerAcSupplyCallback(s32 enable, void* argp); //sub_0x00000650
@@ -79,7 +111,7 @@ static void _scePowerLowBatteryCallback(s32 enable, void* argp); //sub_0x000006C
 static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result); //sub_0x0000071C
 static s32 _scePowerInitCallback(void *data, s32 arg, void *opt); //sub_0x0000114C
 
-const SceSysEventHandler g_PowerSysEv = 
+SceSysEventHandler g_PowerSysEv = 
 {
     .size = sizeof(SceSysEventHandler),
     .name = "ScePower",
@@ -101,254 +133,375 @@ const SceSysEventHandler g_PowerSysEv =
     }  
 }; // 0x00007040
 
-ScePower g_Power; //0x00007080
+ScePower g_Power; // 0x00007080
 
 //scePower_driver_9CE06934 - Address 0x00000000
-// TODO: Verify function
-s32 scePowerInit()
+s32 scePowerInit(void)
 {
-    u8 baryonData[512];
-    u8 powerData[512];
+    SceIdStorageLeafBaryon baryonData; // $sp
+    SceIdStorageLeafMDdr mDdrData; // $sp + 512
     s32 status;
-    s32 appType;
-    u16 upperBaryonVer;
-    u8 tachyonVoltage1;
-    u16 batteryLowCap;
-    u16 batteryReallyLowCap;
-    u8 tachyonVoltage2;
-    s8 ddrVoltage1;
-    s8 ddrVoltage2;
-    s8 ddrStrength1;
-    s8 ddrStrength2;
-    u8 fp;         
-    s16 minCpuSpeed;
-    s16 maxCpuSpeed;
-    s16 minBusSpeed;
-    s16 maxBusSpeed;
-    s16 minPllSpeed;
-    s16 maxPllSpeed;
-    
-    fp = 0;
-    
-    _scePowerSwInit();
-    _scePowerFreqInit();
-    
-    g_Power.baryonVersion = _sceSysconGetBaryonVersion(); //0x00000040
-    status = sceIdStorageLookup(4, 0, baryonData, sizeof baryonData); //0x00000058
-    if (status < SCE_ERROR_OK) { //0x00000060
-        memset(baryonData, 0, sizeof baryonData); //0x00000618
-        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz;
-        g_Power.watchDog = 0;
-        g_Power.isWlanSuppressChargingEnabled = SCE_FALSE;
-        g_Power.unk528 = 0;
-        g_Power.ledOffTiming = 0;
-        batteryReallyLowCap = ((u16 *)baryonData)[BARYON_DATA_REALLY_LOW_BATTERY_CAP_SLOT]; //0x0000062C
-        batteryLowCap = ((u16 *)baryonData)[BARYON_DATA_LOW_BATTERY_CAP_SLOT]; //0x00000634        
-        _scePowerChangeSuspendCap(216); //0x00000640
-    }
-    else {
-        g_Power.ledOffTiming = baryonData[31]; //0x00000080
-        g_Power.watchDog = baryonData[24] & 0x7F; //0x00000088
-        g_Power.isWlanSuppressChargingEnabled = baryonData[25]; //0x0000008C
-        g_Power.unk528 = baryonData[30]; //0x00000090
-        g_Power.wlanExclusivePllClockLimit = ((s8)baryonData[52] < 0) ? baryonData[52] & 0x7F : SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; //0x00000098       
-        batteryReallyLowCap = BATTERY_REALLY_LOW_CAPACITY_VALUE; //0x00000094
-        batteryLowCap = BATTERY_LOW_CAPACITY_VALUE; //0x0000009C
-    }
-    appType = sceKernelApplicationType(); //0x000000A8
-    if (appType == SCE_INIT_APPLICATION_GAME) { //0x000000B4
-        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz;
-        scePowerSetPllUseMask(60); //0x00000600
-    }
-    
-    upperBaryonVer = g_Power.baryonVersion >> 16;
-    if ((upperBaryonVer & 0xF0) == 0x20 && (upperBaryonVer & 0xFF) >= 0x22 && (upperBaryonVer & 0xFF) < 0x26) { //0x000000CC & 0x000005CC & 0x000005D8
-        fp = 1;
-        if (baryonData[53] & 0x2) { //0x000005E8
-            tachyonVoltage1 = -1; //0x00000160
-            tachyonVoltage2 = -1; //0x0000016C
-            
-            if ((s8)baryonData[32] < 0) //0x00000168
-                tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-            if ((s8)baryonData[33] < 0) //0x00000178
-                tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-        }           
-    }
-    else if ((upperBaryonVer & 0xF0) == 0x20 && (upperBaryonVer & 0xFF) >= 0x26 && (upperBaryonVer & 0xFF) < 0x29) { //0x000000E4 & 0x0000059C & 0x000005A8
-        fp = 1; //0x000005BC
-        if (baryonData[53] & 0x2) { //0x000005B8
-            tachyonVoltage1 = -1; //0x00000160
-            tachyonVoltage2 = -1; //0x0000016C
-            
-            if ((s8)baryonData[32] < 0) //0x00000168
-                tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-            if ((s8)baryonData[33] < 0) //0x00000178
-                tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-        }
-    }
-    else if ((upperBaryonVer & 0xF0) == 0x20 && (upperBaryonVer & 0xFF) >= 0x2C && (upperBaryonVer & 0xFF) < 0x2E) { //0x000000FC & 0x0000056C & 0x00000578
-        fp = 1;
-        if (baryonData[53] & 0x2) { //0x00000588
-            tachyonVoltage1 = -1; //0x00000160
-            tachyonVoltage2 = -1; //0x0000016C
-            
-            if ((s8)baryonData[32] < 0) //0x00000168
-                tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-            if ((s8)baryonData[33] < 0) //0x00000178
-                tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-        }
-    }
-    else if ((upperBaryonVer & 0xF0) == 0x20 && (upperBaryonVer & 0xFF) >= 0x2E && (upperBaryonVer & 0xFF) < 0x30) { //0x00000114 & 0x0000053C & 0x00000548
-        fp = 1; //0x0000055C
-        if (baryonData[53] & 0x2) { //0x00000558
-            tachyonVoltage1 = -1; //0x00000160
-            tachyonVoltage2 = -1; //0x0000016C
-            
-            if ((s8)baryonData[32] < 0) //0x00000168
-                tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-            if ((s8)baryonData[33] < 0) //0x00000178
-                tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-        }
-    }
-    else if (((g_Power.baryonVersion & 0x00FF0000) - 48) < 0x10) { //0x0000012C
-        fp = 1; //0x00000140
-        if (baryonData[53] & 0x4) { //0x0000013C
-            tachyonVoltage1 = -1; //0x00000160
-            tachyonVoltage2 = -1; //0x0000016C
-            
-            if ((s8)baryonData[32] < 0) //0x00000168
-                tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-            if ((s8)baryonData[33] < 0) //0x00000178
-                tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-        }
-    }
-    else if ((upperBaryonVer & 0xF0) == 0x40) { //0x00000154
-        if (baryonData[53] & 0x2) //0x00000528
-            fp = 1;
-        
-        tachyonVoltage1 = -1; //0x00000160
-        tachyonVoltage2 = -1; //0x0000016C
-            
-        if ((s8)baryonData[32] < 0) //0x00000168
-            tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-        if ((s8)baryonData[33] < 0) //0x00000178
-            tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-    }
-    else { //0x0000015C
-        tachyonVoltage1 = -1; //0x00000160
-        tachyonVoltage2 = -1; //0x0000016C
-            
-        if ((s8)baryonData[32] < 0) //0x00000168
-            tachyonVoltage1 = (baryonData[32] & 0x7F) << 8; //0x0000051C
-            
-        if ((s8)baryonData[33] < 0) //0x00000178
-            tachyonVoltage2 = (baryonData[33] & 0x7F) << 8; //0x00000510
-    }
-    scePowerSetTachyonVoltage(tachyonVoltage1, tachyonVoltage2); //0x00000180 -- scePower_driver_12F8302D
-    
-    minCpuSpeed = (((s16 *)baryonData)[34] == 0) ? -1 : ((s16 *)baryonData)[34]; //0x000001A0 -- CPU power limit
-    maxCpuSpeed = (((s16 *)baryonData)[36] == 0) ? -1 : ((s16 *)baryonData)[36]; //0x000001A4
-    scePowerLimitScCpuClock(minCpuSpeed, maxCpuSpeed); //0x000001BC -- scePower_driver_DF904CDE
-    
-    minBusSpeed = (((s16 *)baryonData)[40] == 0) ? -1 : ((s16 *)baryonData)[40]; //0x000001A8 -- Bus clock limit
-    maxBusSpeed = (((s16 *)baryonData)[42] == 0) ? -1 : ((s16 *)baryonData)[42]; //0x000001AC
-    scePowerLimitScBusClock(minBusSpeed, maxBusSpeed); //0x000001C8 -- scePower_driver_EEFB2ACF
-    
-    minPllSpeed = (((s16 *)baryonData)[46] == 0) ? -1 : ((s16 *)baryonData)[46]; //0x000001B8 -- PLL clock limit
-    maxPllSpeed = (((s16 *)baryonData)[48] == 0) ? -1 : ((s16 *)baryonData)[48]; //0x000001C0
-    scePowerLimitPllClock(minPllSpeed, maxPllSpeed); //0x000001D4 -- scePower_driver_B7000C75
-    
-    g_Power.busInitSpeed = 111; //0x000001EC
-    g_Power.pllInitSpeed = 222; 
-    g_Power.cpuInitSpeed = (((u16 *)baryonData)[38] == 0) ? 222 : ((u16 *)baryonData)[38]; //0x000001F4
-    g_Power.busInitSpeed = (((u16 *)baryonData)[44] == 0) ? g_Power.busInitSpeed : ((u16 *)baryonData)[44]; //0x00000204
-    g_Power.pllInitSpeed = (((u16 *)baryonData)[50] == 0) ? g_Power.pllInitSpeed : ((u16 *)baryonData)[50]; //0x00000218
-    
-    if (minPllSpeed <= 266 && g_Power.pllInitSpeed < 267) { //0x0000021C & 0x0000022C
-if (minPllSpeed > 222 || g_Power.pllInitSpeed > 222) //0x00000230 & 0x000004F0
-g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; //0x00000508
-    }
-    else {
-    g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE; //0x00000220 || 0x00000234
-    }
-    status = sceKernelDipsw(49); //0x00000238
-    if (status == 1) { //0x00000244
-        g_Power.busInitSpeed = 166;
-        g_Power.pllInitSpeed = 333; //0x000004C0
-        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE;
-        g_Power.cpuInitSpeed = 333;
-        scePowerLimitScCpuClock(minCpuSpeed, 333);
-        scePowerLimitScBusClock(minBusSpeed, 166); //0x000004D4
-        scePowerLimitPllClock(minPllSpeed, 333); //scePower_driver_B7000C75
-    }
-    status = sceIdStorageLookup(0x6, 0, powerData, sizeof powerData); //0x0000025C
-    ddrVoltage1 = -1; //0x00000264
-    ddrVoltage2 = -1; //0x00000268
-    ddrStrength1 = -1; //0x0000026C
-    ddrStrength2 = -1; //0x00000274
 
-    if (status < SCE_ERROR_OK) //0x00000270
-        memset(powerData, 0, sizeof powerData);
+    u16 lowBatteryCapacity; // $s7
+    u16 forceSuspendBatteryCapacity; // $s6
 
-    upperBaryonVer = g_Power.baryonVersion >> 16; //0x0000027C
-    if ((upperBaryonVer & 0xF0) == 0x10) { //0x00000288
-        if ((s8)powerData[20] < 0) //0x00000444
-            ddrVoltage1 = (powerData[20] & 0x7F) << 8; //0x00000490
+    u32 isUsbChargingSupported; // $fp
 
-        if ((s8)powerData[19] < 0) //0x00000454
-            ddrVoltage2 = (powerData[19] & 0x7F) << 8; //0x00000488
+    /* Initialize the power switch and clock frequency components of the power service. */  
+    _scePowerSwInit(); // 0x00000030
+    _scePowerFreqInit(); // 0x00000038
+    
+    g_Power.baryonVersion = _sceSysconGetBaryonVersion(); // 0x00000040
 
-        if ((s8)powerData[22] < 0) //0x00000478
-            ddrStrength1 = (s8)powerData[22] & 0x7F;
+    /* 
+     * Try to read the BARYON specific IdStorage leaf in order to properly initialize the power service and correctly
+     * configure the system. For example, we try to obtain settings for
+     *  - the initial PLL/CPU/bus clock frequencies to use
+     *  - power-service specific clock frequency limits (applied when using Power service APIs to set the clock
+     *    frequencies)
+     *  - the PLL clock frequency at which WLAN is allowed to operate (depending on the PSP system we are running on)
+     *  - whether USB charging is supported (dependent on the PSP system we are running on)
+     *  - whether operating WLAN suppresses battery charging (dependent on the PSP system we are running on)
+     *  - Voltage values for the TACHYON SoC IC (default & maximum)
+     */
+    status = sceIdStorageLookup(SCE_ID_STORAGE_LOOKUP_KEY_BARYON, 0, &baryonData, sizeof baryonData); // 0x00000058
+    if (status < SCE_ERROR_OK)
+    {
+        /* 
+         * If there was a failure obtaining the requested data from the PSP's IdStorage, we use
+         * default values.
+         */
 
-        if ((s8)powerData[21] < 0) //0x00000474
-            ddrStrength2 = (s8)powerData[21] & 0x7F; //0x00000480
+        memset(&baryonData, 0, sizeof baryonData); // 0x00000618
+
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; // 0x00000624
+        g_Power.watchDog = 0; // 0x00000630
+        g_Power.isWlanSuppressChargingEnabled = SCE_FALSE; // 0x00000638
+        g_Power.unk528 = 0; // 0x0000063C
+        g_Power.ledOffTiming = SCE_POWER_LED_OFF_TIMING_AUTO; // 0x00000644
+
+        forceSuspendBatteryCapacity = BATTERY_FORCE_SUSPEND_CAPACITY_THRESHOLD; // 0x0000062C
+        lowBatteryCapacity = BATTERY_LOW_CAPACITY_THRESHOLD; // 0x00000634
+
+        /* 
+         * If the IdStorage is corrupted or the data could not be obtained for other reasons,
+         * the force suspend capacity is set to the low battery capacity threshold.
+         */
+        _scePowerChangeSuspendCap(BATTERY_LOW_CAPACITY_THRESHOLD); // 0x00000640
     }
-    else if ((upperBaryonVer & 0xF0) == 0x20 || (upperBaryonVer & 0xF0) < 0x40 || powerData[24] == 0x40) { //0x00000290 & 0x000002A0 & 0x000002AC
-        if ((s8)powerData[24] < 0) //0x000003E8
-            ddrVoltage1 = (powerData[24] 0x7F) << 8; //0x00000438
-
-        if ((s8)powerData[23] < 0) //0x000003F8
-            ddrVoltage2 = (powerData[23] 0x7F) << 8; //0x00000430
-
-        if ((s8)powerData[26] < 0) //0x00000420
-            ddrStrength1 = (s8)powerData[26] & 0x7F;
-
-        if ((s8)powerData[25] < 0) //0x00000428
-            ddrStrength2 = (s8)powerData[25] & 0x7F;
-    }
-    scePowerSetDdrVoltage(ddrVoltage1, ddrVoltage2); //0x000002B8 -- scePower_driver_018AB235
-    scePowerSetDdrStrength(ddrStrength1, ddrStrength2); //0x000002C8 -- scePower_driver_D13377F7
-
-    if ((upperBaryonVer & 0xF0) == 0x29 || (upperBaryonVer & 0xF0) == 0x2A || (upperBaryonVer & 0xF0) == 0x30 ||
-        (upperBaryonVer & 0xF0) == 0x40) //0x000002DC & 0x000002E8 & 0x000002F4 & 0x000002FC
-        a1 = 1;
     else
-        a1 = 0;
+    {
+        /* Store the successfully obtained BARYON ID storage configuration data. */
 
-    _scePowerBatteryInit(fp, a1); //0x00000304 -- sub_00005B1C
-    _scePowerBatterySetParam(batteryReallyLowCap, batteryLowCap); //0x00000310 -- sub_00005BF0
+        g_Power.ledOffTiming = baryonData.ledOffTiming; // 0x0000006C & 0x00000080
+        g_Power.watchDog = baryonData.watchDog & 0x7F; // 0x00000088
+        g_Power.isWlanSuppressChargingEnabled = baryonData.isWlanSuppressChargingEnabled; // 0x00000070 & 0x0000008C
+        g_Power.unk528 = baryonData.unk30; // 0x00000074 & 0x00000090
 
-    g_Power.isBatteryLow = sceSysconIsLowBattery(); //0x00000318
-    if (g_Power.isBatteryLow == SCE_TRUE) //0x00000328
-        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; //0x000003D4
+        forceSuspendBatteryCapacity = baryonData.forceSuspendBatteryCapacity; // 0x00000094
+        lowBatteryCapacity = baryonData.lowBatteryCapacity; // 0x0000009C
 
-    if (sceSysconIsAcSupplied) //0x00000330
-        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; //0x00000348
+        g_Power.wlanExclusivePllClockLimit = (baryonData.wlanExclusivePllClockLimit >= 0x80) // 0x00000064 & 0x0000007C & 0x00000098
+            ? baryonData.wlanExclusivePllClockLimit & 0x7F // 0x00000084 & 0x000000A4
+            : 1; // 0x000000A0 & 0x000000A4
+    }
 
-    g_Power.callbackArgMask = -1; //0x00000350
-    _scePowerIdleInit();//0x0000034C -- sub_000033C4
+    s32 appType = sceKernelApplicationType(); // 0x000000A8
+    if (appType == SCE_INIT_APPLICATION_GAME) // 0x000000B4
+    {
+        /* Initially limit WLAN's PLL coexistence clock frequency to 222MHz when we are a game application. */
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; // 0x000005FC
 
-    sceSysconSetAcSupplyCallback(_scePowerAcSupplyCallback, NULL); //0x0000035C
-    sceSysconSetLowBatteryCallback(_scePowerLowBatteryCallback, NULL); //0x0000036C
-    sceKernelRegisterSysEventHandler(_scePowerSysEventHandler); //0x00000378
-    sceKernelSetInitCallback(_scePowerInitCallback, 2, NULL); //0x0000038C
+        /* 
+         * For game applications, the PLL clock frequency can only be set to the following values (in MHz):
+         * 199, 222, 266 and 333.
+         */
+        u32 pllUseMask = SCE_POWER_PLL_USE_MASK_190MHz | SCE_POWER_PLL_USE_MASK_222MHz
+            | SCE_POWER_PLL_USE_MASK_266MHz | SCE_POWER_PLL_USE_MASK_333MHz;
+        scePowerSetPllUseMask(pllUseMask); // 0x00000600
+    }
+
+    /* Determine whether USB charging is supported by the PSP device we are running on. */
+
+    u8 baryonVersionMajor = PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion);
+    u8 baryonVersionMinor = PSP_SYSCON_BARYON_GET_VERSION_MINOR(g_Power.baryonVersion);
+    if (baryonVersionMajor == 0x2 
+        && baryonVersionMinor >= 0x2 && baryonVersionMinor < 0x6) // 0x000000CC & 0x000005CC & 0x000005D8
+    {
+        /* Complete PSP 2000 series (02g - TA-085v1 - TA-090v1 (TA-086 excluded2 as that is 01g)) */
+        isUsbChargingSupported = (baryonData.unk53 & 0x2) ? SCE_TRUE : SCE_FALSE; // 0x000005EC
+    }
+    else if (baryonVersionMajor == 0x2
+        && baryonVersionMinor >= 0x6 && baryonVersionMinor < 0x9) // 0x000000E4 & 0x00000598 & 0x000005A8
+    {
+        /* Partial PSP 3000 series (03g - TA-090v2 - TA-092) */
+
+        isUsbChargingSupported = (baryonData.unk53 & 0x2) ? SCE_TRUE : SCE_FALSE; // 0x000005BC
+    }
+    else if (baryonVersionMajor == 0x2
+        && baryonVersionMinor >= 0xC && baryonVersionMinor < 0xE) // 0x000000FC & 0x0000056C & 0x00000578
+    {
+        /* Partial PSP 3000 series (04g - TA-093v1 & TA-093v2) */
+
+        isUsbChargingSupported = (baryonData.unk53 & 0x2) ? SCE_TRUE : SCE_FALSE; // 0x0000058C
+    }
+    else if (baryonVersionMajor == 0x2
+        && (baryonVersionMinor == 0xE || baryonVersionMinor == 0xF)) // 0x00000114 & 0x0000053C & 0x00000548
+    {
+        /* Partial PSP 3000 series (07g & 09g - TA-095v1 & TA-095v2) */
+
+        isUsbChargingSupported = (baryonData.unk53 & 0x2) ? SCE_TRUE : SCE_FALSE; // 0x0000055C
+    }
+    else if (baryonVersionMajor >= 0x3 && baryonVersionMajor < 0x4) // 0x0000012C
+    {
+        /* Complete PSP Go N1000 series (05g - TA-091 & TA-094) */
+
+        isUsbChargingSupported = (baryonData.unk53 & 0x4) ? SCE_TRUE : SCE_FALSE; // 0x00000140
+    }
+    else if (baryonVersionMajor == 0x4) // 0x00000154
+    {
+        /* Complete PSP Street E1000 series (11g - TA-096 & TA-097) */
+        isUsbChargingSupported = (baryonData.unk53 & 0x2) ? SCE_TRUE : SCE_FALSE; // 0x00000528
+    }
+    else
+    {
+        /* Complete PSP 1000 series (01g - TA-079v1 - TA-082 & TA-086) */
+        isUsbChargingSupported = SCE_FALSE;
+    }
+
+    /* Set the TACHYON max voltage & default voltage. */
+
+    s16 tachyonMaxVoltage = -1; // 0x00000160
+    s16 tachyonDefaultVoltage = -1; // 0x0000016C
+
+    if (baryonData.tachyonMaxVoltage >= 0x80) // 0x00000168
+    {
+        tachyonMaxVoltage = (baryonData.tachyonMaxVoltage & 0x7F) << 8; // 0x00000514 & 0x0000051C
+    }
+
+    if (baryonData.tachyonDefaultVoltage >= 0x80) // 0x00000178
+    {
+        tachyonDefaultVoltage = (baryonData.tachyonDefaultVoltage & 0x7F) << 8; // 0x0000017C & 0x00000510
+    }
+    
+    scePowerSetTachyonVoltage(tachyonMaxVoltage, tachyonDefaultVoltage); // 0x00000180
+
+    /* Set power service specific clock frequency limits. */
+    
+    /* Set power service specific CPU clock frequency limits. */
+    s16 cpuClockFreqLowerLimit = baryonData.cpuClockFreqLowerLimit == 0
+        ? -1 
+        : baryonData.cpuClockFreqLowerLimit; // 0x00000188 & 0x000001A0 & 0x000001B0
+
+    s16 cpuClockFreqUpperLimit = baryonData.cpuClockFreqUpperLimit == 0
+        ? -1
+        : baryonData.cpuClockFreqUpperLimit; // 0x0000018C & 0x000001A4 
+
+    scePowerLimitScCpuClock(cpuClockFreqLowerLimit, cpuClockFreqUpperLimit); // 0x000001BC
+
+    /* Set power service specific bus clock frequency limits. */
+    s16 busClockFreqLowerLimit = baryonData.busClockFreqLowerLimit == 0
+        ? -1
+        : baryonData.busClockFreqLowerLimit; // 0x00000190 & 0x000001A8 & 0x000001C4
+
+    s16 busClockFreqUpperLimit = baryonData.busClockFreqUpperLimit == 0
+        ? -1
+        : baryonData.busClockFreqUpperLimit; // 0x00000194 & 0x000001AC & 0x000001CC
+
+    scePowerLimitScBusClock(busClockFreqLowerLimit, busClockFreqUpperLimit); // 0x000001C8
+
+    /* Set power service specific PLL clock frequency limits. */
+    s16 pllClockFreqLowerLimit = baryonData.pllClockFreqLowerLimit == 0
+        ? -1
+        : baryonData.pllClockFreqLowerLimit; // 0x00000198 & 0x000001B8 & 0x000001D0
+
+    s16 pllClockFreqUpperLimit = baryonData.pllClockFreqUpperLimit == 0
+        ? -1
+        : baryonData.pllClockFreqUpperLimit; // 0x0000019C & 0x000001C0 & 0x000001D8
+
+    scePowerLimitPllClock(pllClockFreqLowerLimit, pllClockFreqUpperLimit); // 0x000001D4
+
+    /* 
+     * Obtain the clock frequencies to set on startup (after the Init module finished loading & starting
+     * the rest of the kernel).
+     */ 
+
+    g_Power.cpuClockInitialFrequencyGameAppUpdater = baryonData.cpuClockInitialFrequencyGameAppUpdater == 0
+        ? PSP_CLOCK_CPU_FREQUENCY_STARTUP_GAME_APP_UPDATER
+        : baryonData.cpuClockInitialFrequencyGameAppUpdater; // 0x000001F4 & 0x000001F8 & 0x000001FC
+
+    g_Power.busClockInitialFrequencyGameAppUpdater = baryonData.busClockInitialFrequencyGameAppUpdater == 0
+        ? PSP_CLOCK_BUS_FREQUENCY_STARTUP_GAME_APP_UPDATER
+        : baryonData.busClockInitialFrequencyGameAppUpdater; // 0x00000204 & 0x00000208 & 0x000001EC
+
+
+    g_Power.pllClockInitialFrequencyGameAppUpdater = baryonData.pllClockInitialFrequencyGameAppUpdater == 0
+        ? PSP_CLOCK_PLL_FREQUENCY_STARTUP_GAME_APP_UPDATER
+        : baryonData.pllClockInitialFrequencyGameAppUpdater; // 0x00000210 & 0x00000214 & 0x000001F0
+
+    /* Set the WLAN exclusive PLL clock frequency limit. */
+
+    if (pllClockFreqLowerLimit <= 266 && g_Power.pllClockInitialFrequencyGameAppUpdater <= 266
+        && (pllClockFreqLowerLimit > 222 || g_Power.pllClockInitialFrequencyGameAppUpdater > 222)) // 0x0000021C & 0x0000022C & 0x000004F0 & 0x000004FC
+    {
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; // 0x000004F4 & 0x00000508
+    }
+    else
+    {
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE; // 0x00000220 &  0x00000234
+    }
+
+    // 0x00000238
+
+    /* Check if boot parameter bit 49 has been set (for the PSP Development Tool). */
+
+    if (sceKernelDipsw(PSP_DIPSW_BIT_GAME_APP_UPDATER_PSP_CLOCK_FREQUENCIES_NO_LIMIT)) // 0x00000238 & 0x00000244
+    {
+        /* 
+         * The bit has been set - we impose no clock frequency limits and allow WLAN to be operated at
+         * maximum clock frequencies (independently of the PSP system we are running on).
+         */
+
+        g_Power.cpuClockInitialFrequencyGameAppUpdater = PSP_CLOCK_CPU_FREQUENCY_MAX; // 0x000004AC & 0x000004CC
+        g_Power.busClockInitialFrequencyGameAppUpdater = PSP_CLOCK_BUS_FREQUENCY_MAX; // 0x000004B4 & 0x000004B8
+        g_Power.pllClockInitialFrequencyGameAppUpdater = PSP_CLOCK_PLL_FREQUENCY_MAX; // 0x000004AC & 0x000004C0
+
+        g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_NONE; // 0x000004C4
+
+        scePowerLimitScCpuClock(cpuClockFreqLowerLimit, PSP_CLOCK_CPU_FREQUENCY_MAX); // 0x000004C8
+        scePowerLimitScCpuClock(busClockFreqLowerLimit, PSP_CLOCK_BUS_FREQUENCY_MAX); // 0x000004D4
+        scePowerLimitScCpuClock(pllClockFreqLowerLimit, PSP_CLOCK_PLL_FREQUENCY_MAX); // 0x000004E0
+    }
+
+    /*
+     * Try to read the DDR memory component's specific IdStorage leaf in order to properly to properly
+     * configure the DDR memory compontent. The settings we are interested in are the following:
+     *  - Default and maximum voltage of the DDR memory
+     *  - Default and maximum strength of the DDR memory
+     */
+    status = sceIdStorageLookup(SCE_ID_STORAGE_LOOKUP_KEY_MDDR, 0, &mDdrData, sizeof mDdrData); // 0x0000025C
+    if (status < SCE_ERROR_OK) // 0x00000270
+    {
+        /*
+         * If there was a failure obtaining the requested data from the PSP's IdStorage, we use
+         * default values.
+         */
+        memset(&mDdrData, 0, sizeof mDdrData); // 0x0000049C
+    }
+
+    /* Set DDR memory hardware component voltage and strength values. */
+
+    s16 ddrMaxVoltage = -1; // 0x00000264
+    s16 ddrDefaultVoltage = -1; // 0x00000268
+    s16 ddrMaxStrength = -1; // 0x0000026C
+    s16 ddrDefaultStrength = -1; // 0x00000274
+
+    if (baryonVersionMajor == 0x1) // 0x00000288
+    {
+        /* Partial PSP-1000 series (TA-082 & TA-086) */
+
+        if (mDdrData.ddrMaxVoltage01g >= 0x80) // 0x00000444
+        {
+            ddrMaxVoltage = (mDdrData.ddrMaxVoltage01g & 0x7F) << 8; // 0x0000043C & 0x00000448 & 0x00000490
+        }
+
+        if (mDdrData.ddrDefaultVoltage01g >= 0x80) // 0x00000454
+        {
+            ddrDefaultVoltage = (mDdrData.ddrDefaultVoltage01g & 0x7F) << 8; // 0x0000044C & 0x00000458 & 0x00000488
+        }
+
+        if (mDdrData.ddrMaxStrength01g >= 0x80) // 0x0000045C & 0x00000464 & 0x0000046C & 0x00000478
+        {
+            ddrMaxStrength = mDdrData.ddrMaxStrength01g & 0x7F; // 0x00000468
+        }
+
+        if (mDdrData.ddrDefaultStrength01g >= 0x80) // 0x00000460 & 0x00000470 & 0x00000474
+        {
+            ddrDefaultStrength = mDdrData.ddrDefaultStrength01g & 0x7F; // 0x00000480
+        }
+    }
+    else if (baryonVersionMajor == 0x2 || (baryonVersionMajor >= 0x3 && baryonVersionMajor < 0x4)
+        || baryonVersionMajor == 0x4) // 0x00000290 & 0x000002A0 & 0x000002AC
+    {
+        /* PSP 2000 series - PSP E1000 series - all models included. */
+
+        if (mDdrData.ddrMaxVoltage02gAndLater >= 0x80) // 0x000003E0/0x000002A4/0x000002B0 & 0x000003E8
+        {
+            ddrMaxVoltage = (mDdrData.ddrMaxVoltage02gAndLater & 0x7F) << 8; // 0x000003EC & 0x00000438
+        }
+
+        if (mDdrData.ddrDefaultVoltage02gAndLater >= 0x80) // 0x000003F0 & 0x000003F8
+        {
+            ddrDefaultVoltage = (mDdrData.ddrDefaultVoltage02gAndLater & 0x7F) << 8; // 0x000003FC & 0x00000430
+        }
+
+        if (mDdrData.ddrMaxStrength02gAndLater >= 0x80) // 0x00000400 & 0x00000408 & 0x00000414 & 0x00000420
+        {
+            ddrMaxStrength = mDdrData.ddrMaxStrength02gAndLater & 0x7F; // 0x00000410
+        }
+
+        if (mDdrData.ddrDefaultStrength02gAndLater >= 0x80) // 0x00000404 & 0x0000040C & 0x0000041C
+        {
+            ddrDefaultStrength = mDdrData.ddrDefaultStrength02gAndLater & 0x7F; // 0x00000428
+        }
+    }
+
+    scePowerSetDdrVoltage(ddrMaxVoltage, ddrDefaultVoltage); // 0x000002B8
+    scePowerSetDdrStrength(ddrMaxStrength, ddrDefaultStrength); // 0x000002C8
+
+    /* Set the battery type. */
+
+    u32 batteryType;
+    if ((baryonVersionMajor == 0x2 && (baryonVersionMinor == 0x9 || baryonVersionMajor == 0xA))
+        || baryonVersionMajor == 0x3 || baryonVersionMajor == 0x4) // 0x000002DC & 0x000002E8 & 0x000002F4 & 0x000002FC
+    {
+        /* PSP Go + PSP E1000 + unknown PSP hardware (baryonVersion 0x28, 0x29). */
+        batteryType = SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED; // 0x000002EC or 0x000003DC
+    }
+    else
+    {
+        /* PSP series PSP-1000, PSP-2000 and PSP-3000. */
+        batteryType = SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED; // 0x00000300
+    }
+
+    _scePowerBatteryInit(isUsbChargingSupported, batteryType); // 0x00000304
+
+    /* Send the [forceSuspend] and [low battery] capacity threshold values to Syscon. */
+
+    _scePowerBatterySetParam(forceSuspendBatteryCapacity, lowBatteryCapacity); // 0x00000310
+
+    /* Set the low battery state if the battery is low. */
+
+    g_Power.isBatteryLow = sceSysconIsLowBattery(); // 0x00000318
+    if (g_Power.isBatteryLow) // 0x00000328
+    {
+        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_LOWBATTERY; // 0x000003C8 - 0x000003D4
+    }
+
+    /* Set the power-online state if the PSP system is connected to an AC adapter. */
+    if (sceSysconIsAcSupplied()) // 0x00000330
+    {
+        g_Power.curPowerStateForCallback |= SCE_POWER_CALLBACKARG_POWERONLINE; // 0x00000348
+    }
+
+    /* Support all types of power callbacks by default. */
+    g_Power.callbackArgMask = 0xFFFFFFFF; //0x00000350
+
+    /* Initialize the Idle timer component of the power service. */
+    _scePowerIdleInit(); // 0x0000034C
+
+    /* Register Syscon power state callbacks. */
+    sceSysconSetAcSupplyCallback(_scePowerAcSupplyCallback, NULL); // 0x0000035C
+    sceSysconSetLowBatteryCallback(_scePowerLowBatteryCallback, NULL); // 0x0000036C
+
+    /* Register a system event handler so that the power service can handle suspend & resume events. */
+    sceKernelRegisterSysEventHandler(&g_PowerSysEv); // 0x00000378
+
+    /* 
+     * Register an "Init has finished loading and starting the kernel" callback so that we can set the initial
+     * clock frequencies for apps and games, for example.
+     */
+    sceKernelSetInitCallback(_scePowerInitCallback, 2, NULL); // 0x0000038C
 
     return SCE_ERROR_OK;
 }
@@ -935,7 +1088,7 @@ s32 _scePowerModuleRebootBefore(void *arg0, s32 arg1, s32 arg2, s32 arg3)
 
     // uofw note: Below is basically a scePowerEnd() call.
 
-    sceKernelUnregisterSysEventHandler((SceSysEventHandler *)&g_PowerSysEv); // 0x00000F4C
+    sceKernelUnregisterSysEventHandler(&g_PowerSysEv); // 0x00000F4C
 
     sceSysconSetAcSupplyCallback(NULL, NULL); // 0x00000F58
     sceSysconSetLowBatteryCallback(NULL, NULL); // 0x00000F64
@@ -1000,7 +1153,7 @@ static s32 _scePowerInitCallback(void *data, s32 arg, void *opt)
     if (appType != SCE_INIT_APPLICATION_VSH && appType != SCE_INIT_APPLICATION_POPS) // 0x0000115C - 0x00001174
     {
         /* Set the initial clock frequencies. */
-        _scePowerSetClockFrequency(g_Power.pllInitSpeed, g_Power.cpuInitSpeed, g_Power.busInitSpeed); // 0x00001194
+        _scePowerSetClockFrequency(g_Power.pllClockInitialFrequencyGameAppUpdater, g_Power.cpuClockInitialFrequencyGameAppUpdater, g_Power.busClockInitialFrequencyGameAppUpdater); // 0x00001194
     } 
     
     return SCE_ERROR_OK;

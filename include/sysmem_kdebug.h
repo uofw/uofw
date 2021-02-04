@@ -26,6 +26,21 @@ void Kprintf(const char *format, ...);
 #define PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_222MHz         0 /* Corresponds to the PSP-1000 series */
 #define PSP_DIPSW_PLL_WLAN_COEXISTENCY_CLOCK_333MHz         1 /* COrresponds to the PSP-2000 series and later */
 
+/** 
+ * Boot parameter 49 of the PSP Development Tool (DTP-T1000).
+ * 
+ * Defines if initial clock frequency limits imposed by the system when a game/app/updater
+ * process is launched should be discarded and to impose no frequency limits.
+ * 
+ * 0: PSP system operates with default clock frequency limits. For the PSP-1000 series, for example, this means
+ * that the PLL is set to operate at a clock frequency of 222MHz and WLAN can only operate at a PLL clock
+ * frequency of 222 MHz as well.
+ * 1: PSP system operates at maximum clock frequencies on startup and without clock frequency limits. For the
+ * PSP-1000 series, for example, this means that the PLL is set to operate at its maximum allowed clock frequency
+ * of 333MHz and that WLAN can also operate at maximum PLL clock frequency.
+ */
+#define PSP_DIPSW_BIT_GAME_APP_UPDATER_PSP_CLOCK_FREQUENCIES_NO_LIMIT       49
+
 int sceKernelDipsw(u32 reg);
 u32 sceKernelDipswAll();
 u32 sceKernelDipswLow32();
