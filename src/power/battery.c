@@ -1411,7 +1411,7 @@ s32 scePowerGetBatteryTemp(void)
 }
 
 // Subroutine scePower_862AE1A6 - Address 0x00005A74 - Aliases: scePower_driver_993B8C4A
-s32 scePowerGetBatteryElec(u32* pBatteryElec)
+s32 scePowerGetBatteryElec(u32 *pBatteryElec)
 {
     s32 oldK1;
 
@@ -1646,7 +1646,7 @@ s32 scePowerGetInnerTemp(void)
 }
 
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
-static s32 _scePowerBatteryDelayedPermitCharging(void* common)
+static s32 _scePowerBatteryDelayedPermitCharging(void *common)
 {
     (void)common;
 
@@ -1657,7 +1657,7 @@ static s32 _scePowerBatteryDelayedPermitCharging(void* common)
 }
 
 // Subroutine sub_0x00005ED8 - Address 0x00005ED8
-static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket* pSysconPacket, void* param)
+static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *param)
 {
     (void)pSysconPacket;
     (void)param;

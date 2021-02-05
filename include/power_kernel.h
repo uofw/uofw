@@ -873,6 +873,54 @@ typedef enum {
 	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
 } ScePowerBatteryType;
 
+s32 scePowerGetUsbChargingCapability(void);
+
+s32 scePowerBatteryForbidCharging(void);
+
+s32 scePowerBatteryPermitCharging(void);
+
+s32 scePowerBatteryEnableUsbCharging(void);
+
+s32 scePowerBatteryDisableUsbCharging(void);
+
+s32 scePowerGetBatteryChargingStatus(void);
+
+s32 scePowerIsSuspendRequired(void);
+
+s32 scePowerGetBatteryRemainCapacity(void);
+
+s32 scePowerGetBatteryLifeTime(void);
+
+s32 scePowerGetBatteryTemp(void);
+
+s32 scePowerGetBatteryElec(u32 *pBatteryElec);
+
+s32 scePowerGetBatteryChargeCycle(void);
+
+s32 scePowerBatteryUpdateInfo(void);
+
+s32 scePowerGetForceSuspendCapacity(void);
+
+s32 scePowerGetLowBatteryCapacity(void);
+
+s32 scePowerIsPowerOnline(void);
+
+s32 scePowerIsBatteryExist(void);
+
+s32 scePowerIsBatteryCharging(void);
+
+s32 scePowerIsLowBattery(void);
+
+s32 scePowerGetBatteryType(void);
+
+s32 scePowerGetBatteryFullCapacity(void);
+
+s32 scePowerGetBatteryLifePercent(void);
+
+s32 scePowerGetBatteryVolt(void);
+
+s32 scePowerGetInnerTemp(void);
+
 /* Misc */
 
 /**
