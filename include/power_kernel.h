@@ -93,31 +93,87 @@ typedef enum {
  * @param common Custom callback value. Specified by the same parameter in ::sceKernelCreateCallback().
  * 
  * @return Always SCE_ERROR_OK.
+ * 
+ * @see ::scePowerRegisterCallback()
  */
 typedef void (*ScePowerCallback)(s32 count, s32 arg, void *common);
 
 /**
- * Registers a power service notification callback.
+ * @brief Registers a power service notification callback.
  * 
- * @param slot The callback registration slot to use. Specify value between 0 - 31.
+ * This function registers a callback that is reported from the power service when a change in the 
+ * power state/battery status/POWER switch state or HOLD switch state occurs.
+ * 
+ * @param slot The callback registration slot to use. Specify a value between 0 - 31.
  * @param cbid The callback UID obtained by ::sceKernelCreateCallback().
  * 
- * @return 0 - 31 on success when specific slot was used.
+ * @return SCE_ERROR_OK when @slot was assigned a specific slot number (0 - 31) and registration succeeded.
  * @return A value < 0 on failure.
+ * 
+ * @remark While user mode applications can specify ::SCE_POWER_CALLBACKSLOT_AUTO for the @p slot to have
+ * the power service automatically perform a callback slot assignment, kernel mode applications cannot have 
+ * such an operation performed. They will have to explicitly specify a callback slot to use. Specifying
+ * ::SCE_POWER_CALLBACKSLOT_AUTO will result in an error.
+ * 
+ * @see ::ScePowerCallback()
+ * @see scePowerUnregisterCallback()
  */
 s32 scePowerRegisterCallback(s32 slot, SceUID cbid);
 
 /**
  * Cancels a registered power service notification callback.
  * 
- * @param slot The slot of the callback to unregister. Specify a value between 0 - 31.
+ * @param slot The slot number of the callback to unregister. Specify a value between 0 - 31.
  * 
  * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @see ::scePowerRegisterCallback().
  */
 s32 scePowerUnregisterCallback(s32 slot);
 
+/**
+ * Specifies that a power callback cannot report back to the power service that the system is
+ * busy creating the callback notification and calling the callback function.
+ * As a consequence, if this callback mode is set, the power service will not wait for callback notification
+ * generation being completed by the system when a power state switch occurs (such as a suspend or standby
+ * operation). As such, subscribers to power callbacks might not receive a [suspending/standing by]
+ * power callback in case the system is delayed from calling the callback function.
+ */
+#define SCE_POWER_CALLBACK_MODE_CANNOT_REPORT_BUSY_BEING_PROCESSED_STATUS		0
+
+/**
+ * Sets the mode for a registered power callback. 
+ * 
+ * @param slot The slot number specifying the registered power callback for which a new mode should be set.
+ * Specify a value between 0 - 31.
+ * 
+ * @param mode The callback mode. Specify either ::SCE_POWER_CALLBACK_MODE_CANNOT_REPORT_BUSY_BEING_PROCESSED_STATUS
+ * or any other valid integer value. If a value other than 
+ * ::SCE_POWER_CALLBACK_MODE_CANNOT_REPORT_BUSY_BEING_PROCESSED_STATUS is specified, the power service will wait
+ * with proceeding a power state switch operation (like suspend/standby) until the system has finished processing 
+ * the generated callback notification and called the callback function.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @remark The default callback mode is ::SCE_POWER_CALLBACK_MODE_CANNOT_REPORT_BUSY_BEING_PROCESSED_STATUS.
+ * 
+ * @see ::SCE_POWER_CALLBACK_MODE_CANNOT_REPORT_BUSY_BEING_PROCESSED_STATUS
+ */
 s32 scePowerSetCallbackMode(s32 slot, s32 mode);
 
+/**
+ * Gets the mode for a registered power callback.
+ * 
+ * @param slot The slot number specifying the registered power callback for which the mode should be obtained.
+ * Specify a value between 0 - 31.
+ * 
+ * @param pMode A pointer to a s32 value which is to receive the callback mode.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @see ::SCE_POWER_CALLBACK_MODE_CANNOT_REPORT_BUSY_BEING_PROCESSED_STATUS
+ * @see ::scePowerSetCallbackMode()
+ */
 s32 scePowerGetCallbackMode(s32 slot, s32 *pMode);
 
 /**

@@ -18,8 +18,8 @@
 #define PSP_CLOCK_BUS_FREQUENCY_MIN                     1
 #define PSP_CLOCK_BUS_FREQUENCY_MAX                     166
 
-void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOnlyPowerState);
-s32 _scePowerIsCallbackBusy(u32 cbFlag, SceUID* pCbid);
+void _scePowerNotifyCallback(s32 clearPowerState, s32 setPowerState, s32 cbOneOffPowerState);
+s32 _scePowerIsCallbackBusy(s32 cbArgFlag, SceUID *pCbid);
 
 s32 _scePowerSwInit(void);
 s32 _scePowerSwEnd(void);
