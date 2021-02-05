@@ -20,7 +20,7 @@ typedef struct {
 	u8 isWlanSuppressChargingEnabled; // 25
 	u16 forceSuspendBatteryCapacity; // 26
 	u16 lowBatteryCapacity; // 28
-	u8 unk30; // 30
+	u8 backlightMaximumWlanActive; // 30
 	u8 ledOffTiming; // 31
 	u8 tachyonMaxVoltage; // 32
 	u8 tachyonDefaultVoltage; // 33

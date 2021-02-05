@@ -52,9 +52,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Defines the initial bus clock frequency (in MHz) on startup for (game) applications. */
 #define PSP_CLOCK_BUS_FREQUENCY_STARTUP_GAME_APP_UPDATER    111
 
-#define SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL    (3)
-#define SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_EXTERNAL    (4)
-
 // TODO: Remove
 
 /** Cancel all PSP Hardware timers. */
@@ -82,7 +79,7 @@ typedef struct  {
      * the general power state (such as whether the POWER switch is currently active or the remaining battery
      * capacity in [%]).
      */
-    s32 powerStateCallbackArg; //8
+    s32 powerStateCallbackArg; // 8
     /* The callback mode. */
     s32 mode; // 12
 } ScePowerCallback;
@@ -92,14 +89,14 @@ typedef struct  {
  */
 typedef struct {
     ScePowerCallback powerCallback[POWER_CALLBACK_TOTAL_SLOTS_KERNEL]; // 0 - 511
-    s32 baryonVersion; //512
+    s32 baryonVersion; // 512
     u32 curPowerStateForCallbackArg; // 516
-    u32 callbackArgMask; //520
-    u8 isBatteryLow; //524
+    u32 callbackArgMask; // 520
+    u8 isBatteryLow; // 524
     u8 wlanActivity; // 525
-    u8 watchDog; //526
+    u8 watchDog; // 526
     u8 isWlanSuppressChargingEnabled; // 527
-    u8 unk528; // 528
+    u8 backlightMaximumWlanActive; // 528
     /* 
      * The WLAN exclusive PLL clock frequency limit. If WLAN is active, the PLL clock frequency cannot be set
      * to a value which is higher than this clock limit. If WLAN is inactive, this clock limit dictates if the
@@ -196,7 +193,7 @@ s32 scePowerInit(void)
         g_Power.wlanExclusivePllClockLimit = SCE_POWER_WLAN_EXCLUSIVE_PLL_CLOCK_LIMIT_222Mhz; // 0x00000624
         g_Power.watchDog = 0; // 0x00000630
         g_Power.isWlanSuppressChargingEnabled = SCE_FALSE; // 0x00000638
-        g_Power.unk528 = 0; // 0x0000063C
+        g_Power.backlightMaximumWlanActive = 0; // 0x0000063C
         g_Power.ledOffTiming = SCE_POWER_LED_OFF_TIMING_AUTO; // 0x00000644
 
         forceSuspendBatteryCapacity = BATTERY_FORCE_SUSPEND_CAPACITY_THRESHOLD; // 0x0000062C
@@ -215,7 +212,7 @@ s32 scePowerInit(void)
         g_Power.ledOffTiming = baryonData.ledOffTiming; // 0x0000006C & 0x00000080
         g_Power.watchDog = baryonData.watchDog & 0x7F; // 0x00000088
         g_Power.isWlanSuppressChargingEnabled = baryonData.isWlanSuppressChargingEnabled; // 0x00000070 & 0x0000008C
-        g_Power.unk528 = baryonData.unk30; // 0x00000074 & 0x00000090
+        g_Power.backlightMaximumWlanActive = baryonData.backlightMaximumWlanActive; // 0x00000074 & 0x00000090
 
         forceSuspendBatteryCapacity = baryonData.forceSuspendBatteryCapacity; // 0x00000094
         lowBatteryCapacity = baryonData.lowBatteryCapacity; // 0x0000009C
@@ -1168,18 +1165,26 @@ u8 scePowerGetWlanActivity(void)
 }
 
 //Subroutine scePower_442BFBAC - Address 0x00000E44 - Aliases: scePower_driver_2509FF3B
-// TODO: Verify function
-u32 scePowerGetBacklightMaximum(void)
+s32 scePowerGetBacklightMaximum(void)
 {
-    u32 backlightMax;
+    s32 backlightMax;
+
+    /* Get the maximum display backlight level currently available. */
     
     backlightMax = (scePowerIsPowerOnline() == SCE_TRUE) 
-        ? SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_EXTERNAL 
-        : SCE_POWER_MAX_BACKLIGHT_LEVEL_POWER_INTERNAL; //0x00000E4C & 0x00000E68
+        ? SCE_POWER_BACKLIGHT_LEVEL_MAXIMUM_POWER_ONLINE
+        : SCE_POWER_BACKLIGHT_LEVEL_MAXIMUM_POWER_OFFLINE; // 0x00000E4C & 0x00000E60 - 0x00000E68
 
-    if (g_Power.unk528 != 0)
-        backlightMax = (g_Power.wlanActivity == SCE_POWER_WLAN_ACTIVITY_ON) ? pspMin(backlightMax, g_Power.unk528) : backlightMax; //0x00000E70 & 0x00000E78
-    
+    /* 
+     * There might be a separate maximum backlight level specified for the display while WLAN is active.
+     * Check if that is the case and if it needs to be applied (if WLAN is currently active).
+     */
+    if (g_Power.backlightMaximumWlanActive != 0 && 
+        g_Power.wlanActivity != SCE_POWER_WLAN_ACTIVITY_OFF) // 0x00000E6C & 0x00000E78
+    {
+        backlightMax = pspMin(backlightMax, g_Power.backlightMaximumWlanActive); // 0x00000E70
+    }
+
     return backlightMax;
 }
 
@@ -1291,7 +1296,7 @@ u8 scePowerGetLedOffTiming(void)
 /*
  * Called after the power service was loaded and started by the Init module
  * (or Init has finished loading and starting the remaining kernel/VSH modules). 
-*/
+ */
 static s32 _scePowerInitCallback(void *data, s32 arg, void *opt)
 {
     s32 appType;

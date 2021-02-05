@@ -551,6 +551,33 @@ typedef enum {
  */
 u8 scePowerGetWlanActivity(void);
 
+/* Misc */
+
+/**
+ * Specifies the maximum PSP display backlight level available when the PSP device is not connected to an
+ * external power source.
+ */
+#define SCE_POWER_BACKLIGHT_LEVEL_MAXIMUM_POWER_OFFLINE		3
+/**
+ * Specifies the maximum PSP display backlight level available when the PSP device is connected to an external
+ * power source.
+ */
+#define SCE_POWER_BACKLIGHT_LEVEL_MAXIMUM_POWER_ONLINE		4
+
+/**
+ * @brief Gets the maximum (= brightest) PSP display backlight level currently available.
+ *
+ * The maximum backlight level is dependent on factors like whether the PSP device is currently
+ * connected to an external power source or whether WLAN is currently active. If WLAN is active, the
+ * brightest available PSP display backlight level might be less than without WLAN in use.
+ *
+ * @return If the PSP device is connected to an external power source at the time of this API call, at most
+ * ::SCE_POWER_BACKLIGHT_MAXIMUM_POWER_ONLINE is returned.
+ * @return If the PSP device is not connected to an external power source at the time of this API call, at most
+ * ::SCE_POWER_BACKLIGHT_MAXIMUM_POWER_OFFLINE is returned.
+ */
+s32 scePowerGetBacklightMaximum(void);
+
 
  /** @} */
 
