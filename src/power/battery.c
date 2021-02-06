@@ -15,13 +15,13 @@
 #define POWER_DELAY_PERMIT_CHARGING                 (5 * 1000 * 1000)
 
 /* The (initial) priority of the battery worker thread. */
-#define POWER_BATTERY_WORKER_THREAD_PRIO            (64)
+#define POWER_BATTERY_WORKER_THREAD_PRIO            64
 
 typedef enum 
 {
-    BATTERY_NOT_INSTALLED = 0,
-    BATTERY_IS_BEING_DETECTED = 1,
-    BATTERY_AVAILABLE = 2,
+    BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED = 0,
+    BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED = 1,
+    BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE = 2,
 } ScePowerBatteryAvailabilityStatus;
 
 typedef enum 
@@ -48,6 +48,9 @@ typedef struct
     u8 unk7;
 } ScePowerSysconSetParamDataTTC; // size: 8
 
+/**
+ * This structure represents the power service's internal control block for battery management.
+ */
 typedef struct 
 {
     u32 eventId; // 0
@@ -71,7 +74,20 @@ typedef struct
     s32 batteryRemainingCapacity; // 72
     s32 batteryLifePercentage; // 76
     s32 batteryFullCapacity; // 80
-    s32 unk84;
+    /*
+     * Represents the minimum full capacity of a battery. The full capacity of a battery can only be
+     * accurately determined with a full charge (where the charge is cutoff at the end of the chargin process).
+     * As such, the actual full capacity of a battery might not always be corectly available. In some cases
+     * (such as swapping a battery?) the last reported full capacity might be less than the actual full capacity.
+     * The [minimumFullCapacity] is thus used to provide a more accurate full capacity value until the battery
+     * equipped has been fully charged again and a new full capacity could be ascertained.
+     * 
+     * The minimum full capacity is determiend by initializing it to the current remaining battery capacity on PSP
+     * startup and and then update it to the new reaming capacity value whenever that value is a new maximum
+     * during the the use of the PSP system between two cold reboots. For example, this is the case when the battery
+     * is being charged when the PSP system is turned on.
+     */
+    s32 minimumFullCapacity; // 84
     s32 batteryChargeCycle; // 88
     s32 limitTime; // 92
     s32 batteryTemp; // 96
@@ -181,27 +197,26 @@ s32 _scePowerBatterySuspend(void)
 
 // Subroutine sub_0000461C - Address 0x0000461C 
 // TODO: Verify function
-s32 _scePowerBatteryUpdatePhase0(void* arg0, u32* arg1)
+s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *pPowerStateForCallbackArg)
 {
-    u32 val1;
-    u32 val2;
+    u32 powerSupplyStatus;
 
-    val1 = *(u32*)(arg0 + 36);
+    powerSupplyStatus = *(u32*)(arg0 + 36);
 
     g_Battery.limitTime = -1; // 0x00004644
-    g_Battery.powerSupplyStatus = val1; // 0x0000464C
+    g_Battery.powerSupplyStatus = powerSupplyStatus; // 0x0000464C
     g_Battery.batteryTemp = -1; // 0x00004650
     g_Battery.batteryElec = -1; // 0x00004654
     g_Battery.batteryVoltage = -1; // 0x0000465C
 
-    if (val1 & 0x2) // 0x00004658
+    if (powerSupplyStatus & 0x2) // 0x00004658
     {
-        g_Battery.batteryAvailabilityStatus = BATTERY_IS_BEING_DETECTED; // 0x0000466C
-        if (g_Battery.batteryType == 0) // 0x00004668
+        g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED; // 0x0000466C
+        if (g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00004668
         {
             g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
             g_Battery.batteryRemainingCapacity = *(u32*)(arg0 + 44); // 0x000046B0
-            g_Battery.unk84 = *(u32*)(arg0 + 44); // 0x000046B8
+            g_Battery.minimumFullCapacity = *(u32*)(arg0 + 44); // 0x000046B8
             g_Battery.batteryChargeCycle = -1; // 0x000046C0
             g_Battery.batteryFullCapacity = *(u32*)(arg0 + 48); // 0x000046C8
 
@@ -210,23 +225,22 @@ s32 _scePowerBatteryUpdatePhase0(void* arg0, u32* arg1)
             g_Battery.batteryLifePercentage = _scePowerBatteryCalcRivisedRcap(); // 0x000046C4 & 0x000046D0
         }
 
-        *arg1 &= ~0x7F; // 0x00004678
-        val2 = *arg1 | g_Battery.batteryLifePercentage | 0x80; // 0x00004684
+        *pPowerStateForCallbackArg &= ~SCE_POWER_CALLBACKARG_BATTERY_CAP; // 0x00004678
+        *pPowerStateForCallbackArg |= g_Battery.batteryLifePercentage | SCE_POWER_CALLBACKARG_BATTERYEXIST; // 0x00004684 & 0x00004688
     }
     else
     {
-        g_Battery.unk84 = -1; // 0x000046D4
-        g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED; // 0x000046D8
+        g_Battery.minimumFullCapacity = -1; // 0x000046D4
+        g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x000046D8
         g_Battery.unk68 = 0; // 0x000046DC
         g_Battery.batteryRemainingCapacity = -1;
         g_Battery.batteryLifePercentage = -1;
         g_Battery.batteryFullCapacity = -1;
         g_Battery.batteryChargeCycle = -1; // 0x000046EC
 
-        val2 = *arg1 & ~0xFF; // 0x000046F8
+        *pPowerStateForCallbackArg &= ~(SCE_POWER_CALLBACKARG_BATTERY_CAP | SCE_POWER_CALLBACKARG_BATTERYEXIST); // 0x000046F8 & 0x00004688
     }
 
-    *arg1 = val2; // 0x00004688
     return SCE_ERROR_OK;
 }
 
@@ -328,7 +342,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             // loc_00004FC4
             sceKernelClearEventFlag(g_Battery.eventId, ~0x20000000); // 0x00004FD0
 
-            g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED; // 0x00004FE0
+            g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00004FE0
             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004FE4
             g_Battery.isIdle = SCE_FALSE; // 0x00004FEC
 
@@ -422,20 +436,20 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         timeout = 5000000; // 0x00004850
 
-        if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x0000484C
+        if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x0000484C
         {
             if (g_Battery.workerThreadNextOp >= 2 && g_Battery.workerThreadNextOp <= 12) // 0x00004854 - 0x00004860
             {
                 g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004864
             }
         }
-        else if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00004E44
+        else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00004E44
         {
             // loc_00004E94
             timeout = 20000; // 0x00004E9C 
 
         }
-        else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABLE
+        else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE
             && g_Battery.batteryType == 0) // 0x00004E4C & 0x00004E58
         {
             s32 remainCapacity = _scePowerBatteryCalcRivisedRcap(); // 0x00004E60
@@ -481,9 +495,9 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     }
                     else
                     {
-                        if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x000048EC
+                        if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x000048EC
                         {
-                            g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED; // 0x000048FC
+                            g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED; // 0x000048FC
                             timeout = 20000; // 0x00004900
                         }
 
@@ -592,9 +606,15 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                         g_Battery.batteryRemainingCapacity = remainCap; // 0x00004B2C
                         g_Battery.unk68 = batStat1; // 0x00004B3C
 
-                        if (g_Battery.unk84 < remainCap) // 0x00004B38
+                        /* 
+                         * If the new remaining battery capacity is greater than the current ascertained
+                         * minimum full capacity value, we update the munimum full capacity value. For example,
+                         * this is the case if the battery is currently charging and the remaining battery capacity
+                         * was smaller than the just obtained new remainign capacity when the PSP was turned on.
+                         */
+                        if (g_Battery.minimumFullCapacity < remainCap) // 0x00004B38
                         {
-                            g_Battery.unk84 = remainCap; // 0x00004B4C
+                            g_Battery.minimumFullCapacity = remainCap; // 0x00004B4C
                             if (g_Battery.powerSupplyStatus & 0x80)
                             {
                                 g_Battery.batteryRemainingCapacity = remainCap--; // 0x00004B54
@@ -622,9 +642,9 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                             g_Battery.batteryVoltage = battVolt; // 0x00004C08
                             g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap(battVolt); // 0x00004C0C & 0x00004C20
 
-                            if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00004C1C
+                            if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00004C1C
                             {
-                                g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABLE; // 0x00004C38
+                                g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE; // 0x00004C38
                             }
 
                             g_Battery.unk48 = 0;
@@ -768,9 +788,9 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 else
                 {
                     g_Battery.batteryVoltage = battVolt; // 0x00004E24
-                    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00004E20
+                    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00004E20
                     {
-                        g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABLE; // 0x00004E3C
+                        g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE; // 0x00004E3C
                     }
 
                     g_Battery.unk48 = 0; // 0x00004E28
@@ -787,7 +807,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
 static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
 {
-    if (g_Battery.batteryAvailabilityStatus != BATTERY_NOT_INSTALLED) // 0x00004D70
+    if (g_Battery.batteryAvailabilityStatus != BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x00004D70
     {
         // 0x00004D78 - 0x00004DB8
         g_Battery.batteryVoltage = -1;
@@ -795,11 +815,11 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
         g_Battery.batteryLifePercentage = -1;
         g_Battery.batteryFullCapacity = -1;
         g_Battery.batteryChargeCycle = -1;
-        g_Battery.unk84 = -1;
+        g_Battery.minimumFullCapacity = -1;
         g_Battery.limitTime = -1;
         g_Battery.batteryTemp = -1;
         g_Battery.batteryElec = -1;
-        g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED;
+        g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED;
         g_Battery.unk40 = 0;
         g_Battery.unk68 = 0;
 
@@ -826,9 +846,9 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
 
     fCap = g_Battery.batteryFullCapacity;
     fCapLimit = fCap * 0.9; // 0x0000513C - 0x00005164
-    if (fCapLimit < g_Battery.unk84) // 0x0000516C
+    if (fCapLimit < g_Battery.minimumFullCapacity) // 0x0000516C
     {
-        fCapLimit = g_Battery.unk84 * 0.95; // 0x00005174 - 0x00005194
+        fCapLimit = g_Battery.minimumFullCapacity * 0.95; // 0x00005174 - 0x00005194
     }
 
     rCap = g_Battery.batteryRemainingCapacity;
@@ -1208,13 +1228,13 @@ s32 scePowerGetBatteryChargingStatus(void)
 
     oldK1 = pspShiftK1(); // 0x000057A0
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x0000579C
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x0000579C
     {
         pspSetK1(oldK1);
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x000057AC
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x000057AC
     {
         pspSetK1(oldK1);
         return SCE_POWER_ERROR_DETECTING;
@@ -1314,12 +1334,12 @@ s32 scePowerIsSuspendRequired(void)
 // Subroutine scePower_94F5A53F - Address 0x000058DC - Aliases: scePower_driver_41ADFF48
 s32 scePowerGetBatteryRemainCapacity(void)
 {
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x000058EC
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x000058EC
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x000058FC
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x000058FC
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -1397,12 +1417,12 @@ s32 scePowerGetBatteryTemp(void)
         return SCE_ERROR_NOT_SUPPORTED;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x00005A50
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x00005A50
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00005A60
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00005A60
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -1427,12 +1447,12 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec)
         return SCE_ERROR_PRIV_REQUIRED;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x00005AA8
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x00005AA8
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00005AB8
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00005AB8
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -1452,12 +1472,12 @@ s32 scePowerGetBatteryChargeCycle(void)
         return SCE_ERROR_NOT_SUPPORTED;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED) // 0x00005AF8
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x00005AF8
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED) // 0x00005B08
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00005B08
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -1489,7 +1509,7 @@ static s32 _scePowerBatteryResume(void)
     intrState1 = sceKernelCpuSuspendIntr(); // 0x00005C2C
 
     g_Battery.isAcSupplied = -1; // 0x00005C40
-    g_Battery.batteryAvailabilityStatus = BATTERY_NOT_INSTALLED; // 0x00005C4C
+    g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00005C4C
     g_Battery.isIdle = SCE_FALSE; // 0x00005C4C
 
     sceKernelClearEventFlag(g_Battery.eventId, ~0x900); // 0x00005C64
@@ -1549,7 +1569,7 @@ s32 scePowerIsPowerOnline(void)
 // Subroutine scePower_0AFD0D8B - Address 0x00005D68 - Aliases: scePower_driver_8C873AA7
 s32 scePowerIsBatteryExist(void)
 {
-    return (s32)(g_Battery.batteryAvailabilityStatus != BATTERY_NOT_INSTALLED);
+    return (s32)(g_Battery.batteryAvailabilityStatus != BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED);
 }
 
 // Subroutine scePower_1E490401 - Address 0x00005D78 - Aliases: scePower_driver_7A9EA6DE
@@ -1576,7 +1596,7 @@ s32 scePowerIsLowBattery(void)
     status = SCE_ERROR_OK;
     oldK1 = pspShiftK1(); // 0x00005DC4
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABLE) // 0x00005DC0
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE) // 0x00005DC0
     {
         status = sceSysconIsLowBattery(); // 0x00005DE0
     }
@@ -1594,12 +1614,12 @@ s32 scePowerGetBatteryType(void)
 // Subroutine scePower_FD18A0FF - Address 0x00005DFC - Aliases: scePower_driver_003B1E03
 s32 scePowerGetBatteryFullCapacity(void)
 {
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED)
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -1610,12 +1630,12 @@ s32 scePowerGetBatteryFullCapacity(void)
 // Subroutine scePower_2085D15D - Address 0x00005E30 - Aliases: scePower_driver_31AEA94C
 s32 scePowerGetBatteryLifePercent(void)
 {
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED)
     {
         return SCE_POWER_ERROR_DETECTING;
     }
@@ -1626,12 +1646,12 @@ s32 scePowerGetBatteryLifePercent(void)
 // Subroutine scePower_483CE86B - Address 0x00005E64 - Aliases: scePower_driver_F7DE0E81
 s32 scePowerGetBatteryVolt(void)
 {
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_NOT_INSTALLED)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED)
     {
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
-    if (g_Battery.batteryAvailabilityStatus == BATTERY_IS_BEING_DETECTED)
+    if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED)
     {
         return SCE_POWER_ERROR_DETECTING;
     }

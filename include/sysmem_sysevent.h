@@ -13,7 +13,7 @@ enum SceSysEventTypes {
 
 /* PSP suspend events */
 
-#define SCE_SYSTEM_SUSPEND_EVENT_QUERY              0x00000100
+#define SCE_SYSTEM_SUSPEND_EVENT_QUERY              0x00000100 /* Cancel request can be sent. */
 #define SCE_SYSTEM_SUSPEND_EVENT_CANCELLATION       0x00000101
 #define SCE_SYSTEM_SUSPEND_EVENT_START              0x00000102
 
@@ -39,7 +39,7 @@ enum SceSysEventTypes {
 
 #define SCE_SYSTEM_SUSPEND_EVENT_PHASE1_0           0x00000400
 #define SCE_SYSTEM_SUSPEND_EVENT_PHASE1_1           0x00000401
-#define SCE_SYSTEM_SUSPEND_EVENT_PHASE1_2           0x00000402
+#define SCE_SYSTEM_SUSPEND_EVENT_PHASE1_2           0x00000402 /* Cancel request can be sent. */
 
 #define SCE_SYSTEM_SUSPEND_EVENT_FREEZE             0x00001000
 
@@ -87,7 +87,7 @@ enum SceSysEventTypes {
 
 #define SCE_SYSTEM_RESUME_EVENT_PHASE1_0            0x00100000
 #define SCE_SYSTEM_RESUME_EVENT_PHASE1_1            0x00100001
-#define SCE_SYSTEM_RESUME_EVENT_PHASE1_2            0x00100002
+#define SCE_SYSTEM_RESUME_EVENT_PHASE1_2            0x00100002 /* Cancel request can be sent. */
 
 #define SCE_SYSTEN_RESUME_EVENT_COMPLETED           0x00400000  
 

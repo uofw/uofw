@@ -1342,7 +1342,6 @@ static s32 _scePowerSuspendOperation(s32 mode)
     {
         /* suspend touch and go. */
 
-            // loc_00002530
         int unk = UtilsForKernel_A6B0A6B8(); // 0x00002530
         UtilsForKernel_39FFB756(0); // 0x0000253C
 
@@ -1361,8 +1360,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
             memset(&g_Resume.unk20488, 0, 212); // 0x00002568
 
            // TODO: add 0 assignments
-            // Why are we zeroing them out when the above memset() call already does that job?
-            g_Resume.unk20516 = 0; // 0x00002580
+            g_Resume.unk20516 = pspClock; // 0x00002580
             g_Resume.unk20504 = 0; // 0x0000258C
             g_Resume.unk20492 = 0; // 0x00002590
             g_Resume.unk20496 = 0; // 0x00002598
@@ -1477,7 +1475,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sysEventResumePlayload.unk4 = &g_Resume.unk20488; // 0x00002248
 
     // TODO: 0.5 seconds operand (explanation)
-    sysEventResumePlayload.unk16 = (g_Resume.unk20516 - pspClock) * 500000; // 0x00002224 & 0x00002234 & 0x00002238 & 0x00002260 & 0x00002264
+    sysEventResumePlayload.unk16 = ((u32)(g_Resume.unk20516 - pspClock)) * 500000; // 0x00002224 & 0x00002234 & 0x00002238 & 0x00002260 & 0x00002264
     sysEventResumePlayload.systemTimePreSuspendOp = sysEventSuspendPayload.systemTimePreSuspendOp; // 0x00002258 & 0x0000225C & 0x00002240 & 0x0000223C
 
     // 0x00002268 - 0x00002294
