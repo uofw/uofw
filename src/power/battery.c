@@ -113,7 +113,7 @@ s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
 {
     memset(&g_Battery, 0, sizeof(ScePowerBattery)); // 0x00005B50
 
-    g_Battery.permitChargingDelayAlarmId = 1; // 0x00005B74
+    g_Battery.permitChargingDelayAlarmId = -1; // 0x00005B74
     g_Battery.isUsbChargingSupported = isUsbChargingSupported; // 0x00005B78
     g_Battery.batteryType = batteryType; // 0x00005B7C
     g_Battery.isAcSupplied = -1; // 0x00005B80
