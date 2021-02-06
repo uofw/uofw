@@ -147,7 +147,7 @@ typedef struct {
 #define SCE_RESUME_POWER_STATE_WLAN_POWER           (1 << 1)
 #define SCE_RESUME_POWER_STATE_HR_POWER             (1 << 2)
 #define SCE_RESUME_POWER_STATE_IS_LOW_BATTERY_01G   (1 << 5)
-#define SCE_RESUME_POWER_STATE_HR_POWER             (1 << 18)
+#define SCE_RESUME_POWER_STATE_HDD_POWER            (1 << 18)
 
 /* Status bits for SceSysEventResumePowerState.hardwarePeripheralState */
 
