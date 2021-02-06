@@ -289,6 +289,8 @@ s32 sceSysconEnd(void)
 
 s32 sceSysconResume(void *arg0)
 {   
+    // TODO: arg0 is actually a pointer to a SceSysEventResumePowerState struct.
+
     sceSysregSpiClkSelect(0, 1);
     sceSysregSpiClkEnable(0);
     sceSysregSpiIoEnable(0);
@@ -349,6 +351,8 @@ s32 _sceSysconSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), 
         g_Syscon.pollingMode = 1;
         break;
     case 0x10008:
+        // TODO: Cast param to a pointer to a SceSysEventResumePayload struct.
+
         sceSysconResume(*(void**)(param + 4));
         break;
     case 0x1000F:

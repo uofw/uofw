@@ -113,6 +113,10 @@
 #define PSP_SYSCON_BARYON_GET_VERSION_MAJOR(v)  (((v) >> 20) & 0xF)
 #define PSP_SYSCON_BARYON_GET_VERSION_MINOR(v)  (((v) >> 16) & 0xF)
 
+/* Returned power supply status flags by ::sceSysconGetPowerSupplyStatus() */
+
+#define SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED                 0x00000002                     
+#define SCE_SYSCON_POWER_SUPPLY_STATUS_IS_LOW_BATTERY_02G_AND_LATER     0x00000020
 
 /** 
  * PSP Hardware LEDs which can be turned ON/OFF 

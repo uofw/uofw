@@ -7,6 +7,7 @@
 #include <power_kernel.h>
 #include <syscon.h>
 #include <sysmem_sysclib.h>
+#include <sysmem_sysevent.h>
 #include <threadman_kernel.h>
 
 #include "power_int.h"
@@ -17,15 +18,20 @@
 /* The (initial) priority of the battery worker thread. */
 #define POWER_BATTERY_WORKER_THREAD_PRIO            64
 
-typedef enum 
-{
+/*
+ * This value is sepcified for the [batteryAvailabilityStatus] member of ScePowerBattery.
+ * It represents the current availability status of the battery in the power service.
+ */
+typedef enum {
+    /* No battery is equipped or the power service cannot communicate with the equipped battery. */
     BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED = 0,
-    BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED = 1,
-    BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE = 2,
+    /* The power service is busy getting new battery information after a battery/power state change. */
+    BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED,
+    /* A battery is correctly equipped and its properties (reamining battery life, charging state,...) can be obtained by API. */
+    BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE,
 } ScePowerBatteryAvailabilityStatus;
 
-typedef enum 
-{
+typedef enum {
     POWER_BATTERY_THREAD_OP_START = 0,
     POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS = 1,
     POWER_BATTERY_THREAD_OP_SET_CHARGE_LED_STATUS = 3,
@@ -68,7 +74,7 @@ typedef struct
     u32 unk48;
     PowerBatteryThreadOperation workerThreadNextOp; // 52
     u32 isAcSupplied; // 56
-    u32 powerSupplyStatus; // 60 -- TODO: Define constants for possible values
+    u32 powerSupplyStatus; // 60 -- TODO: Define macros for possible values
     ScePowerBatteryAvailabilityStatus batteryAvailabilityStatus; // 64
     u32 unk68;
     s32 batteryRemainingCapacity; // 72
@@ -196,12 +202,12 @@ s32 _scePowerBatterySuspend(void)
 }
 
 // Subroutine sub_0000461C - Address 0x0000461C 
-// TODO: Verify function
-s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *pPowerStateForCallbackArg)
+/* Called during PSP resume phase [phase0]. Updates our battery status control block. */
+s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState, u32 *pPowerStateForCallbackArg)
 {
     u32 powerSupplyStatus;
 
-    powerSupplyStatus = *(u32*)(arg0 + 36);
+    powerSupplyStatus = pResumePowerState->powerSupplyStatus;
 
     g_Battery.limitTime = -1; // 0x00004644
     g_Battery.powerSupplyStatus = powerSupplyStatus; // 0x0000464C
@@ -209,27 +215,43 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *pPowerStateForCallbackArg)
     g_Battery.batteryElec = -1; // 0x00004654
     g_Battery.batteryVoltage = -1; // 0x0000465C
 
-    if (powerSupplyStatus & 0x2) // 0x00004658
+    /* Check if the PSP system has a battery equipped. */
+    if (powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED) // 0x00004658
     {
+        /* A battery is equipped. Update our internal battery status control block. */
+
         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED; // 0x0000466C
+
+        /* Check if the type of the equipped battery supports battery state monitoring. */
         if (g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00004668
         {
-            g_Battery.unk68 = *(u32*)(arg0 + 40); // 0x000046A8
-            g_Battery.batteryRemainingCapacity = *(u32*)(arg0 + 44); // 0x000046B0
-            g_Battery.minimumFullCapacity = *(u32*)(arg0 + 44); // 0x000046B8
+            /* 
+             * Battery state monitoring is supported. As such, we have access to battery data like its full &
+             * remaining battery capacities and can calculate its remaining battery life (for example in [%]). 
+             */
+
+            g_Battery.unk68 = pResumePowerState->unk40; // 0x000046A8
+            g_Battery.batteryRemainingCapacity = pResumePowerState->batteryRemainCapacity; // 0x000046B0
+            g_Battery.minimumFullCapacity = pResumePowerState->batteryRemainCapacity; // 0x000046B8
             g_Battery.batteryChargeCycle = -1; // 0x000046C0
-            g_Battery.batteryFullCapacity = *(u32*)(arg0 + 48); // 0x000046C8
+            g_Battery.batteryFullCapacity = pResumePowerState->batteryFullCapacity; // 0x000046C8
 
             // Note: In earlier versions, this was
             // g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap(*(u32*)(arg0 + 44));
             g_Battery.batteryLifePercentage = _scePowerBatteryCalcRivisedRcap(); // 0x000046C4 & 0x000046D0
         }
 
+        /* 
+         * Update power service's power callback argument holder so that power callback subscribers can
+         * notice that a battery is currently equipped.
+         */
         *pPowerStateForCallbackArg &= ~SCE_POWER_CALLBACKARG_BATTERY_CAP; // 0x00004678
         *pPowerStateForCallbackArg |= g_Battery.batteryLifePercentage | SCE_POWER_CALLBACKARG_BATTERYEXIST; // 0x00004684 & 0x00004688
     }
     else
     {
+        /* No battery is currently equipped. */
+
         g_Battery.minimumFullCapacity = -1; // 0x000046D4
         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x000046D8
         g_Battery.unk68 = 0; // 0x000046DC
@@ -238,6 +260,10 @@ s32 _scePowerBatteryUpdatePhase0(void *arg0, u32 *pPowerStateForCallbackArg)
         g_Battery.batteryFullCapacity = -1;
         g_Battery.batteryChargeCycle = -1; // 0x000046EC
 
+        /*
+         * Update power service's power callback argument holder so that power callback subscribers can
+         * notice that a battery is not currently equipped.
+         */
         *pPowerStateForCallbackArg &= ~(SCE_POWER_CALLBACKARG_BATTERY_CAP | SCE_POWER_CALLBACKARG_BATTERYEXIST); // 0x000046F8 & 0x00004688
     }
 
@@ -447,7 +473,6 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
         {
             // loc_00004E94
             timeout = 20000; // 0x00004E9C 
-
         }
         else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE
             && g_Battery.batteryType == 0) // 0x00004E4C & 0x00004E58
@@ -486,7 +511,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 if (status >= SCE_ERROR_OK) // 0x000048CC
                 {
                     g_Battery.powerSupplyStatus = powerSupplyStatus; // 0x000048E4
-                    if (!(powerSupplyStatus & 0x2)) // 0x000048E0
+                    if (!(powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED)) // 0x000048E0
                     {
                         _scePowerBatteryThreadErrorObtainBattInfo(); // 00004984 - 0x00004A04
 
@@ -497,7 +522,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     {
                         if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x000048EC
                         {
-                            g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED; // 0x000048FC
+                            g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED; // 0x000048FC
                             timeout = 20000; // 0x00004900
                         }
 
