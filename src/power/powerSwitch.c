@@ -1594,7 +1594,7 @@ static void _scePowerResumePoint(void *pData)
 {
     if (pData != NULL) // 0x00002810
     {
-        /* Copy [g_Resume.resumePowerState] content to the specified source buffer. */
+        /* Copy [g_Resume.resumePowerState] content to the specified destination buffer. */
 
         // s32 copySize = *(s32 *)pData; // 0x00002818
         s32 count = 0; // 0x0000282C -- $a0
