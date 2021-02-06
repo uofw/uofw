@@ -1022,7 +1022,6 @@ static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage)
 }
 
 // Subroutine scePower_driver_5F5006D2 - Address 0x000052C8
-// TODO: Write documentation
 s32 scePowerGetUsbChargingCapability(void)
 {
     return (s32)g_Battery.isUsbChargingSupported;
@@ -1093,7 +1092,6 @@ s32 scePowerBatteryPermitCharging(void)
 }
 
 // Subroutine sub_0000544C - Address 0x0000544C
-// TODO: Write documentation
 s32 _scePowerBatteryUpdateAcSupply(s32 enable)
 {
     s32 intrState;

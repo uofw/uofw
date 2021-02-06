@@ -873,6 +873,11 @@ typedef enum {
 	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
 } ScePowerBatteryType;
 
+/**
+ * Gets the USB charging capability of the PSP device.
+ * 
+ * @return SCE_TRUE if USB charging is supported, SCE_FALSE otherwise.
+ */
 s32 scePowerGetUsbChargingCapability(void);
 
 s32 scePowerBatteryForbidCharging(void);
