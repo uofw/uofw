@@ -31,6 +31,24 @@ typedef enum {
     BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE,
 } ScePowerBatteryAvailabilityStatus;
 
+/* ScePowerBattery.sysconCmdDisableUsbChargingExecStatus */
+
+#define BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_READY    0 /* The command can be executed. */
+#define BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_BUSY     1 /* The command is currently being executed by SYSCON. */
+#define BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_DONE     2 /* SYSCON has finished executing the command. */
+
+/* Action flags for the battery event thread. */
+
+#define BATTERY_EVENT_FORBID_BATTERY_CHARGING           0x00000100 /* Forbid battery charging. */
+#define BATTERY_EVENT_PERMIT_BATTERY_CHARGING           0x00000200 /* Permit battery charging. */
+#define BATTERY_EVENT_UNKNOWN_400                       0x00000400 /* Unknown. Something to do with disabling USB charging. */
+#define BATTERY_EVENT_ENABLE_USB_CHARGING               0x00000800 /* Enable USB charging. */
+#define BATTERY_EVENT_UPDATE_BATTERY_INFO               0x10000000 /* Update the battery control block (remainCap, voltage, temperature,...). */
+#define BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING      0x20000000 /* Suspend updating the battery control block. */
+#define BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING     0x40000000 /* Resume updating the battery control block. */
+#define BATTERY_EVENT_TERMINATION                       0x80000000 /* Terminate the battery event thread. */
+
+/* Defines the different battery info update operations of the battery event thread. */
 typedef enum {
     POWER_BATTERY_THREAD_OP_START = 0,
     POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS = 1,
@@ -54,28 +72,35 @@ typedef struct
     u8 unk7;
 } ScePowerSysconSetParamDataTTC; // size: 8
 
-/**
+/*
  * This structure represents the power service's internal control block for battery management.
  */
 typedef struct 
 {
-    u32 eventId; // 0
-    u32 workerThreadId; // 4
+    SceUID batteryEventFlagId; // 0
+    SceUID workerThreadId; // 4
     u32 forceSuspendCapacity; // 8
     u32 lowBatteryCapacity; // 12
     u32 isIdle; // 16
-    u32 unk20;
+    /* 
+     * Represents the total number of [forbid battery charge] requests minus the total number of 
+     * [permit battery charge] requests (since cold boot). Consequently, if this number is greather 
+     * than 0, there have been more [forbid battery charge] requests than [permit battery charge] requests. 
+     * 
+     * Note: "0" is its minimum ( (we do not "ignore" [forbid battery charge] requests.
+     */
+    u32 batteryForbidChargingNetCounter; // 20
     u32 isUsbChargingSupported; // 24
     u32 isUsbChargingEnabled; // 28
     u32 unk32;
-    u32 permitChargingDelayAlarmId; // 36
+    SceUID permitChargingDelayAlarmId; // 36
     u32 unk40; // 40 TODO: Could have something to do with the status of the charge Led (On/Off)
     u32 batteryType; // 44
-    u32 unk48;
+    u32 isBatteryInfoUpdateInProgress;
     PowerBatteryThreadOperation workerThreadNextOp; // 52
     u32 isAcSupplied; // 56
     u32 powerSupplyStatus; // 60 -- TODO: Define macros for possible values
-    ScePowerBatteryAvailabilityStatus batteryAvailabilityStatus; // 64
+    u32 batteryAvailabilityStatus; // 64
     u32 unk68;
     s32 batteryRemainingCapacity; // 72
     s32 batteryLifePercentage; // 76
@@ -99,9 +124,9 @@ typedef struct
     s32 batteryTemp; // 96
     s32 batteryElec; // 100
     s32 batteryVoltage; // 104
-    u32 unk108;
+    u32 sysconCmdDisableUsbChargingExecStatus; // 108
     SceSysconPacket powerBatterySysconPacket; // 112
-    ScePowerSysconSetParamDataTTC unk208;
+    ScePowerSysconSetParamDataTTC ttcConfig;
 } ScePowerBattery; //size: 216
 
 static inline s32 _scePowerBatteryThreadErrorObtainBattInfo();
@@ -126,7 +151,7 @@ s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
     g_Battery.batteryFullCapacity = -1; // 0x00005B84
     g_Battery.batteryChargeCycle = -1; // 0x00005B8C
 
-    g_Battery.eventId = sceKernelCreateEventFlag("ScePowerBattery", 1, 0, NULL); // 0x00005B88
+    g_Battery.batteryEventFlagId = sceKernelCreateEventFlag("ScePowerBattery", 1, 0, NULL); // 0x00005B88
     g_Battery.workerThreadId = sceKernelCreateThread("ScePowerBattery", _scePowerBatteryThread, POWER_BATTERY_WORKER_THREAD_PRIO,
         2 * SCE_KERNEL_1KiB, SCE_KERNEL_TH_NO_FILLSTACK | 0x1, NULL); // 0x00005BB0
 
@@ -142,23 +167,27 @@ static s32 _scePowerBatteryEnd(void)
     u32 outBits;
 
     if (g_Battery.permitChargingDelayAlarmId <= 0) { //0x000044C0
-        s32 status = sceKernelPollEventFlag(g_Battery.eventId, 0x200, SCE_KERNEL_EW_CLEAR_PAT | SCE_KERNEL_EW_OR, &outBits); //0x00004554
+        s32 status = sceKernelPollEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_PERMIT_BATTERY_CHARGING, SCE_KERNEL_EW_CLEAR_PAT | SCE_KERNEL_EW_OR, &outBits); //0x00004554
         outBits = ((s32)status < 0) ? 0 : outBits; //0x00004564
     }
     else {
         sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); //0x000044C8
-        outBits = 0x200; //0x000044D0
+        outBits = BATTERY_EVENT_PERMIT_BATTERY_CHARGING; //0x000044D0
         g_Battery.permitChargingDelayAlarmId = -1;//0x000044DC
     }
-    sceKernelClearEventFlag(g_Battery.eventId, ~0xF00); //0x000044E8
-    sceKernelSetEventFlag(g_Battery.eventId, 0x80000000); //0x000044F4
 
-    if (outBits & 0x200) //0x00004504
+    u32 battEventFlagClearValue = ~(BATTERY_EVENT_FORBID_BATTERY_CHARGING | BATTERY_EVENT_PERMIT_BATTERY_CHARGING 
+        | BATTERY_EVENT_UNKNOWN_400 | BATTERY_EVENT_ENABLE_USB_CHARGING);
+
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, battEventFlagClearValue); //0x000044E8
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_TERMINATION); //0x000044F4
+
+    if (outBits & BATTERY_EVENT_PERMIT_BATTERY_CHARGING) //0x00004504
         sceSysconPermitChargeBattery(); //0x00004544
 
     sceKernelWaitThreadEnd(g_Battery.workerThreadId, 0); //0x00004510
     sceKernelDeleteThread(g_Battery.workerThreadId); //0x00004518
-    sceKernelDeleteEventFlag(g_Battery.eventId); //0x00004524
+    sceKernelDeleteEventFlag(g_Battery.batteryEventFlagId); //0x00004524
 
     return SCE_ERROR_OK;
 }
@@ -170,7 +199,7 @@ s32 _scePowerBatterySuspend(void)
     s32 intrState;
     u32 eventFlagBits;
 
-    eventFlagBits = 0x40000000; // 0x00004594
+    eventFlagBits = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING; // 0x00004594
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00004590
 
@@ -179,23 +208,23 @@ s32 _scePowerBatterySuspend(void)
         sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x000045A8
         g_Battery.permitChargingDelayAlarmId = -1;
 
-        eventFlagBits |= 0x200;
+        eventFlagBits |= BATTERY_EVENT_PERMIT_BATTERY_CHARGING;
     }
 
-    if (g_Battery.unk20 != 0) // 0x000045D4
+    if (g_Battery.batteryForbidChargingNetCounter != 0) // 0x000045D4
     {
-        eventFlagBits |= 0x200;
+        eventFlagBits |= BATTERY_EVENT_PERMIT_BATTERY_CHARGING;
     }
 
     // 0x000045D0
     if (g_Battery.isUsbChargingEnabled)
     {
         g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x000045D8
-        eventFlagBits |= 0x400; // 0x000045DC
+        eventFlagBits |= BATTERY_EVENT_UNKNOWN_400; // 0x000045DC
     }
 
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x2000000); // 0x000045E0
-    sceKernelSetEventFlag(g_Battery.eventId, eventFlagBits); //0x000045EC
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~0x2000000); // 0x000045E0
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, eventFlagBits); //0x000045EC
 
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
@@ -286,12 +315,15 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
     u32 batteryEventFlagSetValue; // $sp
 
-    g_Battery.unk48 = 1; // 0x00004718
+    g_Battery.isBatteryInfoUpdateInProgress = SCE_TRUE; // 0x00004718
     g_Battery.isIdle = SCE_FALSE; // 0x0000471C
 
     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004720
 
-    batteryEventFlagCheckValue = 0x40000700; // 0x00004728
+    batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING
+        | BATTERY_EVENT_UNKNOWN_400
+        | BATTERY_EVENT_PERMIT_BATTERY_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00004728
+
     timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x0000473C
 
     isUsbChargingEnabled = scePowerGetUsbChargingCapability(); // 0x00004738
@@ -302,7 +334,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) >= 0x2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 0x6) // 0x000050D0 - 0x00005118
         {
             /* We are running on a PSP-2000 series model. */
-            sceSysconReceiveSetParam(4, &g_Battery.unk208); // 0x00005120
+            sceSysconReceiveSetParam(4, &g_Battery.ttcConfig); // 0x00005120
         }
 
         _scePowerBatterySetTTC(1); // 0x000050E4
@@ -315,7 +347,10 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         if (timeout == BATTERY_EVENT_POLL_NO_WAIT) // 0x0000474C
         {
-            sceKernelPollEventFlag(g_Battery.eventId, batteryEventFlagCheckValue | 0x80000000, SCE_KERNEL_EW_OR, &batteryEventFlagSetValue); // 0x000050B4
+            sceKernelPollEventFlag(
+                g_Battery.batteryEventFlagId, 
+                batteryEventFlagCheckValue | BATTERY_EVENT_TERMINATION,
+                SCE_KERNEL_EW_OR, &batteryEventFlagSetValue); // 0x000050B4
 
             status = SCE_ERROR_OK; // 0x000050C0
         }
@@ -325,76 +360,83 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 ? NULL
                 : &timeout;
 
-            status = sceKernelWaitEventFlag(g_Battery.eventId, batteryEventFlagCheckValue | 0x90000000, SCE_KERNEL_EW_OR, &batteryEventFlagSetValue, pTimeout); // 0x00004774 & 0x00004788
+            status = sceKernelWaitEventFlag(
+                g_Battery.batteryEventFlagId, 
+                batteryEventFlagCheckValue | BATTERY_EVENT_TERMINATION | BATTERY_EVENT_UPDATE_BATTERY_INFO,
+                SCE_KERNEL_EW_OR, &batteryEventFlagSetValue, pTimeout); // 0x00004774 & 0x00004788
 
-            if (batteryEventFlagSetValue & 0x10000000 && g_Battery.unk48 == 0) // 0x00004788 & 0x00004794
+            if (batteryEventFlagSetValue & BATTERY_EVENT_UPDATE_BATTERY_INFO 
+                && g_Battery.isBatteryInfoUpdateInProgress == SCE_FALSE) // 0x00004788 & 0x00004794
             {
-                g_Battery.unk48 = 1; // 0x000047A0
+                g_Battery.isBatteryInfoUpdateInProgress = SCE_TRUE; // 0x000047A0
                 g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x000047A4
             }
         }
 
         if ((status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_WAIT_TIMEOUT) 
-            || batteryEventFlagSetValue & 0x80000000) // 0x000047AC - 0x000047C0 & 0x000047C8
+            || batteryEventFlagSetValue & BATTERY_EVENT_TERMINATION) // 0x000047AC - 0x000047C0 & 0x000047C8
         {
             return SCE_ERROR_OK;
         }
 
-        if (batteryEventFlagSetValue & 0x200) // 0x000047D0
+        if (batteryEventFlagSetValue & BATTERY_EVENT_PERMIT_BATTERY_CHARGING) // 0x000047D0
         {
             sceSysconPermitChargeBattery();  // 0x00005028
 
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x00005034
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_PERMIT_BATTERY_CHARGING); // 0x00005034
 
-            if (!(batteryEventFlagSetValue & 0x40000000)) // // 0x00005048
+            if (!(batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING)) // 0x00005048
             {
                 sceKernelDelayThread(1.5 * 1000 * 1000); // 0x00005054
                 continue; // 0x0000505C
             }
         }
 
-        if (batteryEventFlagSetValue & 0x40000000) // 0x000047DC
+        if (batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING) // 0x000047DC
         {
             // loc_00004FF0
             _scePowerBatterySetTTC(1); // 0x00004FF0
 
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x40000000); // 0x00005004
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING); // 0x00005004
 
             g_Battery.isIdle = SCE_TRUE; // 0x0000501C
             timeout = BATTERY_EVENT_INDEFINITE_WAIT; // 0x00005024
 
-            batteryEventFlagCheckValue = 0x60000100; // 0x00005008 & 0x0000500C
+            batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING
+                | BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00005008 & 0x0000500C
 
             continue; // 0x00005020
         }
 
-        if (batteryEventFlagSetValue & 0x20000000) // 0x000047E8
+        if (batteryEventFlagSetValue & BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING) // 0x000047E8
         {
             // loc_00004FC4
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x20000000); // 0x00004FD0
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING); // 0x00004FD0
 
             g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00004FE0
             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004FE4
             g_Battery.isIdle = SCE_FALSE; // 0x00004FEC
 
-            batteryEventFlagCheckValue = 0x40000700; // 0x00004FDC
+            batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING
+                | BATTERY_EVENT_UNKNOWN_400
+                | BATTERY_EVENT_PERMIT_BATTERY_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00004FDC
+
             timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x000048C0
 
             continue; // 0x000048BC
         }
 
-        if (batteryEventFlagSetValue & 0x100) // 0x000047F0
+        if (batteryEventFlagSetValue & BATTERY_EVENT_FORBID_BATTERY_CHARGING) // 0x000047F0
         {
-            // loc_00004F9C
+            /* Battery charging should be forbidden. */
+
             sceSysconForbidChargeBattery(); // 0x00004F9C
 
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x100); // 0x00004FA8
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x00004FA8
 
             /* Wait for 1.5 seconds */
             sceKernelDelayThread(1.5 * 1000 * 1000); // 0x00004FB4
         }
-
-        // loc_00004800
 
         if (g_Battery.isIdle) // 0x00004800
         {
@@ -403,57 +445,63 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         u8 isAcSupplied = sceSysconIsAcSupplied(); // 0x00004808 -- $s3
 
-        if (batteryEventFlagSetValue & 0x800) // 0x00004818
+        if (batteryEventFlagSetValue & BATTERY_EVENT_ENABLE_USB_CHARGING) // 0x00004818
         {
             if (isAcSupplied) // 0x00004820
             {
                 // loc_00004ECC
-                sceSysconSetUSBStatus(4); // 0x00004ECC
+                sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_CHARGING_DISABLED); // 0x00004ECC
 
                 _scePowerBatterySetTTC(1); // 0x00004ED8 & 0x00004EBC
             }
-            else if (g_Battery.unk108 == 0) // 0x0000482C
+            else if (g_Battery.sysconCmdDisableUsbChargingExecStatus == BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_READY) // 0x0000482C
             {
-                sceSysconSetUSBStatus(6); // 0x00004EA0
+                sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_CHARGING_ENABLED); // 0x00004EA0
 
                 // TODO: Define constant for 1251 battery full capacity
                 _scePowerBatterySetTTC((g_Battery.batteryFullCapacity < 1251) ? 1 : 0); // 0x00004EA8 - 0x00004EBC
             }
 
-            // loc_00004834
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x800); // 0x00004838
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x00004838
         }
-        else if (batteryEventFlagSetValue & 0x400) // 0x00004EE0
+        else if (batteryEventFlagSetValue & BATTERY_EVENT_UNKNOWN_400) // 0x00004EE0
         {
-            // loc_00004EDC
             g_Battery.unk32 = 0; // 0x00004F78
-            sceSysconSetUSBStatus(0); // 0x00004F7C
+            sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_UNKNOWN_0); // 0x00004F7C
 
             _scePowerBatterySetTTC(1); // 0x00004F84
 
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x100); // 0x00004F94 & 0x00004838
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x00004F94 & 0x00004838
         }
-        else if (g_Battery.unk108 == 2) // 0x00004EEC
+        else if (g_Battery.sysconCmdDisableUsbChargingExecStatus == BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_DONE) // 0x00004EEC
         {
-            g_Battery.unk108 = 0; // 0x00004EF0
+            g_Battery.sysconCmdDisableUsbChargingExecStatus = BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_READY; // 0x00004EF0
 
             // loc_00004F68
             _scePowerBatterySetTTC(1);
         }
         else if (g_Battery.isUsbChargingEnabled && g_Battery.isAcSupplied != isAcSupplied) // 0x00004EF8 & 0x00004F04
         {
-            // 0x00004F0C
+            /* 
+            * Charging the via an AC adapter (power plug) takes precedence over USB charging. As such, we check
+            * if the AC connection status has changed while USB charging is enabled:
+            * 
+            * PSP power now supplied by an AC adapter: Stop USB charging.
+            * PSP power no longer supplied by an AC adapter: Start USB charging.
+            */
+
             if (!isAcSupplied) // 0x00004F0C
             {
-                sceSysconSetUSBStatus(6); // 0x00004F48
+                /* Start USB charging. */
+                sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_CHARGING_ENABLED); // 0x00004F48
 
-                // TODO: Define constant for 1251 battery full capacity
+                // TODO: Define constant for 1251 (or 1250) battery full capacity
                 _scePowerBatterySetTTC((g_Battery.batteryFullCapacity < 1251) ? 1 : 0); // 0x00004F50 - 0x00004F64 & 0x00004F20
             }
             else
             {
-                // 0x00004F1C
-                sceSysconSetUSBStatus(4);
+                /* Stop USB charging. */
+                sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_CHARGING_DISABLED); // 0x00004F1C
 
                 _scePowerBatterySetTTC(1); // 0x00004F20
             }
@@ -489,7 +537,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
         }
 
-        if (g_Battery.unk48 != 0) // 0x00004870
+        if (g_Battery.isBatteryInfoUpdateInProgress) // 0x00004870
         {
             timeout = 20000; // 0x0000487C
         }
@@ -517,7 +565,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     {
                         _scePowerBatteryThreadErrorObtainBattInfo(); // 00004984 - 0x00004A04
 
-                        g_Battery.unk48 = 0; // 0x00004990
+                        g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE; // 0x00004990
                         g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004998
                     }
                     else
@@ -610,7 +658,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 g_Battery.unk32 = 1; // 0x00004AE4
                 g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x00004AF0
 
-                sceSysconSetUSBStatus(0); // 0x00004AEC
+                sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_UNKNOWN_0); // 0x00004AEC
                 _scePowerBatterySetTTC(1); // 0x00004AF4
 
                 continue; // 0x00004AFC
@@ -674,7 +722,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                                 g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE; // 0x00004C38
                             }
 
-                            g_Battery.unk48 = 0;
+                            g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE;
                             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START;
                         }
                     }
@@ -820,7 +868,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE; // 0x00004E3C
                     }
 
-                    g_Battery.unk48 = 0; // 0x00004E28
+                    g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE; // 0x00004E28
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004E30
                 }
 
@@ -854,8 +902,8 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
 
         s32 intrState = sceKernelCpuSuspendIntr(); // 0x00004BB8
 
-        sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00004BC8
-        sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00004BD8
+        sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00004BC8
+        sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00004BD8
 
         sceKernelCpuResumeIntr(intrState); // 0x00004BE0
     }
@@ -1037,7 +1085,7 @@ s32 scePowerBatteryForbidCharging(void)
 
     intrState1 = sceKernelCpuSuspendIntr();  // 0x000052EC
 
-    if (g_Battery.unk20 == 0) // 0x000052F8
+    if (g_Battery.batteryForbidChargingNetCounter == 0) // 0x000052F8
     {
         if (g_Battery.permitChargingDelayAlarmId > 0) // 0x00005304
         {
@@ -1045,16 +1093,16 @@ s32 scePowerBatteryForbidCharging(void)
             g_Battery.permitChargingDelayAlarmId = 0; // 0x00005318
         }
 
-        sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x00005320
-        sceKernelSetEventFlag(g_Battery.eventId, 0x100); // 0x0000532C
+        sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_PERMIT_BATTERY_CHARGING); // 0x00005320
+        sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x0000532C
     }
 
-    g_Battery.unk20++; // 0x00005344
+    g_Battery.batteryForbidChargingNetCounter++; // 0x00005344
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005340
 
-    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005350
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005360
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005350
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005360
 
     sceKernelCpuResumeIntr(intrState2); // 0x00005368
     sceKernelCpuResumeIntr(intrState1); // 0x00005370
@@ -1071,20 +1119,20 @@ s32 scePowerBatteryPermitCharging(void)
 
     intrState1 = sceKernelCpuSuspendIntr(); // 0x000053AC
 
-    if (g_Battery.unk20 > 0)
+    if (g_Battery.batteryForbidChargingNetCounter > 0)
     {
-        g_Battery.unk20--; // 0x000053CC
-        if (g_Battery.unk20 == 0) // 0x000053C8
+        g_Battery.batteryForbidChargingNetCounter--; // 0x000053CC
+        if (g_Battery.batteryForbidChargingNetCounter == 0) // 0x000053C8
         {
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x100); // 0x00005424
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x00005424
             g_Battery.permitChargingDelayAlarmId = sceKernelSetAlarm(POWER_DELAY_PERMIT_CHARGING, _scePowerBatteryDelayedPermitCharging, NULL); // 0x0000543C
         }
     }
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x000053D0
 
-    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x000053E0
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x000053F0
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x000053E0
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x000053F0
 
     sceKernelCpuResumeIntr(intrState2); // 0x000053F8
     sceKernelCpuResumeIntr(intrState1); // 0x00005400
@@ -1093,18 +1141,18 @@ s32 scePowerBatteryPermitCharging(void)
 }
 
 // Subroutine sub_0000544C - Address 0x0000544C
-s32 _scePowerBatteryUpdateAcSupply(s32 enable)
+s32 _scePowerBatteryUpdateAcSupply(s32 isAcSupplied)
 {
     s32 intrState;
 
-    if (!enable) // 0x00005464
+    if (!isAcSupplied) // 0x00005464
     {
         return SCE_ERROR_OK;
     }
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00005488
 
-    if (g_Battery.unk20 > 0) // 0x00005494
+    if (g_Battery.batteryForbidChargingNetCounter > 0) // 0x00005494
     {
         if (g_Battery.permitChargingDelayAlarmId > 0) // 0x000054A0
         {
@@ -1112,8 +1160,8 @@ s32 _scePowerBatteryUpdateAcSupply(s32 enable)
             g_Battery.permitChargingDelayAlarmId = -1; // 0x000054B4
         }
 
-        sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x000054BC
-        sceKernelSetEventFlag(g_Battery.eventId, 0x100);  // 0x000054C8
+        sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_PERMIT_BATTERY_CHARGING); // 0x000054BC
+        sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_FORBID_BATTERY_CHARGING);  // 0x000054C8
     }
 
     sceKernelCpuResumeIntr(intrState);
@@ -1146,8 +1194,8 @@ s32 scePowerBatteryEnableUsbCharging(void)
 
         if (!sceSysconIsAcSupplied()) // 0x00005564
         {
-            sceKernelSetEventFlag(g_Battery.eventId, 0x800); // 0x00005574
-            sceKernelClearEventFlag(g_Battery.eventId, ~0x400); // 0x00005580
+            sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x00005574
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UNKNOWN_400); // 0x00005580
         }
     }
 
@@ -1174,35 +1222,35 @@ s32 scePowerBatteryDisableUsbCharging(void)
     {
         g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x000055E8
 
-        if (g_Battery.unk108 == 0) // 0x000055EC
+        if (g_Battery.sysconCmdDisableUsbChargingExecStatus == BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_READY) // 0x000055EC
         {
-            g_Battery.powerBatterySysconPacket.tx[0] = PSP_SYSCON_CMD_SET_USB_STATUS; // 0x0000567C
-            g_Battery.powerBatterySysconPacket.tx[1] = 3; // 0x00005680
-            g_Battery.powerBatterySysconPacket.tx[2] = 4; // 0x00005688
+            g_Battery.powerBatterySysconPacket.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_SET_USB_STATUS; // 0x0000567C
+            g_Battery.powerBatterySysconPacket.tx[PSP_SYSCON_TX_LEN] = 3; // 0x00005680
+            g_Battery.powerBatterySysconPacket.tx[PSP_SYSCON_TX_DATA(0)] = SCE_SYSCON_USB_STATUS_CHARGING_DISABLED; // 0x00005688
 
             status = sceSysconCmdExecAsync(&g_Battery.powerBatterySysconPacket, 1, _scePowerBatterySysconCmdIntr, NULL); // 0x00005684
             if (status < SCE_ERROR_OK) // 0x0000568C
             {
-                sceKernelSetEventFlag(g_Battery.eventId, 0x400); // 0x00005660
+                sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UNKNOWN_400); // 0x00005660
             }
             else
             {
-                g_Battery.unk108 = 1; // 0x00005698
+                g_Battery.sysconCmdDisableUsbChargingExecStatus = BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_BUSY; // 0x00005698
                 g_Battery.unk32 = 0; // 0x000056A0
             }
         }
         else
         {
-            sceKernelSetEventFlag(g_Battery.eventId, 0x400); // 0x00005660
+            sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UNKNOWN_400); // 0x00005660
         }
 
-        sceKernelClearEventFlag(g_Battery.eventId, ~0x800); // 0x000055FC
+        sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x000055FC
     }
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005604
 
-    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000);  // 0x00005614
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005624
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO);  // 0x00005614
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005624
 
     sceKernelCpuResumeIntr(intrState2); // 0x0000562C
     sceKernelCpuResumeIntr(intrState1); // 0x00005634
@@ -1211,6 +1259,7 @@ s32 scePowerBatteryDisableUsbCharging(void)
 }
 
 // Subroutine sub_000056A4 - Address 0x000056A4
+/* Sets the charging rate (0 = limited rate, 1 = full rate) (?) */
 static s32 _scePowerBatterySetTTC(s32 arg0)
 {
     s32 status;
@@ -1221,12 +1270,11 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
         return SCE_ERROR_OK;
     }
 
-    // 0x000056D4 - 0x0000571C
-
-    /* Only proceed if we are running on a PSP with a supported Baryon version (PS-2000 series). */
+    /* Only proceed if we are running on a PSP with a supported Baryon version (PSP-2000 series). */
     u8 version = _sceSysconGetBaryonVersion();
-    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 0x2 &&
-        PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 0x2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) > 0x6)
+    u8 baryonMinVersion = PSP_SYSCON_BARYON_GET_VERSION_MINOR(version);
+    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 0x2 || 
+        baryonMinVersion < 0x2 || baryonMinVersion >= 0x6) // 0x000056D4 - 0x0000571C
     {
         return SCE_ERROR_OK;
     }
@@ -1235,16 +1283,16 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
 
     if (arg0 == 0) // 0x00005734
     {
-        g_Battery.unk208.unk7 = (g_Battery.unk208.unk7 & 0xF8) | 0x4; // 0x00005738 & 0x00005768 - 0x00005770, 0x0000574C
+        g_Battery.ttcConfig.unk7 = (g_Battery.ttcConfig.unk7 & 0xF8) | 0x4; // 0x00005738 & 0x00005768 - 0x00005770, 0x0000574C
     }
     else
     {
-        g_Battery.unk208.unk7 = (g_Battery.unk208.unk7 & 0xF8) | 0x5; // 0x00005738 - 0x00005740, 0x0000574C
+        g_Battery.ttcConfig.unk7 = (g_Battery.ttcConfig.unk7 & 0xF8) | 0x5; // 0x00005738 - 0x00005740, 0x0000574C
     }
 
     sceKernelCpuResumeIntr(intrState); // 0x00005748
 
-    status = sceSysconSendSetParam(4, &g_Battery.unk208); // 0x00005758
+    status = sceSysconSendSetParam(4, &g_Battery.ttcConfig); // 0x00005758
     return status;
 }
 
@@ -1276,12 +1324,12 @@ s32 scePowerGetBatteryChargingStatus(void)
     if (sceSysconIsAcSupplied()) // 0x000057BC
     {
         // TODO: Battery charging may be suppressed (the battery is not charging) while the WLAN is in use
-        // Could g_Battery.unk20 here be an indicator for WlanActive?
+        // Could g_Battery.batteryForbidChargingNetCounter here be an indicator for WlanActive?
 
         // Another case is where we are connected to an external power source and the battery is already fully charged.
         // In this case, we report the battery as not charging and this info could be accessed in the else part below (?)
 
-        if (g_Battery.unk20 != 0) // 0x000057C8
+        if (g_Battery.batteryForbidChargingNetCounter != 0) // 0x000057C8
         {
             // battery not charging
             batteryChargingStatus = 2; // 0x000057CC
@@ -1413,8 +1461,8 @@ s32 scePowerGetBatteryLifeTime(void)
     {
         intrState = sceKernelCpuSuspendIntr(); // 0x000059F4
 
-        sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005A04
-        sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005A14
+        sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005A04
+        sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005A14
 
         sceKernelCpuResumeIntr(intrState);
         return SCE_POWER_ERROR_DETECTING;
@@ -1551,13 +1599,17 @@ static s32 _scePowerBatteryResume(void)
     g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00005C4C
     g_Battery.isIdle = SCE_FALSE; // 0x00005C4C
 
-    sceKernelClearEventFlag(g_Battery.eventId, ~(0x800 | 0x100)); // 0x00005C64
-    sceKernelSetEventFlag(g_Battery.eventId, g_Battery.unk20 == 0 ? 0x20000000 : 0x20000100); // 0x00005C70
+    u32 battEventFlagSetValue = g_Battery.batteryForbidChargingNetCounter == 0
+        ? BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING
+        : (BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING | BATTERY_EVENT_FORBID_BATTERY_CHARGING);
+
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~(BATTERY_EVENT_ENABLE_USB_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING)); // 0x00005C64
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, battEventFlagSetValue); // 0x00005C70
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005C78
 
-    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005C88
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005C98
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C88
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C98
 
     sceKernelCpuResumeIntr(intrState2); // 0x00005CA0
     sceKernelCpuResumeIntr(intrState1); // 0x00005CA8
@@ -1573,8 +1625,8 @@ s32 scePowerBatteryUpdateInfo(void)
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00005CDC
 
-    sceKernelSetEventFlag(g_Battery.eventId, 0x10000000); // 0x00005CEC
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x10000000); // 0x00005CFC
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005CEC
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005CFC
 
     sceKernelCpuResumeIntr(intrState); // 0x00005D04
     return SCE_ERROR_OK;
@@ -1722,7 +1774,7 @@ static s32 _scePowerBatteryDelayedPermitCharging(void *common)
     (void)common;
 
     g_Battery.permitChargingDelayAlarmId = -1;
-    sceKernelSetEventFlag(g_Battery.eventId, 0x200);
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_PERMIT_BATTERY_CHARGING);
 
     return 0; /* Delete this alarm handler. */
 }
@@ -1733,6 +1785,6 @@ static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *p
     (void)pSysconPacket;
     (void)param;
 
-    g_Battery.unk108 = 2;
-    return SCE_ERROR_OK;
+    g_Battery.sysconCmdDisableUsbChargingExecStatus = BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_DONE;
+    return 0;
 }

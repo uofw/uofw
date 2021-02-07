@@ -958,6 +958,10 @@ s32 sceSysconReadAlarm(s32 *alarm);
  */
 s32 sceSysconWriteAlarm(s32 alarm);
 
+#define SCE_SYSCON_USB_STATUS_UNKNOWN_0             0 /* Unknown. Perhaps a "busy" status? */
+#define SCE_SYSCON_USB_STATUS_CHARGING_DISABLED     4 /* USB charging disabled. */
+#define SCE_SYSCON_USB_STATUS_CHARGING_ENABLED      6 /* USB charging enabled. */
+
 /**
  * Set the USB status.
  *
