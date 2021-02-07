@@ -157,7 +157,7 @@ typedef struct {
 #define SCE_KERNEL_EW_CLEAR_PAT         (0x20)      /** Clear bits specified by bit pattern after wait condition is satisfied. */
 #define SCE_KERNEL_EW_CLEAR             SCE_KERNEL_EW_CLEAR_ALL
 
-SceUID sceKernelCreateEventFlag(const char *name, int attr, int bits, SceKernelEventFlagOptParam *opt);
+SceUID sceKernelCreateEventFlag(const char *name, int attr, int initBits, SceKernelEventFlagOptParam *optParam);
 int sceKernelSetEventFlag(SceUID evid, u32 bits);
 int sceKernelClearEventFlag(SceUID evid, u32 bits);
 int sceKernelPollEventFlag(int evid, u32 bits, u32 wait, u32 *outBits);

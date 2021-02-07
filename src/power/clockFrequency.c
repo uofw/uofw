@@ -419,7 +419,7 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
          * WLAN is active.
          */
         u32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00003E08
-        if (sdkVersion > 0x0200000F) // 0x00003E18
+        if (sdkVersion >= SCE_DEVKIT_VERSION_2_00_0010) // 0x00003E18
         {
             sceKernelUnlockMutex(g_PowerFreq.mutexId, 1); //0x00003DF4
 

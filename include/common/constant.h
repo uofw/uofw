@@ -14,4 +14,10 @@
 
 #define SCE_KERNEL_1MiB		(0x00100000) /* 1 Mebibyte */
 
+/* Devkit versions (Release X.Y.Z -> 0xXXYYZZZZ) */
+
+#define SCE_DEVKIT_VERSION_2_00_0010		0x02000010
+
+#define SCE_DEVKIT_VERSION_6_00_0000		0x06000000
+
 #endif /* SCE_KERNEL_CONSTANT_H */

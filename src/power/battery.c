@@ -294,8 +294,8 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
     if (isUsbChargingEnabled) // 0x00004740
     {
         u8 version = _sceSysconGetBaryonVersion(); // 0x000050CC
-        if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) == 2 &&
-            PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) >= 2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 6) // 0x000050D0 - 0x00005118
+        if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) == 0x2 &&
+            PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) >= 0x2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 0x6) // 0x000050D0 - 0x00005118
         {
             /* We are running on a PSP-2000 series model. */
             sceSysconReceiveSetParam(4, &g_Battery.unk208); // 0x00005120
@@ -310,13 +310,13 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
         batteryEventFlag = 0; // 0x0000474C
         if (timeout == 0) // 0x0000474C
         {
-            sceKernelPollEventFlag(g_Battery.eventId, batteryEventCheckFlags /* 0x40000700 */ | 0x80000000, SCE_KERNEL_EW_OR, &batteryEventFlag); // 0x000050B4
+            sceKernelPollEventFlag(g_Battery.eventId, batteryEventCheckFlags | 0x80000000, SCE_KERNEL_EW_OR, &batteryEventFlag); // 0x000050B4
 
             status = SCE_ERROR_OK; // 0x000050C0
         }
         else
         {
-            s32* pTimeout;
+            s32 *pTimeout;
             if (timeout == -1) // 0x00004758
                 pTimeout = NULL; // 0x000050A0
             else
@@ -331,8 +331,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
         }
 
-        if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT
-            || batteryEventFlag & 0x80000000) // 0x000047AC - 0x000047C0 & 0x000047C8
+        if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT || batteryEventFlag & 0x80000000) // 0x000047AC - 0x000047C0 & 0x000047C8
         {
             return SCE_ERROR_OK;
         }
@@ -459,24 +458,22 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             g_Battery.unk32 = 0; // 0x00004F3C
         }
 
-        // loc_00004840
-
         timeout = 5000000; // 0x00004850
 
         if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x0000484C
         {
-            if (g_Battery.workerThreadNextOp >= 2 && g_Battery.workerThreadNextOp <= 12) // 0x00004854 - 0x00004860
+            if (g_Battery.workerThreadNextOp > POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS 
+                && g_Battery.workerThreadNextOp <= (POWER_BATTERY_THREAD_OP_SET_BATT_VOLT + 1)) // 0x00004854 - 0x00004860
             {
                 g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004864
             }
         }
         else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00004E44
         {
-            // loc_00004E94
             timeout = 20000; // 0x00004E9C 
         }
         else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE
-            && g_Battery.batteryType == 0) // 0x00004E4C & 0x00004E58
+            && g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00004E4C & 0x00004E58
         {
             s32 remainCapacity = _scePowerBatteryCalcRivisedRcap(); // 0x00004E60
             if (remainCapacity != g_Battery.batteryLifePercentage) // 0x00004E6C
@@ -487,7 +484,6 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
         }
 
-        // potentially continuing at loc_0000486C / loc_00004870?
         if (g_Battery.unk48 != 0) // 0x00004870
         {
             timeout = 20000; // 0x0000487C
@@ -617,7 +613,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             case POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP:
             {
                 // 0x00004B04
-                if (g_Battery.batteryType == 0) // 0x00004B0C
+                if (g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00004B0C
                 {
                     s32 batStat1;
                     s32 remainCap;
@@ -1222,10 +1218,10 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
 
     // 0x000056D4 - 0x0000571C
 
-    /* Ony proceed if we are running on a PSP with a supported Baryon version (PS-2000 series). */
+    /* Only proceed if we are running on a PSP with a supported Baryon version (PS-2000 series). */
     u8 version = _sceSysconGetBaryonVersion();
-    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 2 &&
-        PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) > 6)
+    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 0x2 &&
+        PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 0x2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) > 0x6)
     {
         return SCE_ERROR_OK;
     }
@@ -1287,7 +1283,7 @@ s32 scePowerGetBatteryChargingStatus(void)
         }
         else
         {
-            // If bit 8 (pos 7) is set, then battery is being charged
+            // If bit 8 (pos 7) is set, then battery is being charged (g_Battery.powerSupplyStatus & 0x80)
             batteryChargingStatus = g_Battery.powerSupplyStatus >> 7 & 0x1; // 0x000057D0 & 0x000057D4
         }
     }
@@ -1550,7 +1546,7 @@ static s32 _scePowerBatteryResume(void)
     g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00005C4C
     g_Battery.isIdle = SCE_FALSE; // 0x00005C4C
 
-    sceKernelClearEventFlag(g_Battery.eventId, ~0x900); // 0x00005C64
+    sceKernelClearEventFlag(g_Battery.eventId, ~(0x800 | 0x100)); // 0x00005C64
     sceKernelSetEventFlag(g_Battery.eventId, g_Battery.unk20 == 0 ? 0x20000000 : 0x20000100); // 0x00005C70
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005C78
