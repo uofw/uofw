@@ -223,7 +223,7 @@ s32 _scePowerBatterySuspend(void)
         eventFlagBits |= BATTERY_EVENT_UNKNOWN_400; // 0x000045DC
     }
 
-    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~0x2000000); // 0x000045E0
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING); // 0x000045E0
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, eventFlagBits); //0x000045EC
 
     sceKernelCpuResumeIntr(intrState);
