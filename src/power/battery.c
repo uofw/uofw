@@ -270,6 +270,9 @@ s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState,
     return SCE_ERROR_OK;
 }
 
+#define BATTERY_EVENT_POLL_NO_WAIT      0
+#define BATTERY_EVENT_INDEFINITE_WAIT   (-1)
+
 // Subroutine sub_0x000046FC - Address 0x000046FC
 // TODO: Verify
 static s32 _scePowerBatteryThread(SceSize args, void* argp)
@@ -279,16 +282,17 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
     s32 isUsbChargingEnabled;
     s32 timeout; // $sp + 4
-    s32 batteryEventCheckFlags; // $s2
+    s32 batteryEventFlagCheckValue; // $s2
 
-    u32 batteryEventFlag; // $sp
+    u32 batteryEventFlagSetValue; // $sp
 
     g_Battery.unk48 = 1; // 0x00004718
     g_Battery.isIdle = SCE_FALSE; // 0x0000471C
+
     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004720
 
-    batteryEventCheckFlags = 0x40000700; // 0x00004728
-    timeout = 0; // 0x0000473C
+    batteryEventFlagCheckValue = 0x40000700; // 0x00004728
+    timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x0000473C
 
     isUsbChargingEnabled = scePowerGetUsbChargingCapability(); // 0x00004738
     if (isUsbChargingEnabled) // 0x00004740
@@ -307,49 +311,49 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
     s32 status; // $a0 in loc_000047AC
     for (;;)
     {
-        batteryEventFlag = 0; // 0x0000474C
-        if (timeout == 0) // 0x0000474C
+        batteryEventFlagSetValue = 0; // 0x0000474C
+
+        if (timeout == BATTERY_EVENT_POLL_NO_WAIT) // 0x0000474C
         {
-            sceKernelPollEventFlag(g_Battery.eventId, batteryEventCheckFlags | 0x80000000, SCE_KERNEL_EW_OR, &batteryEventFlag); // 0x000050B4
+            sceKernelPollEventFlag(g_Battery.eventId, batteryEventFlagCheckValue | 0x80000000, SCE_KERNEL_EW_OR, &batteryEventFlagSetValue); // 0x000050B4
 
             status = SCE_ERROR_OK; // 0x000050C0
         }
         else
         {
-            s32 *pTimeout;
-            if (timeout == -1) // 0x00004758
-                pTimeout = NULL; // 0x000050A0
-            else
-                pTimeout = &timeout; // 0x00004760 - 0x00004770
+            SceUInt *pTimeout = (timeout == BATTERY_EVENT_INDEFINITE_WAIT) // 0x00004758  - (0x00004760 - 0x00004770)/0x000050A0
+                ? NULL
+                : &timeout;
 
-            status = sceKernelWaitEventFlag(g_Battery.eventId, batteryEventCheckFlags | 0x90000000, SCE_KERNEL_EW_OR, &batteryEventFlag, pTimeout); // 0x00004774 & 0x00004788
+            status = sceKernelWaitEventFlag(g_Battery.eventId, batteryEventFlagCheckValue | 0x90000000, SCE_KERNEL_EW_OR, &batteryEventFlagSetValue, pTimeout); // 0x00004774 & 0x00004788
 
-            if (batteryEventFlag & 0x10000000 && g_Battery.unk48 == 0) // 0x00004788 & 0x00004794
+            if (batteryEventFlagSetValue & 0x10000000 && g_Battery.unk48 == 0) // 0x00004788 & 0x00004794
             {
                 g_Battery.unk48 = 1; // 0x000047A0
                 g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x000047A4
             }
         }
 
-        if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT || batteryEventFlag & 0x80000000) // 0x000047AC - 0x000047C0 & 0x000047C8
+        if ((status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_WAIT_TIMEOUT) 
+            || batteryEventFlagSetValue & 0x80000000) // 0x000047AC - 0x000047C0 & 0x000047C8
         {
             return SCE_ERROR_OK;
         }
 
-        if (batteryEventFlag & 0x200) // 0x000047D0
+        if (batteryEventFlagSetValue & 0x200) // 0x000047D0
         {
             sceSysconPermitChargeBattery();  // 0x00005028
 
             sceKernelClearEventFlag(g_Battery.eventId, ~0x200); // 0x00005034
 
-            if (!(batteryEventFlag & 0x40000000)) // // 0x00005048
+            if (!(batteryEventFlagSetValue & 0x40000000)) // // 0x00005048
             {
                 sceKernelDelayThread(1.5 * 1000 * 1000); // 0x00005054
                 continue; // 0x0000505C
             }
         }
 
-        if (batteryEventFlag & 0x40000000) // 0x000047DC
+        if (batteryEventFlagSetValue & 0x40000000) // 0x000047DC
         {
             // loc_00004FF0
             _scePowerBatterySetTTC(1); // 0x00004FF0
@@ -357,13 +361,14 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             sceKernelClearEventFlag(g_Battery.eventId, ~0x40000000); // 0x00005004
 
             g_Battery.isIdle = SCE_TRUE; // 0x0000501C
-            timeout = -1; // 0x00005024
-            batteryEventCheckFlags = 0x60000100; // 0x00005008 & 0x0000500C
+            timeout = BATTERY_EVENT_INDEFINITE_WAIT; // 0x00005024
+
+            batteryEventFlagCheckValue = 0x60000100; // 0x00005008 & 0x0000500C
 
             continue; // 0x00005020
         }
 
-        if (batteryEventFlag & 0x20000000) // 0x000047E8
+        if (batteryEventFlagSetValue & 0x20000000) // 0x000047E8
         {
             // loc_00004FC4
             sceKernelClearEventFlag(g_Battery.eventId, ~0x20000000); // 0x00004FD0
@@ -372,13 +377,13 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004FE4
             g_Battery.isIdle = SCE_FALSE; // 0x00004FEC
 
-            batteryEventCheckFlags = 0x40000700; // 0x00004FDC
-            timeout = 0; // 0x000048C0
+            batteryEventFlagCheckValue = 0x40000700; // 0x00004FDC
+            timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x000048C0
 
             continue; // 0x000048BC
         }
 
-        if (batteryEventFlag & 0x100) // 0x000047F0
+        if (batteryEventFlagSetValue & 0x100) // 0x000047F0
         {
             // loc_00004F9C
             sceSysconForbidChargeBattery(); // 0x00004F9C
@@ -398,7 +403,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         u8 isAcSupplied = sceSysconIsAcSupplied(); // 0x00004808 -- $s3
 
-        if (batteryEventFlag & 0x800) // 0x00004818
+        if (batteryEventFlagSetValue & 0x800) // 0x00004818
         {
             if (isAcSupplied) // 0x00004820
             {
@@ -418,7 +423,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             // loc_00004834
             sceKernelClearEventFlag(g_Battery.eventId, ~0x800); // 0x00004838
         }
-        else if (batteryEventFlag & 0x400) // 0x00004EE0
+        else if (batteryEventFlagSetValue & 0x400) // 0x00004EE0
         {
             // loc_00004EDC
             g_Battery.unk32 = 0; // 0x00004F78
@@ -496,7 +501,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             case POWER_BATTERY_THREAD_OP_START:
             {
                 g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS; // 0x000048B4
-                timeout = 0; // 0x000048C0
+                timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x000048C0
 
                 continue;
             }
@@ -699,7 +704,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 else
                 {
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_CHARGE_CYCLE; // 0x00004CC4
-                    timeout = 0; // 0x000048BC
+                    timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x000048BC
                 }
 
                 continue;
@@ -726,7 +731,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 else
                 {
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_LIMIT_TIME; // 0x00004CF8 & 0x00004CC4
-                    timeout = 0; // 0x000048C0
+                    timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x000048C0
                 }
 
                 continue;
@@ -756,7 +761,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_BATT_TEMP; // 0x00004D38
                     g_Battery.limitTime = -1; // 0x00004D40
 
-                    timeout = 0; // 0x00004D3C & 0x000048C0
+                    timeout = BATTERY_EVENT_POLL_NO_WAIT; // 0x00004D3C & 0x000048C0
                 }
 
                 continue;

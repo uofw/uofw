@@ -659,9 +659,9 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 
         g_Power.curPowerStateForCallbackArg &= ~SCE_POWER_CALLBACKARG_HOLDSW; // 0x0000080C & 0x00000814
 
-        u32 sdkVersion = sceKernelGetCompiledSdkVersion(); //0x00000810
+        u32 sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x00000810
         if (sdkVersion <= SCE_DEVKIT_VERSION_6_00_0000
-            && !(pResumePowerState->hardwarePeripheralState & SCE_RESUME_HARDWARE_PERIPHERAL_STATE_HOLD_SWITCH_INACTIVE)) // // 0x0000081C - 0x00000830
+            && !(pResumePowerState->hardwarePeripheralState & SCE_RESUME_HARDWARE_PERIPHERAL_STATE_HOLD_SWITCH_INACTIVE)) // 0x0000081C - 0x00000830
         {
             g_Power.curPowerStateForCallbackArg |= SCE_POWER_CALLBACKARG_HOLDSW; // 0x0000083C - 0x00000844
         }

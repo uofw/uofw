@@ -573,6 +573,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
                 | POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO | POWER_SWITCH_EVENT_REQUEST_COLD_RESET
                 | POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE;
             waitTimeout = POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD; /* 2 seconds timeout */
+
             status = sceKernelWaitEventFlag(g_PowerSwitch.eventId, powerSwitchWaitFlags, SCE_KERNEL_EW_OR,
                 &powerSwitchSetFlags, &waitTimeout); // 0x00001A04
 
