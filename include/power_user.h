@@ -345,10 +345,13 @@ s32 scePowerRequestSuspend(void);
 
 s32 scePowerRequestSuspendTouchAndGo(void);
 
+/* This constant defines the default cold reset mode. */
+#define SCE_POWER_COLD_RESET_DEFAULT	0
+
 /**
  * @brief Requests the PSP system to do a cold reset.
  * 
- * @param mode Unknown. Only specify 0.
+ * @param mode Only specify ::SCE_POWER_COLD_RESET_DEFAULT.
  *
  * @return SCE_ERROR_OK on successful request generation, otherwise < 0.
  *

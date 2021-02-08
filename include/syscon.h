@@ -1144,6 +1144,9 @@ s32 sceSysconGetPowerError(s32 *error);
  */
 s32 sceSysconCtrlLeptonPower(s8 power);
 
+#define SCE_SYSCON_MS_POWER_OFF     0
+#define SCE_SYSCON_MS_POWER_ON      1
+
 /**
  * Set the memory stick power.
  *

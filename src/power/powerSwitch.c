@@ -528,6 +528,8 @@ static s32 _scePowerUnlock(s32 lockType, s32 isUserLock)
 #define POWER_SWITCH_SUSPEND_OP_SUSPEND_TOUCH_AND_GO        0x300
 #define POWER_SWITCH_SUSPEND_OP_COLD_RESET		            0x400
 
+#define POWER_SWITCH_SUSPEND_OP_MASK                        0xF00
+
 //0x000017F0
 /* Processes power switch requests. */
 static s32 _scePowerOffThread(SceSize args, void* argp)
@@ -1000,7 +1002,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
             if (watchdog != 0) // 0x00001DE0
             {
-                sceSysconCtrlTachyonWDT(5); // 0x00002768
+                sceSysconCtrlTachyonWDT(0x5); // 0x00002768
             }
 
             sceSysconSetAffirmativeRertyMode(1); // 0x00001DE8
@@ -1288,7 +1290,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sceKernelDispatchSuspendHandlers(0); // 0x00002160 & 0x00002144
 
     /* 
-     * No application code is running any logner at this point. As such, no application
+     * No application code is running any longer at this point. As such, no application
      * can try to acquire a power lock to proceed with stable power state critical operations.
      * 
      * Remove the force-wait now so that when the PSP system resumes, user applications can call
@@ -1296,7 +1298,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
      */
     g_PowerSwitch.powerLockForUserShouldForceWait = SCE_FALSE; // 0x0000217C
 
-    if (suspendMode & 0xF00 == POWER_SWITCH_SUSPEND_OP_SUSPEND) // 0x00002180 & 0x00002174
+    if ((suspendMode & POWER_SWITCH_SUSPEND_OP_MASK) == POWER_SWITCH_SUSPEND_OP_SUSPEND) // 0x00002180 & 0x00002174
     {
         /* Suspend operation */
 
@@ -1326,11 +1328,11 @@ static s32 _scePowerSuspendOperation(s32 mode)
             for (;;); // 0x00002654
         }
     }
-    else if ((suspendMode & 0xF00) == POWER_SWITCH_SUSPEND_OP_SUSPEND_TOUCH_AND_GO) // 0x00002188 & 0x000024D4 & 0x0000218C
+    else if ((suspendMode & POWER_SWITCH_SUSPEND_OP_MASK) == POWER_SWITCH_SUSPEND_OP_SUSPEND_TOUCH_AND_GO) // 0x00002188 & 0x000024D4 & 0x0000218C
     {
         /* suspend touch and go. */
 
-        int unk = UtilsForKernel_A6B0A6B8(); // 0x00002530
+        int cp0StateR24 = UtilsForKernel_A6B0A6B8(); // 0x00002530 -- Get CP0 Status Register 24
         UtilsForKernel_39FFB756(0); // 0x0000253C
 
         /* Save the register state (VFPU/FPU/CP0/MIPS GPR). */
@@ -1338,7 +1340,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
         if (status != SCE_ERROR_OK) // 0x0000254C
         {
-            UtilsForKernel_39FFB756(unk); // 0x00002554
+            UtilsForKernel_39FFB756(cp0StateR24); // 0x00002554
         }
         else
         {
@@ -1372,23 +1374,25 @@ static s32 _scePowerSuspendOperation(s32 mode)
             /* Load the previously saved register state (VFPU/FPU/CP0/MIPS GPR). */
             sceSuspendForKernel_B2C9640B(1); // 0x00002804
 
-            // Note: In the ASM, an inlined _scePowerResumePoint() directly follows
-            // the call of sceSuspendForKernel_B2C9640B(). Depending on that function
-            // this code might not be executed after all.
-            _scePowerResumePoint(1); // 0x0000280C
+            // TODO: In the ASM, an inlined _scePowerResumePoint() directly follows
+            // the call of sceSuspendForKernel_B2C9640B(). We very likely don't call the function
+            // below...
+            // If power module is working in tests we should confirm that removing this code below
+            // can be done safely.
+            s32 a0;
+            asm("move %0, $a0" : "=r" (a0));
+            _scePowerResumePoint((void *)a0); // 0x0000280C
         }
     }
-    else if ((suspendMode & 0xF00) == POWER_SWITCH_SUSPEND_OP_COLD_RESET) // 0x00002188 & 0x000024DC
+    else if ((suspendMode & POWER_SWITCH_SUSPEND_OP_MASK) == POWER_SWITCH_SUSPEND_OP_COLD_RESET) // 0x00002188 & 0x000024DC
     {
         /* cold reset */
 
-        // 0x000024E4
+        // TODO: In what ways do the reset operations below differ from one each other?
 
-        if (g_PowerSwitch.coldResetMode != 0) // 0x000024E8
+        if (g_PowerSwitch.coldResetMode != SCE_POWER_COLD_RESET_DEFAULT) // 0x000024E8
         {
-            // loc_00002500
-
-            sceSysconCtrlMsPower(1); // 0x00002500
+            sceSysconCtrlMsPower(SCE_SYSCON_MS_POWER_ON); // 0x00002500
 
             u32 delayCount = 1 * 1000 * 1000; // 0x00002508 & 0x0000250C
             while (--delayCount != 0) {} // 0x00002510 - 0x00002518
@@ -1414,11 +1418,9 @@ static s32 _scePowerSuspendOperation(s32 mode)
             for (;;); // 0x000024F8
         }
     }
-    else if ((suspendMode & 0xF00) == POWER_SWITCH_SUSPEND_OP_STANDBY) // 0x00002194
+    else if ((suspendMode & POWER_SWITCH_SUSPEND_OP_MASK) == POWER_SWITCH_SUSPEND_OP_STANDBY) // 0x00002194
     {
         /* Standby operation (0x101) */
-
-        // loc_000024C4
 
         /* Let the system enter standby state.  */
         sceSysconPowerStandby(wakeupCondition);  // 0x000024C4
@@ -1506,7 +1508,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     while (sceDisplayIsVblank() == 0);
 
     // 0x000022F0 - 0x000022FC
-    while (sceDisplayIsVblank() != 0);
+    while (sceDisplayIsVblank() != SCE_FALSE);
 
     // 0x00002300 - 0x0000230C
     while (sceDisplayGetCurrentHcount() < unkHcount);
@@ -1684,7 +1686,7 @@ static void _scePowerResumePoint(void *pData)
     HW(0xBFC00536) = hwData7;
     HW(0xBFC00540) = hwData8;
 
-    // Note: This probably won't return here as otherwise no jr $ra exists to execute and 
+    // Note: We very likely won't return here as otherwise no jr $ra exists to execute and 
     // _scePowerOffCommon() would be executed following this call.
     sceSuspendForKernel_B2C9640B(1); // 0x0000296C 
 }
@@ -1940,7 +1942,8 @@ s32 scePowerRequestColdReset(s32 mode)
 
     oldK1 = pspShiftK1();
 
-    if (pspK1IsUserMode() && mode != 0) // 0x00002DBC & 0x00002DC8
+    /* We only allow mode SCE_POWER_COLD_RESET_DEFAULT for user applications. */
+    if (pspK1IsUserMode() && mode != SCE_POWER_COLD_RESET_DEFAULT) // 0x00002DBC & 0x00002DC8
     {
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_MODE;
