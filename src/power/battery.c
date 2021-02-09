@@ -1774,7 +1774,6 @@ s32 scePowerIsBatteryExist(void)
 }
 
 // Subroutine scePower_1E490401 - Address 0x00005D78 - Aliases: scePower_driver_7A9EA6DE
-// TODO: Write documentation
 s32 scePowerIsBatteryCharging(void)
 {
     s32 status;
@@ -1791,13 +1790,12 @@ s32 scePowerIsBatteryCharging(void)
 }
 
 // Subroutine scePower_D3075926 - Address 0x00005DA0 - Aliases: scePower_driver_FA651CE1
-// TODO: Write documentation
 s32 scePowerIsLowBattery(void)
 {
     s32 status;
     s32 oldK1;
 
-    status = SCE_ERROR_OK;
+    status = SCE_FALSE;
     oldK1 = pspShiftK1(); // 0x00005DC4
 
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE) // 0x00005DC0

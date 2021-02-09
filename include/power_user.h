@@ -655,6 +655,18 @@ s32 scePowerIsBatteryExist(void);
  */
 s32 scePowerIsBatteryCharging(void);
 
+/**
+ * @brief Gets the low battery status.
+ *
+ * This function indicates whether or not the battery is currently in the low battery status. A low battery
+ * status means that the remaining battery life is short. When the battery is low, the POWER LED on the PSP
+ * system will blink.
+ *
+ * @return SCE_TRUE if the battery is low, otherwise SCE_FALSE.
+ *
+ * @remark Whether the battery is currently in the low battery status can also be checked using a power callback.
+ * See ::scePowerRegisterCallback() for more details.
+ */
 s32 scePowerIsLowBattery(void);
 
 s32 scePowerGetBatteryFullCapacity(void);

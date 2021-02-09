@@ -92,7 +92,7 @@ typedef struct {
     s32 baryonVersion; // 512
     u32 curPowerStateForCallbackArg; // 516
     u32 callbackArgMask; // 520
-    u8 isBatteryLow; // 524
+    u8 isLowBattery; // 524
     u8 wlanActivity; // 525
     u8 watchDog; // 526
     u8 isWlanSuppressChargingEnabled; // 527
@@ -488,8 +488,8 @@ s32 scePowerInit(void)
 
     /* Set the low battery state if the battery is low. */
 
-    g_Power.isBatteryLow = sceSysconIsLowBattery(); // 0x00000318
-    if (g_Power.isBatteryLow) // 0x00000328
+    g_Power.isLowBattery = sceSysconIsLowBattery(); // 0x00000318
+    if (g_Power.isLowBattery) // 0x00000328
     {
         g_Power.curPowerStateForCallbackArg |= SCE_POWER_CALLBACKARG_LOWBATTERY; // 0x000003C8 - 0x000003D4
     }
@@ -559,14 +559,14 @@ static void _scePowerLowBatteryCallback(s32 enable, void *argp)
     (void)argp;
 
     /* We only generate a power callback if the low battery state has changed. */
-    if (g_Power.isBatteryLow == (u8)enable) // 0x000006D8
+    if (g_Power.isLowBattery == (u8)enable) // 0x000006D8
     {
         return;
     }
 
     /* Low battery state has changed. Generate the appropriate power callback. */
     
-    g_Power.isBatteryLow = (u8)enable; //0x000006F0
+    g_Power.isLowBattery = (u8)enable; //0x000006F0
 
     if (enable) // 0x000006EC
     {
@@ -574,7 +574,7 @@ static void _scePowerLowBatteryCallback(s32 enable, void *argp)
     }
     else
     {
-        _scePowerNotifyCallback(0, SCE_POWER_CALLBACKARG_LOWBATTERY, 0); // 0x000006F4 - 0x00000700
+        _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_LOWBATTERY, 0, 0); // 0x000006F4 - 0x00000700
     }
     
     /* Update power service's power battery control block to reflect the low battery state change. */
