@@ -1011,6 +1011,9 @@ s32 scePowerIsPowerOnline(void);
  * 
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
+ * 
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details.
  */
 s32 scePowerIsBatteryExist(void);
 
