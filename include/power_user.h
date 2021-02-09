@@ -627,6 +627,32 @@ s32 scePowerIsPowerOnline(void);
  */
 s32 scePowerIsBatteryExist(void);
 
+/**
+ * @Brief Gets the battery charging status.
+ *
+ * This function indicates whether or not the battery is currently charging. If detailed battery charging
+ * status information is required, consider using ::scePowerGetBatteryChargingStatus() instead.
+ *
+ * @return SCE_TRUE if the battery is charging, otherwise SCE_FALSE.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark The correct value may not be returned after a battery is equipped until the power service polls
+ * and recognizes that the battery has been equipped. Battery charging may be suppressed (the battery is not
+ * charging) while WLAN is in use.
+ *
+ * @remark To find out whether battery charging has been completed (= battery is fully charged), you can
+ * use this API together with ::sceIsPowerOnline().
+ * @par Example:
+ * @code
+ * if (sceIsPowerOnline() && !scePowerIsBatteryCharging())
+ * {
+ *		// battery is fully charged
+ * }
+ * @endcode
+ *
+ * @see ::scePowerGetBatteryChargingStatus()
+ */
 s32 scePowerIsBatteryCharging(void);
 
 s32 scePowerIsLowBattery(void);
