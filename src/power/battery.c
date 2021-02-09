@@ -1768,7 +1768,6 @@ s32 scePowerIsPowerOnline(void)
 }
 
 // Subroutine scePower_0AFD0D8B - Address 0x00005D68 - Aliases: scePower_driver_8C873AA7
-// TODO: Write documentation
 s32 scePowerIsBatteryExist(void)
 {
     return (s32)(g_Battery.batteryAvailabilityStatus != BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED);

@@ -679,8 +679,6 @@ typedef enum {
  * (like standby/suspend/reboot).
  * 
  * @return The power LED's off timing used by the power service. One of ::ScePowerLedOffTiming.
- * 
- * @see ::ScePowerLedOffTiming
  */
 u8 scePowerGetLedOffTiming(void);
 
@@ -860,24 +858,6 @@ u8 scePowerGetWlanActivity(void);
 /* Battery state */
 
 /**
- * Defines constants indicating whether the type of the equipped battery supports battery state monitoring.
- * If battery state monitoring is supported, state information such as the full/remaining battery capacity, 
- * or the current battery voltage/temperatur can be obtained through the power service.
- */
-typedef enum {
-	/** 
-	 * Describes a battery type which supports battery state monitoring. This type of battery is equipped by
-	 * the PSP-1000, PSP-2000 and PSP-3000 models.
-	 */
-	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED = 0,
-	/**
-	 * Describes a battery type which does not supports battery state monitoring. This type of battery is 
-	 * equipped by the PSP Go and the PSP-E1000 models.
-	 */
-	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
-} ScePowerBatteryType;
-
-/**
  * @brief Gets the USB charging capability of the PSP device.
  * 
  * This function returns whether the PSP device has in-built support for USB charging or not. Typically, 
@@ -1008,11 +988,40 @@ s32 scePowerGetLowBatteryCapacity(void);
 
 s32 scePowerIsPowerOnline(void);
 
+/**
+ * @brief Gets the battery equipped status.
+ * 
+ * This function gets whether or not a battery is equipped. A battery is considered to be equipped if the
+ * PSP system can correctly communicate with the battery.
+ * 
+ * @return SCE_TRUE If a battery is equipped, otherwise SCE_FALSE.
+ * 
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ */
 s32 scePowerIsBatteryExist(void);
 
 s32 scePowerIsBatteryCharging(void);
 
 s32 scePowerIsLowBattery(void);
+
+/**
+ * Defines constants indicating whether the type of the equipped battery supports battery state monitoring.
+ * If battery state monitoring is supported, state information such as the full/remaining battery capacity,
+ * or the current battery voltage/temperatur can be obtained through the power service.
+ */
+typedef enum {
+	/**
+	 * Describes a battery type which supports battery state monitoring. This type of battery is equipped by
+	 * the PSP-1000, PSP-2000 and PSP-3000 models.
+	 */
+	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED = 0,
+	/**
+	 * Describes a battery type which does not supports battery state monitoring. This type of battery is
+	 * equipped by the PSP Go and the PSP-E1000 models.
+	 */
+	 SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
+} ScePowerBatteryType;
 
 s32 scePowerGetBatteryType(void);
 

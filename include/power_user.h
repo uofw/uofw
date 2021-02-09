@@ -594,6 +594,51 @@ typedef enum {
  */
 s32 scePowerGetBatteryChargingStatus(void);
 
+s32 scePowerIsSuspendRequired(void);
+
+s32 scePowerGetBatteryRemainCapacity(void);
+
+s32 scePowerGetBatteryLifeTime(void);
+
+s32 scePowerGetBatteryTemp(void);
+
+s32 scePowerGetBatteryElec(u32 *pBatteryElec);
+
+s32 scePowerGetBatteryChargeCycle(void);
+
+s32 scePowerBatteryUpdateInfo(void);
+
+s32 scePowerGetForceSuspendCapacity(void);
+
+s32 scePowerGetLowBatteryCapacity(void);
+
+s32 scePowerIsPowerOnline(void);
+
+/**
+ * @brief Gets the battery equipped status.
+ *
+ * This function gets whether or not a battery is equipped. A battery is considered to be equipped if the
+ * PSP system can correctly communicate with the battery.
+ *
+ * @return SCE_TRUE If a battery is equipped, otherwise SCE_FALSE.
+ *
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ */
+s32 scePowerIsBatteryExist(void);
+
+s32 scePowerIsBatteryCharging(void);
+
+s32 scePowerIsLowBattery(void);
+
+s32 scePowerGetBatteryFullCapacity(void);
+
+s32 scePowerGetBatteryLifePercent(void);
+
+s32 scePowerGetBatteryVolt(void);
+
+s32 scePowerGetInnerTemp(void);
+
 /* Misc */
 
 /**
