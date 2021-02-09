@@ -608,6 +608,15 @@ s32 scePowerGetBatteryChargeCycle(void);
 
 s32 scePowerBatteryUpdateInfo(void);
 
+/**
+ * @brief Gets the force-suspend battery capacity threshold value.
+ *
+ * This function gets the battery capacity value at which the PSP system is force suspended by the system.
+ *
+ * @return The force-suspend battery capacity threshold value in mAh.
+ *
+ * @see ::scePowerIsSuspendRequired().
+ */
 s32 scePowerGetForceSuspendCapacity(void);
 
 /**

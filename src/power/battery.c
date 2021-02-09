@@ -1740,7 +1740,6 @@ s32 scePowerBatteryUpdateInfo(void)
 }
 
 // Subroutine scePower_E8E4E204 - Address 0x00005D24 - Aliases: scePower_driver_A641CF3F
-// TODO: Write documentation
 s32 scePowerGetForceSuspendCapacity(void)
 {
     return (s32)g_Battery.forceSuspendCapacity;
