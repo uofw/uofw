@@ -140,6 +140,7 @@ static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket* pSysconPacket, void* p
 ScePowerBattery g_Battery; //0x0000C5B8
 
 // Subroutine sub_00005B1C - Address 0x00005B1C
+/* Initialize power service's internal batter manager. */
 s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
 {
     memset(&g_Battery, 0, sizeof(ScePowerBattery)); // 0x00005B50
@@ -161,33 +162,70 @@ s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType)
 }
 
 //Subroutine sub_00004498 - Address 0x00004498
-// TODO: Verify function
-static s32 _scePowerBatteryEnd(void)
+/* Terminate power service's internal battery manager. */
+s32 _scePowerBatteryEnd(void)
 {
-    u32 outBits;
+    /* 
+     * At the time of power service termination, there might be an active [permit battery charging] request
+     * in our battery manager. This request might currently be lined up in our battery worker thread for
+     * execution or scheduled to happen after some delay time. However, as we are in the process of shutting
+     * down the kernel (anf thus our battery worker thread) we will removed any scheduled/lined up work here 
+     * and directly allow battery charging. That way, we won't hold up the termination process waiting for our
+     * battery worker thread to have allowed battery charging again.
+     */
 
-    if (g_Battery.permitChargingDelayAlarmId <= 0) { //0x000044C0
-        s32 status = sceKernelPollEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_PERMIT_BATTERY_CHARGING, SCE_KERNEL_EW_CLEAR_PAT | SCE_KERNEL_EW_OR, &outBits); //0x00004554
-        outBits = ((s32)status < 0) ? 0 : outBits; //0x00004564
+    u32 eventFlagSetValue;
+
+    /* 
+     * If the battery is scheduled to be allowed to charge, we remove this scheduled operation
+     * and allow the battery to charge now.
+     */
+    if (g_Battery.permitChargingDelayAlarmId > 0) // 0x000044C0
+    {
+        sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x000044C8
+        g_Battery.permitChargingDelayAlarmId = -1; // 0x000044DC
+
+        /* Allow the battery to charge (see code below). */
+        eventFlagSetValue = BATTERY_EVENT_PERMIT_BATTERY_CHARGING; // 0x000044D0       
     }
-    else {
-        sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); //0x000044C8
-        outBits = BATTERY_EVENT_PERMIT_BATTERY_CHARGING; //0x000044D0
-        g_Battery.permitChargingDelayAlarmId = -1;//0x000044DC
+    else
+    {
+        /* 
+         * If a [permit battery charge] operation has been lined up for our battery worker thread,
+         * remove it now and directly permit battery charging instead.
+         */
+        s32 status = sceKernelPollEventFlag(g_Battery.batteryEventFlagId,
+            BATTERY_EVENT_PERMIT_BATTERY_CHARGING, SCE_KERNEL_EW_CLEAR_PAT | SCE_KERNEL_EW_OR, &eventFlagSetValue); //0x00004554
+        if (status < SCE_ERROR_OK)
+        {
+            /* There is no [permit battery charge] operation lined up (or an error occured). */
+            eventFlagSetValue = 0; // 0x00004564
+        }
     }
+
+    /* Remove currently lined up battery charging operations for our battery work thread. */
 
     u32 battEventFlagClearValue = ~(BATTERY_EVENT_FORBID_BATTERY_CHARGING | BATTERY_EVENT_PERMIT_BATTERY_CHARGING 
-        | BATTERY_EVENT_UNKNOWN_400 | BATTERY_EVENT_ENABLE_USB_CHARGING);
+        | BATTERY_EVENT_UNKNOWN_400 | BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x000044E4
 
-    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, battEventFlagClearValue); //0x000044E8
-    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_TERMINATION); //0x000044F4
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, battEventFlagClearValue); // 0x000044E8
 
-    if (outBits & BATTERY_EVENT_PERMIT_BATTERY_CHARGING) //0x00004504
-        sceSysconPermitChargeBattery(); //0x00004544
+    /* Command our battery worker thread to terminate. */
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_TERMINATION); // 0x000044F4
 
-    sceKernelWaitThreadEnd(g_Battery.workerThreadId, 0); //0x00004510
-    sceKernelDeleteThread(g_Battery.workerThreadId); //0x00004518
-    sceKernelDeleteEventFlag(g_Battery.batteryEventFlagId); //0x00004524
+    /* If the battery was to be allowed to charge, permit charging now. */
+    if (eventFlagSetValue & BATTERY_EVENT_PERMIT_BATTERY_CHARGING) // 0x00004504
+    {
+        sceSysconPermitChargeBattery(); // 0x00004544
+    }
+
+    /* Wait for our battery worker thread to end. */
+    sceKernelWaitThreadEnd(g_Battery.workerThreadId, NULL); // 0x00004510
+
+    /* Delete worker resources. */
+
+    sceKernelDeleteThread(g_Battery.workerThreadId); // 0x00004518
+    sceKernelDeleteEventFlag(g_Battery.batteryEventFlagId); // 0x00004524
 
     return SCE_ERROR_OK;
 }
@@ -593,6 +631,8 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 // loc_00004918
                 //
                 // uofw note: I am putting my faith in prxtool here that this will indeed work :p
+                //
+                // TODO: If power crashes in tasting...this might be one crash reason...
                 s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
                 if (cop0CtrlReg30 == 0 && *((s32*)0x00000004) != 0) // 0x0000491C & 0x00004928
                 {
