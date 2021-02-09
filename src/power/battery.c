@@ -1753,7 +1753,6 @@ s32 scePowerGetLowBatteryCapacity(void)
 }
 
 // Subroutine scePower_87440F5E - Address 0x00005D3C - Aliases: scePower_driver_872F4ECE
-// TODO: Write documentation
 s32 scePowerIsPowerOnline(void)
 {
     s32 status;

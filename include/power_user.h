@@ -34,7 +34,7 @@ typedef enum {
 	SCE_POWER_CALLBACKARG_BATTERYEXIST				= 0x00000080,
 	/** Indicates the battery is in a low battery state.  */
 	SCE_POWER_CALLBACKARG_LOWBATTERY				= 0x00000100,
-	/** Indicates power is being supplied from an external power source (AC adapter). */
+	/** Indicates power is being supplied from an external power source (AC adapter only). */
 	SCE_POWER_CALLBACKARG_POWERONLINE				= 0x00001000,
 	/**
 	 * Indicates the PSP's suspend process has begun. This happens for example when
@@ -612,6 +612,18 @@ s32 scePowerGetForceSuspendCapacity(void);
 
 s32 scePowerGetLowBatteryCapacity(void);
 
+/**
+ * @brief Gets the external power supply connection status.
+ *
+ * This function checks whether or not power is supplied from an external power source (AC adapter only).
+ * Powering the system over USB (USB charging) is not recognized by this API.
+ *
+ * @return SCE_TRUE if the PSP system is connected to an external power source via an AC adapter, SCE_FALSE
+ * otherwise.
+ *
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details.
+ */
 s32 scePowerIsPowerOnline(void);
 
 /**
