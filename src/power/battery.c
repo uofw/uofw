@@ -98,9 +98,10 @@ typedef struct
     u32 batteryForbidChargingNetCounter; // 20
     u32 isUsbChargingSupported; // 24
     u32 isUsbChargingEnabled; // 28
-    u32 unk32;
+    u32 unk32; // 32 -- TODO: A boolean flag dealing with USB charging.
     SceUID permitChargingDelayAlarmId; // 36
-    u32 unk40; // 40 TODO: Could have something to do with the status of the charge Led (On/Off)
+    /* Indicates whether the battery is currently charging. */
+    u32 isBatteryCharging; // 40
     u32 batteryType; // 44
     u32 isBatteryInfoUpdateInProgress;
     PowerBatteryThreadOperation workerThreadNextOp; // 52
@@ -641,11 +642,11 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                             timeout = 20000; // 0x00004900
                         }
 
-                        // loc_00004908
-
                         if (!g_Battery.isUsbChargingEnabled) // 0x00004908
                         {
-                            g_Battery.unk40 = (powerSupplyStatus & 0x80) ? 1 : 0; // 0x0000490C & 0x00004964 - 0x00004970
+                            g_Battery.isBatteryCharging = (powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING) 
+                                ? SCE_TRUE 
+                                : SCE_FALSE; // 0x0000490C & 0x00004964 - 0x00004970
                             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP; // 0x00004980
                         }
                         else
@@ -685,18 +686,16 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 status = sceSysconReadPolestarReg(2, &polestarR2Val); // 0x00004A18
                 if (status < SCE_ERROR_OK) // 0x00004A20
                 {
-                    // loc_00004A90
-                    g_Battery.unk40 = -1; // 0x00004A9C
+                    g_Battery.isBatteryCharging = -1; // 0x00004A9C
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP; // 0x00004A98 & 0x00004A7C - 0x00004A84
                 }
                 else
                 {
-                    // This code is _scePowerGetPolestar2ChargeLed(), so g_Battery.unk40 something with charge Led?
-                    g_Battery.unk40 = (polestarR2Val & 0x100) ? 1 : 0; // 0x00004A28 - 0x00004A3C
+                    // This code is _scePowerGetPolestar2ChargeLed(), so we are getting the Charge Led on/off status here?
+                    g_Battery.isBatteryCharging = (polestarR2Val & 0x100) ? SCE_TRUE : SCE_FALSE; // 0x00004A28 - 0x00004A3C
 
                     if (polestarR2Val & 0x8000 || g_Battery.powerSupplyStatus & 0x40) // 0x00004A44 & 0x00004A58
                     {
-                        // loc_00004A7C
                         g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP; // 0x00004A84
                     }
                     else
@@ -961,7 +960,7 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
         g_Battery.batteryTemp = -1;
         g_Battery.batteryElec = -1;
         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED;
-        g_Battery.unk40 = 0;
+        g_Battery.isBatteryCharging = SCE_FALSE;
         g_Battery.unk68 = 0;
 
         _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_BATTERYEXIST, 0, 0); // 0x00004DB4 & 0x00004BB0
@@ -1405,11 +1404,6 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
 }
 
 // Subroutine scePower_B4432BC8 - Address 0x00005774 - Aliases: scePower_driver_67492C52
-//
-// TODO: Figure out meaning behind different batteryChargingStatus values (0 - 3) 
-// Looking at scePowerIsBatteryCharging() it appears [1] means battery is charging, and [0, 2, 3] mean 
-// battery is not charging
-// TODO: Write documentation
 s32 scePowerGetBatteryChargingStatus(void)
 {
     s32 oldK1;
@@ -1417,54 +1411,58 @@ s32 scePowerGetBatteryChargingStatus(void)
 
     oldK1 = pspShiftK1(); // 0x000057A0
 
+    /* If no battery is equipped we return with an error. */
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x0000579C
     {
         pspSetK1(oldK1);
         return SCE_POWER_ERROR_NO_BATTERY;
     }
 
+    /* If the power service is currently busy detecting the battery status we return with an error. */
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x000057AC
     {
         pspSetK1(oldK1);
         return SCE_POWER_ERROR_DETECTING;
     }
 
+    /* 
+     * Each PSP system cna be charged by connecting it to an external power source with an AC adapter.
+     * In addition, starting with the PSP-2000 series, a PSP device can also be charged over the USB cable.
+     */
+
+    /* Check if the PSP system is connected to an external power source with an AC adapter. */
     if (sceSysconIsAcSupplied()) // 0x000057BC
     {
-        // TODO: Battery charging may be suppressed (the battery is not charging) while the WLAN is in use
-        // Could g_Battery.batteryForbidChargingNetCounter here be an indicator for WlanActive?
-
-        // Another case is where we are connected to an external power source and the battery is already fully charged.
-        // In this case, we report the battery as not charging and this info could be accessed in the else part below (?)
-
+        /* We are connected via an AC adapter. Check if battery charging is forbidden. */
         if (g_Battery.batteryForbidChargingNetCounter != 0) // 0x000057C8
         {
-            // battery not charging
-            batteryChargingStatus = 2; // 0x000057CC
+            /* Battery charging is forbidden. */
+            batteryChargingStatus = SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING_FORBIDDEN; // 0x000057CC
         }
         else
         {
-            // If bit 8 (pos 7) is set, then battery is being charged (g_Battery.powerSupplyStatus & 0x80)
-            batteryChargingStatus = g_Battery.powerSupplyStatus >> 7 & 0x1; // 0x000057D0 & 0x000057D4
+            /* Battery charging is not forbidden. Obtain the battery charging status. */
+            batteryChargingStatus = g_Battery.powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING; // 0x000057D0 & 0x000057D4
         }
     }
     else
     {
+        /* The PSP device is not connected via an AC adapter to an external power source. */
+
+        // TODO: Figure out what is being checked here.
         if (g_Battery.unk32 != 0) // 0x000057F4
         {
-            // Apparently battery not charging
-            batteryChargingStatus = 3; // 0x000057F8
+            batteryChargingStatus = SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING_UNKNOWN_STATUS_3; // 0x000057F8
         }
-        else if (!g_Battery.isUsbChargingEnabled || !(g_Battery.powerSupplyStatus & 0x40) || g_Battery.unk40 == 0) // 0x00005800 & 0x00005810 & 0x0000581C
+        else if (!g_Battery.isUsbChargingEnabled || !(g_Battery.powerSupplyStatus & 0x40) || !g_Battery.isBatteryCharging) // 0x00005800 & 0x00005810 & 0x0000581C
         {
-            // Aparently battery not charging
-            batteryChargingStatus = 0; // 0x00005804
+            /* If the PSP system is not charging over USB, the battery is not charging. */
+            batteryChargingStatus = SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING; // 0x00005804
         }
         else
         {
-            // Apparently battery charging, why is that? We are not connected to an external power source
-            // Could this be USB charging and sceSysconIsAcSupplied() does not supply that info (only traditional PSP AC)?
-            batteryChargingStatus = 1; // 0x00005820
+            /* The battery is charging over USB. */
+            batteryChargingStatus = SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING; // 0x00005820
         }
     }
 
@@ -1784,7 +1782,8 @@ s32 scePowerIsBatteryCharging(void)
 
     status = scePowerGetBatteryChargingStatus(); // 0x00005D80
 
-    if (status == 2 || status == 3) // 0x00005D88 & 0x00005D90
+    if (status == SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING_FORBIDDEN 
+        || status == SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING_UNKNOWN_STATUS_3) // 0x00005D88 & 0x00005D90
     {
         status = SCE_FALSE; // 0x00005D94
     }

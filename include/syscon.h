@@ -879,6 +879,9 @@ s32 sceSysconGetBaryonVersion(s32 *baryonVersion);
  */
 s32 sceSysconGetGValue(void);
 
+/* Indicates that the battery is currently charging. */
+#define SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING     0x80
+
 /**
  * Get the power supply status.
  *

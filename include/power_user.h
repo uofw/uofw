@@ -554,6 +554,46 @@ typedef enum {
  */
 u8 scePowerGetWlanActivity(void);
 
+/* Battery state */
+
+/** Defines constants indicating the battery charging status returned by ::scePowerGetBatteryChargingStatus(). */
+typedef enum {
+	/* The battery is not charging. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING = 0,
+	/* The battery is charging. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING,
+	/* The battery is not charging as battery charging is currently forbidden. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING_FORBIDDEN,
+	/* The battery is not charging. Concrete meaning unknown. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING_UNKNOWN_STATUS_3
+} ScePowerBatteryChargingStatus;
+
+/**
+ * @brief Gets the battery charging status.
+ *
+ * This function gets the current battery charging status. The correct value may not be returned after a
+ * battery is installed until the power service polls and recognizes that the battery has been installed.
+ * Battery charging may be suppressed (the battery is not charging) while WLAN is in use.
+ *
+ * @return The current battery charging status on success. One of ::ScePowerBatteryChargingStatus.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark To find out whether battery charging has been completed (= battery is fully charged), you can
+ * use this API together with ::sceIsPowerOnline().
+ * @par Example:
+ * @code
+ * if (sceIsPowerOnline()
+ *	&& scePowerGetBatteryChargingStatus() == SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING)
+ * {
+ *		// battery is fully charged
+ * }
+ * @endcode
+ *
+ * @see ::scePowerIsBatteryCharging()
+ */
+s32 scePowerGetBatteryChargingStatus(void);
+
 /* Misc */
 
 /**
