@@ -37,18 +37,18 @@ typedef enum {
 #define BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_BUSY     1 /* The command is currently being executed by SYSCON. */
 #define BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_DONE     2 /* SYSCON has finished executing the command. */
 
-/* Action flags for the battery event thread. */
+/* Action flags for the battery worker thread. */
 
-#define BATTERY_EVENT_FORBID_BATTERY_CHARGING           0x00000100 /* Forbid battery charging. */
-#define BATTERY_EVENT_PERMIT_BATTERY_CHARGING           0x00000200 /* Permit battery charging. */
-#define BATTERY_EVENT_UNKNOWN_400                       0x00000400 /* Unknown. Something to do with disabling USB charging. */
-#define BATTERY_EVENT_ENABLE_USB_CHARGING               0x00000800 /* Enable USB charging. */
-#define BATTERY_EVENT_UPDATE_BATTERY_INFO               0x10000000 /* Update the battery control block (remainCap, voltage, temperature,...). */
-#define BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING      0x20000000 /* Suspend updating the battery control block. */
-#define BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING     0x40000000 /* Resume updating the battery control block. */
-#define BATTERY_EVENT_TERMINATION                       0x80000000 /* Terminate the battery event thread. */
+#define BATTERY_EVENT_FORBID_BATTERY_CHARGING                               0x00000100 /* Forbid battery charging. */
+#define BATTERY_EVENT_PERMIT_BATTERY_CHARGING                               0x00000200 /* Permit battery charging. */
+#define BATTERY_EVENT_UNKNOWN_400                                           0x00000400 /* Unknown. Something to do with disabling USB charging. */
+#define BATTERY_EVENT_ENABLE_USB_CHARGING                                   0x00000800 /* Enable USB charging. */
+#define BATTERY_EVENT_UPDATE_BATTERY_INFO                                   0x10000000 /* Update the battery control block (remainCap, voltage, temperature,...). */
+#define BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT      0x20000000 /* Suspend polling the battery for data and USB charge management. */
+#define BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT     0x40000000 /* Resume polling the battery for data and USB charge management. */
+#define BATTERY_EVENT_TERMINATION                                           0x80000000 /* Terminate the battery event thread. */
 
-/* Defines the different battery info update operations of the battery event thread. */
+/* Defines the different battery info update operations of the battery worker thread. */
 typedef enum {
     POWER_BATTERY_THREAD_OP_START = 0,
     POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS = 1,
@@ -231,16 +231,25 @@ s32 _scePowerBatteryEnd(void)
 }
 
 // Subroutine sub_00004570 - Address 0x00004570 
-// TODO: Verify function
+/* Suspends the power service's internal battery manager. */
 s32 _scePowerBatterySuspend(void)
 {
     s32 intrState;
     u32 eventFlagBits;
 
-    eventFlagBits = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING; // 0x00004594
+    /* 
+     * When the PSP system enters the [suspended] power state, we want to suspend our battery
+     * worker thread as well (so that it won't continue polling for updated battery infomration
+     * (like remaining capacity, temperature, voltage,...).
+     */
+    eventFlagBits = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT; // 0x00004594
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00004590
 
+    /* 
+     * If a scheduled [permit battery charging] operation is in the system at the time of suspension,
+     * cancel it and permit battery charging directly.
+     */
     if (g_Battery.permitChargingDelayAlarmId > 0) // 0x000045A0
     {
         sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x000045A8
@@ -249,20 +258,27 @@ s32 _scePowerBatterySuspend(void)
         eventFlagBits |= BATTERY_EVENT_PERMIT_BATTERY_CHARGING;
     }
 
+    /* Permit battery charging in case it is currently forbidden. */
     if (g_Battery.batteryForbidChargingNetCounter != 0) // 0x000045D4
     {
         eventFlagBits |= BATTERY_EVENT_PERMIT_BATTERY_CHARGING;
     }
 
-    // 0x000045D0
-    if (g_Battery.isUsbChargingEnabled)
+    /* Disable USB charging (USB charging is not supported when the PSP device is suspended). */
+    if (g_Battery.isUsbChargingEnabled) // 0x000045D0
     {
         g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x000045D8
         eventFlagBits |= BATTERY_EVENT_UNKNOWN_400; // 0x000045DC
     }
 
-    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING); // 0x000045E0
-    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, eventFlagBits); //0x000045EC
+    /* Remove lined up battery worker thread resume command (if one exists). */
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT); // 0x000045E0
+
+    /* 
+     * Command the worker thread to suspend itself and allow battery charging/disable USB charging 
+     * if required. 
+     */
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, eventFlagBits); // 0x000045EC
 
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
@@ -358,7 +374,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004720
 
-    batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING
+    batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
         | BATTERY_EVENT_UNKNOWN_400
         | BATTERY_EVENT_PERMIT_BATTERY_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00004728
 
@@ -423,39 +439,39 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_PERMIT_BATTERY_CHARGING); // 0x00005034
 
-            if (!(batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING)) // 0x00005048
+            if (!(batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT)) // 0x00005048
             {
                 sceKernelDelayThread(1.5 * 1000 * 1000); // 0x00005054
                 continue; // 0x0000505C
             }
         }
 
-        if (batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING) // 0x000047DC
+        if (batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT) // 0x000047DC
         {
             // loc_00004FF0
             _scePowerBatterySetTTC(1); // 0x00004FF0
 
-            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING); // 0x00005004
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT); // 0x00005004
 
             g_Battery.isIdle = SCE_TRUE; // 0x0000501C
             timeout = BATTERY_EVENT_INDEFINITE_WAIT; // 0x00005024
 
-            batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING
-                | BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00005008 & 0x0000500C
+            batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
+                | BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00005008 & 0x0000500C
 
             continue; // 0x00005020
         }
 
-        if (batteryEventFlagSetValue & BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING) // 0x000047E8
+        if (batteryEventFlagSetValue & BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT) // 0x000047E8
         {
             // loc_00004FC4
-            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING); // 0x00004FD0
+            sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT); // 0x00004FD0
 
             g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00004FE0
             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004FE4
             g_Battery.isIdle = SCE_FALSE; // 0x00004FEC
 
-            batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_INFO_UPDATING
+            batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
                 | BATTERY_EVENT_UNKNOWN_400
                 | BATTERY_EVENT_PERMIT_BATTERY_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING; // 0x00004FDC
 
@@ -1640,8 +1656,8 @@ static s32 _scePowerBatteryResume(void)
     g_Battery.isIdle = SCE_FALSE; // 0x00005C4C
 
     u32 battEventFlagSetValue = g_Battery.batteryForbidChargingNetCounter == 0
-        ? BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING
-        : (BATTERY_EVENT_RESUME_BATTERY_INFO_UPDATING | BATTERY_EVENT_FORBID_BATTERY_CHARGING);
+        ? BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
+        : (BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT | BATTERY_EVENT_FORBID_BATTERY_CHARGING);
 
     sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~(BATTERY_EVENT_ENABLE_USB_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING)); // 0x00005C64
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, battEventFlagSetValue); // 0x00005C70
