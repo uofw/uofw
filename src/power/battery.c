@@ -1679,6 +1679,7 @@ s32 scePowerGetBatteryChargeCycle(void)
 }
 
 // Subroutine sub_00005BF0 - Address 0x00005BF0
+/* Sets the battery capacities [forceSuspend] and [low] for the battery manager. */
 s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
 {
     g_Battery.lowBatteryCapacity = lowBatteryCapacity; // 0x00005BFC
@@ -1746,7 +1747,6 @@ s32 scePowerGetForceSuspendCapacity(void)
 }
 
 // Subroutine scePower_B999184C - Address 0x00005D30 - Aliases: scePower_driver_7B908CAA
-// TODO: Write documentation
 s32 scePowerGetLowBatteryCapacity(void)
 {
     return (s32)g_Battery.lowBatteryCapacity;

@@ -482,8 +482,10 @@ s32 scePowerInit(void)
 
     _scePowerBatteryInit(isUsbChargingSupported, batteryType); // 0x00000304
 
-    /* Send the [forceSuspend] and [low battery] capacity threshold values to Syscon. */
-
+    /* 
+     * Pass the [forceSuspend] and [low battery] capacity threshold values to the power service's
+     * internal battery manager.
+     */
     _scePowerBatterySetParam(forceSuspendBatteryCapacity, lowBatteryCapacity); // 0x00000310
 
     /* Set the low battery state if the battery is low. */

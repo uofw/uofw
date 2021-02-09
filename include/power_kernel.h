@@ -985,6 +985,15 @@ s32 scePowerBatteryUpdateInfo(void);
 
 s32 scePowerGetForceSuspendCapacity(void);
 
+/**
+ * @brief Gets the low battery status capacity threshold value.
+ * 
+ * This function gets the battery capacity value at which it enters the low battery state.
+ * 
+ * @return The low battery capacity threshold value in mAh.
+ * 
+ * @see ::scePowerIsLowBattery().
+ */
 s32 scePowerGetLowBatteryCapacity(void);
 
 /**
