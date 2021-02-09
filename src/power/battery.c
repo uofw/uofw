@@ -81,13 +81,19 @@ typedef struct
     SceUID workerThreadId; // 4
     u32 forceSuspendCapacity; // 8
     u32 lowBatteryCapacity; // 12
-    u32 isIdle; // 16
+    /*
+     * Indicates whether the battery manager is set up to consistently poll the battery for new
+     * data (temperatur, remaining capacity,...) and can enable/disable USB charging. For example,
+     * if the PSP system enters the suspended power state, the battery manager won't poll (repeatedly)
+     * for new battery data.
+     */
+    u32 isBatteryPollingAndUsbManagementSuspended; // 16
     /* 
      * Represents the total number of [forbid battery charge] requests minus the total number of 
      * [permit battery charge] requests (since cold boot). Consequently, if this number is greather 
      * than 0, there have been more [forbid battery charge] requests than [permit battery charge] requests. 
      * 
-     * Note: "0" is its minimum ( (we do not "ignore" [forbid battery charge] requests.
+     * Note: "0" is its minimum (we do not "ignore" [forbid battery charge] requests).
      */
     u32 batteryForbidChargingNetCounter; // 20
     u32 isUsbChargingSupported; // 24
@@ -370,7 +376,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
     u32 batteryEventFlagSetValue; // $sp
 
     g_Battery.isBatteryInfoUpdateInProgress = SCE_TRUE; // 0x00004718
-    g_Battery.isIdle = SCE_FALSE; // 0x0000471C
+    g_Battery.isBatteryPollingAndUsbManagementSuspended = SCE_FALSE; // 0x0000471C
 
     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004720
 
@@ -435,8 +441,11 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         if (batteryEventFlagSetValue & BATTERY_EVENT_PERMIT_BATTERY_CHARGING) // 0x000047D0
         {
+            /* Handle [permit battery charge] request. */
+
             sceSysconPermitChargeBattery();  // 0x00005028
 
+            /* Remove lined-up [permit battery charge] command now that we've handled it.*/
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_PERMIT_BATTERY_CHARGING); // 0x00005034
 
             if (!(batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT)) // 0x00005048
@@ -453,7 +462,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT); // 0x00005004
 
-            g_Battery.isIdle = SCE_TRUE; // 0x0000501C
+            g_Battery.isBatteryPollingAndUsbManagementSuspended = SCE_TRUE; // 0x0000501C
             timeout = BATTERY_EVENT_INDEFINITE_WAIT; // 0x00005024
 
             batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
@@ -469,7 +478,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
             g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00004FE0
             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004FE4
-            g_Battery.isIdle = SCE_FALSE; // 0x00004FEC
+            g_Battery.isBatteryPollingAndUsbManagementSuspended = SCE_FALSE; // 0x00004FEC
 
             batteryEventFlagCheckValue = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
                 | BATTERY_EVENT_UNKNOWN_400
@@ -482,17 +491,19 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         if (batteryEventFlagSetValue & BATTERY_EVENT_FORBID_BATTERY_CHARGING) // 0x000047F0
         {
-            /* Battery charging should be forbidden. */
+            /* Handle [forbid battery charge] request. */
 
+            /* Forbid battery charging. */
             sceSysconForbidChargeBattery(); // 0x00004F9C
 
+            /* Remove lined-up [forbid battery charge] command now that we've handled it.*/
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x00004FA8
 
             /* Wait for 1.5 seconds */
             sceKernelDelayThread(1.5 * 1000 * 1000); // 0x00004FB4
         }
 
-        if (g_Battery.isIdle) // 0x00004800
+        if (g_Battery.isBatteryPollingAndUsbManagementSuspended) // 0x00004800
         {
             continue;
         }
@@ -648,7 +659,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 //
                 // uofw note: I am putting my faith in prxtool here that this will indeed work :p
                 //
-                // TODO: If power crashes in tasting...this might be one crash reason...
+                // TODO: If power crashes in testing...this might be one crash reason...
                 s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
                 if (cop0CtrlReg30 == 0 && *((s32*)0x00000004) != 0) // 0x0000491C & 0x00004928
                 {
@@ -699,24 +710,23 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_USB_STATUS:
             {
-                s32 powerSupplyStatus;
-                s16 polestarR2Val;
+                s32 powerSupplyStatus; // $sp + 16
+                s16 polestarR2Val; // $sp + 20
+
                 // 0x00004AA0 - 0x00004AD4
-                if (sceSysconGetPowerSupplyStatus(&powerSupplyStatus) < SCE_ERROR_OK
-                    || sceSysconReadPolestarReg(2, &polestarR2Val) < SCE_ERROR_OK
-                    || polestarR2Val & 0x8000
-                    || powerSupplyStatus & 0x40)
+                if (sceSysconGetPowerSupplyStatus(&powerSupplyStatus) == SCE_ERROR_OK
+                    && sceSysconReadPolestarReg(2, &polestarR2Val) == SCE_ERROR_OK
+                    && !(polestarR2Val & 0x8000)
+                    && !(powerSupplyStatus & 0x40))
                 {
-                    g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP; // 0x00004A84
-                    continue;
+                    g_Battery.unk32 = 1; // 0x00004AE4
+                    g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x00004AF0
+
+                    sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_UNKNOWN_0); // 0x00004AEC
+                    _scePowerBatterySetTTC(1); // 0x00004AF4
                 }
 
-                g_Battery.unk32 = 1; // 0x00004AE4
-                g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x00004AF0
-
-                sceSysconSetUSBStatus(SCE_SYSCON_USB_STATUS_UNKNOWN_0); // 0x00004AEC
-                _scePowerBatterySetTTC(1); // 0x00004AF4
-
+                g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP; // 0x00004A84
                 continue; // 0x00004AFC
             }
             case POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP:
@@ -891,7 +901,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             case POWER_BATTERY_THREAD_OP_SET_BATT_ELEC:
             {
                 // 0x00004DE0
-                s32 battElec;
+                s32 battElec; // $sp + 52
                 status = sceSysconBatteryGetElec(&battElec); // 0x00004DE0
                 if (status < SCE_ERROR_OK) // 0x00004DE8
                 {
@@ -1084,7 +1094,6 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
 //  - This function has been changed since 5.00. While it still most likely returns the remaining battery capacity
 //    its input have changed. As such, this function name might no longer be correct
 //  - Define constants for these values
-//  - Might these be different values depending on the PSP model used (thus different battery)?
 /* Convert battery voltage to remaining battery capacity (relative) */
 static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage)
 {
@@ -1133,7 +1142,6 @@ s32 scePowerGetUsbChargingCapability(void)
 }
 
 // Subroutine scePower_driver_10CE273F - Address 0x000052D4
-// TODO: Write documentation
 s32 scePowerBatteryForbidCharging(void)
 {
     s32 intrState1;
@@ -1141,22 +1149,35 @@ s32 scePowerBatteryForbidCharging(void)
 
     intrState1 = sceKernelCpuSuspendIntr();  // 0x000052EC
 
+    /* 
+     * Check if battery charging is currently permitted. We only need to proceed if battery
+     * charging is currenly permitted.
+     */
     if (g_Battery.batteryForbidChargingNetCounter == 0) // 0x000052F8
     {
+        /* 
+         * The battery can currently be charged. Check if a scheduled [permit battery charging] operation
+         * is currently in the system. If it is, cancel that operation.
+         */
         if (g_Battery.permitChargingDelayAlarmId > 0) // 0x00005304
         {
             sceKernelCancelAlarm(g_Battery.permitChargingDelayAlarmId); // 0x0000530C
             g_Battery.permitChargingDelayAlarmId = 0; // 0x00005318
         }
 
+        /* Remove a lined up [permit battery charge] in the battery worker thread if once exists. */
         sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_PERMIT_BATTERY_CHARGING); // 0x00005320
+
+        /* Comamnd the battery worker thread to forbid battery charging. */
         sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x0000532C
     }
 
+    /* Increase the net counter. */
     g_Battery.batteryForbidChargingNetCounter++; // 0x00005344
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005340
 
+    /* Command the battery worker thread to update battery info (poll the battery). */
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005350
     sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005360
 
@@ -1167,7 +1188,6 @@ s32 scePowerBatteryForbidCharging(void)
 }
 
 // Subroutine scePower_driver_EF751B4A - Address 0x00005394 
-// TODO: Write documentation
 s32 scePowerBatteryPermitCharging(void)
 {
     s32 intrState1;
@@ -1175,9 +1195,21 @@ s32 scePowerBatteryPermitCharging(void)
 
     intrState1 = sceKernelCpuSuspendIntr(); // 0x000053AC
 
+    /*
+     * Check if battery charging is currently forbidden. We only need to proceed if battery
+     * charging is currently forbidden.
+     */
     if (g_Battery.batteryForbidChargingNetCounter > 0)
     {
+        /* The battery is currently not allowed to charge. */
+
+        /* Decrease the net counter. */
         g_Battery.batteryForbidChargingNetCounter--; // 0x000053CC
+
+        /* 
+         * If a [permit charge] request has been sent as often as a [forbid charge] request, we will now
+         * proceed with allowing the battery to charge again.
+         */
         if (g_Battery.batteryForbidChargingNetCounter == 0) // 0x000053C8
         {
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_FORBID_BATTERY_CHARGING); // 0x00005424
@@ -1187,6 +1219,7 @@ s32 scePowerBatteryPermitCharging(void)
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x000053D0
 
+    /* Command the battery worker thread to poll the battery. */
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x000053E0
     sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x000053F0
 
@@ -1225,32 +1258,43 @@ s32 _scePowerBatteryUpdateAcSupply(s32 isAcSupplied)
 }
 
 // Subroutine scePower_driver_72D1B53A - Address 0x000054E0
-// TODO: Write documentation
 s32 scePowerBatteryEnableUsbCharging(void)
 {
     s32 prevIsUsbEnabled;
     s32 intrState;
 
+    /* Only enable USB charging on PSP devices which actually support USB charging. */
     if (!g_Battery.isUsbChargingSupported) // 0x00005508
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }
 
-    if (g_Battery.isIdle) // 0x00005514
+    /* Check if our battery worker thread can currently enable USB charging. */
+    if (g_Battery.isBatteryPollingAndUsbManagementSuspended) // 0x00005514
     {
         return SCE_ERROR_OK;
     }
 
     intrState = sceKernelCpuSuspendIntr(); // 0x0000553C
 
+    /* Obtain the previous status. */
     prevIsUsbEnabled = g_Battery.isUsbChargingEnabled;
+
+    /* Only proceed if USB charging is not already enabled. */
     if (!g_Battery.isUsbChargingEnabled) // 0x00005548
     {
         g_Battery.isUsbChargingEnabled = SCE_TRUE; // 0x00005568
 
+        /* 
+         * Charging via an AC adapter takes precedence over USB charging. As such, only proceed with
+         * actually enabling USB charging when the PSP system is not currently connected to an external
+         * power source via an AC adapter.
+         */
         if (!sceSysconIsAcSupplied()) // 0x00005564
         {
+            /* Lineup up an [enable USB charging] command for our battery worker thread to execute. */
             sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x00005574
+
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UNKNOWN_400); // 0x00005580
         }
     }
@@ -1260,13 +1304,13 @@ s32 scePowerBatteryEnableUsbCharging(void)
 }
 
 // Subroutine scePower_driver_7EAA4247 - Address 0x00005590
-// TODO: Write documentation
 s32 scePowerBatteryDisableUsbCharging(void)
 {
     s32 status;
     s32 intrState1;
     s32 intrState2;
 
+    /* Only disable USB charging on PSP devices which actually support USB charging. */
     if (!g_Battery.isUsbChargingSupported) // 0x000055B4
     {
         return SCE_ERROR_NOT_SUPPORTED;
@@ -1274,12 +1318,15 @@ s32 scePowerBatteryDisableUsbCharging(void)
 
     intrState1 = sceKernelCpuSuspendIntr(); // 0x000055BC
 
+    /* Only proceed if USB charging is currently enabled. */
     if (g_Battery.isUsbChargingEnabled) // 0x000055C8
     {
         g_Battery.isUsbChargingEnabled = SCE_FALSE; // 0x000055E8
 
+        /* Check if SYSCON is already disabling USB charging right now. */
         if (g_Battery.sysconCmdDisableUsbChargingExecStatus == BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_READY) // 0x000055EC
         {
+            /* SYSCON is not currently disabling USB charging -> tell it to disable USB charging now. */
             g_Battery.powerBatterySysconPacket.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_SET_USB_STATUS; // 0x0000567C
             g_Battery.powerBatterySysconPacket.tx[PSP_SYSCON_TX_LEN] = 3; // 0x00005680
             g_Battery.powerBatterySysconPacket.tx[PSP_SYSCON_TX_DATA(0)] = SCE_SYSCON_USB_STATUS_CHARGING_DISABLED; // 0x00005688
@@ -1287,24 +1334,29 @@ s32 scePowerBatteryDisableUsbCharging(void)
             status = sceSysconCmdExecAsync(&g_Battery.powerBatterySysconPacket, 1, _scePowerBatterySysconCmdIntr, NULL); // 0x00005684
             if (status < SCE_ERROR_OK) // 0x0000568C
             {
+                /* Our command to disable USB charging was not started being executed successfully. */
                 sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UNKNOWN_400); // 0x00005660
             }
             else
             {
+                /* SYSCON successfully started executing the command to disable USB charging. */
                 g_Battery.sysconCmdDisableUsbChargingExecStatus = BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_BUSY; // 0x00005698
                 g_Battery.unk32 = 0; // 0x000056A0
             }
         }
         else
         {
+            /* SYSCON is currently busy disabling USB charging (from a previous call). */
             sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UNKNOWN_400); // 0x00005660
         }
 
+        /* Remove a lined-up [enable USB charging] command from our battery worker thread (if one exists). */
         sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x000055FC
     }
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005604
 
+    /* Request the battery worker thread to update the battery info. */
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO);  // 0x00005614
     sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005624
 
@@ -1315,7 +1367,7 @@ s32 scePowerBatteryDisableUsbCharging(void)
 }
 
 // Subroutine sub_000056A4 - Address 0x000056A4
-/* Sets the charging rate (0 = limited rate, 1 = full rate) (?) */
+/* Sets the charging rate (0 = limited rate, 1 = full rate) (?) - only used on the PSP-2000 series. */
 static s32 _scePowerBatterySetTTC(s32 arg0)
 {
     s32 status;
@@ -1640,7 +1692,7 @@ s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
 // Subroutine sub_00005C08 - Address 0x00005C08
 s32 _scePowerBatteryIsBusy(void)
 {
-    return !g_Battery.isIdle;
+    return !g_Battery.isBatteryPollingAndUsbManagementSuspended;
 }
 
 // Subroutine sub_00005C18 - Address 0x00005C18
@@ -1653,7 +1705,7 @@ static s32 _scePowerBatteryResume(void)
 
     g_Battery.isAcSupplied = -1; // 0x00005C40
     g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00005C4C
-    g_Battery.isIdle = SCE_FALSE; // 0x00005C4C
+    g_Battery.isBatteryPollingAndUsbManagementSuspended = SCE_FALSE; // 0x00005C4C
 
     u32 battEventFlagSetValue = g_Battery.batteryForbidChargingNetCounter == 0
         ? BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
@@ -1841,6 +1893,7 @@ static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket *pSysconPacket, void *p
     (void)pSysconPacket;
     (void)param;
 
+    /* SYSCON has finished disabling USB charging. */
     g_Battery.sysconCmdDisableUsbChargingExecStatus = BATTERY_SYSCON_CMD_DISABLE_USB_CHARGING_EXEC_STATUS_DONE;
     return 0;
 }

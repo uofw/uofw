@@ -878,18 +878,76 @@ typedef enum {
 } ScePowerBatteryType;
 
 /**
- * Gets the USB charging capability of the PSP device.
+ * @brief Gets the USB charging capability of the PSP device.
+ * 
+ * This function returns whether the PSP device has in-built support for USB charging or not. Typically, 
+ * starting with the PSP-2000 series, every PSP model has support for USB charging.
  * 
  * @return SCE_TRUE if USB charging is supported, SCE_FALSE otherwise.
  */
 s32 scePowerGetUsbChargingCapability(void);
 
+/**
+ * @brief Forbids battery charging.
+ * 
+ * Thus function forbids battery charging. Note that there might be a slight delay between when
+ * this API returns and when the battery will actually no longer be charged.
+ *
+ * @return Always SCE_ERROR_OK.
+ */
 s32 scePowerBatteryForbidCharging(void);
 
+/**
+ * @brief Permits battery charging.
+ * 
+ * This function allows the battery to be charged. Note that there might be a slight delay between when
+ * this API returns and when the battery will actually be charged again.
+ * 
+ * @attention This function is to be used in pairs with ::scePowerBatteryForbidCharging(). After
+ * battery charging has been forbidden, battery charging will only be permitted again if each
+ * ::scePowerBatteryForbidCharging() function call has been paired with a corresponding 
+ * ::scePowerBatteryPermitCharging() call. If there are ::scePowerBatteryForbidCharging() calls
+ * without a matching ::scePowerBatteryPermitCharging() function call, battery charging will remain
+ * forbidden.
+ * 
+ * @return Always SCE_ERROR_OK.
+ * 
+ * @see ::scePowerBatteryForbidCharging()
+ */
 s32 scePowerBatteryPermitCharging(void);
-
+/**
+ * @brief Enables USB charging.
+ * 
+ * This function enables USB charging. While this function can be called on any PSP device, USB charging
+ * is only actually supported on PSP devices which have in-built hardware support for USB charging.
+ * Specifically, calling this API on the PSP-1000 series will result in an error.
+ * 
+ * Note that charging the battery via an AC adapter takes precedence over USB charging. As such, while USB
+ * charging might be enabled, the battery will actually only be charged over USB if the PSP device is not
+ * connected to an external power source via an AC adapter.
+ * 
+ * @return The previous USB charging enabled status on success (0 = disabled/1 = enabled).
+ * @return 0 If the power service currently cannot enable USB charging. Since this return value
+ * might be the same value returned on success (if USB charging was previously disabled), you can
+ * call this API again and check its returns value. If it returns "1", USB charging has been enabled
+ * successfully.
+ * @return < 0 on error.
+ * 
+ * @see ::scePowerBatteryDisableUsbCharging()
+ */
 s32 scePowerBatteryEnableUsbCharging(void);
 
+/**
+ * Disables USB charging. 
+ * 
+ * This function disables USB charging. While this function can be called on any PSP device, USB charging
+ * is only actually supported on PSP devices which have in-built hardware support for USB charging.
+ * Specifically, calling this API on the PSP-1000 series will result in an error.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @see ::scePowerBatteryEnableUsbCharging()
+ */
 s32 scePowerBatteryDisableUsbCharging(void);
 
 s32 scePowerGetBatteryChargingStatus(void);

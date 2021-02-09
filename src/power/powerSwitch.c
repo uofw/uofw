@@ -1504,8 +1504,10 @@ static s32 _scePowerSuspendOperation(s32 mode)
     /* Accept user input again. */
     sceCtrlSetPollingMode(SCE_CTRL_POLL_ACTIVE); // 0x000022D8
 
+    /* Wait for an entire VBLANK interval to pass. */
+
     // 0x000022E0 - 0x000022EC
-    while (sceDisplayIsVblank() == 0);
+    while (sceDisplayIsVblank() == SCE_FALSE);
 
     // 0x000022F0 - 0x000022FC
     while (sceDisplayIsVblank() != SCE_FALSE);
@@ -1572,7 +1574,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
             sceKernelDelayThread(POWER_RESUME_OPERATION_DELAY_TIME); // 0x000023F0
         }
     } 
-    while (status < SCE_ERROR_OK);
+    while (status < SCE_ERROR_OK); /* Wait until every system component has completed its own resume operation. */
 
     // loc_00002400
 

@@ -540,7 +540,7 @@ static void _scePowerAcSupplyCallback(s32 enable, void *argp)
         _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_POWERONLINE, 0, 0); // 0x00000670 - 0x0000067C
     }
 
-    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion) == 2)
+    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion) == 0x2)
     {
         /* We are running on either a PSP 2000 gen or a PSP 3000 gen. */
 
@@ -1261,7 +1261,7 @@ s32 _scePowerModuleRebootBefore(void *arg0, s32 arg1, s32 arg2, s32 arg3)
 //Subroutine scePower_driver_AD5BB433 - Address 0x00000FCC
 s32 scePowerEnd(void)
 {
-    sceKernelUnregisterSysEventHandler((SceSysEventHandler *)&g_PowerSysEv); // 0x00000FD8
+    sceKernelUnregisterSysEventHandler(&g_PowerSysEv); // 0x00000FD8
 
     sceSysconSetAcSupplyCallback(NULL, NULL); // 0x00000FE4
     sceSysconSetLowBatteryCallback(NULL, NULL); // 0x00000FF0
