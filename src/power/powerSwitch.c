@@ -156,6 +156,10 @@ s32 _scePowerSwInit(void)
     sceSysconSetPowerSwitchCallback(_scePowerPowerSwCallback, NULL); // 0x0000125C
     sceSysconSetHoldSwitchCallback(_scePowerHoldSwCallback, NULL); // 0x0000126C
 
+    /*
+     * Obtain the RAM area reserved for storing the PSP system's eDRAM content when the PSP suspends
+     * (volatile memory area).
+     */
     partitionInfo.size = sizeof(SceSysmemPartitionInfo); // 0x00001284
     sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_VSHELL_PARTITION, &partitionInfo); // 0x00001280
     g_PowerSwitch.volatileMemoryReservedAreaSize = partitionInfo.memSize; // 0x00001290

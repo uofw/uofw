@@ -478,6 +478,10 @@ s32 scePowerUnlockForUser(s32 lockType);
  *
  * @return SCE_ERROR_OK if exclusive access was obtained, < 0 on error.
  *
+ * @attention When an application has obtained exclusive access, a PSP suspend/standby operation cannot
+ * be successfully completed until the application has relinquished its control. See
+ * ::scePowerVolatileMemUnlock() for more details.
+ *
  * @see ::scePowerVolatileMemTryLock()
  * @see ::scePowerVolatileMemUnlock()
  */
@@ -499,6 +503,10 @@ s32 scePowerVolatileMemLock(s32 mode, void** ppAddr, SceSize* pSize);
  *
  * @return SCE_ERROR_OK if exclusive access was obtained, < 0 on error.
  *
+ * @attention When an application has obtained exclusive access, a PSP suspend/standby operation cannot
+ * be successfully completed until the application has relinquished its control. See
+ * ::scePowerVolatileMemUnlock() for more details.
+ *
  * @see ::scePowerVolatileMemLock()
  * @see ::scePowerVolatileMemUnlock()
  */
@@ -507,16 +515,39 @@ s32 scePowerVolatileMemTryLock(s32 mode, void** ppAddr, SceSize* pSize);
 /**
  * @brief Relinquishes exclusive access to the PSP's RAM area reserved for volatile memory.
  *
- * This function relinquishes exlusive access to the memory reserved for saving volatile memory,
+ * This function relinquishes exlusive access to the memory area reserved for saving volatile memory,
  * which had been previously obtained by using the ::sceKernelVolatileMemLock() or
- * ::sceKernelVolatileMemTryLock() APIs back to the kernel.
+ * ::sceKernelVolatileMemTryLock() APIs back to the kernel. The kernel's Utility modules (OSK, game sharing,...)
+ * will have access to it again.
  *
  * @param mode Currently only specify ::SCE_KERNEL_VOLATILE_MEM_DEFAULT.
  *
  * @return SCE_ERROR_OK on success, otherwise < 0.
  *
- * @see scePowerVolatileMemLock()
- * @see scePowerVolatileMemTryLock()
+ * @attention Only call this function when you have previously obtained exclusive usage rights (access) for the
+ * volatile memory area. If this fucntion is called without having exclusive access at the time, the currently
+ * held exclusive access (potentially by another application) will be relinquished and the result of the
+ * operation cannot be guaranteed.
+ *
+ * @attention When an application has obtained exclusive usage rights, it needs to quickly relinquish these rights
+ * when the PSP is suspending/standing by in order for the suspend/standby operation to be completed
+ * successfully. A power callback registered with ::scePowerRegisterCallback() can be used for this.
+ * @par Example:
+ * @code
+ *
+ * // Note: Previously registered with scePowerRegisterCallback().
+ * int powerCallback(int count, int arg, void *common)
+ * {
+ *		if (arg & (SCE_POWER_CALLBACKARG_SUSPENDING | SCE_POWER_CALLBACKARG_STANDINGBY))
+ *		{
+ *			scePowerVolatileMemUnlock(SCE_KERNEL_VOLATILE_MEM_DEFAULT);
+ *		}
+ * }
+ * @endcode
+ *
+ * @see ::scePowerVolatileMemLock()
+ * @see ::scePowerVolatileMemTryLock()
+ * @see ::scePowerRegisterCallback()
  */
 s32 scePowerVolatileMemUnlock(s32 mode);
 
