@@ -1337,7 +1337,7 @@ s32 _scePowerChangeSuspendCap(u32 newSuspendCap)
     *(u8 *)param = (u8)(newSuspendCap & 0xFFFF); // 0x00001AB0 & 0x00001ACC
 
     /* Send the new battery suspend capacity to Syscon. */
-    status = sceSysconSendSetParam(0, &param); // 0x00001AC8
+    status = sceSysconSendSetParam(SCE_SYSCON_PARAM_POWER_BATTERY_SUSPEND_CAPACITY, &param); // 0x00001AC8
     return (status < SCE_ERROR_OK) 
         ? status 
         : SCE_ERROR_OK;

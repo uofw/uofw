@@ -1399,7 +1399,7 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
 
     sceKernelCpuResumeIntr(intrState); // 0x00005748
 
-    status = sceSysconSendSetParam(4, &g_Battery.ttcConfig); // 0x00005758
+    status = sceSysconSendSetParam(SCE_SYSCON_PARAM_POWER_BATTERY_TTC, &g_Battery.ttcConfig); // 0x00005758
     return status;
 }
 
