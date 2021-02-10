@@ -395,7 +395,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) >= 0x2 && PSP_SYSCON_BARYON_GET_VERSION_MINOR(version) < 0x6) // 0x000050D0 - 0x00005118
         {
             /* We are running on a PSP-2000 series model. */
-            sceSysconReceiveSetParam(4, &g_Battery.ttcConfig); // 0x00005120
+            sceSysconReceiveSetParam(SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC, &g_Battery.ttcConfig); // 0x00005120
         }
 
         _scePowerBatterySetTTC(1); // 0x000050E4
@@ -1457,7 +1457,7 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
 
     sceKernelCpuResumeIntr(intrState); // 0x00005748
 
-    status = sceSysconSendSetParam(SCE_SYSCON_PARAM_POWER_BATTERY_TTC, &g_Battery.ttcConfig); // 0x00005758
+    status = sceSysconSendSetParam(SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC, &g_Battery.ttcConfig); // 0x00005758
     return status;
 }
 

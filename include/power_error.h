@@ -23,7 +23,7 @@
 /* This constant represents an unknown power service error (related to the PSP system chip's temperature). */
 #define SCE_POWER_ERROR_0010					0x802B0010
 /* 
- *This constant indicates that no battery has been equipped or that the power service failed to
+ * This constant indicates that no battery has been equipped or that the power service failed to
  * properly communicate with an installed battery.
  */
 #define SCE_POWER_ERROR_NO_BATTERY				0x802B0100
