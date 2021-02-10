@@ -761,6 +761,18 @@ s32 scePowerIsBatteryCharging(void);
  */
 s32 scePowerIsLowBattery(void);
 
+/**
+ * @brief Gets the full capacity of the battery.
+ *
+ * This function gets the full capacity of the equipped battery in mAh.
+ *
+ * @attention Call this API only on the PSP series PSP-1000, PSP-2000 and PSP-3000. Calling this API on other PSP
+ * models (like the PSP Go or PSP Street, for example) will not return correct values!
+ *
+ * @return The full battery capacity on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ */
 s32 scePowerGetBatteryFullCapacity(void);
 
 s32 scePowerGetBatteryLifePercent(void);

@@ -1171,6 +1171,20 @@ typedef enum {
  */
 s32 scePowerGetBatteryType(void);
 
+/**
+ * @brief Gets the full capacity of the battery.
+ * 
+ * This function gets the full capacity of the equipped battery in mAh.
+ * 
+ * @attention Call this API only on devices which support battery monitoring. On PSP systems which do not
+ * support battery monitoring incorrect values will be returned!
+ * 
+ * @return The full battery capacity on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * 
+ * @see ::scePowerGetBatteryType()
+ */
 s32 scePowerGetBatteryFullCapacity(void);
 
 s32 scePowerGetBatteryLifePercent(void);
