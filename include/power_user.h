@@ -657,6 +657,24 @@ s32 scePowerIsSuspendRequired(void);
 
 s32 scePowerGetBatteryRemainCapacity(void);
 
+/**
+ * @brief Gets the estimated continuous remaining battery lifetime.
+ *
+ * This function gets the estimated continuous remaining battery lifetime in minutes. When the PSP system
+ * is connected to an external power source via an AC adapter, 0 is returned since the continuous remaining
+ * time cannot be estimated.
+ *
+ * @return The estimated continuous remaining battery lifetime on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
+ *
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an incorrect value!
+ *
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ */
 s32 scePowerGetBatteryLifeTime(void);
 
 /**
@@ -669,8 +687,8 @@ s32 scePowerGetBatteryLifeTime(void);
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
  *
- * @remark This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error.
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  */
 s32 scePowerGetBatteryTemp(void);
 
@@ -686,8 +704,8 @@ s32 scePowerGetBatteryTemp(void);
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
  *
- * @remark This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error.
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  */
 s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 
@@ -699,8 +717,8 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
  *
- * @remark This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error.
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  */
 s32 scePowerGetBatteryChargeCycle(void);
 

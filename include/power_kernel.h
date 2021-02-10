@@ -970,7 +970,7 @@ s32 scePowerBatteryPermitCharging(void);
  * might be the same value returned on success (if USB charging was previously disabled), you can
  * call this API again and check its returns value. If it returns "1", USB charging has been enabled
  * successfully.
- * @return < 0 on error.
+ * @return < 0 Error.
  * 
  * @see ::scePowerBatteryDisableUsbCharging()
  */
@@ -1031,6 +1031,26 @@ s32 scePowerIsSuspendRequired(void);
 
 s32 scePowerGetBatteryRemainCapacity(void);
 
+/**
+ * @brief Gets the estimated continuous remaining battery lifetime.
+ * 
+ * This function gets the estimated continuous remaining battery lifetime in minutes. When the PSP system
+ * is connected to an external power source via an AC adapter, 0 is returned since the continuous remaining
+ * time cannot be estimated.
+ * 
+ * @return The estimated continuous remaining battery lifetime on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
+ * 
+ * @attention While this API can be called on any PSP system, a valid estimated remaining battery lifetime will
+ * only be returned on PSP devices which have battery monitoring capabilities as indicated by
+ * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
+ * capability will rreturn an incorrect value!
+ * 
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ */
 s32 scePowerGetBatteryLifeTime(void);
 
 /**
@@ -1043,10 +1063,10 @@ s32 scePowerGetBatteryLifeTime(void);
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
  * 
- * @remark While this API can be called on any PSP system, a valid temperature value will only be
+ * @attention While this API can be called on any PSP system, a valid temperature value will only be
  * returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
- * capability will return an error.
+ * capability will return an error!
  */
 s32 scePowerGetBatteryTemp(void);
 
@@ -1062,10 +1082,10 @@ s32 scePowerGetBatteryTemp(void);
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
  * 
- * @remark While this API can be called on any PSP system, a valid electric charge value will only be
+ * @attention While this API can be called on any PSP system, a valid electric charge value will only be
  * returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
- * capability will return an error.
+ * capability will return an error!
  */
 s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 
@@ -1077,10 +1097,10 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
  * 
- * @remark While this API can be called on any PSP system, a valid charge cycle will only be
+ * @attention While this API can be called on any PSP system, a valid charge cycle will only be
  * returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
- * capability will return an error.
+ * capability will return an error!
  */
 s32 scePowerGetBatteryChargeCycle(void);
 

@@ -148,6 +148,10 @@ typedef struct  {
     s32 minimumFullCapacity; // 84
     /* The current battery charge cycle count. */
     s32 batteryChargeCycle; // 88
+    /*
+     * Represents the remaining available minutes of use to the user of the PSP system. If this member
+     * is set to a valid value, it will be considered in the calculation of the remaining battery lifetime.
+     */
     s32 limitTime; // 92
     /* The current battery temperature in degree Celsius. */
     s32 batteryTemp; // 96
@@ -1619,19 +1623,18 @@ s32 scePowerGetBatteryRemainCapacity(void)
 }
 
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
-// TODO: Write documentation
 s32 scePowerGetBatteryLifeTime(void)
 {
     s32 status;
     s32 intrState;
 
-    // If an external power supply is available, return 0 since we cannot estimate the remaining batter life.
+    /* If an external power supply is available, return 0 since we cannot estimate the remaining battery life. */
     if (sceSysconIsAcSupplied()) // 0x00005920 & 0x00005928
     {
         return 0;
     }
 
-    if (g_Battery.batteryType != 0) // 0x0000593C
+    if (g_Battery.batteryType != SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x0000593C
     {
         // uofw note: Yes, Sony is returning an unitialized local variable here
         // Presumably status should have been set to SCE_ERROR_NOT_SUPPORTED before 
@@ -1639,6 +1642,7 @@ s32 scePowerGetBatteryLifeTime(void)
         return status;
     }
 
+    /* Get the remaining battery capacity. */
     s32 remainingCapacity = scePowerGetBatteryRemainCapacity(); // 0x00005944
     if (remainingCapacity < 0) // 0x00005950
     {
@@ -1658,6 +1662,7 @@ s32 scePowerGetBatteryLifeTime(void)
 
     if (g_Battery.batteryElec < 0) // 0x00005978
     {
+        /* Get the remaining battery capacity actually available to the user. */
         s32 remainingCapacityForRunning = (remainingCapacity - g_Battery.forceSuspendCapacity); // 0x000059A8 & 0x000059AC
 
         if (g_Battery.batteryElec == -1) // 0x000059C0
@@ -1665,11 +1670,13 @@ s32 scePowerGetBatteryLifeTime(void)
             pspBreak(SCE_BREAKCODE_DIVZERO); // 0x000059C4
         }
 
-        // Convert remaining capacity (which is (presumably - based on PS Vita SDK doc) in mAh) into minutes.
-        // rough formula to use here:
-        //    (mAh)/(Amps*1000)*60 = (minutes). 
-        s32 cvtRemainingTime = remainingCapacityForRunning * 60 / ~g_Battery.batteryElec; // 0x000059B0 & 0x000059B4 & 0x000059B4
+        /* 
+         * Convert remaining capacity in mAh into minutes. Rough formula to use here:
+         * (mAh)/(Amps*1000)*60 = (minutes).
+         */
+        s32 cvtRemainingTime = (remainingCapacityForRunning * 60) / ~g_Battery.batteryElec; // 0x000059B0 & 0x000059B4 & 0x000059B4
 
+        /* Consider the explicitely set limit time. */
         if (g_Battery.limitTime >= 0) // 0x000059CC & 0x000059D
         {
             cvtRemainingTime = pspMin(cvtRemainingTime, g_Battery.limitTime); // 0x000059D8
@@ -1678,7 +1685,7 @@ s32 scePowerGetBatteryLifeTime(void)
         return pspMax(cvtRemainingTime, 1); // 0x000059E0
     }
 
-    return 0;
+    return 0; /* Remaining battery lifetime cannot be estimated. */
 }
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
