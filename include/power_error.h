@@ -20,10 +20,10 @@
 #ifndef POWER_ERROR_H
 #define	POWER_ERROR_H
 
-/* This constant represents an an unknown power service error. */
+/* This constant represents an unknown power service error. */
 #define SCE_POWER_ERROR_0010					0x802B0010
 /* 
- *This constant indicates that no battery has been equiiped or that the power service failed to
+ *This constant indicates that no battery has been equipped or that the power service failed to
  * properly communicate with an installed battery.
  */
 #define SCE_POWER_ERROR_NO_BATTERY				0x802B0100
