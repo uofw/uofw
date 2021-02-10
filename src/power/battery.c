@@ -750,12 +750,12 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                          * If the new remaining battery capacity is greater than the current ascertained
                          * minimum full capacity value, we update the munimum full capacity value. For example,
                          * this is the case if the battery is currently charging and the remaining battery capacity
-                         * was smaller than the just obtained new remainign capacity when the PSP was turned on.
+                         * was smaller than the just obtained new remaining capacity when the PSP was turned on.
                          */
                         if (g_Battery.minimumFullCapacity < remainCap) // 0x00004B38
                         {
                             g_Battery.minimumFullCapacity = remainCap; // 0x00004B4C
-                            if (g_Battery.powerSupplyStatus & 0x80)
+                            if (g_Battery.powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING)
                             {
                                 g_Battery.batteryRemainingCapacity = remainCap--; // 0x00004B54
                             }
@@ -767,6 +767,34 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 }
                 else
                 {
+                    /* 
+                     * The type of the equipped battery does not support broad battery monitoring. For example,
+                     * its remaining battery capacity cannot be adequatly measured. We wll proceed with estimating
+                     * the remaining battery capacity by deriving it from the battery's current voltage level.
+                     * This won't be as accurate as directly measuring the remaining battery capacity and is
+                     * also problematic if the estimated battery life is reported back to the UI (for
+                     * example) for the user:
+                     * 
+                     * The problem is that under a higher load, battery voltage drops considerably whereas with the
+                     * load removed, battery voltage is stabiizing and might even recover itself to the previous value
+                     * before the battery load was applied. In other words, what this means is that if the user
+                     * starts a game application (which creates high battery load) the voltage will drop considerably,
+                     * If the user then quits their gaming session and puts their PSP system in an idle state the
+                     * battery voltage might recover. This could lead to an observation where the PSP system will
+                     * indicate 60% remaining battery life when playing a game but then returning to the XMB,
+                     * the remaining battery life will jump back up again (to, say, 70%). If the user observes this, 
+                     * they might be lead to believe that their battery actually charged itself after quitting the game
+                     * while sitting idly in the XMB. Assuming that the PSP device is not currently connected to an
+                     * external power source, this is obviously incorrect!
+                     */
+
+                    /*
+                     * Note: The API to obtain the current battery voltage differs from the one used on PSP hardware
+                     * where battery monitoring is supported. Here we call the sceSysconGetBattVolt() function which
+                     * is only meant to be called for devices without battery monitoring capabilities. On devices which
+                     * have such capabilities, the API sceSysconBatteryGetVolt() is called instead.
+                     */
+
                     // loc_00004BF0
                     s32 battVolt;
                     status = sceSysconGetBattVolt(&battVolt); // 0x00004BF0
@@ -777,19 +805,39 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     }
                     else
                     {
+                        /* Check if the obtained battery voltage is valid. */
                         if (battVolt != 0) // 0x00004C00
                         {
+                            /* We've obtained a valid battery voltage value. */
+
                             g_Battery.batteryVoltage = battVolt; // 0x00004C08
+
+                            /* 
+                             * Estimate the remaining battery life (in [%]) based on the current battery voltage.
+                             * Note that this is potentially problematic as stated above.
+                             */
                             g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap(battVolt); // 0x00004C0C & 0x00004C20
+
+                            /*
+                             * Since the battery type does not support battery monitoring, we cannot obtain its
+                             * properties like its full capacity, charge cycle or temperature. A such, we are
+                             * done with polling the battery for updated values.
+                             */
 
                             if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00004C1C
                             {
                                 g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE; // 0x00004C38
                             }
 
-                            g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE;
-                            g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START;
+                            g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE; // 0x00004C24
+                            g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004C2C
                         }
+
+                        /* 
+                         * If the battery voltage is 0 (which would signal an incorrect voltage value), it
+                         * apears we will keep reapeating this step until we have obtained a valid battery
+                         * voltage value.
+                         */
                     }
                 }
 
@@ -1291,7 +1339,7 @@ s32 scePowerBatteryEnableUsbCharging(void)
          */
         if (!sceSysconIsAcSupplied()) // 0x00005564
         {
-            /* Lineup up an [enable USB charging] command for our battery worker thread to execute. */
+            /* Line up an [enable USB charging] command for our battery worker thread to execute. */
             sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_ENABLE_USB_CHARGING); // 0x00005574
 
             sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UNKNOWN_400); // 0x00005580
@@ -1806,7 +1854,6 @@ s32 scePowerIsLowBattery(void)
 }
 
 // Subroutine scePower_driver_071160B1 - Address 0x00005DF0
-// TODO: Write documentation
 s32 scePowerGetBatteryType(void)
 {
     return (s32)g_Battery.batteryType;

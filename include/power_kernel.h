@@ -1131,6 +1131,7 @@ s32 scePowerIsBatteryCharging(void);
  * @return SCE_TRUE if the battery is low, otherwise SCE_FALSE.
  * 
  * @remark Whether the battery is currently in the low battery status can also be checked using a power callback.
+ * 
  * See ::scePowerRegisterCallback() for more details.
  */
 s32 scePowerIsLowBattery(void);
@@ -1153,6 +1154,21 @@ typedef enum {
 	 SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
 } ScePowerBatteryType;
 
+/**
+ * @brief Gets the battery type.
+ * 
+ * This function gets the type of the battery equipped in a standard PSP system. The battery type indicates
+ * whether battery properties like the remaining battery lifetime/temperature/full capacity can be
+ * (accurately) obtained. 
+ * 
+ * PSP devices ranging from the PSP-1000 series to the PSP-3000 series can obtain these battery properties,
+ * whereas the PSP-Go and PSP-1000 series cannot. 
+ * 
+ * Only use this API to determine the battery type. Do not use it for anything else (like determining the PSP
+ * hardware model).
+ *
+ * @return The battery type. One of ::ScePowerBatteryType.
+ */
 s32 scePowerGetBatteryType(void);
 
 s32 scePowerGetBatteryFullCapacity(void);
