@@ -1215,7 +1215,15 @@ s32 scePowerGetBatteryLifePercent(void);
  */
 s32 scePowerGetBatteryVolt(void);
 
-s32 scePowerGetInnerTemp(void);
+/**
+ * @brief Gets the PSP system chip's temperature.
+ *
+ * @note As of at least PSP fimrware version 3.50 this API has been "disabled". It will now only
+ * return a constant representing an error.
+ *
+ * @return Always SCE_POWER_ERROR_0010.
+ */
+s32 scePowerGetInnerTemp(float *pInnerTemp);
 
 /* Misc */
 

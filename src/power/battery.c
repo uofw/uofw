@@ -1918,9 +1918,12 @@ s32 scePowerGetBatteryVolt(void)
 }
 
 // Subroutine scePower_23436A4A - Address 0x00005E98 - Aliases: scePower_driver_C730F432
-// TODO: Write documentation
-s32 scePowerGetInnerTemp(void)
+s32 scePowerGetInnerTemp(float *pInnerTemp)
 {
+    (void)pInnerTemp;
+
+    /* In earlier firmwares (like 1.50) this API apparently returned the PSP system chip's temperature. */
+
     return SCE_POWER_ERROR_0010;
 }
 
