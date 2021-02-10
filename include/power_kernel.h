@@ -1037,6 +1037,18 @@ s32 scePowerGetBatteryTemp(void);
 
 s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 
+/**
+ * @brief Gets the charge cycle status of the battery.
+ * 
+ * @return The current charge cycle count on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * 
+ * @remark While this API can be called on any PSP system, a valid charge cycle will only be
+ * returned on PSP devices which have battery monitoring capabilities as indicated by
+ * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
+ * capability will return an error.
+ */
 s32 scePowerGetBatteryChargeCycle(void);
 
 s32 scePowerBatteryUpdateInfo(void);
@@ -1175,14 +1187,13 @@ s32 scePowerGetBatteryType(void);
  * 
  * This function gets the full capacity of the equipped battery in mAh.
  * 
- * @attention Call this API only on devices which support battery monitoring. On PSP systems which do not
- * support battery monitoring incorrect values will be returned!
+ * @attention Call this API only on devices which support battery monitoring as indicated by
+ * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be
+ * returned!
  * 
  * @return The full battery capacity on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * 
- * @see ::scePowerGetBatteryType()
  */
 s32 scePowerGetBatteryFullCapacity(void);
 
@@ -1191,8 +1202,9 @@ s32 scePowerGetBatteryFullCapacity(void);
  *
  * This function gets the remaining battery life as a percentage relative to the fully charged status.
  * 
- * @attention Call this API only on devices which support battery monitoring. On PSP systems which do not
- * support battery monitoring incorrect values might be returned!
+ * @attention Call this API only on devices which support battery monitoring as indicated by
+ * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be
+ * returned!
  * 
  * @return The remaining battery life in percent [0-100] on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.

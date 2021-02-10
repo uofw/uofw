@@ -663,6 +663,16 @@ s32 scePowerGetBatteryTemp(void);
 
 s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 
+/**
+ * @brief Gets the charge cycle status of the battery.
+ *
+ * @return The current charge cycle count on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error.
+ */
 s32 scePowerGetBatteryChargeCycle(void);
 
 s32 scePowerBatteryUpdateInfo(void);

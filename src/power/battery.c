@@ -75,11 +75,15 @@ typedef struct
 /*
  * This structure represents the power service's internal control block for battery management.
  */
-typedef struct 
-{
+typedef struct  {
     SceUID batteryEventFlagId; // 0
     SceUID workerThreadId; // 4
+    /* The battery capacity threshold value in mAh at which point the PSP system is automatically suspended. */
     u32 forceSuspendCapacity; // 8
+    /*
+     * The battery capacity threshold value in mAh at which point the remaining battery lifetime is considered
+     * to be short.
+     */
     u32 lowBatteryCapacity; // 12
     /*
      * Indicates whether the battery manager is set up to consistently poll the battery for new
@@ -96,21 +100,37 @@ typedef struct
      * Note: "0" is its minimum (we do not "ignore" [forbid battery charge] requests).
      */
     u32 batteryForbidChargingNetCounter; // 20
+    /* Indicates whether or not battery charging over USB is supported. */
     u32 isUsbChargingSupported; // 24
+    /* Indicates whether or not battery charging over USB is currently enabled. */
     u32 isUsbChargingEnabled; // 28
     u32 unk32; // 32 -- TODO: A boolean flag dealing with USB charging.
     SceUID permitChargingDelayAlarmId; // 36
-    /* Indicates whether the battery is currently charging. */
+    /* Indicates whether or not the battery is currently charging. */
     u32 isBatteryCharging; // 40
+    /* The type of the battery. One of ::ScePowerBatteryType. */
     u32 batteryType; // 44
+    /*
+     * Indicates whether or not the battery manager is currently polling the battery for data
+     * (like remaining capacity, battery temperature or voltage).
+     */
     u32 isBatteryInfoUpdateInProgress;
     PowerBatteryThreadOperation workerThreadNextOp; // 52
+    /*
+     * Indicates whether or not the PSP device is currently connected to an external power source
+     * via an AC adapter.
+     */
     u32 isAcSupplied; // 56
-    u32 powerSupplyStatus; // 60 -- TODO: Define macros for possible values
+    /* The current power supply status of the PSP system. */
+    u32 powerSupplyStatus; // 60 
+    /* The current availibilty status of the battery to the power service. One of ::ScePowerBatteryAvailabilityStatus. */
     u32 batteryAvailabilityStatus; // 64
-    u32 unk68;
+    u32 unk68; // 68
+    /* The current remaining capacity of the battery in mAh. */
     s32 batteryRemainingCapacity; // 72
+    /* The current remaining percentage of battery life relative to a fully charged status. */
     s32 batteryLifePercentage; // 76
+    /* The full capacity of the battery in mAh. */
     s32 batteryFullCapacity; // 80
     /*
      * Represents the minimum full capacity of a battery. The full capacity of a battery can only be
@@ -120,16 +140,19 @@ typedef struct
      * The [minimumFullCapacity] is thus used to provide a more accurate full capacity value until the battery
      * equipped has been fully charged again and a new full capacity could be ascertained.
      * 
-     * The minimum full capacity is determiend by initializing it to the current remaining battery capacity on PSP
+     * The minimum full capacity is determined by initializing it to the current remaining battery capacity on PSP
      * startup and and then update it to the new reaming capacity value whenever that value is a new maximum
      * during the the use of the PSP system between two cold reboots. For example, this is the case when the battery
      * is being charged when the PSP system is turned on.
      */
     s32 minimumFullCapacity; // 84
+    /* The current battery charge cycle count. */
     s32 batteryChargeCycle; // 88
     s32 limitTime; // 92
+    /* The current battery temperature in degree Celsius. */
     s32 batteryTemp; // 96
     s32 batteryElec; // 100
+    /* The current battery voltage in mV. */
     s32 batteryVoltage; // 104
     u32 sysconCmdDisableUsbChargingExecStatus; // 108
     SceSysconPacket powerBatterySysconPacket; // 112
@@ -1715,10 +1738,9 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec)
 }
 
 // Subroutine scePower_CB49F5CE - Address 0x00005AD8 - Aliases: scePower_driver_8432901E
-// TODO: Write documentation
 s32 scePowerGetBatteryChargeCycle(void)
 {
-    if (g_Battery.batteryType != 0) // 0x00005AE8
+    if (g_Battery.batteryType != SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00005AE8
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }
