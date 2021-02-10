@@ -1204,6 +1204,15 @@ s32 scePowerGetBatteryFullCapacity(void);
  */
 s32 scePowerGetBatteryLifePercent(void);
 
+/**
+ * @brief Gets the current battery voltage. 
+ * 
+ * This function gets the current battery voltage in mV (millivolts).
+ * 
+ * @return The current battery voltage on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ */
 s32 scePowerGetBatteryVolt(void);
 
 s32 scePowerGetInnerTemp(void);

@@ -1902,7 +1902,6 @@ s32 scePowerGetBatteryLifePercent(void)
 }
 
 // Subroutine scePower_483CE86B - Address 0x00005E64 - Aliases: scePower_driver_F7DE0E81
-// TODO: Write documentation
 s32 scePowerGetBatteryVolt(void)
 {
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED)
