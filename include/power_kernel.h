@@ -1035,6 +1035,23 @@ s32 scePowerGetBatteryLifeTime(void);
 
 s32 scePowerGetBatteryTemp(void);
 
+/**
+ * Gets the current electric charge value of the battery.
+ * 
+ * @param pBatteryElec Pointer to an u32 which is to receive the electric charge value.
+ * 
+ * @attention Do not specify a NULL pointer as the argument. Otherwise the PSP system will crash.
+ * 
+ * @return SCE_ERROR_OK on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
+ * 
+ * @remark While this API can be called on any PSP system, a valid electric charge value will only be
+ * returned on PSP devices which have battery monitoring capabilities as indicated by
+ * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
+ * capability will return an error.
+ */
 s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 
 /**

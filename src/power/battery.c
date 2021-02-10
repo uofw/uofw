@@ -151,6 +151,7 @@ typedef struct  {
     s32 limitTime; // 92
     /* The current battery temperature in degree Celsius. */
     s32 batteryTemp; // 96
+    /* The current electric charge value of the battery. */
     s32 batteryElec; // 100
     /* The current battery voltage in mV. */
     s32 batteryVoltage; // 104
@@ -1703,18 +1704,18 @@ s32 scePowerGetBatteryTemp(void)
 }
 
 // Subroutine scePower_862AE1A6 - Address 0x00005A74 - Aliases: scePower_driver_993B8C4A
-// TODO: Write documentation
 s32 scePowerGetBatteryElec(u32 *pBatteryElec)
 {
     s32 oldK1;
 
     oldK1 = pspShiftK1(); // 0x00005A80
 
-    if (g_Battery.batteryType != 0) // 0x00005A90
+    if (g_Battery.batteryType != SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00005A90
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }
 
+    /* Verify that a valid memory address was specified. */
     if (!pspK1PtrOk(pBatteryElec)) // 0x00005A98
     {
         return SCE_ERROR_PRIV_REQUIRED;
