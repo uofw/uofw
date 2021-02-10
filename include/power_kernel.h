@@ -1162,7 +1162,7 @@ typedef enum {
  * (accurately) obtained. 
  * 
  * PSP devices ranging from the PSP-1000 series to the PSP-3000 series can obtain these battery properties,
- * whereas the PSP-Go and PSP-1000 series cannot. 
+ * whereas the PSP Go and PSP Street (PSP E-1000) series cannot. 
  * 
  * Only use this API to determine the battery type. Do not use it for anything else (like determining the PSP
  * hardware model).
