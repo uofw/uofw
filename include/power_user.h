@@ -659,6 +659,19 @@ s32 scePowerGetBatteryRemainCapacity(void);
 
 s32 scePowerGetBatteryLifeTime(void);
 
+/**
+ * @brief Gets the current temperature of the battery.
+ *
+ * Gets the current battery temperature in degree Celsius.
+ *
+ * @return The current battery temperature on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
+ *
+ * @remark This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error.
+ */
 s32 scePowerGetBatteryTemp(void);
 
 /**
@@ -684,6 +697,7 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
  * @return The current charge cycle count on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
  *
  * @remark This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
  * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error.

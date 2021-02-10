@@ -1682,10 +1682,9 @@ s32 scePowerGetBatteryLifeTime(void)
 }
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
-// TODO: Write documentation
 s32 scePowerGetBatteryTemp(void)
 {
-    if (g_Battery.batteryType != 0) // 0x00005A40
+    if (g_Battery.batteryType != SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00005A40
     {
         return SCE_ERROR_NOT_SUPPORTED;
     }

@@ -1033,6 +1033,21 @@ s32 scePowerGetBatteryRemainCapacity(void);
 
 s32 scePowerGetBatteryLifeTime(void);
 
+/**
+ * @brief Gets the current temperature of the battery. 
+ * 
+ * Gets the current battery temperature in degree Celsius.
+ * 
+ * @return The current battery temperature on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
+ * 
+ * @remark While this API can be called on any PSP system, a valid temperature value will only be
+ * returned on PSP devices which have battery monitoring capabilities as indicated by
+ * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
+ * capability will return an error.
+ */
 s32 scePowerGetBatteryTemp(void);
 
 /**
@@ -1060,6 +1075,7 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
  * @return The current charge cycle count on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
  * 
  * @remark While this API can be called on any PSP system, a valid charge cycle will only be
  * returned on PSP devices which have battery monitoring capabilities as indicated by
