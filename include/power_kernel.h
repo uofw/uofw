@@ -115,6 +115,34 @@ typedef void (*ScePowerCallback)(s32 count, s32 arg, void *common);
  * such an operation performed. They will have to explicitly specify a callback slot to use. Specifying
  * ::SCE_POWER_CALLBACKSLOT_AUTO will result in an error.
  * 
+ * @par Example:
+ * @code
+ * 
+ * s32 powerCallback(int count, int arg, void *common)
+ * {
+ *	  if (arg & SCE_POWER_CALLBACKARG_LOWBATTERY)
+ *    {
+ *        // Do something when the battery is in low battery state.
+ *    }
+ * }
+ *
+ * s32 registerPowerCallback()
+ * {
+ *    SceUID uidCb;
+ *    s32 status;
+ *
+ *    // Create the callback.
+ *	  uidCb = sceKernelCreateCallback("powerCb", powerCallback, NULL);
+ *
+ *    // Register the callback with the power service.
+ *	  status = scePowerRegisterCallback(0, uidCb);
+ *	  if (status < SCE_ERROR_OK)
+ *    {
+ *		  // Power callback registration failed.
+ *	  }
+ * }
+ * @endcode
+ * 
  * @see ::ScePowerCallback()
  * @see scePowerUnregisterCallback()
  */

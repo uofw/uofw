@@ -82,6 +82,34 @@ typedef void (*ScePowerCallback)(s32 count, s32 arg, void *common);
  * was found (slot number returned).
  * @return A value < 0 on failure.
  * 
+ * @par Example:
+ * @code
+ * 
+ * s32 powerCallback(int count, int arg, void *common)
+ * {
+ *	  if (arg & SCE_POWER_CALLBACKARG_LOWBATTERY)
+ *    {
+ *        // Do something when the battery is in low battery state.
+ *    }
+ * }
+ *
+ * s32 registerPowerCallback()
+ * {
+ *    SceUID uidCb;
+ *    s32 status;
+ *
+ *    // Create the callback.
+ *	  uidCb = sceKernelCreateCallback("powerCb", powerCallback, NULL);
+ *
+ *    // Register the callback with the power service.
+ *	  status = scePowerRegisterCallback(0, uidCb);
+ *	  if (status < SCE_ERROR_OK)
+ *    {
+ *		  // Power callback registration failed.
+ *	  }
+ * }
+ * @endcode
+ * 
  * @see ::ScePowerCallback()
  * @see scePowerUnregisterCallback()
  */
@@ -485,7 +513,7 @@ s32 scePowerUnlockForUser(s32 lockType);
  * @see ::scePowerVolatileMemTryLock()
  * @see ::scePowerVolatileMemUnlock()
  */
-s32 scePowerVolatileMemLock(s32 mode, void** ppAddr, SceSize* pSize);
+s32 scePowerVolatileMemLock(s32 mode, void **ppAddr, SceSize *pSize);
 
 /**
  * @brief Obtains exclusive access to the PSP's RAM area reserved for volatile memory.
@@ -510,7 +538,7 @@ s32 scePowerVolatileMemLock(s32 mode, void** ppAddr, SceSize* pSize);
  * @see ::scePowerVolatileMemLock()
  * @see ::scePowerVolatileMemUnlock()
  */
-s32 scePowerVolatileMemTryLock(s32 mode, void** ppAddr, SceSize* pSize);
+s32 scePowerVolatileMemTryLock(s32 mode, void **ppAddr, SceSize *pSize);
 
 /**
  * @brief Relinquishes exclusive access to the PSP's RAM area reserved for volatile memory.
