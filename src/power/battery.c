@@ -594,12 +594,21 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
         else if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE
             && g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00004E4C & 0x00004E58
         {
-            s32 remainCapacity = _scePowerBatteryCalcRivisedRcap(); // 0x00004E60
-            if (remainCapacity != g_Battery.batteryLifePercentage) // 0x00004E6C
+            /* 
+             * If the equipped battery supports accurate battery monitoring, we update its remaining battery
+             * life (relative to a full charge) and notify any power callback subscribers.
+             */
+            s32 newBatteryLifePercentage = _scePowerBatteryCalcRivisedRcap(); // 0x00004E60
+            if (newBatteryLifePercentage != g_Battery.batteryLifePercentage) // 0x00004E6C
             {
-                g_Battery.batteryLifePercentage = remainCapacity; // 0x00004E74
-                _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_BATTERY_CAP,
-                    remainCapacity | SCE_POWER_CALLBACKARG_BATTERYEXIST, 0); // 0x00004E7C
+                /* Update the remaining relative battery life. */
+                g_Battery.batteryLifePercentage = newBatteryLifePercentage; // 0x00004E74
+
+                /* Notify power callback subscribers about the updated remaining relative battery life. */
+                _scePowerNotifyCallback(
+                    SCE_POWER_CALLBACKARG_BATTERY_CAP,
+                    newBatteryLifePercentage | SCE_POWER_CALLBACKARG_BATTERYEXIST, 
+                    0); // 0x00004E7C
             }
         }
 
@@ -1025,6 +1034,7 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
 // Subroutine sub_00005130 - Address 0x00005130
 // Note: Yep, that's the name used in 5.00, might have been corrected since.
 // TODO: Verify correctness (for example using a small test function)
+/* Gets the  remaining percentage of battery life relative to the fully charged status (0-100). */
 static s32 _scePowerBatteryCalcRivisedRcap(void)
 {
     s32 fsCap;
@@ -1860,7 +1870,6 @@ s32 scePowerGetBatteryType(void)
 }
 
 // Subroutine scePower_FD18A0FF - Address 0x00005DFC - Aliases: scePower_driver_003B1E03
-// TODO: Write documentation
 s32 scePowerGetBatteryFullCapacity(void)
 {
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED)
@@ -1877,7 +1886,6 @@ s32 scePowerGetBatteryFullCapacity(void)
 }
 
 // Subroutine scePower_2085D15D - Address 0x00005E30 - Aliases: scePower_driver_31AEA94C
-// TODO: Write documentation
 s32 scePowerGetBatteryLifePercent(void)
 {
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED)

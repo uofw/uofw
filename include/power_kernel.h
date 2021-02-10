@@ -1131,7 +1131,6 @@ s32 scePowerIsBatteryCharging(void);
  * @return SCE_TRUE if the battery is low, otherwise SCE_FALSE.
  * 
  * @remark Whether the battery is currently in the low battery status can also be checked using a power callback.
- * 
  * See ::scePowerRegisterCallback() for more details.
  */
 s32 scePowerIsLowBattery(void);
@@ -1187,6 +1186,22 @@ s32 scePowerGetBatteryType(void);
  */
 s32 scePowerGetBatteryFullCapacity(void);
 
+/**
+ * @brief Gets the remaining percentage of battery life relative to the fully charged status.
+ *
+ * This function gets the remaining battery life as a percentage relative to the fully charged status.
+ * 
+ * @attention Call this API only on devices which support battery monitoring. On PSP systems which do not
+ * support battery monitoring incorrect values might be returned!
+ * 
+ * @return The remaining battery life in percent [0-100] on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * 
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details. As mentioned above, correct values are only obtained on PSP devices which have battery
+ * monitoring capabilities.
+ */
 s32 scePowerGetBatteryLifePercent(void);
 
 s32 scePowerGetBatteryVolt(void);

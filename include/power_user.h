@@ -775,6 +775,21 @@ s32 scePowerIsLowBattery(void);
  */
 s32 scePowerGetBatteryFullCapacity(void);
 
+/**
+ * @brief Gets the remaining percentage of battery life relative to the fully charged status.
+ *
+ * This function gets the remaining battery life as a percentage relative to the fully charged status.
+ *
+ * @attention Call this API only on the PSP series PSP-1000, PSP-2000 and PSP-3000. Calling this API on other PSP
+ * models (like the PSP Go or PSP Street, for example) will not return correct values!
+ *
+ * @return The remaining battery life in percent [0-100] on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details. As mentioned above, the correct status is only reported on the PSP-1000, PSP-2000 and PSP-3000 series.
+ */
 s32 scePowerGetBatteryLifePercent(void);
 
 s32 scePowerGetBatteryVolt(void);
