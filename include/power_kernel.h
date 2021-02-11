@@ -1034,14 +1034,14 @@ s32 scePowerIsSuspendRequired(void);
  * 
  * This function gets the remaining battery capacity in mAh.
  * 
- * @return The remaining battery capacity on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * 
  * @attention While this API can be called on any PSP system, a valid remaining battery capacity will
  * only be returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
  * capability will return an incorrect value!
+ * 
+ * @return The remaining battery capacity on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * 
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
@@ -1055,15 +1055,20 @@ s32 scePowerGetBatteryRemainCapacity(void);
  * is connected to an external power source via an AC adapter, 0 is returned since the continuous remaining
  * time cannot be estimated.
  * 
- * @return The estimated continuous remaining battery lifetime on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * @return < 0 Error.
+ * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
+ * lifetime. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
+ * returned as well. As such, the returned remaining battery lifetime is the lifetime available to the user before
+ * the PSP system is automatically suspended.
  * 
  * @attention While this API can be called on any PSP system, a valid estimated remaining battery lifetime will
  * only be returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
  * capability will return an incorrect value!
+ * 
+ * @return The estimated continuous remaining battery lifetime on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
  * 
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
@@ -1075,15 +1080,15 @@ s32 scePowerGetBatteryLifeTime(void);
  * 
  * Gets the current battery temperature in degree Celsius.
  * 
- * @return The current battery temperature on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * @return < 0 Error.
- * 
  * @attention While this API can be called on any PSP system, a valid temperature value will only be
  * returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
  * capability will return an error!
+ * 
+ * @return The current battery temperature on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
  */
 s32 scePowerGetBatteryTemp(void);
 
@@ -1109,15 +1114,15 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 /**
  * @brief Gets the charge cycle status of the battery.
  * 
- * @return The current charge cycle count on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * @return < 0 Error.
- * 
  * @attention While this API can be called on any PSP system, a valid charge cycle will only be
  * returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
  * capability will return an error!
+ * 
+ * @return The current charge cycle count on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * @return < 0 Error.
  */
 s32 scePowerGetBatteryChargeCycle(void);
 
@@ -1271,6 +1276,11 @@ s32 scePowerGetBatteryFullCapacity(void);
  * @brief Gets the remaining percentage of battery life relative to the fully charged status.
  *
  * This function gets the remaining battery life as a percentage relative to the fully charged status.
+ * 
+ * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
+ * life. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
+ * returned. As such, the returned remaining relative battery life is the battery life available to the user
+ * before the PSP system is automatically suspended.
  * 
  * @attention Call this API only on devices which support battery monitoring as indicated by
  * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be

@@ -659,13 +659,13 @@ s32 scePowerIsSuspendRequired(void);
  * @brief Gets the remaining battery capacity.
  *
  * This function gets the remaining battery capacity in mAh.
+ * 
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an incorrect value!
  *
  * @return The remaining battery capacity on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- *
- * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an incorrect value!
  *
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
@@ -678,14 +678,19 @@ s32 scePowerGetBatteryRemainCapacity(void);
  * This function gets the estimated continuous remaining battery lifetime in minutes. When the PSP system
  * is connected to an external power source via an AC adapter, 0 is returned since the continuous remaining
  * time cannot be estimated.
+ * 
+ * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
+ * lifetime. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
+ * returned as well. As such, the returned remaining battery lifetime is the lifetime available to the user before
+ * the PSP system is automatically suspended.
+ * 
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an incorrect value!
  *
  * @return The estimated continuous remaining battery lifetime on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
- *
- * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an incorrect value!
  *
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
@@ -696,14 +701,14 @@ s32 scePowerGetBatteryLifeTime(void);
  * @brief Gets the current temperature of the battery.
  *
  * Gets the current battery temperature in degree Celsius.
+ * 
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  *
  * @return The current battery temperature on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
- *
- * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  */
 s32 scePowerGetBatteryTemp(void);
 
@@ -713,27 +718,27 @@ s32 scePowerGetBatteryTemp(void);
  * @param pBatteryElec Pointer to an u32 which is to receive the electric charge value.
  *
  * @attention Do not specify a NULL pointer as the argument. Otherwise the PSP system will crash.
+ * 
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  *
  * @return SCE_ERROR_OK on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
- *
- * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  */
 s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 
 /**
  * @brief Gets the charge cycle status of the battery.
+ * 
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  *
  * @return The current charge cycle count on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
- *
- * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
- * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an error!
  */
 s32 scePowerGetBatteryChargeCycle(void);
 
@@ -851,6 +856,11 @@ s32 scePowerGetBatteryFullCapacity(void);
  * @brief Gets the remaining percentage of battery life relative to the fully charged status.
  *
  * This function gets the remaining battery life as a percentage relative to the fully charged status.
+ * 
+ * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
+ * life. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
+ * returned. As such, the returned remaining relative battery life is the battery life available to the user
+ * before the PSP system is automatically suspended.
  *
  * @attention Call this API only on the PSP series PSP-1000, PSP-2000 and PSP-3000. Calling this API on other PSP
  * models (like the PSP Go or PSP Street, for example) will not return correct values!
@@ -858,6 +868,9 @@ s32 scePowerGetBatteryFullCapacity(void);
  * @return The remaining battery life in percent [0-100] on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * 
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
  *
  * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
  * details. As mentioned above, the correct status is only reported on the PSP-1000, PSP-2000 and PSP-3000 series.
