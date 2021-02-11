@@ -1029,6 +1029,23 @@ s32 scePowerGetBatteryChargingStatus(void);
 
 s32 scePowerIsSuspendRequired(void);
 
+/**
+ * @brief Gets the remaining battery capacity.
+ * 
+ * This function gets the remaining battery capacity in mAh.
+ * 
+ * @return The remaining battery capacity on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ * 
+ * @attention While this API can be called on any PSP system, a valid remaining battery capacity will
+ * only be returned on PSP devices which have battery monitoring capabilities as indicated by
+ * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
+ * capability will return an incorrect value!
+ * 
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ */
 s32 scePowerGetBatteryRemainCapacity(void);
 
 /**
@@ -1046,7 +1063,7 @@ s32 scePowerGetBatteryRemainCapacity(void);
  * @attention While this API can be called on any PSP system, a valid estimated remaining battery lifetime will
  * only be returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
- * capability will rreturn an incorrect value!
+ * capability will return an incorrect value!
  * 
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.

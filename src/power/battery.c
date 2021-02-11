@@ -1072,7 +1072,7 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
     s32 fCapLimit;
 
     fCap = g_Battery.batteryFullCapacity;
-    fCapLimit = fCap * 0.9; // 0x0000513C - 0x00005164
+    fCapLimit = fCap * 0.9; // 0x0000513C - 0x00005164 -- Note: We could write 0.9 as 90 / 100 instead.
     if (fCapLimit < g_Battery.minimumFullCapacity) // 0x0000516C
     {
         fCapLimit = g_Battery.minimumFullCapacity * 0.95; // 0x00005174 - 0x00005194
@@ -1092,7 +1092,7 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
         return 0;
     }
 
-    /* Check if the remaining capacity is no larger than the low-battery capacity. */
+    /* Check if the remaining capacity is not larger than the low-battery capacity. */
     if (rCap <= lCap) // 0x000051B0
     {
         /*
@@ -1606,7 +1606,6 @@ s32 scePowerIsSuspendRequired(void)
 }
 
 // Subroutine scePower_94F5A53F - Address 0x000058DC - Aliases: scePower_driver_41ADFF48
-// TODO: Write documentation
 s32 scePowerGetBatteryRemainCapacity(void)
 {
     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x000058EC

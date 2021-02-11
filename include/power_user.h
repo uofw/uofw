@@ -655,6 +655,21 @@ s32 scePowerGetBatteryChargingStatus(void);
 
 s32 scePowerIsSuspendRequired(void);
 
+/**
+ * @brief Gets the remaining battery capacity.
+ *
+ * This function gets the remaining battery capacity in mAh.
+ *
+ * @return The remaining battery capacity on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @attention This API should only be called on the PSP-1000, PSP-2000 and PSP-3000 series. Calling
+ * this API on any other PSP model (such as a PSP Go or PSP E-1000) will return an incorrect value!
+ *
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ */
 s32 scePowerGetBatteryRemainCapacity(void);
 
 /**
