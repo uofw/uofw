@@ -916,14 +916,114 @@ u8 scePowerGetWlanActivity(void);
 /* Battery state */
 
 /**
- * @brief Gets the USB charging capability of the PSP device.
- * 
- * This function returns whether the PSP device has in-built support for USB charging or not. Typically, 
- * starting with the PSP-2000 series, every PSP model has support for USB charging.
- * 
- * @return SCE_TRUE if USB charging is supported, SCE_FALSE otherwise.
+ * @brief Gets the external power supply connection status.
+ *
+ * This function checks whether or not power is supplied from an external power source (AC adapter only).
+ * Powering the system over USB (USB charging) is not recognized by this API.
+ *
+ * @return SCE_TRUE if the PSP system is connected to an external power source via an AC adapter, SCE_FALSE
+ * otherwise.
+ *
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details.
  */
-s32 scePowerGetUsbChargingCapability(void);
+s32 scePowerIsPowerOnline(void);
+
+/**
+ * @brief Gets the battery equipped status.
+ *
+ * This function gets whether or not a battery is equipped. A battery is considered to be equipped if the
+ * PSP system can correctly communicate with the battery.
+ *
+ * @return SCE_TRUE If a battery is equipped, otherwise SCE_FALSE.
+ *
+ * @remark The correct value may not be returned after a battery is installed until the power service
+ * polls and recognizes that the battery has been equipped.
+ *
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details.
+ */
+s32 scePowerIsBatteryExist(void);
+
+/**
+ * @brief Gets the low battery status.
+ *
+ * This function indicates whether or not the battery is currently in the low battery status. A low battery
+ * status means that the remaining battery life is short. When the battery is low, the POWER LED on the PSP
+ * system will blink.
+ *
+ * @return SCE_TRUE if the battery is low, otherwise SCE_FALSE.
+ *
+ * @remark Whether the battery is currently in the low battery status can also be checked using a power callback.
+ * See ::scePowerRegisterCallback() for more details.
+ */
+s32 scePowerIsLowBattery(void);
+
+/**
+ * @Brief Gets the battery charging status.
+ *
+ * This function indicates whether or not the battery is currently charging. If detailed battery charging
+ * status information is required, consider using ::scePowerGetBatteryChargingStatus() instead.
+ *
+ * @return SCE_TRUE if the battery is charging, otherwise SCE_FALSE.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark The correct value may not be returned after a battery is equipped until the power service polls
+ * and recognizes that the battery has been equipped. Battery charging may be suppressed (the battery is not
+ * charging) while WLAN is in use.
+ *
+ * @remark To find out whether battery charging has been completed (= battery is fully charged), you can
+ * use this API together with ::sceIsPowerOnline().
+ * @par Example:
+ * @code
+ * if (sceIsPowerOnline() && !scePowerIsBatteryCharging())
+ * {
+ *		// battery is fully charged
+ * }
+ * @endcode
+ *
+ * @see ::scePowerGetBatteryChargingStatus()
+ */
+s32 scePowerIsBatteryCharging(void);
+
+/** Defines constants indicating the battery charging status returned by ::scePowerGetBatteryChargingStatus(). */
+typedef enum {
+	/* The battery is not charging. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING = 0,
+	/* The battery is charging. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING,
+	/* The battery is not charging as battery charging is currently forbidden. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING_FORBIDDEN,
+	/* The battery is not charging. Concrete meaning unknown. */
+	SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING_UNKNOWN_STATUS_3
+} ScePowerBatteryChargingStatus;
+
+/**
+ * @brief Gets the battery charging status.
+ *
+ * This function gets the current battery charging status. The correct value may not be returned after a
+ * battery is installed until the power service polls and recognizes that the battery has been installed.
+ * Battery charging may be suppressed (the battery is not charging) while WLAN is in use.
+ *
+ * @return The current battery charging status on success. One of ::ScePowerBatteryChargingStatus.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark To find out whether battery charging has been completed (= battery is fully charged), you can
+ * use this API together with ::sceIsPowerOnline().
+ * @par Example:
+ * @code
+ * if (sceIsPowerOnline()
+ *	&& scePowerGetBatteryChargingStatus() == SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING)
+ * {
+ *		// battery is fully charged
+ * }
+ * @endcode
+ *
+ * @see ::scePowerIsBatteryCharging()
+ */
+s32 scePowerGetBatteryChargingStatus(void);
 
 /**
  * @brief Forbids battery charging.
@@ -953,6 +1053,16 @@ s32 scePowerBatteryForbidCharging(void);
  * @see ::scePowerBatteryForbidCharging()
  */
 s32 scePowerBatteryPermitCharging(void);
+
+/**
+ * @brief Gets the USB charging capability of the PSP device.
+ *
+ * This function returns whether the PSP device has in-built support for USB charging or not. Typically,
+ * starting with the PSP-2000 series, every PSP model has support for USB charging.
+ *
+ * @return SCE_TRUE if USB charging is supported, SCE_FALSE otherwise.
+ */
+s32 scePowerGetUsbChargingCapability(void);
 
 /**
  * @brief Enables USB charging.
@@ -989,100 +1099,145 @@ s32 scePowerBatteryEnableUsbCharging(void);
  */
 s32 scePowerBatteryDisableUsbCharging(void);
 
-/** Defines constants indicating the battery charging status returned by ::scePowerGetBatteryChargingStatus(). */
+/**
+ * Defines constants indicating whether the type of the equipped battery supports battery state monitoring.
+ * If battery state monitoring is supported, state information such as the full/remaining battery capacity,
+ * or the current battery voltage/temperatur can be obtained through the power service.
+ */
 typedef enum {
-	/* The battery is not charging. */
-	SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING = 0,
-	/* The battery is charging. */
-	SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING,
-	/* The battery is not charging as battery charging is currently forbidden. */
-	SCE_POWER_BATTERY_CHARGING_STATUS_CHARGING_FORBIDDEN,
-	/* The battery is not charging. Concrete meaning unknown. */
-	SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING_UNKNOWN_STATUS_3
-} ScePowerBatteryChargingStatus;
+	/**
+	 * Describes a battery type which supports battery state monitoring. This type of battery is equipped by
+	 * the PSP-1000, PSP-2000 and PSP-3000 models.
+	 */
+	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED = 0,
+	/**
+	 * Describes a battery type which does not supports battery state monitoring. This type of battery is
+	 * equipped by the PSP Go and the PSP-E1000 models.
+	 */
+	 SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
+} ScePowerBatteryType;
 
 /**
- * @brief Gets the battery charging status.
- * 
- * This function gets the current battery charging status. The correct value may not be returned after a 
- * battery is installed until the power service polls and recognizes that the battery has been installed.
- * Battery charging may be suppressed (the battery is not charging) while WLAN is in use.
- * 
- * @return The current battery charging status on success. One of ::ScePowerBatteryChargingStatus.
+ * @brief Gets the battery type.
+ *
+ * This function gets the type of the battery equipped in a standard PSP system. The battery type indicates
+ * whether battery properties like the remaining battery lifetime/temperature/full capacity can be
+ * (accurately) obtained.
+ *
+ * PSP devices ranging from the PSP-1000 series to the PSP-3000 series can obtain these battery properties,
+ * whereas the PSP Go and PSP Street (PSP E-1000) series cannot.
+ *
+ * Only use this API to determine the battery type. Do not use it for anything else (like determining the PSP
+ * hardware model).
+ *
+ * @return The battery type. One of ::ScePowerBatteryType.
+ */
+s32 scePowerGetBatteryType(void);
+
+/**
+ * @brief Gets the full capacity of the battery.
+ *
+ * This function gets the full capacity of the equipped battery in mAh.
+ *
+ * @attention Call this API only on devices which support battery monitoring as indicated by
+ * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be
+ * returned!
+ *
+ * @return The full battery capacity on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * 
- * @remark To find out whether battery charging has been completed (= battery is fully charged), you can
- * use this API together with ::sceIsPowerOnline().
- * @par Example:
- * @code
- * if (sceIsPowerOnline() 
- *	&& scePowerGetBatteryChargingStatus() == SCE_POWER_BATTERY_CHARGING_STATUS_NOT_CHARGING)
- * {
- *		// battery is fully charged
- * }
- * @endcode
- * 
- * @see ::scePowerIsBatteryCharging()
  */
-s32 scePowerGetBatteryChargingStatus(void);
-
-/**
- * @brief Gets the suspend-required status.
- * 
- * This function gets whether or not the PSP system should be suspended due to very low battery capacity.
- * If the PSP is currently connected to an external power source via an AC adapter, there is no need
- * to suspend the PSP device no matter its current battery capacity.
- * 
- * @return SCE_TRUE if the PSP system needs to be suspended, SCE_FALSE otherwise.
- */
-s32 scePowerIsSuspendRequired(void);
+s32 scePowerGetBatteryFullCapacity(void);
 
 /**
  * @brief Gets the remaining battery capacity.
- * 
+ *
  * This function gets the remaining battery capacity in mAh.
- * 
+ *
  * @attention While this API can be called on any PSP system, a valid remaining battery capacity will
  * only be returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
  * capability will return an incorrect value!
- * 
+ *
  * @return The remaining battery capacity on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * 
+ *
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
+ * 
+ * @see ::scePowerGetBatteryLifeTime()
+ * @see ::scePowerGetBatteryLifePercent()
  */
 s32 scePowerGetBatteryRemainCapacity(void);
 
 /**
  * @brief Gets the estimated continuous remaining battery lifetime.
- * 
+ *
  * This function gets the estimated continuous remaining battery lifetime in minutes. When the PSP system
  * is connected to an external power source via an AC adapter, 0 is returned since the continuous remaining
  * time cannot be estimated.
- * 
+ *
  * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
  * lifetime. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
  * returned as well. As such, the returned remaining battery lifetime is the lifetime available to the user before
  * the PSP system is automatically suspended.
- * 
+ *
  * @attention While this API can be called on any PSP system, a valid estimated remaining battery lifetime will
  * only be returned on PSP devices which have battery monitoring capabilities as indicated by
  * ::scePowerGetBatteryType(). Calling this API on PSP systems which do not have such a
  * capability will return an incorrect value!
- * 
+ *
  * @return The estimated continuous remaining battery lifetime on success.
  * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
  * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
  * @return < 0 Error.
- * 
+ *
  * @remark The correct value may not be returned after a battery is installed until the power service
  * polls and recognizes that the battery has been equipped.
+ * 
+ * @see ::scePowerGetBatteryLifePercent()
+ * @see ::scePowerGetBatteryRemainCapacity()
  */
 s32 scePowerGetBatteryLifeTime(void);
+
+/**
+ * @brief Gets the remaining percentage of battery life relative to the fully charged status.
+ *
+ * This function gets the remaining battery life as a percentage relative to the fully charged status.
+ *
+ * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
+ * life. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
+ * returned. As such, the returned remaining relative battery life is the battery life available to the user
+ * before the PSP system is automatically suspended.
+ *
+ * @attention Call this API only on devices which support battery monitoring as indicated by
+ * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be
+ * returned!
+ *
+ * @return The remaining battery life in percent [0-100] on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ *
+ * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
+ * details. As mentioned above, correct values are only obtained on PSP devices which have battery
+ * monitoring capabilities.
+ * 
+ * @see ::scePowerGetBatteryLifeTime()
+ * @see ::scePowerGetBatteryRemainCapacity()
+ */
+s32 scePowerGetBatteryLifePercent(void);
+
+/**
+ * @brief Gets the current battery voltage.
+ *
+ * This function gets the current battery voltage in mV (millivolts).
+ *
+ * @return The current battery voltage on success.
+ * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
+ * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
+ */
+s32 scePowerGetBatteryVolt(void);
 
 /**
  * @brief Gets the current temperature of the battery. 
@@ -1136,20 +1291,15 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
 s32 scePowerGetBatteryChargeCycle(void);
 
 /**
- * @brief Requests the power service to poll the battery for new data.
- * 
- * This function tells the power service to poll the battery for new data (remaining capacity, voltage,
- * temperature,...) and to refresh its internal battery data.
- * 
- * @return Always SCE_ERROR_OK.
- * 
- * @remark Typically, you don't have to call this function as the PSP system will consistently poll the battery
- * for new data.
- * 
- * @remark There might be a slight delay between returning from this call and when a new set of battery data
- * is available in the power service.
+ * @brief Gets the suspend-required status.
+ *
+ * This function gets whether or not the PSP system should be suspended due to very low battery capacity.
+ * If the PSP is currently connected to an external power source via an AC adapter, there is no need
+ * to suspend the PSP device no matter its current battery capacity.
+ *
+ * @return SCE_TRUE if the PSP system needs to be suspended, SCE_FALSE otherwise.
  */
-s32 scePowerBatteryUpdateInfo(void);
+s32 scePowerIsSuspendRequired(void);
 
 /**
  * @brief Gets the force-suspend battery capacity threshold value.
@@ -1164,171 +1314,14 @@ s32 scePowerGetForceSuspendCapacity(void);
 
 /**
  * @brief Gets the low battery status capacity threshold value.
- * 
+ *
  * This function gets the battery capacity value at which it enters the low battery state.
- * 
+ *
  * @return The low battery capacity threshold value in mAh.
- * 
+ *
  * @see ::scePowerIsLowBattery().
  */
 s32 scePowerGetLowBatteryCapacity(void);
-
-/**
- * @brief Gets the external power supply connection status.
- * 
- * This function checks whether or not power is supplied from an external power source (AC adapter only).
- * Powering the system over USB (USB charging) is not recognized by this API.
- *
- * @return SCE_TRUE if the PSP system is connected to an external power source via an AC adapter, SCE_FALSE
- * otherwise.
- * 
- * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
- * details.
- */
-s32 scePowerIsPowerOnline(void);
-
-/**
- * @brief Gets the battery equipped status.
- * 
- * This function gets whether or not a battery is equipped. A battery is considered to be equipped if the
- * PSP system can correctly communicate with the battery.
- * 
- * @return SCE_TRUE If a battery is equipped, otherwise SCE_FALSE.
- * 
- * @remark The correct value may not be returned after a battery is installed until the power service
- * polls and recognizes that the battery has been equipped.
- * 
- * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
- * details.
- */
-s32 scePowerIsBatteryExist(void);
-
-/**
- * @Brief Gets the battery charging status.
- * 
- * This function indicates whether or not the battery is currently charging. If detailed battery charging
- * status information is required, consider using ::scePowerGetBatteryChargingStatus() instead.
- * 
- * @return SCE_TRUE if the battery is charging, otherwise SCE_FALSE.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * 
- * @remark The correct value may not be returned after a battery is equipped until the power service polls
- * and recognizes that the battery has been equipped. Battery charging may be suppressed (the battery is not
- * charging) while WLAN is in use.
- * 
- * @remark To find out whether battery charging has been completed (= battery is fully charged), you can
- * use this API together with ::sceIsPowerOnline().
- * @par Example:
- * @code
- * if (sceIsPowerOnline() && !scePowerIsBatteryCharging())
- * {
- *		// battery is fully charged
- * }
- * @endcode
- *
- * @see ::scePowerGetBatteryChargingStatus()
- */
-s32 scePowerIsBatteryCharging(void);
-
-/**
- * @brief Gets the low battery status.
- * 
- * This function indicates whether or not the battery is currently in the low battery status. A low battery
- * status means that the remaining battery life is short. When the battery is low, the POWER LED on the PSP
- * system will blink.
- * 
- * @return SCE_TRUE if the battery is low, otherwise SCE_FALSE.
- * 
- * @remark Whether the battery is currently in the low battery status can also be checked using a power callback.
- * See ::scePowerRegisterCallback() for more details.
- */
-s32 scePowerIsLowBattery(void);
-
-/**
- * Defines constants indicating whether the type of the equipped battery supports battery state monitoring.
- * If battery state monitoring is supported, state information such as the full/remaining battery capacity,
- * or the current battery voltage/temperatur can be obtained through the power service.
- */
-typedef enum {
-	/**
-	 * Describes a battery type which supports battery state monitoring. This type of battery is equipped by
-	 * the PSP-1000, PSP-2000 and PSP-3000 models.
-	 */
-	SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED = 0,
-	/**
-	 * Describes a battery type which does not supports battery state monitoring. This type of battery is
-	 * equipped by the PSP Go and the PSP-E1000 models.
-	 */
-	 SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED
-} ScePowerBatteryType;
-
-/**
- * @brief Gets the battery type.
- * 
- * This function gets the type of the battery equipped in a standard PSP system. The battery type indicates
- * whether battery properties like the remaining battery lifetime/temperature/full capacity can be
- * (accurately) obtained. 
- * 
- * PSP devices ranging from the PSP-1000 series to the PSP-3000 series can obtain these battery properties,
- * whereas the PSP Go and PSP Street (PSP E-1000) series cannot. 
- * 
- * Only use this API to determine the battery type. Do not use it for anything else (like determining the PSP
- * hardware model).
- *
- * @return The battery type. One of ::ScePowerBatteryType.
- */
-s32 scePowerGetBatteryType(void);
-
-/**
- * @brief Gets the full capacity of the battery.
- * 
- * This function gets the full capacity of the equipped battery in mAh.
- * 
- * @attention Call this API only on devices which support battery monitoring as indicated by
- * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be
- * returned!
- * 
- * @return The full battery capacity on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- */
-s32 scePowerGetBatteryFullCapacity(void);
-
-/**
- * @brief Gets the remaining percentage of battery life relative to the fully charged status.
- *
- * This function gets the remaining battery life as a percentage relative to the fully charged status.
- * 
- * This function takes the force-suspend capacity threshold value as the baseline for the remaining battery
- * life. If the remaining battery capacity is currently very close to the force-suspend capacity, 0 is
- * returned. As such, the returned remaining relative battery life is the battery life available to the user
- * before the PSP system is automatically suspended.
- * 
- * @attention Call this API only on devices which support battery monitoring as indicated by
- * ::scePowerGetBatteryType(). On PSP systems which do not support battery monitoring incorrect values will be
- * returned!
- * 
- * @return The remaining battery life in percent [0-100] on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- * 
- * @remark This status can also be obtained using a power callback. See ::scePowerRegisterCallback() for more
- * details. As mentioned above, correct values are only obtained on PSP devices which have battery
- * monitoring capabilities.
- */
-s32 scePowerGetBatteryLifePercent(void);
-
-/**
- * @brief Gets the current battery voltage. 
- * 
- * This function gets the current battery voltage in mV (millivolts).
- * 
- * @return The current battery voltage on success.
- * @return SCE_POWER_ERROR_NO_BATTERY No battery equipped.
- * @return SCE_POWER_ERROR_DETECTING The power service is busy detecting the new battery status.
- */
-s32 scePowerGetBatteryVolt(void);
 
 /**
  * @brief Gets the PSP system chip's temperature.
@@ -1339,6 +1332,22 @@ s32 scePowerGetBatteryVolt(void);
  * @return Always SCE_POWER_ERROR_0010.
  */
 s32 scePowerGetInnerTemp(float *pInnerTemp);
+
+/**
+ * @brief Requests the power service to poll the battery for new data.
+ *
+ * This function tells the power service to poll the battery for new data (remaining capacity, voltage,
+ * temperature,...) and to refresh its internal battery data.
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark Typically, you don't have to call this function as the PSP system will consistently poll the battery
+ * for new data.
+ *
+ * @remark There might be a slight delay between returning from this call and when a new set of battery data
+ * is available in the power service.
+ */
+s32 scePowerBatteryUpdateInfo(void);
 
 /* Misc */
 

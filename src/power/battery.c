@@ -319,6 +319,47 @@ s32 _scePowerBatterySuspend(void)
     return SCE_ERROR_OK;
 }
 
+// Subroutine sub_00005C18 - Address 0x00005C18
+static s32 _scePowerBatteryResume(void)
+{
+    s32 intrState1;
+    s32 intrState2;
+
+    intrState1 = sceKernelCpuSuspendIntr(); // 0x00005C2C
+
+    g_Battery.isAcSupplied = -1; // 0x00005C40
+    g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00005C4C
+    g_Battery.isBatteryPollingAndUsbManagementSuspended = SCE_FALSE; // 0x00005C4C
+
+    u32 battEventFlagSetValue = g_Battery.batteryForbidChargingNetCounter == 0
+        ? BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
+        : (BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT | BATTERY_EVENT_FORBID_BATTERY_CHARGING);
+
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~(BATTERY_EVENT_ENABLE_USB_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING)); // 0x00005C64
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, battEventFlagSetValue); // 0x00005C70
+
+    intrState2 = sceKernelCpuSuspendIntr(); // 0x00005C78
+
+    /* Poll the battery again and refresh power service's collected battery data. */
+    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C88
+    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C98
+
+    sceKernelCpuResumeIntr(intrState2); // 0x00005CA0
+    sceKernelCpuResumeIntr(intrState1); // 0x00005CA8
+
+    return SCE_ERROR_OK;
+}
+
+// Subroutine sub_00005BF0 - Address 0x00005BF0
+/* Sets the battery capacities [forceSuspend] and [low] for the battery manager. */
+s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
+{
+    g_Battery.lowBatteryCapacity = lowBatteryCapacity; // 0x00005BFC
+    g_Battery.forceSuspendCapacity = forceSuspendCapacity; // 0x00005C04
+
+    return SCE_ERROR_OK;
+}
+
 // Subroutine sub_0000461C - Address 0x0000461C 
 /* Called during PSP resume phase [phase0]. Updates our battery status control block. */
 s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState, u32 *pPowerStateForCallbackArg)
@@ -1059,6 +1100,12 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
     }
 }
 
+// Subroutine sub_00005C08 - Address 0x00005C08
+s32 _scePowerBatteryIsBusy(void)
+{
+    return !g_Battery.isBatteryPollingAndUsbManagementSuspended;
+}
+
 // Subroutine sub_00005130 - Address 0x00005130
 // Note: Yep, that's the name used in 5.00, might have been corrected since.
 /* Gets the  remaining percentage of battery life relative to the fully charged status (0-100). */
@@ -1269,12 +1316,6 @@ static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage)
     return 100;
 }
 
-// Subroutine scePower_driver_5F5006D2 - Address 0x000052C8
-s32 scePowerGetUsbChargingCapability(void)
-{
-    return (s32)g_Battery.isUsbChargingSupported;
-}
-
 // Subroutine scePower_driver_10CE273F - Address 0x000052D4
 s32 scePowerBatteryForbidCharging(void)
 {
@@ -1391,6 +1432,12 @@ s32 _scePowerBatteryUpdateAcSupply(s32 isAcSupplied)
     return SCE_ERROR_OK;
 }
 
+// Subroutine scePower_driver_5F5006D2 - Address 0x000052C8
+s32 scePowerGetUsbChargingCapability(void)
+{
+    return (s32)g_Battery.isUsbChargingSupported;
+}
+
 // Subroutine scePower_driver_72D1B53A - Address 0x000054E0
 s32 scePowerBatteryEnableUsbCharging(void)
 {
@@ -1498,44 +1545,6 @@ s32 scePowerBatteryDisableUsbCharging(void)
     sceKernelCpuResumeIntr(intrState1); // 0x00005634
 
     return SCE_ERROR_OK;
-}
-
-// Subroutine sub_000056A4 - Address 0x000056A4
-/* Sets the charging rate (0 = limited rate, 1 = full rate) (?) - only used on the PSP-2000 series. */
-static s32 _scePowerBatterySetTTC(s32 arg0)
-{
-    s32 status;
-    s32 intrState;
-
-    if (!scePowerGetUsbChargingCapability()) // 0x000056B8
-    {
-        return SCE_ERROR_OK;
-    }
-
-    /* Only proceed if we are running on a PSP with a supported Baryon version (PSP-2000 series). */
-    u8 version = _sceSysconGetBaryonVersion();
-    u8 baryonMinVersion = PSP_SYSCON_BARYON_GET_VERSION_MINOR(version);
-    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 0x2 || 
-        baryonMinVersion < 0x2 || baryonMinVersion >= 0x6) // 0x000056D4 - 0x0000571C
-    {
-        return SCE_ERROR_OK;
-    }
-
-    intrState = sceKernelCpuSuspendIntr(); // 0x00005720
-
-    if (arg0 == 0) // 0x00005734
-    {
-        g_Battery.ttcConfig.unk7 = (g_Battery.ttcConfig.unk7 & 0xF8) | 0x4; // 0x00005738 & 0x00005768 - 0x00005770, 0x0000574C
-    }
-    else
-    {
-        g_Battery.ttcConfig.unk7 = (g_Battery.ttcConfig.unk7 & 0xF8) | 0x5; // 0x00005738 - 0x00005740, 0x0000574C
-    }
-
-    sceKernelCpuResumeIntr(intrState); // 0x00005748
-
-    status = sceSysconSendSetParam(SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC, &g_Battery.ttcConfig); // 0x00005758
-    return status;
 }
 
 // Subroutine scePower_B4432BC8 - Address 0x00005774 - Aliases: scePower_driver_67492C52
@@ -1838,53 +1847,6 @@ s32 scePowerGetBatteryChargeCycle(void)
     return g_Battery.batteryChargeCycle; // 0x00005B10
 }
 
-// Subroutine sub_00005BF0 - Address 0x00005BF0
-/* Sets the battery capacities [forceSuspend] and [low] for the battery manager. */
-s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
-{
-    g_Battery.lowBatteryCapacity = lowBatteryCapacity; // 0x00005BFC
-    g_Battery.forceSuspendCapacity = forceSuspendCapacity; // 0x00005C04
-
-    return SCE_ERROR_OK;
-}
-
-// Subroutine sub_00005C08 - Address 0x00005C08
-s32 _scePowerBatteryIsBusy(void)
-{
-    return !g_Battery.isBatteryPollingAndUsbManagementSuspended;
-}
-
-// Subroutine sub_00005C18 - Address 0x00005C18
-static s32 _scePowerBatteryResume(void)
-{
-    s32 intrState1;
-    s32 intrState2;
-
-    intrState1 = sceKernelCpuSuspendIntr(); // 0x00005C2C
-
-    g_Battery.isAcSupplied = -1; // 0x00005C40
-    g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x00005C4C
-    g_Battery.isBatteryPollingAndUsbManagementSuspended = SCE_FALSE; // 0x00005C4C
-
-    u32 battEventFlagSetValue = g_Battery.batteryForbidChargingNetCounter == 0
-        ? BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT
-        : (BATTERY_EVENT_RESUME_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT | BATTERY_EVENT_FORBID_BATTERY_CHARGING);
-
-    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~(BATTERY_EVENT_ENABLE_USB_CHARGING | BATTERY_EVENT_FORBID_BATTERY_CHARGING)); // 0x00005C64
-    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, battEventFlagSetValue); // 0x00005C70
-
-    intrState2 = sceKernelCpuSuspendIntr(); // 0x00005C78
-
-    /* Poll the battery again and refresh power service's collected battery data. */
-    sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C88
-    sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C98
-
-    sceKernelCpuResumeIntr(intrState2); // 0x00005CA0
-    sceKernelCpuResumeIntr(intrState1); // 0x00005CA8
-
-    return SCE_ERROR_OK;
-}
-
 // Subroutine scePower_27F3292C - Address 0x00005CCC - Aliases: scePower_driver_0DA940D2
 s32 scePowerBatteryUpdateInfo(void)
 {
@@ -2028,6 +1990,44 @@ s32 scePowerGetInnerTemp(float *pInnerTemp)
     /* In earlier firmwares (like 1.50) this API apparently returned the PSP system chip's temperature. */
 
     return SCE_POWER_ERROR_0010;
+}
+
+// Subroutine sub_000056A4 - Address 0x000056A4
+/* Sets the charging rate (0 = limited rate, 1 = full rate) (?) - only used on the PSP-2000 series. */
+static s32 _scePowerBatterySetTTC(s32 arg0)
+{
+    s32 status;
+    s32 intrState;
+
+    if (!scePowerGetUsbChargingCapability()) // 0x000056B8
+    {
+        return SCE_ERROR_OK;
+    }
+
+    /* Only proceed if we are running on a PSP with a supported Baryon version (PSP-2000 series). */
+    u8 version = _sceSysconGetBaryonVersion();
+    u8 baryonMinVersion = PSP_SYSCON_BARYON_GET_VERSION_MINOR(version);
+    if (PSP_SYSCON_BARYON_GET_VERSION_MAJOR(version) != 0x2 ||
+        baryonMinVersion < 0x2 || baryonMinVersion >= 0x6) // 0x000056D4 - 0x0000571C
+    {
+        return SCE_ERROR_OK;
+    }
+
+    intrState = sceKernelCpuSuspendIntr(); // 0x00005720
+
+    if (arg0 == 0) // 0x00005734
+    {
+        g_Battery.ttcConfig.unk7 = (g_Battery.ttcConfig.unk7 & 0xF8) | 0x4; // 0x00005738 & 0x00005768 - 0x00005770, 0x0000574C
+    }
+    else
+    {
+        g_Battery.ttcConfig.unk7 = (g_Battery.ttcConfig.unk7 & 0xF8) | 0x5; // 0x00005738 - 0x00005740, 0x0000574C
+    }
+
+    sceKernelCpuResumeIntr(intrState); // 0x00005748
+
+    status = sceSysconSendSetParam(SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC, &g_Battery.ttcConfig); // 0x00005758
+    return status;
 }
 
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
