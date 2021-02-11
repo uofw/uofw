@@ -1875,6 +1875,7 @@ static s32 _scePowerBatteryResume(void)
 
     intrState2 = sceKernelCpuSuspendIntr(); // 0x00005C78
 
+    /* Poll the battery again and refresh power service's collected battery data. */
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C88
     sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005C98
 
@@ -1885,13 +1886,13 @@ static s32 _scePowerBatteryResume(void)
 }
 
 // Subroutine scePower_27F3292C - Address 0x00005CCC - Aliases: scePower_driver_0DA940D2
-// TODO: Write documentation
 s32 scePowerBatteryUpdateInfo(void)
 {
     s32 intrState;
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00005CDC
 
+    /* Poll the battery again and refresh power service's collected battery data. */
     sceKernelSetEventFlag(g_Battery.batteryEventFlagId, BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005CEC
     sceKernelClearEventFlag(g_Battery.batteryEventFlagId, ~BATTERY_EVENT_UPDATE_BATTERY_INFO); // 0x00005CFC
 

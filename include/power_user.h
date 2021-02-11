@@ -660,7 +660,7 @@ s32 scePowerGetBatteryChargingStatus(void);
  * If the PSP is currently connected to an external power source via an AC adapter, there is no need
  * to suspend the PSP device no matter its current battery capacity.
  *
- * @return SCE_TRUE if the PSP system needs to suspended, SCE_FALSE otherwise.
+ * @return SCE_TRUE if the PSP system needs to be suspended, SCE_FALSE otherwise.
  */
 s32 scePowerIsSuspendRequired(void);
 
@@ -751,6 +751,20 @@ s32 scePowerGetBatteryElec(u32 *pBatteryElec);
  */
 s32 scePowerGetBatteryChargeCycle(void);
 
+/**
+ * @brief Requests the power service to poll the battery for new data.
+ *
+ * This function tells the power service to poll the battery for new data (remaining capacity, voltage,
+ * temperature,...) and to refresh its internal battery data.
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark Typically, you don't have to call this function as the PSP system will consistently poll the battery
+ * for new data.
+ *
+ * @remark There might be a slight delay between returning from this call and when a new set of battery data
+ * is available in the power service.
+ */
 s32 scePowerBatteryUpdateInfo(void);
 
 /**
