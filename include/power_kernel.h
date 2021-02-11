@@ -1027,6 +1027,15 @@ typedef enum {
  */
 s32 scePowerGetBatteryChargingStatus(void);
 
+/**
+ * @brief Gets the suspend-required status.
+ * 
+ * This function gets whether or not the PSP system should be suspended due to very low battery capacity.
+ * If the PSP is currently connected to an external power source via an AC adapter, there is no need
+ * to suspend the PSP device no matter its current battery capacity.
+ * 
+ * @return SCE_TRUE if the PSP system needs to suspended, SCE_FALSE otherwise.
+ */
 s32 scePowerIsSuspendRequired(void);
 
 /**

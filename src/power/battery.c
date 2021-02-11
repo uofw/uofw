@@ -1061,7 +1061,6 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
 
 // Subroutine sub_00005130 - Address 0x00005130
 // Note: Yep, that's the name used in 5.00, might have been corrected since.
-// TODO: Verify correctness (for example using a small test function)
 /* Gets the  remaining percentage of battery life relative to the fully charged status (0-100). */
 static s32 _scePowerBatteryCalcRivisedRcap(void)
 {
@@ -1150,7 +1149,7 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
          * low-battery capacity.
          */
 
-         // TODO: Not exactly sure yet what fCapLimit is exactly about...
+         // TODO: Not exactly sure yet what fCapLimit is about...
         if (fCapLimit == 0) // 0x0000520C
         {
             pspBreak(SCE_BREAKCODE_DIVZERO); // 0x00005210
@@ -1173,50 +1172,100 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
     }
 }
 
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_1   3100 /* 3.10V */
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_2   3300 /* 3.30V */
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_3   3400 /* 3.40V */
+
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_2_THRESHOLD     3500 /* 3.50V */
+
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_4_THRESHOLD     3600 /* 3.60V */
+
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_12_THRESHOLD    3700 /* 3.70V */
+
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_30_THRESHOLD    3800 /* 3.80V */
+
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_60_THRESHOLD    4000 /* 4.00V */
+
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_90_THRESHOLD_1  4050 /* 4.05V */
+#define BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_90_THRESHOLD_2  4150 /* 4.15V */
+
 // Subroutine sub_0000524C - Address 0x0000524C
-//
-// TODO: 
-//  - This function has been changed since 5.00. While it still most likely returns the remaining battery capacity
-//    its input have changed. As such, this function name might no longer be correct
-//  - Define constants for these values
-/* Convert battery voltage to remaining battery capacity (relative) */
+/* 
+ * Convert battery voltage to remaining battery capacity (relative). The conversion operates on
+ * hardcoded values and lacks some accuracy.
+ */
 static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage)
 {
-    if (voltage <= 0 || voltage < 3100 || voltage < 3300 || voltage < 3400) // 0x0000524C - 0x00005268
+    /* 
+     * This function returns an estimated remaining battery capacity related to a full charge
+     * based on the specified battery voltage. It is used to for PSP devices which are equipped
+     * with a battery which does not have battery monitoring capabilties.
+     * 
+     * The maximum charge voltage of such a battery (like the Li-ion battery equipped in the PSP Go)
+     * is 4.25 V or 4250 mV. For the battery manufactured specifically for the PSP, the following
+     * relation between current battery voltage and remaining battery capacity is used:
+     * 
+     * 100% --- >= 4.15V
+     * 90%  --- >= 4.00V
+     * 60%  --- >= 3.80V
+     * 30%  --- >= 3.70V
+     * 12%  --- >= 3.60V
+     *  4%  --- >= 3.50V
+     *  2%  --- >= 3.40V
+     */
+
+    /* If an invalid voltage is specified, we return 0. */
+    if (voltage <= 0)
     {
         return 0;
     }
 
-    if (voltage < 3500) // 0x00005270
+    /* Battery voltage threshold values for 0% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_1 
+        || voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_2
+        || voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_3) // 0x0000524C - 0x00005268
+    {
+        return 0;
+    }
+
+    /* Battery voltage threshold value for 2% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_2_THRESHOLD) // 0x00005270
     {
         return 2;
     }
 
-    if (voltage < 3600) // 0x0000527C
+    /* Battery voltage threshold value for 4% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_4_THRESHOLD) // 0x0000527C
     {
         return 4;
     }
-
-    if (voltage < 3700) // 0x00005288
+    
+    /* Battery voltage threshold value for 12% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_12_THRESHOLD) // 0x00005288
     {
         return 12;
     }
 
-    if (voltage < 3800) // 0x00005294
+    /* Battery voltage threshold value for 30% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_30_THRESHOLD) // 0x00005294
     {
         return 30;
     }
 
-    if (voltage < 4000) // 0x000052A0
+    /* Battery voltage threshold value for 60% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_60_THRESHOLD) // 0x000052A0
     {
         return 60;
     }
 
-    if (voltage < 4050 || voltage < 4150) // 0x000052AC
+    /* Battery voltage threshold values for 90% remaining battery capacity. */
+    if (voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_90_THRESHOLD_1 
+        || voltage < BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_90_THRESHOLD_2) // 0x000052AC
     {
         return 90;
     }
 
+    /* Battery voltage is high enough for 100% remaining battery capacity. */
     return 100;
 }
 
@@ -1556,8 +1605,13 @@ s32 scePowerGetBatteryChargingStatus(void)
     return batteryChargingStatus;
 }
 
+/*
+ * Defines the battery voltage threshold value at which the PSP system should automatically suspend.
+ * This voltage value currently maps to a remaining relative battery capacity of 0%.
+ */
+#define BATTERY_VOLTAGE_FORCE_SUSPEND_THRESHOLD     BATTERY_VOLTAGE_REMAINING_RELATIVE_BATTERY_CAPACITY_0_THRESHOLD_3
+
 // Subroutine scePower_78A1A796 - Address 0x0000582C - Aliases: scePower_driver_88C79735
-// TODO: Write documentation
 s32 scePowerIsSuspendRequired(void)
 {
     s32 isSuspendRequired;
@@ -1565,43 +1619,63 @@ s32 scePowerIsSuspendRequired(void)
 
     oldK1 = pspShiftK1(); // 0x00005838
 
+    /* 
+     * No suspension required if the PSP system is currently connected to an external power source
+     * with an AC adapter.
+     */
     if (sceSysconIsAcSupplied()) // 0x00005850
     {
         pspSetK1(oldK1);
         return SCE_FALSE; // 0x000058D8
     }
 
-    if (g_Battery.batteryType == 0) // 0x0000585C
+    /* Check if the equipped battery supports battery monitoring. */
+    if (g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x0000585C
     {
+        /*
+         * As the equipped battery supports battery monitoring, we can obtain its currently remaining battery
+         * capacity and use that to derive whether or not PSP system suspension is required.
+         */
         s32 remainingCapacity = scePowerGetBatteryRemainCapacity(); // 0x000058B8
         if (remainingCapacity <= 0) // 0x000058C0
         {
+            /* If the remaining battery capacity could not be estimated, no suspension is required. */
             isSuspendRequired = SCE_FALSE; // 0x000058C4
         }
         else
         {
+            /* 
+             * If the remaining battery capacity is less than the specified force-suspend capacity, suspending the
+             * PSP system is required.
+             */
             isSuspendRequired = remainingCapacity < g_Battery.forceSuspendCapacity; // 0x000058C8 & 0x000058D0
         }
     }
 
-    if (g_Battery.batteryType == 1) // 0x00005864
+    if (g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_NOT_SUPPORTED) // 0x00005864
     {
+        /* 
+         * If the equipped battery does not support battery monitoring, we need to obtain the suspension-required
+         * status by asking SYSCON or by estimating based on the current battery voltage.
+         */
+
         u8 baryonStatus2 = sceSysconGetBaryonStatus2(); // 0x0000588C
-        if (baryonStatus2 & 0x8) // 0x00005898
+        if (baryonStatus2 & SCE_SYSCON_BARYON_STATUS2_IS_LOW_BATTERY) // 0x00005898
         {
             isSuspendRequired = SCE_TRUE; // 0x00005890
         }
         else
         {
-            // TODO: Define constant for 3400 batteryVoltage
-            isSuspendRequired = g_Battery.batteryVoltage >= 0 && g_Battery.batteryVoltage < 3400; // 0x0000589C - 0x000058B4
+            /* Estimate the need to suspend the PSP system based on the current battery voltage. */
+            isSuspendRequired = g_Battery.batteryVoltage >= 0 
+                && g_Battery.batteryVoltage < BATTERY_VOLTAGE_FORCE_SUSPEND_THRESHOLD; // 0x0000589C - 0x000058B4
         }
     }
 
     pspSetK1(oldK1);
 
     // uofw note: if g_Battery.batteryType is neither 0 or 1, isSuspendRequired is unitialized.
-    // That said, perhaps Sony made sure g_Battery.batteryType is only ever either 0 or 1.
+    // Normally, it should only be set to either 0 or 1 though.
     return isSuspendRequired;
 }
 

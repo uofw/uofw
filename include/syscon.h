@@ -520,6 +520,9 @@ s32 sceSyscon_driver_6C388E02(SceSysconFunc callback, void *argp);
  */
 u8 sceSysconGetBaryonStatus(void);
 
+/* If this bit is set for the second BARYON status, then the equipped battery is in the low battery state. */
+#define SCE_SYSCON_BARYON_STATUS2_IS_LOW_BATTERY    0x08
+
 /**
  * Get the "second" baryon status (set of other flags about the syscon ctrl state).
  *
