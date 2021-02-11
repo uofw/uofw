@@ -886,7 +886,7 @@ s32 sceSysconGetGValue(void);
 #define SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED                 0x00000002    
 /* Indicates that remaining battery life is short (PSP-2000 and later). */
 #define SCE_SYSCON_POWER_SUPPLY_STATUS_IS_LOW_BATTERY_02G_AND_LATER     0x00000020
-/* Indicates that the battery is currently charging. */
+/* Indicates that the battery is currently charging (using an AC adapter). */
 #define SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING                 0x00000080
 
 /**

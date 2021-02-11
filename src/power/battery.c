@@ -52,7 +52,7 @@ typedef enum {
 typedef enum {
     POWER_BATTERY_THREAD_OP_START = 0,
     POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS = 1,
-    POWER_BATTERY_THREAD_OP_SET_CHARGE_LED_STATUS = 3,
+    POWER_BATTERY_THREAD_OP_SET_IS_BATTERY_CHARGING_USB = 3,
     POWER_BATTERY_THREAD_OP_SET_USB_STATUS = 4,
     POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP = 5,
     POWER_BATTERY_THREAD_OP_SET_FULL_CAP = 6,
@@ -114,7 +114,7 @@ typedef struct  {
      * Indicates whether or not the battery manager is currently polling the battery for data
      * (like remaining capacity, battery temperature or voltage).
      */
-    u32 isBatteryInfoUpdateInProgress;
+    u32 isBatteryInfoUpdateInProgress; // 48
     PowerBatteryThreadOperation workerThreadNextOp; // 52
     /*
      * Indicates whether or not the PSP device is currently connected to an external power source
@@ -433,7 +433,7 @@ s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState,
 #define BATTERY_EVENT_INDEFINITE_WAIT   (-1)
 
 // Subroutine sub_0x000046FC - Address 0x000046FC
-// TODO: Verify
+/* Polls the battery for a fresh set of data and controls battery charging. */
 static s32 _scePowerBatteryThread(SceSize args, void* argp)
 {
     (void)args;
@@ -442,7 +442,6 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
     s32 isUsbChargingEnabled;
     s32 timeout; // $sp + 4
     s32 batteryEventFlagCheckValue; // $s2
-
     u32 batteryEventFlagSetValue; // $sp
 
     g_Battery.isBatteryInfoUpdateInProgress = SCE_TRUE; // 0x00004718
@@ -473,6 +472,9 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
     s32 status; // $a0 in loc_000047AC
     for (;;)
     {
+        /* Poll our event flag to see what operations are currently requested by the power service. */
+
+        /* Reset the result bit pattern. */
         batteryEventFlagSetValue = 0; // 0x0000474C
 
         if (timeout == BATTERY_EVENT_POLL_NO_WAIT) // 0x0000474C
@@ -503,16 +505,19 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
         }
 
+        /* Check if we need to terminate the battery worker thread. */
         if ((status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_WAIT_TIMEOUT) 
             || batteryEventFlagSetValue & BATTERY_EVENT_TERMINATION) // 0x000047AC - 0x000047C0 & 0x000047C8
         {
             return SCE_ERROR_OK;
         }
 
+        /* Check if we need to permit battery charging. */
         if (batteryEventFlagSetValue & BATTERY_EVENT_PERMIT_BATTERY_CHARGING) // 0x000047D0
         {
             /* Handle [permit battery charge] request. */
 
+            /* Permit battery charging. */
             sceSysconPermitChargeBattery();  // 0x00005028
 
             /* Remove lined-up [permit battery charge] command now that we've handled it.*/
@@ -525,6 +530,10 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
         }
 
+        /* 
+         * Check if we need to suspend battery polling and USB charge management. For example, this is the case
+         * when the PSP system is suspending.
+         */
         if (batteryEventFlagSetValue & BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT) // 0x000047DC
         {
             // loc_00004FF0
@@ -559,6 +568,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             continue; // 0x000048BC
         }
 
+        /* Check if we need to forbid battery charging. */
         if (batteryEventFlagSetValue & BATTERY_EVENT_FORBID_BATTERY_CHARGING) // 0x000047F0
         {
             /* Handle [forbid battery charge] request. */
@@ -573,15 +583,23 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             sceKernelDelayThread(1.5 * 1000 * 1000); // 0x00004FB4
         }
 
+        /* If battery polling and USB charge management is suspended, we are done here. */
         if (g_Battery.isBatteryPollingAndUsbManagementSuspended) // 0x00004800
         {
             continue;
         }
 
+        /* Handle USB charging. We check if USB charging needs to be enabled/disabled. */
+
         u8 isAcSupplied = sceSysconIsAcSupplied(); // 0x00004808 -- $s3
 
+        /* Check if we need to enable USB battery charging. */
         if (batteryEventFlagSetValue & BATTERY_EVENT_ENABLE_USB_CHARGING) // 0x00004818
         {
+            /*
+             * Only enable USB charging when the PSP system is not currently connected to
+             * an external power source via an AC adapter.
+             */
             if (isAcSupplied) // 0x00004820
             {
                 // loc_00004ECC
@@ -618,8 +636,8 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
         else if (g_Battery.isUsbChargingEnabled && g_Battery.isAcSupplied != isAcSupplied) // 0x00004EF8 & 0x00004F04
         {
             /* 
-            * Charging the via an AC adapter (power plug) takes precedence over USB charging. As such, we check
-            * if the AC connection status has changed while USB charging is enabled:
+            * Charging the PSP via an AC adapter (power plug) takes precedence over USB charging. As such, we
+            * check if the AC connection status has changed while USB charging is enabled:
             * 
             * PSP power now supplied by an AC adapter: Stop USB charging.
             * PSP power no longer supplied by an AC adapter: Start USB charging.
@@ -648,8 +666,10 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
         timeout = 5000000; // 0x00004850
 
+        /* Set the next battery polling operation dependeing on whether a battery is currently equipped or not. */
         if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x0000484C
         {
+            /* If no battery is currently equipped, skip all the commands which require battery polling. */
             if (g_Battery.workerThreadNextOp > POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS 
                 && g_Battery.workerThreadNextOp <= (POWER_BATTERY_THREAD_OP_SET_BATT_VOLT + 1)) // 0x00004854 - 0x00004860
             {
@@ -686,8 +706,38 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             timeout = 20000; // 0x0000487C
         }
 
+        /* Update the battery AC-supply status. */
         g_Battery.isAcSupplied = isAcSupplied; // 0x00004884
 
+        /* 
+         * Execute a battery thread operation. An operation is used to update power service's power supply
+         * and battery data. Each operation updates a specific set of power supply/battery data in the
+         * power service. These operations are run consequtively in a battery polling round. If the final
+         * operation was run, the current polling round is considered to be over. Each polling round starts
+         * with the [op_start] operation.
+         * 
+         * Whether an operation is executed or not depends on if a battery is currently available
+         * and the type of the equipped battery. If the battery does not feature battery monitoring
+         * capabilities, the following operations won't be run:
+         * - Obtain the battery's full capacity
+         * - Obtain the battery's charge cycle count
+         * - Obtain the battery's limit time
+         * - Obtain the battery's temperature
+         * - Obtain the battery's electric charge
+         * 
+         * Note that while the operation to obtain the remaining battery capacity is run for both types of
+         * battery, in case of the battery type not supporting monitoring capabilities, only an _estimate_
+         * of the remaining capacity derived from the current battery voltage is obtained. See the comments
+         * in this specific opeation for more details and drawbacks of that approach.
+         * 
+         * A polling round also sets the battery availability status and thus the indicator whether applications
+         * can poll the power service for battery data or not. If the currently equipped battery is polled for the
+         * first time (i.e. it was just recently equipped), the [battery detecting] status is set at the
+         * beginning of a polling round. Once the polling round has been successfully completed, we then set
+         * the battery availability status to [battery available].
+         * 
+         * 
+         */
         switch (g_Battery.workerThreadNextOp) // 0x0000488C & 0x000048A8
         {
             case POWER_BATTERY_THREAD_OP_START:
@@ -699,37 +749,72 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS:
             {
+                /* 
+                 * If a battery has been newly equipped and the power has not yet polled the battery, the battery
+                 * availability status is set to [battery detecting]. The power service will do a full round of
+                 * battery polling (running through all applicable operations (depending on the battery type)) and
+                 * only once it has completed obtaining all the battery data it can will it set the battery
+                 * availability status to [battery available].
+                 * 
+                 * Data try to be obtained as part of this operation:
+                 *  - the current power suppyly status
+                 *  - whether or not the battery is currenly charging (only f USB charging is currently disabled)
+                 */
+
                 // 0x000048C4
                 s32 powerSupplyStatus;
                 status = sceSysconGetPowerSupplyStatus(&powerSupplyStatus); // 0x000048C4
                 if (status >= SCE_ERROR_OK) // 0x000048CC
                 {
+                    /* Check if a battery is currently equipped. */
                     g_Battery.powerSupplyStatus = powerSupplyStatus; // 0x000048E4
                     if (!(powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED)) // 0x000048E0
                     {
+                        /*
+                         * No battery equipped. Invalidate collected battery data and generate a [battery not equipped]
+                         * callback.
+                         */
                         _scePowerBatteryThreadErrorObtainBattInfo(); // 00004984 - 0x00004A04
 
+                        /* Since no battery is currently equipped, we are done here. */
                         g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE; // 0x00004990
                         g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004998
                     }
                     else
                     {
+                        /* A battery is currently equipped. */
+
+                        /*
+                         * If the power service had yet to poll ("detect") the battery, we set the battery availability status
+                         * to [battery detecting] to indicate that the power service is currently busy obtaining battery data.
+                         */
                         if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x000048EC
                         {
                             g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED; // 0x000048FC
                             timeout = 20000; // 0x00004900
                         }
 
+                        /*
+                         * Check if USB charging is enabled. If USB charging is enabled, the battery charging state
+                         * is obtained differently than if the battery is charging over an AC adapter.
+                         */
                         if (!g_Battery.isUsbChargingEnabled) // 0x00004908
                         {
+                            /* As we are not charging over USB, we can ask SYSCON whether the battery is currently charging. */
                             g_Battery.isBatteryCharging = (powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING) 
                                 ? SCE_TRUE 
                                 : SCE_FALSE; // 0x0000490C & 0x00004964 - 0x00004970
+
+                            /* 
+                             * Skip the operation to determine whether the battery is charging when USB charging is enabled
+                             * as USB charging is disabled.
+                             */
                             g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP; // 0x00004980
                         }
                         else
                         {
-                            g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_CHARGE_LED_STATUS; // 0x00004914
+                            /* USB charging is enabled: We need to obtain the battery charging status in the next operations. */
+                            g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_IS_BATTERY_CHARGING_USB; // 0x00004914
                         }
                     }
                 }
@@ -757,8 +842,13 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
                 continue; // 0x0000495C
             }
-            case POWER_BATTERY_THREAD_OP_SET_CHARGE_LED_STATUS:
+            case POWER_BATTERY_THREAD_OP_SET_IS_BATTERY_CHARGING_USB:
             {
+                /*
+                 * Set the battery charging state depdending on polestar's charge LED status. This operation
+                 * is only required when the USB charging is enabled.
+                 * 
+                 */
                 // 0x00004A14
                 s16 polestarR2Val;
                 status = sceSysconReadPolestarReg(2, &polestarR2Val); // 0x00004A18
@@ -787,6 +877,8 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_USB_STATUS:
             {
+                /* Sets the USB status. This operation is only run if USB charging is enabled. */
+
                 s32 powerSupplyStatus; // $sp + 16
                 s16 polestarR2Val; // $sp + 20
 
@@ -808,19 +900,43 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_REMAIN_CAP:
             {
+                /*
+                 * This operation tries to obtain the remaining battery capacity.
+                 * 
+                 * The remaining battery capacity can only be obtained if the equipped battery supports battery
+                 * monitoring. In that case, we can poll the battery and obtain a correct value.
+                 * 
+                 * If, however, the equipped battery does not have monitoring capabilities, we cannot obtain
+                 * its remaining battery capacity. In that case, we try to derive the remaining battery lifetime
+                 * (relative to a full charge) by using the current battery voltage. Note though that this approach
+                 * is for one less accurate and more importantly, potentially quite problematic. See the detailed
+                 * comment below for more context.
+                 */
                 // 0x00004B04
                 if (g_Battery.batteryType == SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x00004B0C
                 {
+                    /* 
+                     * The equipped battery supports battery monitoring. We can directly poll the battery for its
+                     * currently remaining battery capacity.
+                     */
+
                     s32 batStat1;
                     s32 remainCap;
                     status = sceSysconBatteryGetStatusCap(&batStat1, &remainCap); // 0x00004B18
                     if (status < SCE_ERROR_OK) // 0x00004B20
                     {
+                        /*
+                         * There was a failure polling the battery. This could be due to the battery just being
+                         * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                         * callback.
+                         */
+
                         // 0x00004B68 - 0x00004BE0
                         _scePowerBatteryThreadErrorObtainBattInfo();
                     }
                     else
                     {
+                        /* Set the remaining battery capacity. */
                         g_Battery.batteryRemainingCapacity = remainCap; // 0x00004B2C
                         g_Battery.unk68 = batStat1; // 0x00004B3C
 
@@ -878,6 +994,12 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     status = sceSysconGetBattVolt(&battVolt); // 0x00004BF0
                     if (status < SCE_ERROR_OK) // 0x00004BF8
                     {
+                        /*
+                         * There was a failure polling the battery. This could be due to the battery just being
+                         * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                         * callback.
+                         */
+
                         // 0x00004C40 - 0x00004BE0
                         _scePowerBatteryThreadErrorObtainBattInfo();
                     }
@@ -923,19 +1045,31 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_FULL_CAP:
             {
-                // 0x00004CAC
+                /*
+                 * Try to obtain the full capacity of the battery. This operation is only run when the equipped
+                 * battery has battery monitoring capabilities.
+                 */
 
+                /* Only try to obtain the full capacity if the power service hasn't already obtained it. */
                 if (g_Battery.batteryFullCapacity < 0) // 0x00004CB8
                 {
+                    /* Poll the battery for its full capacity. */
                     s32 fullCap;
                     status = sceSysconBatteryGetFullCap(&fullCap); // 0x00004CC8
                     if (status < SCE_ERROR_OK) // 0x00004CD0
                     {
+                        /*
+                         * There was a failure polling the battery. This could be due to the battery just being
+                         * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                         * callback.
+                         */
+
                         // 0x00004C40 - 0x00004BE0
                         _scePowerBatteryThreadErrorObtainBattInfo();
                     }
                     else
                     {
+                        /* Battery full capacity was successfully obtained. */
                         g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_CHARGE_CYCLE; // 0x00004CD8
                         g_Battery.batteryFullCapacity = fullCap; // 0x00004CE4
                     }
@@ -950,19 +1084,31 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_CHARGE_CYCLE:
             {
-                // 0x00004CE8
+                /*
+                 * Try to obtain the charge cycle count of the battery. This operation is only run when the
+                 * equipped battery has battery monitoring capabilities.
+                 */
+
+                 /* Only try to obtain the charge cycle count if the power service hasn't already obtained it. */
                 if (g_Battery.batteryChargeCycle < 0) // 0x00004CF0
                 {
-                    // loc_00004D00
+                    /* Poll the battery for its charge cycle count. */
                     s32 chargeCycle;
                     status = sceSysconBatteryGetCycle(&chargeCycle); // 0x00004D00
                     if (status < SCE_ERROR_OK) // 0x00004D08
                     {
+                        /*
+                         * There was a failure polling the battery. This could be due to the battery just being
+                         * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                         * callback.
+                         */
+
                         // 0x00004C40 - 0x00004BE0
                         _scePowerBatteryThreadErrorObtainBattInfo();
                     }
                     else
                     {
+                        /* The battery's charge cycle count was successfully obtained. */
                         g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_LIMIT_TIME; // 0x00004D10
                         g_Battery.batteryChargeCycle = chargeCycle; // 0x00004D1C
                     }
@@ -977,26 +1123,46 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_LIMIT_TIME:
             {
-                // 0x00004D20
+                /*
+                 * Try to obtain the charge cycle count of the battery. This operation is only run when the
+                 * equipped battery has battery monitoring capabilities.
+                 */
+
+                /*
+                 * The battery's limit time (which, if set, is considered in computing the remaining battery
+                 * lifetime remaining until automatic suspension) is only relevant when the PSP battery is
+                 * not currently charging (over an AC adapter).
+                 */
                 u8 isAcSupplied = sceSysconIsAcSupplied(); // 0x00004D20
                 if (!isAcSupplied) // 0x00004D28
                 {
-                    // loc_00004D44
+                    /*
+                     * The battery is currently not charging over and AC adapter. Try to obtain the battery's
+                     * limit time.
+                     */
                     s32 limitTime;
                     s32 status = sceSysconBatteryGetLimitTime(&limitTime); // 0x00004D44
                     if (status < SCE_ERROR_OK) // 0x00004D4C
                     {
+                        /*
+                         * There was a failure polling the battery. This could be due to the battery just being
+                         * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                         * callback.
+                         */
+
                         // 0x00004D68 - 0x00004BE0
                         _scePowerBatteryThreadErrorObtainBattInfo();
                     }
                     else
                     {
+                        /* The limit time was successfully obtained. */
                         g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_BATT_TEMP; // 0x00004D58
                         g_Battery.limitTime = limitTime; // 0x00004D64
                     }
                 }
                 else
                 {
+                    /* The battery is currently charging. Invalidate the limit time. */
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_BATT_TEMP; // 0x00004D38
                     g_Battery.limitTime = -1; // 0x00004D40
 
@@ -1007,16 +1173,27 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_BATT_TEMP:
             {
-                // 0x00004DBC
+                /*
+                 * Try to obtain the current temperature of the battery. This operation is only run when the
+                 * equipped battery has battery monitoring capabilities.
+                 */
+
                 s32 battTemp;
                 status = sceSysconBatteryGetTemp(&battTemp); // 0x00004DBC
                 if (status < SCE_ERROR_OK) // 0x00004DC4
                 {
+                    /*
+                     * There was a failure polling the battery. This could be due to the battery just being
+                     * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                     * callback.
+                     */
+
                     // 0x00004D68 - 0x00004BE0
                     _scePowerBatteryThreadErrorObtainBattInfo();
                 }
                 else
                 {
+                    /* The battery temperature was obtained successfully. */
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_BATT_ELEC; // 0x00004DD0
                     g_Battery.batteryTemp = battTemp; // 0x00004DDC
                 }
@@ -1025,16 +1202,27 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_BATT_ELEC:
             {
-                // 0x00004DE0
+                /*
+                 * Try to obtain the current electric charge of the battery. This operation is only run when the
+                 * equipped battery has battery monitoring capabilities.
+                 */
+
                 s32 battElec; // $sp + 52
                 status = sceSysconBatteryGetElec(&battElec); // 0x00004DE0
                 if (status < SCE_ERROR_OK) // 0x00004DE8
                 {
+                    /*
+                     * There was a failure polling the battery. This could be due to the battery just being
+                     * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                     * callback.
+                     */
+
                     // 0x00004D68 - 0x00004BE0
                     _scePowerBatteryThreadErrorObtainBattInfo();
                 }
                 else
                 {
+                    /* The electric charge of the battery was successfully obtained. */
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_SET_BATT_VOLT; // 0x00004DF0
                     g_Battery.batteryElec = battElec; // 0x00004E00
                 }
@@ -1043,22 +1231,43 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             }
             case POWER_BATTERY_THREAD_OP_SET_BATT_VOLT:
             {
-                // 0x00004E04
+                /*
+                 * Try to obtain the current voltage of the battery. This operation is only run when the
+                 * equipped battery has battery monitoring capabilities.
+                 */
+
                 s32 battVolt;
                 status = sceSysconBatteryGetVolt(&battVolt); // 0x00004E04
                 if (status < SCE_ERROR_OK) // 0x00004E0C
                 {
+                    /*
+                     * There was a failure polling the battery. This could be due to the battery just being
+                     * removed by the user. Invalidate collected battery data and generate a [battery not equipped]
+                     * callback.
+                     */
+
                     // 0x00004D68 - 0x00004BE0
                     _scePowerBatteryThreadErrorObtainBattInfo();
                 }
                 else
                 {
+                    /* The current battery voltage was obtained successfully. */
                     g_Battery.batteryVoltage = battVolt; // 0x00004E24
+
+                    /*
+                     * If the battery availability status was set to [battery detecting] at the start of
+                     * the battery polling round, we now set it to [battery available] as we have obtained
+                     * a fresh set of battery data which can now be polled by applications.
+                     */
                     if (g_Battery.batteryAvailabilityStatus == BATTERY_AVAILABILITY_STATUS_BATTERY_IS_BEING_DETECTED) // 0x00004E20
                     {
                         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_AVAILABLE; // 0x00004E3C
                     }
 
+                    /*
+                     * We have reached the end of the final battery polling operation of this round of battery
+                     * polling. As such, we are done with this round and prepare execution of the next round.
+                     */
                     g_Battery.isBatteryInfoUpdateInProgress = SCE_FALSE; // 0x00004E28
                     g_Battery.workerThreadNextOp = POWER_BATTERY_THREAD_OP_START; // 0x00004E30
                 }
@@ -1071,11 +1280,16 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
     }
 }
 
+/*
+ * Invalidates battery data collected by the power service and notifies power callback subscribers
+ * that no battery is currently equipped.
+ */
 static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
 {
     if (g_Battery.batteryAvailabilityStatus != BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x00004D70
     {
         // 0x00004D78 - 0x00004DB8
+        /* Invalidate collected battery data. */
         g_Battery.batteryVoltage = -1;
         g_Battery.batteryRemainingCapacity = -1;
         g_Battery.batteryLifePercentage = -1;
@@ -1089,6 +1303,7 @@ static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
         g_Battery.isBatteryCharging = SCE_FALSE;
         g_Battery.unk68 = 0;
 
+        /* Inform power callback subscribers that no battery is currently eqipped. */
         _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_BATTERYEXIST, 0, 0); // 0x00004DB4 & 0x00004BB0
 
         s32 intrState = sceKernelCpuSuspendIntr(); // 0x00004BB8
