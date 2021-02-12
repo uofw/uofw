@@ -4,254 +4,374 @@
 
 #include <common_imp.h>
 #include <interruptman.h>
+#include <power_kernel.h>
 #include <syscon.h>
 #include <sysmem_sysclib.h>
+#include <threadman_kernel.h>
 
-typedef struct 
-{
-    u32 unk16;
-    u32 unk20;
-    u32 unk24;
-    u32 unk28;
-    u32 unk32;
-    u32 unk36;
-    u32 unk40;
-    u32 unk44;
-    u32 unk48;
-    u32 unk52;
-} ScePowerIdleData; //size: 40
+/* Specifies the maximum available idle timer callback slots in the system. */
+#define POWER_IDLE_TIMER_NUM_SLOTS      8
 
-typedef struct 
-{
-    u32 unk0;
-    u32 unk4;
-    u32 unk8;
-    u32 unk12;
-    ScePowerIdleData data[8];
-} ScePowerIdle;
+/* Enables the idle timer for the given slot. */
+#define POWER_IDLE_TIMER_IS_TIMER_ENABLED(t, i)     (((t) >> i) & 0x1)
 
-static s32 _scePowerVblankInterrupt(s32 subIntNm, void* arg);
+/* Enables all idle timers. */
+#define POWER_IDLE_TIMER_ENABLE_ALL_TIMERS(t)       ((t) = (t) | (0xFFFFFFFF >> (32 - POWER_IDLE_TIMER_NUM_SLOTS)))
+
+typedef struct {
+    /* Indicates whether or not the idle timer has just been resetted. */
+    u32 isResetted; // 0
+    /* Indicates whether or not the idle timer has reached its specified due time. */
+    u32 isDueTimeReached; // 4
+    /* 
+     * The base time of an idle timer. The difference between the base time and the current system time is the
+     * ellapsed time which is then compared to the specified dueTime to determine whether or not the idle
+     * timer callback needs to be invoked.
+     * 
+     * The base time is set to the current system time when the idle timer is resetted (in other words, its
+     * timer counted is resetted back to 0).
+     */
+    u64 baseTime; // 8
+    /* Specifies the time offset in microseconds when the callback is to be invoked. */
+    u64 dueTime; // 16
+    /* Specifies idle timer callback attributes. One or more of ::ScePowerIdleTimerCallbackAttr. */
+    u32 attr; // 24
+    /* The callback function to be called when the idle timer has reached its due time. */
+    ScePowerIdleTimerCallback callback; // 28
+    /* Contains the [global pointer] value to use when the idle timer callback is invoked. */
+    u32 gp; // 32
+    /* A custom argument to be passed to the callback function. */
+    void *callbackArg; // 36
+} ScePowerIdleTimerCb; // size = 40
+
+typedef struct  {
+    /*
+     * The current system time set in the power service. Used to determine whether an idle timer has reached
+     * its specified due time and that its callback needs to be invoked. It is also used to set an idle timer's
+     * base time the timer is resetted.
+     */
+    u64 curSystemTime; // 0
+    /* Holds the enabled status of all idle timers. */
+    u32 idleTimerStatus; // 8
+    /* Unused. Padding? */
+    u32 unk12; // 12
+    /* The set of idle timer control blocks. One control block for each idle timer. */
+    ScePowerIdleTimerCb idleTimerCb[POWER_IDLE_TIMER_NUM_SLOTS]; // 16
+} ScePowerIdle; // size = 336
+
+static s32 _scePowerVblankInterrupt(s32 subIntNm, void *arg);
 static s32 GetGp(void);
 
-ScePowerIdle g_PowerIdle; //0x0000C400
+ScePowerIdle g_PowerIdle; // 0x0000C400
 
 //Subroutine scePower_EFD3C963 - Address 0x00002F94 - Aliases: scePower_driver_0EFEE60E
-// TODO: Verify function
-u32 scePowerTick(u32 tickType)
+s32 scePowerTick(s32 tickType)
 {
     u32 i;
-
-    //0x00002F9C - 0x00002FF8
-    for (i = 0; i < 8; i++) {
-        if ((((s32)tickType >> i) & 0x1) == 0 && (tickType != 0 || g_PowerIdle.data[i].unk40 & 0x200)) //0x00002FB0 & 0x00002FB8 & 0x00002FC8
+    for (i = 0; i < POWER_IDLE_TIMER_NUM_SLOTS; i++)
+    {
+        /*
+         * Find the idle timers corresponding to the specified tick type. If ::SCE_KERNEL_POWER_TICK_DEFAULT
+         * is specified, we try to reset all idle timers.
+         * 
+         * In the current implementation only the following timers can be resetted individually:
+         *         power tick                     slot
+         * 
+         * SCE_KERNEL_POWER_TICK_SUSPENDONLY        0
+         * SCE_KERNEL_POWER_TICK_LCDONLY           1-2
+         * 
+         * All timer callbacks registered in the remaining slots (3 to 7) can only be resetted by specifying
+         * ::SCE_KERNEL_POWER_TICK_DEFAULT as the tick type.
+         * 
+         */
+        if (!((tickType >> i) & 0x1) && tickType != SCE_KERNEL_POWER_TICK_DEFAULT) // 0x00002FB0 & 0x00002FB8
+        {
             continue;
+        }
 
-        if (g_PowerIdle.data[i].unk16 != 0) //0x00002FD4
+        /* Check if we can cancel the timer. */
+        if (g_PowerIdle.idleTimerCb[i].attr & SCE_POWER_IDLE_TIMER_CALLBACK_ATTR_CANNOT_RESET) // 0x00002FC8
+        {
             continue;
+        }
 
-        g_PowerIdle.data[i].unk16 = 1;
-        g_PowerIdle.data[i].unk24 = g_PowerIdle.unk0; //0x00002FF0
-        g_PowerIdle.data[i].unk28 = g_PowerIdle.unk4; //0x00002FF4
+        /* If the timer is already currently resetted, we are done with it. */
+        if (g_PowerIdle.idleTimerCb[i].isResetted) // 0x00002FD4
+        {
+            continue;
+        }
 
+        /* Reset the current idle timer. */
+        g_PowerIdle.idleTimerCb[i].isResetted = SCE_TRUE; // 0x00002FEC
+        g_PowerIdle.idleTimerCb[i].baseTime = g_PowerIdle.curSystemTime; // 0x00002FF0 & 0x00002FF4
     }
+
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_EDC13FE5 - Address 0x00003008 - Aliases: scePower_driver_DF336CDE
-// TODO: Verify function
-u32 scePowerGetIdleTimer(u32 slot, SceKernelSysClock* sysClock, u32* arg2)
+// Subroutine scePower_EDC13FE5 - Address 0x00003008 - Aliases: scePower_driver_DF336CDE
+s32 scePowerGetIdleTimer(s32 slot, u64 *pCurEllapsedTime, u64 *pCurDueTime)
 {
     s32 oldK1;
-    s64 sysTime;
 
-    oldK1 = pspShiftK1(); //0x00003018
+    oldK1 = pspShiftK1(); // 0x00003018
 
-    if (slot >= 8) { //0x00003040
+    if (slot < 0 || slot >= POWER_IDLE_TIMER_NUM_SLOTS) // 0x0000301C & 0x00003040
+    {
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_INDEX;
     }
-    if (!pspK1PtrOk(sysClock) || !pspK1PtrOk(arg2)) { //0x00003054 & 0x0000305C
+
+    /* Verify that valid memory addresses were specified. */
+    if (!pspK1PtrOk(pCurEllapsedTime) || !pspK1PtrOk(pCurDueTime)) // 0x00003054 & 0x0000305C
+    {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
 
-    sysTime = sceKernelGetSystemTimeWide(); //0x00003088
-    if (sysClock != NULL) { //0x000030C0
-        sysClock->low = (u32)sysTime - g_PowerIdle.data[slot].unk24; //0x000030BC
-        sysClock->hi = ((u32)(sysTime >> 32) - g_PowerIdle.data[slot].unk28) - ((u32)sysTime < g_PowerIdle.data[slot].unk24); //0x000030CC & 0x000030C4 & 0x000030B8
+    u64 curSysTime = sceKernelGetSystemTimeWide(); // 0x00003088
+    if (pCurEllapsedTime != NULL)
+    {     
+        pCurEllapsedTime = curSysTime - g_PowerIdle.idleTimerCb[slot].baseTime; // 0x000030A8 - 0x000030CC
     }
-    if (arg2 != NULL) { //0x000030D0
-        *arg2 = g_PowerIdle.data[slot].unk32 - ((u32)sysTime - g_PowerIdle.data[slot].unk24); //0x000030E8
-        *(u32*)(arg2 + 4) = (g_PowerIdle.data[slot].unk36 - (((u32)(sysTime >> 32) - g_PowerIdle.data[slot].unk28) -
-            ((u32)sysTime < g_PowerIdle.data[slot].unk24))) -
-            (g_PowerIdle.data[slot].unk32 < (u32)sysTime - g_PowerIdle.data[slot].unk24);
+
+    if (pCurDueTime != NULL) // 0x000030D0
+    {
+        pCurDueTime = curSysTime - g_PowerIdle.idleTimerCb[slot].dueTime; // 0x000030D8 - 0x000030F4
     }
-    return (u32)sysTime - g_PowerIdle.data[slot].unk24;
+
+    pspSetK1(oldK1);
+    return (u32)curSysTime - (u32)g_PowerIdle.idleTimerCb[slot].baseTime;
 }
 
-//Subroutine scePower_driver_1BA2FCAE - Address 0x00003100
-// TODO: Verify function
-u32 scePowerSetIdleCallback(u32 slot, u32 arg1, u32 arg2, u32 arg3, u32 arg4, u32 arg5)
+// Subroutine scePower_driver_1BA2FCAE - Address 0x00003100
+s32 scePowerSetIdleCallback(s32 slot, u32 attr, u64 dueTime, ScePowerIdleTimerCallback callback, void *common)
 {
     s32 intrState;
-    s64 sysTime;
 
-    if (slot >= 8) //0x00003148
+    if (slot < 0 || slot >= POWER_IDLE_TIMER_NUM_SLOTS) // 0x00003110 & 0x00003148
+    {
         return SCE_ERROR_INVALID_INDEX;
+    }
 
-    intrState = sceKernelCpuSuspendIntr(); //0x00003150
+    intrState = sceKernelCpuSuspendIntr(); // 0x00003150
 
-    if (arg3 != 0 && g_PowerIdle.data[slot].unk44 != 0) { //0x00003170 & 0x0000317C
-        sceKernelCpuResumeIntr(intrState);
+    /* If there already is an idle timer callback registered for this slot, we cannot overwrite it. */
+    if (callback != NULL && g_PowerIdle.idleTimerCb[slot].callback != NULL) // 0x00003170 & 0x0000317C
+    {
+        sceKernelCpuResumeIntr(intrState); // 0x0000320C
+
+        /* An idle timer callback already exists in this slot. */
         return SCE_ERROR_ALREADY;
     }
-    sysTime = sceKernelGetSystemTimeWide(); //0x00003198
-    g_PowerIdle.data[slot].unk40 = arg1; //0x0000319C
-    g_PowerIdle.data[slot].unk44 = arg4; //0x000031B8
-    g_PowerIdle.data[slot].unk24 = (u32)sysTime; //0x000031AC
-    g_PowerIdle.data[slot].unk28 = (u32)(sysTime >> 32); //0x000031B0
-    g_PowerIdle.data[slot].unk16 = 0; //0x000031D4
-    g_PowerIdle.data[slot].unk20 = -1; //0x000031BC
-    g_PowerIdle.data[slot].unk32 = arg2; //0x000031C0
-    g_PowerIdle.data[slot].unk36 = arg3; //0x000031C4
-    g_PowerIdle.data[slot].unk48 = pspGetGp(); //0x000031C8
-    g_PowerIdle.data[slot].unk52 = arg5; //0x000031CC
 
-    sceKernelCpuResumeIntr(intrState); //0x000031D0
+    /* Register the idle timer callback. */
+
+    g_PowerIdle.idleTimerCb[slot].attr = attr; // 0x0000319C
+    g_PowerIdle.idleTimerCb[slot].baseTime = sceKernelGetSystemTimeWide(); // 0x000031AC & 0x000031B0
+    g_PowerIdle.idleTimerCb[slot].callback = callback; // 0x000031B8
+    g_PowerIdle.idleTimerCb[slot].isDueTimeReached = -1; // 0x000031BC
+    g_PowerIdle.idleTimerCb[slot].dueTime = dueTime; // 0x000031C0 & 0x000031C4
+    g_PowerIdle.idleTimerCb[slot].gp = &GetGp; // 0x000031C8 -- Note: Yes, this is the address of the function and not its return value...
+    g_PowerIdle.idleTimerCb[slot].callbackArg = common; // 0x000031CC
+    g_PowerIdle.idleTimerCb[slot].isResetted = SCE_FALSE; // 0x000031D4
+
+    sceKernelCpuResumeIntr(intrState); // 0x000031D0
+
     return SCE_ERROR_OK;
 }
 
-//0x00003220
-// TODO: Verify function
-static s32 _scePowerVblankInterrupt(s32 subIntNm, void* arg)
+// 0x00003220
+/*
+ * Enumerates through all idle timer callback slots and checks which timer callbacks have reached their specified
+ * due time. For those timer callbacks, their callback is invoked.
+ */
+static s32 _scePowerVblankInterrupt(s32 subIntNm, void *arg)
 {
-    s64 sysTime;
-    u8 isAcSupplied;
-    s32 gp;
-    u32 i;
-    u32 data;
-    u32 diff;
-    void (*func)(u32, u32, u32, u32);
-
     (void)subIntNm;
     (void)arg;
 
-    sysTime = sceKernelGetSystemTimeWide(); //0x00003240
-    g_PowerIdle.unk0 = (u32)sysTime; //0x00003258
-    g_PowerIdle.unk4 = (u32)(sysTime >> 32);
+    u8 isAcSupplied;
+    s32 oldGp;
 
-    isAcSupplied = sceSysconIsAcSupplied(); //0x0000325C
-    gp = pspGetGp(); //0x00003264
+    g_PowerIdle.curSystemTime = sceKernelGetSystemTimeWide(); // 0x00003240
 
-    //0x0000326C
-    for (i = 0; i < 8; i++) {
-        if (g_PowerIdle.data[i].unk44 == 0) //0x00003278
+    isAcSupplied = sceSysconIsAcSupplied(); // 0x0000325C
+    oldGp = pspGetGp(); // 0x00003264
+
+    /* Enumerate through all idle timer callback slots and check which timer callbacks need to be invoked. */
+    u32 i;
+    for (i = 0; i < POWER_IDLE_TIMER_NUM_SLOTS; i++) // 0x00003274
+    {
+        /* Check if a idle callback has been registered in the slot. */
+        if (g_PowerIdle.idleTimerCb[i].callback == NULL) // 0x00003278
+        {
+            /* No callback registered. Proceed with the next slot. */
             continue;
-
-        if ((g_PowerIdle.unk8 & (1 << i)) == 0) //0x00003288 & 0x00003290
-            continue;
-
-        if (isAcSupplied && ((g_PowerIdle.data[i].unk40 & 0x100) == 0)) { //0x000032DC & 0x000032EC
-            g_PowerIdle.data[i].unk16 = 1; //0x000032F4
-            g_PowerIdle.data[i].unk24 = (u32)sysTime;
-            g_PowerIdle.data[i].unk16 = (u32)(sysTime >> 32);
         }
-        if (g_PowerIdle.data[i].unk16 != 0) { //0x00003304
-            g_PowerIdle.data[i].unk16 = 0; //0x00003314
-            if (g_PowerIdle.data[i].unk20 == 0) //0x00003310
+
+        /* Check if the idle timer callback is currently enabled. */
+        if (!POWER_IDLE_TIMER_IS_TIMER_ENABLED(g_PowerIdle.idleTimerStatus, i)) // 0x00003290
+        {
+            /* The idle timer callback has been disabled. Proceed with the next slot. */
+            continue;
+        }
+
+        /*
+         * Check if we need to automatically reset the current idle timer callback when an AC connection
+         * is active.
+         */
+        if (isAcSupplied 
+            && !(g_PowerIdle.idleTimerCb[i].attr & SCE_POWER_IDLE_TIMER_CALLBACK_ATTR_NO_AUTO_RESET_ON_AC_CONNECTION)) // 0x000032DC & 0x000032EC
+        {
+            /* Reset the current idle timer. */
+            g_PowerIdle.idleTimerCb[i].isResetted = SCE_TRUE;
+            g_PowerIdle.idleTimerCb[i].baseTime = g_PowerIdle.curSystemTime;
+        }
+
+        /* 
+         * If the idle timer callback has been resetted, remove the reset status now that we again "counting"
+         * the time until its specified due time is reached.
+        */
+        if (g_PowerIdle.idleTimerCb[i].isResetted) // 0x00003304
+        {
+            g_PowerIdle.idleTimerCb[i].isResetted = SCE_FALSE; // 0x00003314
+
+            /* 
+             * Check if the resetted idle timer had previously reached its due time. If it did, we invoke
+             * its callback now.
+             */
+            if (!g_PowerIdle.idleTimerCb[i].isDueTimeReached) // 0x00003310
+            {
                 continue;
+            }
 
-            g_PowerIdle.data[i].unk20 = 0; //0x00003318
-            pspSetGp(g_PowerIdle.data[i].unk48); //0x00003324
-            func = g_PowerIdle.data[i].unk44;
-            func(i, 0, g_PowerIdle.data[i].unk52, &g_PowerIdle.data[i].unk16); //0x00003334
+            /* Invoke the callback of the resetted idle timer. */
+
+            g_PowerIdle.idleTimerCb[i].isDueTimeReached = SCE_FALSE; // 0x00003318
+
+            pspSetGp(g_PowerIdle.idleTimerCb[i].gp); // 0x00003324
+
+            /* Invoke the idle timer callback. */
+            g_PowerIdle.idleTimerCb[i].callback(i, 0, g_PowerIdle.idleTimerCb[i].callbackArg); // 0x00003334
             continue;
         }
-        if (g_PowerIdle.data[i].unk20 == 1) //0x0000334C
+
+        /*
+         * If the timer callback has already reached its due time, we won't invoke its callback and instead
+         * proceed with the next idle callback.
+         */
+        if (g_PowerIdle.idleTimerCb[i].isDueTimeReached == SCE_TRUE) // 0x0000334C
+        {
             continue;
+        }
 
-        data = ((u32)(sysTime >> 32) - g_PowerIdle.data[i].unk28) - (g_PowerIdle.data[i].unk24 < (u32)sysTime); //0x00003360 & 0x00003364 & 0x00003368
-        if (data < g_PowerIdle.data[i].unk36) //0x0000336C & 0x00003370
+        /*
+         * Check if enough time has ellapsed so that the idle timer callback has reached/passed its specified
+         * due time.
+         */
+        u64 ellapsedTime = g_PowerIdle.curSystemTime - g_PowerIdle.idleTimerCb[i].baseTime; // 0x00003350 - 0x0000337C & 0x000033B0 - 0x000033C0
+        if (ellapsedTime < g_PowerIdle.idleTimerCb[i].dueTime)
+        {
+            /* The timer callback has not yet reached its due time, proceed with the next idle callback. */
             continue;
+        }
 
-        diff = (u32)sysTime - g_PowerIdle.data[i].unk24; //0x00003374
-        if ((data == g_PowerIdle.data[i].unk36) && (diff < g_PowerIdle.data[i].unk32)) //0x00003378 & 0x000033B4
-            continue;
+        /*
+         * The ellapsed time (since the timer was last resetted or registered) has reached/passed the specified
+         * due time for the timer callback. We will now invoke the timer callback.
+         */
 
-        g_PowerIdle.data[i].unk20 = 1; //0x00003380
+        g_PowerIdle.idleTimerCb[i].isDueTimeReached = SCE_TRUE; // 0x000033C0
 
-        pspSetGp(g_PowerIdle.data[i].unk48); //0x00003390
-        func = g_PowerIdle.data[i].unk44; //0x00003398
-        func(i, diff, g_PowerIdle.data[i].unk52, &g_PowerIdle.data[i].unk16); //0x000033A0
+        pspSetGp(g_PowerIdle.idleTimerCb[i].gp); // 0x00003324
+
+        /* Invoke the idle timer callback. */
+        g_PowerIdle.idleTimerCb[i].callback(i, (u32)ellapsedTime, g_PowerIdle.idleTimerCb[i].callbackArg); // 0x00003334
     }
+
+    pspSetGp(oldGp); // 0x000032AC
+
     return -1;
 }
 
-//sub_000033C4
-// TODO: Verify function
-u32 _scePowerIdleInit(void)
+// sub_000033C4
+s32 _scePowerIdleInit(void)
 {
-    u64 sysTime;
+    memset(&g_PowerIdle, 0, sizeof g_PowerIdle); // 0x000033E0
 
-    memset(&g_PowerIdle, 0, sizeof g_PowerIdle); //0x000033E0
-    sysTime = sceKernelGetSystemTimeWide(); //0x000033E8
+    g_PowerIdle.curSystemTime = sceKernelGetSystemTimeWide(); // 0x000033E8 & 0x00003408 & 0x0000340C
 
-    g_PowerIdle.unk0 = (u32)sysTime; //0x00003408
-    g_PowerIdle.unk4 = (u32)(sysTime >> 32);
-    g_PowerIdle.unk8 = 255;
+    /* Enable all timers by default. */
+    POWER_IDLE_TIMER_ENABLE_ALL_TIMERS(g_PowerIdle.idleTimerStatus); // 0x000033F8
 
-    sceKernelRegisterSubIntrHandler(SCE_VBLANK_INT, 0x1A, _scePowerVblankInterrupt, NULL); //0x0000340C
-    sceKernelEnableSubIntr(SCE_VBLANK_INT, 0x1A); //0x0000341C
+    /* Register and enable the VBLANK interrupt for our idle timer manager. */
+    sceKernelRegisterSubIntrHandler(SCE_VBLANK_INT, SCE_KERNEL_INTR_VBLANK_SUB_INTR_POWER, _scePowerVblankInterrupt, NULL); // 0x0000340C
+    sceKernelEnableSubIntr(SCE_VBLANK_INT, SCE_KERNEL_INTR_VBLANK_SUB_INTR_POWER); // 0x0000341C
+
     return SCE_ERROR_OK;
 }
 
-//sub_00003438
-// TODO: Verify function
-u32 _scePowerIdleEnd(void)
+// sub_00003438
+s32 _scePowerIdleEnd(void)
 {
-    sceKernelReleaseSubIntrHandler(SCE_VBLANK_INT, 0x1A); //0x00003444
+    sceKernelReleaseSubIntrHandler(SCE_VBLANK_INT, SCE_KERNEL_INTR_VBLANK_SUB_INTR_POWER); // 0x00003444
+
     return SCE_ERROR_OK;
 }
 
-//Subroutine scePower_7F30B3B1 - Address 0x0000345C - Aliases: scePower_driver_1E3B1FAE
-// TODO: Verify function
-u32 scePowerIdleTimerEnable(u32 slot)
+// Subroutine scePower_7F30B3B1 - Address 0x0000345C - Aliases: scePower_driver_1E3B1FAE
+s32 scePowerIdleTimerEnable(s32 slot)
 {
     s32 intrState;
-    u32 data;
+    u32 prevIdleTimerStatus;
 
-    if (slot >= 8) //0x00003474
+    if (slot < 0 || slot >= POWER_IDLE_TIMER_NUM_SLOTS) // 0x00003464 & 0x00003474
+    {
         return SCE_ERROR_INVALID_INDEX;
+    }
 
-    intrState = sceKernelCpuSuspendIntr(); //0x0000347C
+    intrState = sceKernelCpuSuspendIntr(); // 0x0000347C
 
-    data = g_PowerIdle.unk8;
-    g_PowerIdle.unk8 |= (1 << slot); //0x0000348C - 0x0000349C
+    prevIdleTimerStatus = g_PowerIdle.idleTimerStatus; // 0x0000348C
 
-    sceKernelCpuResumeIntr(intrState);
-    return (data >> slot) & 0x1;
+    /* Enable the specified idle timer. */
+    g_PowerIdle.idleTimerStatus |= (1 << slot); // 0x00003490 - 0x0000349C
+
+    sceKernelCpuResumeIntr(intrState); // 0x000034A8
+
+     /* Return the previous enabled status for the specified idle timer. */
+    return POWER_IDLE_TIMER_IS_TIMER_ENABLED(prevIdleTimerStatus, slot); // 0x000034A0 & 0x000034A4 & 0x000034B0 & 0x000034BC
 }
 
-//Subroutine scePower_972CE941 - Address 0x000034C8 - Aliases: scePower_driver_961A06A5
-// TODO: Verify function
-u32 scePowerIdleTimerDisable(u32 slot)
+// Subroutine scePower_972CE941 - Address 0x000034C8 - Aliases: scePower_driver_961A06A5
+s32 scePowerIdleTimerDisable(s32 slot)
 {
     s32 intrState;
-    u32 data;
+    u32 prevIdleTimerStatus;
 
-    if (slot >= 8) //0x000034D0
+    if (slot < 0 || slot >= POWER_IDLE_TIMER_NUM_SLOTS)
+    {
         return SCE_ERROR_INVALID_INDEX;
+    }
 
-    intrState = sceKernelCpuSuspendIntr(); //0x000034E8
+    intrState = sceKernelCpuSuspendIntr(); // 0x000034E8
 
-    data = g_PowerIdle.unk8; //0x000034F8
-    g_PowerIdle.unk8 &= (~1 << slot); //0x00003508
+    prevIdleTimerStatus = g_PowerIdle.idleTimerStatus; // 0x000034F8
 
-    sceKernelCpuResumeIntr(intrState);
-    return (data >> slot) & 0x1; //0x000031A4
+    /*
+     * We disable all registered idle timers in range [0..slot]. This differs with the
+     * scePowerIdleTimerEnable() implementation which only enables the specified idle timer.
+     */
+    g_PowerIdle.idleTimerStatus &= (~0x1 << slot); // 0x000034FC - 0x00003508
+
+    sceKernelCpuResumeIntr(intrState); // 0x00003514
+
+    /* Return the previous enabled status for the specified idle timer. */
+    return POWER_IDLE_TIMER_IS_TIMER_ENABLED(prevIdleTimerStatus, slot); // 0x0000350C & 0x00003510 & 0x0000351C & 0x00003528
 }
 
-//0x00003534
+// 0x00003534
 static s32 GetGp(void)
 {
     return pspGetGp();

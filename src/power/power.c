@@ -52,15 +52,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Defines the initial bus clock frequency (in MHz) on startup for (game) applications. */
 #define PSP_CLOCK_BUS_FREQUENCY_STARTUP_GAME_APP_UPDATER    111
 
-// TODO: Remove
-
-/** Cancel all PSP Hardware timers. */
-#define SCE_KERNEL_POWER_TICK_DEFAULT               (0)     
-/** Cancel auto-suspend-related timer. */
-#define SCE_KERNEL_POWER_TICK_SUSPENDONLY           (1)
-/** Cancel LCD-related timer */
-#define SCE_KERNEL_POWER_TICK_LCDONLY               (6)	
-
 /**
  * This structure represents a control block for a registered power callback.
  */

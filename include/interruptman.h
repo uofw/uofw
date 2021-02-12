@@ -34,6 +34,11 @@ enum SceInterrupts {
     SCE_INTERRUPT_INT = 66
 };
 
+typedef enum SceKernelIntrVBlankSubIntr {
+    SCE_KERNEL_INTR_VBLANK_SUB_INTR_CONTROLLER = 19,
+    SCE_KERNEL_INTR_VBLANK_SUB_INTR_POWER      = 26,
+};
+
 typedef struct {   
     // Handler address
     s32 handler; // 0

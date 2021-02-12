@@ -86,7 +86,7 @@ typedef enum {
 } ScePowerCallbackArg;
 
 /** 
- * Power service callback function prototype 
+ * Power service callback function prototype.
  * 
  * @param count Number of times the callback has been called.
  * @param arg The callback argument. Can contain multiple members of ::ScePowerCallbackArg.
@@ -1348,6 +1348,140 @@ s32 scePowerGetInnerTemp(float *pInnerTemp);
  * is available in the power service.
  */
 s32 scePowerBatteryUpdateInfo(void);
+
+/* Idle timer */
+
+/** Cancels all timers. */
+#define SCE_KERNEL_POWER_TICK_DEFAULT			0     
+/** Cancels only the timer related to automatic suspension. */
+#define SCE_KERNEL_POWER_TICK_SUSPENDONLY		1
+/** Cancels the timer related to the LCD. */
+#define SCE_KERNEL_POWER_TICK_LCDONLY			6
+
+/**
+ * 
+ * @brief Cancels an idle timer.
+ * 
+ * This function cancels an idle timer by resetting its current idle time counter.
+ * 
+ * In idle state, the system automatically performs power save processing such as turning off the
+ * LCD backlight. Using the ::scePowerTick() function to cancel the count value for the idle state prevents
+ * the specified power save processing from being performed.
+ * 
+ * Note that calling this function only resets a timer counter and does not stop the counting itself. As such,
+ * to continuously prevent the system from performing power saving operations, call ::scePowerTick() repeatedly,
+ * for example once every VBLANK interval.
+ * 
+ * @returns Always SCE_ERROR_OK.
+ */
+s32 scePowerTick(s32 tickType);
+
+/**
+ * Defines attributes for an idle timer callback to be specified when registering the callback using
+ * ::scePowerSetIdleCallback(). Multiple attributes can be specified.
+ */
+typedef enum {
+	/*
+	 * Specifies that the idle timer's time counter is not automatically resetted constantly when the
+	 * PSP system is connected to an external power source via an AC adapter.
+	 */
+	SCE_POWER_IDLE_TIMER_CALLBACK_ATTR_NO_AUTO_RESET_ON_AC_CONNECTION	= 0x100,
+	/* Specifies that the idle timer's time counter cannot be resetted using the ::scePowerTick() API. */
+	SCE_POWER_IDLE_TIMER_CALLBACK_ATTR_CANNOT_RESET						= 0x200,
+} ScePowerIdleTimerCallbackAttr;
+
+/**
+ * Power service idle timer callback function prototype.
+ *
+ * @param slot The slot registration number of the invoked idle timer callback.
+ * @param ellapsedTime The low-order 32 bit value of the ellapsed time since the idle timer callback
+ * was last resetted or registered.
+ * @param common Custom callback value. Specified by the same parameter in ::scePowerSetIdleCallback().
+ *
+ * @see ::scePowerSetIdleCallback()
+ */
+typedef void (*ScePowerIdleTimerCallback)(s32 slot, u32 ellapsedTime, void *common);
+
+/**
+ * @brief Gets the timing state for a registered idle timer callback.
+ * 
+ * @param slot The registered idle timer callback the timing state should be obtained for. Specify value in
+ * range 0 to 7.
+ * @param pCurEllapsedTime Pointer to an u64 which is to retrieve the passed time in microseconds since the
+ * timer was last resetted.
+ * @param pCurDueTime Pointer to an u64 which is to retrieve the remaining time in microseconds until the
+ * idle timer callback will be called.
+ * 
+ * @return The low-order 32-bit offset between the current system time and the idle timer callback's base time.
+ * 
+ * @see ::scePowerSetIdleCallback()
+ */
+s32 scePowerGetIdleTimer(s32 slot, u64 *pCurEllapsedTime, u64 *pCurDueTime);
+
+/**
+ * @brief Registers an idle timer callback in the system.
+ * 
+ * This function registers an idle timer callback in the system.
+ * 
+ * A timer callback cannot overwrite an already registered idle timer callback in the same slot. If you want
+ * to register a new timer callback when all slots are already in use, you first need to unregister an existing
+ * idle timer callback and then use the freed slot to register your new idle timer callback.
+ * 
+ * @note If the idle timer for the given slot has been previously disabled by calling ::scePowerIdleTimerDisable()
+ * you need to enable the idler timer for this slot again using ::scePowerIdleTimerEnable().
+ *
+ * @param slot The callback registration slot. Specify value in range of 0 to 7.
+ * @param attr The callback attributes. One or more of ::ScePowerIdleTimerCallbackAttr.
+ * @param dueTime The amount of (idle) time to pass until the callback is invoked.
+ * @param callback Pointer to the callback function. Specify [null] if you want to unregister an idle timer
+ * callback.
+ * @param common Argument to be passed to the callback function.
+ * 
+ * @return SCE_ERROR_OK on success, otherwise < 0.
+ * 
+ * @remark The specified callback might not just be invoked when the specified due time is reached. For example,
+ * when a timer, which had previously reached its due time, has been resetted by calling ::scePowerTick(), the
+ * system invokes its callback. However, the ellapsedTime argument of the callback will be set to 0 in this case
+ * so you can differentiate between this case and when the callback is invoked due to idle timer reaching its
+ * its due time (where the ellapsedTime argument is set to a value greater than 0).
+ * 
+ * @see ::scePowerGetIdleTimer()
+ */
+s32 scePowerSetIdleCallback(s32 slot, u32 attr, u64 dueTime, ScePowerIdleTimerCallback callback, void *common);
+
+/**
+ * @brief Enables an idle timer.
+ * 
+ * This function enables an idle timer. If an idle callback is registered for this idle timer with
+ * ::scePowerSetIdleCallback(), its callback function is invoked when the idle timer counter has
+ * reached/passed the specified due time for the idle timer callback.
+ * 
+ * @param slot The callback registration slot. Specify value in range of 0 to 7.
+ * 
+ * @return The previous enabled state of the idle timer callback on success, otherwise < 0.
+ * 
+ * @see ::scePowerIdleTimerDisable()
+ */
+s32 scePowerIdleTimerEnable(s32 slot);
+
+/**
+ * @brief Disables an idle timer.
+ *
+ * This function disables an idle timer. If an idle callback is registered for this idle timer with
+ * ::scePowerSetIdleCallback(), its callback function is no longer invoked when the idle timer counter
+ * has reached/passed the specified due time for the idle timer callback.
+ * 
+ * In the current implementation, disabling an idle timer will also disable all idle timers for the slots
+ * 0 to (slots - 1). Other than the idle timer assigned to the first slot, no other idle timer can be
+ * individually disabled.
+ *
+ * @param slot The callback registration slot. Specify value in range of 0 to 7.
+ *
+ * @return The previous enabled state of the idle timer callback on success, otherwise < 0.
+ * 
+ * @see ::scePowerIdleTimerEnable()
+ */
+s32 scePowerIdleTimerDisable(s32 slot);
 
 /* Misc */
 

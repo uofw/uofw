@@ -24,8 +24,8 @@ s32 _scePowerIsCallbackBusy(s32 cbArgFlag, SceUID *pCbid);
 s32 _scePowerSwInit(void);
 s32 _scePowerSwEnd(void);
 
-u32 _scePowerIdleInit(void);
-u32 _scePowerIdleEnd(void);
+s32 _scePowerIdleInit(void);
+s32 _scePowerIdleEnd(void);
 
 s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType);
 s32 _scePowerBatteryEnd(void);
