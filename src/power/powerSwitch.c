@@ -1251,10 +1251,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
     if (((u32)g_Resume.scratchpad % 4 == 0) && ((u32)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x0000203C & 0x00002074
     {
         // 0x00002690 - 0x00002684
-        __builtin_memcpy(
+        /*__builtin_memcpy(
             (void *)__builtin_assume_aligned(&g_Resume.scratchpad, 4), 
             (void *)__builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4), 
-            SCE_SCRATCHPAD_SIZE);
+            SCE_SCRATCHPAD_SIZE);*/
+
+        __builtin_memcpy(&g_Resume.scratchpad, (void *)SCE_SCRATCHPAD_ADDR_K1, SCE_SCRATCHPAD_SIZE);
     }
     else 
     {
@@ -1268,10 +1270,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
     if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x000020D8 & 0x000020E0
     {
         // 0x0000265C - 0x00002688
-        __builtin_memcpy(
+        /*__builtin_memcpy(
             (void *)__builtin_assume_aligned(&g_Resume.hwResetVector, 4),
             (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
-            HW_RESET_VECTOR_SIZE);
+            HW_RESET_VECTOR_SIZE);*/
+
+        __builtin_memcpy(&g_Resume.hwResetVector, (void *)HW_RESET_VECTOR, HW_RESET_VECTOR_SIZE);
     }
     else
     {
@@ -1363,10 +1367,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
             if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x00002574 & 0x0000257C
             {
                 // 0x000025A0 - 0x000025EC
-                __builtin_memcpy(
+                /*__builtin_memcpy(
                     (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
                     (void *)__builtin_assume_aligned(g_Resume.hwResetVector, 4),
-                    HW_RESET_VECTOR_SIZE);
+                    HW_RESET_VECTOR_SIZE);*/
+
+                __builtin_memcpy((void *)HW_RESET_VECTOR, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
             }
             else
             {
@@ -1449,10 +1455,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
     if (((u32)g_Resume.scratchpad % 4 == 0) && ((u32)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x000021A4 & 0x000021A8 & 0x000021B0
     {
         // 0x00002690 - 0x00002684
-        __builtin_memcpy(
+        /*__builtin_memcpy(
             (void *)__builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4),
             (void *)__builtin_assume_aligned(&g_Resume.scratchpad, 4),
-            SCE_SCRATCHPAD_SIZE);
+            SCE_SCRATCHPAD_SIZE);*/
+
+        __builtin_memcpy((void *)SCE_SCRATCHPAD_ADDR_K1, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
     }
     else
     {
@@ -1662,13 +1670,16 @@ static void _scePowerResumePoint(void *pData)
     // so we will aim to use the same load/store instructions here -- even if 
     // it might not be perfectly optimized (such as no dedicated source buffer alignment 
     // check.
+
     if (((u32)g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x0000203C & 0x00002074
     {
         // 0x00002918 - 0x00002940
-        __builtin_memcpy(
+        /*__builtin_memcpy(
             (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
             (void *)__builtin_assume_aligned(&g_Resume.hwResetVector, 4),
-            HW_RESET_VECTOR_SIZE);
+            HW_RESET_VECTOR_SIZE);*/
+
+        __builtin_memcpy((void *)HW_RESET_VECTOR, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
     }
     else
     {
