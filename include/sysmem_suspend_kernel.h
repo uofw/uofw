@@ -41,8 +41,8 @@ int sceKernelPowerUnlockForUser(int lockType);
 int sceKernelPowerTick(int tickType);
 
 #define SCE_KERNEL_VOLATILE_MEM_DEFAULT		(0)
-int sceKernelVolatileMemLock(int unk, void **ptr, int *size);
-int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size);
+int sceKernelVolatileMemLock(int unk, void **ptr, SceSize *size);
+int sceKernelVolatileMemTryLock(int unk, void **ptr, SceSize *size);
 int sceKernelVolatileMemUnlock(int unk);
 
 int sceKernelPowerRebootStart(int);

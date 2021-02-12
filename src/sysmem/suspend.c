@@ -40,7 +40,7 @@ int sceKernelSuspendInit(void)
 
 int sceKernelRegisterPowerHandlers(const ScePowerHandlers *handlers)
 {
-    g_pPowerHandlers = handlers;
+    g_pPowerHandlers = (ScePowerHandlers *)handlers;
     return g_iTempPowerLock;
 }
 
@@ -93,14 +93,14 @@ int sceKernelPowerTick(int unk)
     return 0;
 }
 
-int sceKernelVolatileMemLock(int unk, void **ptr, int *size)
+int sceKernelVolatileMemLock(int unk, void **ptr, SceSize *size)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->memLock(unk, ptr, size);
     return -1;
 }
 
-int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size)
+int sceKernelVolatileMemTryLock(int unk, void **ptr, SceSize *size)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->memTryLock(unk, ptr, size);
