@@ -88,19 +88,19 @@ typedef struct
 #define POWER_PLL_CONFIGURATIONS            (sizeof g_pllSettings / sizeof g_pllSettings[0])
 const ScePowerPllConfiguration g_pllSettings[] =
 {
-    {.frequency = 19, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_19MHz }, /* 0.057 (~ 1/18) */
-    {.frequency = 37, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_37MHz }, /* 0.111 (1/9) */
-    {.frequency = 74, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_74MHz }, /* 0.222 (2/9)*/
-    {.frequency = 96, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_96MHz }, /* 0.286 (~5/18) */
-    {.frequency = 111, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_111MHz }, /* 0.333 (3/9) */
-    {.frequency = 133, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_133MHz }, /* 0.4 (7/18) */
-    {.frequency = 148, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_148MHz }, /* 0.444 (4/9)  */
-    {.frequency = 166, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_166MHz }, /* 0.5 (9/18) */
-    {.frequency = 190, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_190MHz }, /* 0.571 (5/9) */
-    {.frequency = 222, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_222MHz }, /* 0.667 (6/9) */
-    {.frequency = 266, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_266MHz }, /* 0.8 (7/9) */
-    {.frequency = 333, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_333MHz }, /* 1 (9/9) */
-}; //0x00006F70 -- size 96
+    { .frequency = 19, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_19MHz }, /* 0.057 (~ 1/18) */
+    { .frequency = 37, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_37MHz }, /* 0.111 (1/9) */
+    { .frequency = 74, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_74MHz }, /* 0.222 (2/9)*/
+    { .frequency = 96, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_96MHz }, /* 0.286 (~5/18) */
+    { .frequency = 111, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_111MHz }, /* 0.333 (3/9) */
+    { .frequency = 133, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_133MHz }, /* 0.4 (7/18) */
+    { .frequency = 148, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_148MHz }, /* 0.444 (4/9)  */
+    { .frequency = 166, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_166MHz }, /* 0.5 (9/18) */
+    { .frequency = 190, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_190MHz }, /* 0.571 (5/9) */
+    { .frequency = 222, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_222MHz }, /* 0.667 (6/9) */
+    { .frequency = 266, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_266MHz }, /* 0.8 (7/9) */
+    { .frequency = 333, .pllUseMaskBit = SCE_SYSREG_PLL_OUT_SELECT_333MHz }, /* 1 (9/9) */
+}; // 0x00006F70 -- size 96
 
 ScePowerFrequency g_PowerFreq; //0x0000C550
 
