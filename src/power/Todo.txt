@@ -1,3 +1,0 @@
-- scePowerSetGeEdramRefreshMode(): Look at the used arithmetic (compiler) optimization again and try to re-weite it into a more readable form
-
-in battery.c: Define macros for event flag values.

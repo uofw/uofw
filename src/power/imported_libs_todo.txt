@@ -1,5 +1,0 @@
-Libs to re-generate (summary):
-
-- libsceSysreg_driver
-- libsceDdr_driver
-- libsceSyscon_driver
