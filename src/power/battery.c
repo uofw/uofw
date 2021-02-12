@@ -1333,10 +1333,10 @@ static s32 _scePowerBatteryCalcRivisedRcap(void)
     s32 fCapLimit;
 
     fCap = g_Battery.batteryFullCapacity;
-    fCapLimit = fCap * 0.9; // 0x0000513C - 0x00005164 -- Note: We could write 0.9 as 90 / 100 instead.
+    fCapLimit = fCap * 90 / 100; // 0x0000513C - 0x00005164 -- Note: We could write 0.9 as 90 / 100 instead.
     if (fCapLimit < g_Battery.minimumFullCapacity) // 0x0000516C
     {
-        fCapLimit = g_Battery.minimumFullCapacity * 0.95; // 0x00005174 - 0x00005194
+        fCapLimit = g_Battery.minimumFullCapacity * 95 / 100; // 0x00005174 - 0x00005194
     }
 
     rCap = g_Battery.batteryRemainingCapacity;
