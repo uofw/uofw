@@ -38,7 +38,7 @@ int sceKernelSuspendInit(void)
     return 0;
 }
 
-int sceKernelRegisterPowerHandlers(ScePowerHandlers *handlers)
+int sceKernelRegisterPowerHandlers(const ScePowerHandlers *handlers)
 {
     g_pPowerHandlers = handlers;
     return g_iTempPowerLock;

@@ -21,6 +21,7 @@
 #include <threadman_kernel.h>
 
 #include "power_int.h"
+#include "powerSwitch.h"
 
 #define POWER_SWITCH_WORKER_THREAD_INIT_PRIO                4
 
@@ -63,9 +64,9 @@ typedef struct
     s32 numPowerLocksUser; // 20
     s32 numPowerLocksKernel; // 24
     /* Start address of the PSP's RAM area reserved for volatile memory. */
-    u32 volatileMemoryReservedAreaStartAddr; //28
+    void *volatileMemoryReservedAreaStartAddr; //28
     /* Size of the PSP's RAM area reserved for volatile memory. */
-    u32 volatileMemoryReservedAreaSize; // 32
+    SceSize volatileMemoryReservedAreaSize; // 32
     /* 
      * Indicates whether an application has acquired control over the PSP's RAM area reserved 
      * for volatile memory. 
@@ -105,7 +106,7 @@ const ScePowerHandlers g_PowerHandler =
     .memLock = scePowerVolatileMemLock, //0x000012E0
     .memTryLock = scePowerVolatileMemTryLock, //0x00001400
     .memUnlock = scePowerVolatileMemUnlock, //0x00001540
-}; //0x00006F48
+}; // 0x00006F48
 
 static s32 _scePowerLock(s32 lockType, s32 isUserLock);
 static s32 _scePowerUnlock(s32 lockType, s32 isUserLock);
@@ -163,7 +164,7 @@ s32 _scePowerSwInit(void)
     partitionInfo.size = sizeof(SceSysmemPartitionInfo); // 0x00001284
     sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_VSHELL_PARTITION, &partitionInfo); // 0x00001280
     g_PowerSwitch.volatileMemoryReservedAreaSize = partitionInfo.memSize; // 0x00001290
-    g_PowerSwitch.volatileMemoryReservedAreaStartAddr = partitionInfo.startAddr; // 0x00001298
+    g_PowerSwitch.volatileMemoryReservedAreaStartAddr = (void *)partitionInfo.startAddr; // 0x00001298
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00001294
 
@@ -224,7 +225,7 @@ s32 scePowerVolatileMemLock(s32 mode, void **ppAddr, SceSize *pSize)
      * If the memory area reserved for the volatile memory resides in RAM reserved for the kernel, 
      * we need to change the memory protection for it to make it available to user applications.
      */
-    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    startAddr = (u32)g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
     if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
         || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
@@ -277,8 +278,8 @@ s32 scePowerVolatileMemTryLock(s32 mode, void **ppAddr, SceSize *pSize)
         /* Exclusive control to the memory area has already been assigned to someone else. */
 
         pspSetK1(oldK1);
-        return (status == SCE_ERROR_KERNEL_SEMA_ZERO) 
-            ? SCE_POWER_ERROR_CANNOT_LOCK_VMEM 
+        return (status == (s32)SCE_ERROR_KERNEL_SEMA_ZERO) 
+            ? (s32)SCE_POWER_ERROR_CANNOT_LOCK_VMEM 
             : status; //0x00001524 - 0x0000153C
     }
 
@@ -300,7 +301,7 @@ s32 scePowerVolatileMemTryLock(s32 mode, void **ppAddr, SceSize *pSize)
      * If the memory area reserved for the volatile memory resides in RAM reserved for the kernel,
      * we need to change the memory protection for it to make it available to user applications.
      */
-    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    startAddr = (u32)g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
     if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
         || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
@@ -333,10 +334,10 @@ s32 scePowerVolatileMemUnlock(s32 mode)
 
     oldK1 = pspShiftK1(); // 0x00001434
 
-    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    startAddr = (u32)g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
 
     /* Invalidate the cache for the memory area now that we are done using it. */
-    sceKernelDcacheWritebackInvalidateRange(startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize); // 0x0000157C
+    sceKernelDcacheWritebackInvalidateRange((void *)startAddr, g_PowerSwitch.volatileMemoryReservedAreaSize); // 0x0000157C
 
     intrState = sceKernelCpuSuspendIntr(); // 0x00001584
 
@@ -479,6 +480,8 @@ s32 scePowerUnlockForUser(s32 lockType)
 //Subroutine sub_00002E1C - Address 0x00002E1C
 static s32 _scePowerUnlock(s32 lockType, s32 isUserLock)
 {
+    (void)lockType;
+
     s32 intrState;
     s32 numPowerLocks;
 
@@ -614,7 +617,7 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
                      */
                     g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_SUSPEND; // 0x00001A74
                 }
-                else if (status == SCE_ERROR_KERNEL_WAIT_TIMEOUT) // 0x00001A84
+                else if (status == (s32)SCE_ERROR_KERNEL_WAIT_TIMEOUT) // 0x00001A84
                 {
                     /*
                      * The user kept holding the POWER switch for at least two seconds so we now enter the
@@ -740,10 +743,10 @@ static s32 _scePowerSuspendOperation(s32 mode)
     SceSysEventSuspendPayloadResumData sysEventSuspendPayloadResumeData; // $sp + 128
 
     u32 wakeupCondition; // sp + 304
-    u32 suspendQuerySysEventResult; // sp + 308
+    s32 suspendQuerySysEventResult; // sp + 308
     SceSysEventHandler *pSuspendQuerySysEventHandler; // sp + 312
     s32 pspClock; // sp + 316
-    u32 suspendPhase1SysEventResult; // sp + 320
+    s32 suspendPhase1SysEventResult; // sp + 320
     SceSysEventHandler *pSuspendPhase1SysEventHandler; // sp + 324
 
     SceUID busyPowerCallbackId; // sp + 328
@@ -789,7 +792,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     // TODO: Seems to determine the power LED flash rate. Larger values
     // mean longer blink intervals.
     u32 ledFlashInterval = 1; // 0x00001B04 -- $s5
-    if (suspendMode & 0xF >= 4) // 0x00001BE4
+    if ((suspendMode & 0xF) >= 4) // 0x00001BE4
     {
         // loc_000027DC
 
@@ -1192,7 +1195,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     /* Write back the entire contents of the D-cache to RAM (dirty cache lines only). */
     sceKernelDcacheWritebackAll(); // 0x00001F8C
 
-    s8 scratchPadData[8]; // sp + 256;
+    u8 scratchPadData[8]; // sp + 256;
     u8 sha1Digest[SCE_KERNEL_UTILS_SHA1_DIGEST_SIZE]; // sp + 272
     sceSysconReadScratchPad(0x10, scratchPadData, sizeof scratchPadData);  // 0x00001FA0
 
@@ -1245,35 +1248,35 @@ static s32 _scePowerSuspendOperation(s32 mode)
     // so we will aim to use the same load/store instructions here -- even if 
     // it might not be perfectly optimized (such as no dedicated source buffer alignment 
     // check.
-    if (((size_t)g_Resume.scratchpad % 4 == 0) && ((size_t)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x0000203C & 0x00002074
+    if (((u32)g_Resume.scratchpad % 4 == 0) && ((u32)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x0000203C & 0x00002074
     {
         // 0x00002690 - 0x00002684
         __builtin_memcpy(
-            __builtin_assume_aligned(&g_Resume.scratchpad, 4), 
-            __builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4), 
+            (void *)__builtin_assume_aligned(&g_Resume.scratchpad, 4), 
+            (void *)__builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4), 
             SCE_SCRATCHPAD_SIZE);
     }
     else 
     {
         // 0x00002080 - 0x000020C8       
-        __builtin_memcpy(g_Resume, SCE_SCRATCHPAD_ADDR_K1, SCE_SCRATCHPAD_SIZE);
+        __builtin_memcpy(&g_Resume.scratchpad, (void *)SCE_SCRATCHPAD_ADDR_K1, SCE_SCRATCHPAD_SIZE);
     }
 
     /* Copy the hardware-reset-vector content to the power service. */
 
     // uofw: The same note as directly above applies here as well.
-    if (((size_t)&g_Resume.hwResetVector % 4 == 0) && ((size_t)HW_RESET_VECTOR % 4 == 0)) // 0x000020D8 & 0x000020E0
+    if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x000020D8 & 0x000020E0
     {
         // 0x0000265C - 0x00002688
         __builtin_memcpy(
-            __builtin_assume_aligned(&g_Resume.hwResetVector, 4),
-            __builtin_assume_aligned(HW_RESET_VECTOR, 4),
+            (void *)__builtin_assume_aligned(&g_Resume.hwResetVector, 4),
+            (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
             HW_RESET_VECTOR_SIZE);
     }
     else
     {
         // 0x000020EC - 0x000020C8       
-        __builtin_memcpy(&g_Resume.hwResetVector, HW_RESET_VECTOR, HW_RESET_VECTOR_SIZE);
+        __builtin_memcpy(&g_Resume.hwResetVector, (void *)HW_RESET_VECTOR, HW_RESET_VECTOR_SIZE);
     }
 
     // loc_0000213C
@@ -1357,18 +1360,18 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
             /* Copy back the saved hardware-reset-vector content. */
 
-            if (((size_t)&g_Resume.hwResetVector % 4 == 0) && ((size_t)HW_RESET_VECTOR % 4 == 0)) // 0x00002574 & 0x0000257C
+            if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x00002574 & 0x0000257C
             {
                 // 0x000025A0 - 0x000025EC
                 __builtin_memcpy(
-                    __builtin_assume_aligned((u32 *)HW_RESET_VECTOR, 4),
-                    __builtin_assume_aligned(g_Resume.hwResetVector, 4),
+                    (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
+                    (void *)__builtin_assume_aligned(g_Resume.hwResetVector, 4),
                     HW_RESET_VECTOR_SIZE);
             }
             else
             {
                 // 0x000025F4 - 0x0000261C       
-                __builtin_memcpy((u32 *)HW_RESET_VECTOR, g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
+                __builtin_memcpy((void *)HW_RESET_VECTOR, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
             }
 
             // loc_000027F4
@@ -1443,18 +1446,18 @@ static s32 _scePowerSuspendOperation(s32 mode)
     /* Copy back the saved Scratchpad data. */
 
     // uofw: The same note as directly above applies here as well.
-    if (((size_t)g_Resume.scratchpad % 4 == 0) && ((size_t)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x000021A4 & 0x000021A8 & 0x000021B0
+    if (((u32)g_Resume.scratchpad % 4 == 0) && ((u32)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x000021A4 & 0x000021A8 & 0x000021B0
     {
         // 0x00002690 - 0x00002684
         __builtin_memcpy(
-            __builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4),
-            __builtin_assume_aligned(&g_Resume.scratchpad, 4),
+            (void *)__builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4),
+            (void *)__builtin_assume_aligned(&g_Resume.scratchpad, 4),
             SCE_SCRATCHPAD_SIZE);
     }
     else
     {
         // 0x00002490 - 0x000024C0       
-        __builtin_memcpy(SCE_SCRATCHPAD_ADDR_K1, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
+        __builtin_memcpy((void *)SCE_SCRATCHPAD_ADDR_K1, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
     }
 
     _scePowerFreqResume(0); // 0x0000220C
@@ -1618,7 +1621,7 @@ static void _scePowerResumePoint(void *pData)
         /* Set the PLL clock frequency. */
 
         g_Resume.resumePowerState.changePllClock = NULL; // 0x00002858
-        if (*(s32 *)(pData + 20) != NULL) // 0x00002860
+        if (*(void **)(pData + 20) != NULL) // 0x00002860
         {
             /* 
              * Restore PLL clock frequency at the time of the supension
@@ -1659,18 +1662,18 @@ static void _scePowerResumePoint(void *pData)
     // so we will aim to use the same load/store instructions here -- even if 
     // it might not be perfectly optimized (such as no dedicated source buffer alignment 
     // check.
-    if (((size_t)g_Resume.hwResetVector % 4 == 0) && ((size_t)HW_RESET_VECTOR % 4 == 0)) // 0x0000203C & 0x00002074
+    if (((u32)g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x0000203C & 0x00002074
     {
         // 0x00002918 - 0x00002940
         __builtin_memcpy(
-            __builtin_assume_aligned((vs32 *)HW_RESET_VECTOR, 4),
-            __builtin_assume_aligned(&g_Resume.hwResetVector, 4),
+            (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
+            (void *)__builtin_assume_aligned(&g_Resume.hwResetVector, 4),
             HW_RESET_VECTOR_SIZE);
     }
     else
     {
         // 0x000028C4 - 0x0000290C       
-        __builtin_memcpy((vs32 *)HW_RESET_VECTOR, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
+        __builtin_memcpy((void *)HW_RESET_VECTOR, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
     }
 
      // loc_0000295C
@@ -1763,7 +1766,7 @@ s32 _scePowerSwEnd(void)
      * if that area is in kernel space (the running power service is responsible for 
      * "locking" access to that memory area to a single request at a time). 
      */
-    startAddr = g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
+    startAddr = (u32)g_PowerSwitch.volatileMemoryReservedAreaStartAddr;
     if ((startAddr >= SCE_KERNELSPACE_ADDR_KU0 && startAddr < SCE_USERSPACE_ADDR_KU0)
         || (startAddr >= SCE_KERNELSPACE_ADDR_KU1 && startAddr < SCE_USERSPACE_ADDR_KU1)
         || (startAddr >= SCE_KERNELSPACE_ADDR_K0 && startAddr < SCE_USERSPACE_ADDR_K0)
@@ -1793,8 +1796,10 @@ s32 scePowerGetPowerSwMode(void)
 }
 
 //Subroutine scePower_driver_1EC2D4E4 - Address 0x00002B78
-s32 scePowerRebootStart(void)
+s32 scePowerRebootStart(int arg0)
 {
+    (void)arg0;
+
     s32 oldK1;
     s32 intrState;
 
@@ -1808,12 +1813,14 @@ s32 scePowerRebootStart(void)
     g_PowerSwitch.isRebootPowerLockExist = SCE_TRUE; // 0x00002BA8
 
     pspSetK1(oldK1); // 0x00002BB0
+
     intrState = sceKernelCpuSuspendIntr(); // 0x00002BAC
 
     sceKernelClearEventFlag(g_PowerSwitch.eventId, ~POWER_SWITCH_EVENT_POWER_SWITCH_UNLOCKED); // 0x00002BC0
     sceKernelSetEventFlag(g_PowerSwitch.eventId, POWER_SWITCH_EVENT_IDLE); // 0x00002BCC
 
     sceKernelCpuResumeIntr(intrState); // 0x00002BD4
+
     return SCE_ERROR_OK;
 }
 
@@ -1836,6 +1843,7 @@ s32 scePowerCancelRequest(void)
     g_PowerSwitch.curHardwarePowerSwitchRequest = HARDWARE_POWER_SWITCH_REQUEST_NONE;
 
     sceKernelCpuResumeIntr(intrState);
+
     return (s32)canceledRequest;
 }
 
@@ -1850,7 +1858,7 @@ s32 scePowerWaitRequestCompletion(void)
     oldK1 = pspShiftK1(); // 0x00001748
 
     status = sceKernelPollEventFlag(g_PowerSwitch.eventId, 0xFFFFFFFF, SCE_KERNEL_EW_OR, &powerSwitchSetFlags); // 0x00001744
-    if (status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) // 0x0000174C & 0x00001764
+    if (status < SCE_ERROR_OK && status != (s32)SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) // 0x0000174C & 0x00001764
     {
         pspSetK1(oldK1); // 0x000017EC
         return status;

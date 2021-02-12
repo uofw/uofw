@@ -81,7 +81,7 @@ typedef struct
 
 typedef struct
 {
-    u32 frequency; // 0
+    s32 frequency; // 0
     u32 pllUseMaskBit; // 4
 } ScePowerPllConfiguration; //size: 8
 
@@ -364,8 +364,9 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
      * we will actually attempt to set the PLL clock frequency to 166 MHz.
      */
     newPllOutSelect = 0xFFFFFFFF; // 0x00003984
+
     u32 i;
-    for (int i = 0; i < POWER_PLL_CONFIGURATIONS; i++)
+    for (i = 0; i < POWER_PLL_CONFIGURATIONS; i++)
     {
         /* Filter out all PLL settings which do not match out PLL use mask. */
         if (!((1 << g_pllSettings[i].pllUseMaskBit) & g_PowerFreq.pllUseMask)) // 0x000039A0
@@ -682,7 +683,7 @@ s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode)
                     // 0x00003F84 - 0x00003FAC
                     // TODO: What kind of (compiler) arithmetic optimization am I looking at?
                     s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75); // $t4
-                    s32 tmp2 = (tmp * 0xBFA02FE9) >> 32; // $t3
+                    s32 tmp2 = (s32)(((s64)tmp * 0xBFA02FE9) >> 32); // $t3
 
                     refreshParam1 = (tmp + tmp2) / 128 - (tmp >> 31);
                 }
@@ -694,7 +695,7 @@ s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode)
                     // 0x00003F48 - 0x00003F78
                     // TODO: What kind of (compiler) arithmetic optimization am I looking at?
                     s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75); // $a1
-                    s32 tmp2 = (tmp * 0xBFA02FE9) >> 32; // $t9
+                    s32 tmp2 = (s32)(((s64)tmp * 0xBFA02FE9) >> 32); // $t9
 
                     refreshParam1 = (tmp + tmp2) / 256 - (tmp >> 31);
                 }

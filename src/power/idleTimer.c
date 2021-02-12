@@ -6,6 +6,7 @@
 #include <interruptman.h>
 #include <power_kernel.h>
 #include <syscon.h>
+#include <sysmem_suspend_kernel.h>
 #include <sysmem_sysclib.h>
 #include <threadman_kernel.h>
 
@@ -132,12 +133,12 @@ s32 scePowerGetIdleTimer(s32 slot, u64 *pCurEllapsedTime, u64 *pCurDueTime)
     u64 curSysTime = sceKernelGetSystemTimeWide(); // 0x00003088
     if (pCurEllapsedTime != NULL)
     {     
-        pCurEllapsedTime = curSysTime - g_PowerIdle.idleTimerCb[slot].baseTime; // 0x000030A8 - 0x000030CC
+        *pCurEllapsedTime = curSysTime - g_PowerIdle.idleTimerCb[slot].baseTime; // 0x000030A8 - 0x000030CC
     }
 
     if (pCurDueTime != NULL) // 0x000030D0
     {
-        pCurDueTime = curSysTime - g_PowerIdle.idleTimerCb[slot].dueTime; // 0x000030D8 - 0x000030F4
+        *pCurDueTime = curSysTime - g_PowerIdle.idleTimerCb[slot].dueTime; // 0x000030D8 - 0x000030F4
     }
 
     pspSetK1(oldK1);
@@ -172,7 +173,7 @@ s32 scePowerSetIdleCallback(s32 slot, u32 attr, u64 dueTime, ScePowerIdleTimerCa
     g_PowerIdle.idleTimerCb[slot].callback = callback; // 0x000031B8
     g_PowerIdle.idleTimerCb[slot].isDueTimeReached = -1; // 0x000031BC
     g_PowerIdle.idleTimerCb[slot].dueTime = dueTime; // 0x000031C0 & 0x000031C4
-    g_PowerIdle.idleTimerCb[slot].gp = &GetGp; // 0x000031C8 -- Note: Yes, this is the address of the function and not its return value...
+    g_PowerIdle.idleTimerCb[slot].gp = (u32)&GetGp; // 0x000031C8 -- Note: Yes, this is the address of the function and not its return value...
     g_PowerIdle.idleTimerCb[slot].callbackArg = common; // 0x000031CC
     g_PowerIdle.idleTimerCb[slot].isResetted = SCE_FALSE; // 0x000031D4
 

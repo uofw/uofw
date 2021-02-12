@@ -16,12 +16,12 @@ typedef struct
     int (*lockForUser)(int); // 16
     int (*unlockForUser)(int); // 20
     int (*rebootStart)(int); // 24
-    int (*memLock)(int, void**, int*); // 28
-    int (*memTryLock)(int, void**, int*); // 32
+    int (*memLock)(int, void**, SceSize *); // 28
+    int (*memTryLock)(int, void**, SceSize *); // 32
     int (*memUnlock)(int); // 36
 } ScePowerHandlers;
 
-int sceKernelRegisterPowerHandlers(ScePowerHandlers* handlers);
+int sceKernelRegisterPowerHandlers(const ScePowerHandlers* handlers);
 
 int sceKernelDispatchSuspendHandlers(int unk);
 int sceKernelDispatchResumeHandlers(int unk);
@@ -32,9 +32,12 @@ int sceKernelPowerLockForUser(int lockType);
 int sceKernelPowerUnlock(int lockType);
 int sceKernelPowerUnlockForUser(int lockType);
 
-#define SCE_KERNEL_POWER_TICK_DEFAULT       (0) /** Cancel all timers. */
-#define SCE_KERNEL_POWER_TICK_SUSPEND_ONLY	(1) /** Cancel auto-suspend-related timer. */				
-#define SCE_KERNEL_POWER_TICK_LCD_ONLY		(6) /** Cancel LCD-related timer .*/	
+/** Cancels all timers. */
+#define SCE_KERNEL_POWER_TICK_DEFAULT			0     
+/** Cancels only the timer related to automatic suspension. */
+#define SCE_KERNEL_POWER_TICK_SUSPENDONLY		1
+/** Cancels the timer related to the LCD. */
+#define SCE_KERNEL_POWER_TICK_LCDONLY			6	
 int sceKernelPowerTick(int tickType);
 
 #define SCE_KERNEL_VOLATILE_MEM_DEFAULT		(0)

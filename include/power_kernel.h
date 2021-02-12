@@ -639,10 +639,12 @@ s32 scePowerWaitRequestCompletion(void);
  *
  * This function creates a usermode power lock and prevents the system from being suspended/
  * going into standby while the reboot process is active.
+ * 
+ * @param arg0 Unknown. Not used.
  *
  * @return Always SCE_ERROR_OK.
  */
-s32 scePowerRebootStart(void);
+s32 scePowerRebootStart(int arg0);
 
 /**
  * Gets the number of times resume processing was performed for the PSP system (between two cold boots).
@@ -1351,13 +1353,6 @@ s32 scePowerBatteryUpdateInfo(void);
 
 /* Idle timer */
 
-/** Cancels all timers. */
-#define SCE_KERNEL_POWER_TICK_DEFAULT			0     
-/** Cancels only the timer related to automatic suspension. */
-#define SCE_KERNEL_POWER_TICK_SUSPENDONLY		1
-/** Cancels the timer related to the LCD. */
-#define SCE_KERNEL_POWER_TICK_LCDONLY			6
-
 /**
  * 
  * @brief Cancels an idle timer.
@@ -1371,6 +1366,11 @@ s32 scePowerBatteryUpdateInfo(void);
  * Note that calling this function only resets a timer counter and does not stop the counting itself. As such,
  * to continuously prevent the system from performing power saving operations, call ::scePowerTick() repeatedly,
  * for example once every VBLANK interval.
+ * 
+ * @param tickType Specify the idle timer you want to reset. Pick one of the following: 
+   - ::SCE_KERNEL_POWER_TICK_DEFAULT - Cancels all timers.
+   - ::SCE_KERNEL_POWER_TICK_SUSPENDONLY - Cancels only the timer related to automatic suspension.
+   - ::SCE_KERNEL_POWER_TICK_LCDONLY - Cancels the timer related to the LCD.
  * 
  * @returns Always SCE_ERROR_OK.
  */
@@ -1534,7 +1534,6 @@ s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode);
  * @return Always SCE_ERROR_OK.
  */
 s32 scePower_driver_D79B0122(void);
-
 
  /** @} */
 

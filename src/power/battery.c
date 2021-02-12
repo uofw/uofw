@@ -79,12 +79,12 @@ typedef struct  {
     SceUID batteryEventFlagId; // 0
     SceUID workerThreadId; // 4
     /* The battery capacity threshold value in mAh at which point the PSP system is automatically suspended. */
-    u32 forceSuspendCapacity; // 8
+    s32 forceSuspendCapacity; // 8
     /*
      * The battery capacity threshold value in mAh at which point the remaining battery lifetime is considered
      * to be short.
      */
-    u32 lowBatteryCapacity; // 12
+    s32 lowBatteryCapacity; // 12
     /*
      * Indicates whether the battery manager is set up to consistently poll the battery for new
      * data (temperatur, remaining capacity,...) and can enable/disable USB charging. For example,
@@ -164,12 +164,12 @@ typedef struct  {
     ScePowerSysconSetParamDataTTC ttcConfig;
 } ScePowerBattery; //size: 216
 
-static inline s32 _scePowerBatteryThreadErrorObtainBattInfo();
+static s32 _scePowerBatteryThread(SceSize args, void *argp);
+static inline void _scePowerBatteryThreadErrorObtainBattInfo();
 static s32 _scePowerBatteryCalcRivisedRcap(void); // 0x00005130
 static s32 _scePowerBatteryConvertVoltToRCap(s32 voltage); // 0x00005130
 static s32 _scePowerBatterySetTTC(s32 arg0); // 0x000056A4
-static s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType); // 0x00005B1C
-static s32 _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
+static SceUInt _scePowerBatteryDelayedPermitCharging(void* common); // 0x00005EA4
 static s32 _scePowerBatterySysconCmdIntr(SceSysconPacket* pSysconPacket, void* param); // 0x00005ED8
 
 ScePowerBattery g_Battery; //0x0000C5B8
@@ -320,7 +320,7 @@ s32 _scePowerBatterySuspend(void)
 }
 
 // Subroutine sub_00005C18 - Address 0x00005C18
-static s32 _scePowerBatteryResume(void)
+s32 _scePowerBatteryResume(void)
 {
     s32 intrState1;
     s32 intrState2;
@@ -490,7 +490,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
         {
             SceUInt *pTimeout = (timeout == BATTERY_EVENT_INDEFINITE_WAIT) // 0x00004758  - (0x00004760 - 0x00004770)/0x000050A0
                 ? NULL
-                : &timeout;
+                : (SceUInt *)&timeout;
 
             status = sceKernelWaitEventFlag(
                 g_Battery.batteryEventFlagId, 
@@ -506,7 +506,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
         }
 
         /* Check if we need to terminate the battery worker thread. */
-        if ((status < SCE_ERROR_OK && status != SCE_ERROR_KERNEL_WAIT_TIMEOUT) 
+        if ((status < SCE_ERROR_OK && status != (s32)SCE_ERROR_KERNEL_WAIT_TIMEOUT) 
             || batteryEventFlagSetValue & BATTERY_EVENT_TERMINATION) // 0x000047AC - 0x000047C0 & 0x000047C8
         {
             return SCE_ERROR_OK;
@@ -825,19 +825,19 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 //
                 // TODO: If power crashes in testing...this might be one crash reason...
                 s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
-                if (cop0CtrlReg30 == 0 && *((s32*)0x00000004) != 0) // 0x0000491C & 0x00004928
+                if (cop0CtrlReg30 == 0 && *((void **)0x00000004) != NULL) // 0x0000491C & 0x00004928
                 {
-                    void* pData = *(s32*)0x00000004;
-                    *(s32*)(pData + 4) = 1; // 0x00004930
-                    *(s32*)(pData + 8) = 0; // 0x00004934
+                    void *pData = *(void **)0x00000004;
+                    *(s32 *)(pData + 4) = 1; // 0x00004930
+                    *(s32 *)(pData + 8) = 0; // 0x00004934
                 }
 
                 s32 cop0CtrlReg31 = pspCop0CtrlGet(COP0_CTRL_31); // 0x00004938 - $s4
-                if (cop0CtrlReg31 == 0 && *((s32*)0x00000000) != 0) // 0x0000493C & 0x0000494C
+                if (cop0CtrlReg31 == 0 && *((void **)0x00000000) != NULL) // 0x0000493C & 0x0000494C
                 {
-                    void* pData = *(s32*)0x00000000;
-                    *(s32*)(pData + 4) = 1; // 0x00004958
-                    *(s32*)(pData + 8) = 0; // 0x00004960
+                    void *pData = *(void **)0x00000000;
+                    *(s32 *)(pData + 4) = 1; // 0x00004958
+                    *(s32 *)(pData + 8) = 0; // 0x00004960
                 }
 
                 continue; // 0x0000495C
@@ -1284,7 +1284,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
  * Invalidates battery data collected by the power service and notifies power callback subscribers
  * that no battery is currently equipped.
  */
-static inline s32 _scePowerBatteryThreadErrorObtainBattInfo()
+static inline void _scePowerBatteryThreadErrorObtainBattInfo()
 {
     if (g_Battery.batteryAvailabilityStatus != BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED) // 0x00004D70
     {
@@ -1919,6 +1919,11 @@ s32 scePowerGetBatteryRemainCapacity(void)
     return g_Battery.batteryRemainingCapacity; // 0x00005904
 }
 
+// TODO: This should be included inside the fucntion below (tight exclusion) but I (Felix-Dev) need to
+// upgrade my PSPSDK on Windows first...
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
 s32 scePowerGetBatteryLifeTime(void)
 {
@@ -1984,6 +1989,8 @@ s32 scePowerGetBatteryLifeTime(void)
 
     return 0; /* Remaining battery lifetime cannot be estimated. */
 }
+
+#pragma GCC diagnostic pop
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
 s32 scePowerGetBatteryTemp(void)
@@ -2246,7 +2253,7 @@ static s32 _scePowerBatterySetTTC(s32 arg0)
 }
 
 // Subroutine sub_0x00005EA4 - Address 0x00005EA4
-static s32 _scePowerBatteryDelayedPermitCharging(void *common)
+static SceUInt _scePowerBatteryDelayedPermitCharging(void *common)
 {
     (void)common;
 
