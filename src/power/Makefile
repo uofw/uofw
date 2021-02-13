@@ -2,7 +2,7 @@
 # See the file COPYING for copying permission.
 
 TARGET = power
-OBJS = batteryHelper.o battery.o clockFrequency.o idleTimer.o power.o powerSwitch.o
+OBJS = batteryHelper.o battery.o clockFrequency.o idleTimer.o power.o powerSwitch.o scePowerSetGeEdramRefreshMode.o
 
 LIBS = -lSysMemForKernel -lsceSuspendForKernel -lsceSysEventForKernel -lKDebugForKernel -lInterruptManagerForKernel \
        -lSysclibForKernel -lThreadManForKernel -lSysTimerForKernel -lInitForKernel -lsceDisplay_driver \

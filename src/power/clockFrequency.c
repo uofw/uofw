@@ -42,8 +42,7 @@
                                              SCE_SYSREG_PLL_OUT_SELECT_96MHz | SCE_SYSREG_PLL_OUT_SELECT_111MHz | \
                                              SCE_SYSREG_PLL_OUT_SELECT_133MHz | SCE_SYSREG_PLL_OUT_SELECT_166MHz)
 
-typedef struct
-{
+typedef struct {
     u32 mutexId; //0
     void* pSm1Ops; //4
     u32 pllOutSelect; //8
@@ -69,18 +68,17 @@ typedef struct
     s16 ddrDefaultStrength; // 78
     s32 geEdramRefreshMode; //80
     s32 oldGeEdramRefreshMode; //84
-    u16 unk88;
+    u16 unk88; // 88 -- seems to be unused
     s16 scCpuClockLowerLimit; // 90
     s16 scCpuClockUpperLimit; // 92
     s16 scBusClockLowerLimit; // 94
     s16 scBusClockUpperLimit; // 96
     s16 pllClockLowerLimit; // 98
     s16 pllClockUpperLimit; // 100
-    u16 unk102;
+    u16 unk102; // 102 .-- seems to be unused
 } ScePowerFrequency; //size: 104
 
-typedef struct
-{
+typedef struct {
     s32 frequency; // 0
     u32 pllUseMaskBit; // 4
 } ScePowerPllConfiguration; //size: 8
@@ -103,6 +101,17 @@ const ScePowerPllConfiguration g_pllSettings[] =
 }; // 0x00006F70 -- size 96
 
 ScePowerFrequency g_PowerFreq; //0x0000C550
+
+// uofw note: These variables are NOT in the original code. I've created them so that I can easily
+// access the g_PowerFreq.busClockFrequencyInt and g_PowerFreq.geEdramRefreshMode members in an ASM file.
+// The ASM file is scePowerSetGeEdramRefeshMode.S which contains the implementation for the
+// scePowerSetGeEdramRefeshMode() API. See that file for more details.
+// 
+// TODO: Once the implementation of scePowerSetGeEdramRefeshMode() has been moved into this file again
+// we should remove these variables.
+s32 *g_pBusClockFrequencyInt = &g_PowerFreq.busClockFrequencyInt;
+s32 *g_pGeEdramRefreshMode = &g_PowerFreq.geEdramRefreshMode;
+
 
 //sub_0000353C
 /* Initialize the internal power frequency control block. */
@@ -648,97 +657,104 @@ s32 _scePowerSetClockFrequency(s32 pllFrequency, s32 cpuFrequency, s32 busFreque
 }
 
 //Subroutine scePower_driver_100A77A1 - Address 0x00003E64
-s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode)
-{
-    s32 refreshParam1; // $a1
-    s32 refreshParam2; // $a2
-    s32 refreshParam3; // $a3
-    s32 intrState;
-    s32 status;
+//
+// uofw note: There seem to be some non-trivial arithmetic optimizations used here.
+// As I am not confident that my current version is functionally identical to the original
+// implementation (after comparing the generated ASM with the original one), I am commenting out my code
+// for now and resort to the original ASM. The original ASM can be found in the file
+// scePowerSetGeEdramRefreshMode.S.
 
-    intrState = sceKernelCpuSuspendIntr(); // 0x00003E78
-
-    refreshParam1 = 1;
-    refreshParam2 = 8;
-    refreshParam3 = 6;
-
-    if (geEdramRefreshMode == 0) // 0x00003E8C
-    {
-        // 0x00003E94
-        if (g_PowerFreq.busClockFrequencyInt < 75) // 0x00003EA0
-        {
-            // loc_00003F0C
-
-            if (g_PowerFreq.busClockFrequencyInt < 50) // 0x00003EA4 & 0x00003F0C
-            {
-                // loc_00003F40
-
-                if (g_PowerFreq.busClockFrequencyInt < 25) // 0x00003F10 & 0x00003F40
-                {
-                    // loc_00003F84
-
-                    refreshParam3 = 1; // 0x00003F90
-                    refreshParam2 = 6; // 0x00003F94
-
-                    // 0x00003F84 - 0x00003FAC
-                    // TODO: What kind of (compiler) arithmetic optimization am I looking at?
-                    s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75); // $t4
-                    s32 tmp2 = (s32)(((s64)tmp * 0xBFA02FE9) >> 32); // $t3
-
-                    refreshParam1 = (tmp + tmp2) / 128 - (tmp >> 31);
-                }
-                else
-                {
-                    refreshParam3 = 2; // 0x00003F58
-                    refreshParam2 = 3; // 0x00003F5C
-
-                    // 0x00003F48 - 0x00003F78
-                    // TODO: What kind of (compiler) arithmetic optimization am I looking at?
-                    s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75); // $a1
-                    s32 tmp2 = (s32)(((s64)tmp * 0xBFA02FE9) >> 32); // $t9
-
-                    refreshParam1 = (tmp + tmp2) / 256 - (tmp >> 31);
-                }
-            }
-            else
-            {
-                refreshParam3 = 3; // 0x00003F1C
-                refreshParam2 = 2; // 0x00003F20
-
-                // 0x00003F14 - 0x00003F3C
-                s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75);
-                refreshParam1 = (tmp < 0)
-                    ? (tmp + 511) / 512 /* Presumably something to do with overflow */
-                    : tmp / 512;
-            }
-        }
-        else
-        {
-            refreshParam2 = 1; // 0x00003EB0
-
-            // 0x00003EAC - 0x00003EC8
-            s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75);
-            refreshParam1 = (tmp < 0)
-                ? (tmp + 1023) / 1024 /* Presumably something to do with overflow */
-                : tmp / 1024;
-        }
-    }
-
-    // loc_00003ECC
-
-    status = sceGeEdramSetRefreshParam(geEdramRefreshMode, refreshParam1, refreshParam2, refreshParam3); // 0x00003ECC
-
-    sceKernelCpuResumeIntr(intrState); //0x00003ED8
-
-    if (status < SCE_ERROR_OK)
-    {
-        return status;
-    }
-
-    g_PowerFreq.geEdramRefreshMode = geEdramRefreshMode; // 0x00003EEC
-
-    return SCE_ERROR_OK;
-}
+//s32 scePowerSetGeEdramRefreshMode2(s32 geEdramRefreshMode)
+//{
+//    s32 refreshParam1; // $a1
+//    s32 refreshParam2; // $a2
+//    s32 refreshParam3; // $a3
+//    s32 intrState;
+//    s32 status;
+//
+//    intrState = sceKernelCpuSuspendIntr(); // 0x00003E78
+//
+//    refreshParam1 = 1;
+//    refreshParam2 = 8;
+//    refreshParam3 = 6;
+//
+//    if (geEdramRefreshMode == 0) // 0x00003E8C
+//    {
+//        // 0x00003E94
+//        if (g_PowerFreq.busClockFrequencyInt < 75) // 0x00003EA0
+//        {
+//            // loc_00003F0C
+//
+//            if (g_PowerFreq.busClockFrequencyInt < 50) // 0x00003EA4 & 0x00003F0C
+//            {
+//                // loc_00003F40
+//
+//                if (g_PowerFreq.busClockFrequencyInt < 25) // 0x00003F10 & 0x00003F40
+//                {
+//                    // loc_00003F84
+//
+//                    refreshParam3 = 1; // 0x00003F90
+//                    refreshParam2 = 6; // 0x00003F94
+//
+//                    // 0x00003F84 - 0x00003FAC
+//                    // TODO: What kind of (compiler) arithmetic optimization am I looking at?
+//                    s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75); // $t4
+//                    s32 tmp2 = (s32)(((s64)tmp * 0xBFA02FE9) >> 32); // $t3
+//
+//                    refreshParam1 = (tmp + tmp2) / 128 - (tmp >> 31);
+//                }
+//                else
+//                {
+//                    refreshParam3 = 2; // 0x00003F58
+//                    refreshParam2 = 3; // 0x00003F5C
+//
+//                    // 0x00003F48 - 0x00003F78
+//                    // TODO: What kind of (compiler) arithmetic optimization am I looking at?
+//                    s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75); // $a1
+//                    s32 tmp2 = (s32)(((s64)tmp * 0xBFA02FE9) >> 32); // $t9
+//
+//                    refreshParam1 = (tmp + tmp2) / 256 - (tmp >> 31);
+//                }
+//            }
+//            else
+//            {
+//                refreshParam3 = 3; // 0x00003F1C
+//                refreshParam2 = 2; // 0x00003F20
+//
+//                // 0x00003F14 - 0x00003F3C
+//                s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75);
+//                refreshParam1 = (tmp < 0)
+//                    ? (tmp + 511) / 512 /* Presumably something to do with overflow */
+//                    : tmp / 512;
+//            }
+//        }
+//        else
+//        {
+//            refreshParam2 = 1; // 0x00003EB0
+//
+//            // 0x00003EAC - 0x00003EC8
+//            s32 tmp = ((g_PowerFreq.busClockFrequencyInt * 8000) - 75);
+//            refreshParam1 = (tmp < 0)
+//                ? (tmp + 1023) / 1024 /* Presumably something to do with overflow */
+//                : tmp / 1024;
+//        }
+//    }
+//
+//    // loc_00003ECC
+//
+//    status = sceGeEdramSetRefreshParam(geEdramRefreshMode, refreshParam1, refreshParam2, refreshParam3); // 0x00003ECC
+//
+//    sceKernelCpuResumeIntr(intrState); //0x00003ED8
+//
+//    if (status < SCE_ERROR_OK)
+//    {
+//        return status;
+//    }
+//
+//    g_PowerFreq.geEdramRefreshMode = geEdramRefreshMode; // 0x00003EEC
+//
+//    return SCE_ERROR_OK;
+//}
 
 //Subroutine scePower_driver_C520F5DC - Address 0x00003FB8
 s32 scePowerGetGeEdramRefreshMode(void)
