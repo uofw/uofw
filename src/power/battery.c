@@ -4,13 +4,13 @@
 
 #include <common_imp.h>
 #include <interruptman.h>
+#include <loadexec_kernel.h>
 #include <power_kernel.h>
 #include <syscon.h>
 #include <sysmem_sysclib.h>
 #include <sysmem_sysevent.h>
 #include <threadman_kernel.h>
 
-#include "batteryHelper.h"
 #include "power_int.h"
 
 /* Permit Charge delay in microseconds */
@@ -820,37 +820,23 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     }
                 }
 
-                // loc_00004918
-                //
-                // uofw note: I am putting my faith in prxtool here that this will indeed work :p
-                //
-                // In the original code, this is all inline, however, attempting to translate it into
-                // C code caused the compiler to cut code here (namely reading addresses 0x4 and 0x0).
-                // Compared to inline ASM, I find maintaining the code easier when in its separate .S
-                // file. The original ASM code (slightly modified) can be found in batteryHelper.S.
-                //
-                // TODO: If power crashes in testing...this might be one crash reason...
+                /* Set content for a LoadExec exported variable. */
 
-                // 0x00004918 - 0x00004960
-                sub_4918();
-
-                // Leaving the C code behind for reference...
-
-                //s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
-                //if (cop0CtrlReg30 == 0 && *((void **)0x00000004) != NULL) // 0x0000491C & 0x00004928
-                //{
-                //    void *pData = *(void **)0x00000004;
-                //    *(s32 *)(pData + 4) = 1; // 0x00004930
-                //    *(s32 *)(pData + 8) = 0; // 0x00004934
-                //}
-
-                //s32 cop0CtrlReg31 = pspCop0CtrlGet(COP0_CTRL_31); // 0x00004938 - $s4
-                //if (cop0CtrlReg31 == 0 && *((void **)0x00000000) != NULL) // 0x0000493C & 0x0000494C
-                //{
-                //    void *pData = *(void **)0x00000000;
-                //    *(s32 *)(pData + 4) = 1; // 0x00004958
-                //    *(s32 *)(pData + 8) = 0; // 0x00004960
-                //}
+                s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
+                if (cop0CtrlReg30 == 0 && g_unkCbInfo[1] != NULL) // 0x0000491C & 0x00004928
+                {
+                    void *pData = (void *)g_unkCbInfo[1];
+                    *(s32 *)(pData + 4) = 1; // 0x00004930
+                    *(s32 *)(pData + 8) = 0; // 0x00004934
+                }
+                
+                s32 cop0CtrlReg31 = pspCop0CtrlGet(COP0_CTRL_31); // 0x00004938 - $s4
+                if (cop0CtrlReg31 == 0 && g_unkCbInfo[0] != NULL) // 0x0000493C & 0x0000494C
+                {
+                    void *pData = (void *)g_unkCbInfo[0];
+                    *(s32 *)(pData + 4) = 1; // 0x00004958
+                    *(s32 *)(pData + 8) = 0; // 0x00004960
+                }
 
                 continue; // 0x0000495C
             }

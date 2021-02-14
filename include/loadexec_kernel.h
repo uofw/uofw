@@ -421,6 +421,10 @@ SceUID sceKernelCheckExitCallback(void);
  */
 s32 LoadExecForKernel_A5ECA6E3(void (*cb)());
 
+/* Variable export */
+
+extern s32 *g_unkCbInfo[4];
+
 #endif	/* LOADEXEC_KERNEL_H */
 
 /** @} */
