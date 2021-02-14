@@ -139,6 +139,19 @@ typedef struct {
     u32 unk64; // 64
     void *pInitParamSfo; // 68
     SceSize paramSfoSize; // 72
+    u32 unk76; // 76
+    u32 unk80; // 80
+    u32 unk84; // 84
+    u32 unk88; // 88
+    u32 unk92; // 92
+    u32 unk96; // 96
+    u32 unk100; // 100
+    u32 unk104; // 104
+    u32 unk108; // 108
+    u32 unk112; // 112
+    u32 unk116; // 116
+    u32 unk120; // 120
+    u32 unk124; // 124
 } SceSysEventSuspendPayloadResumData; // size = 128
 
 /* Status bits for SceSysEventResumePowerState.powerState */
