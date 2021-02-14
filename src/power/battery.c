@@ -822,21 +822,26 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
                 /* Set content for a LoadExec exported variable. */
 
-                s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
-                if (cop0CtrlReg30 == 0 && g_unkCbInfo[1] != NULL) // 0x0000491C & 0x00004928
-                {
-                    void *pData = (void *)g_unkCbInfo[1];
-                    *(s32 *)(pData + 4) = 1; // 0x00004930
-                    *(s32 *)(pData + 8) = 0; // 0x00004934
-                }
-                
-                s32 cop0CtrlReg31 = pspCop0CtrlGet(COP0_CTRL_31); // 0x00004938 - $s4
-                if (cop0CtrlReg31 == 0 && g_unkCbInfo[0] != NULL) // 0x0000493C & 0x0000494C
-                {
-                    void *pData = (void *)g_unkCbInfo[0];
-                    *(s32 *)(pData + 4) = 1; // 0x00004958
-                    *(s32 *)(pData + 8) = 0; // 0x00004960
-                }
+                // TODO: uofw's psp-fixup-imports utility currently has issues with processing variable imports.
+                // Trying to fix the import for the generated power.elf file results in a segmentation fault.
+                // As such, we comment out this code for now. It shouldn't cause a PSP crash, but some functionality
+                // might not work as intended.
+
+                //s32 cop0CtrlReg30 = pspCop0CtrlGet(COP0_CTRL_30); // 0x00004918 - $s3
+                //if (cop0CtrlReg30 == 0 && g_unkCbInfo[1] != NULL) // 0x0000491C & 0x00004928
+                //{
+                //    void *pData = (void *)g_unkCbInfo[1];
+                //    *(s32 *)(pData + 4) = 1; // 0x00004930
+                //    *(s32 *)(pData + 8) = 0; // 0x00004934
+                //}
+                //
+                //s32 cop0CtrlReg31 = pspCop0CtrlGet(COP0_CTRL_31); // 0x00004938 - $s4
+                //if (cop0CtrlReg31 == 0 && g_unkCbInfo[0] != NULL) // 0x0000493C & 0x0000494C
+                //{
+                //    void *pData = (void *)g_unkCbInfo[0];
+                //    *(s32 *)(pData + 4) = 1; // 0x00004958
+                //    *(s32 *)(pData + 8) = 0; // 0x00004960
+                //}
 
                 continue; // 0x0000495C
             }
@@ -1917,7 +1922,7 @@ s32 scePowerGetBatteryRemainCapacity(void)
     return g_Battery.batteryRemainingCapacity; // 0x00005904
 }
 
-// TODO: This should be included inside the fucntion below (tight exclusion) but I (Felix-Dev) need to
+// TODO: This should be included inside the function below (tight exclusion) but I (Felix-Dev) need to
 // upgrade my PSPSDK on Windows first...
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"

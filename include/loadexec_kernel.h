@@ -423,6 +423,7 @@ s32 LoadExecForKernel_A5ECA6E3(void (*cb)());
 
 /* Variable export */
 
+// TODO: As this is an exported variable, we should rename it accordingly.
 extern s32 *g_unkCbInfo[4];
 
 #endif	/* LOADEXEC_KERNEL_H */
