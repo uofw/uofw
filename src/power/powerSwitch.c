@@ -740,7 +740,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 {
     SceSysEventSuspendPayload sysEventSuspendPayload; // $sp
     SceSysEventResumePayload sysEventResumePlayload; // $sp + 64 
-    SceSysEventSuspendPayloadResumData sysEventSuspendPayloadResumeData; // $sp + 128
+    SceSysEventSuspendPayloadResumData sysEventSuspendPayloadResumeData __attribute__((aligned(16))); // $sp + 128
 
     u32 wakeupCondition; // sp + 304
     s32 suspendQuerySysEventResult; // sp + 308
