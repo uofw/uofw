@@ -40,9 +40,9 @@ CFLAGS := $(INCLUDE) -O1 -fno-toplevel-reorder -G0 $(WARNINGS) $(BUILTINS_DISABL
 CFLAGS_S := $(INCLUDE)
 LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
 
-FIXUP_IMPORTS = D:\Users\Felix\Programming\Consoles\PSP\Projects\uOFW\utils\bins\psp-fixup-imports
-BUILD_EXPORTS = D:\Users\Felix\Programming\Consoles\PSP\Projects\uOFW\utils\bins\psp-build-exports
-PRXGEN = D:\Users\Felix\Programming\Consoles\PSP\Projects\uOFW\utils\bins\psp-kprxgen
+FIXUP_IMPORTS = ../../utils/fixup-imports/psp-fixup-imports
+BUILD_EXPORTS = ../../utils/build-exports/psp-build-exports
+PRXGEN = ../../utils/kprxgen/psp-kprxgen
 
 PRX_EXPORTS = exports.exp
 EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
