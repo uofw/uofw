@@ -1691,15 +1691,37 @@ static void _scePowerResumePoint(void *pData)
 
     // TODO: Try writing it in inline ASM for register $at use.
 
+    /*
+     * Write back the previously saved hardware data. 
+     * 
+     * uofw note: The original ASM uses the $at register which indicates these store operations
+     * were written by hand. While not quite clear if using a base register other than $at would pose
+     * an issue here, to be on the safe side, we replicate the exact same code.
+     */
+
     // 0x00002964 - 0x000029AC
-    HW(0xBFC00512) = hwData1;
-    HW(0xBFC00516) = hwData2;
-    HW(0xBFC00520) = hwData3;
-    HW(0xBFC00524) = hwData4;
-    HW(0xBFC00528) = hwData5;
-    HW(0xBFC00532) = hwData6;
-    HW(0xBFC00536) = hwData7;
-    HW(0xBFC00540) = hwData8;
+    __asm__(".set noat\n"
+        "lui $at, 0xBFC0;"
+        "sw %0, 512($at);"
+        "lui $at, 0xBFC0;"
+        "sw %1, 516($at);"
+        "lui $at, 0xBFC0;"
+        "sw %2, 520($at);"
+        "lui $at, 0xBFC0;"
+        "sw %3, 524($at);"
+        "lui $at, 0xBFC0;"
+        "sw %4, 528($at);"
+        "lui $at, 0xBFC0;"
+        "sw %5, 532($at);"
+        "lui $at, 0xBFC0;"
+        "sw %6, 536($at);"
+        "lui $at, 0xBFC0;"
+        "sw %7, 540($at);"
+        ".set at\n"
+        :: "r" (hwData1), "r" (hwData2), "r" (hwData3), "r" (hwData4), "r" (hwData5), 
+        "r" (hwData6), "r" (hwData7), "r" (hwData8));
+
+    // TODO: Add detailed comment. 
 
     /* Load the register state (VFPU/FPU/CP0/MIPS GPR). We do not return here. */
     sceSuspendForKernel_B2C9640B(1); // 0x0000296C 
