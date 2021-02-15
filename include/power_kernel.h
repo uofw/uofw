@@ -562,7 +562,7 @@ s32 scePowerRequestSuspend(void);
  * @brief Requests the PSP system to suspend and immediately resume again.
  * 
  * This function generates a request to suspend the PSP system and immediately resume it again without requiring
- * any user input (like maipulating the POWER switch).
+ * any user input (like manipulating the POWER switch).
  * 
  * @return Always SCE_ERROR_OK.
  * 
