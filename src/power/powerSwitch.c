@@ -740,7 +740,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 {
     SceSysEventSuspendPayload sysEventSuspendPayload; // $sp
     SceSysEventResumePayload sysEventResumePlayload; // $sp + 64 
-    SceSysEventSuspendPayloadResumData sysEventSuspendPayloadResumeData __attribute__((aligned(16))); // $sp + 128
+    SceSysEventSuspendPayloadResumeData sysEventSuspendPayloadResumeData __attribute__((aligned(16))); // $sp + 128
 
     u32 wakeupCondition; // sp + 304
     s32 suspendQuerySysEventResult; // sp + 308
@@ -1213,6 +1213,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     u32 digestXor = ((u32*)sha1Digest)[0] ^ ((u32*)sha1Digest)[1]
         ^ ((u32*)sha1Digest)[2] ^ ((u32*)sha1Digest)[3] ^ ((u32*)sha1Digest)[4]; // $t4
 
+    /* Set power's entry point on resume. */
     sysEventSuspendPayloadResumeData.resumePointFunc = _scePowerResumePoint; // 0x00002038
 
     unk332 = (((u32)&sysEventSuspendPayloadResumeData) | 0x1) ^ digestXor; // 0x00002044 & 0x00002024 & 0x00002018

@@ -107,7 +107,7 @@ typedef struct {
     u32 isStandbyOrRebootRequested; // 4
     s64 systemTimePreSuspendOp; // 8
     u32 *pWakeupCondition; // 16
-    void *pResumeData; // 20
+    SceSysEventSuspendPayloadResumeData *pResumeData; // 20
     u32 unk24; // 24
     u32 unk28; // 28
     u32 unk32; // 32
@@ -152,7 +152,7 @@ typedef struct {
     u32 unk116; // 116
     u32 unk120; // 120
     u32 unk124; // 124
-} SceSysEventSuspendPayloadResumData; // size = 128
+} SceSysEventSuspendPayloadResumeData; // size = 128
 
 /* Status bits for SceSysEventResumePowerState.powerState */
 
