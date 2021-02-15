@@ -754,10 +754,10 @@ static s32 _scePowerSuspendOperation(s32 mode)
     u32 unk332; // sp + 332
 
     s32 resumePhase1SysEventResult; // sp + 336
-    SceSysEventHandler*pResumePhase1SysEventHandler; // sp + 340
+    SceSysEventHandler *pResumePhase1SysEventHandler; // sp + 340
 
     u32 suspendMode; // sp + 344;
-    u32 powerLedStatusForFlashing; // sp + 384 -- Seems to track if power LED should be turned on or off
+    u32 powerLedStatusForFlashing; // sp + 348 -- Seems to track if power LED should be turned on or off
 
     u32 ledOffTiming; // $s3
 
@@ -828,8 +828,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
     suspendQuerySysEventResult = 0; // 0x00001C34
 
     /* 
-     * Query the system if the PSP device can be suspended. Systen components can ask for blocking 
-     * the power switch operation. 
+     * Query the system if the PSP device can be suspended. System components can ask for blocking 
+     * the power state switch operation. 
      */
     status = sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_QUERY, "query",
         &sysEventSuspendPayload, &suspendQuerySysEventResult, SCE_TRUE, &pSuspendQuerySysEventHandler); // 0x00001C30
@@ -863,8 +863,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
     /* 
      * Notify the power-state-change listeners of the impending [suspend] or [standby] operation. 
      * An application, which currently has exclusive access rights to the reserved main memory area
-     * for volatile memory, should use these callbacks to quickly release their volatile memory lock.
-     * Otherwise the suspend operation in progress won't be able to proceed.
+     * for volatile memory, should use these callbacks to quickly release its volatile memory lock.
+     * Otherwise, the suspend operation in progress won't be able to proceed.
      */
 
     if (sysEventSuspendPayload.isStandbyOrRebootRequested) // 0x00001C98
@@ -913,7 +913,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     /* Send suspend operation [phase 1] event to the system. */
 
-    sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_PHASE1_0, "phase1", &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x00001D40
+    sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_PHASE1_0, "phase1", 
+        &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x00001D40
 
     powerLedStatusForFlashing = PSP_SYSCON_LED_POWER_STATE_OFF; // 0x00001D48
 
@@ -1050,9 +1051,10 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
         // loc_00001E14
 
-        sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_PHASE1_1, "phase1", &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x00001E28
+        sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_PHASE1_1, "phase1", 
+            &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x00001E28
 
-        intrState = sceKernelCpuSuspendIntr(); // 0x00001E54
+        intrState = sceKernelCpuSuspendIntr(); // 0x00001E30
 
         /*
          * Each system component (modules) might have its own individiual suspend operation.
@@ -1063,8 +1065,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
          * Below we send a [phase1] suspend event to the system which a system component can receive
          * and use to report back to the power service that it has not yet completed its suspend operation.
          */
-        status = sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_PHASE1_2, "phase1", &sysEventSuspendPayload,
-            &suspendPhase1SysEventResult, SCE_TRUE, &pSuspendPhase1SysEventHandler); // 0x00001E54
+        status = sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_PHASE1_2, "phase1", 
+            &sysEventSuspendPayload, &suspendPhase1SysEventResult, SCE_TRUE, &pSuspendPhase1SysEventHandler); // 0x00001E54
 
         /*
          * Check if a system component has indicated that it is currently busy suspending itself or if
@@ -1152,8 +1154,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sysEventSuspendPayloadResumeData.systemTimePreSuspendOp = systemTime; // 0x00001F1C & 0x00001F20
     sysEventSuspendPayload.systemTimePreSuspendOp = systemTime; // 0x00001F20 - 0x00001F28
 
-    sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_FREEZE, "freeze", &sysEventSuspendPayload,
-        NULL, SCE_FALSE, NULL); // 0x00001F2C
+    sceKernelSysEventDispatch(SCE_SUSPEND_EVENTS, SCE_SYSTEM_SUSPEND_EVENT_FREEZE, "freeze", 
+        &sysEventSuspendPayload, NULL, SCE_FALSE, NULL); // 0x00001F2C
 
     if (ledOffTiming == SCE_POWER_LED_OFF_TIMING_POWER_OFF_WITH_BUSY_INDICATOR) // 0x00001F34 & 0x00001F00
     {
@@ -1223,13 +1225,11 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     s32 pllOutSelect = sceSysregPllGetOutSelect(); // 0x00002048
     g_Resume.pllOutSelect = pllOutSelect; // 0x00002054
-
     sysEventSuspendPayloadResumeData.pllOutSelect = pllOutSelect; // 0x00002068
 
     // Reads a value for HW address 0xBD000044
     s32 valBD000044 = sceDdr_driver_00E36648(); // 0x00002050
     g_Resume.unk20484 = valBD000044; // 0x00002058
-
     sysEventSuspendPayloadResumeData.unk44 = valBD000044; //0x00002060
 
     _scePowerFreqSuspend();
@@ -1327,7 +1327,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
          * allows us to set the result value of sceSuspendForKernel_67B59042() so we can use that return value
          * to differentiate between when we should proceed to suspend the system and when we should resume the system.
          * 
-         * Calling sceSuspendForKernel_67B59042() directly gives us a return value of 0 , so we will suspend the system
+         * Calling sceSuspendForKernel_67B59042() directly gives us a return value of 0, so we will suspend the system
          * during the suspend operation.
          */
         status = sceSuspendForKernel_67B59042(0); // 0x0000263C
