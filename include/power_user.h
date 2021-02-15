@@ -371,6 +371,18 @@ s32 scePowerRequestStandby(void);
  */
 s32 scePowerRequestSuspend(void);
 
+/**
+ * @brief Requests the PSP system to suspend and immediately resume again.
+ *
+ * This function generates a request to suspend the PSP system and immediately resume it again without requiring
+ * any user input (like maipulating the POWER switch).
+ *
+ * @return Always SCE_ERROR_OK.
+ *
+ * @remark This function only generates a request. The actual suspend-and-resume operation might be delayed.
+ * For example, if power switch locks have been put in place (for example by calling ::scePowerLockForKernel())
+ * then this operation will be delayed until all power switch locks have been removed.
+ */
 s32 scePowerRequestSuspendTouchAndGo(void);
 
 /* This constant defines the default cold reset mode. */
