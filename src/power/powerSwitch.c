@@ -1320,11 +1320,19 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
         UtilsForKernel_39FFB756(0); // 0x00002634
 
-        /* Save the register state (VFPU/FPU/CP0/MIPS GPR). */
+        /* 
+         * Save the current execution context. We will call its counterpart (sceSuspendForKernel_B2C9640B())
+         * in _scePowerResumePoint() to return back here when the PSP is resuming. sceSuspendForKernel_B2C9640B()
+         * allows us to set the result value of sceSuspendForKernel_67B59042() so we can use that return value
+         * to differentiate between when we should proceed to suspend the system and when we should resume the system.
+         * 
+         * Calling sceSuspendForKernel_67B59042() directly gives us a return value of 0 , so we will suspend the system
+         * during the suspend operation.
+         */
         status = sceSuspendForKernel_67B59042(0); // 0x0000263C
         if (status != 0) // 0x00002644
         {
-            // loc_00002554
+            /* A status != 0 indicates that we should proceed to resume the system. */
             UtilsForKernel_39FFB756(cp0SReg24); // 0x00002554
         }
         else
@@ -1341,20 +1349,35 @@ static s32 _scePowerSuspendOperation(s32 mode)
     }
     else if ((suspendMode & POWER_SWITCH_SUSPEND_OP_MASK) == POWER_SWITCH_SUSPEND_OP_SUSPEND_TOUCH_AND_GO) // 0x00002188 & 0x000024D4 & 0x0000218C
     {
-        /* suspend touch and go. */
+        /*
+         * Suspend "Touch and Go": We suspend the system just to immediately resume it again without the PSP user
+         * actually having to turn on the PSP again (for example via the POWER switch).
+         */
 
         int cp0StateR24 = UtilsForKernel_A6B0A6B8(); // 0x00002530 -- Get CP0 Status Register 24
+
         UtilsForKernel_39FFB756(0); // 0x0000253C
 
-        /* Save the register state (VFPU/FPU/CP0/MIPS GPR). */
+        /* Save the current execution context so we can return to it later. */
         status = sceSuspendForKernel_67B59042(0); // 0x00002544
-
-        if (status != SCE_ERROR_OK) // 0x0000254C
+        if (status != 0) // 0x0000254C
         {
+            /*
+             * Proceed with resuming the system. We enter this block when loading the saved execution context
+             * from above by calling sceSuspendForKernel_B2C9640B(1) just below in the else part.
+             */
+
             UtilsForKernel_39FFB756(cp0StateR24); // 0x00002554
         }
         else
         {
+            /* 
+             * "Simulate" the power service entering its resume entry point after turned on by the user again.
+             * Since we automatically resume immediately we will run this logic directly after the power service
+             * has directed the rest of the system to be suspended. We are not calling SYSCON to actually suspend
+             * the device for real.
+             */
+
             memset(&g_Resume.resumePowerState, 0, sizeof g_Resume.resumePowerState); // 0x00002568
 
             g_Resume.resumePowerState.resumeClock = pspClock; // 0x00002580
@@ -1362,7 +1385,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
             g_Resume.resumePowerState.unk4 = 0; // 0x00002590
             g_Resume.resumePowerState.unk8 = 0; // 0x00002598
 
-            /* Copy back the saved hardware-reset-vector content. */
+            /* Write back the saved hardware-reset-vector content. */
 
             if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x00002574 & 0x0000257C
             {
@@ -1380,11 +1403,13 @@ static s32 _scePowerSuspendOperation(s32 mode)
                 __builtin_memcpy((void *)HW_RESET_VECTOR, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
             }
 
-            // loc_000027F4
-
+            /* Increase the resume counter. */
             g_PowerSwitch.resumeCount++;  // 0x000027F8 & 0x00002808
 
-            /* Load the previously saved register state (VFPU/FPU/CP0/MIPS GPR). */
+            /*
+             * Load the previously saved execution context and resume from there. Passing 1 as the argument
+             * allows us to differentiate between the need to suspen
+             */
             sceSuspendForKernel_B2C9640B(1); // 0x00002804
 
             // TODO: Write comment
@@ -1486,8 +1511,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
     _scePowerFreqResume(1); // 0x00002298
 
     /* 
-     * We no longer need to store the volatime memory in the RAM area reserved for it on suspension.
-     * Relinquish exlusive control now so that user applications can get access to it (one at a time).
+     * We no longer need to store the volatile memory in the RAM area reserved for it on suspension.
+     * Relinquish exclusive control now so that user applications can get access to it (one at a time).
      */
     scePowerVolatileMemUnlock(SCE_KERNEL_VOLATILE_MEM_DEFAULT); // 0x000022A4
 
@@ -1603,6 +1628,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
 }
 
 //0x0000280C
+/*
+ * This function is power's entry point when the PSP resumes from a previous suspension. It writes back
+ * the hardware-reset-vector content which we've saved in the suspension operation earlier. After that,
+ * it loads the execution context saved right before we've asked SYSCON to suspend the device and resumes
+ * execution 
+ */
 static void _scePowerResumePoint(void *pData)
 {
     if (pData != NULL) // 0x00002810
@@ -1635,7 +1666,10 @@ static void _scePowerResumePoint(void *pData)
 
     // loc_00002868
 
-    /* Copy some hardware data first */
+    /*
+     * Save some hardware-reset-vector content data first before we write back our hardware-reset-vector
+     * copy created when the PSP is suspending.
+     */
 
     // 0x00002878 - 0x000028B0
     s32 hwData1 = HW(0xBFC00512);
@@ -1680,19 +1714,11 @@ static void _scePowerResumePoint(void *pData)
         __builtin_memcpy((void *)HW_RESET_VECTOR, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
     }
 
-     // loc_0000295C
-
+    /* Increase the resume counter. */
     g_PowerSwitch.resumeCount++; // 0x00002960 & 0x00002974
 
     /*
-     * Write back the VFPU's, FPU's and COP's control and status registers from the Sysmem internal
-     * memory block.
-     */
-
-    // TODO: Try writing it in inline ASM for register $at use.
-
-    /*
-     * Write back the previously saved hardware data. 
+     * Write back the previously saved hardware-reset-vector content. 
      * 
      * uofw note: The original ASM uses the $at register which indicates these store operations
      * were written by hand. While not quite clear if using a base register other than $at would pose
@@ -1721,9 +1747,12 @@ static void _scePowerResumePoint(void *pData)
         :: "r" (hwData1), "r" (hwData2), "r" (hwData3), "r" (hwData4), "r" (hwData5), 
         "r" (hwData6), "r" (hwData7), "r" (hwData8));
 
-    // TODO: Add detailed comment. 
-
-    /* Load the register state (VFPU/FPU/CP0/MIPS GPR). We do not return here. */
+    /*
+     * Load the previously saved execution context and continue from there. Setting 1 as the argument changes
+     * the received result from sceSuspendForKernel_67B59042() (which was used to save the execution context
+     * previously) from zero to non-zero (1) and we use it to differentiate between having to suspend the system
+     * and having to resume the system in _scePowerSuspendOperation().
+     */
     sceSuspendForKernel_B2C9640B(1); // 0x0000296C 
 
     for (;;);
