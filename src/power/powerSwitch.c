@@ -112,7 +112,7 @@ static s32 _scePowerLock(s32 lockType, s32 isUserLock);
 static s32 _scePowerUnlock(s32 lockType, s32 isUserLock);
 static s32 _scePowerOffThread(SceSize args, void* argp);
 static s32 _scePowerSuspendOperation(s32 mode);
-static void _scePowerResumePoint(void *pData);
+static void _scePowerResumePoint(void *pData) __attribute__((noreturn));
 static s32 _scePowerOffCommon(void);
 static void _scePowerPowerSwCallback(s32 enable, void* argp);
 static void _scePowerHoldSwCallback(s32 enable, void* argp);
@@ -1387,14 +1387,8 @@ static s32 _scePowerSuspendOperation(s32 mode)
             /* Load the previously saved register state (VFPU/FPU/CP0/MIPS GPR). */
             sceSuspendForKernel_B2C9640B(1); // 0x00002804
 
-            // TODO: In the ASM, an inlined _scePowerResumePoint() directly follows
-            // the call of sceSuspendForKernel_B2C9640B(). We very likely don't call the function
-            // below...
-            // If power module is working in tests we should confirm that removing this code below
-            // can be done safely.
-            s32 a0;
-            asm("move %0, $a0" : "=r" (a0));
-            _scePowerResumePoint((void *)a0); // 0x0000280C
+            // TODO: Write comment
+            for (;;);
         }
     }
     else if ((suspendMode & POWER_SWITCH_SUSPEND_OP_MASK) == POWER_SWITCH_SUSPEND_OP_COLD_RESET) // 0x00002188 & 0x000024DC
@@ -1472,12 +1466,11 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     sceDdr_driver_E0A39D3E(g_Resume.unk20484); // 0x00002214 & 0x0000221C
 
-    // possible loop ahead
     sysEventResumePlayload.pResumePowerState = &g_Resume.resumePowerState; // 0x00002248
 
     // TODO: Could [unk16] be the duration the PSP system had been suspended?
     // TODO: 0.5 seconds operand (explanation)
-    sysEventResumePlayload.unk16 = ((u32)(g_Resume.resumePowerState.resumeClock - pspClock)) * 500000; // 0x00002224 & 0x00002234 & 0x00002238 & 0x00002260 & 0x00002264
+    sysEventResumePlayload.unk16 = ((u64)(g_Resume.resumePowerState.resumeClock - pspClock)) * 500000; // 0x00002224 & 0x00002234 & 0x00002238 & 0x00002260 & 0x00002264
     sysEventResumePlayload.systemTimePreSuspendOp = sysEventSuspendPayload.systemTimePreSuspendOp; // 0x00002258 & 0x0000225C & 0x00002240 & 0x0000223C
 
     // 0x00002268 - 0x00002294
@@ -1507,7 +1500,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
         | POWER_SWITCH_EVENT_REQUEST_STANDBY | POWER_SWITCH_EVENT_REQUEST_SUSPEND
         | POWER_SWITCH_EVENT_REQUEST_SUSPEND_TOUCH_AND_GO | POWER_SWITCH_EVENT_REQUEST_COLD_RESET
         | POWER_SWITCH_EVENT_POWER_SWITCH_ACTIVE | POWER_SWITCH_EVENT_POWER_SWITCH_INACTIVE;
-    sceKernelClearEventFlag(g_PowerSwitch.eventId, clearPowerSwitchFlags); // 0x000022B0
+    sceKernelClearEventFlag(g_PowerSwitch.eventId, ~clearPowerSwitchFlags); // 0x000022B0
 
     /* Send callbacks through the system notifying subscribers that we are resuming the system. */
     _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_SUSPENDING, SCE_POWER_CALLBACKARG_RESUMING, 0); // 0x000022C0
@@ -1696,6 +1689,8 @@ static void _scePowerResumePoint(void *pData)
      * memory block.
      */
 
+    // TODO: Try writing it in inline ASM for register $at use.
+
     // 0x00002964 - 0x000029AC
     HW(0xBFC00512) = hwData1;
     HW(0xBFC00516) = hwData2;
@@ -1706,9 +1701,10 @@ static void _scePowerResumePoint(void *pData)
     HW(0xBFC00536) = hwData7;
     HW(0xBFC00540) = hwData8;
 
-    // Note: We very likely won't return here as otherwise no jr $ra exists to execute and 
-    // _scePowerOffCommon() would be executed following this call.
+    /* Load the register state (VFPU/FPU/CP0/MIPS GPR). We do not return here. */
     sceSuspendForKernel_B2C9640B(1); // 0x0000296C 
+
+    for (;;);
 }
 
 //sub_000029B8
