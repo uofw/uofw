@@ -360,11 +360,16 @@ s32 scePowerIdleTimerDisable(s32 slot)
 
     prevIdleTimerStatus = g_PowerIdle.idleTimerStatus; // 0x000034F8
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshift-negative-value"
+
     /*
      * We disable all registered idle timers in range [0..slot]. This differs with the
      * scePowerIdleTimerEnable() implementation which only enables the specified idle timer.
      */
     g_PowerIdle.idleTimerStatus &= (~0x1 << slot); // 0x000034FC - 0x00003508
+
+#pragma GCC diagnostic pop
 
     sceKernelCpuResumeIntr(intrState); // 0x00003514
 

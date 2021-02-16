@@ -1901,9 +1901,14 @@ s32 scePowerIsSuspendRequired(void)
 
     pspSetK1(oldK1);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
     // uofw note: if g_Battery.batteryType is neither 0 or 1, isSuspendRequired is unitialized.
     // Normally, it should only be set to either 0 or 1 though.
     return isSuspendRequired;
+
+#pragma GCC diagnostic pop
 }
 
 // Subroutine scePower_94F5A53F - Address 0x000058DC - Aliases: scePower_driver_41ADFF48
@@ -1922,11 +1927,6 @@ s32 scePowerGetBatteryRemainCapacity(void)
     return g_Battery.batteryRemainingCapacity; // 0x00005904
 }
 
-// TODO: This should be included inside the function below (tight exclusion) but I (Felix-Dev) need to
-// upgrade my PSPSDK on Windows first...
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuninitialized"
-
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
 s32 scePowerGetBatteryLifeTime(void)
 {
@@ -1941,10 +1941,15 @@ s32 scePowerGetBatteryLifeTime(void)
 
     if (g_Battery.batteryType != SCE_POWER_BATTERY_TYPE_BATTERY_STATE_MONITORING_SUPPORTED) // 0x0000593C
     {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
         // uofw note: Yes, Sony is returning an unitialized local variable here
         // Presumably status should have been set to SCE_ERROR_NOT_SUPPORTED before 
         // returning here.
         return status;
+
+#pragma GCC diagnostic pop
     }
 
     /* Get the remaining battery capacity. */
@@ -1992,8 +1997,6 @@ s32 scePowerGetBatteryLifeTime(void)
 
     return 0; /* Remaining battery lifetime cannot be estimated. */
 }
-
-#pragma GCC diagnostic pop
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
 s32 scePowerGetBatteryTemp(void)
