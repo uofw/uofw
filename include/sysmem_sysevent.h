@@ -89,7 +89,7 @@ enum SceSysEventTypes {
 #define SCE_SYSTEM_RESUME_EVENT_PHASE1_1            0x00100001
 #define SCE_SYSTEM_RESUME_EVENT_PHASE1_2            0x00100002 /* Cancel request can be sent. */
 
-#define SCE_SYSTEN_RESUME_EVENT_COMPLETED           0x00400000  
+#define SCE_SYSTEM_RESUME_EVENT_COMPLETED           0x00400000  
 
 /* PSP clock frequency change events */
 

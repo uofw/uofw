@@ -1198,7 +1198,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     sceKernelDcacheWritebackAll(); // 0x00001F8C
 
     u8 scratchPadData[8]; // sp + 256;
-    u8 sha1Digest[SCE_KERNEL_UTILS_SHA1_DIGEST_SIZE]; // sp + 272
+    u8 sha1Digest[SCE_KERNEL_UTILS_SHA1_DIGEST_SIZE] __attribute__((aligned(16))); // sp + 272
     sceSysconReadScratchPad(0x10, scratchPadData, sizeof scratchPadData);  // 0x00001FA0
 
     scratchPadData[5] = 0; // 0x00001FB8
@@ -1221,7 +1221,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     unk332 = (((u32)&sysEventSuspendPayloadResumeData) | 0x1) ^ digestXor; // 0x00002044 & 0x00002024 & 0x00002018
 
     /* Write back to scratchpad. */
-    sceSysconWriteScratchPad(12, &unk332, sizeof unk332); // 0x00002040
+    sceSysconWriteScratchPad(0xC, &unk332, sizeof unk332); // 0x00002040
 
     s32 pllOutSelect = sceSysregPllGetOutSelect(); // 0x00002048
     g_Resume.pllOutSelect = pllOutSelect; // 0x00002054
@@ -1616,7 +1616,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
      * All system components have finished resuming themselved. We will now report to the system
      * that the resume process has been completed.
      */
-    status = sceKernelSysEventDispatch(SCE_RESUME_EVENTS, SCE_SYSTEN_RESUME_EVENT_COMPLETED, "completed",
+    status = sceKernelSysEventDispatch(SCE_RESUME_EVENTS, SCE_SYSTEM_RESUME_EVENT_COMPLETED, "completed",
         &sysEventResumePlayload, NULL, SCE_FALSE, NULL);  // 0x0000241C
 
     /* 
