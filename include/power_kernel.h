@@ -1444,7 +1444,7 @@ s32 scePowerGetIdleTimer(s32 slot, u64 *pCurEllapsedTime, u64 *pCurDueTime);
  *
  * @param slot The callback registration slot. Specify value in range of 0 to 7.
  * @param attr The callback attributes. One or more of ::ScePowerIdleTimerCallbackAttr.
- * @param dueTime The amount of (idle) time to pass until the callback is invoked.
+ * @param dueTime The amount of (idle) time to pass until the callback is invoked. In microseconds.
  * @param callback Pointer to the callback function. Specify [null] if you want to unregister an idle timer
  * callback.
  * @param common Argument to be passed to the callback function.
@@ -1455,7 +1455,7 @@ s32 scePowerGetIdleTimer(s32 slot, u64 *pCurEllapsedTime, u64 *pCurDueTime);
  * when a timer, which had previously reached its due time, has been resetted by calling ::scePowerTick(), the
  * system invokes its callback. However, the ellapsedTime argument of the callback will be set to 0 in this case
  * so you can differentiate between this case and when the callback is invoked due to idle timer reaching its
- * its due time (where the ellapsedTime argument is set to a value greater than 0).
+ * due time (where the ellapsedTime argument is set to a value greater than 0).
  * 
  * @see ::scePowerGetIdleTimer()
  */
@@ -1470,7 +1470,7 @@ s32 scePowerSetIdleCallback(s32 slot, u32 attr, u64 dueTime, ScePowerIdleTimerCa
  * 
  * @param slot The callback registration slot. Specify value in range of 0 to 7.
  * 
- * @return The previous enabled state of the idle timer callback on success, otherwise < 0.
+ * @return The previous enabled state of the idle timer on success, otherwise < 0.
  * 
  * @see ::scePowerIdleTimerDisable()
  */
@@ -1489,7 +1489,7 @@ s32 scePowerIdleTimerEnable(s32 slot);
  *
  * @param slot The callback registration slot. Specify value in range of 0 to 7.
  *
- * @return The previous enabled state of the idle timer callback on success, otherwise < 0.
+ * @return The previous enabled state of the idle timer on success, otherwise < 0.
  * 
  * @see ::scePowerIdleTimerEnable()
  */

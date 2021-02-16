@@ -992,7 +992,7 @@ s32 scePowerGetIdleTimer(s32 slot, u64 *pCurEllapsedTime, u64 *pCurDueTime);
  *
  * @param slot The callback registration slot. Specify value in range of 0 to 7.
  *
- * @return The previous enabled state of the idle timer callback on success, otherwise < 0.
+ * @return The previous enabled state of the idle timer on success, otherwise < 0.
  *
  * @see ::scePowerIdleTimerDisable()
  */
@@ -1011,7 +1011,7 @@ s32 scePowerIdleTimerEnable(s32 slot);
  *
  * @param slot The callback registration slot. Specify value in range of 0 to 7.
  *
- * @return The previous enabled state of the idle timer callback on success, otherwise < 0.
+ * @return The previous enabled state of the idle timer on success, otherwise < 0.
  *
  * @see ::scePowerIdleTimerEnable()
  */
