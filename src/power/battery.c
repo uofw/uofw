@@ -1943,6 +1943,7 @@ s32 scePowerGetBatteryLifeTime(void)
     {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 
         // uofw note: Yes, Sony is returning an unitialized local variable here
         // Presumably status should have been set to SCE_ERROR_NOT_SUPPORTED before 
