@@ -1199,7 +1199,7 @@ s32 _scePowerModuleStart(SceSize argSize, const void *argBlock)
          
     scePowerInit(); // 0x00000EC8
 
-    return SCE_ERROR_OK;
+    return SCE_KERNEL_RESIDENT;
 }
 
 //Subroutine syslib_ADF12745 - Address 0x00000EE4
