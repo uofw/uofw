@@ -1927,6 +1927,8 @@ s32 scePowerGetBatteryRemainCapacity(void)
     return g_Battery.batteryRemainingCapacity; // 0x00005904
 }
 
+#pragma GCC diagnostic ignored "-Wuninitialized"
+
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
 s32 scePowerGetBatteryLifeTime(void)
 {
@@ -1943,7 +1945,6 @@ s32 scePowerGetBatteryLifeTime(void)
     {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#pragma GCC diagnostic ignored "-Wuninitialized"
 
         // uofw note: Yes, Sony is returning an unitialized local variable here
         // Presumably status should have been set to SCE_ERROR_NOT_SUPPORTED before 
@@ -1998,6 +1999,8 @@ s32 scePowerGetBatteryLifeTime(void)
 
     return 0; /* Remaining battery lifetime cannot be estimated. */
 }
+
+#pragma GCC diagnostic pop
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
 s32 scePowerGetBatteryTemp(void)
