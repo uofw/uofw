@@ -1286,18 +1286,17 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     // loc_0000213C
 
+    /* Set copied content from 0xBFC00200 - 0xBFC0021F to 0. */
+
     // 0x00002140 - 0x00002164
-    //
-    // TODO: We should perhaps replace this with an inlined memset
-    u32 *powersvcHRVClearArea = (u32 *)&g_Resume.hwResetVector[0x200];
-    powersvcHRVClearArea[0] = 0;
-    powersvcHRVClearArea[1] = 0;
-    powersvcHRVClearArea[2] = 0;
-    powersvcHRVClearArea[3] = 0;
-    powersvcHRVClearArea[4] = 0;
-    powersvcHRVClearArea[5] = 0;
-    powersvcHRVClearArea[6] = 0;
-    powersvcHRVClearArea[7] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x200] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x204] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x208] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x20C] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x210] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x214] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x218] = 0;
+    *(u32 *)&g_Resume.hwResetVector[0x21C] = 0;
 
     sceKernelDispatchSuspendHandlers(0); // 0x00002160 & 0x00002144
 
@@ -1673,14 +1672,14 @@ static void _scePowerResumePoint(void *pData)
      */
 
     // 0x00002878 - 0x000028B0
-    s32 hwData1 = HW(0xBFC00512);
-    s32 hwData2 = HW(0xBFC00516);
-    s32 hwData3 = HW(0xBFC00520);
-    s32 hwData4 = HW(0xBFC00524);
-    s32 hwData5 = HW(0xBFC00528);
-    s32 hwData6 = HW(0xBFC00532);
-    s32 hwData7 = HW(0xBFC00536);
-    s32 hwData8 = HW(0xBFC00540);
+    s32 hwData1 = HW(0xBFC00200);
+    s32 hwData2 = HW(0xBFC00204);
+    s32 hwData3 = HW(0xBFC00208);
+    s32 hwData4 = HW(0xBFC0020C);
+    s32 hwData5 = HW(0xBFC00210);
+    s32 hwData6 = HW(0xBFC00214);
+    s32 hwData7 = HW(0xBFC00218);
+    s32 hwData8 = HW(0xBFC0021C);
 
 
     /* Write back the saved hardware-reset-vector. */
@@ -1729,21 +1728,21 @@ static void _scePowerResumePoint(void *pData)
     // 0x00002964 - 0x000029AC
     __asm__(".set noat\n"
         "lui $at, 0xBFC0;"
-        "sw %0, 512($at);"
+        "sw %0, 0x200($at);"
         "lui $at, 0xBFC0;"
-        "sw %1, 516($at);"
+        "sw %1, 0x204($at);"
         "lui $at, 0xBFC0;"
-        "sw %2, 520($at);"
+        "sw %2, 0x208($at);"
         "lui $at, 0xBFC0;"
-        "sw %3, 524($at);"
+        "sw %3, 0x20C($at);"
         "lui $at, 0xBFC0;"
-        "sw %4, 528($at);"
+        "sw %4, 0x210($at);"
         "lui $at, 0xBFC0;"
-        "sw %5, 532($at);"
+        "sw %5, 0x214($at);"
         "lui $at, 0xBFC0;"
-        "sw %6, 536($at);"
+        "sw %6, 0x218($at);"
         "lui $at, 0xBFC0;"
-        "sw %7, 540($at);"
+        "sw %7, 0x21C($at);"
         ".set at\n"
         :: "r" (hwData1), "r" (hwData2), "r" (hwData3), "r" (hwData4), "r" (hwData5), 
         "r" (hwData6), "r" (hwData7), "r" (hwData8));
