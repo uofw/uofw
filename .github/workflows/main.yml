@@ -10,7 +10,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install doxygen
-          wget http://www.mirari.fr/VmX0 -O psptoolchain.deb
+          wget https://github.com/uofw/artifacts/releases/download/psp-toolchain-02-2021/psptoolchain.deb -O psptoolchain.deb
           sudo dpkg --install psptoolchain.deb
       - name: Build project
         run: |
