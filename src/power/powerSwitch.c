@@ -2,6 +2,65 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uofw/src/power/powerSwitch.c
+ *
+ * This file implements power service's [power state switch management] feature area. This feature area consists
+ * of public APIs to generate power state switch requests and prevent power state switching. In addition, this
+ * file contains the implementation driving the PSP system's suspend & resume feature.
+ * 
+ * The PSP system has the following power states and power state transitions:
+ * 
+ * 1) Power On
+ * 
+ *  If the user slides the POWER switch when the power is off, power on (cold boot) processing is performed.
+ * 
+ * 2) Standby
+ * 
+ *  If the user slides the POWER switch and holds it for at least two seconds when the power is on, the PSP
+ *  system enters standby state and power-off processing is performed. The PSP system can also be requested to
+ *  enter the standby state by calling an API.
+ * 
+ * 3) Suspend
+ *  
+ *  If the user slides the POWER switch and holds it for less than two seconds while the PSP system is in
+ *  power-on state, power-off processing is performed. The PSP system can also be requested to enter the suspend
+ *  state by calling an API. For example, when the battery capacity is critically low, the "Impose" kernel
+ *  component generates a suspend request. When the battery runs out while the system in in standby state, the
+ *  PSP system will then enter standby state and a cold boot is performed the next time the PSP is turned on
+ *  manually.
+ * 
+ * 4) Resume
+ * 
+ *  If the user slides the POWER switch while the PSP system is in suspend state, resume processing is performed.
+ *  The PSP system can also be requested to resume after a specific amount of time using the sceRtcSetAlarmTick()
+ *  API (provided by the RTC service).
+ * 
+ * The power service handles requests to transition between power states. It notifies the rest of the system when
+ * a power state transition is occuring so that each kernel component can perform its own suspend/standby/resume
+ * processing.
+ * 
+ * In order for the power service to resume the PSP system, it writes the necessary information (such as power's
+ * resume entry point) to the PSP's scratchpad where it can be read by controller firmwares (such as SYSCON)
+ * to jump into power's resume entry point when the system is resumed. From there, the rest of the kernel and
+ * the previously suspended application will be resumed.
+ * 
+ * To prevent power state transitions from occuring, the power service provides APIs which lock and unlock the
+ * current power state. These APIs are useful if power-critical operations need to be performed - such as writing
+ * data to the equipped memory stick - where a loss of power during the operation needs to be avoided.
+ * 
+ * Last but not least, the power service provides APIs for an application to obtain exclusive usage rights for 4MB
+ * of RAM normally reserved for the PSP kernel. The PSP system has 32MB RAM (64MB RAM starting with the PSP-2000
+ * series) of which 24MB are available to applications, with the remaining 8MB reserved for the kernel. However,
+ * 4MB out of those 8MB are primarily used by the kernel when the PSP system is suspended. This memory block is
+ * used to contain a copy of the on-board eDRAM content as the 4MB eDRAM memory is volatile when the system is
+ * suspended. When the PSP resumes, this saved content is then written back to the on-board eDRAM. 
+ * As such, while the PSP is running and not suspended, an application can obtain exclusive usage rights to these
+ * 4MB of RAM to use as desired. However, since the kernel needs this memory block for the PSP system to properly
+ * suspend & resume, an application has to relinquish its usage rights when the PSP is initiating a suspend
+ * operation. The suspend operation cannot be completed until the application has done so.
+ */
+
 #include <common_imp.h>
 #include <ctrl.h>
 #include <display.h>
@@ -45,8 +104,7 @@
 #define POWER_SWITCH_STANDBY_REQUEST_HOLD_PERIOD            (2 * 1000 * 1000)
 
 /** Defines programmatically generated power switch requests. */
-typedef enum
-{
+typedef enum {
     SOFTWARE_POWER_SWITCH_REQUEST_NONE = 0,
     SOFTWARE_POWER_SWITCH_REQUEST_STANDBY,
     SOFTWARE_POWER_SWITCH_REQUEST_SUSPEND,
@@ -81,10 +139,21 @@ typedef struct
     u32 resumeCount; // 64
 } ScePowerSwitch; //size: 68
 
-typedef struct
-{
+typedef struct {
+    /* 
+     * Contains a copy of the PSP's scratchpad created when the system is suspending and is written back
+     * to the scratchpad when the system is resuming.
+     */
     u8 scratchpad[SCE_SCRATCHPAD_SIZE]; // 0 
+    /*
+     * Contains a copy of the PSP's hardware-reset-vector (0xBFC00000 - 0xBFD00000) created when the system is
+     * suspending and is written back to the hardware-reset-vector when the system is resuming.
+     */
     u8 hwResetVector[HW_RESET_VECTOR_SIZE]; // 0x4000
+    /*
+     * The PLL clock freqeuncy setting to apply when the PSP is resuming. Represents the PLL clock freqeuncy
+     * at the time the PSP system is suspending.
+     */
     s32 pllOutSelect; // 20480 (0x5000)
     s32 unk20484; // 20484 (0x5004)
     SceSysEventResumePowerState resumePowerState; // 20488 (0x5008) - 20696
@@ -736,6 +805,10 @@ static s32 _scePowerOffThread(SceSize args, void* argp)
 #define POWER_SUSPEND_OPERATION_BLOCKED_TRIES_PRINT_ERROR_THRESHOLD     500
 
 //sub_00001AE8
+/*
+ * Suspends the PSP system as well as resumes the system. The rest of the system is notified of these operations
+ * so they can perform their own specific suspend/standby/resume processing.
+ */
 static s32 _scePowerSuspendOperation(s32 mode)
 {
     SceSysEventSuspendPayload sysEventSuspendPayload; // $sp
@@ -751,7 +824,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     SceUID busyPowerCallbackId; // sp + 328
     
-    u32 unk332; // sp + 332
+    u32 secureResumeDataBaseAddr; // sp + 332
 
     s32 resumePhase1SysEventResult; // sp + 336
     SceSysEventHandler *pResumePhase1SysEventHandler; // sp + 340
@@ -1197,6 +1270,16 @@ static s32 _scePowerSuspendOperation(s32 mode)
     /* Write back the entire contents of the D-cache to RAM (dirty cache lines only). */
     sceKernelDcacheWritebackAll(); // 0x00001F8C
 
+    /* 
+     * Set up power's resume entry point and make it available to hardware controllers
+     * (i.e. SYSCON) so that the PSP can actually resume again. The memory address of the resume payload which
+     * holds power's resume point is written to the scratchpad and thus made accessible to other system
+     * controllers.
+     * 
+     * Before writing the address of the resume payload to the scratchpad, however, it is additionally 
+     * secured/obfuscated by xoring it with a SHA1 hash influenced by the fuse ID - a value unique to each PSP device.
+     */
+
     u8 scratchPadData[8]; // sp + 256;
     u8 sha1Digest[SCE_KERNEL_UTILS_SHA1_DIGEST_SIZE] __attribute__((aligned(16))); // sp + 272
     sceSysconReadScratchPad(0x10, scratchPadData, sizeof scratchPadData);  // 0x00001FA0
@@ -1218,10 +1301,10 @@ static s32 _scePowerSuspendOperation(s32 mode)
     /* Set power's entry point on resume. */
     sysEventSuspendPayloadResumeData.resumePointFunc = _scePowerResumePoint; // 0x00002038
 
-    unk332 = (((u32)&sysEventSuspendPayloadResumeData) | 0x1) ^ digestXor; // 0x00002044 & 0x00002024 & 0x00002018
+    secureResumeDataBaseAddr = (((u32)&sysEventSuspendPayloadResumeData) | 0x1) ^ digestXor; // 0x00002044 & 0x00002024 & 0x00002018
 
-    /* Write back to scratchpad. */
-    sceSysconWriteScratchPad(0xC, &unk332, sizeof unk332); // 0x00002040
+    /* Write the back to scratchpad. */
+    sceSysconWriteScratchPad(0xC, &secureResumeDataBaseAddr, sizeof secureResumeDataBaseAddr); // 0x00002040
 
     s32 pllOutSelect = sceSysregPllGetOutSelect(); // 0x00002048
     g_Resume.pllOutSelect = pllOutSelect; // 0x00002054

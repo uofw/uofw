@@ -2,6 +2,60 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uofw/src/power/clockFrequency.c
+ *
+ * Power service's feature area to control the operating speed of the PSP device is implemented in this file.
+ * It provides public APIs to set the frequencies for the PLL clock, the CPU clock and the bus clock of the
+ * PSP system.
+ * 
+ * • PLL clock
+ *   The following hardware components operate with the PLL clock:
+ *      - DDR memory
+ * 
+ *   In addition, the PLL clock frequency controls the maximumum allowed frequencies for both the CPU and bus clock.
+ *   The PLL only operates at a fixed set of frequencies, so even though the APIs in question allow a broad range of
+ *   frequencies to be set for the PLL clock, in reality, the PLL clock will only run at the following frequencies:
+ *   
+ *     19MHz, 37MHz, 74MHz, 96MHz, 111MHz, 133MHz, 148MHZ, 166MHz, 190MHz, 222MHz, 266MHz and 333MHz
+ * 
+ *   Note that in later firmware versions, the frequencies 19MHz and 148MHz appear to be no longer available.
+ * 
+ *   The actual PLL clock frequency change is not done by the power service itself but instead by the "lowio" kernel
+ *   component. The power service just tells lowio which one of the fixed PLL clock frequencies now represents
+ *   the current PLL clock frequency and "lowio" then proceeds to actually change the clock frequency.
+ * 
+ * • CPU clock
+ *   The following hardware components operate with the CPU clock:
+ *      - Integer pipeline
+ *      - FPU pipeline
+ *      - VFPU pipeline
+ *      - I-cache and D-cache
+ * 
+ *   The CPU clock frequency can be set to a frequency in range [1MHz, 333MHz]. However, as noted above, the
+ *   PLL clock frequency contols the maximum allowed CPU clock frequency. Specifically, the CPU cannot be set
+ *   to operate at a higher clock frequency than the PLL clock frequency.
+ * 
+ * • Bus clock
+ *   The following hardware components operate with the bus clock:
+ *      - VFPU write buffer
+ *      - Scratchpad memory
+ *      - Graphic Engine and the Graphic Engine's eDRAM
+ *      - DMA transfers for general-purpose memory copying
+ *      - DMA transfers for the Memory Stic, WLAN, USB, LCD, or audio
+ *      - DMA transfers for transfers to the MediaEngine
+ * 
+ *   As noted above, the PLL clock frequency controls the maximum allowed bus clock frequency. Specifically,
+ *   the bus is set to always operate at 1/2 of the current PLL clock frequency. Given a maximum allowed frequency
+ *   of 333MHz for the PLL clock, the maximum allowed clock frequency for the bus is thus 166MHz.
+ * 
+ *   While an API exists to individually set the bus clock frequency, note that this API overwrites the specified
+ *   frequency and automatically sets the bus to operate at 1/2 of the PLL clock frequency.
+ * 
+ * In addition to the above APIs, this feature area also provides APIs to obtain and set the voltages for TACHYON
+ * (the PSP system's main CPU SoC IC) and the DDR memory component, as well as the "strength" of the DDR memory.
+ */
+
 #include <common_imp.h>
 #include <display.h>
 #include <ge.h>

@@ -2,6 +2,29 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uofw/src/power/idleTimer.c
+ *
+ * Power service's [idleTimer] feature area is implemented in this file. It provides APIs which can be used
+ * to register an idle timer callback and to reset an idle timer count. The term "idle timer" in the scope of 
+ * power service alone is misleading - power service just obtains the current system time periodically (in the
+ * current implementation: every VBLANK interval) and compares it with the base time of a registered idle timer
+ * callback. In the power service itself, there is no concept of whether the PSP is currently idle or not.
+ * The scePowerTick() API has to be used by other system components to create the illusion of an "idle timer".
+ * This API resets a registered idle timer callback count (you can imagine the timer counter being set to 0
+ * again).
+ * 
+ * For example, the controller service calls the scePowerTick() API whenever it registers a button state change
+ * (interpreted as user input) and thus constantly resets registered idle timer callback counters. Since a timer
+ * callback is only called by the power service when its internal counter has reached the specified due time,
+ * the controller service creates the illusion of an "idle timer" by constantly resetting a timer counter.
+ * 
+ * In the current implementation the power service thus works in tandem with other system components
+ * (such as the controller service or the "Impose" module) to implement automatic power saving features - such
+ * as dimming/turning off the PSP display or automatically suspending the system after a certain amount of idle
+ * time (no registered user input) has passed.
+ */
+
 #include <common_imp.h>
 #include <interruptman.h>
 #include <power_kernel.h>

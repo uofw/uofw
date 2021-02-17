@@ -2,6 +2,26 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uofw/src/power/battery.c
+ *
+ * This file implements the battery feature area of the power service. It provides public APIs to query the current
+ * power supply (is supplied by battery or AC) and battery state (remaining battery capacity, current temperature,
+ * voltage, charge cycle,...). Internally, we set up a worker thread which periodically polls the battery to update
+ * the collected battery properties.
+ * 
+ * Starting with the PSP N-1000 (PSP-Go) serie, the battery equipped by default no longer has hardware included to
+ * monitor the current battery state. In this case, the power service tries to estimate the current remaining battery
+ * capacity based on the current battery voltage.
+ * 
+ * The battery feature area also provides public APIs to control the charging policies of the PSP system. Battery
+ * charging can be allowed/disallowed and whether or not the battery can be charged over USB or not (if the PSP
+ * device has a USB charging capability).
+ * 
+ * Last but not least, battery.c also implements a public API to query whether or not the PSP system should be
+ * suspended due to critically low remaining battery capacity.
+ */
+
 #include <common_imp.h>
 #include <interruptman.h>
 #include <loadexec_kernel.h>

@@ -2,6 +2,68 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uofw/src/power/
+ *
+ * Power Service - Kernel component for power management
+ * 
+ * The power service is responsible for the following main features:
+ * 
+ * • Polling the battery and providing APIs to obtain battery information such as the remaining percentage
+ *   of battery life
+ * • Provide APIs to control how the PSP system's battery is charging
+ * • Provide APIs to turn on or off the WLAN component
+ * • Transition to suspend mode and resume from suspend mode
+ * • Transition to hibernation state and resume from hibernation state (only for PSP-N1000 (PSP Go) series systems
+ *   with internal flash memory) 
+ * • Tell the PSP system to enter standby mode when requested
+ * • Provide APIs to generate requests to switch the current PSP system's power state
+ * • Provide APIs to switch the dynamic operating clock frequency of the PSP system chip
+ * • Provide APIs to set up idle timer callbacks and manange idle timer counting
+ * 
+ * Please check each individual source file (such as battery.c) for more information on a specific feature area
+ * of the power service.
+ * 
+ * The power service is used by other kernel components in the following ways:
+ * 
+ * • The "Impose" module uses the idle timer callback APIs to implement the following power saving features:
+ *      - Automatically dim the screen after a certain amount of idle time has passed
+ *      - Automatically turn off the screen after a certain amount of idle time has passed
+ *      - Automatically suspend the PSP system after a certain amount of idle time has passed.
+ * 
+ * 
+ * • Multiple components like the controller service or memory-stick service reset idle timer counters to prevent
+ *   power saving features from starting when user interaction with the PSP system is registered.
+ * 
+ * • The "Impose" module polls the battery state and requests the power service to suspend the PSP system when
+ *   the currently remaining battery capacity is critically low and the system should force-suspend itself to save
+ *   the currently run application's state.
+ * 
+ * 
+ * Note that although the hibernation feature for PSP Go systems is listed above, uofw's current version of the power
+ * service does not have support for this feature and thus the PSP Go system.
+ * 
+ * Open questions:
+ * 
+ * • When the PSP battery enters the low battery state, the PSP system's power LED starts to flash repeatedly.
+ *   The question is which system component is responsible for flashing the LED? It's not the power service.
+ *   The low battery capacity is also known by SYSCON so this might be handled by it, though I haven't yet seen
+ *   logic in SYSCON causing the power LED to flash when in the low battery state.
+ *  
+ */
+
+/*
+ * uofw/src/power/power.c
+ *
+ * power.c is responsible for initializing the power service (by reading the PSP system's power
+ * configuration stored in the device's ID Storage) and listening to power state changes as reported by
+ * SYSCON to delegate them to power's specific feature areas for further processing. 
+ * 
+ * In addition, it provides public APIs to register callbacks with the power service to notify subscribers of power
+ * state changes (such as [battery has been equipped]). APIs to set activate/deactivate the WLAN component are
+ * also provided.
+ */
+
 #include <common_imp.h>
 #include <idstorage.h>
 #include <interruptman.h>
