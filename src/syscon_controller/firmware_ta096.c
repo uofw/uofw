@@ -198,9 +198,22 @@ void memcpy(void *pSrc, void *pDst, u16 n)
 }
 
 // sub_5039
-void memcmp()
+// A modified memcpy, where a return value of 0 means s1 == s2 and a value != 0 means s1 != s2.
+u8 memcmp(const void *s1, const void *s2, u16 n)
 {
+	u8 cmpResult = 0; // 0x5041
+	while (n-- != 0)
+	{
 
+		if (*(u8 *)(s1 - n) == *(u8 *)(s2 - n)) // 0x5065
+		{
+			continue;
+		}
+
+		cmpResult = -1; // 0x5069
+	}
+
+	return cmpResult;
 }
 
 // sub_5076
