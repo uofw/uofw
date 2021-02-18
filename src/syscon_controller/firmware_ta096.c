@@ -189,7 +189,7 @@ void response_handler()
 // TODO: more functions here...
 
 // sub_5011
-void memcpy()
+void memcpy(void *pSrc, void *pDst, u16 size)
 {
 
 }
@@ -207,9 +207,13 @@ void xorloop_0x10()
 }
 
 // sub_50A7
-void memset()
+void memset(void *s, int c, u16 n)
 {
-
+	// 0x50AC - 0x50BF
+	while (n-- != 0)
+	{
+		*(u8 *)(s + n) = (u8)c;
+	}
 }
 
 // TODO: more functions here...
