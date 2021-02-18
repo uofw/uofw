@@ -189,9 +189,12 @@ void response_handler()
 // TODO: more functions here...
 
 // sub_5011
-void memcpy(void *pSrc, void *pDst, u16 size)
+void memcpy(void *pSrc, void *pDst, u16 n)
 {
-
+	while (n-- != 0)
+	{
+		*(u8 *)(pDst + n) = *(u8 *)(pSrc + n);
+	}
 }
 
 // sub_5039
