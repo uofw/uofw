@@ -30,15 +30,44 @@
 
 const u32 g_baryonVersion = 0x00403000; // 0x010E
 
-char g_buildDate[] = "$Date:: 2011-05-09 20:45:25 +0900#$"; // 0x0112
+#define SYSCON_TIMESTAMP_DATE_PREFIX_LEN	8
+#define SYSCON_TIMESTAMP_LEN				12
 
-void (*g_ops[])(void); // TODO: Fill with function pointers once ready
+u8 g_buildDate[] = "$Date:: 2011-05-09 20:45:25 +0900#$"; // 0x0112
 
+void (*g_sysconCmdGetOps[])(void) = {
+	exec_syscon_cmd_nop,
+	exec_syscon_cmd_get_baryon_version,
+	exec_syscon_cmd_get_digital_key,
+	exec_syscon_cmd_get_analog,
+	exec_syscon_cmd_nop,
+	exec_syscon_cmd_get_tachyon_temp,
+	exec_syscon_cmd_get_digital_key_analog,
+	exec_syscon_cmd_get_kernel_digital_key,
+	exec_syscon_cmd_get_kernel_digital_key_analog,
+	exec_syscon_cmd_read_clock,
+	exec_syscon_cmd_read_alarm,
+	exec_syscon_cmd_get_power_supply_status,
+	exec_syscon_cmd_get_tachyon_wdt_status,
+	exec_syscon_cmd_get_batt_volt,
+	exec_syscon_cmd_get_wake_up_factor,
+	exec_syscon_cmd_get_wake_up_factor,
+	exec_syscon_cmd_get_wake_up_req,
+	exec_syscon_cmd_get_baryon_status_2,
+	exec_syscon_cmd_get_timestamp,
+	exec_syscon_cmd_get_video_cable
+}; // 0x008A -- SIO10 communication
+
+u16 g_wakeUpFactor; // 0xFC79
 u8 g_watchdogTimerStatus; // 0xFC80
 
 u8 g_ctrlAnalogDataX; // 0xFD16 
 u8 g_ctrlAnalogDataY; // 0xFD17
 
+/* Base value for the battery voltage on PSP series PSP-N1000 and PSP-E1000. */
+u8 g_battVoltBase; // 0xFD46
+
+u8 g_unkFE32; // 0xFE32
 u16 g_unkFE3A; // 0xFE34
 
 u32 g_clock; // 0xFE3C
@@ -47,7 +76,9 @@ u32 g_alarm; // 0xFE40
 u8 g_unkFE45; // 0xFE45
 u8 g_unkFE46; // 0xFE46
 
-u8 g_transmitData[8]; // 0xFE50 -- TODO: This could be a bigger size (up until size 0x14)
+u8 g_unkFE4E; // 0xFE4E
+
+u8 g_transmitData[12]; // 0xFE50 -- TODO: This could be a bigger size (up until size 0x13)
 
 u8 g_curSysconCmdId; // 0xFE6E
 u8 g_sysconCmdTransmitDataLength; // 0xFE71
@@ -56,10 +87,15 @@ u8 g_powerSupplyStatus; // 0xFE7A
 
 u8 g_unkFE98; // 0xFE98
 
+u8 g_baryonStatus2; // 0xFED2
+u8 g_unkFED3; // 0xFED3
+
 /* Special Function Registers (SFR) */
 
 #define GET_PORT_VAL(i)		*(u8 *)(0xFF00 + i)
 #define SET_PORT_VAL(i, v)	*(u8 *)(0xFF00 + i) = (v)
+
+#define GET_SIO10_VAL		*(u8 *)0xFF0F	/* Serial I/O shift register 10 */
 
 /* functions */
 
@@ -190,12 +226,15 @@ void poll_intrerfaces(void)
 }
 
 // sub_10AC
-void sub_10AC(void)
+/* Interrupt handler for serial interface CSI10. Called when a CSI10 communication has ended. */
+void INTCSI10(void)
 {
 
 }
 
 // TODO: More functions here
+
+/* SYSCON [get] commands */
 
 // sub_1921
 void exec_syscon_cmd_nop(void)
@@ -374,6 +413,94 @@ void exec_syscon_cmd_get_tachyon_wdt_status(void)
 
 	g_transmitData[0] = g_watchdogTimerStatus;
 }
+
+// sub_1A0D
+void exec_syscon_cmd_get_batt_volt(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 1;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_BATT_VOLT;
+
+	g_transmitData[0] = g_battVoltBase;
+}
+
+// sub_1A19
+void exec_syscon_cmd_get_wake_up_factor(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 2;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_WAKE_UP_FACTOR;
+
+	((u16 *)g_transmitData)[0] = g_wakeUpFactor;
+}
+
+// sub_1A2A
+void exec_syscon_cmd_get_wake_up_req(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 1;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_WAKE_UP_REQ;
+
+	/* This command appears to be retired now. */
+	g_transmitData[0] = -1;
+}
+
+// sub_1A34
+void exec_syscon_cmd_get_baryon_status_2(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 1;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_STATUS2;
+
+	g_transmitData[0] = g_baryonStatus2; // 0x1A3C
+
+	// Clear bits (TODO: probably some status bits)
+	g_unkFE32 &= ~0x20; // 1A3E
+	g_unkFED3 &= ~0x4; // 1A40
+}
+
+// sub_1A43
+void exec_syscon_cmd_get_timestamp(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + SYSCON_TIMESTAMP_LEN;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_TIMESTAMP;
+
+	/*
+	 * Obtain the timestamp from the build date. We only take the date and hour/minute of the day.
+	 * I.e. given a build date string "$Date:: 2011-05-09 20:45:25 +0900#$", we return the string
+	 * "201105092045".
+	 */
+
+	u8 i = 0;
+	u8 curDateIndex = SYSCON_TIMESTAMP_DATE_PREFIX_LEN;
+	while (i < SYSCON_TIMESTAMP_LEN) // 0x1A51
+	{
+		/* Check if we are looking at a numerical character. */
+		if (g_buildDate[curDateIndex] < '0' || g_buildDate[curDateIndex] > '9') // 0x1A53 - 0x1A6D 
+		{
+			/* Skip any non-numerical characters. */
+			curDateIndex++; // 0x1A83
+			continue;
+		}
+		
+		/* Save the numerical character in our transmit buffer. */
+		g_transmitData[i++] = g_buildDate[curDateIndex++];
+	}
+}
+
+// sub_1A88
+void exec_syscon_cmd_get_video_cable(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 1;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_VIDEO_CABLE;
+
+	/* No video cable support for TA-096. */
+	g_transmitData[0] = 0;
+}
+
+// sub_1A92
+void sub_1A92(void)
+{
+	g_unkFE4E = 0x84;
+}
+
+/* SYSCON [set] commands */
 
 // TODO: More functions here
 
