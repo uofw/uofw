@@ -4,10 +4,18 @@
 
 /*
  *
- *          SYSCON controller fimrware
+ *          SYSCON controller firmware
  *
- *       Renesas/NES 78K0 - model D78F0534
+ *       Renesas/NEC 78K0 - model D78F0534
  *
+ */
+
+/*
+ *
+ * Credits to:
+ *	- Proxima for the function names 
+ *	- [TODO] for dumping the SYSCON controller firmware 
+ * 
  */
 
 #include <common_imp.h>
@@ -198,7 +206,7 @@ void memcpy(void *pSrc, void *pDst, u16 n)
 }
 
 // sub_5039
-// A modified memcpy, where a return value of 0 means s1 == s2 and a value != 0 means s1 != s2.
+// A modified memcpy, where a return value of 0 means s1 == s2 and a return value of -1 means s1 != s2.
 u8 memcmp(const void *s1, const void *s2, u16 n)
 {
 	u8 cmpResult = 0; // 0x5041
@@ -217,9 +225,13 @@ u8 memcmp(const void *s1, const void *s2, u16 n)
 }
 
 // sub_5076
-void xorloop_0x10()
+// Pairwise XOR's the first 10 bytes of s1 with s2 and overwrites the first 10 bytes s2 with the resulting bytes
+void xorloop_0x10(void *s1, void *s2)
 {
-
+	for (int i = 0xF; i >= 0; i--)
+	{
+		*(u8 *)(s2 + i) ^= *(u8 *)(s1 + i); // 0x50A0
+	}
 }
 
 // sub_50A7
