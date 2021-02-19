@@ -13,20 +13,53 @@
 /*
  *
  * Credits to:
- *	- Proxima for the function names 
+ *	- Proxima for a set of function names 
  *	- [TODO] for dumping the SYSCON controller firmware 
  * 
  */
 
 #include <common_imp.h>
+#include <syscon.h>
 
-// 010E
-u32 g_BaryonVersion = 0x00403000;
+/*
+ * This constant specifies the base length of the data to be transmitted back to the SYSCON module.
+ * This base length represents the first three members in the ::SceSysconPacket.tx[16] data buffer, which
+ * are always sent back to the SYSCON module.
+ */
+#define SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH	3
 
-// 0112
-char g_BuildDate[] = "$Date:: 2011-05-09 20:45:25 +0900#$";
+const u32 g_baryonVersion = 0x00403000; // 0x010E
 
-void (*g_ops[])(void);
+char g_buildDate[] = "$Date:: 2011-05-09 20:45:25 +0900#$"; // 0x0112
+
+void (*g_ops[])(void); // TODO: Fill with function pointers once ready
+
+u8 g_watchdogTimerStatus; // 0xFC80
+
+u8 g_ctrlAnalogDataX; // 0xFD16 
+u8 g_ctrlAnalogDataY; // 0xFD17
+
+u16 g_unkFE3A; // 0xFE34
+
+u32 g_clock; // 0xFE3C
+u32 g_alarm; // 0xFE40
+
+u8 g_unkFE45; // 0xFE45
+u8 g_unkFE46; // 0xFE46
+
+u8 g_transmitData[8]; // 0xFE50 -- TODO: This could be a bigger size (up until size 0x14)
+
+u8 g_curSysconCmdId; // 0xFE6E
+u8 g_sysconCmdTransmitDataLength; // 0xFE71
+
+u8 g_powerSupplyStatus; // 0xFE7A
+
+u8 g_unkFE98; // 0xFE98
+
+/* Special Function Registers (SFR) */
+
+#define GET_PORT_VAL(i)		*(u8 *)(0xFF00 + i)
+#define SET_PORT_VAL(i, v)	*(u8 *)(0xFF00 + i) = (v)
 
 /* functions */
 
@@ -156,17 +189,193 @@ void poll_intrerfaces(void)
 
 }
 
-// sub_10A2
-void sub_10A2(void)
-{
-
-}
-
 // sub_10AC
 void sub_10AC(void)
 {
 
 }
+
+// TODO: More functions here
+
+// sub_1921
+void exec_syscon_cmd_nop(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH;
+	g_curSysconCmdId = PSP_SYSCON_CMD_NOP;
+}
+
+// sub_1928
+void exec_syscon_cmd_get_baryon_version(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 4;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_BARYON_VERSION;
+
+	((u32 *)g_transmitData)[0] = g_baryonVersion;
+}
+
+// sub_1939
+void transmit_data_set_digital_user_key_data(void)
+{
+	// PORT 7 seems to contain state values for the following buttons:
+	//		UP, DOWN, LEFT, RIGHT
+	//		TRIANGLE, CIRCLE, CROSS, SQUARE
+	g_transmitData[0] = GET_PORT_VAL(7);
+
+
+	// Port 4 seems to contain state values for the following buttons:
+	//	SELECT, START
+	//	L, R
+	//
+	// Port 2 seems to contain state values for the following buttons:
+	//	SCE_CTRL_INTERCEPTED
+	//  SCE_CTRL_HOLD
+	u8 ctrlData2 = ((GET_PORT_VAL(2) << 4) & 0x30) | (GET_PORT_VAL(4) & 0xF);
+	ctrlData2 |= 0x40; // Set 7th bit -- SCE_CTRL_WLAN_UP?
+	ctrlData2 &= ~0x80; // clear 8th bit -- SCE_CTRL_REMOTE?
+
+	g_transmitData[1] = ctrlData2;
+}
+
+// sub_1953
+void transmit_data_set_digital_kernel_key_data(void)
+{
+	// g_transmitData[2] = buttons 0x0BF00000
+	// VolUp, VolDown, Screen, Note (0xF)
+	// Disc, MS, 0x08000000 (unknown) - 0xB
+
+	g_transmitData[2] = GET_PORT_VAL(5) | 0xFC; // 1957
+
+	//u8 isDiscPresent = (((g_unkFE45 >> 2) & 0x1) ^ 0xFF) & 0x1;
+	u8 isDiscPresent = !((g_unkFE45 >> 2) & 0x1);
+
+	// set 5th bit
+	g_transmitData[2] &= ~0x10;
+	g_transmitData[2] |= (isDiscPresent << 4); // 0x1962
+
+	if (!(g_unkFE3A & 0x8)) // 0x1965
+	{
+		// clear 6th bit -- Memory stick not present
+		g_transmitData[2] &= ~0x20; // 0x1968
+	}
+
+	// set 8th bit
+	g_transmitData[2] &= ~0x80;
+	g_transmitData[2] |= (g_unkFE46 >> 2) & 0x1; // 196A
+
+	// unknown controller bits below
+	//
+	// g_transmitData[3] = buttons & 0x30000000
+	// unknown 0x10000000, 0x20000000
+
+	g_transmitData[3] = 0xFF; // 0x1970
+
+	// set 1st bit
+	g_transmitData[3] &= 0xFE;
+	g_transmitData[3] |= (g_unkFE98 >> 2) & 0x1; // 0x1973 - 0x1976
+}
+
+// sub_197A
+void exec_syscon_cmd_get_digital_key(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 2;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_DIGITAL_KEY;
+
+	transmit_data_set_digital_user_key_data();
+}
+
+// sub_1984
+void exec_syscon_cmd_get_analog(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 2;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_ANALOG;
+
+	g_transmitData[0] = g_ctrlAnalogDataX;
+	g_transmitData[1] = g_ctrlAnalogDataY;
+}
+
+// sub_1995
+void exec_syscon_cmd_get_tachyon_temp(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 2;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_TACHYON_TEMP;
+
+	/* This command has been retired in later firmwares. */
+	g_transmitData[0] = 0;
+	g_transmitData[1] = 0;
+}
+
+// sub_19A0
+void exec_syscon_cmd_get_digital_key_analog(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 4;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_DIGITAL_KEY_ANALOG;
+
+	transmit_data_set_digital_user_key_data();
+
+	g_transmitData[2] = g_ctrlAnalogDataX;
+	g_transmitData[3] = g_ctrlAnalogDataY;
+}
+
+// sub_19B4
+void exec_syscon_cmd_get_kernel_digital_key(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 4;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY;
+
+	transmit_data_set_digital_user_key_data();
+	transmit_data_set_digital_kernel_key_data();
+}
+
+// sub_19C1
+void exec_syscon_cmd_get_kernel_digital_key_analog(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 6;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG;
+
+	transmit_data_set_digital_user_key_data();
+	transmit_data_set_digital_kernel_key_data();
+
+	g_transmitData[4] = g_ctrlAnalogDataX;
+	g_transmitData[5] = g_ctrlAnalogDataX;
+}
+
+// sub_19D8
+void exec_syscon_cmd_read_clock(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 4;
+	g_curSysconCmdId = PSP_SYSCON_CMD_READ_CLOCK;
+
+	((u32 *)g_transmitData)[0] = g_clock;
+}
+
+// sub_19E7
+void exec_syscon_cmd_read_alarm(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 4;
+	g_curSysconCmdId = PSP_SYSCON_CMD_READ_ALARM;
+
+	((u32 *)g_transmitData)[0] = g_alarm;
+}
+
+// sub_19F6
+void exec_syscon_cmd_get_power_supply_status(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 1;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_POWER_SUPPLY_STATUS;
+
+	g_transmitData[0] = g_powerSupplyStatus;
+}
+
+// sub_1A01
+void exec_syscon_cmd_get_tachyon_wdt_status(void)
+{
+	g_sysconCmdTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LENGTH + 1;
+	g_curSysconCmdId = PSP_SYSCON_CMD_GET_TACHYON_WDT_STATUS;
+
+	g_transmitData[0] = g_watchdogTimerStatus;
+}
+
+// TODO: More functions here
 
 // sub_1D34
 void response_manager(void)

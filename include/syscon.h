@@ -17,10 +17,11 @@
  */
 
 #define PSP_SYSCON_CMD_NOP                           0x00
-#define PSP_SYSCON_CMD_GET_BARYON                    0x01
+#define PSP_SYSCON_CMD_GET_BARYON_VERSION            0x01
 #define PSP_SYSCON_CMD_GET_DIGITAL_KEY               0x02
 #define PSP_SYSCON_CMD_GET_ANALOG                    0x03
 
+#define PSP_SYSCON_CMD_GET_TACHYON_TEMP              0x05
 #define PSP_SYSCON_CMD_GET_DIGITAL_KEY_ANALOG        0x06
 #define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY        0x07
 #define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG 0x08
