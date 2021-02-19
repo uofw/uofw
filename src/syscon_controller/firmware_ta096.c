@@ -78,7 +78,7 @@ u8 g_unkFE46; // 0xFE46
 
 u8 g_unkFE4E; // 0xFE4E
 
-u8 g_transmitData[12]; // 0xFE50 -- TODO: This could be a bigger size (up until size 0x13)
+u8 g_transmitData[12]; // 0xFE50 -- TODO: This could be a bigger size (up until size 13)
 
 u8 g_curSysconCmdId; // 0xFE6E
 u8 g_sysconCmdTransmitDataLength; // 0xFE71
@@ -225,14 +225,14 @@ void poll_intrerfaces(void)
 
 }
 
-// sub_10AC
+// TODO: More functions here
+
+// sub_1536
 /* Interrupt handler for serial interface CSI10. Called when a CSI10 communication has ended. */
 void INTCSI10(void)
 {
 
 }
-
-// TODO: More functions here
 
 /* SYSCON [get] commands */
 
@@ -375,7 +375,7 @@ void exec_syscon_cmd_get_kernel_digital_key_analog(void)
 	transmit_data_set_digital_kernel_key_data();
 
 	g_transmitData[4] = g_ctrlAnalogDataX;
-	g_transmitData[5] = g_ctrlAnalogDataX;
+	g_transmitData[5] = g_ctrlAnalogDataY;
 }
 
 // sub_19D8
