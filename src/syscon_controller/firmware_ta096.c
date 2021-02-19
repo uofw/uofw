@@ -421,8 +421,7 @@ u8 memcmp(const void *s1, const void *s2, u16 n)
 	u8 cmpResult = 0; // 0x5041
 	while (n-- != 0)
 	{
-
-		if (*(u8 *)(s1 - n) == *(u8 *)(s2 - n)) // 0x5065
+		if (*(u8 *)(s1 + n) == *(u8 *)(s2 + n)) // 0x5065
 		{
 			continue;
 		}
