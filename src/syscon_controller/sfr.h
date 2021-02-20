@@ -11,8 +11,11 @@
 #define GET_PORT_VAL(i)			(*(u8 *)(0xFF00 + (i)))
 #define SET_PORT_VAL(i, v)		(*(u8 *)(0xFF00 + (i)) = (v))
 
-#define GET_ADCR_VAL			(*(u16 *)0xFF08) & 0x /* 10-bit A/D conversion result register */
-#define GET_ADCRH_VAL			(*(u8 *)0xFF09) /* 8-bit A/D conversion result register */
+/* 10-bit A/D conversion result register */
+#define GET_ADCR_VAL			(*(u16 *)0xFF08)
+
+/* 8-bit A/D conversion result register */
+#define GET_ADCRH_VAL			(*(u8 *)0xFF09)
 
 /* Receive buffer register 6 */
 #define GET_RXB6_VAL			(*(u8 *)0xFF0A))
