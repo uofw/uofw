@@ -8,7 +8,7 @@
  * 
  *				Motherboard TA-096
  *
- *       Renesas/NEC 78K0KE2 - model D78F0534
+ *       Renesas 78K0/KE2 - model D78F0534
  *
  */
 
@@ -22,6 +22,8 @@
 
 #include <common_imp.h>
 #include <syscon.h>
+
+#include "sfr.h"
 
 /*
  * This constant specifies the base length of the data to be transmitted back to the SYSCON module.
@@ -92,13 +94,6 @@ u8 g_unkFE98; // 0xFE98
 u8 g_baryonStatus2; // 0xFED2
 u8 g_unkFED3; // 0xFED3
 
-/* Special Function Registers (SFR) */
-
-#define GET_PORT_DATA(i)		*(u8 *)(0xFF00 + (i))
-#define SET_PORT_DATA(i, v)		*(u8 *)(0xFF00 + (i)) = (v)
-
-#define GET_SIO10_DATA			*(u8 *)0xFF0F	/* Serial I/O shift register 10 */
-
 /* functions */
 
 // sub_0660
@@ -135,6 +130,7 @@ void sub_075D()
 // sub_075F
 void main(void)
 {
+
 }
 
 // sub_0818
@@ -212,7 +208,7 @@ void sub_10A2(void)
 {
 }
 
-// sub_10Ac
+// sub_10AC
 void INTWT(void)
 {
 }
@@ -292,7 +288,7 @@ void transmit_data_set_digital_user_key_data(void)
 	// PORT 7 seems to contain state values for the following buttons:
 	//		UP, DOWN, LEFT, RIGHT
 	//		TRIANGLE, CIRCLE, CROSS, SQUARE
-	g_transmitData[0] = GET_PORT_DATA(7);
+	g_transmitData[0] = GET_PORT_VAL(7);
 
 
 	// Port 4 seems to contain state values for the following buttons:
@@ -302,7 +298,7 @@ void transmit_data_set_digital_user_key_data(void)
 	// Port 2 seems to contain state values for the following buttons:
 	//	SCE_CTRL_INTERCEPTED
 	//  SCE_CTRL_HOLD
-	u8 ctrlData2 = ((GET_PORT_DATA(2) << 4) & 0x30) | (GET_PORT_DATA(4) & 0xF);
+	u8 ctrlData2 = ((GET_PORT_VAL(2) << 4) & 0x30) | (GET_PORT_VAL(4) & 0xF);
 	ctrlData2 |= 0x40; // Set 7th bit -- SCE_CTRL_WLAN_UP?
 	ctrlData2 &= ~0x80; // clear 8th bit -- SCE_CTRL_REMOTE?
 
@@ -316,7 +312,7 @@ void transmit_data_set_digital_kernel_key_data(void)
 	// VolUp, VolDown, Screen, Note (0xF)
 	// Disc, MS, 0x08000000 (unknown) - 0xB
 
-	g_transmitData[2] = GET_PORT_DATA(5) | 0xFC; // 1957
+	g_transmitData[2] = GET_PORT_VAL(5) | 0xFC; // 1957
 
 	//u8 isDiscPresent = (((g_unkFE45 >> 2) & 0x1) ^ 0xFF) & 0x1;
 	u8 isDiscPresent = !((g_unkFE45 >> 2) & 0x1);
