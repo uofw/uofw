@@ -6,7 +6,7 @@
  *
  *          SYSCON controller firmware
  * 
- *				Motherboard TA-096
+ *              Motherboard TA-096
  *
  *       Renesas 78K0/KE2 - model D78F0534
  *
