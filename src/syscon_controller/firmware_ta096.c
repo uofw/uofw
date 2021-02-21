@@ -713,6 +713,18 @@ void set_usb_status(void)
 // sub_1AC0
 void write_alarm(void)
 {
+	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+
+	/* Disable interrupts. */
+	DI();
+
+	/* Set the new alarm value. */
+	g_alarm = *(u32 *)g_mainOperationsReceiveBuffer;
+
+	/* Enable interrupts. */
+	EI();
+
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1AD5
