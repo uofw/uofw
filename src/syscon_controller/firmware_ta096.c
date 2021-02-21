@@ -140,7 +140,6 @@ u8 g_mainOperationId; // 0xFE4C
 #define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
 u8 g_mainOperationResultStatus; // 0xFE4E
 
-
 u8 g_transmitData[12]; // 0xFE50 -- TODO: This could be a bigger size (up until size 13)
 
 u8 g_curSysconCmdId; // 0xFE6E
@@ -189,12 +188,6 @@ void sub_073B()
 void sub_075D()
 {
 }
-
-/*
- * When this constant is writte to the WDTE register, the watchdog timer counter is cleared and couting starts
- * again.
- */
-#define WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER		0xAC
 
 // sub_075F
 void main(void)
@@ -778,7 +771,6 @@ void ctrl_tachyon_wdt(void)
 {
 	if (g_mainOperationsReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
 	{
-		/* Presumably WDTON. Setting to 1 enables watchdog timer counting. */
 		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_COUNTING;
 
 		g_watchdogTimerCounterResetValue = g_mainOperationsReceiveBuffer[0] + g_mainOperationsReceiveBuffer[0];

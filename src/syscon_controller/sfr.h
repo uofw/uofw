@@ -273,6 +273,12 @@
 /* Timer clock selection register 51 */
 #define TCL51		(*(u8 *)0xFF8C)
 
+/*
+ * When this constant is written to the WDTE register, the watchdog timer counter is cleared and couting starts
+ * again.
+ */
+#define WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER		0xAC
+
 /* Watchdog timer enable register */
 #define WDTE		(*(u8 *)0xFF99)
 
