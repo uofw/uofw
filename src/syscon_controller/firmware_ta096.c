@@ -773,8 +773,6 @@ void exec_syscon_cmd_0x30(void)
 {
 }
 
-#define WATCHDOG_TIMER_STATUS_
-
 // sub_1FD2
 void ctrl_tachyon_wdt(void)
 {
