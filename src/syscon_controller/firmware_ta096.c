@@ -170,38 +170,38 @@ void sub_075D()
 void main(void)
 {
 	/* Specify the ROM and RAM sizes */
-	SET_IMS_VAL(0x06);
-	SET_IXS_VAL(0x0A);
+	IMS = 0x06;
+	IXS = 0x0A;
 
-	SET_WDTE_VAL(0xAC);
+	WDTE = 0xAC;
 
-	if (GET_WDTE_VAL != 0) // 0x076B & 9x076D
+	if (WDTE != 0) // 0x076B & 9x076D
 	{
-		SET_PORT_VAL(6, GET_PORT_VAL(6) & ~0x4); // 0x076F
-		SET_PORT_MODE_VAL(6, GET_PORT_MODE_VAL(6) & ~0x4); // 0x076F
+		PO6 &= ~0x4; // 0x076F
+		PM6 &= ~0x4; // 0x076F
 
-		SET_TMHMD1_VAL(0x50);
-		SET_CMP01_VAL(0xC);
+		TMHMD1 = 0x50;
+		CMP01 = 0xC;
 
-		SET_MK0H_VAL(GET_MK0H_VAL | 0x8); // 0x077A
-		SET_IF0H_VAL(GET_IF0H_VAL & ~0x8); // 0x077D
+		MK0H |= 0x8; // 0x077A
+		IF0H &= ~0x8; // 0x077D
 
-		SET_TMHMD1_VAL(GET_TMHMD1_VAL | 0x80); // 0x0780
+		TMHMD1 |= 0x80; // 0x0780
 
 		/* Wait for bit 3 of Interrupt request flag register 0 to be set. */
-		while (!(GET_IF0H_VAL & 0x8))
+		while (!(IF0H & 0x8))
 			;;
 
-		SET_TMHMD1_VAL(GET_TMHMD1_VAL & ~0x80);
-		SET_PORT_VAL(6, GET_PORT_VAL(6) | 0x4); // 0x076F
+		TMHMD1 &= ~0x80;
+		PO6 |= 0x4; // 0x076F
 	}
 
 loc_78E:
 
 	// Wait for bit 0 of Port 12 to be set
-	while (!(GET_PORT_VAL(12) & 0x1)) // 0x078E
+	while (!(PO12 & 0x1)) // 0x078E
 	{
-		SET_WDTE_VAL(0xAC);
+		WDTE = 0xAC;
 	}
 
 	/* Initialize hardware. */
@@ -219,7 +219,7 @@ loc_78E:
 	init_allegrex_session();
 	init_pandora_secret_keys();
 
-	if (!(GET_PORT_VAL(12) & 0x1)) // 0x07BA
+	if (!(PO12 & 0x1)) // 0x07BA
 	{
 		goto loc_78E;
 	}
@@ -227,7 +227,7 @@ loc_78E:
 	/* Copy function sub_1070 to RAM */
 	memcpy(sub_1070, g_unkF400, (u32)sub_10A2 - (u32)sub_1070); // 0x07C1 - 0x7CF
 
-	SET_PORT_MODE_VAL(14, GET_PORT_MODE_VAL(14) & ~0x20);
+	PM14 &= ~0x20;
 
 	/* Enable interrupts */
 	EI();
@@ -235,7 +235,7 @@ loc_78E:
 	/* Poll various interfaces and hardware components for new requests to handle. */
 	for (;;)
 	{
-		SET_WDTE_VAL(0xAC);
+		WDTE = 0xAC;
 		if (g_unkFE31 != 0x5) // 0x07DC & 07DF
 		{
 			allegrex_handshake();
@@ -420,7 +420,7 @@ void transmit_data_set_digital_user_key_data(void)
 	// PORT 7 seems to contain state values for the following buttons:
 	//		UP, DOWN, LEFT, RIGHT
 	//		TRIANGLE, CIRCLE, CROSS, SQUARE
-	g_transmitData[0] = GET_PORT_VAL(7);
+	g_transmitData[0] = PO7;
 
 
 	// Port 4 seems to contain state values for the following buttons:
@@ -430,7 +430,7 @@ void transmit_data_set_digital_user_key_data(void)
 	// Port 2 seems to contain state values for the following buttons:
 	//	SCE_CTRL_INTERCEPTED
 	//  SCE_CTRL_HOLD
-	u8 ctrlData2 = ((GET_PORT_VAL(2) << 4) & 0x30) | (GET_PORT_VAL(4) & 0xF);
+	u8 ctrlData2 = ((PO2 << 4) & 0x30) | (PO4 & 0xF);
 	ctrlData2 |= 0x40; // Set 7th bit -- SCE_CTRL_WLAN_UP?
 	ctrlData2 &= ~0x80; // clear 8th bit -- SCE_CTRL_REMOTE?
 
@@ -444,7 +444,7 @@ void transmit_data_set_digital_kernel_key_data(void)
 	// VolUp, VolDown, Screen, Note (0xF)
 	// Disc, MS, 0x08000000 (unknown) - 0xB
 
-	g_transmitData[2] = GET_PORT_VAL(5) | 0xFC; // 1957
+	g_transmitData[2] = PO5 | 0xFC; // 1957
 
 	//u8 isDiscPresent = (((g_unkFE45 >> 2) & 0x1) ^ 0xFF) & 0x1;
 	u8 isDiscPresent = !((g_unkFE45 >> 2) & 0x1);
