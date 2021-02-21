@@ -99,6 +99,8 @@ u8 g_unkF400[0x1D0]; // 0xF400
 u16 g_wakeUpFactor; // 0xFC79
 u8 g_watchdogTimerStatus; // 0xFC80
 
+u8 g_mainOperationsReceiveBuffer[0x9]; // 0xFCB0 -- Could be larger....
+
 u8 g_ctrlAnalogDataX; // 0xFD16 
 u8 g_ctrlAnalogDataY; // 0xFD17
 
@@ -119,12 +121,19 @@ u8 g_unkFE46; // 0xFE46
 
 u8 g_mainOperationId; // 0xFE4C
 
-u8 g_unkFE4E; // 0xFE4E
+#define MAIN_OPERATION_RESULT_STATUS_SUCCESS			0x82
+#define MAIN_OPERATION_RESULT_STATUS_ERROR				0x83
+#define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
+u8 g_mainOperationResultStatus; // 0xFE4E
+
 
 u8 g_transmitData[12]; // 0xFE50 -- TODO: This could be a bigger size (up until size 13)
 
 u8 g_curSysconCmdId; // 0xFE6E
 u8 g_sysconCmdTransmitDataLength; // 0xFE71
+
+u8 g_mainOperationTransmitDataLength; // 0xFE72
+
 
 u8 g_powerSupplyStatus; // 0xFE7A
 
@@ -659,7 +668,7 @@ void exec_syscon_cmd_get_video_cable(void)
 // sub_1A92
 void main_op_nop(void)
 {
-	g_unkFE4E = 0x84;
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED;
 }
 
 /* SYSCON [set] commands */
@@ -667,6 +676,21 @@ void main_op_nop(void)
 // sub_1A96
 void write_clock(void)
 {
+	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+
+	/* Disable interrupts. */
+	DI();
+
+	/* Set the new clock value. */
+	g_clock = *(u32 *)g_mainOperationsReceiveBuffer;
+
+	WTM = 0xC0;
+	WTM = 0xC3;
+
+	/* Enable interrupts. */
+	EI();
+
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1AB1
