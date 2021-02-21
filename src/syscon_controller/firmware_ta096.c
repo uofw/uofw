@@ -99,6 +99,8 @@ u8 g_unkF400[0x1D0]; // 0xF400
 u16 g_wakeUpFactor; // 0xFC79
 u8 g_watchdogTimerStatus; // 0xFC80
 
+u8 g_usbStatus; // 0xFC86
+
 u8 g_mainOperationsReceiveBuffer[0x9]; // 0xFCB0 -- Could be larger....
 
 u8 g_ctrlAnalogDataX; // 0xFD16 
@@ -134,6 +136,7 @@ u8 g_sysconCmdTransmitDataLength; // 0xFE71
 
 u8 g_mainOperationTransmitDataLength; // 0xFE72
 
+u16 g_unkFE76; // 0xFE76 -- TODO: Might be a flag indicating what needs to be updated (i.e. new USB status set).
 
 u8 g_powerSupplyStatus; // 0xFE7A
 
@@ -696,6 +699,15 @@ void write_clock(void)
 // sub_1AB1
 void set_usb_status(void)
 {
+	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+
+	/* Set the new USB status. */
+	g_usbStatus = g_mainOperationsReceiveBuffer[0];
+
+	// TODO: Probably setting a flag here that a new USB status has been set.
+	g_unkFE76 |= 0x2;
+
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1AC0
