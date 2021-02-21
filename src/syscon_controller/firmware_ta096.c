@@ -97,7 +97,17 @@ void (*g_mainOperations[])(void) = {
 u8 g_unkF400[0x1D0]; // 0xF400
 
 u16 g_wakeUpFactor; // 0xFC79
+
+/*
+ * This constant indicates that the watch dog timer is not currently counting. For example, this is the case
+ * when the timer counter has counted downwards until it reached the value 0, at which point there is nothing
+ * left to count. This can indicate that the watchdog timer counter could not be properly resetted.
+ */
+#define WATCHDOG_TIMER_STATUS_NOT_COUNTING		0
+#define WATCHDOG_TIMER_STATUS_COUNTING			1
 u8 g_watchdogTimerStatus; // 0xFC80
+u8 g_watchdogTimerCounter; // 0xFC81
+u8 g_watchdogTimerCounterResetValue; // 0xFC82
 
 u8 g_usbStatus; // 0xFC86
 
@@ -113,7 +123,9 @@ u8 g_unkFE31; // 0xFE31
 u8 g_unkFE32; // 0xFE32
 u8 g_isMainOperationRequestExist; // 0xFE33
 
-u16 g_unkFE3A; // 0xFE34
+u8 g_unkFE35; // 0xFE35 -- TODO: Bit 1 is set when the watchdog timer counter has reached value [0] (= finished counting)
+
+u16 g_unkFE3A; // 0xFE3A
 
 u32 g_clock; // 0xFE3C
 u32 g_alarm; // 0xFE40
@@ -178,6 +190,12 @@ void sub_075D()
 {
 }
 
+/*
+ * When this constant is writte to the WDTE register, the watchdog timer counter is cleared and couting starts
+ * again.
+ */
+#define WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER		0xAC
+
 // sub_075F
 void main(void)
 {
@@ -185,7 +203,7 @@ void main(void)
 	IMS = 0x06;
 	IXS = 0x0A;
 
-	WDTE = 0xAC;
+	WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER;
 
 	if (WDTE != 0) // 0x076B & 9x076D
 	{
@@ -213,7 +231,8 @@ loc_78E:
 	// Wait for bit 0 of Port 12 to be set
 	while (!(PO12 & 0x1)) // 0x078E
 	{
-		WDTE = 0xAC;
+		/* Reset the watchdog timer. */
+		WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER;
 	}
 
 	/* Initialize hardware. */
@@ -247,7 +266,9 @@ loc_78E:
 	/* Poll various interfaces and hardware components for new requests to handle. */
 	for (;;)
 	{
-		WDTE = 0xAC;
+		/* Reset the watchdog timer. */
+		WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER;
+
 		if (g_unkFE31 != 0x5) // 0x07DC & 07DF
 		{
 			allegrex_handshake();
@@ -704,7 +725,7 @@ void set_usb_status(void)
 	/* Set the new USB status. */
 	g_usbStatus = g_mainOperationsReceiveBuffer[0];
 
-	// TODO: Probably setting a flag here that a new USB status has been set.
+	// TODO: Perhaps setting a flag here that a new USB status has been set.
 	g_unkFE76 |= 0x2;
 
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
@@ -752,10 +773,29 @@ void exec_syscon_cmd_0x30(void)
 {
 }
 
+#define WATCHDOG_TIMER_STATUS_
+
 // sub_1FD2
 void ctrl_tachyon_wdt(void)
 {
+	if (g_mainOperationsReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
+	{
+		/* Presumably WDTON. Setting to 1 enables watchdog timer counting. */
+		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_COUNTING;
 
+		g_watchdogTimerCounterResetValue = g_mainOperationsReceiveBuffer[0] + g_mainOperationsReceiveBuffer[0];
+		g_watchdogTimerCounter = g_mainOperationsReceiveBuffer[0] + g_mainOperationsReceiveBuffer[0];
+
+	}
+	else
+	{
+		// loc_1FEB
+
+		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_NOT_COUNTING;
+	}
+
+	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1FF7
