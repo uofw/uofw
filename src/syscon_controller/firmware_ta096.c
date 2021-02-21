@@ -25,6 +25,9 @@
 
 #include "sfr.h"
 
+void sub_1070(void);
+void sub_10A2(void);
+
 /*
  * This constant specifies the base length of the data to be transmitted back to the SYSCON module.
  * This base length represents the first three members in the ::SceSysconPacket.tx[16] data buffer, which
@@ -62,6 +65,37 @@ void (*g_sysconCmdGetOps[])(void) = {
 	exec_syscon_cmd_get_video_cable
 }; // 0x008A -- SIO10 communication
 
+#define MAIN_OPERATIONS_ID_START		PSP_SYSCON_CMD_WRITE_CLOCK
+
+void (*g_mainOperations[])(void) = {
+	write_clock,
+	set_usb_status,
+	write_alarm,
+	write_scratchpad,
+	read_scratchpad,
+	send_setparam,
+	receive_setparam,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	main_op_nop,
+	exec_syscon_cmd_0x30,
+	ctrl_tachyon_wdt,
+	reset_device,
+	ctrl_analog_xy_polling,
+	main_op_nop,
+	exec_syscon_cmd_0x35,
+	exec_syscon_cmd_0x36,
+	get_batt_volt_ad
+}; // 0x00B0
+
+u8 g_unkF400[0x1D0]; // 0xF400
+
 u16 g_wakeUpFactor; // 0xFC79
 u8 g_watchdogTimerStatus; // 0xFC80
 
@@ -71,7 +105,10 @@ u8 g_ctrlAnalogDataY; // 0xFD17
 /* Base value for the battery voltage on PSP series PSP-N1000 and PSP-E1000. */
 u8 g_battVoltBase; // 0xFD46
 
+u8 g_unkFE31; // 0xFE31
 u8 g_unkFE32; // 0xFE32
+u8 g_isMainOperationRequestExist; // 0xFE33
+
 u16 g_unkFE3A; // 0xFE34
 
 u32 g_clock; // 0xFE3C
@@ -79,6 +116,8 @@ u32 g_alarm; // 0xFE40
 
 u8 g_unkFE45; // 0xFE45
 u8 g_unkFE46; // 0xFE46
+
+u8 g_mainOperationId; // 0xFE4C
 
 u8 g_unkFE4E; // 0xFE4E
 
@@ -130,11 +169,99 @@ void sub_075D()
 // sub_075F
 void main(void)
 {
+	/* Specify the ROM and RAM sizes */
+	SET_IMS_VAL(0x06);
+	SET_IXS_VAL(0x0A);
 
+	SET_WDTE_VAL(0xAC);
+
+	if (GET_WDTE_VAL != 0) // 0x076B & 9x076D
+	{
+		SET_PORT_VAL(6, GET_PORT_VAL(6) & ~0x4); // 0x076F
+		SET_PORT_MODE_VAL(6, GET_PORT_MODE_VAL(6) & ~0x4); // 0x076F
+
+		SET_TMHMD1_VAL(0x50);
+		SET_CMP01_VAL(0xC);
+
+		SET_MK0H_VAL(GET_MK0H_VAL | 0x8); // 0x077A
+		SET_IF0H_VAL(GET_IF0H_VAL & ~0x8); // 0x077D
+
+		SET_TMHMD1_VAL(GET_TMHMD1_VAL | 0x80); // 0x0780
+
+		/* Wait for bit 3 of Interrupt request flag register 0 to be set. */
+		while (!(GET_IF0H_VAL & 0x8))
+			;;
+
+		SET_TMHMD1_VAL(GET_TMHMD1_VAL & ~0x80);
+		SET_PORT_VAL(6, GET_PORT_VAL(6) | 0x4); // 0x076F
+	}
+
+loc_78E:
+
+	// Wait for bit 0 of Port 12 to be set
+	while (!(GET_PORT_VAL(12) & 0x1)) // 0x078E
+	{
+		SET_WDTE_VAL(0xAC);
+	}
+
+	/* Initialize hardware. */
+
+	init_devices_1(0); // 0x0799
+	sub_0932();
+	sub_099A(0);
+	sub_0987();
+
+	init_battery_message();
+	sub_2804();
+	sub_429C();
+	sub_5791();
+
+	init_allegrex_session();
+	init_pandora_secret_keys();
+
+	if (!(GET_PORT_VAL(12) & 0x1)) // 0x07BA
+	{
+		goto loc_78E;
+	}
+
+	/* Copy function sub_1070 to RAM */
+	memcpy(sub_1070, g_unkF400, (u32)sub_10A2 - (u32)sub_1070); // 0x07C1 - 0x7CF
+
+	SET_PORT_MODE_VAL(14, GET_PORT_MODE_VAL(14) & ~0x20);
+
+	/* Enable interrupts */
+	EI();
+
+	/* Poll various interfaces and hardware components for new requests to handle. */
+	for (;;)
+	{
+		SET_WDTE_VAL(0xAC);
+		if (g_unkFE31 != 0x5) // 0x07DC & 07DF
+		{
+			allegrex_handshake();
+			sub_56D2();
+			battery_handshake_handler();
+			response_handler();
+			battery_serial_handler();
+		}
+
+		/* Check if an operation to handle has arrived. */
+		if (g_isMainOperationRequestExist) // 0x07F0
+		{
+			/* An operation to handle has arrived. Run it now. */
+
+			g_isMainOperationRequestExist = SCE_FALSE; // 0x07F5
+
+			g_mainOperations[g_mainOperationId - MAIN_OPERATIONS_ID_START](); // 0x07F5 - 0x80C
+		}
+
+		sub_3F10();
+		poll_interrfaces();
+	}
 }
 
 // sub_0818
-void init_devices_1()
+void init_devices_1(u16 arg0)
 {
 }
 
@@ -154,7 +281,7 @@ void sub_0987(void)
 }
 
 // sub_099A
-void sub_099A()
+void sub_099A(u8 arg0)
 {
 }
 
@@ -199,7 +326,12 @@ void sub_0B5B(void)
 }
 
 // sub_0B73
-void poll_intrerfaces(void)
+void poll_interrfaces(void)
+{
+}
+
+// sub_1070
+void sub_1070(void)
 {
 }
 
@@ -525,31 +657,88 @@ void exec_syscon_cmd_get_video_cable(void)
 }
 
 // sub_1A92
-void sub_1A92(void)
+void main_op_nop(void)
 {
 	g_unkFE4E = 0x84;
 }
 
 /* SYSCON [set] commands */
 
-// TODO: More functions here
+// sub_1A96
+void write_clock(void)
+{
+}
+
+// sub_1AB1
+void set_usb_status(void)
+{
+}
+
+// sub_1AC0
+void write_alarm(void)
+{
+}
+
+// sub_1AD5
+void write_scratchpad()
+{
+}
+
+// sub_1B4C
+void read_scratchpad()
+{
+}
+
+// sub_1BC5
+void send_setparam(void)
+{
+}
+
+// sub_1CD8
+void receive_setparam(void)
+{
+}
 
 // sub_1D34
-void response_manager(void)
+void exec_syscon_cmd_0x30(void)
 {
-
 }
 
 // sub_1FD2
-void sub_1FD2(void)
+void ctrl_tachyon_wdt(void)
 {
 
 }
 
 // sub_1FF7
-void sub_1FF7()
+void reset_device()
 {
 
+}
+
+// sub_2081
+void ctrl_analog_xy_polling(void)
+{
+}
+
+// sub_20E9
+void sub_20E9(void)
+{
+}
+
+// sub_20F3
+void exec_syscon_cmd_0x35(void)
+{
+}
+
+// sub_20F9
+void exec_syscon_cmd_0x36(void)
+{
+}
+
+// sub_2107
+void get_batt_volt_ad(void)
+{
 }
 
 // TODO: more functions here...
@@ -607,6 +796,51 @@ void memset(void *s, int c, u16 n)
 	{
 		*(u8 *)(s + n) = (u8)c;
 	}
+}
+
+// sub_50C4
+void generate_challenge(void)
+{
+}
+
+// sub_5103
+void final_key_encryption_cbc(u8 *key1, u8 *key2, u8 *data)
+{
+}
+
+// sub_5190
+void allegrex_handshake(void)
+{
+}
+
+// sub_54E5
+void init_allegrex_session(void)
+{
+}
+
+// sub_5516
+void battery_serial_handler(void)
+{
+}
+
+// sub_55CF
+void read_secure_flash(u16 flashOffset)
+{
+}
+
+// sub_5637
+void init_pandora_secret_keys(void)
+{
+}
+
+// sub_56D2
+void sub_56D2(void)
+{
+}
+
+// sub_5791
+void sub_5791(void)
+{
 }
 
 // TODO: more functions here...
