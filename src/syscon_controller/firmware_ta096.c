@@ -21,6 +21,7 @@
  */
 
 #include <common_imp.h>
+#include <ctrl.h>
 #include <syscon.h>
 
 #include "sfr.h"
@@ -101,6 +102,15 @@ u8 g_unkF400[0x1D0]; // 0xF400
 /* SYSCON's internal scratchpad buffer. */
 u8 g_scratchpad[SCRATCH_PAD_SIZE]; // 0xF7B0
 
+typedef struct {
+	u8 data[SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE];
+} SysconParamIdPayload;
+
+#define SYSCON_SET_PARAM_NUM_SET_PARAMS		5
+#define SYSCON_SET_PARAM_MAX_SET_PARAM_ID	(SYSCON_SET_PARAM_NUM_SET_PARAMS - 1)
+
+SysconParamIdPayload g_setParamPayloads[SYSCON_SET_PARAM_NUM_SET_PARAMS]; // 0xF7D0
+
 u16 g_wakeUpFactor; // 0xFC79
 
 /*
@@ -126,6 +136,8 @@ u8 g_mainOperationReceivedPackageLength; // 0xFCCB
 
 u8 g_ctrlAnalogDataX; // 0xFD16 
 u8 g_ctrlAnalogDataY; // 0xFD17
+
+u8 g_unkFD29; // 0xFD29
 
 /* Base value for the battery voltage on PSP series PSP-N1000 and PSP-E1000. */
 u8 g_battVoltBase; // 0xFD46
@@ -166,6 +178,8 @@ u16 g_unkFE78; // 0xFE78
 
 u8 g_powerSupplyStatus; // 0xFE7A
 
+#define SYSCON_CTRL_ANALOG_SAMPLING_ENABLED		0x02
+u8 g_unkFE96; // 0xFE96
 u8 g_unkFE98; // 0xFE98
 
 u16 g_setParam1PayloadData1; // FEAE
@@ -895,15 +909,6 @@ void read_scratchpad(void)
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
-typedef struct {
-	u8 data[SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE];
-} SysconParamIdPayload;
-
-#define SYSCON_SET_PARAM_NUM_SET_PARAMS		5
-#define SYSCON_SET_PARAM_MAX_SET_PARAM_ID	(SYSCON_SET_PARAM_NUM_SET_PARAMS - 1)
-
-SysconParamIdPayload g_setParamPayloads[SYSCON_SET_PARAM_NUM_SET_PARAMS]; // 0xF7D0
-
 /* This constant defines the default setParam ID if no ID has been specified. */
 #define SYSCON_SET_PARAM_ID_DEFAULT	SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
 
@@ -1094,8 +1099,78 @@ void reset_device()
 }
 
 // sub_2081
+/* Enable/disable analog pad sampling. */
 void ctrl_analog_xy_polling(void)
 {
+	u8 unk1;
+	u8 samplingMode;
+
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+
+	unk1 = g_mainOperationPayloadReceiveBuffer[1];
+	if (unk1 & 0x80 
+		|| g_mainOperationReceivedPackageLength == 3) // 0x2088 & 0x208E
+	{
+		/* Check if analog pad sampling should be enabled. */
+		samplingMode = g_mainOperationPayloadReceiveBuffer[0]; // 0x2092
+		if (samplingMode & SCE_CTRL_INPUT_DIGITAL_ANALOG 
+			&& !(g_unkFE96 & SYSCON_CTRL_ANALOG_SAMPLING_ENABLED)) // 0x2095 & 0x2098
+		{
+			/* Enable analog pad sampling. */
+
+			g_unkFE96 |= SYSCON_CTRL_ANALOG_SAMPLING_ENABLED; // 209B
+			sub_42CB();
+		}
+
+		// loc_20A0
+
+		samplingMode = g_mainOperationPayloadReceiveBuffer[0] >> 1; // 0x20A3
+		samplingMode = g_mainOperationPayloadReceiveBuffer[0]; // 0x20A4
+		if (samplingMode & 0x4) // 0x20A9
+		{
+			g_unkFD29 = 0; // 0x20AE
+			g_unkFE96 |= 0x80; // 0x20B1
+			g_unkFE98 |= 0x4; // 0x20B3
+		}
+	}
+
+	// loc_20B5
+
+	unk1 = g_mainOperationPayloadReceiveBuffer[1];
+	if ((unk1 & 0x80) && (g_mainOperationReceivedPackageLength != 3)) // 0x20B9 & 0x20BF
+	{
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+		return;
+	}
+
+	if (g_mainOperationReceivedPackageLength == 3) // 0x20C3 - 0x20C8
+	{
+		/* Flip samplingMode bits */
+		g_mainOperationPayloadReceiveBuffer[0] = ~g_mainOperationPayloadReceiveBuffer[0]; // 0x20CD - 0x20D0
+	}
+
+	/* Check if analog sampling needs to be disabled. */
+
+	samplingMode = g_mainOperationPayloadReceiveBuffer[0]; // 0x20C3
+
+	/*
+	 * As we have flipped the bits earlier, we actually test here if samplingMode has been set to
+	 * ::SCE_CTRL_INPUT_DIGITAL_ONLY.
+	 */
+	if (samplingMode & 0x1) // 20D4
+	{
+		/* Disable analog pad sampling. */
+
+		g_unkFE96 &= ~SYSCON_CTRL_ANALOG_SAMPLING_ENABLED; // 0x20D7
+		g_ctrlAnalogDataX = SCE_CTRL_ANALOG_PAD_CENTER_VALUE;
+		g_ctrlAnalogDataY = SCE_CTRL_ANALOG_PAD_CENTER_VALUE;
+	}
+
+	// TODO: Not sure what this is about, samplingMode doesn't appear to be used any further, nor is it
+	// a return value.
+	samplingMode = g_mainOperationPayloadReceiveBuffer[0] >> 1;
+
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_20E9
@@ -1124,6 +1199,11 @@ void get_batt_volt_ad(void)
 void response_handler()
 {
 
+}
+
+// sub_42CB
+void sub_42CB(void)
+{
 }
 
 // TODO: more functions here...

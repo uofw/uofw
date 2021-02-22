@@ -236,6 +236,9 @@ enum SceCtrlPadButtonMaskMode {
     SCE_CTRL_MASK_APPLY_BUTTONS = 2,
 };
 
+/* The center position of the analog stick on both axes. */
+#define SCE_CTRL_ANALOG_PAD_CENTER_VALUE            0x80
+
 /**
  * Initialize the controller device. Bind the controller driver to the controller device.
  * 
