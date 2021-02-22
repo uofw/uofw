@@ -90,8 +90,8 @@ void (*g_mainOperations[])(void) = {
 	reset_device,
 	ctrl_analog_xy_polling,
 	main_op_nop,
-	exec_syscon_cmd_0x35,
-	exec_syscon_cmd_0x36,
+	power_standby,
+	power_suspend,
 	get_batt_volt_ad
 }; // 0x00B0
 
@@ -1179,12 +1179,12 @@ void sub_20E9(void)
 }
 
 // sub_20F3
-void exec_syscon_cmd_0x35(void)
+void power_standby(void)
 {
 }
 
 // sub_20F9
-void exec_syscon_cmd_0x36(void)
+void power_suspend(void)
 {
 }
 

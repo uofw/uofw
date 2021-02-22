@@ -51,6 +51,8 @@
 #define PSP_SYSCON_CMD_RESET_DEVICE                  0x32
 #define PSP_SYSCON_CMD_CTRL_ANALOG_XY_POLLING        0x33
 #define PSP_SYSCON_CMD_CTRL_HR_POWER                 0x34
+#define PSP_SYSCON_CMD_POWER_STANDBY                 0x35
+#define PSP_SYSCON_CMD_POWER_SUSPEND                 0x36
 
 #define PSP_SYSCON_CMD_GET_BATT_VOLT_AD              0x37
 
