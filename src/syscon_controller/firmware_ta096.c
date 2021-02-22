@@ -96,6 +96,11 @@ void (*g_mainOperations[])(void) = {
 
 u8 g_unkF400[0x1D0]; // 0xF400
 
+/* SYSCON's internal scratchpad buffer size. */
+#define SCRATCH_PAD_SIZE	32
+/* SYSCON's internal scratchpad buffer. */
+u8 g_scratchpad[SCRATCH_PAD_SIZE]; // 0xF7B0
+
 u16 g_wakeUpFactor; // 0xFC79
 
 /*
@@ -111,7 +116,7 @@ u8 g_watchdogTimerCounterResetValue; // 0xFC82
 
 u8 g_usbStatus; // 0xFC86
 
-u8 g_mainOperationsReceiveBuffer[0x9]; // 0xFCB0 -- Could be larger....
+u8 g_mainOperationReceiveBuffer[9]; // 0xFCB0 -- Could be larger....
 
 u8 g_ctrlAnalogDataX; // 0xFD16 
 u8 g_ctrlAnalogDataY; // 0xFD17
@@ -140,7 +145,8 @@ u8 g_mainOperationId; // 0xFE4C
 #define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
 u8 g_mainOperationResultStatus; // 0xFE4E
 
-u8 g_transmitData[12]; // 0xFE50 -- TODO: This could be a bigger size (up until size 13)
+u8 g_transmitData[12]; // 0xFE50
+u8 g_mainOperationTransmitData[12]; // 0xFE5C
 
 u8 g_curSysconCmdId; // 0xFE6E
 u8 g_sysconCmdTransmitDataLength; // 0xFE71
@@ -699,9 +705,17 @@ void write_clock(void)
 	DI();
 
 	/* Set the new clock value. */
-	g_clock = *(u32 *)g_mainOperationsReceiveBuffer;
+	g_clock = *(u32 *)g_mainOperationReceiveBuffer;
 
+	/*
+	 * Watchdog timer operates with the subsystem clock frequency. Update the watchdog timer config
+	 * to use the new clock setting.
+	 */
+
+	/* Stop and clear the watchdog timer counter. */
 	WTM = 0xC0;
+
+	/* Enable and start the watchdog timer counter. */
 	WTM = 0xC3;
 
 	/* Enable interrupts. */
@@ -716,7 +730,7 @@ void set_usb_status(void)
 	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
 	/* Set the new USB status. */
-	g_usbStatus = g_mainOperationsReceiveBuffer[0];
+	g_usbStatus = g_mainOperationReceiveBuffer[0];
 
 	// TODO: Perhaps setting a flag here that a new USB status has been set.
 	g_unkFE76 |= 0x2;
@@ -733,7 +747,7 @@ void write_alarm(void)
 	DI();
 
 	/* Set the new alarm value. */
-	g_alarm = *(u32 *)g_mainOperationsReceiveBuffer;
+	g_alarm = *(u32 *)g_mainOperationReceiveBuffer;
 
 	/* Enable interrupts. */
 	EI();
@@ -741,14 +755,130 @@ void write_alarm(void)
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
+/* 
+ * Macros to obtain SYSCON's scratchpad destination ("index") and size of data to read/write from the received
+ * encoded data (first byte of g_mainOperationReceiveBuffer).
+ */
+
+#define SYSCON_SCRATCHPAD_GET_DST(enc)					(((enc) >> 2) & 0x3F)
+#define SYSCON_SCRATCHPAD_GET_DATA_SIZE(enc)			((enc) & 0x3)
+#define SYSCON_SCRATCHPAD_SET_DATA_SIZE(enc, s)		(((enc) & ~0x3) | ((s) & 0x3))
+
 // sub_1AD5
-void write_scratchpad()
+void write_scratchpad(void)
 {
+	u8 dstAndSizeEnc = g_mainOperationReceiveBuffer[0]; // 0x1ADA
+
+	/* Check if the specified scratchpad destination is valid. */
+	if (SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) >= SCRATCH_PAD_SIZE) // 0x1AE3 & 0x1AE5
+	{
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_ERROR;
+		return;
+	}
+
+	/*
+	 * The size of the content which should be written to the scratchpad is at most 0x8 bytes.
+	 * That specified size is encoded in the lower 2 bit of the [dstAndSizeEnc] value as such:
+	 *		0 = size 0x1
+	 *		1 = size 0x2
+	 *		2 = size 0x4
+	 *		3 = size 0x8
+	 * 
+	 * Below we "unpack" the size from the [dstAndSizeEnc] value.
+	 */
+	u8 size = 1;
+
+	/* As long as our "size counter" has not yet reached 0, we have to double the size. */
+	while (SYSCON_SCRATCHPAD_GET_DATA_SIZE(dstAndSizeEnc) & 0x3) // 0x1AEA - 0x1B08
+	{
+		/* Increase our size counter 1 time. */
+		size += size; // 0x1AF5
+
+		/* Only decrease the "size counter" in the lower 2 bits. */
+		SYSCON_SCRATCHPAD_SET_DATA_SIZE(dstAndSizeEnc, SYSCON_SCRATCHPAD_GET_DATA_SIZE(dstAndSizeEnc) - 1); // 0x1AF8 - 0x1B06 
+	}
+
+	/* Verify that we don't write more data to the scratchpad buffer than it can contain. */
+	if ((SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) + size) > SCRATCH_PAD_SIZE) // 0x1B11 - 0x1B15
+	{
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_ERROR;
+		return;
+	}
+
+	/*
+	 * Now that we have decoded the size of the data to write and verified that we will only write
+	 * inside the limits of the scratchpad buffer, let's actually write the data to SYSCON's scratchpad.
+	 */
+	while (size-- > 0)
+	{
+		/*
+		 * We need to access the element at [size + 1] because the data to write to the scratchpad
+		 * is located starting at g_mainOperationReceiveBuffer[1].
+		 */
+		u8 nScratchpadData = g_mainOperationReceiveBuffer[size + 1]; // 0x1B25
+
+		g_scratchpad[SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) + size] = nScratchpadData;
+	}
+
+	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1B4C
-void read_scratchpad()
+void read_scratchpad(void)
 {
+	u8 dstAndSizeEnc = g_mainOperationReceiveBuffer[0]; // 0x1B51
+
+	/* Check if the specified scratchpad destination is valid. */
+	if (SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) >= SCRATCH_PAD_SIZE) // 0x1B56 - 0x1B5C
+	{
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_ERROR;
+		return;
+	}
+
+	/*
+	 * The size of the content which should be read from the scratchpad is at most 0x8 bytes.
+	 * That specified size is encoded in the lower 2 bit of the [dstAndSizeEnc] value as such:
+	 *		0 = size 0x1
+	 *		1 = size 0x2
+	 *		2 = size 0x4
+	 *		3 = size 0x8
+	 *
+	 * Below we "unpack" the size from the [dstAndSizeEnc] value.
+	 */
+	u8 size = 1;
+
+	/* As long as our "size counter" has not yet reached 0, we have to double the size. */
+	while (SYSCON_SCRATCHPAD_GET_DATA_SIZE(dstAndSizeEnc) & 0x3) // 0x1B61 - 0x1B7F
+	{
+		/* Increase our size counter 1 time. */
+		size += size; // 0x1B6C
+
+		/* Only decrease the "size counter" in the lower 2 bits. */
+		SYSCON_SCRATCHPAD_SET_DATA_SIZE(dstAndSizeEnc, SYSCON_SCRATCHPAD_GET_DATA_SIZE(dstAndSizeEnc) - 1); // 0x1B6F - 0x1B7D 
+	}
+
+	/* Verify that we don't read data outside the bounds the of the scratchpad buffer. */
+	if ((SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) + size) > SCRATCH_PAD_SIZE) // 0x1B81 - 0x1B8C
+	{
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_ERROR;
+		return;
+	}
+
+	/* Set the size of the data which will be transmitted. */
+	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + size; // 0x1B91
+
+	/*
+	 * Now that we have decoded the size of the data to read and verified that we will only read
+	 * inside the limits of the scratchpad buffer, let's actually read the data from SYSCON's scratchpad.
+	 */
+	while (size-- > 0) // 0x1B93 - 0x1BB3
+	{
+		u8 scratchpadData = g_scratchpad[SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) + size]; // 0x1B9B - 1BA9
+		g_mainOperationTransmitData[size] = scratchpadData; // 0x1BB1
+	}
+
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1BC5
@@ -769,12 +899,12 @@ void exec_syscon_cmd_0x30(void)
 // sub_1FD2
 void ctrl_tachyon_wdt(void)
 {
-	if (g_mainOperationsReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
+	if (g_mainOperationReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
 	{
 		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_COUNTING;
 
-		g_watchdogTimerCounterResetValue = g_mainOperationsReceiveBuffer[0] + g_mainOperationsReceiveBuffer[0];
-		g_watchdogTimerCounter = g_mainOperationsReceiveBuffer[0] + g_mainOperationsReceiveBuffer[0];
+		g_watchdogTimerCounterResetValue = g_mainOperationReceiveBuffer[0] + g_mainOperationReceiveBuffer[0];
+		g_watchdogTimerCounter = g_mainOperationReceiveBuffer[0] + g_mainOperationReceiveBuffer[0];
 
 	}
 	else
