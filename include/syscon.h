@@ -783,6 +783,11 @@ s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size);
  */
 s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size);
 
+#define SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY     0
+#define SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC                  4
+
+#define SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE   8
+
 /**
  * Set a parameter (used by power).
  *

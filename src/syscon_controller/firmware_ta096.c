@@ -116,7 +116,13 @@ u8 g_watchdogTimerCounterResetValue; // 0xFC82
 
 u8 g_usbStatus; // 0xFC86
 
-u8 g_mainOperationReceiveBuffer[9]; // 0xFCB0 -- Could be larger....
+u8 g_mainOperationPayloadReceiveBuffer[9]; // 0xFCB0 -- Could be larger....
+
+/*
+ * The length of a command package sent to the SYSCON controller. A command package consists of
+ * the command ID, the command package length and the actual command data.
+ */
+u8 g_mainOperationReceivedPackageLength; // 0xFCCB
 
 u8 g_ctrlAnalogDataX; // 0xFD16 
 u8 g_ctrlAnalogDataY; // 0xFD17
@@ -143,21 +149,29 @@ u8 g_mainOperationId; // 0xFE4C
 #define MAIN_OPERATION_RESULT_STATUS_SUCCESS			0x82
 #define MAIN_OPERATION_RESULT_STATUS_ERROR				0x83
 #define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
+#define MAIN_OPERATION_RESULT_STATUS_INVALID_ID			0x87
 u8 g_mainOperationResultStatus; // 0xFE4E
 
 u8 g_transmitData[12]; // 0xFE50
-u8 g_mainOperationTransmitData[12]; // 0xFE5C
+u8 g_mainOperationPayloadTransmitBuffer[12]; // 0xFE5C
 
 u8 g_curSysconCmdId; // 0xFE6E
 u8 g_sysconCmdTransmitDataLength; // 0xFE71
 
-u8 g_mainOperationTransmitDataLength; // 0xFE72
+u8 g_mainOperationTransmitPackageLength; // 0xFE72
 
 u16 g_unkFE76; // 0xFE76 -- TODO: Might be a flag indicating what needs to be updated (i.e. new USB status set).
+
+u16 g_unkFE78; // 0xFE78
 
 u8 g_powerSupplyStatus; // 0xFE7A
 
 u8 g_unkFE98; // 0xFE98
+
+u16 g_setParam1PayloadData1; // FEAE
+u16 g_setParam1PayloadData0; // FEB0
+u16 g_setParam1PayloadData3; // FEB2
+u16 g_setParam1PayloadData2; // FEB4
 
 u8 g_baryonStatus2; // 0xFED2
 u8 g_unkFED3; // 0xFED3
@@ -699,13 +713,13 @@ void main_op_nop(void)
 // sub_1A96
 void write_clock(void)
 {
-	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
 	/* Disable interrupts. */
 	DI();
 
 	/* Set the new clock value. */
-	g_clock = *(u32 *)g_mainOperationReceiveBuffer;
+	g_clock = *(u32 *)g_mainOperationPayloadReceiveBuffer;
 
 	/*
 	 * Watchdog timer operates with the subsystem clock frequency. Update the watchdog timer config
@@ -727,10 +741,10 @@ void write_clock(void)
 // sub_1AB1
 void set_usb_status(void)
 {
-	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
 	/* Set the new USB status. */
-	g_usbStatus = g_mainOperationReceiveBuffer[0];
+	g_usbStatus = g_mainOperationPayloadReceiveBuffer[0];
 
 	// TODO: Perhaps setting a flag here that a new USB status has been set.
 	g_unkFE76 |= 0x2;
@@ -741,13 +755,13 @@ void set_usb_status(void)
 // sub_1AC0
 void write_alarm(void)
 {
-	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
 	/* Disable interrupts. */
 	DI();
 
 	/* Set the new alarm value. */
-	g_alarm = *(u32 *)g_mainOperationReceiveBuffer;
+	g_alarm = *(u32 *)g_mainOperationPayloadReceiveBuffer;
 
 	/* Enable interrupts. */
 	EI();
@@ -757,17 +771,17 @@ void write_alarm(void)
 
 /* 
  * Macros to obtain SYSCON's scratchpad destination ("index") and size of data to read/write from the received
- * encoded data (first byte of g_mainOperationReceiveBuffer).
+ * encoded data (first byte of g_mainOperationPayloadReceiveBuffer).
  */
 
 #define SYSCON_SCRATCHPAD_GET_DST(enc)					(((enc) >> 2) & 0x3F)
 #define SYSCON_SCRATCHPAD_GET_DATA_SIZE(enc)			((enc) & 0x3)
-#define SYSCON_SCRATCHPAD_SET_DATA_SIZE(enc, s)		(((enc) & ~0x3) | ((s) & 0x3))
+#define SYSCON_SCRATCHPAD_SET_DATA_SIZE(enc, s)			(((enc) & ~0x3) | ((s) & 0x3))
 
 // sub_1AD5
 void write_scratchpad(void)
 {
-	u8 dstAndSizeEnc = g_mainOperationReceiveBuffer[0]; // 0x1ADA
+	u8 dstAndSizeEnc = g_mainOperationPayloadReceiveBuffer[0]; // 0x1ADA
 
 	/* Check if the specified scratchpad destination is valid. */
 	if (SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) >= SCRATCH_PAD_SIZE) // 0x1AE3 & 0x1AE5
@@ -813,21 +827,21 @@ void write_scratchpad(void)
 	{
 		/*
 		 * We need to access the element at [size + 1] because the data to write to the scratchpad
-		 * is located starting at g_mainOperationReceiveBuffer[1].
+		 * is located starting at g_mainOperationPayloadReceiveBuffer[1].
 		 */
-		u8 nScratchpadData = g_mainOperationReceiveBuffer[size + 1]; // 0x1B25
+		u8 nScratchpadData = g_mainOperationPayloadReceiveBuffer[size + 1]; // 0x1B25
 
 		g_scratchpad[SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) + size] = nScratchpadData;
 	}
 
-	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1B4C
 void read_scratchpad(void)
 {
-	u8 dstAndSizeEnc = g_mainOperationReceiveBuffer[0]; // 0x1B51
+	u8 dstAndSizeEnc = g_mainOperationPayloadReceiveBuffer[0]; // 0x1B51
 
 	/* Check if the specified scratchpad destination is valid. */
 	if (SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) >= SCRATCH_PAD_SIZE) // 0x1B56 - 0x1B5C
@@ -866,7 +880,7 @@ void read_scratchpad(void)
 	}
 
 	/* Set the size of the data which will be transmitted. */
-	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + size; // 0x1B91
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + size; // 0x1B91
 
 	/*
 	 * Now that we have decoded the size of the data to read and verified that we will only read
@@ -875,20 +889,176 @@ void read_scratchpad(void)
 	while (size-- > 0) // 0x1B93 - 0x1BB3
 	{
 		u8 scratchpadData = g_scratchpad[SYSCON_SCRATCHPAD_GET_DST(dstAndSizeEnc) + size]; // 0x1B9B - 1BA9
-		g_mainOperationTransmitData[size] = scratchpadData; // 0x1BB1
+		g_mainOperationPayloadTransmitBuffer[size] = scratchpadData; // 0x1BB1
 	}
 
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
+typedef struct {
+	u8 data[SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE];
+} SysconParamIdPayload;
+
+#define SYSCON_SET_PARAM_NUM_SET_PARAMS		5
+#define SYSCON_SET_PARAM_MAX_SET_PARAM_ID	(SYSCON_SET_PARAM_NUM_SET_PARAMS - 1)
+
+SysconParamIdPayload g_setParamPayloads[SYSCON_SET_PARAM_NUM_SET_PARAMS]; // 0xF7D0
+
+/* This constant defines the default setParam ID if no ID has been specified. */
+#define SYSCON_SET_PARAM_ID_DEFAULT	SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
+
 // sub_1BC5
 void send_setparam(void)
 {
+	if ((g_mainOperationReceivedPackageLength == 10
+		|| (g_mainOperationReceivedPackageLength == 11 && g_mainOperationPayloadReceiveBuffer[8] == 0 /* setParam ID 0 */))
+		&& g_mainOperationPayloadReceiveBuffer[6] >= 10) // 0x1BCB & 0x1BCF & 0x1BD6 & 0x1BDD
+	{
+		// loc_1BE1
+
+		/* Set payload for setParam with ID 0. */
+
+		u8 i;
+		for (i = 0; i < SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE; i++) // 0x1BE1 - 0x1BF9
+		{
+			g_setParamPayloads[0].data[i] = g_mainOperationPayloadReceiveBuffer[i];
+		}
+
+		g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+	}
+	else if (g_mainOperationReceivedPackageLength == 11 && g_mainOperationPayloadReceiveBuffer[8] == 1) // 0x1C07 & 0x1C0F
+	{
+		/* Verify if the payload data for setParam ID 1 is correct. */
+
+		u16 payload = ((u16 *)g_mainOperationPayloadReceiveBuffer)[0]; // 0x1C11
+		if (payload <= 3264 || payload > 18560) // 0x1C14 - 0x1C19
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+			g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+
+			return;
+		}
+
+		payload = ((u16 *)g_mainOperationPayloadReceiveBuffer)[1]; // 0x1C22
+		if (payload < 46912 || payload >= 62208) // 0x1C28 & 0x1C2D
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+			g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+
+			return;
+		}
+
+		payload = ((u16 *)g_mainOperationPayloadReceiveBuffer)[2]; // 0x1C2F
+		if (payload <= 3264 || payload > 18560) // 0x1C32 & 0x1C39 & 1C3E
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+			g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+
+			return;
+		}
+
+		payload = ((u16 *)g_mainOperationPayloadReceiveBuffer)[3]; // 1C40
+		if (payload < 46912 || payload >= 62208) // 0x1C43 & 0x1C48
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+			g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+
+			return;
+		}
+
+		/* Payload data is correct. Set it now. */
+
+		u8 i;
+		for (i = 0; i < SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE; i++) // 0x1C4F - 0x1C69
+		{
+			g_setParamPayloads[1].data[i] = g_mainOperationPayloadReceiveBuffer[i];
+		}
+
+		// loc_1C6B
+
+		/* Create copy of the data (which won't be modified) for setParam with ID 1. */
+
+		g_setParam1PayloadData1 = ((u16 *)g_setParamPayloads[1].data)[1];
+		g_setParam1PayloadData0 = ((u16 *)g_setParamPayloads[1].data)[0];
+		g_setParam1PayloadData3 = ((u16 *)g_setParamPayloads[1].data)[3];
+		g_setParam1PayloadData2 = ((u16 *)g_setParamPayloads[1].data)[2];
+
+		g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+	}
+	else if (g_mainOperationReceivedPackageLength != 11 
+		|| g_mainOperationPayloadReceiveBuffer[8] > 3) // 0x1C8A & 0x1C90
+	{
+		/* 
+		 * We only support packages which have either length 10 or length 11 (an additional byte for the
+		 * setParam ID).
+		 * 
+		 * We also do not support setting param values for the [SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC] ID
+		 * in a PSP model equipped with the TA-096 motherboard. This setParam is only supported on PSP models
+		 * of the PSP-2000 series (Motherboards TA-085v1 - TA-090v1).
+		 */
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_ERROR;
+	}
+	else
+	{
+		/* Write the specified data for the remaining setParams 2 or 3. */
+
+		u8 setParamId = g_mainOperationPayloadReceiveBuffer[8];
+
+		u8 i;
+		for (i = 0; i < SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE; i++) // 0x1C4F - 0x1C69
+		{
+			g_setParamPayloads[setParamId].data[i] = g_mainOperationPayloadReceiveBuffer[i];
+		}
+
+		if (setParamId == 2) // 0x1CC0 & 0x1CC2
+		{
+			g_unkFE78 |= 0x1; // 0x1CC4
+		}
+
+		g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+	}
 }
 
 // sub_1CD8
 void receive_setparam(void)
 {
+	u8 setParamId;
+
+	/* Set default setParam ID. */
+	setParamId = SYSCON_SET_PARAM_ID_DEFAULT; // 0x1CD9
+
+	/* Check if a setParam ID has been set. */
+	if (g_mainOperationReceivedPackageLength == 3) // 0x1CE0
+	{
+		/* Obtain the specified setParam ID. */
+		setParamId = g_mainOperationPayloadReceiveBuffer[0];
+	}
+
+	if (setParamId > SYSCON_SET_PARAM_MAX_SET_PARAM_ID) // 0x1CED
+	{
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_INVALID_ID;
+		return;
+	}
+
+	if (setParamId == 1) // 0x1CF4
+	{
+		((u16 *)&g_setParamPayloads[1].data)[1] = g_setParam1PayloadData1;
+		((u16 *)&g_setParamPayloads[1].data)[0] = g_setParam1PayloadData0;
+		((u16 *)&g_setParamPayloads[1].data)[3] = g_setParam1PayloadData3;
+		((u16 *)&g_setParamPayloads[1].data)[2] = g_setParam1PayloadData2;
+	}
+
+	u8 i;
+	for (i = 0; i < SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE; i++) // 0x1D0A - 0x1D25
+	{
+		g_mainOperationPayloadTransmitBuffer[i] = g_setParamPayloads[setParamId].data[i];
+	}
+
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE;
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1D34
@@ -899,13 +1069,12 @@ void exec_syscon_cmd_0x30(void)
 // sub_1FD2
 void ctrl_tachyon_wdt(void)
 {
-	if (g_mainOperationReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
+	if (g_mainOperationPayloadReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
 	{
 		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_COUNTING;
 
-		g_watchdogTimerCounterResetValue = g_mainOperationReceiveBuffer[0] + g_mainOperationReceiveBuffer[0];
-		g_watchdogTimerCounter = g_mainOperationReceiveBuffer[0] + g_mainOperationReceiveBuffer[0];
-
+		g_watchdogTimerCounterResetValue = g_mainOperationPayloadReceiveBuffer[0] + g_mainOperationPayloadReceiveBuffer[0];
+		g_watchdogTimerCounter = g_mainOperationPayloadReceiveBuffer[0] + g_mainOperationPayloadReceiveBuffer[0];
 	}
 	else
 	{
@@ -914,7 +1083,7 @@ void ctrl_tachyon_wdt(void)
 		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_NOT_COUNTING;
 	}
 
-	g_mainOperationTransmitDataLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
