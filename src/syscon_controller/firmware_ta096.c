@@ -137,10 +137,14 @@ u8 g_mainOperationReceivedPackageLength; // 0xFCCB
 u8 g_ctrlAnalogDataX; // 0xFD16 
 u8 g_ctrlAnalogDataY; // 0xFD17
 
+u8 g_battVoltADUnkVal; // 0xFD22
+
 u8 g_unkFD29; // 0xFD29
 
 /* Base value for the battery voltage on PSP series PSP-N1000 and PSP-E1000. */
 u8 g_battVoltBase; // 0xFD46
+u8 g_unkFD47; //0xFD47
+u8 g_unkFD49; // 0xFD49
 
 u8 g_unkFE31; // 0xFE31
 u8 g_unkFE32; // 0xFE32
@@ -158,6 +162,7 @@ u8 g_unkFE46; // 0xFE46
 
 u8 g_mainOperationId; // 0xFE4C
 
+#define MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x81		0x81 // TODO: perhaps a [retry] indicator?
 #define MAIN_OPERATION_RESULT_STATUS_SUCCESS			0x82
 #define MAIN_OPERATION_RESULT_STATUS_ERROR				0x83
 #define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
@@ -182,10 +187,12 @@ u8 g_powerSupplyStatus; // 0xFE7A
 u8 g_unkFE96; // 0xFE96
 u8 g_unkFE98; // 0xFE98
 
-u16 g_setParam1PayloadData1; // FEAE
-u16 g_setParam1PayloadData0; // FEB0
-u16 g_setParam1PayloadData3; // FEB2
-u16 g_setParam1PayloadData2; // FEB4
+u16 g_setParam1PayloadData1; // 0xFEAE
+u16 g_setParam1PayloadData0; // 0xFEB0
+u16 g_setParam1PayloadData3; // 0xFEB2
+u16 g_setParam1PayloadData2; // 0xFEB4
+
+u8 g_unkFECF; // 0xFECF
 
 u8 g_baryonStatus2; // 0xFED2
 u8 g_unkFED3; // 0xFED3
@@ -1191,6 +1198,49 @@ void power_suspend(void)
 // sub_2107
 void get_batt_volt_ad(void)
 {
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
+
+	if (g_unkFD49 == 0x80) // 0x210F
+	{
+		if (g_powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED) // 0x2111
+		{
+			g_unkFD47 = 0;
+			g_unkFECF |= 0x2;
+			g_unkFD49 = 0x81;
+		}
+		else
+		{
+			/* No battery is equipped. */
+
+			// loc_2123
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 3;
+
+			g_mainOperationPayloadTransmitBuffer[0] = 0;
+			g_mainOperationPayloadTransmitBuffer[1] = 0;
+			g_mainOperationPayloadTransmitBuffer[2] = 0;
+
+			g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+		}
+	}
+	else if (g_unkFD49 == 0x82) // 0x2137
+	{
+		// loc_2134
+
+		g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 3;
+
+		((u16 *)g_mainOperationPayloadTransmitBuffer)[0] = g_battVoltADUnkVal;
+		g_mainOperationPayloadTransmitBuffer[2] = g_battVoltBase;
+
+		g_unkFD49 = 0x80;
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+	}
+
+	// loc_2155
+	if (g_unkFD49 == 0x81)
+	{
+		g_isMainOperationRequestExist = SCE_TRUE;
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x81;
+	}
 }
 
 // TODO: more functions here...
