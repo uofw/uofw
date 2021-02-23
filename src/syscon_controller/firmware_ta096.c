@@ -26,6 +26,9 @@
 
 #include "sfr.h"
 
+#define SYSCON_STACK_LOWER_BOUND	0xFE20
+#define SYSCON_STACK_UPPER_BOUND	0xFEDF
+
 void sub_1070(void);
 void sub_10A2(void);
 
@@ -35,6 +38,11 @@ void sub_10A2(void);
  * are always sent back to the SYSCON module.
  */
 #define SYSCON_CMD_TRANSMIT_DATA_BASE_LEN	3
+
+/* Constants */
+
+const u8 g_analogPadStartPositionY = SCE_CTRL_ANALOG_PAD_CENTER_VALUE; // 0x86
+const u8 g_analogPadStartPositionX = SCE_CTRL_ANALOG_PAD_CENTER_VALUE; // 0x87
 
 const u32 g_baryonVersion = 0x00403000; // 0x010E
 
@@ -111,6 +119,16 @@ typedef struct {
 
 SysconParamIdPayload g_setParamPayloads[SYSCON_SET_PARAM_NUM_SET_PARAMS]; // 0xF7D0
 
+u16 g_unkFC40; // 0xFC40
+u16 g_unkFC42; // 0xFC42
+u16 g_unkFC44; // 0xFC44
+
+u16 g_unkFC54; // 0xFC54
+u16 *g_unkFC56; // 0xFC56
+u16 g_unkFC58; // 0xFC58
+
+u8 g_unkFC78; // 0xFC78
+
 u16 g_wakeUpFactor; // 0xFC79
 
 /*
@@ -146,6 +164,15 @@ u8 g_battVoltBase; // 0xFD46
 u8 g_unkFD47; //0xFD47
 u8 g_unkFD49; // 0xFD49
 
+/* 0 = analog pad at bottom limit, 0xFF = analog pad at top limit. */
+u8 g_curAnalogPadPositionY; // 0xFD4A
+
+/* 0 = analog pad at right limit, 0xFF = analog pad at left limit. */
+u8 g_curAnalogPadPositionX; // 0xFD4B
+
+/* sreg variables below */
+
+u8 g_unkFE30; // 0xFE30
 u8 g_unkFE31; // 0xFE31
 u8 g_unkFE32; // 0xFE32
 u8 g_isMainOperationRequestExist; // 0xFE33
@@ -192,16 +219,86 @@ u16 g_setParam1PayloadData0; // 0xFEB0
 u16 g_setParam1PayloadData3; // 0xFEB2
 u16 g_setParam1PayloadData2; // 0xFEB4
 
+u8 g_unkFEB6; // 0xFEB6
+
 u8 g_unkFECF; // 0xFECF
 
 u8 g_baryonStatus2; // 0xFED2
 u8 g_unkFED3; // 0xFED3
-
 /* functions */
 
+void RESET(void) __attribute__((noreturn));
+
 // sub_0660
+/*
+ * Run when a [reset] signal is generated. A [reset] signal is generated, for example, when
+ *		- the device is turned on
+ *		- the watchdog timer detected a a loop (counter wasn't resetted)
+ * 
+ * Initializes state such as the stack pointer (and clears the stack area), the current analog pad data
+ * and clears global variables (so that we start fresh).
+ */
 void RESET(void)
 {
+	/* Set the register bank RB0 (0xFEF8 - 0xFEFF) as the work register set. */
+	// SEL RB0
+
+	/* Set the Stack pointer. */
+	// MOVW SP SYSCON_STACK_LOWER_BOUND
+
+	hdwinit();
+
+	g_unkFC54 = 0;
+	g_unkFC40 = 0;
+	g_unkFC44 = 0;
+	g_unkFC42 = 1;
+	g_unkFC56 = &g_unkFC58;
+
+	/* Clear stack content. */
+	u8 *pStackLower = (u8 *)SYSCON_STACK_LOWER_BOUND;
+	while (*pStackLower != (u8 *)(SYSCON_STACK_UPPER_BOUND + 1))
+	{
+		*pStackLower++ = 0;
+	}
+
+	/* ROM data copy: copy external variables having initial value. */
+
+	/* Set default analog pad data. */
+
+	// 0x0689 - 0x0699
+	g_curAnalogPadPositionY = g_analogPadStartPositionY;
+	g_curAnalogPadPositionX = g_analogPadStartPositionX;
+
+	/* Initialize external variables which don't have initial values (initialize to 0) */
+
+	u8 *pStartAddr = &g_unkFC78;
+	u8 *pEndAddr = &g_curAnalogPadPositionY;
+	while (pStartAddr != pEndAddr) // 0x069B - 0x06A8
+	{
+		*pStartAddr = 0;
+	}
+
+	/* ROM copy: Copy sreg variables which have initial values. */
+
+	// Note: Logic from 0x6AA - 0x6BC does not do anything, hence omitted here
+	// (no sreg vars with initial values)
+
+	/* Initialize sreg variables which don't have initial values (initialize to 0) */
+
+	pStartAddr = &g_unkFE30;
+	pEndAddr = &g_unkFEB6;
+	while (pStartAddr != pEndAddr) // 0x06BC - 0x06C9
+	{
+		*pStartAddr = 0;
+	}
+
+	/* Call our [main] function now that we have set up the SYSCON state. */
+	main();
+
+	/* Cleanup if necessary. */
+	exit(0);
+
+	for (;;);
 }
 
 // sub_06D6
@@ -215,14 +312,15 @@ void xor_bytes()
 }
 
 // sub_073A
-void sub_073A(void)
+void hdwinit(void)
 {
 	return;
 }
 
 // sub_073B
-void sub_073B()
+void exit(u16 status)
 {
+	(void)status;
 }
 
 // sub_075D
@@ -917,7 +1015,7 @@ void read_scratchpad(void)
 }
 
 /* This constant defines the default setParam ID if no ID has been specified. */
-#define SYSCON_SET_PARAM_ID_DEFAULT	SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
+#define SYSCON_SET_PARAM_ID_DEFAULT		SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
 
 // sub_1BC5
 void send_setparam(void)
