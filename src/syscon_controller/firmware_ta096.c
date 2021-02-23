@@ -141,6 +141,7 @@ u16 g_wakeUpFactor; // 0xFC79
 u8 g_watchdogTimerStatus; // 0xFC80
 u8 g_watchdogTimerCounter; // 0xFC81
 u8 g_watchdogTimerCounterResetValue; // 0xFC82
+u8 g_unkFC83; // 0xFC83 -- TODO: Seems related to the watchdogTimer
 
 u8 g_usbStatus; // 0xFC86
 
@@ -189,12 +190,15 @@ u8 g_unkFE46; // 0xFE46
 
 u8 g_mainOperationId; // 0xFE4C
 
+#define MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x80		0x80
 #define MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x81		0x81 // TODO: perhaps a [retry] indicator?
 #define MAIN_OPERATION_RESULT_STATUS_SUCCESS			0x82
 #define MAIN_OPERATION_RESULT_STATUS_ERROR				0x83
 #define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
 #define MAIN_OPERATION_RESULT_STATUS_INVALID_ID			0x87
 u8 g_mainOperationResultStatus; // 0xFE4E
+
+u8 g_unkFE4F; // 0xFE4F -- TODO: Seems similar to g_mainOperationResultStatus
 
 u8 g_transmitData[12]; // 0xFE50
 u8 g_mainOperationPayloadTransmitBuffer[12]; // 0xFE5C
@@ -339,7 +343,7 @@ void main(void)
 
 	if (WDTE != 0) // 0x076B & 9x076D
 	{
-		PO6 &= ~0x4; // 0x076F
+		P6 &= ~0x4; // 0x076F
 		PM6 &= ~0x4; // 0x076F
 
 		TMHMD1 = 0x50;
@@ -355,13 +359,13 @@ void main(void)
 			;;
 
 		TMHMD1 &= ~0x80;
-		PO6 |= 0x4; // 0x076F
+		P6 |= 0x4; // 0x076F
 	}
 
 loc_78E:
 
 	// Wait for bit 0 of Port 12 to be set
-	while (!(PO12 & 0x1)) // 0x078E
+	while (!(P12 & 0x1)) // 0x078E
 	{
 		/* Reset the watchdog timer. */
 		WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER;
@@ -382,7 +386,7 @@ loc_78E:
 	init_allegrex_session();
 	init_pandora_secret_keys();
 
-	if (!(PO12 & 0x1)) // 0x07BA
+	if (!(P12 & 0x1)) // 0x07BA
 	{
 		goto loc_78E;
 	}
@@ -585,7 +589,7 @@ void transmit_data_set_digital_user_key_data(void)
 	// PORT 7 seems to contain state values for the following buttons:
 	//		UP, DOWN, LEFT, RIGHT
 	//		TRIANGLE, CIRCLE, CROSS, SQUARE
-	g_transmitData[0] = PO7;
+	g_transmitData[0] = P7;
 
 
 	// Port 4 seems to contain state values for the following buttons:
@@ -595,7 +599,7 @@ void transmit_data_set_digital_user_key_data(void)
 	// Port 2 seems to contain state values for the following buttons:
 	//	SCE_CTRL_INTERCEPTED
 	//  SCE_CTRL_HOLD
-	u8 ctrlData2 = ((PO2 << 4) & 0x30) | (PO4 & 0xF);
+	u8 ctrlData2 = ((P2 << 4) & 0x30) | (P4 & 0xF);
 	ctrlData2 |= 0x40; // Set 7th bit -- SCE_CTRL_WLAN_UP?
 	ctrlData2 &= ~0x80; // clear 8th bit -- SCE_CTRL_REMOTE?
 
@@ -609,7 +613,7 @@ void transmit_data_set_digital_kernel_key_data(void)
 	// VolUp, VolDown, Screen, Note (0xF)
 	// Disc, MS, 0x08000000 (unknown) - 0xB
 
-	g_transmitData[2] = PO5 | 0xFC; // 1957
+	g_transmitData[2] = P5 | 0xFC; // 1957
 
 	//u8 isDiscPresent = (((g_unkFE45 >> 2) & 0x1) ^ 0xFF) & 0x1;
 	u8 isDiscPresent = !((g_unkFE45 >> 2) & 0x1);
@@ -1198,9 +1202,94 @@ void ctrl_tachyon_wdt(void)
 }
 
 // sub_1FF7
-void reset_device()
+void reset_device(void )
 {
+	u8 resetType;
 
+	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN; // 0x1FFC
+
+	resetType = g_mainOperationPayloadReceiveBuffer[0]; // 0x1FFF
+	if (!(resetType & 0x1)) // 0x2004
+	{
+		// loc_205D
+		if (!(resetType & 0x2))
+		{
+			g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_INVALID_ID;
+			return;
+		}
+
+		if (resetType & 0x80) // 0x2065 & 0x2066
+		{
+			P6 &= ~0x8;
+			P0 &= ~0x4;
+		}
+		else
+		{
+			// loc_206F
+
+			if (!(g_unkFE45 & 0x4)) // 0x206F
+			{
+				P2 |= 0x4;
+			}
+
+			P3 |= 0x8;
+		}
+		g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
+		return;
+	}
+
+	// 0x2007
+
+	/* (Reset type & 0x1) == 1 */
+
+	/* Mask interrupt for input pin 2 (P31) (rising edge). */
+	MK0L |= MK0L_INTR_MASK_FLAG_P2; // 0x2007
+
+	if (!(MK0H & MK0L_INTR_MASK_FLAG_P1) || g_unkFE4F == 0x81) // 200A & 0x200E & 0x2011
+	{
+		g_isMainOperationRequestExist = SCE_TRUE; // 0x2013
+		return;
+	}
+
+	/* Disable interrupts. */
+	DI();
+
+	P0 &= ~0x20;
+
+	g_unkFE4F = 0x80;
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x80;
+
+	if (resetType & 0x40 && g_unkFC83 != 0) // 0x2022 - 0x2026
+	{
+		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_NOT_COUNTING; // 0x2032
+
+		/* Set serial clock I/O pin of serial interface CSI11. */
+		P0 |= 0x10;
+	}
+	else
+	{
+		// loc_2039
+		g_watchdogTimerStatus = WATCHDOG_TIMER_STATUS_COUNTING;
+	}
+
+	// loc_203E
+
+	init_allegrex_session();
+
+	g_wakeUpFactor = ((g_wakeUpFactor & 0xC4) | 0x4) & 0x7F; // 0x2041 - 0x204D
+
+	/* Clear interrupt request flag for interrupt INTCSI10 */
+	IF0H &= ~IF0H_INTR_REQ_FLAG_CSI10;
+	P0 |= 0x20;
+
+	/* Enable interrupts. */
+	EI();
+
+	/* Clear interrupt request flag for input pin 3 (P31)  */
+	IF0L &= ~IF0L_INTR_REQ_FLAG_P2;
+
+	/* Remove applied interrupt masks. */
+	MK0L &= ~MK0L_INTR_MASK_FLAG_P2;
 }
 
 // sub_2081

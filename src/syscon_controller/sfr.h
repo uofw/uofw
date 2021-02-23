@@ -8,28 +8,28 @@
 /* Special Function Registers (SFR) */
 
 /* Port register 1 */
-#define PO0			(*(u8 *)0xFF00)
+#define P0			(*(u8 *)0xFF00)
 
 /* Port register 1 */
-#define PO1			(*(u8 *)0xFF01)
+#define P1			(*(u8 *)0xFF01)
 
 /* Port register 2 */
-#define PO2			(*(u8 *)0xFF02)
+#define P2			(*(u8 *)0xFF02)
 
 /* Port register 3 */
-#define PO3			(*(u8 *)0xFF03)
+#define P3			(*(u8 *)0xFF03)
 
 /* Port register 4 */
-#define PO4			(*(u8 *)0xFF04)
+#define P4			(*(u8 *)0xFF04)
 
 /* Port register 5 */
-#define PO5			(*(u8 *)0xFF05)
+#define P5			(*(u8 *)0xFF05)
 
 /* Port register 6 */
-#define PO6			(*(u8 *)0xFF06)
+#define P6			(*(u8 *)0xFF06)
 
 /* Port register 7 */
-#define PO7			(*(u8 *)0xFF07)
+#define P7			(*(u8 *)0xFF07)
 
 /* 10-bit A/D conversion result register */
 #define ADCR		(*(const u16 *)0xFF08)
@@ -44,10 +44,10 @@
 #define TXB6		(*(u8 *)0xFF0B))
 
 /* Port register 12 */
-#define PO12		(*(u8 *)0xFF00)
+#define P12			(*(u8 *)0xFF00)
 
 /* Port register 14 */
-#define PO14		(*(u8 *)0xFF00)
+#define P14			(*(u8 *)0xFF00)
 
 /* Serial I/O shift register 10 */
 #define SIO10		(*(const u8 *)0xFF0F)
@@ -363,8 +363,26 @@
 /* Low-voltage detection level selection register */
 #define LVIS		(*(u8 *)0xFFBF)
 
+#define IF0L_INTR_REQ_FLAG_LVI	(1 << 0)
+#define IF0L_INTR_REQ_FLAG_PO	(1 << 1)
+#define IF0L_INTR_REQ_FLAG_P1	(1 << 2)
+#define IF0L_INTR_REQ_FLAG_P2	(1 << 3) /* Interrupt request flag for input pin 2 (P31) */
+#define IF0L_INTR_REQ_FLAG_P3	(1 << 4)
+#define IF0L_INTR_REQ_FLAG_P4	(1 << 5)
+#define IF0L_INTR_REQ_FLAG_P5	(1 << 6)
+#define IF0L_INTR_REQ_FLAG_SRE6	(1 << 7)
+
 /* Interrupt request flag register 0L */
 #define IF0L		(*(u8 *)0xFFE0)
+
+#define IF0H_INTR_REQ_FLAG_SR6		(1 << 0)
+#define IF0H_INTR_REQ_FLAG_ST6		(1 << 1)
+#define IF0H_INTR_REQ_FLAG_CSI10	(1 << 2)
+#define IF0H_INTR_REQ_FLAG_TMH1		(1 << 3)
+#define IF0H_INTR_REQ_FLAG_TMH0		(1 << 4)
+#define IF0H_INTR_REQ_FLAG_TM50		(1 << 5)
+#define IF0H_INTR_REQ_FLAG_TM000	(1 << 6)
+#define IF0H_INTR_REQ_FLAG_TM010	(1 << 7)
 
 /* Interrupt request flag register 0H */
 #define IF0H		(*(u8 *)0xFFE1)
@@ -374,6 +392,15 @@
 
 /* Interrupt request flag register 1H */
 #define IF1H		(*(u8 *)0xFFE3)
+
+#define MK0L_INTR_MASK_FLAG_LVI		(1 << 0)
+#define MK0L_INTR_MASK_FLAG_P0		(1 << 1)
+#define MK0L_INTR_MASK_FLAG_P1		(1 << 2)
+#define MK0L_INTR_MASK_FLAG_P2		(1 << 3) /* Interrupt mask bit for input pin 2 (P31) */
+#define MK0L_INTR_MASK_FLAG_P3		(1 << 4)
+#define MK0L_INTR_MASK_FLAG_P4		(1 << 5)
+#define MK0L_INTR_MASK_FLAG_P5		(1 << 6)
+#define MK0L_INTR_MASK_FLAG_SRE6	(1 << 7)
 
 /* Interrupt mask flag register 0L */
 #define MK0L		(*(u8 *)0xFFE4)
