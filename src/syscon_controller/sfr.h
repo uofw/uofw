@@ -44,10 +44,10 @@
 #define TXB6		(*(u8 *)0xFF0B))
 
 /* Port register 12 */
-#define P12			(*(u8 *)0xFF00)
+#define P12			(*(u8 *)0xFF0C)
 
 /* Port register 14 */
-#define P14			(*(u8 *)0xFF00)
+#define P14			(*(u8 *)0xFF0E)
 
 /* Serial I/O shift register 10 */
 #define SIO10		(*(const u8 *)0xFF0F)
@@ -78,6 +78,12 @@
 
 /* 8-bit timer H compare register 11 */
 #define CMP11		(*(u8 *)0xFF1B)
+
+/* 16-bit processor register SP (stack pointer) */
+#define PROCESSOR_REGISTER_SP ((u16 *)0xFF1C)
+
+/* 8-bit processor register PSW (Program Status Word) */
+#define PROCESSOR_REGISTER_PSW ((u8 *)0xFF1E)
 
 /* 8-bit timer counter 51 */
 #define TM51		(*(const u8 *)0xFF1F
@@ -362,6 +368,10 @@
 
 /* Low-voltage detection level selection register */
 #define LVIS		(*(u8 *)0xFFBF)
+
+#define PFCMD		(*(u8 *)0xFFC0)
+
+#define FLPMC		(*(u8 *)0xFFC4)
 
 #define IF0L_INTR_REQ_FLAG_LVI	(1 << 0)
 #define IF0L_INTR_REQ_FLAG_PO	(1 << 1)

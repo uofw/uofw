@@ -6,7 +6,7 @@
  *
  *          SYSCON controller firmware
  * 
- *              Motherboard TA-096
+ *  Motherboard TA-096 - PSP Street (E-1000) - 11g
  *
  *       Renesas 78K0/KE2 - model D78F0534
  *
@@ -586,19 +586,22 @@ void exec_syscon_cmd_get_baryon_version(void)
 // sub_1939
 void transmit_data_set_digital_user_key_data(void)
 {
-	// PORT 7 seems to contain state values for the following buttons:
-	//		UP, DOWN, LEFT, RIGHT
-	//		TRIANGLE, CIRCLE, CROSS, SQUARE
+	/*
+	 * Port 7:
+	 *
+	 * SQUARE, CROSS, CIRCLE, TRIANGLE | LEFT, DOWN, RIGHT, UP
+	 * 
+	 * Port 4:
+	 * 
+	 * START, R, L, SELECT
+	 * 
+	 * Port 2:
+	 * 
+	 * SCE_CTRL_HOLD, SCE_CTRL_INTERCEPTED
+	 */
+
 	g_transmitData[0] = P7;
 
-
-	// Port 4 seems to contain state values for the following buttons:
-	//	SELECT, START
-	//	L, R
-	//
-	// Port 2 seems to contain state values for the following buttons:
-	//	SCE_CTRL_INTERCEPTED
-	//  SCE_CTRL_HOLD
 	u8 ctrlData2 = ((P2 << 4) & 0x30) | (P4 & 0xF);
 	ctrlData2 |= 0x40; // Set 7th bit -- SCE_CTRL_WLAN_UP?
 	ctrlData2 &= ~0x80; // clear 8th bit -- SCE_CTRL_REMOTE?
