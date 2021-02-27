@@ -24,6 +24,7 @@
 #include <ctrl.h>
 #include <syscon.h>
 
+#include "firmware.h"
 #include "sfr.h"
 
 #define SYSCON_STACK_LOWER_BOUND	0xFE20
@@ -31,13 +32,6 @@
 
 void sub_1070(void);
 void sub_10A2(void);
-
-/*
- * This constant specifies the base length of the data to be transmitted back to the SYSCON module.
- * This base length represents the first three members in the ::SceSysconPacket.tx[16] data buffer, which
- * are always sent back to the SYSCON module.
- */
-#define SYSCON_CMD_TRANSMIT_DATA_BASE_LEN	3
 
 /* Constants */
 
@@ -73,8 +67,6 @@ void (*g_sysconCmdGetOps[])(void) = {
 	exec_syscon_cmd_get_timestamp,
 	exec_syscon_cmd_get_video_cable
 }; // 0x008A -- SIO10 communication
-
-#define MAIN_OPERATIONS_ID_START		PSP_SYSCON_CMD_WRITE_CLOCK
 
 void (*g_mainOperations[])(void) = {
 	write_clock,
@@ -131,13 +123,6 @@ u8 g_unkFC78; // 0xFC78
 
 u16 g_wakeUpFactor; // 0xFC79
 
-/*
- * This constant indicates that the watch dog timer is not currently counting. For example, this is the case
- * when the timer counter has counted downwards until it reached the value 0, at which point there is nothing
- * left to count. This can indicate that the watchdog timer counter could not be properly resetted.
- */
-#define WATCHDOG_TIMER_STATUS_NOT_COUNTING		0
-#define WATCHDOG_TIMER_STATUS_COUNTING			1
 u8 g_watchdogTimerStatus; // 0xFC80
 u8 g_watchdogTimerCounter; // 0xFC81
 u8 g_watchdogTimerCounterResetValue; // 0xFC82
@@ -190,12 +175,6 @@ u8 g_unkFE46; // 0xFE46
 
 u8 g_mainOperationId; // 0xFE4C
 
-#define MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x80		0x80
-#define MAIN_OPERATION_RESULT_STATUS_UNKNOWN_0x81		0x81 // TODO: perhaps a [retry] indicator?
-#define MAIN_OPERATION_RESULT_STATUS_SUCCESS			0x82
-#define MAIN_OPERATION_RESULT_STATUS_ERROR				0x83
-#define MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED	0x84
-#define MAIN_OPERATION_RESULT_STATUS_INVALID_ID			0x87
 u8 g_mainOperationResultStatus; // 0xFE4E
 
 u8 g_unkFE4F; // 0xFE4F -- TODO: Seems similar to g_mainOperationResultStatus
