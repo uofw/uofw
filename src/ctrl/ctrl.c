@@ -1468,7 +1468,6 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
                      * 
                      * Note that some controller connection states like [SCE_CTRL_MS] are [active high]
                      * and thus we do not need to flip such bits.
-                     *
                      */
                     ^ CTRL_SYSCON_KERNEL_MODE_BUTTONS_NEGATIVE_LOGIC;
             }
@@ -1491,7 +1490,6 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
                      * button is not currently being pressed.
                      * 
                      * As such, we need to invert the user mode button bits retrieved from SYSCON.
-                     * 
                      */
                     ^ CTRL_SYSCON_USER_MODE_BUTTONS_NEGATIVE_LOGIC)
                     | (g_ctrl.rawButtons & 0xFFF00000);
