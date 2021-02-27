@@ -320,7 +320,7 @@ void main(void)
 
 	WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER;
 
-	if (WDTE != 0) // 0x076B & 9x076D
+	if (RESF != 0) // 0x076B & 9x076D
 	{
 		P6 &= ~0x4; // 0x076F
 		PM6 &= ~0x4; // 0x076F
