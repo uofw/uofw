@@ -4,7 +4,7 @@
 
 /*
  *
- *          SYSCON controller firmware
+ *       SYSCON (System controller) firmware
  * 
  *  Motherboard TA-096 - PSP Street (E-1000) - 11g
  *
@@ -16,7 +16,7 @@
  *
  * Credits to:
  *	- Proxima for a set of function names 
- *	- [TODO] for dumping the SYSCON controller firmware 
+ *	- [TODO] for dumping the SYSCON firmware 
  * 
  */
 
@@ -156,7 +156,7 @@ u8 g_usbStatus; // 0xFC86
 u8 g_mainOperationPayloadReceiveBuffer[9]; // 0xFCB0 -- Could be larger....
 
 /*
- * The length of a command package sent to the SYSCON controller. A command package consists of
+ * The length of a command package sent to SYSCON. A command package consists of
  * the command ID, the command package length and the actual command data.
  */
 u8 g_mainOperationReceivedPackageLength; // 0xFCCB
