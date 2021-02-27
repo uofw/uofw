@@ -27,8 +27,8 @@
 #include "firmware.h"
 #include "sfr.h"
 
-#define SYSCON_STACK_LOWER_BOUND	0xFE20
-#define SYSCON_STACK_UPPER_BOUND	0xFEDF
+#define SYSCON_STACK_LOWER_BOUND    0xFE20
+#define SYSCON_STACK_UPPER_BOUND    0xFEDF
 
 void sub_1070(void);
 void sub_10A2(void);
@@ -40,8 +40,8 @@ const u8 g_analogPadStartPositionX = SCE_CTRL_ANALOG_PAD_CENTER_VALUE; // 0x87
 
 const u32 g_baryonVersion = 0x00403000; // 0x010E
 
-#define SYSCON_TIMESTAMP_DATE_PREFIX_LEN	8
-#define SYSCON_TIMESTAMP_LEN				12
+#define SYSCON_TIMESTAMP_DATE_PREFIX_LEN    8
+#define SYSCON_TIMESTAMP_LEN                12
 
 const u8 g_buildDate[] = "$Date:: 2011-05-09 20:45:25 +0900#$"; // 0x0112
 
@@ -76,29 +76,52 @@ void (*g_mainOperations[])(void) = {
 	read_scratchpad,
 	send_setparam,
 	receive_setparam,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
-	main_op_nop,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
+	main_op_invalid,
 	exec_syscon_cmd_0x30,
 	ctrl_tachyon_wdt,
 	reset_device,
 	ctrl_analog_xy_polling,
-	main_op_nop,
+	main_op_invalid,
 	power_standby,
 	power_suspend,
 	get_batt_volt_ad
 }; // 0x00B0
 
+void (*g_peripheralOperations[])(void) = {
+	exec_syscon_cmd_get_pommel_version,
+	exec_syscon_cmd_get_pommel_version, /* PSP_SYSCON_CMD_GET_POLESTAR_VERSION */
+	exec_syscon_cmd_ctrl_voltage,
+	peripheral_op_invalid,
+	peripheral_op_invalid,
+	exec_syscon_cmd_ctrl_power,
+	exec_syscon_cmd_get_power_status,
+	exec_syscon_cmd_ctrl_led,
+	exec_syscon_cmd_write_pommel_reg,
+	exec_syscon_cmd_read_pommel_reg,
+	peripheral_op_invalid, /* PSP_SYSCON_CMD_CTRL_HDD_POWER */
+	exec_syscon_cmd_ctrl_lepton_power,
+	exec_syscon_cmd_ctrl_ms_power,
+	peripheral_op_invalid, /* PSP_SYSCON_CMD_CTRL_WLAN_POWER */
+	exec_syscon_cmd_write_pommel_reg, /* PSP_SYSCON_CMD_WRITE_POLESTAR_REG */
+	exec_syscon_cmd_read_pommel_reg, /* PSP_SYSCON_CMD_READ_POLESTAR_REG */
+	peripheral_op_invalid,
+	peripheral_op_invalid,
+	peripheral_op_invalid, /* PSP_SYSCON_CMD_CTRL_DVE_POWER */
+	peripheral_op_invalid, /* PSP_SYSCON_CMD_CTRL_BT_POWER */
+	exec_syscon_cmd_ctrl_usb_power,
+	exec_syscon_cmd_ctrl_charge
+}; // 0x00E0
+
 u8 g_unkF400[0x1D0]; // 0xF400
 
-/* SYSCON's internal scratchpad buffer size. */
-#define SCRATCH_PAD_SIZE	32
 /* SYSCON's internal scratchpad buffer. */
 u8 g_scratchpad[SCRATCH_PAD_SIZE]; // 0xF7B0
 
@@ -106,8 +129,8 @@ typedef struct {
 	u8 data[SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE];
 } SysconParamIdPayload;
 
-#define SYSCON_SET_PARAM_NUM_SET_PARAMS		5
-#define SYSCON_SET_PARAM_MAX_SET_PARAM_ID	(SYSCON_SET_PARAM_NUM_SET_PARAMS - 1)
+#define SYSCON_SET_PARAM_NUM_SET_PARAMS       5
+#define SYSCON_SET_PARAM_MAX_SET_PARAM_ID    (SYSCON_SET_PARAM_NUM_SET_PARAMS - 1)
 
 SysconParamIdPayload g_setParamPayloads[SYSCON_SET_PARAM_NUM_SET_PARAMS]; // 0xF7D0
 
@@ -193,7 +216,7 @@ u16 g_unkFE78; // 0xFE78
 
 u8 g_powerSupplyStatus; // 0xFE7A
 
-#define SYSCON_CTRL_ANALOG_SAMPLING_ENABLED		0x02
+#define SYSCON_CTRL_ANALOG_SAMPLING_ENABLED    0x02
 u8 g_unkFE96; // 0xFE96
 u8 g_unkFE98; // 0xFE98
 
@@ -808,9 +831,9 @@ void exec_syscon_cmd_get_video_cable(void)
 }
 
 // sub_1A92
-void main_op_nop(void)
+void main_op_invalid(void)
 {
-	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_NOT_IMPLEMENTED;
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_NOT_SUPPORTED;
 }
 
 /* SYSCON [set] commands */
@@ -873,15 +896,6 @@ void write_alarm(void)
 
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
-
-/* 
- * Macros to obtain SYSCON's scratchpad destination ("index") and size of data to read/write from the received
- * encoded data (first byte of g_mainOperationPayloadReceiveBuffer).
- */
-
-#define SYSCON_SCRATCHPAD_GET_DST(enc)					(((enc) >> 2) & 0x3F)
-#define SYSCON_SCRATCHPAD_GET_DATA_SIZE(enc)			((enc) & 0x3)
-#define SYSCON_SCRATCHPAD_SET_DATA_SIZE(enc, s)			(((enc) & ~0x3) | ((s) & 0x3))
 
 // sub_1AD5
 void write_scratchpad(void)
@@ -1001,7 +1015,7 @@ void read_scratchpad(void)
 }
 
 /* This constant defines the default setParam ID if no ID has been specified. */
-#define SYSCON_SET_PARAM_ID_DEFAULT		SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
+#define SYSCON_SET_PARAM_ID_DEFAULT    SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
 
 // sub_1BC5
 void send_setparam(void)
@@ -1412,7 +1426,89 @@ void get_batt_volt_ad(void)
 	}
 }
 
-// TODO: more functions here...
+// sub_2163
+// TODO
+void sub_2163(void)
+{
+}
+
+// sub_216E
+// TODO
+void peripheral_op_invalid(void)
+{
+}
+
+// sub_217F
+// TODO
+void exec_syscon_cmd_get_pommel_version(void)
+{
+}
+
+// sub_21B5
+// TODO
+void exec_syscon_cmd_ctrl_voltage(void)
+{
+}
+
+// sub_220E
+// TODO
+void exec_syscon_cmd_ctrl_power(void)
+{
+}
+
+// sub_2365
+// TODO
+void exec_syscon_cmd_get_power_status(void)
+{
+}
+
+// sub_243F
+// TODO
+void exec_syscon_cmd_ctrl_led(void)
+{
+}
+
+// sub_2481
+// TODO
+void exec_syscon_cmd_write_pommel_reg(void)
+{
+}
+
+// sub_24CF
+// TODO
+void exec_syscon_cmd_read_pommel_reg(void)
+{
+}
+
+// sub_2523
+// TODO
+void exec_syscon_cmd_ctrl_lepton_power(void)
+{
+}
+
+// sub_2549
+// TODO
+void exec_syscon_cmd_ctrl_ms_power(void)
+{
+}
+
+// sub_25A0
+// TODO
+void sub_25A0(void)
+{
+}
+
+// sub_25A1
+// TODO
+void exec_syscon_cmd_ctrl_usb_power(void)
+{
+}
+
+// sub_2606
+// TODO
+void exec_syscon_cmd_ctrl_charge(void)
+{
+}
 
 // sub_2654
 void response_handler()
@@ -1518,6 +1614,28 @@ void sub_56D2(void)
 void sub_5791(void)
 {
 }
+
+/* Flash self-programming library */
+
+// sub_57AF
+// TODO
+void _FlashStart(void)
+{
+}
+
+// sub_57BC
+// TODO
+void FlashEnv(void)
+{
+}
+
+// sub_57DB
+// TODO
+void _CheckFLMD(u16 entryRAM)
+{
+}
+
+//
 
 // TODO: more functions here...
 
