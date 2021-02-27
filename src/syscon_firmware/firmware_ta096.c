@@ -1635,8 +1635,6 @@ void _CheckFLMD(u16 entryRAM)
 {
 }
 
-//
-
 // TODO: more functions here...
 
 
