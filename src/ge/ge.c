@@ -287,11 +287,44 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define HW_GE_CTRL               HW(0xA7F00000)
 #define HW_GE_RESET              HW(0xBD400000)
+#define HW_GE_UNK004             HW(0xBD400004)
 #define HW_GE_EDRAM_HW_SIZE      HW(0xBD400008)
 #define HW_GE_EXEC               HW(0xBD400100)
+#define HW_GE_UNK104             HW(0xBD400104)
 #define HW_GE_LISTADDR           HW(0xBD400108)
 #define HW_GE_STALLADDR          HW(0xBD40010C)
+// first return address
+#define HW_GE_RADR1              HW(0xBD400110)
+// second return address
+#define HW_GE_RADR2              HW(0xBD400114)
+// address of vertices (for bezier etc)
+#define HW_GE_VADR               HW(0xBD400118)
+// address of indices (for bezier etc)
+#define HW_GE_IADR               HW(0xBD40011C)
+// must be an address
+#define HW_GE_UNK120             HW(0xBD400120)
+// must be an address
+#define HW_GE_UNK124             HW(0xBD400124)
+// must be an address
+#define HW_GE_UNK128             HW(0xBD400128)
+#define HW_GE_GEOMETRY_CLOCK     HW(0xBD400200)
+#define HW_GE_UNK300             HW(0xBD400300)
+#define HW_GE_INTERRUPT_TYPE1    HW(0xBD400304)
+#define HW_GE_INTERRUPT_TYPE2    HW(0xBD400308)
+#define HW_GE_INTERRUPT_TYPE3    HW(0xBD40030C)
+#define HW_GE_INTERRUPT_TYPE4    HW(0xBD400310)
 #define HW_GE_EDRAM_ENABLED_SIZE HW(0xBD400400)
+#define HW_GE_EDRAM_REFRESH_UNK1 HW(0xBD500000)
+#define HW_GE_EDRAM_UNK10        HW(0xBD500010)
+#define HW_GE_EDRAM_REFRESH_UNK2 HW(0xBD500020)
+#define HW_GE_EDRAM_REFRESH_UNK3 HW(0xBD500030)
+#define HW_GE_EDRAM_UNK40        HW(0xBD500040)
+#define HW_GE_EDRAM_UNK50        HW(0xBD500050)
+#define HW_GE_EDRAM_UNK60        HW(0xBD500060)
+#define HW_GE_EDRAM_ADDR_TRANS_DISABLE HW(0xBD500070)
+#define HW_GE_EDRAM_ADDR_TRANS_VALUE   HW(0xBD500080)
+#define HW_GE_EDRAM_UNK90        HW(0xBD500090)
+#define HW_GE_EDRAM_UNKA0        HW(0xBD5000A0)
 #define HW_GE_CMD(i)    HW(0xBD400800 + i * 4)
 #define HW_GE_BONES     ((vs32*)HWPTR(0xBD400C00))
 #define HW_GE_BONE(i)   ((vs32*)HWPTR(0xBD400C00 + i * 48))
@@ -342,9 +375,14 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define JR_RA                      (0x03E00008)
 #define NOP                        (0)
 
-#define SCE_GE_INTERNAL_REG_BASE_RADR 1
+#define SCE_GE_INTERNAL_REG_BASE_ADDR 1
 #define SCE_GE_INTERNAL_REG_RADR1 2
 #define SCE_GE_INTERNAL_REG_RADR2 4
+
+#define SCE_GE_INTSIG 1
+#define SCE_GE_INTEND 2
+#define SCE_GE_INTFIN 4
+#define SCE_GE_INTERR 8
 
 /******************************/
 
@@ -471,20 +509,46 @@ char save_regs[] = {
     0xFF, 0x5B, 0x7F, 0x03
 };
 
+#define SCE_GE_REG_LISTADDR 5
 #define SCE_GE_REG_RADR1 7
 #define SCE_GE_REG_RADR2 8
+#define SCE_GE_REG_UNK128 13
 #define SCE_GE_REG_EDRAM_SIZE 19
 
 // 66D4
-u32 *g_pAwRegAdr[] = {
-    0xBD400000, 0xBD400004, 0xBD400008, 0xBD400100,
-    0xBD400104, 0xBD400108, 0xBD40010C, 0xBD400110,
-    0xBD400114, 0xBD400118, 0xBD40011C, 0xBD400120,
-    0xBD400124, 0xBD400128, 0xBD400300, 0xBD400304,
-    0xBD400308, 0xBD40030C, 0xBD400310, 0xBD400400,
-    0xBD400200, 0xBD500000, 0xBD500010, 0xBD500020,
-    0xBD500030, 0xBD500040, 0xBD500050, 0xBD500060,
-    0xBD500070, 0xBD500080, 0xBD500090, 0xBD5000A0
+volatile void *g_pAwRegAdr[32] = {
+    &HW_GE_RESET,
+    &HW_GE_UNK004,
+    &HW_GE_EDRAM_HW_SIZE,
+    &HW_GE_EXEC,
+    &HW_GE_UNK104,
+    &HW_GE_LISTADDR,
+    &HW_GE_STALLADDR,
+    &HW_GE_RADR1,
+    &HW_GE_RADR2,
+    &HW_GE_VADR,
+    &HW_GE_IADR,
+    &HW_GE_UNK120,
+    &HW_GE_UNK124,
+    &HW_GE_UNK128,
+    &HW_GE_UNK300,
+    &HW_GE_INTERRUPT_TYPE1,
+    &HW_GE_INTERRUPT_TYPE2,
+    &HW_GE_INTERRUPT_TYPE3,
+    &HW_GE_INTERRUPT_TYPE4,
+    &HW_GE_EDRAM_ENABLED_SIZE,
+    &HW_GE_GEOMETRY_CLOCK,
+    &HW_GE_EDRAM_REFRESH_UNK1,
+    &HW_GE_EDRAM_UNK10,
+    &HW_GE_EDRAM_REFRESH_UNK2,
+    &HW_GE_EDRAM_REFRESH_UNK3,
+    &HW_GE_EDRAM_UNK40,
+    &HW_GE_EDRAM_UNK50,
+    &HW_GE_EDRAM_UNK60,
+    &HW_GE_EDRAM_ADDR_TRANS_DISABLE,
+    &HW_GE_EDRAM_ADDR_TRANS_VALUE,
+    &HW_GE_EDRAM_UNK90,
+    &HW_GE_EDRAM_UNKA0,
 };
 
 // 6754
@@ -571,24 +635,24 @@ int _sceGeReset()
     while ((HW_GE_RESET & 1) != 0)
         ;
     sceGeSaveContext(&_aw_ctx);
-    _aw_ctx.ctx[16] = HW(0xBD400200);
+    _aw_ctx.ctx[16] = HW_GE_GEOMETRY_CLOCK;
     sceSysregAwResetEnable();
     sceSysregAwResetDisable();
     HW(0xBD500010) = 0;
     HW_GE_EXEC = 0;
     HW_GE_LISTADDR = 0;
     HW_GE_STALLADDR = 0;
-    HW(0xBD400110) = 0;
-    HW(0xBD400114) = 0;
-    HW(0xBD400118) = 0;
-    HW(0xBD40011C) = 0;
+    HW_GE_RADR1 = 0;
+    HW_GE_RADR2 = 0;
+    HW_GE_VADR = 0;
+    HW_GE_IADR = 0;
     HW(0xBD400120) = 0;
     HW(0xBD400124) = 0;
     HW(0xBD400128) = 0;
-    HW(0xBD400310) = HW(0xBD400304);
-    HW(0xBD40030C) = HW(0xBD400308);
-    HW(0xBD400308) = 7;
-    HW(0xBD400200) = _aw_ctx.ctx[16];
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
+    HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
+    HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+    HW_GE_GEOMETRY_CLOCK = _aw_ctx.ctx[16];
     sceSysregSetMasterPriv(64, 1);
     sceGeRestoreContext(&_aw_ctx);
     sceSysregSetMasterPriv(64, 0);
@@ -612,16 +676,16 @@ int sceGeInit()
     HW_GE_LISTADDR = 0;
     HW_GE_STALLADDR = 0;
     u32 *curDl = dlist;
-    HW(0xBD400110) = 0;
-    HW(0xBD400114) = 0;
-    HW(0xBD400118) = 0;
-    HW(0xBD40011C) = 0;
+    HW_GE_RADR1 = 0;
+    HW_GE_RADR2 = 0;
+    HW_GE_VADR = 0;
+    HW_GE_IADR = 0;
     HW(0xBD400120) = 0;
     HW(0xBD400124) = 0;
     HW(0xBD400128) = 0;
-    HW(0xBD400310) = HW(0xBD400304);
-    HW(0xBD40030C) = HW(0xBD400308);
-    HW(0xBD400308) = 7;
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
+    HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
+    HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
     int i;
     for (i = 0; i < 256; i++) {
         if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
@@ -656,7 +720,7 @@ int sceGeInit()
     *(curDl + 0) = GE_MAKE_OP(SCE_GE_CMD_PRIM, 0);
     *(curDl + 1) = GE_MAKE_OP(SCE_GE_CMD_END, 0);
     sceKernelDcacheWritebackInvalidateRange(dlist, 1980);
-    HW(0xBD40030C) = HW(0xBD400308);
+    HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
     HW_GE_LISTADDR = (int)UCACHED(dlist);
     HW_GE_STALLADDR = 0;
     sceSysregSetMasterPriv(64, 1);
@@ -669,8 +733,8 @@ int sceGeInit()
     HW_GE_EXEC = 0;
     HW_GE_LISTADDR = 0;
     HW_GE_STALLADDR = 0;
-    HW(0xBD400310) = HW(0xBD400304);
-    HW(0xBD400308) = 7;
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
+    HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
     sceKernelRegisterIntrHandler(SCE_GE_INT, 1, _sceGeInterrupt, 0, &g_GeIntrOpt);
 
     // 0534
@@ -781,7 +845,7 @@ int sceGeGetReg(u32 regId)
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
     int wasEnabled = sceSysregAwRegABusClockEnable();
-    int val = *g_pAwRegAdr[regId];
+    int val = *(int*)g_pAwRegAdr[regId];
     if (!wasEnabled) {
         // 08C8
         sceSysregAwRegABusClockDisable();
@@ -797,7 +861,7 @@ int sceGeSetReg(u32 regId, u32 value)
     dbg_printf("sceGeSetReg\n");
     if (regId >= 32)
         return SCE_ERROR_INVALID_INDEX;
-    if (regId >= 5 && regId < 14 && (value & 3) != 0)
+    if (regId >= SCE_GE_REG_LISTADDR && regId <= SCE_GE_REG_UNK128 && (value & 3) != 0)
         return SCE_ERROR_INVALID_VALUE;
 
     // 092C
@@ -814,7 +878,7 @@ int sceGeSetReg(u32 regId, u32 value)
             _sceGeSetRegRadr2(value);
         }
         // 0974
-        *g_pAwRegAdr[regId] = value;
+        *(int*)g_pAwRegAdr[regId] = value;
         ret = 0;
     } else {
         ret = SCE_ERROR_BUSY;
@@ -911,13 +975,13 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
                     // 0E48 dup
                     ret = 0x80000003;
                 } else {
-                    old108 = HW(0xBD400110);
+                    old108 = HW_GE_RADR1;
                     // 1404 dup
                     HW(0xBD400120) = HW(0xBD400124);
                     old100 &= 0xFFFFFEFF;
                 }
             } else {
-                old108 = HW(0xBD400114);
+                old108 = HW_GE_RADR2;
                 // 1404 dup
                 HW(0xBD400120) = HW(0xBD400128);
                 old100 = (old100 & 0xFFFFFDFF) | 0x100;
@@ -931,14 +995,14 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             cmdOff = 0;
             cmd = HW_GE_CMD(SCE_GE_CMD_NOP);
         } else if (cmdOff == SCE_GE_CMD_PRIM || cmdOff == SCE_GE_CMD_BEZIER || cmdOff == SCE_GE_CMD_SPLINE) {
-            int addr = HW(0xBD400118);
+            int addr = HW_GE_VADR;
             if (!GE_VALID_ADDR(addr))
                 ret = SCE_ERROR_INVALID_POINTER;
 
             // 0F14
             if (((HW_GE_CMD(SCE_GE_CMD_VTYPE) >> 11) & 3) != 0)
             {
-                int addr = HW(0xBD40011C);
+                int addr = HW_GE_IADR;
                 if (!GE_VALID_ADDR(addr))
                     ret = SCE_ERROR_INVALID_POINTER;
             }
@@ -993,7 +1057,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         // 0BB8
         sp128 = HW_GE_STALLADDR;
         int *ptr = (int *)(((int)buf | 0x3F) + 1);
-        sp132 = HW(0xBD400304);
+        sp132 = HW_GE_INTERRUPT_TYPE1;
         if (cmdOff == SCE_GE_CMD_FINISH) {
             // 0DC0
             ptr[0] = GE_MAKE_OP(SCE_GE_CMD_FINISH, cmd);
@@ -1023,7 +1087,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         }
         // 0C88
         sceSysregSetMasterPriv(64, 1);
-        HW(0xBD400310) = 4;
+        HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTFIN;
         HW_GE_LISTADDR = (int)UCACHED(ptr);
         HW_GE_STALLADDR = 0;
         pspSync();
@@ -1032,11 +1096,11 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         while ((HW_GE_EXEC & 1) != 0)
             ;
         // 0CD4
-        while ((HW(0xBD400304) & 4) == 0)
+        while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
             ;
         HW_GE_LISTADDR = old108;
         HW_GE_STALLADDR = sp128;
-        HW(0xBD400310) = HW(0xBD400304) ^ sp132;
+        HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1 ^ sp132;
         sceSysregSetMasterPriv(64, 0);
     }
     // 0D1C
@@ -1147,10 +1211,10 @@ int sceGeSaveContext(SceGeContext * ctx)
     ctx->ctx[0] = HW_GE_EXEC;
     ctx->ctx[1] = HW_GE_LISTADDR;
     ctx->ctx[2] = HW_GE_STALLADDR;
-    ctx->ctx[3] = HW(0xBD400110);
-    ctx->ctx[4] = HW(0xBD400114);
-    ctx->ctx[5] = HW(0xBD400118);
-    ctx->ctx[6] = HW(0xBD40011C);
+    ctx->ctx[3] = HW_GE_RADR1;
+    ctx->ctx[4] = HW_GE_RADR2;
+    ctx->ctx[5] = HW_GE_VADR;
+    ctx->ctx[6] = HW_GE_IADR;
     ctx->ctx[7] = HW(0xBD400120);
     ctx->ctx[8] = HW(0xBD400124);
     ctx->ctx[9] = HW(0xBD400128);
@@ -1234,24 +1298,24 @@ int sceGeRestoreContext(SceGeContext * ctx)
         pspSetK1(oldK1);
         return SCE_ERROR_BUSY;
     }
-    int old304 = HW(0xBD400304);
-    int old308 = HW(0xBD400308);
-    HW(0xBD40030C) = old308;
+    int old304 = HW_GE_INTERRUPT_TYPE1;
+    int old308 = HW_GE_INTERRUPT_TYPE2;
+    HW_GE_INTERRUPT_TYPE3 = old308;
     HW_GE_LISTADDR = (int)UCACHED(&ctx->ctx[17]);
     HW_GE_STALLADDR = 0;
     HW_GE_EXEC = ctx->ctx[0] | 1;
     // 1B64
     while ((HW_GE_EXEC & 1) != 0)
         ;
-    int n304 = HW(0xBD400304);
-    HW(0xBD400310) = (old304 ^ HW(0xBD400304)) & 0xFFFFFFFA;
-    HW(0xBD400308) = old308;
+    int n304 = HW_GE_INTERRUPT_TYPE1;
+    HW_GE_INTERRUPT_TYPE4 = (old304 ^ HW_GE_INTERRUPT_TYPE1) & ~(SCE_GE_INTFIN | SCE_GE_INTSIG);
+    HW_GE_INTERRUPT_TYPE2 = old308;
     if ((n304 & 8) != 0)
         ret = -1;
     HW_GE_LISTADDR = ctx->ctx[1];
     HW_GE_STALLADDR = ctx->ctx[2];
-    HW(0xBD400118) = ctx->ctx[5];
-    HW(0xBD40011C) = ctx->ctx[6];
+    HW_GE_VADR = ctx->ctx[5];
+    HW_GE_IADR = ctx->ctx[6];
     HW(0xBD400120) = ctx->ctx[7];
     HW(0xBD400124) = ctx->ctx[8];
     HW(0xBD400128) = ctx->ctx[9];
@@ -1283,7 +1347,7 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
     if (cmdList == NULL)
         return 0;
     int oldIntr = sceKernelCpuSuspendIntr();
-    int old304 = HW(0xBD400304);
+    int old304 = HW_GE_INTERRUPT_TYPE1;
     int old100 = HW_GE_EXEC;
     int old108 = HW_GE_LISTADDR;
     int old10C = HW_GE_STALLADDR;
@@ -1304,7 +1368,7 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
         int *uncachedNewCmdList = UCACHED(radr2 - 4);
         u32 cmd = (u32) (uncachedCmdList - old120);
         int oldCmd = uncachedNewCmdList[0];
-        uncachedNewCmdList[0] = GE_MAKE_CMD(SCE_GE_CMD_CALL, cmd & 0x00FFFFFF);
+        uncachedNewCmdList[0] = GE_MAKE_OP(SCE_GE_CMD_CALL, cmd & 0x00FFFFFF);
         pspCache(0x1A, uncachedNewCmdList);
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
@@ -1394,13 +1458,13 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
     HW(0xBD400128) = old128;
 
     if ((type & SCE_GE_INTERNAL_REG_RADR1) != 0)
-        HW(0xBD400110) = radr1;
+        HW_GE_RADR1 = radr1;
     // 2084
     if ((type & SCE_GE_INTERNAL_REG_RADR2) != 0)
-        HW(0xBD400114) = radr2;
+        HW_GE_RADR2 = radr2;
 
     // 2094
-    HW(0xBD400310) = HW(0xBD400304) ^ old304;
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1 ^ old304;
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
@@ -1410,37 +1474,38 @@ _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 __attribute__ ((unused)), int arg2 __attribute__ ((unused)))
 {
     int oldIntr = sceKernelCpuSuspendIntr();
-    int attr = HW(0xBD400304);
+    int attr = HW_GE_INTERRUPT_TYPE1;
     int unk1 = HW(0xBD400004);
-    if ((attr & 8) != 0) {
+    if ((attr & SCE_GE_INTERR) != 0) {
         // 2228
-        HW(0xBD400310) = 8;
+        HW_GE_INTERRUPT_TYPE4 = 8;
         _sceGeErrorInterrupt(attr, unk1, arg2);
     }
     // 2118
-    if ((attr & 5) == 5) {
+    if ((attr & (SCE_GE_INTSIG | SCE_GE_INTFIN)) == (SCE_GE_INTSIG | SCE_GE_INTFIN)) {
         // 2218
         Kprintf("GE INTSIG/INTFIN at the same time\n"); // 0x6324
     }
     // 2128
-    if ((attr & 4) == 0) {
+    if ((attr & SCE_GE_INTFIN) == 0) {
+        // signal and/or end
         // 21AC
-        if ((attr & 1) == 0 && (attr & 2) != 0) {   // 2208
+        if ((attr & SCE_GE_INTSIG) == 0 && (attr & SCE_GE_INTEND) != 0) {   // 2208
             // 21FC dup
-            HW(0xBD40030C) = 2;
-        } else if ((attr & 1) != 0 && (attr & 2) == 0) {
+            HW_GE_INTERRUPT_TYPE3 = SCE_GE_INTEND;
+        } else if ((attr & SCE_GE_INTSIG) != 0 && (attr & SCE_GE_INTEND) == 0) {
             // 21FC dup
-            HW(0xBD40030C) = 1;
+            HW_GE_INTERRUPT_TYPE3 = SCE_GE_INTSIG;
         } else {
             // 21C0
             while ((HW_GE_EXEC & 1) != 0)
                 ;
-            HW(0xBD400310) = 3;
-            HW(0xBD400308) = 3;
+            HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTSIG | SCE_GE_INTEND;
+            HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND;
             _sceGeListInterrupt(attr, unk1, arg2);
         }
     } else {
-        if ((attr & 2) == 0) {
+        if ((attr & SCE_GE_INTEND) == 0) {
             // 2198
             Kprintf("CMD_FINISH must be used with CMD_END.\n"); // 0x6348
             HW_GE_EXEC = 0;
@@ -1448,8 +1513,8 @@ _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
         // 213C
         while ((HW_GE_EXEC & 1) != 0)
             ;
-        HW(0xBD400310) = 6;
-        HW(0xBD400308) = 6;
+        HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
+        HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTEND | SCE_GE_INTFIN;
         _sceGeFinishInterrupt(attr, unk1, arg2);
     }
 
@@ -1466,13 +1531,13 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
         sceSysregAwRegABusClockEnable();
         _sceGeQueueSuspend();
         sceGeSaveContext(&_aw_ctx);
-        _aw_ctx.ctx[10] = HW(0xBD500070);
-        _aw_ctx.ctx[11] = HW(0xBD500080);
-        _aw_ctx.ctx[12] = HW(0xBD500000);
-        _aw_ctx.ctx[13] = HW(0xBD500020);
-        _aw_ctx.ctx[14] = HW(0xBD500030);
+        _aw_ctx.ctx[10] = HW_GE_EDRAM_ADDR_TRANS_DISABLE;
+        _aw_ctx.ctx[11] = HW_GE_EDRAM_ADDR_TRANS_VALUE;
+        _aw_ctx.ctx[12] = HW_GE_EDRAM_REFRESH_UNK1;
+        _aw_ctx.ctx[13] = HW_GE_EDRAM_REFRESH_UNK2;
+        _aw_ctx.ctx[14] = HW_GE_EDRAM_REFRESH_UNK3;
         _aw_ctx.ctx[15] = HW(0xBD500040);
-        _aw_ctx.ctx[16] = HW(0xBD400200);
+        _aw_ctx.ctx[16] = HW_GE_GEOMETRY_CLOCK;
         break;
 
     case SCE_SYSTEM_SUSPEND_EVENT_PHASE0_3:
@@ -1496,23 +1561,23 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
         HW_GE_EXEC = 0;
         HW_GE_LISTADDR = 0;
         HW_GE_STALLADDR = 0;
-        HW(0xBD400110) = 0;
-        HW(0xBD400114) = 0;
-        HW(0xBD400118) = 0;
-        HW(0xBD40011C) = 0;
+        HW_GE_RADR1 = 0;
+        HW_GE_RADR2 = 0;
+        HW_GE_VADR = 0;
+        HW_GE_IADR = 0;
         HW(0xBD400120) = 0;
         HW(0xBD400124) = 0;
         HW(0xBD400128) = 0;
-        HW(0xBD400310) = HW(0xBD400304);
-        HW(0xBD40030C) = HW(0xBD400308);
-        HW(0xBD400308) = 7;
-        HW(0xBD500070) = _aw_ctx.ctx[10];
-        HW(0xBD500080) = _aw_ctx.ctx[11];
-        HW(0xBD500000) = _aw_ctx.ctx[12];
-        HW(0xBD500020) = _aw_ctx.ctx[13];
-        HW(0xBD500030) = _aw_ctx.ctx[14];
+        HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
+        HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
+        HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+        HW_GE_EDRAM_ADDR_TRANS_DISABLE = _aw_ctx.ctx[10];
+        HW_GE_EDRAM_ADDR_TRANS_VALUE = _aw_ctx.ctx[11];
+        HW_GE_EDRAM_REFRESH_UNK1 = _aw_ctx.ctx[12];
+        HW_GE_EDRAM_REFRESH_UNK2 = _aw_ctx.ctx[13];
+        HW_GE_EDRAM_REFRESH_UNK3 = _aw_ctx.ctx[14];
         HW(0xBD500040) = _aw_ctx.ctx[15];
-        HW(0xBD400200) = _aw_ctx.ctx[16];
+        HW_GE_GEOMETRY_CLOCK = _aw_ctx.ctx[16];
         sceSysregSetMasterPriv(64, 1);
         sceGeRestoreContext(&_aw_ctx);
         sceSysregSetMasterPriv(64, 0);
@@ -1526,7 +1591,7 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
 
 int _sceGeModuleStart()
 {
-    dbg_init(1, FB_HARDWARE, FAT_HARDWARE);
+    dbg_init(1, FB_NONE, FAT_HARDWARE);
     dbg_printf("Doing init\n");
     sceGeInit();
     dbg_printf("Init ok\n");
@@ -1554,8 +1619,8 @@ int sceGeRegisterLogHandler(void (*handler) ())
 
 int sceGeSetGeometryClock(int opt)
 {
-    int old = HW(0xBD400200);
-    HW(0xBD400200) = opt & 1;
+    int old = HW_GE_GEOMETRY_CLOCK;
+    HW_GE_GEOMETRY_CLOCK = opt & 1;
     return old & 1;
 }
 
@@ -1593,15 +1658,15 @@ int sceGeEdramInit()
     // 2660
     while ((HW(0xBD500010) & 1) != 0)
         ;
-    HW(0xBD500020) = 0x6C4;
+    HW_GE_EDRAM_REFRESH_UNK2 = 0x6C4;
     HW(0xBD500040) = 1;
     HW(0xBD500090) = 3;
     HW_GE_EDRAM_ENABLED_SIZE = 4;
     if (g_uiEdramHwSize != 0)
         return 0;
-    if ((HW(0xBD500070) & 1) == 0) {
+    if ((HW_GE_EDRAM_ADDR_TRANS_DISABLE & 1) == 0) {
         // 2758
-        g_edramAddrTrans = HW(0xBD500080) << 1;
+        g_edramAddrTrans = HW_GE_EDRAM_ADDR_TRANS_VALUE << 1;
     } else
         g_edramAddrTrans = 0;
 
@@ -1623,30 +1688,31 @@ int sceGeEdramInit()
     return 0;
 }
 
-int sceGeEdramSetRefreshParam(int arg0, int arg1, int arg2, int arg3)
+int sceGeEdramSetRefreshParam(int mode, int arg1, int arg2, int arg3)
 {
     int ret = 0;
     int oldIntr = sceKernelCpuSuspendIntr();
     int old44 = HW(0xBC000044);
     HW(0xBC000044) &= 0xFF9BFFFF;
-    if (arg0 != 0) {
+    if (mode != 0) {
         // 2858
-        if (arg0 == 1) {
-            HW(0xBD500000) =
-                ((arg3 & 0xF) << 20) | (HW(0xBD500000) & 0xFF0FFFFF);
-            HW(0xBD500030) = arg2 & 0x3FF;
-            HW(0xBD500020) = arg1 & 0x007FFFFF;
+        if (mode == 1) {
+            HW_GE_EDRAM_REFRESH_UNK1 =
+                ((arg3 & 0xF) << 20) | (HW_GE_EDRAM_REFRESH_UNK1 & 0xFF0FFFFF);
+            HW_GE_EDRAM_REFRESH_UNK3 = arg2 & 0x3FF;
+            HW_GE_EDRAM_REFRESH_UNK2 = arg1 & 0x007FFFFF;
             if ((HW(0xBD500040) & 2) == 0) {
                 // 284C
                 HW(0xBD500040) = 3;
             }
-        } else
+        } else {
             ret = -1;
+        }
     } else {
-        HW(0xBD500000) =
-            ((arg3 & 0xF) << 20) | (HW(0xBD500000) & 0xFF0FFFFF);
-        HW(0xBD500030) = arg2 & 0x3FF;
-        HW(0xBD500020) = arg1 & 0x007FFFFF;
+        HW_GE_EDRAM_REFRESH_UNK1 =
+            ((arg3 & 0xF) << 20) | (HW_GE_EDRAM_REFRESH_UNK1 & 0xFF0FFFFF);
+        HW_GE_EDRAM_REFRESH_UNK3 = arg2 & 0x3FF;
+        HW_GE_EDRAM_REFRESH_UNK2 = arg1 & 0x007FFFFF;
         if ((HW(0xBD500040) & 2) != 0) {
             // 284C dup
             HW(0xBD500040) = 1;
@@ -1698,18 +1764,18 @@ int sceGeEdramSetAddrTranslation(int arg)
     g_edramAddrTrans = arg;
     if (arg == 0) {
         // 2A28
-        if ((HW(0xBD500070) & 1) == 0) {
-            ret = HW(0xBD500080) << 1;
-            HW(0xBD500070) = 1;
+        if ((HW_GE_EDRAM_ADDR_TRANS_DISABLE & 1) == 0) {
+            ret = HW_GE_EDRAM_ADDR_TRANS_VALUE << 1;
+            HW_GE_EDRAM_ADDR_TRANS_DISABLE = 1;
         } else
             ret = 0;
-    } else if ((HW(0xBD500070) & 1) == 0) {
+    } else if ((HW_GE_EDRAM_ADDR_TRANS_DISABLE & 1) == 0) {
         // 2A0C
-        ret = HW(0xBD500080) << 1;
-        HW(0xBD500080) = arg >> 1;
+        ret = HW_GE_EDRAM_ADDR_TRANS_VALUE << 1;
+        HW_GE_EDRAM_ADDR_TRANS_VALUE = arg >> 1;
     } else {
-        HW(0xBD500080) = arg >> 1;
-        HW(0xBD500070) = 0;
+        HW_GE_EDRAM_ADDR_TRANS_VALUE = arg >> 1;
+        HW_GE_EDRAM_ADDR_TRANS_DISABLE = 0;
         ret = 0;
     }
     sceKernelCpuResumeIntrWithSync(oldIntr);
@@ -1790,7 +1856,7 @@ int _sceGeQueueSuspend()
             g_GeSuspend.unk12 = stall;
             g_GeSuspend.unk0 = HW(0xBD400004);
             g_GeSuspend.unk8 = HW_GE_LISTADDR;
-            g_GeSuspend.unk16 = HW(0xBD400304);
+            g_GeSuspend.unk16 = HW_GE_INTERRUPT_TYPE1;
             g_GeSuspend.unk20 = HW_GE_CMD(SCE_GE_CMD_SIGNAL);
             g_GeSuspend.unk24 = HW_GE_CMD(SCE_GE_CMD_FINISH);
             g_GeSuspend.unk28 = HW_GE_CMD(SCE_GE_CMD_END);
@@ -1822,7 +1888,7 @@ int _sceGeQueueSuspend()
                 break;
             } else {
                 // 2F08
-                while ((HW(0xBD400304) & 4) == 0)
+                while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
                     ;
                 stall[0] = oldCmd1;
                 stall[1] = oldCmd2;
@@ -1834,10 +1900,10 @@ int _sceGeQueueSuspend()
     }
 
     // 2C88
-    if ((HW(0xBD400304) & 1) == 0 && (g_AwQueue.active_first->signal != SCE_GE_DL_SIGNAL_BREAK || g_AwQueue.isBreak != 0)) // 2DE8
+    if ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTSIG) == 0 && (g_AwQueue.active_first->signal != SCE_GE_DL_SIGNAL_BREAK || g_AwQueue.isBreak != 0)) // 2DE8
     {
         // 2CB0
-        while ((HW(0xBD400304) & 4) == 0)
+        while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
             ;
     }
     // 2CC4
@@ -1845,15 +1911,15 @@ int _sceGeQueueSuspend()
     g_GeSuspend.unk4 = HW_GE_EXEC;
     g_GeSuspend.unk8 = HW_GE_LISTADDR;
     g_GeSuspend.unk12 = (int *)HW_GE_STALLADDR;
-    g_GeSuspend.unk16 = HW(0xBD400304);
+    g_GeSuspend.unk16 = HW_GE_INTERRUPT_TYPE1;
     g_GeSuspend.unk20 = HW_GE_CMD(SCE_GE_CMD_SIGNAL);
     g_GeSuspend.unk24 = HW_GE_CMD(SCE_GE_CMD_FINISH);
     g_GeSuspend.unk28 = HW_GE_CMD(SCE_GE_CMD_END);
     sceSysregSetMasterPriv(64, 1);
     int old108 = HW_GE_LISTADDR;
     int old10C = HW_GE_STALLADDR;
-    int old304 = HW(0xBD400304);
-    HW(0xBD400310) = 4;
+    int old304 = HW_GE_INTERRUPT_TYPE1;
+    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTFIN;
     HW_GE_LISTADDR = (int)UCACHED(stopCmd);
     HW_GE_STALLADDR = 0;
     HW_GE_EXEC = 1;
@@ -1861,11 +1927,11 @@ int _sceGeQueueSuspend()
     while ((HW_GE_EXEC & 1) != 0)
         ;
     // 2D94
-    while ((HW(0xBD400304) & 4) == 0)
+    while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
         ;
     HW_GE_LISTADDR = old108;
     HW_GE_STALLADDR = old10C;
-    HW(0xBD400310) = HW(0xBD400304) ^ old304;
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1 ^ old304;
     sceSysregSetMasterPriv(64, 0);
     return 0;
 }
@@ -1883,18 +1949,18 @@ int _sceGeQueueResume()
     while ((HW_GE_EXEC & 1) != 0)
         ;
     // 2FD4
-    while ((HW(0xBD400304) & 4) == 0)
+    while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
         ;
     sceSysregSetMasterPriv(64, 0);
     int oldFlag = g_GeSuspend.unk16;
     int flag = 0;
     if ((oldFlag & 1) == 0)
-        flag |= 1;
+        flag |= SCE_GE_INTSIG;
     if ((oldFlag & 2) == 0)
-        flag |= 2;
+        flag |= SCE_GE_INTEND;
     if ((oldFlag & 4) == 0)
-        flag |= 4;
-    HW(0xBD400310) = flag;
+        flag |= SCE_GE_INTFIN;
+    HW_GE_INTERRUPT_TYPE4 = flag;
     HW_GE_LISTADDR = g_GeSuspend.unk8;
     HW_GE_STALLADDR = (int)g_GeSuspend.unk12;
     HW_GE_EXEC = g_GeSuspend.unk4;
@@ -1926,8 +1992,8 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
             int state = HW_GE_EXEC;
             dl->flags = state;
             dl->list = (int *)HW_GE_LISTADDR;
-            dl->unk28 = HW(0xBD400110);
-            dl->unk32 = HW(0xBD400114);
+            dl->unk28 = HW_GE_RADR1;
+            dl->unk32 = HW_GE_RADR2;
             dl->unk36 = HW(0xBD400120);
             dl->unk40 = HW(0xBD400124);
             dl->unk44 = HW(0xBD400128);
@@ -2197,8 +2263,8 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             curStack->stack[2] = HW(0xBD400120);
             curStack->stack[3] = HW(0xBD400124);
             curStack->stack[4] = HW(0xBD400128);
-            curStack->stack[5] = HW(0xBD400110);
-            curStack->stack[6] = HW(0xBD400114);
+            curStack->stack[5] = HW_GE_RADR1;
+            curStack->stack[6] = HW_GE_RADR2;
             curStack->stack[7] = HW_GE_CMD(SCE_GE_CMD_BASE);
             if ((dl->flags & 0x200) == 0) {
                 dl->unk32 = 0;
@@ -2520,7 +2586,7 @@ SceGeListState sceGeDrawSync(int syncType)
         int oldIntr = sceKernelCpuSuspendIntr();
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
-        //ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, 0, 0);
+        ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, 0, 0);
         ret = 0;
         if (ret >= 0) {
             // 3FF4
@@ -2617,8 +2683,8 @@ int sceGeBreak(u32 resetQueue, void *arg1)
                 dl->list = cmdList;
                 dl->flags = state;
                 dl->stall = (int *)HW_GE_STALLADDR;
-                dl->unk28 = HW(0xBD400110);
-                dl->unk32 = HW(0xBD400114);
+                dl->unk28 = HW_GE_RADR1;
+                dl->unk32 = HW_GE_RADR2;
                 dl->unk36 = HW(0xBD400120);
                 dl->unk40 = HW(0xBD400124);
                 dl->unk44 = HW(0xBD400128);
@@ -2653,7 +2719,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             dl->signal = SCE_GE_DL_SIGNAL_BREAK;
             HW_GE_STALLADDR = 0;
             HW_GE_LISTADDR = (int)UUNCACHED(g_cmdList);
-            HW(0xBD400310) = 6;
+            HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
             HW_GE_EXEC = 1;
             pspSync();
             g_AwQueue.isBreak = 1;
@@ -2707,7 +2773,7 @@ int sceGeContinue()
                     // 448C
                     while ((HW_GE_EXEC & 1) != 0)
                         ;
-                    HW(0xBD400310) = 6;
+                    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
                     if (dl->ctx != NULL && dl->ctxUpToDate == 0) {
                         // 4598
                         sceGeSaveContext(dl->ctx);
@@ -2721,7 +2787,7 @@ int sceGeContinue()
                     HW(0xBD400124) = dl->unk40;
                     HW(0xBD400128) = dl->unk44;
                     _sceGeSetBaseRadr(dl->unk48, dl->unk28, dl->unk32);
-                    HW(0xBD400310) = 6;
+                    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
                     HW_GE_EXEC = dl->flags | 1;
                     pspSync();
                     g_AwQueue.curRunning = dl;
@@ -3036,7 +3102,7 @@ int sceGeDebugContinue(int arg0)
         return SCE_ERROR_BUSY;
     }
     int wasEnabled = sceSysregAwRegABusClockEnable();
-    if ((HW(0xBD400304) & 2) != 0) {
+    if ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTEND) != 0) {
         // 5084
         if (!wasEnabled) {
             // 50A0
@@ -3088,9 +3154,9 @@ int sceGeDebugContinue(int arg0)
             if ((flag & 0x200) == 0) {
                 // 5020
                 if ((flag & 0x100) != 0)
-                    nextCmdPtr1 = (int *)HW(0xBD400110);
+                    nextCmdPtr1 = (int *)HW_GE_RADR1;
             } else
-                nextCmdPtr1 = (int *)HW(0xBD400114);
+                nextCmdPtr1 = (int *)HW_GE_RADR2;
         } else {
             if (op == SCE_GE_CMD_FINISH)
                 nextCmdPtr1 = nextCmdPtr2;
@@ -3640,8 +3706,8 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         HW(0xBD400120) = 0;
         HW(0xBD400124) = 0;
         HW(0xBD400128) = 0;
-        HW(0xBD400110) = 0;
-        HW(0xBD400114) = 0;
+        HW_GE_RADR1 = 0;
+        HW_GE_RADR2 = 0;
         pspSync();
         HW_GE_EXEC = 1;
         pspSync();
