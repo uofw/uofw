@@ -373,21 +373,21 @@ typedef struct SceGeDisplayList
     /** Pointer to the stall address, where the display list will stop being executed */
     void *stall; // 24
     /** Internal data */
-    int unk28;
+    int radr1; // 28
     /** Internal data */
-    int unk32;
+    int radr2; // 32
     /** Internal data */
-    int unk36;
+    int oadr; // 36
     /** Internal data */
-    int unk40;
+    int oadr1; // 40
     /** Internal data */
-    int unk44;
+    int oadr2; // 44
     /** Internal data */
-    int unk48;
+    int base; // 48
     /** The callbacks id set with sceGeSetCallback() */
     short cbId; // 52
     /** Some argument passed to the interrupt handler when calling the subintrs */
-    u16 unk54;
+    u16 signalData;
     /** The number of stacks of the display list */
     short numStacks; // 56
     /** The offset of the current stack */

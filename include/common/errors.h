@@ -105,6 +105,7 @@
  */
 
 #define SCE_ERROR_OK                                            0x0
+#define SCE_ERROR_NOT_IMPLEMENTED                               0x80000003
 #define SCE_ERROR_NOT_SUPPORTED                                 0x80000004
 #define SCE_ERROR_ALREADY                                       0x80000020
 #define SCE_ERROR_BUSY                                          0x80000021
