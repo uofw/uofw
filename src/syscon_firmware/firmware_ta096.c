@@ -45,7 +45,7 @@ const u32 g_baryonVersion = 0x00403000; // 0x010E
 
 const u8 g_buildDate[] = "$Date:: 2011-05-09 20:45:25 +0900#$"; // 0x0112
 
-void (*g_sysconCmdGetOps[])(void) = {
+const void (*g_sysconCmdGetOps[])(void) = {
 	exec_syscon_cmd_nop,
 	exec_syscon_cmd_get_baryon_version,
 	exec_syscon_cmd_get_digital_key,
@@ -68,7 +68,7 @@ void (*g_sysconCmdGetOps[])(void) = {
 	exec_syscon_cmd_get_video_cable
 }; // 0x008A -- SIO10 communication
 
-void (*g_mainOperations[])(void) = {
+const void (*g_mainOperations[])(void) = {
 	write_clock,
 	set_usb_status,
 	write_alarm,
@@ -95,7 +95,7 @@ void (*g_mainOperations[])(void) = {
 	get_batt_volt_ad
 }; // 0x00B0
 
-void (*g_peripheralOperations[])(void) = {
+const void (*g_peripheralOperations[])(void) = {
 	exec_syscon_cmd_get_pommel_version,
 	exec_syscon_cmd_get_pommel_version, /* PSP_SYSCON_CMD_GET_POLESTAR_VERSION */
 	exec_syscon_cmd_ctrl_voltage,
@@ -120,7 +120,43 @@ void (*g_peripheralOperations[])(void) = {
 	exec_syscon_cmd_ctrl_charge
 }; // 0x00E0
 
-u8 g_unkF400[0x1D0]; // 0xF400
+const u8 g_unkBaseKey05D6[16] = {
+	0x03, 0x76, 0x3C, 0x68, 0x65, 0xC6, 0x9B, 0x0F, 0xFE, 0x8F, 0xD8, 0xEE, 0x4A, 0x36, 0x16, 0xA0
+}; // 0x05D6
+
+const u8 g_unkBaseKey05E6[16] = {
+	0xC1, 0xBF, 0x66, 0x81, 0x8E, 0xF9, 0x53, 0xF2, 0xE1, 0x26, 0x6B, 0x6F, 0x55, 0x0C, 0xC9, 0xCD
+}; // 0x5E6
+
+const u8 g_unkBaseKey056F[16] = {
+	0x7D, 0x50, 0xB8, 0x5C, 0x0A, 0x67, 0x69, 0xF0, 0xE5, 0x4A, 0xA8, 0x09, 0x8B, 0x0E, 0xBE, 0x1C
+}; // 0x5F6
+
+const u8 g_unkBaseKey0606[16] = {
+	0xF1, 0x07, 0x30, 0xC3, 0x11, 0xE0, 0x26, 0xFC, 0xF8, 0x7B, 0x50, 0xAE, 0xA3, 0xD1, 0x7B, 0xA0
+}; // 0x606
+
+u8 g_unkF400[0x40]; // 0xF400
+
+u8 g_expandedBaseKey0606[176]; // 0xF440
+
+u8 g_unkF4F0[8]; // 0xF4F0
+u8 g_unkF4F8[8]; // 0xF4F8
+
+u8 g_expandedBaseKey05D6[176]; // 0xF500
+
+u8 g_unkF5C0[8]; // 0xF5C0
+u8 g_unkF5C8[8]; // 0xF5C8
+
+u8 g_unkF6B0[8]; // 0xF6B0
+u8 g_unkF6B8[8]; // 0xF6B8
+u8 g_unkF6C0[8]; // 0xF6C0
+u8 g_unkF6C8[8]; // 0xF6C8
+u8 g_unkF6D0[8]; // 0xF6D0
+u8 g_unkF6D8[8]; // 0xF6D8
+u8 g_unkF6E0[8]; // 0xF6E0
+u8 g_unkF6E8[8]; // 0xF6E8
+
 
 /* SYSCON's internal scratchpad buffer. */
 u8 g_scratchpad[SCRATCH_PAD_SIZE]; // 0xF7B0
@@ -168,10 +204,16 @@ u8 g_battVoltADUnkVal; // 0xFD22
 
 u8 g_unkFD29; // 0xFD29
 
+u8 g_allegrexService; // 0xFD42
+u8 g_unkFD43; // 0xFD43
+
 /* Base value for the battery voltage on PSP series PSP-N1000 and PSP-E1000. */
 u8 g_battVoltBase; // 0xFD46
 u8 g_unkFD47; //0xFD47
 u8 g_unkFD49; // 0xFD49
+
+u8 g_unkFD60[8]; // 0xFD60
+u8 g_unkFD68[8]; // 0xFD68
 
 /* 0 = analog pad at bottom limit, 0xFF = analog pad at top limit. */
 u8 g_curAnalogPadPositionY; // 0xFD4A
@@ -1171,30 +1213,6 @@ void receive_setparam(void)
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
-u8 g_unkF4F0[8]; // 0xF4F0
-u8 g_unkF4F8[8]; // 0xF4F8
-
-u8 *g_unkF500; // 0xF500 -- TODO: This is a buffer, figure out its actual size
-
-u8 g_unkF5C0[8]; // 0xF5C0
-u8 g_unkF5C8[8]; // 0xF5C8
-
-u8 g_unkF6B0[8]; // 0xF6B0
-u8 g_unkF6B8[8]; // 0xF6B8
-u8 g_unkF6C0[8]; // 0xF6C0
-u8 g_unkF6C8[8]; // 0xF6C8
-u8 g_unkF6D0[8]; // 0xF6D0
-u8 g_unkF6D8[8]; // 0xF6D8
-
-u8 g_allegrexService; // 0xFD42
-u8 g_unkFD43; // 0xFD43
-
-u8 g_unkFD60[8]; // 0xFD60
-u8 g_unkFD68[8]; // 0xFD68
-
-u8 g_unkFE60[8]; // 0xFE60
-u8 g_unkFE68[8]; // 0xFE68
-
 #define SYSCON_CMD_0x30_KEY_ID_RECEIVE_DATA_FLAG    0x80
 
 // sub_1D34
@@ -1288,13 +1306,13 @@ void exec_syscon_cmd_0x30(void)
 
 		if (keyId == 0x86 && g_unkFD43 == 0x9) // 0x1EAC & 0x1EB3
 		{
-			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkFE60, 8); // 0x1EC0
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF6E0, 8); // 0x1EC0
 
 			g_unkFD43 = 0xA; // 0x1EC7
 		}
 		else if (keyId == 0x87 && g_unkFD43 == 0xA) // 0x1ECF & 0x1ED6
 		{
-			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkFE68, 8); // 0x1EE3
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF6E8, 8); // 0x1EE3
 
 			g_unkFD43 = 0xB; // 0x1EEA
 		}
@@ -1466,7 +1484,7 @@ void exec_syscon_cmd_0x30(void)
 
 	if (g_unkFD43 & 0x80) // 0x1FAF
 	{
-		do_encrypt(g_unkF500, g_unkF4F0); // 0x1FB9
+		do_encrypt(g_expandedBaseKey05D6, g_unkF4F0); // 0x1FB9
 
 		memcpy(&g_unkF4F0[5], &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1FC8
 	}
@@ -1822,11 +1840,16 @@ void sub_42CB(void)
 // TODO: more functions here...
 
 // sub_4CE0
+// TODO
 void do_encrypt(u8 *key, void *plainText)
 {
 }
 
-// TODO: more functions here...
+// sub_4D02
+// TODO
+void aes_key_expand(u8 *pBaseKey, u8 *pExpandedKey)
+{
+}
 
 // sub_5011
 void memcpy(const void *pSrc, void *pDst, u16 n)
@@ -1893,6 +1916,22 @@ void allegrex_handshake(void)
 // sub_54E5
 void init_allegrex_session(void)
 {
+	g_allegrexService = 0; // 0x54E6
+	g_unkFD43 = 0; // 0x54E8
+
+	/* Reset the watchdog timer. */
+	WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER; // 0x54EE
+
+	aes_key_expand(g_unkBaseKey05D6, g_expandedBaseKey05D6); // 0x54F8
+	aes_key_expand(g_unkBaseKey0606, g_expandedBaseKey0606); // 0x5503
+
+	/* Reset the watchdog timer. */
+	WDTE = WATCHDOG_TIMER_ENABLE_REGISTER_RESET_WATCHDOG_TIMER; // 0x5507
+
+	if (g_unkFE31 != 1) // 0x550D
+	{
+		g_allegrexService = 2; // 5511
+	}
 }
 
 // sub_5516
