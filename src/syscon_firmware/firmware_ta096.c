@@ -1171,9 +1171,307 @@ void receive_setparam(void)
 	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
+u8 g_unkF4F0[8]; // 0xF4F0
+u8 g_unkF4F8[8]; // 0xF4F8
+
+u8 *g_unkF500; // 0xF500 -- TODO: This is a buffer, figure out its actual size
+
+u8 g_unkF5C0[8]; // 0xF5C0
+u8 g_unkF5C8[8]; // 0xF5C8
+
+u8 g_unkF6B0[8]; // 0xF6B0
+u8 g_unkF6B8[8]; // 0xF6B8
+u8 g_unkF6C0[8]; // 0xF6C0
+u8 g_unkF6C8[8]; // 0xF6C8
+u8 g_unkF6D0[8]; // 0xF6D0
+u8 g_unkF6D8[8]; // 0xF6D8
+
+u8 g_allegrexService; // 0xFD42
+u8 g_unkFD43; // 0xFD43
+
+u8 g_unkFD60[8]; // 0xFD60
+u8 g_unkFD68[8]; // 0xFD68
+
+u8 g_unkFE60[8]; // 0xFE60
+u8 g_unkFE68[8]; // 0xFE68
+
+#define SYSCON_CMD_0x30_KEY_ID_RECEIVE_DATA_FLAG    0x80
+
 // sub_1D34
 void exec_syscon_cmd_0x30(void)
 {
+	u8 keyId;
+
+	keyId = g_mainOperationPayloadReceiveBuffer[0]; // 0x1D38
+
+	g_mainOperationPayloadTransmitBuffer[0] = keyId;
+	if (g_allegrexService == 0) // 0x1D3E - 0x1D42
+	{
+		g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9;
+
+		g_unkFD43 = 0xA0; // 0x1FA9
+	}
+	else if (g_allegrexService == 13) // 0x1D47
+	{
+		// loc_1F44
+
+		if (keyId == 0x4 && g_unkFD43 == 0xD) // 0x1F47 & 1F4E
+		{
+			// 0x1F4E
+
+			memcpy(g_unkFD60, &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1F5B
+
+			g_unkFD43 = 0xE; // 0x1F60
+
+		}
+		else if (keyId == 0x5 && g_unkFD43 == 0xE) // 0x1F68 & 0x1F6F
+		{
+			// 0x1F73
+
+			memcpy(g_unkFD68, &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1F7E
+
+			g_unkFD43 = 0xF; // 0x1F83
+		}
+		else
+		{
+			// loc_1F8A
+
+			g_unkFD43 = 0x8F;
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else if (g_allegrexService == 12) // 0x1D4E
+	{
+		// loc_1EF7
+
+		if (keyId == 0x2 && g_unkFD43 == 0xB) // 0x1EFC & 0x1F01
+		{
+			// 0x1F03
+
+			memcpy(g_unkF6C0, &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1F0E
+
+			g_unkFD43 = 0xC; // 0x1F15
+		}
+		else if (keyId == 0x3 && g_unkFD43 == 0xC) // 0x1F1D & 1F24
+		{
+			// 0x1F26
+
+			memcpy(g_unkF6C8, &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1F31
+
+			g_unkFD43 = 0xD; // 0x1F38
+		}
+		else
+		{
+			g_unkFD43 = 0x8D; // 0x1F3F
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else if (g_allegrexService == 9) // 0x1D55
+	{
+		// loc_1EA9
+
+		if (keyId == 0x86 && g_unkFD43 == 0x9) // 0x1EAC & 0x1EB3
+		{
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkFE60, 8); // 0x1EC0
+
+			g_unkFD43 = 0xA; // 0x1EC7
+		}
+		else if (keyId == 0x87 && g_unkFD43 == 0xA) // 0x1ECF & 0x1ED6
+		{
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkFE68, 8); // 0x1EE3
+
+			g_unkFD43 = 0xB; // 0x1EEA
+		}
+		else
+		{
+			g_unkFD43 = 0x8B; // 0x1EEF
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else if (g_allegrexService == 8) // 0x1D5C
+	{
+		// loc_1E5B
+
+		if (keyId == 0x84 && g_unkFD43 == 0x6) // 0x1E5E & 0x1E65
+		{
+			// 0x1E67
+
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF6B0, 8); // 0x1E72
+
+			g_unkFD43 = 0x8; // 0x1E77
+		}
+		else if (keyId == 0x85 && g_unkFD43 == 0x8) // 0x1E81 & 0x1E88
+		{
+			// 0x1E8A
+
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF6B8, 8); // 0x1E95
+
+			g_unkFD43 = 0x9; // 0x1E9C
+		}
+		else
+		{
+			g_unkFD43 = 0x89; // 0x1EA3
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else if (g_allegrexService == 5) // 0x1D63
+	{
+		// loc_1E0D
+
+		if (keyId == 0x82 && g_unkFD43 == 0x4) // 0x1E0E & 0x1E15
+		{
+			// 0x1E19
+
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF4F0, 8); // 0x1E24
+
+			g_unkFD43 = 0x5; // 0x1E2B
+		}
+		else if (keyId == 0x83 && g_unkFD43 == 0x5) // 0x1E33 & 0x1E3A
+		{
+			// 0x1E3C
+
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF4F8, 8); // 0x1E44
+
+			g_unkFD43 = 0x6; // 0x1E4C
+		}
+		else
+		{
+			g_unkFD43 = 0x86; // 0x1E53
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else if (g_allegrexService == 4) // 0x1D6A
+	{
+		// loc_1DC0
+
+		if (keyId == 0x0 && g_unkFD43 == 0x2) // 0x1DC3 & 0x1DCA
+		{
+			// 0x1DCC
+
+			memcpy(g_unkF4F0, &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1DD7
+
+			g_unkFD43 = 0x3;
+		}
+		else if (keyId == 0x1 && g_unkFD43 == 0x3) // 0x1DE5 & 0x1DEC
+		{
+			// 0x1DEE
+
+			memcpy(g_unkF4F8, &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1DF9
+
+			g_unkFD43 = 0x4; // 0x1E00
+		}
+		else
+		{
+			g_unkFD43 = 0x84; // 0x1E07
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else if (g_allegrexService == 3) // 0x1D6E
+	{
+		// loc_1D73
+
+		if (keyId == 0x80 && g_unkFD43 == 0x0) // 0x1D76 & 1D7D
+		{
+			// 0x1D7F
+
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF5C0, 8); // 0x1D8A
+
+			g_unkFD43 = 0x1; // 0x1D91
+		}
+		else if (keyId == 0x81 && g_unkFD43 == 0x1) // 0x1D99 & 0x1D9F
+		{
+			// 0x1DA1
+
+			memcpy(&g_mainOperationPayloadReceiveBuffer[1], g_unkF5C8, 8); // 0x1DAC
+
+			g_unkFD43 = 0x2; // 0x1DB3
+		}
+		else
+		{
+			g_unkFD43 = 0x82; // 0x1DBA
+		}
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+	else
+	{
+		// loc_1F91
+
+		g_unkFD43 = 0x90; // 0x1F93
+
+		if (keyId & 0x80) // 0x1F97
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 1; // 0x1F9A
+		}
+		else
+		{
+			g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN + 9; // 0x1F9F
+		}
+	}
+
+	if (g_unkFD43 & 0x80) // 0x1FAF
+	{
+		do_encrypt(g_unkF500, g_unkF4F0); // 0x1FB9
+
+		memcpy(&g_unkF4F0[5], &g_mainOperationPayloadTransmitBuffer[1], 8); // 0x1FC8
+	}
+
+	g_mainOperationResultStatus = MAIN_OPERATION_RESULT_STATUS_SUCCESS;
 }
 
 // sub_1FD2
@@ -1518,6 +1816,13 @@ void response_handler()
 
 // sub_42CB
 void sub_42CB(void)
+{
+}
+
+// TODO: more functions here...
+
+// sub_4CE0
+void do_encrypt(u8 *key, void *plainText)
 {
 }
 
