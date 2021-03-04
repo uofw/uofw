@@ -638,7 +638,7 @@ int _sceGeReset()
     int oldIntr = sceKernelCpuSuspendIntr();
     sceSysregAwRegABusClockEnable();
     pspSync();
-    HW(0xBD500010) = 2;
+    HW_GE_EDRAM_UNK10 = 2;
     HW_GE_RESET = 1;
     // 0144
     while ((HW_GE_RESET & 1) != 0)
@@ -647,7 +647,7 @@ int _sceGeReset()
     _aw_ctx.ctx[16] = HW_GE_GEOMETRY_CLOCK;
     sceSysregAwResetEnable();
     sceSysregAwResetDisable();
-    HW(0xBD500010) = 0;
+    HW_GE_EDRAM_UNK10 = 0;
     HW_GE_EXEC = 0;
     HW_GE_LISTADDR = 0;
     HW_GE_STALLADDR = 0;
@@ -1546,7 +1546,7 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
         _aw_ctx.ctx[12] = HW_GE_EDRAM_REFRESH_UNK1;
         _aw_ctx.ctx[13] = HW_GE_EDRAM_REFRESH_UNK2;
         _aw_ctx.ctx[14] = HW_GE_EDRAM_REFRESH_UNK3;
-        _aw_ctx.ctx[15] = HW(0xBD500040);
+        _aw_ctx.ctx[15] = HW_GE_EDRAM_UNK40;
         _aw_ctx.ctx[16] = HW_GE_GEOMETRY_CLOCK;
         break;
 
@@ -1664,13 +1664,13 @@ int sceGeEdramInit()
     // 264C
     while ((i--) != 0)
         ;
-    HW(0xBD500010) = 1;
+    HW_GE_EDRAM_UNK10 = 1;
     // 2660
-    while ((HW(0xBD500010) & 1) != 0)
+    while ((HW_GE_EDRAM_UNK10 & 1) != 0)
         ;
     HW_GE_EDRAM_REFRESH_UNK2 = 0x6C4;
-    HW(0xBD500040) = 1;
-    HW(0xBD500090) = 3;
+    HW_GE_EDRAM_UNK40 = 1;
+    HW_GE_EDRAM_UNK90 = 3;
     HW_GE_EDRAM_ENABLED_SIZE = 4;
     if (g_uiEdramHwSize != 0)
         return 0;
@@ -1711,9 +1711,9 @@ int sceGeEdramSetRefreshParam(int mode, int arg1, int arg2, int arg3)
                 ((arg3 & 0xF) << 20) | (HW_GE_EDRAM_REFRESH_UNK1 & 0xFF0FFFFF);
             HW_GE_EDRAM_REFRESH_UNK3 = arg2 & 0x3FF;
             HW_GE_EDRAM_REFRESH_UNK2 = arg1 & 0x007FFFFF;
-            if ((HW(0xBD500040) & 2) == 0) {
+            if ((HW_GE_EDRAM_UNK40 & 2) == 0) {
                 // 284C
-                HW(0xBD500040) = 3;
+                HW_GE_EDRAM_UNK40 = 3;
             }
         } else {
             ret = -1;
@@ -1723,9 +1723,9 @@ int sceGeEdramSetRefreshParam(int mode, int arg1, int arg2, int arg3)
             ((arg3 & 0xF) << 20) | (HW_GE_EDRAM_REFRESH_UNK1 & 0xFF0FFFFF);
         HW_GE_EDRAM_REFRESH_UNK3 = arg2 & 0x3FF;
         HW_GE_EDRAM_REFRESH_UNK2 = arg1 & 0x007FFFFF;
-        if ((HW(0xBD500040) & 2) != 0) {
+        if ((HW_GE_EDRAM_UNK40 & 2) != 0) {
             // 284C dup
-            HW(0xBD500040) = 1;
+            HW_GE_EDRAM_UNK40 = 1;
         }
     }
 
@@ -1840,7 +1840,7 @@ int _sceGeQueueInit()
     g_AwQueue.active_first = NULL;
     g_AwQueue.active_last = NULL;
 
-    g_AwQueue.drawingEvFlagId = sceKernelCreateEventFlag("SceGeQueueId", 0x201, 2, NULL);
+    g_AwQueue.drawingEvFlagId = sceKernelCreateEventFlag("SceGeQueue", 0x201, 2, NULL);
     g_AwQueue.listEvFlagIds[0] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.listEvFlagIds[1] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.syscallId = sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr);
