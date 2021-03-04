@@ -1025,7 +1025,8 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         if ((HW_GE_CMD(SCE_GE_CMD_TME) & 1) != 0) {
             int count = (HW_GE_CMD(SCE_GE_CMD_TMODE) >> 16) & 7;
             // 0FC0
-            for (int i = 0; i <= count; i++) {
+            int i;
+            for (i = 0; i <= count; i++) {
                 int addr = ((HW_GE_CMD(SCE_GE_CMD_TBW0 + i) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_TBP0 + i) & 0x00FFFFFF);
                 if (!GE_VALID_ADDR(addr)) {
                     // 1028
@@ -1039,7 +1040,8 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         // 12E4
         int count = (HW_GE_CMD(SCE_GE_CMD_TMODE) >> 16) & 7;
         // 1328
-        for (int i = 0; i <= count; i++) {
+        int i;
+        for (i = 0; i <= count; i++) {
             int addr = ((HW_GE_CMD(SCE_GE_CMD_TBW0 + i) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_TBP0 + i) & 0x00FFFFFF);
             if (!GE_VALID_ADDR(addr)) {
                 ret = SCE_ERROR_INVALID_POINTER;   // 1390
@@ -3527,7 +3529,8 @@ void _sceGeListLazyFlush()
 u32 _tmp_base = 0;
 void print_list(void *list, void *stall)
 {
-    for (u32 *curCmd = list; (void*)curCmd < stall || stall == NULL; curCmd++) {
+    u32 *curCmd;
+    for (curCmd = list; (void*)curCmd < stall || stall == NULL; curCmd++) {
         dbg_printf("- cmd %08x [%s %06x]\n", *curCmd, _dbg_cmds[*curCmd >> 24], *curCmd & 0xFFFFFF);
         if (*curCmd >> 24 == 0x10) { // base
             _tmp_base = *curCmd & 0xFFFFFF;
