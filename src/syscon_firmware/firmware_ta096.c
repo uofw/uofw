@@ -1714,7 +1714,8 @@ void exec_syscon_cmd_power_suspend(void)
 	g_wakeupCondition = g_mainOperationPayloadReceiveBuffer[0] & 0x38; // 0x20FE
 
 	sub_20E9();
-	g_unkFE35 | POWER_REQUEST_SUSPEND;
+
+	g_unkFE35 |= POWER_REQUEST_SUSPEND;
 }
 
 // sub_2107
