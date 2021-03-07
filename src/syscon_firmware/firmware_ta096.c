@@ -69,13 +69,13 @@ const void (*g_sysconCmdGetOps[])(void) = {
 }; // 0x008A -- SIO10 communication
 
 const void (*g_mainOperations[])(void) = {
-	write_clock,
-	set_usb_status,
-	write_alarm,
-	write_scratchpad,
-	read_scratchpad,
-	send_setparam,
-	receive_setparam,
+	exec_syscon_cmd_write_clock,
+	exec_syscon_cmd_set_usb_status,
+	exec_syscon_cmd_write_alarm,
+	exec_syscon_cmd_write_scratchpad,
+	exec_syscon_cmd_read_scratchpad,
+	exec_syscon_cmd_send_setparam,
+	exec_syscon_cmd_receive_setparam,
 	main_op_invalid,
 	main_op_invalid,
 	main_op_invalid,
@@ -86,13 +86,13 @@ const void (*g_mainOperations[])(void) = {
 	main_op_invalid,
 	main_op_invalid,
 	exec_syscon_cmd_0x30,
-	ctrl_tachyon_wdt,
-	reset_device,
-	ctrl_analog_xy_polling,
+	exec_syscon_cmd_ctrl_tachyon_wdt,
+	exec_syscon_cmd_reset_device,
+	exec_syscon_cmd_ctrl_analog_xy_polling,
 	main_op_invalid,
-	power_standby,
-	power_suspend,
-	get_batt_volt_ad
+	exec_syscon_cmd_power_standby,
+	exec_syscon_cmd_power_suspend,
+	exec_syscon_cmd_get_batt_volt_ad
 }; // 0x00B0
 
 const void (*g_peripheralOperations[])(void) = {
@@ -881,7 +881,7 @@ void main_op_invalid(void)
 /* SYSCON [set] commands */
 
 // sub_1A96
-void write_clock(void)
+void exec_syscon_cmd_write_clock(void)
 {
 	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
@@ -909,7 +909,7 @@ void write_clock(void)
 }
 
 // sub_1AB1
-void set_usb_status(void)
+void exec_syscon_cmd_set_usb_status(void)
 {
 	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
@@ -923,7 +923,7 @@ void set_usb_status(void)
 }
 
 // sub_1AC0
-void write_alarm(void)
+void exec_syscon_cmd_write_alarm(void)
 {
 	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
@@ -940,7 +940,7 @@ void write_alarm(void)
 }
 
 // sub_1AD5
-void write_scratchpad(void)
+void exec_syscon_cmd_write_scratchpad(void)
 {
 	u8 dstAndSizeEnc = g_mainOperationPayloadReceiveBuffer[0]; // 0x1ADA
 
@@ -1000,7 +1000,7 @@ void write_scratchpad(void)
 }
 
 // sub_1B4C
-void read_scratchpad(void)
+void exec_syscon_cmd_read_scratchpad(void)
 {
 	u8 dstAndSizeEnc = g_mainOperationPayloadReceiveBuffer[0]; // 0x1B51
 
@@ -1060,7 +1060,7 @@ void read_scratchpad(void)
 #define SYSCON_SET_PARAM_ID_DEFAULT    SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY
 
 // sub_1BC5
-void send_setparam(void)
+void exec_syscon_cmd_send_setparam(void)
 {
 	if ((g_mainOperationReceivedPackageLength == 10
 		|| (g_mainOperationReceivedPackageLength == 11 && g_mainOperationPayloadReceiveBuffer[8] == 0 /* setParam ID 0 */))
@@ -1175,7 +1175,7 @@ void send_setparam(void)
 }
 
 // sub_1CD8
-void receive_setparam(void)
+void exec_syscon_cmd_receive_setparam(void)
 {
 	u8 setParamId;
 
@@ -1493,7 +1493,7 @@ void exec_syscon_cmd_0x30(void)
 }
 
 // sub_1FD2
-void ctrl_tachyon_wdt(void)
+void exec_syscon_cmd_ctrl_tachyon_wdt(void)
 {
 	if (g_mainOperationPayloadReceiveBuffer[0] > 0x80) // 0x1FD4 & 0x1FD7
 	{
@@ -1514,7 +1514,7 @@ void ctrl_tachyon_wdt(void)
 }
 
 // sub_1FF7
-void reset_device(void )
+void exec_syscon_cmd_reset_device(void)
 {
 	u8 resetType;
 
@@ -1606,7 +1606,7 @@ void reset_device(void )
 
 // sub_2081
 /* Enable/disable analog pad sampling. */
-void ctrl_analog_xy_polling(void)
+void exec_syscon_cmd_ctrl_analog_xy_polling(void)
 {
 	u8 unk1;
 	u8 samplingMode;
@@ -1685,17 +1685,17 @@ void sub_20E9(void)
 }
 
 // sub_20F3
-void power_standby(void)
+void exec_syscon_cmd_power_standby(void)
 {
 }
 
 // sub_20F9
-void power_suspend(void)
+void exec_syscon_cmd_power_suspend(void)
 {
 }
 
 // sub_2107
-void get_batt_volt_ad(void)
+void exec_syscon_cmd_get_batt_volt_ad(void)
 {
 	g_mainOperationTransmitPackageLength = SYSCON_CMD_TRANSMIT_DATA_BASE_LEN;
 
