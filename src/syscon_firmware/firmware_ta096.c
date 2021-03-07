@@ -181,6 +181,7 @@ u16 g_unkFC58; // 0xFC58
 u8 g_unkFC78; // 0xFC78
 
 u16 g_wakeUpFactor; // 0xFC79
+u8 g_wakeupCondition; // 0xFC7B
 
 u8 g_watchdogTimerStatus; // 0xFC80
 u8 g_watchdogTimerCounter; // 0xFC81
@@ -188,6 +189,8 @@ u8 g_watchdogTimerCounterResetValue; // 0xFC82
 u8 g_unkFC83; // 0xFC83 -- TODO: Seems related to the watchdogTimer
 
 u8 g_usbStatus; // 0xFC86
+
+u8 g_unkFCA6; // 0xFCA6
 
 u8 g_mainOperationPayloadReceiveBuffer[9]; // 0xFCB0 -- Could be larger....
 
@@ -228,7 +231,16 @@ u8 g_unkFE31; // 0xFE31
 u8 g_unkFE32; // 0xFE32
 u8 g_isMainOperationRequestExist; // 0xFE33
 
-u8 g_unkFE35; // 0xFE35 -- TODO: Bit 1 is set when the watchdog timer counter has reached value [0] (= finished counting)
+// TODO:
+//
+// Bit 1 is set when the watchdog timer counter has reached value [0] (= finished counting)
+//
+// 0x1 = POWER_REQUEST_SUSPEND (?)
+// 0x2 = POWER_REQUEST_STANDBY (?)
+
+#define POWER_REQUEST_SUSPEND    1
+#define POWER_REQUEST_STANDBY    2
+u8 g_unkFE35; // 0xFE35
 
 u16 g_unkFE3A; // 0xFE3A
 
@@ -1682,16 +1694,27 @@ void exec_syscon_cmd_ctrl_analog_xy_polling(void)
 // sub_20E9
 void sub_20E9(void)
 {
+	if (g_powerSupplyStatus & 0x10) // 0x20E9
+	{
+		g_unkFCA6 = 0;
+	}
 }
 
 // sub_20F3
 void exec_syscon_cmd_power_standby(void)
 {
+	sub_20E9();
+
+	g_unkFE35 |= POWER_REQUEST_STANDBY; // 0x20F6
 }
 
 // sub_20F9
 void exec_syscon_cmd_power_suspend(void)
 {
+	g_wakeupCondition = g_mainOperationPayloadReceiveBuffer[0] & 0x38; // 0x20FE
+
+	sub_20E9();
+	g_unkFE35 | POWER_REQUEST_SUSPEND;
 }
 
 // sub_2107
