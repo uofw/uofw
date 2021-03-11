@@ -660,8 +660,14 @@ void transmit_data_set_digital_user_key_data(void)
 	g_transmitData[0] = P7;
 
 	u8 ctrlData2 = ((P2 << 4) & 0x30) | (P4 & 0xF);
-	ctrlData2 |= 0x40; // Set 7th bit -- SCE_CTRL_WLAN_UP?
-	ctrlData2 &= ~0x80; // clear 8th bit -- SCE_CTRL_REMOTE?
+
+	/*
+	 * TA-096 does not have WLAN and HP Remote support. Turn off these controller bits. The WLAN key is
+	 * active low, whereas the HP Remote connect key is active high. As such, we need to set the WLAN bit
+	 * and clear the HP Remote bit.
+	 */
+	ctrlData2 |= 0x40; /* SCE_CTRL_WLAN_UP */
+	ctrlData2 &= ~0x80; /* SCE_CTRL_REMOTE */
 
 	g_transmitData[1] = ctrlData2;
 }
