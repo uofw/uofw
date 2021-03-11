@@ -736,11 +736,11 @@ typedef struct {
 	/* Unknown. */
 	u32 wakeUpReq; // 8
 	/* Pointer to the sceSysconCmdExec() function. */
-	s32(*pSysconCmdExec)(void *, u32); // 12
+	s32 (*pSysconCmdExec)(void *, u32); // 12
 	/* PSP Testing Tool dip switches. */
 	u32 dipSw; // 16
 	/* Pointer to a function to set the PLL clock frequency. */
-	s32(*pChangeClock)(u32); // 20
+	s32 (*pChangeClock)(u32); // 20
 	/* The BARYON status. */
 	u8 baryonStatus; // 24
 	/* The BARYON clock. */
@@ -756,21 +756,21 @@ typedef struct {
 	/* The full battery capacity in mAh. */
 	s32 batteryFullCapacity; // 48
 	/* Pointer to the sceSysconPowerSuspend() function. */
-	s32(*pSysconPowerSuspend)(u32, u32); // 52
+	s32 (*pSysconPowerSuspend)(u32, u32); // 52
 	/* Pointer to the sceSysconPowerStandby() function. */
-	s32(*pSysconPowerStandby)(u32); // 56
+	s32 (*pSysconPowerStandby)(u32); // 56
 	/* Pointer to a function to change the clock voltage. */
-	s32(*pChangeClockVoltage)(s32, s32, s32); // 60
+	s32 (*pChangeClockVoltage)(s32, s32, s32); // 60
 	/* The second BARYON status. */
 	u8 baryonStatus2; // 64
 	/* Unknown.*/
 	s32 unk68; // 68
 	/* Pointer to the sceI2cMasterTransmit() function. */
-	s32(*pI2cTransmit)(u32, u8 *, s32); // 72
+	s32 (*pI2cTransmit)(u32, u8 *, s32); // 72
 	/* Pointer to the sceI2cMasterReceive() function. */
-	s32(*pI2cReceive)(u32, u8 *, s32); // 76
+	s32 (*pI2cReceive)(u32, u8 *, s32); // 76
 	/* Pointer to the sceI2cMasterTransmitReceive() function. */
-	s32(*pI2cTransmitReceive)(u32, u8 *, s32, u32, u8 *, s32); // 80
+	s32 (*pI2cTransmitReceive)(u32, u8 *, s32, u32, u8 *, s32); // 80
 	u8 remainingData[0x80]; // 84 -- remaining unknowns, for convenience represented as an array for now
 } ScePowerResumeInfo; // size = 212
 
