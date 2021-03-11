@@ -1,4 +1,4 @@
-MODULES=debug audio clockgen codec ctrl exceptionman ge init interruptman \
+MODULES=debug audio chnnlsv clockgen codec ctrl exceptionman ge init interruptman \
 iofilemgr led libatrac3plus loadcore loadexec mediaman me_wrapper modulemgr \
 power syscon sysmem systimer usersystemlib wlanfirm
 
