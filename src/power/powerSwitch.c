@@ -67,7 +67,6 @@
 #include <interruptman.h>
 #include <lowio_ddr.h>
 #include <lowio_gpio.h>
-#include <lowio_sysreg.h>
 #include <modulemgr_init.h>
 #include <power_kernel.h>
 #include <syscon.h>
@@ -156,7 +155,8 @@ typedef struct {
      */
     s32 pllOutSelect; // 20480 (0x5000)
     s32 unk20484; // 20484 (0x5004)
-    SceSysEventResumePowerState resumePowerState; // 20488 (0x5008) - 20696
+    /* Contains resume data required to successfully resume the system from suspension. */
+    ScePowerResumeInfo resumeInfo; // 20488 (0x5008) - 20696
     u32 unk20520[44]; // 20520 -- TODO: This might not actually be an array but choosing one for convenience for now
     u32 unk20696; // 20696
     u32 unk20700; // 20700 (0x50DC)
@@ -181,7 +181,7 @@ static s32 _scePowerLock(s32 lockType, s32 isUserLock);
 static s32 _scePowerUnlock(s32 lockType, s32 isUserLock);
 static s32 _scePowerOffThread(SceSize args, void* argp);
 static s32 _scePowerSuspendOperation(s32 mode);
-static void _scePowerResumePoint(void *pData) __attribute__((noreturn));
+static void _scePowerResumePoint(ScePowerResumeInfo *pResumeInfo) __attribute__((noreturn));
 static s32 _scePowerOffCommon(void);
 static void _scePowerPowerSwCallback(s32 enable, void* argp);
 static void _scePowerHoldSwCallback(s32 enable, void* argp);
@@ -1299,7 +1299,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
         ^ ((u32*)sha1Digest)[2] ^ ((u32*)sha1Digest)[3] ^ ((u32*)sha1Digest)[4]; // $t4
 
     /* Set power's entry point on resume. */
-    sysEventSuspendPayloadResumeData.resumePointFunc = _scePowerResumePoint; // 0x00002038
+    sysEventSuspendPayloadResumeData.pResumePoint = _scePowerResumePoint; // 0x00002038
 
     secureResumeDataBaseAddr = (((u32)&sysEventSuspendPayloadResumeData) | 0x1) ^ digestXor; // 0x00002044 & 0x00002024 & 0x00002018
 
@@ -1461,12 +1461,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
              * the device for real.
              */
 
-            memset(&g_Resume.resumePowerState, 0, sizeof g_Resume.resumePowerState); // 0x00002568
+            memset(&g_Resume.resumeInfo, 0, sizeof g_Resume.resumeInfo); // 0x00002568
 
-            g_Resume.resumePowerState.resumeClock = pspClock; // 0x00002580
-            g_Resume.resumePowerState.unk16 = 0; // 0x0000258C
-            g_Resume.resumePowerState.unk4 = 0; // 0x00002590
-            g_Resume.resumePowerState.unk8 = 0; // 0x00002598
+            g_Resume.resumeInfo.baryonClock = pspClock; // 0x00002580
+            g_Resume.resumeInfo.dipSw = 0; // 0x0000258C
+            g_Resume.resumeInfo.wakeUpFactor = 0; // 0x00002590
+            g_Resume.resumeInfo.wakeUpReq = 0; // 0x00002598
 
             /* Write back the saved hardware-reset-vector content. */
 
@@ -1574,11 +1574,11 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     sceDdr_driver_E0A39D3E(g_Resume.unk20484); // 0x00002214 & 0x0000221C
 
-    sysEventResumePlayload.pResumePowerState = &g_Resume.resumePowerState; // 0x00002248
+    sysEventResumePlayload.pResumeInfo = &g_Resume.resumeInfo; // 0x00002248
 
     // TODO: Could [unk16] be the duration the PSP system had been suspended?
     // TODO: 0.5 seconds operand (explanation)
-    sysEventResumePlayload.unk16 = ((u64)(g_Resume.resumePowerState.resumeClock - pspClock)) * 500000; // 0x00002224 & 0x00002234 & 0x00002238 & 0x00002260 & 0x00002264
+    sysEventResumePlayload.unk16 = ((u64)(g_Resume.resumeInfo.baryonClock - pspClock)) * 500000; // 0x00002224 & 0x00002234 & 0x00002238 & 0x00002260 & 0x00002264
     sysEventResumePlayload.systemTimePreSuspendOp = sysEventSuspendPayload.systemTimePreSuspendOp; // 0x00002258 & 0x0000225C & 0x00002240 & 0x0000223C
 
     // 0x00002268 - 0x00002294
@@ -1717,33 +1717,28 @@ static s32 _scePowerSuspendOperation(s32 mode)
  * it loads the execution context saved right before we've asked SYSCON to suspend the device and resumes
  * execution 
  */
-static void _scePowerResumePoint(void *pData)
+static void _scePowerResumePoint(ScePowerResumeInfo *pResumeInfo)
 {
-    if (pData != NULL) // 0x00002810
+    if (pResumeInfo != NULL) // 0x00002810
     {
-        /* Copy [g_Resume.resumePowerState] content to the specified destination buffer. */
+        /* Copy [pResumeInfo] content to [g_Resume.resumeInfo]. */
 
-        // s32 copySize = *(s32 *)pData; // 0x00002818
-        s32 count = 0; // 0x0000282C -- $a0
-        u8 *pDst = (u8 *)&g_Resume.resumePowerState; // 0x00002820
-        u8 *pSrc = (u8 *)pData;
+        u32 count = 0; // 0x0000282C -- $a0
+        u8 *pDst = (u8 *)&g_Resume.resumeInfo; // 0x00002820
+        u8 *pSrc = (u8 *)pResumeInfo;
 
-        while (count++ < *(s32 *)pData)
+        while (count++ < pResumeInfo->size)
         {
             *pDst++ = *pSrc++; // 0x00002830 - 0x0000283C
         }
 
         /* Set the PLL clock frequency. */
 
-        g_Resume.resumePowerState.changePllClock = NULL; // 0x00002858
-        if (*(void **)(pData + 20) != NULL) // 0x00002860
+        g_Resume.resumeInfo.pChangeClock = NULL; // 0x00002858
+        if (pResumeInfo->pChangeClock != NULL) // 0x00002860
         {
-            /* 
-             * Restore PLL clock frequency at the time of the supension
-             * (calls g_Resume.resumePowerState.changePllClock()). 
-             */
-            void (*func)(s32) = (void (*)(s32)) *(s32 *)(pData + 20);
-            func(g_Resume.pllOutSelect); // 0x0000294C
+            /* Restore PLL clock frequency at the time of the supension. */
+            pResumeInfo->pChangeClock(g_Resume.pllOutSelect); // 0x0000294C
         }
     }
 

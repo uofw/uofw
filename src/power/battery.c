@@ -146,7 +146,8 @@ typedef struct  {
     u32 powerSupplyStatus; // 60 
     /* The current availibilty status of the battery to the power service. One of ::ScePowerBatteryAvailabilityStatus. */
     u32 batteryAvailabilityStatus; // 64
-    u32 unk68; // 68
+    /* Unknown. */
+    u32 batteryStatus; // 68
     /* The current remaining capacity of the battery in mAh. */
     s32 batteryRemainingCapacity; // 72
     /* The current remaining percentage of battery life relative to a fully charged status. */
@@ -383,11 +384,11 @@ s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity)
 
 // Subroutine sub_0000461C - Address 0x0000461C 
 /* Called during PSP resume phase [phase0]. Updates our battery status control block. */
-s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState, u32 *pPowerStateForCallbackArg)
+s32 _scePowerBatteryUpdatePhase0(ScePowerResumeInfo *pResumeInfo, u32 *pPowerStateForCallbackArg)
 {
     u32 powerSupplyStatus;
 
-    powerSupplyStatus = pResumePowerState->powerSupplyStatus;
+    powerSupplyStatus = pResumeInfo->powerSupplyStatus;
 
     g_Battery.limitTime = -1; // 0x00004644
     g_Battery.powerSupplyStatus = powerSupplyStatus; // 0x0000464C
@@ -410,11 +411,11 @@ s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState,
              * remaining battery capacities and can calculate its remaining battery life (for example in [%]). 
              */
 
-            g_Battery.unk68 = pResumePowerState->unk40; // 0x000046A8
-            g_Battery.batteryRemainingCapacity = pResumePowerState->batteryRemainCapacity; // 0x000046B0
-            g_Battery.minimumFullCapacity = pResumePowerState->batteryRemainCapacity; // 0x000046B8
+            g_Battery.batteryStatus = pResumeInfo->batteryStatus; // 0x000046A8
+            g_Battery.batteryRemainingCapacity = pResumeInfo->batteryRemainCapacity; // 0x000046B0
+            g_Battery.minimumFullCapacity = pResumeInfo->batteryRemainCapacity; // 0x000046B8
             g_Battery.batteryChargeCycle = -1; // 0x000046C0
-            g_Battery.batteryFullCapacity = pResumePowerState->batteryFullCapacity; // 0x000046C8
+            g_Battery.batteryFullCapacity = pResumeInfo->batteryFullCapacity; // 0x000046C8
 
             // Note: In earlier versions, this was
             // g_Battery.batteryLifePercentage = _scePowerBatteryConvertVoltToRCap(*(u32*)(arg0 + 44));
@@ -434,7 +435,7 @@ s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState,
 
         g_Battery.minimumFullCapacity = -1; // 0x000046D4
         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED; // 0x000046D8
-        g_Battery.unk68 = 0; // 0x000046DC
+        g_Battery.batteryStatus = 0; // 0x000046DC
         g_Battery.batteryRemainingCapacity = -1;
         g_Battery.batteryLifePercentage = -1;
         g_Battery.batteryFullCapacity = -1;
@@ -943,9 +944,9 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                      * currently remaining battery capacity.
                      */
 
-                    s32 batStat1;
+                    u32 batteryStatus;
                     s32 remainCap;
-                    status = sceSysconBatteryGetStatusCap(&batStat1, &remainCap); // 0x00004B18
+                    status = sceSysconBatteryGetStatusCap(&batteryStatus, &remainCap); // 0x00004B18
                     if (status < SCE_ERROR_OK) // 0x00004B20
                     {
                         /*
@@ -961,7 +962,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                     {
                         /* Set the remaining battery capacity. */
                         g_Battery.batteryRemainingCapacity = remainCap; // 0x00004B2C
-                        g_Battery.unk68 = batStat1; // 0x00004B3C
+                        g_Battery.batteryStatus = batteryStatus; // 0x00004B3C
 
                         /* 
                          * If the new remaining battery capacity is greater than the current ascertained
@@ -1324,7 +1325,7 @@ static inline void _scePowerBatteryThreadErrorObtainBattInfo()
         g_Battery.batteryElec = -1;
         g_Battery.batteryAvailabilityStatus = BATTERY_AVAILABILITY_STATUS_BATTERY_NOT_INSTALLED;
         g_Battery.isBatteryCharging = SCE_FALSE;
-        g_Battery.unk68 = 0;
+        g_Battery.batteryStatus = 0;
 
         /* Inform power callback subscribers that no battery is currently eqipped. */
         _scePowerNotifyCallback(SCE_POWER_CALLBACKARG_BATTERYEXIST, 0, 0); // 0x00004DB4 & 0x00004BB0

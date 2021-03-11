@@ -31,7 +31,7 @@ s32 _scePowerBatteryInit(u32 isUsbChargingSupported, u32 batteryType);
 s32 _scePowerBatteryEnd(void);
 s32 _scePowerBatterySuspend(void);
 s32 _scePowerBatteryResume(void);
-s32 _scePowerBatteryUpdatePhase0(SceSysEventResumePowerState *pResumePowerState, u32 *pPowerStateForCallbackArg);
+s32 _scePowerBatteryUpdatePhase0(ScePowerResumeInfo *pResumeInfo, u32 *pPowerStateForCallbackArg);
 s32 _scePowerBatteryUpdateAcSupply(s32 isAcSupplied);
 s32 _scePowerBatterySetParam(s32 forceSuspendCapacity, s32 lowBatteryCapacity);
 s32 _scePowerChangeSuspendCap(u32 newSuspendCap);

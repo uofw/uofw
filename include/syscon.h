@@ -104,14 +104,80 @@
 #define PSP_SYSCON_RX_RESPONSE (2)
 #define PSP_SYSCON_RX_DATA(i) (3 + (i))
 
+/**
+ * SYSCON key bits (obtained via GET_*_DIGITAL_KEY commands)
+ * 
+ * The following bits are active low:
+ *   - PSP_SYSCON_KEY_UP - PSP_SYSCON_KEY_WLAN
+ *   - PSP_SYSCON_KEY_VOL_UP - PSP_SYSCON_KEY_SOUND
+ *   - PSP_SYSCON_KEY_UNKNOWN_02000000
+ * 
+ * The following bits are active high:
+ *   - PSP_SYSCON_KEY_HPR
+ *   - PSP_SYSCON_KEY_UMD
+ *   - PSP_SYSCON_KEY_MS
+ *   - PSP_SYSCON_KEY_UNKNOWN_01000000
+ */
+
+/** Up direction key. Active low. */
+#define PSP_SYSCON_KEY_UP               0x00000001
+/** Right direction key. Active low. */
+#define PSP_SYSCON_KEY_RIGHT            0x00000002
+/** Down direction key. Active low. */
+#define PSP_SYSCON_KEY_DOWN             0x00000004
+/** Left direction key. Active low. */
+#define PSP_SYSCON_KEY_LEFT             0x00000008
+/** Triangle key. Active low. */
+#define PSP_SYSCON_KEY_TRIANGLE         0x00000010
+/** Circle key. Active low. */
+#define PSP_SYSCON_KEY_CIRCLE           0x00000020
+/** Cross key. Active low. */
+#define PSP_SYSCON_KEY_CROSS            0x00000040
+/** Square key. Active low. */
+#define PSP_SYSCON_KEY_SQUARE           0x00000080
+/** Select key. Active low. */
+#define PSP_SYSCON_KEY_SELECT           0x00000100
+/** L1 key. Active low. */
+#define PSP_SYSCON_KEY_L1               0x00000200
+/** R1 key. Active low. */
+#define PSP_SYSCON_KEY_R1               0x00000400
+/** Start key. Active low. */
+#define PSP_SYSCON_KEY_START            0x00000800
+/** Home key. Active low. */
+#define PSP_SYSCON_KEY_HOME             0x00001000
+/** Hold key. Active low. */
+#define PSP_SYSCON_KEY_HOLD             0x00002000
+/** WLAN switch. Active low. */
+#define PSP_SYSCON_KEY_WLAN             0x00004000
+/** Bluetooth switch. Active low. PSP Go series only. */
+#define PSP_SYSCON_KEY_BT               0x00004000
+/** Headphone Remote connect key. Active high. */
+#define PSP_SYSCON_KEY_HPR               0x00008000
+/** Volume up key. Active low. */
+#define PSP_SYSCON_KEY_VOL_UP           0x00010000
+/** Volume down key. Active low. */
+#define PSP_SYSCON_KEY_VOL_DOWN         0x00020000
+/** Display key. Active low. */
+#define PSP_SYSCON_KEY_DISPLAY          0x00040000
+/** Sound key. Active low. */
+#define PSP_SYSCON_KEY_SOUND            0x00080000
+/** UMD switch. Active high. */
+#define PSP_SYSCON_KEY_UMD              0x00100000
+/** MS key. Active high. */
+#define PSP_SYSCON_KEY_MS               0x00200000
+/** Unknown. Active high. */
+#define PSP_SYSCON_KEY_UNKNOWN_01000000 0x01000000
+/** Unknown. Active low. */
+#define PSP_SYSCON_KEY_UNKNOWN_02000000 0x02000000
+
 /** 
  * Below are macros to extract Baryon specific info returned by _sceSysconGetBaryonVersion() 
  * and sceSysconGetBaryonVersion().  
  */
 
-#define PSP_SYSCON_BARYON_GET_UNIT_TYPE(v)      ((v) & 0xFF) /* 0 = Dev version, 1 = Retail */
-#define PSP_SYSCON_BARYON_GET_VERSION_MAJOR(v)  (((v) >> 20) & 0xF)
-#define PSP_SYSCON_BARYON_GET_VERSION_MINOR(v)  (((v) >> 16) & 0xF)
+#define PSP_SYSCON_BARYON_GET_UNIT_TYPE(v)        ((v) & 0xFF) /* 0 = Dev version, 1 = Retail */
+#define PSP_SYSCON_BARYON_GET_VERSION_MAJOR(v)    (((v) >> 20) & 0xF)
+#define PSP_SYSCON_BARYON_GET_VERSION_MINOR(v)    (((v) >> 16) & 0xF)
 
 /** 
  * PSP Hardware LEDs which can be turned ON/OFF 
@@ -513,6 +579,14 @@ s32 sceSyscon_driver_26307D84(SceSysconFunc callback, void *argp);
  */
 s32 sceSyscon_driver_6C388E02(SceSysconFunc callback, void *argp);
 
+#define SCE_SYSCON_BARYON_STATUS_AC_ACTIVE          (1 << 0)
+#define SCE_SYSCON_BARYON_STATUS_WLAN_POWER         (1 << 1)
+#define SCE_SYSCON_BARYON_STATUS_HR_POWER           (1 << 2)
+#define SCE_SYSCON_BARYON_STATUS_ALARM              (1 << 3)
+#define SCE_SYSCON_BARYON_STATUS_POWER_SW_ON        (1 << 4)
+#define SCE_SYSCON_BARYON_STATUS_IS_LOW_BATTERY_01G (1 << 5)
+#define SCE_SYSCON_BARYON_STATUS_HDD_POWER          (1 << 18)
+
 /**
  * Get the baryon status (set of flags about the syscon ctrl state).
  *
@@ -841,21 +915,21 @@ s32 sceSysconResetDevice(u32 reset, u32 mode);
 /**
  * Let the PSP enter standby state.
  *
- * @param arg0 Unknown.
+ * @param wakeUpCondition Indicates if and when the PSP is to wake up again.
  *
  * @return 0.
  */
-s32 sceSysconPowerStandby(u32 arg0);
+s32 sceSysconPowerStandby(u32 wakeUpCondition);
 
 /**
  * Suspend the PSP power.
  *
- * @param wakeupCondition Unknown.
+ * @param wakeUpCondition Indicates if and when the PSP is to wake up again.
  * @param arg1 Unknown.
  *
  * @return 0.
  */
-s32 sceSysconPowerSuspend(u32 wakeupCondition, u32 arg1);
+s32 sceSysconPowerSuspend(u32 wakeUpCondition, u32 arg1);
 
 /**
  * Send a command to the syscon doing nothing.
@@ -905,14 +979,16 @@ s32 sceSysconGetPowerSupplyStatus(s32 *status);
  */
 s32 sceSysconGetFallingDetectTime(void);
 
+#define SCE_SYSCON_WAKE_UP_FACTOR_RESUME_FROM_SUSPEND    0x80
+
 /**
- * Get the wake up factor (?).
+ * Get the wake up factor. Describes the boot type.
  *
- * @param factor Pointer to a buffer where the factor will be stored.
+ * @param pFactor Pointer to an u32 where the factor will be stored.
  *
  * @return 0 on success.
  */
-s32 sceSysconGetWakeUpFactor(void *factor);
+s32 sceSysconGetWakeUpFactor(u32 *pFactor);
 
 /**
  * Get the wake up req (?).
@@ -1294,12 +1370,12 @@ s32 sceSysconReadGSensorReg(void);
 /**
  * Get the battery status cap.
  *
- * @param arg0 Pointer to an unknown s32 where a value will be stored.
- * @param arg1 Pointer to a s32 where the remaining capacity of the battery will be stored.
+ * @param pStatus Pointer to an u32 where the battery status will be stored.
+ * @param pRemainCap Pointer to a s32 where the remaining capacity of the battery will be stored.
  *
  * @return 0 on success.
  */
-s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 * pRemainCap);
+s32 sceSysconBatteryGetStatusCap(u32 *pStatus, s32 *pRemainCap);
 
 /**
  * Get the battery info.

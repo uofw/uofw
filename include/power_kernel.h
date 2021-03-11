@@ -724,6 +724,56 @@ typedef enum {
  */
 u8 scePowerGetLedOffTiming(void);
 
+/**
+ * This structure contains PSP system information at the time of resumption from the suspend state. It also
+ * contains pointers to functions required to complete the resume process.
+ */
+typedef struct {
+	/* Size of the structure. */
+	u32 size; // 0
+	/* The wakeup factor. */
+	u32 wakeUpFactor; // 4
+	/* Unknown. */
+	u32 wakeUpReq; // 8
+	/* Pointer to the sceSysconCmdExec() function. */
+	s32(*pSysconCmdExec)(void *, u32); // 12
+	/* PSP Testing Tool dip switches. */
+	u32 dipSw; // 16
+	/* Pointer to a function to set the PLL clock frequency. */
+	s32(*pChangeClock)(u32); // 20
+	/* The BARYON status. */
+	u8 baryonStatus; // 24
+	/* The BARYON clock. */
+	u32 baryonClock; // 28
+	/* The BARYON key states. */
+	u32 baryonKey; // 32
+	/* The power supply status. */
+	u32 powerSupplyStatus; // 36
+	/* The battery status. */
+	u32 batteryStatus; // 40
+	/* The remaining battery capacity in mAh. */
+	u32 batteryRemainCapacity; // 44
+	/* The full battery capacity in mAh. */
+	s32 batteryFullCapacity; // 48
+	/* Pointer to the sceSysconPowerSuspend() function. */
+	s32(*pSysconPowerSuspend)(u32, u32); // 52
+	/* Pointer to the sceSysconPowerStandby() function. */
+	s32(*pSysconPowerStandby)(u32); // 56
+	/* Pointer to a function to change the clock voltage. */
+	s32(*pChangeClockVoltage)(s32, s32, s32); // 60
+	/* The second BARYON status. */
+	u8 baryonStatus2; // 64
+	/* Unknown.*/
+	s32 unk68; // 68
+	/* Pointer to the sceI2cMasterTransmit() function. */
+	s32(*pI2cTransmit)(u32, u8 *, s32); // 72
+	/* Pointer to the sceI2cMasterReceive() function. */
+	s32(*pI2cReceive)(u32, u8 *, s32); // 76
+	/* Pointer to the sceI2cMasterTransmitReceive() function. */
+	s32(*pI2cTransmitReceive)(u32, u8 *, s32, u32, u8 *, s32); // 80
+	u8 remainingData[0x80]; // 84 -- remaining unknowns, for convenience represented as an array for now
+} ScePowerResumeInfo; // size = 212
+
 /* Power switch manipulation lock / unlock */
 
 /**

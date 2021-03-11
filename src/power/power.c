@@ -670,7 +670,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 
     if (eventId == SCE_SYSTEM_RESUME_EVENT_PHASE0_9) // 0x00000784
     {
-        SceSysEventResumePowerState *pResumePowerState = ((SceSysEventResumePayload *)param)->pResumePowerState; // 0x000007C8 -- $s1
+        ScePowerResumeInfo *pResumeInfo = ((SceSysEventResumePayload *)param)->pResumeInfo; // 0x000007C8 -- $s1
 
         u32 isLowBattery;
         s32 baryonVersionMajor = PSP_SYSCON_BARYON_GET_VERSION_MAJOR(g_Power.baryonVersion); // 0x000007AC & 0x000007B0
@@ -678,13 +678,13 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
         {
             /* PSP 1000 series */
 
-            isLowBattery = pResumePowerState->powerState & SCE_RESUME_POWER_STATE_IS_LOW_BATTERY_01G; // 0x000007C8 - 0x000007D0
+            isLowBattery = pResumeInfo->baryonStatus & SCE_SYSCON_BARYON_STATUS_IS_LOW_BATTERY_01G; // 0x000007C8 - 0x000007D0
         }
         else
         {
             /* PSP 2000 series and newer */
 
-            isLowBattery = pResumePowerState->powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_IS_LOW_BATTERY_02G_AND_LATER; // 0x000007C8 & 0x00000880 - 0x00000888
+            isLowBattery = pResumeInfo->powerSupplyStatus & SCE_SYSCON_POWER_SUPPLY_STATUS_IS_LOW_BATTERY_02G_AND_LATER; // 0x000007C8 & 0x00000880 - 0x00000888
         }
 
         /* Update the low battery status for the power callbacks. */
@@ -700,7 +700,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 
         /* Update the power supply status for the power callbacks. */
 
-        u32 isPowerOnline = pResumePowerState->powerState & SCE_RESUME_POWER_STATE_IS_POWER_ONLINE; // 0x000007E8 - 0x000007EC
+        u32 isPowerOnline = pResumeInfo->baryonStatus & SCE_SYSCON_BARYON_STATUS_AC_ACTIVE; // 0x000007E8 - 0x000007EC
         if (isPowerOnline) // 0x000007F0
         {
             g_Power.curPowerStateForCallbackArg |= SCE_POWER_CALLBACKARG_POWERONLINE; // 0x000007FC & 0x00000800
@@ -716,7 +716,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
 
         u32 sdkVersion = sceKernelGetCompiledSdkVersion(); // 0x00000810
         if (sdkVersion <= SCE_DEVKIT_VERSION_6_00_0000
-            && !(pResumePowerState->hardwarePeripheralState & SCE_RESUME_HARDWARE_PERIPHERAL_STATE_HOLD_SWITCH_INACTIVE)) // 0x0000081C - 0x00000830
+            && !(pResumeInfo->baryonKey & PSP_SYSCON_KEY_HOLD)) // 0x0000081C - 0x00000830
         {
             g_Power.curPowerStateForCallbackArg |= SCE_POWER_CALLBACKARG_HOLDSW; // 0x0000083C - 0x00000844
         }
@@ -728,7 +728,7 @@ static s32 _scePowerSysEventHandler(s32 eventId, char *eventName, void *param, s
          * Refresh the power service's internal battery control block with new battery status data 
          * (such as remaining battery lifetime). 
          */
-        _scePowerBatteryUpdatePhase0(pResumePowerState, &g_Power.curPowerStateForCallbackArg); // 0x0000085C
+        _scePowerBatteryUpdatePhase0(pResumeInfo, &g_Power.curPowerStateForCallbackArg); // 0x0000085C
     }
     else if (eventId == SCE_SYSTEM_RESUME_EVENT_PHASE1_0) // 0x00000790
     {

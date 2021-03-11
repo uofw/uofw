@@ -3,6 +3,7 @@
 */
 
 #include "common_header.h"
+#include "power_kernel.h"
 #include "sysmem_kernel.h"
 
 enum SceSysEventTypes {
@@ -114,7 +115,7 @@ typedef struct {
     s64 systemTimePreSuspendOp; // 32
     s32 pllOutSelect; // 40
     s32 unk44; // 44
-    void (*resumePointFunc)(void *); // 48
+    void (*pResumePoint)(ScePowerResumeInfo *); // 48
     SceKernelGameInfo *pSuspendedGameInfo; // 52
     u32 unk56; // 56
     u32 unk60; // 60
@@ -154,46 +155,9 @@ typedef struct {
     u32 unk60; // 60
 } SceSysEventSuspendPayload; // size = 64
 
-/* Status bits for SceSysEventResumePowerState.powerState */
-
-#define SCE_RESUME_POWER_STATE_IS_POWER_ONLINE      (1 << 0)
-#define SCE_RESUME_POWER_STATE_WLAN_POWER           (1 << 1)
-#define SCE_RESUME_POWER_STATE_HR_POWER             (1 << 2)
-#define SCE_RESUME_POWER_STATE_IS_LOW_BATTERY_01G   (1 << 5)
-#define SCE_RESUME_POWER_STATE_HDD_POWER            (1 << 18)
-
-/* Status bits for SceSysEventResumePowerState.hardwarePeripheralState */
-
-#define SCE_RESUME_HARDWARE_PERIPHERAL_STATE_HOLD_SWITCH_INACTIVE  (1 << 13)
-#define SCE_RESUME_HARDWARE_PERIPHERAL_STATE_WLAN_SWITCH_INACTIVE  (1 << 14)
-#define SCE_RESUME_HARDWARE_PERIPHERAL_STATE_BT_SWITCH_INACTIVE    (1 << 14)
-#define SCE_RESUME_HARDWARE_PERIPHERAL_STATE_HP_CONNECTED          (1 << 15)
-#define SCE_RESUME_HARDWARE_PERIPHERAL_STATE_UMD_SWITCH_ACTIVE     (1 << 20)
-
-typedef struct {
-    u32 unk0; // 0
-    u32 unk4; // 4
-    u32 unk8; // 8
-    u32 unk12; // 12
-    u32 unk16; // 16
-    void (*changePllClock)(s32); // 20 -- TODO: Verify return type (might be a s32 return value)
-    u32 powerState; // 24
-    u32 resumeClock; // 28
-    u32 hardwarePeripheralState; // 32
-    u32 powerSupplyStatus; // 36
-    u32 unk40; // 40
-    u32 batteryRemainCapacity; // 44
-    u32 batteryFullCapacity; // 48
-    u32 unk52; // 52
-    u32 unk56; // 56
-    u32 unk60; // 60;
-    u32 baryonStatus2; // 64
-    u32 remainingData[0x90]; // 68 -- remaining unknowns, for convenience represented as an array for now
-} SceSysEventResumePowerState; // size = 212
-
 typedef struct {
     SceSize size; // 0;
-    SceSysEventResumePowerState *pResumePowerState; // 4
+    ScePowerResumeInfo *pResumeInfo; // 4
     s64 systemTimePreSuspendOp; // 8
     s64 unk16; // 16
     u32 unk24; // 24
