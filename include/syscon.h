@@ -152,7 +152,7 @@
 /** Bluetooth switch. Active low. PSP Go series only. */
 #define PSP_SYSCON_KEY_BT               0x00004000
 /** Headphone Remote connect key. Active high. */
-#define PSP_SYSCON_KEY_HPR               0x00008000
+#define PSP_SYSCON_KEY_HPR              0x00008000
 /** Volume up key. Active low. */
 #define PSP_SYSCON_KEY_VOL_UP           0x00010000
 /** Volume down key. Active low. */
