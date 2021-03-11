@@ -285,6 +285,7 @@ u8 g_unkFECF; // 0xFECF
 
 u8 g_baryonStatus2; // 0xFED2
 u8 g_unkFED3; // 0xFED3
+
 /* functions */
 
 void RESET(void) __attribute__((noreturn));
@@ -689,7 +690,7 @@ void transmit_data_set_digital_kernel_key_data(void)
 
 	// set 8th bit
 	g_transmitData[2] &= ~0x80;
-	g_transmitData[2] |= (g_unkFE46 >> 2) & 0x1; // 196A
+	g_transmitData[2] |= ((g_unkFE46 >> 2) & 0x1) << 7; // 0x196A
 
 	// unknown controller bits below
 	//
