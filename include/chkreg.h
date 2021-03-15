@@ -1,4 +1,4 @@
-/** Copyright (C) The uOFW team
+/* Copyright (C) The uOFW team
    See the file COPYING for copying permission.
 */
 
