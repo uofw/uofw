@@ -88,7 +88,7 @@ int sub_0000(int reg, int set)
 int sub_004C(int reg, int flag)
 {
     if (reg < 0 || reg >= 43)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     if (g_codec.unk97 <= 0)
         return 0;
     if (g_codec.flags[reg] == flag)
@@ -264,7 +264,7 @@ int sceCodecOutputEnable(int arg0, int arg1)
 int sceCodecSetOutputVolume(int reg)
 {
     if (reg < 0 || reg >= 31)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     int shift = 0;
     if (g_codec.outputDisabled == 0)
         shift = reg;
@@ -283,7 +283,7 @@ int sceCodecSetHeadphoneVolume(int arg0)
 {
     int flag = pspMax(arg0 + g_codec.flag2 + 121, 0);
     if (flag >= 128)
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
     int ret = sceKernelLockMutex(g_codec.mutexId, 1, NULL);
     if (ret < 0)
         return ret;
@@ -307,7 +307,7 @@ int sceCodecSetSpeakerVolume(int arg0)
 {
     int flag = arg0 + 121;
     if (flag >= 128)
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
     flag += g_codec.flag2;
     flag = pspMin(flag, 0x7F);
     flag = pspMax(flag, 0);
@@ -347,7 +347,7 @@ int sceCodec_driver_FCA6D35B(int freq)
     int flag = g_codec.flags[8] & 0x180;
     if (freq != 44100 && freq != 48000) {
         // 0748
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
     }
     if (freq == 44100)
     {
@@ -490,7 +490,7 @@ int sceCodecInitEntry()
 int sceCodecSelectVolumeTable(int arg0)
 {
     if (arg0 != 0)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     g_codec.unk93 = 0;
     sceCodecSetOutputVolume(g_codec.reg);
     return 0;
@@ -506,7 +506,7 @@ int sceCodec_driver_FC355DE0()
     return 0;
 }
 
-int sceCodecStopEntry()
+int sceCodecStopEntry(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     sub_01FC(-1, -1, -1, -1);
     sceKernelUnregisterSysEventHandler(&g_sysEv);

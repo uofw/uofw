@@ -163,6 +163,29 @@ SCE_SDK_VERSION(SDK_VERSION);
 //SCE_CTRL_MS | SCE_CTRL_DISC | SCE_CTRL_REMOTE | SCE_CTRL_WLAN_UP | SCE_CTRL_HOLD | ?
 #define CTRL_HARDWARE_IO_BUTTONS                (0x3B0E0000)
 
+/*
+ * Represents the [user mode] buttons retrieved from SYSCON for which their button pressed state is represented
+ * in negative logic. Since the controller service represents the pressed state of a button in positive logic,
+ * the corresponding bits for these buttons need to be flipped before storing them in our internal controller
+ * buffers.
+ */
+#define CTRL_SYSCON_USER_MODE_BUTTONS_NEGATIVE_LOGIC    (SCE_CTRL_SELECT | SCE_CTRL_START | \
+                                                         SCE_CTRL_UP | SCE_CTRL_RIGHT | SCE_CTRL_DOWN | SCE_CTRL_LEFT | \
+                                                         SCE_CTRL_LTRIGGER | SCE_CTRL_RTRIGGER | \
+                                                         SCE_CTRL_TRIANGLE | SCE_CTRL_CIRCLE | SCE_CTRL_CROSS | SCE_CTRL_SQUARE | \
+                                                         SCE_CTRL_INTERCEPTED | SCE_CTRL_HOLD | SCE_CTRL_WLAN_UP)
+/*
+ * Represents the [kernel mode] buttons retrieved from SYSCON for which their button pressed state is represented
+ * in negative logic. Since the controller service represents the pressed state of a button in positive logic,
+ * the corresponding bits for these buttons need to be flipped before storing them in our internal controller
+ * buffers.
+ */
+#define CTRL_SYSCON_KERNEL_MODE_BUTTONS_NEGATIVE_LOGIC  (CTRL_SYSCON_USER_MODE_BUTTONS_NEGATIVE_LOGIC | \
+                                                         SCE_CTRL_VOLUP | SCE_CTRL_VOLDOWN | SCE_CTRL_SCREEN | SCE_CTRL_NOTE | \
+                                                         SCE_CTRL_UNK_20000000)
+
+
+
 /* Controller buffer read modes. */
 enum SceCtrlReadBufferModes {
     PEEK_BUFFER_POSITIVE = 0,
@@ -618,8 +641,11 @@ s32 sceCtrlInit(void)
    
     deci2Ops = sceKernelDeci2pReferOperations();
     if (deci2Ops != NULL && deci2Ops->size == 48) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
         func = (void (*)(SceKernelDeci2Ops *))deci2Ops->ops[10];
         func(&g_ctrlDeci2Ops);
+#pragma GCC diagnostic pop
     }
     return SCE_ERROR_OK;
 }
@@ -1427,7 +1453,23 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
                           | ((sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 6) << 7)
                           | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xF) << 4)
                           | (sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 9)) 
-                    ^ 0x20F7F3F9;
+                    /*
+                     * The PSP's hardware buttons are [active low], in other words, a SYSCON sent button bit
+                     * is 0 if the button is currently being pressed. If the bit is 1, then the button
+                     * is not being pressed.
+                     *
+                     * By default, the controller service represents a button pressed state in positive logic,
+                     * that is if a button is currently being pressed, its corresponding bit in the internal
+                     * controller buffers will be set to 1. Consequently, the button bit is set to 0 if the
+                     * button is not currently being pressed.
+                     *
+                     * As such, we need to flip the button bits retrieved from SYSCON which are represented in
+                     * negative logic.
+                     * 
+                     * Note that some controller connection states like [SCE_CTRL_MS] are [active high]
+                     * and thus we do not need to flip such bits.
+                     */
+                    ^ CTRL_SYSCON_KERNEL_MODE_BUTTONS_NEGATIVE_LOGIC;
             }
         }
         else {
@@ -1436,7 +1478,20 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
                        | ((sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0x6) << 7)
                        | ((sysPacket->rx[PSP_SYSCON_RX_DATA(0)] & 0xF) << 4)
                        | (sysPacket->rx[PSP_SYSCON_RX_DATA(1)] & 0x9)) 
-                    ^ 0x7F3F9) 
+
+                    /*
+                     * The PSP's buttons are [active low], in other words, a SYSCON sent button bit
+                     * is 0 if the button is currently being pressed. If the bit is 1, then the button
+                     * is not being pressed.
+                     * 
+                     * By default, the controller service represents a button pressed state in positive logic,
+                     * that is if a button is currently being pressed, its corresponding bit in the internal
+                     * controller buffers will be set to 1. Consequently, the button bit is set to 0 if the
+                     * button is not currently being pressed.
+                     * 
+                     * As such, we need to invert the user mode button bits retrieved from SYSCON.
+                     */
+                    ^ CTRL_SYSCON_USER_MODE_BUTTONS_NEGATIVE_LOGIC)
                     | (g_ctrl.rawButtons & 0xFFF00000);
         }
         g_ctrl.rawButtons = curButtons;
@@ -1968,7 +2023,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
     s32 status;
     s32 intrState;
 
-    if (nBufs >= CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
+	if (nBufs >= CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
         return SCE_ERROR_INVALID_SIZE;
 
 	if (inputMode > CTRL_NUM_EXTERNAL_INPUT_MODES)
@@ -1986,7 +2041,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
     }
     if (pspK1IsUserMode())
         intDataPtr = &g_ctrl.userModeData;
-    else
+	else
         intDataPtr = &g_ctrl.kernelModeData;
 
 	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE && intDataPtr->pCtrlInputBuffers[inputMode] == NULL)
@@ -2126,20 +2181,14 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
     return numReadIntBufs;
 }
 
-s32 _sceCtrlModuleStart(s32 argc, void *argp) 
+s32 _sceCtrlModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
-	(void)argc;
-	(void)argp;
-
     sceCtrlInit();    
     return SCE_KERNEL_RESIDENT;
 }
 
-s32 _sceCtrlModuleRebootBefore(s32 argc, void *argp) 
+s32 _sceCtrlModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
-	(void)argc;
-	(void)argp;
-
     sceCtrlEnd();   
     return SCE_KERNEL_STOP_SUCCESS;
 }

@@ -35,7 +35,7 @@ s32 SysMemUserForUser_945E45DA(char *arg)
     s32 oldK1 = pspShiftK1();
     if (arg == NULL || !pspK1PtrOk(arg)) {
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // A280
     strncpy(arg, g_140C8, 8);
@@ -100,7 +100,7 @@ s32 SysMemForKernel_807179E7(char *gameId, int arg1, char *arg2, char *arg3, int
 s32 sceKernelCopyGameInfo(SceKernelGameInfo *info)
 {
     if (info == NULL)
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     info->flags = SystemGameInfo.flags & 0xFFFFFFFD;
     info->size = SystemGameInfo.size;
     if ((SystemGameInfo.flags & 1) != 0) {
@@ -281,7 +281,7 @@ s32 SysMemForKernel_F3BDB718(char *arg0)
 s32 sceKernelGetQTGP2(char *qtgp2)
 {
     if ((SystemGameInfo.flags & 0x4) == 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     memcpy(qtgp2, SystemGameInfo.qtgp2, 8);
     return 0;
 }
@@ -303,7 +303,7 @@ s32 sceKernelSetQTGP2(char *qtgp2)
 s32 sceKernelGetQTGP3(char *qtgp3)
 {
     if ((SystemGameInfo.flags & 0x8) == 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     memcpy(qtgp3, SystemGameInfo.qtgp3, 16);
     return 0;
 }
@@ -324,7 +324,7 @@ s32 sceKernelSetQTGP3(char *qtgp3)
 s32 sceKernelGetAllowReplaceUmd(u32 *allow)
 {
     if ((SystemGameInfo.flags & 0x10) == 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     *allow = SystemGameInfo.allowReplaceUmd;
     return 0;
 }
@@ -622,7 +622,7 @@ s32 sceKernelGetInitialRandomValue(void)
 s32 SysMemUserForUser_D8DE5C1E(void)
 {
     if (g_1453C != 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     return 0;
 }
 
@@ -645,14 +645,14 @@ s32 sceKernelSetRebootKernel(s32 (*rebootKernel)(void*))
 s32 sceKernelRebootKernel(void *arg)
 {
     if (gRebootFunc == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     return gRebootFunc(arg);
 }
 
 s32 sceKernelRegisterGetIdFunc(void *func)
 {
     if (gGetIdFunc != NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     gGetIdFunc = func;
     return 0;
 }
@@ -660,7 +660,7 @@ s32 sceKernelRegisterGetIdFunc(void *func)
 s32 sceKernelGetId(const char *path, char *id)
 {
     if (gGetIdFunc == NULL || gGetIdFunc == (void*)-1)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     // A164
     s32 ret = gGetIdFunc(path, id);
     gGetIdFunc = (void*)-1;

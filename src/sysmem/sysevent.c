@@ -13,7 +13,7 @@ int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
     {
         // C8A8
         resumeIntr(oldIntr);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
     SceSysEventHandler *cur = g_pHandlers;
     SceSysEventHandler *prev = NULL;
@@ -37,7 +37,7 @@ int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
     // C864
     resumeIntr(oldIntr);
     if (cur == NULL)
-        return 0x80020068;
+        return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     return 0;
 }
 
@@ -124,7 +124,7 @@ int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler)
         return 0;
     }
     resumeIntr(oldIntr1);
-    return 0x80020067;
+    return SCE_ERROR_KERNEL_HANDLER_ALREADY_EXISTS;
 }
 
 SceSysEventHandler *sceKernelReferSysEventHandler(void)

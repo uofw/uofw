@@ -197,7 +197,7 @@ static s32 exe_thread(SceSize args, void *argp)
 
         if (pModParams->modeFinish == CMD_LOAD_MODULE) //0x00000214
             break;
-
+        /* FALLTHRU */
     case CMD_RELOCATE_MODULE: // 0x0000021C
         if (pMod == NULL) {
             pMod = sceKernelCreateModule(); //0x00000448
@@ -233,7 +233,7 @@ static s32 exe_thread(SceSize args, void *argp)
         *(pModParams->pResult) = pModParams->pMod->modId; //0x00000260        
         if (pModParams->modeFinish == CMD_RELOCATE_MODULE) //0x00000268
             break;
-
+        /* FALLTHRU */
     case CMD_START_MODULE: //0x00000270
         pMod = sceKernelGetModuleFromUID(pModParams->modId); //0x00000270
         if (pMod == NULL && (pMod = sceKernelFindModuleByUID(pModParams->modId)) == NULL) //0x00000400
@@ -254,7 +254,7 @@ static s32 exe_thread(SceSize args, void *argp)
 
         if (status < SCE_ERROR_OK || pModParams->modeFinish == CMD_START_MODULE) //0x000002B4 & 0x000002C0
             break;
-
+        /* FALLTHRU */
     case CMD_STOP_MODULE: //0x000002C8
         if (pMod == NULL) { //0x000002C8
             pMod = sceKernelGetModuleFromUID(pModParams->modId);
@@ -279,7 +279,7 @@ static s32 exe_thread(SceSize args, void *argp)
 
         if (status < SCE_ERROR_OK || pModParams->modeFinish == CMD_STOP_MODULE) //0x0000030C & 0x00000318
             break;
-
+        /* FALLTHRU */
     case CMD_UNLOAD_MODULE: //0x00000320
         pMod = sceKernelGetModuleFromUID(pModParams->modId); //0x00000320
         if (pMod == NULL) { // 0x00000328
@@ -309,31 +309,22 @@ static s32 exe_thread(SceSize args, void *argp)
 }
 
 // 0x0000501C
-s32 ModuleMgrRebootPhase(SceSize argc, void *argp)
+s32 ModuleMgrRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
-    (void)argc;
-    (void)argp;
-
     return SCE_ERROR_OK;
 }
 
 // 0x00005024
-s32 ModuleMgrRebootBefore(SceSize argc, void *argp)
+s32 ModuleMgrRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
-    (void)argc;
-    (void)argp;
-
     return sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
 }
 // 0x00005048
 /*
  * Create the work objects (threads,...) for the module manager.
  */
-s32 ModuleMgrInit(SceSize argc, void *argp)
+s32 ModuleMgrInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
-    (void)argc;
-    (void)argp;
-
     ChunkInit();
 
     g_ModuleManager.threadId = sceKernelCreateThread("SceKernelModmgrWorker", (SceKernelThreadEntry)exe_thread,
@@ -1436,7 +1427,7 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
     for (i = 0; i < pLib->stubCount; i++) {
         switch (pLib->entryTable[i]) {
         case NID_MODULE_REBOOT_PHASE: //0x000079C0
-            pMod->moduleRebootPhase = (SceKernelRebootKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007C14
+            pMod->moduleRebootPhase = (SceKernelRebootPhaseForKernel)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007C14
             break;
         case NID_MODULE_BOOTSTART: //0x00007B94
             pMod->moduleBootstart = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007BF4
@@ -1448,7 +1439,7 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
             pMod->moduleStop = (SceKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007BC8
             break;
         case NID_MODULE_REBOOT_BEFORE: //0x000079E8
-            pMod->moduleRebootBefore = (SceKernelRebootKernelThreadEntry)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007B8C
+            pMod->moduleRebootBefore = (SceKernelRebootBeforeForKernel)pLib->entryTable[pLib->vStubCount + pLib->stubCount + i]; //0x00007B8C
             break;
         case NID_592743D8: // 0x000079D8
             break;

@@ -13,7 +13,7 @@ struct SceLibraryEntry {
     unsigned char   entLen;
     unsigned char   varCount;
     unsigned short  funcCount;
-    void *          entrytable;
+    const void *    entrytable;
 };
 
 #endif

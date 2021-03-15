@@ -541,6 +541,7 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
             vshParam.key = g_gameStr;
         else
             vshParam.key = g_umdEmuStr;
+        break;
 
     case SCE_EXEC_FILE_APITYPE_MLNAPP_MS:
     case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:

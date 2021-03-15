@@ -242,7 +242,7 @@ s32 sceClockgenSetSpectrumSpreading(s32 mode)
 }
 
 //0x000002B4
-s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+int _sceClockgenModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     sceClockgenInit();
 
@@ -253,7 +253,7 @@ s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __a
 }
 
 //0x00000320
-s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceClockgenModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     s32 oldRegSS;
     s32 curRegSS;

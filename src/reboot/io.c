@@ -1,6 +1,7 @@
 /* Copyright (C) 2011, 2012 The uOFW team
    See the file COPYING for copying permission.
 */
+#include <common_header.h>
 
 int unkVar = 0x89000000; // 0x886128E0
 
@@ -28,7 +29,7 @@ int sub_26FC(int arg0, int arg1, int arg2, int arg3, int arg4)
         isInited = 1;
         v0 = sub_8124(0, arg2, arg3);
         if (v0 < 0)
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
     }
     // 2768
     v0 = sub_822C(*(int*)(arg0 + 0));
@@ -54,7 +55,7 @@ int sub_26FC(int arg0, int arg1, int arg2, int arg3, int arg4)
     {
         // 2840
         sub_8344();
-        return 0x800201BC;
+        return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
     }
     *(int*)(arg0 + 4) = a0;
     // 27D8
@@ -80,10 +81,10 @@ int sub_2874(int arg)
     unkVar = (unkVar + 63) & 0xFFFFFFC0;
     v0 = sub_82E4(/*0*/);
     if (v0 < 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     v0 = sub_82C8(unkVar, *(int*)(arg + 72));
     if (v0 < 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     *(int*)(arg + 76) = unkVar;
     return 0;
 }
