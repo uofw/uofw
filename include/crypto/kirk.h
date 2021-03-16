@@ -52,7 +52,8 @@
 
 #define KIRK_AES_BLOCK_LEN          (16) /*!< The length (128 bit) of a block to encrypt using AES. */
 
-#define KIRK_CERT_LEN               (184) /*!< The length (1472 bit) of the certification to verify. */
+/*!< The length (1472 bit) of the certificate to verify. Used for example for ID Storage keys 0x100 and 0x101. */
+#define KIRK_CERT_LEN               (184)
 
 
 typedef struct {

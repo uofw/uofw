@@ -36,7 +36,7 @@ g_chkregOld_struct g_chkregOld = { { 0 }, { 0 } };
 
 u32 g_unk1540; // 0x00001540
 
-u8 g_unk1480[184]; // 0x00001480 -- size = 148
+SceIdStorageLeafConsoleIdBlockConsoleIdCertificate g_consoleIdCertificate; // 0x00001480
 
 typedef struct {
     SceIdStorageLeafUMD1 umd1; // 0
@@ -58,9 +58,10 @@ SceChkreg g_chkreg = {
     .pData = &g_unk1540,
 }; // 0x00000A00
 
-u8 g_unkA40; // 0x00000A40
-u8 g_unkA44; // 0x00000A44
-u8 g_unkA48; // 0x00000A48
+u32 g_unkA40; // 0x00000A40
+u32 g_unkA44; // 0x00000A44
+
+u32 g_isConsoleIdCertificateObtained; // 0x00000A48
 
 SceUID g_semaId; // 0x00001538
 
@@ -135,24 +136,30 @@ s32 sub_00000128(s32 arg0, s32 arg1)
 }
 
 // Subroutine sub_00000190 - Address 0x00000190
-s32 sub_00000190(void)
+s32 _sceChkregLookupConsoleIdCertificate(void)
 {
-    if (sceIdStorageLookup(0x100, 0x38, g_pscode, KIRK_CERT_LEN) < 0) { // Read pscode into g_pscode from key 0x100
-        if (sceIdStorageLookup(0x120, 0x38, g_pscode, KIRK_CERT_LEN) < 0) // Read (backup) pscode into g_pscode from key 0x120 if key 0x100 fails
-            return SCE_ERROR_NOT_FOUND;
+    /* Read unique console identifier data. */
+    if (sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_CONSOLE_ID, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OFFSET_BLOCK_CONSOLE_ID_CERTIFICATE, &g_consoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK
+        || sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_BACKUP_CONSOLE_ID, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OFFSET_BLOCK_CONSOLE_ID_CERTIFICATE, &g_consoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK) // 0x000001B0 & 0x000001F0
+    {
+        return SCE_ERROR_NOT_FOUND;
     }
-    
-    g_chkregOld.buf[0x48] = 1; // pscode found
-    return 0;
+
+    g_isConsoleIdCertificateObtained = SCE_TRUE; // 0x000001D4
+
+    return SCE_ERROR_OK;
 }
 
 // Subroutine sub_0000020C - Address 0x0000020C
-s32 sub_0000020C(void)
+s32 _sceChkregVerifyConsoleIdCertificate(void)
 {
-    if (sceUtilsBufferCopyWithRange(NULL, 0, g_pscode, KIRK_CERT_LEN, KIRK_CMD_CERT_VER) != 0) // Validate g_pscode
-        return SCE_ERROR_INVALID_FORMAT;
-        
-    return 0;
+    s32 status;
+
+    status = sceUtilsBufferCopyWithRange(NULL, 0, &g_consoleIdCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
+
+    return (status != SCE_ERROR_OK)
+        ? SCE_ERROR_INVALID_FORMAT
+        : SCE_ERROR_OK;
 }
 
 // Subroutine module_start - Address 0x00000248
@@ -169,14 +176,14 @@ s32 _sceChkregInit(SceSize args, void *argp)
     }
 
     // 0x00000270 - 0x0000028C
-    for (i = 0; i < (sizeof g_unk1480 / sizeof g_unk1480[0]); i++)
+    for (i = 0; i < sizeof g_consoleIdCertificate; i++)
     {
-        g_unk1480[i] = 0;
+        ((u8 *)&g_consoleIdCertificate)[i] = 0;
     }
 
     g_unkA40 = 0; // 0x0x000002B0
     g_unkA44 = 0;
-    g_unkA48 = 0;
+    g_isConsoleIdCertificateObtained = SCE_FALSE;
 
     /* Create a module semaphore which acts as a mutex. */
     g_semaId = sceKernelCreateSema("SceChkreg", SCE_KERNEL_SA_THFIFO, 1, 1, NULL); // 0x000002BC
@@ -206,14 +213,14 @@ s32 _sceChkregEnd(SceSize args, void *argp)
     }
 
     // 0x00000318 - 0x00000334
-    for (i = 0; i < (sizeof g_unk1480 / sizeof g_unk1480[0]); i++)
+    for (i = 0; i < sizeof g_consoleIdCertificate; i++)
     {
-        g_unk1480[i] = 0;
+        ((u8 *)&g_consoleIdCertificate)[i] = 0;
     }
 
     g_unkA40 = 0; // 0x00000348
     g_unkA44 = 0;
-    g_unkA48 = 0;
+    g_isConsoleIdCertificateObtained = SCE_FALSE;
 
     /* Only stop the module when it is not currently used by other modules. */
 
@@ -231,44 +238,98 @@ s32 _sceChkregEnd(SceSize args, void *argp)
     SCE_KERNEL_STOP_FAIL;
 }
 
-// Subroutine sceChkreg_driver_59F8491D - Address 0x00000438
-s32 sceChkregGetPsCode(u8 *code)
-{
-    s32 ret = SCE_ERROR_SEMAPHORE;
-
-    if ((sceKernelWaitSema(g_chkregOld_sema, 1, NULL)) == 0) {
-        if (((g_chkregOld.buf[0x48] != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
-            code[0] = g_pscode[1];
-            code[1] = g_pscode[0];
-            code[2] = g_pscode[3];
-            code[3] = g_pscode[2];
-            code[4] = g_pscode[5];
-            code[5] = g_pscode[4];
-            code[6] = g_pscode[6] >> 2;
-            code[7] = 0;
-        }
-        
-        if ((sceKernelSignalSema(g_chkregOld_sema, 1)) != 0)
-            ret = SCE_ERROR_SEMAPHORE;
-    }
-    
-    return ret;
-}
-
 // Subroutine sceChkreg_driver_54495B19 - Address 0x00000390
 s32 sceChkregCheckRegion(u32 arg0, u32 arg1)
 {
     s32 ret = 0;
-    
+
     if (sceKernelWaitSema(g_chkregOld_sema, 1, NULL) == 0) {
         if ((g_chkregOld.buf[0x44] != 0) || ((ret = sub_00000000()) == 0))
             ret = sub_00000128(0x80000000, (arg0 | arg1));
-        
+
         if (sceKernelSignalSema(g_chkregOld_sema, 1) != 0)
             ret = SCE_ERROR_SEMAPHORE;
     }
 
     return ret;
+}
+
+// Subroutine sceChkreg_driver_59F8491D - Address 0x00000438
+s32 sceChkregGetPsCode(ScePsCode *pPsCode)
+{
+    s32 status1;
+    s32 status2;
+
+    status1 = SCE_ERROR_SEMAPHORE;
+
+    /* Allow only single thread access. */
+    status2 = sceKernelWaitSema(g_semaId, 1, NULL);
+    if (status2 == SCE_ERROR_OK)
+    {
+        if ((g_isConsoleIdCertificateObtained || (status1 = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
+            && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
+        {
+            pPsCode->companyCode = g_consoleIdCertificate.consoleId.companyCcode;
+            pPsCode->productCode = g_consoleIdCertificate.consoleId.productCode;
+            pPsCode->productSubCode = g_consoleIdCertificate.consoleId.productSubCode;
+            pPsCode->factoryCode = g_consoleIdCertificate.consoleId.chassisCheck >> 2;
+        }
+
+        /* Release acquired sema resource. */
+        status2 = sceKernelSignalSema(g_semaId, 1);
+        if (status2 != SCE_ERROR_OK)
+        {
+            status1 = SCE_ERROR_SEMAPHORE;
+        }
+    }
+
+    return status1;
+}
+
+// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- Done
+s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
+    s32 ret = 0;
+    s32 error = SCE_ERROR_SEMAPHORE;
+
+    if ((ret = sceKernelWaitSema(g_chkregOld_sema, 1, 0)) == 0) {
+        g_unk2 = 0x34;
+        u32 i = 0;
+
+        for (i = 0; i < 0x14; i++)
+            g_chkregOld.buf[0x8 + i] = g_chkregOld.unk2[i]; // 0xA00 + 0x8 = 0xA08
+
+        for (i = 0; i < 0x10; i++)
+            g_chkregOld.buf[0x1C + i] = (arg0[i] + 0xD4); // 0xA08 + 0x14 = 0xA1C 
+
+        for (i = 0; i < 0x10; i++)
+            g_chkregOld.buf[0x2C + i] = (arg0[i] + 0x140); // 0xA1C + 0x10 = 0xA2C
+
+        error = 0;
+
+        if ((ret = sceUtilsBufferCopyWithRange(g_chkregOld.buf, 0x38, g_chkregOld.buf, 0x38, 0xB)) == 0) {
+            for (i = 0; i < 0x10; i++)
+                g_chkregOld.buf[i] = arg1[i];
+
+            error = 0;
+        }
+        else {
+            if (ret < 0)
+                error = SCE_ERROR_BUSY;
+            else {
+                error = SCE_ERROR_NOT_INITIALIZED;
+                if (ret != 0xC)
+                    error = SCE_ERROR_NOT_SUPPORTED;
+            }
+        }
+
+        for (i = 0; i < 0x38; i++)
+            g_chkregOld.buf[i] = 0;
+
+        if ((ret = sceKernelSignalSema(g_chkregOld_sema, 1)) != 0)
+            error = SCE_ERROR_SEMAPHORE;
+    }
+
+    return error;
 }
 
 // Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8 -- Done
@@ -332,50 +393,4 @@ s32 sceChkreg_driver_7939C851(void) {
     }
     
     return ret;
-}
-
-// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- Done
-s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
-    s32 ret = 0;
-    s32 error = SCE_ERROR_SEMAPHORE;
-
-    if ((ret = sceKernelWaitSema(g_chkregOld_sema, 1, 0)) == 0) {
-        g_unk2 = 0x34;
-        u32 i = 0;
-        
-        for (i = 0; i < 0x14; i++)
-            g_chkregOld.buf[0x8 + i] = g_chkregOld.unk2[i]; // 0xA00 + 0x8 = 0xA08
-        
-        for (i = 0; i < 0x10; i++)
-            g_chkregOld.buf[0x1C + i] = (arg0[i] + 0xD4); // 0xA08 + 0x14 = 0xA1C 
-        
-        for (i = 0; i < 0x10; i++)
-            g_chkregOld.buf[0x2C + i] = (arg0[i] + 0x140); // 0xA1C + 0x10 = 0xA2C
-            
-        error = 0;
-
-        if ((ret = sceUtilsBufferCopyWithRange(g_chkregOld.buf, 0x38, g_chkregOld.buf, 0x38, 0xB)) == 0) {
-            for (i = 0; i < 0x10; i++)
-                g_chkregOld.buf[i] = arg1[i];
-            
-            error = 0;
-        }
-        else {
-            if (ret < 0)
-                error = SCE_ERROR_BUSY;
-            else {
-                error = SCE_ERROR_NOT_INITIALIZED;
-                if (ret != 0xC)
-                    error = SCE_ERROR_NOT_SUPPORTED;
-            }
-        }
-
-        for (i = 0; i < 0x38; i++)
-            g_chkregOld.buf[i] = 0;
-        
-        if ((ret = sceKernelSignalSema(g_chkregOld_sema, 1)) != 0)
-            error = SCE_ERROR_SEMAPHORE;
-    }
-
-    return error;
 }
