@@ -274,7 +274,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
     return status1;
 }
 
-// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C -- Done
+// Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C
 s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
     s32 ret = 0;
     s32 error = SCE_ERROR_SEMAPHORE;
@@ -376,45 +376,31 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
 // Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
 s32 sceChkreg_driver_7939C851(void)
 {
+    s32 status;
+    ScePsCode psCode;
 
-}
-
-// Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
-s32 sceChkreg_driver_7939C851(void) {
-    s32 ret = 0;
-    u8 code[4];
-    u16 unk = 0;
-    
-    // TODO: Fix this, it doesn't seem right
-    if ((ret = sceChkreg_driver_59F8491D(code)) == 0) {
-        ret = 0;
-        
-        switch(unk) {
-            case 0:
-                ret = 0;
-                break;
-            
-            case 1:
-            case 2:
-                ret = 1;
-                break;
-                
-            case 3:
-                ret = 2;
-                break;
-                
-            case 4:
-            case 6:
-            case 8:
-                ret = 3;
-                break;
-                
-            case 5:
-            case 7:
-            case 9:
-                ret = 5;
-        }
+    status = sceChkregGetPsCode(&psCode); // 0x000007A4
+    if (status != SCE_ERROR_OK) // 0x000007AC
+    {
+        return status;
     }
-    
-    return ret;
+
+    switch (psCode.productSubCode)
+    {
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_079_TA_081:
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_082_TA_086:
+            return 1;
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_085_TA_088:
+            return 2;
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_090_TA_092:
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_093:
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_095:
+            return 3;
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_091:
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_094:
+        case SCE_PSP_PRODUCT_SUB_CODE_TA_096_TA_097:
+            return 5;
+        default:
+            return 0;
+    }
 }
