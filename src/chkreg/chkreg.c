@@ -34,128 +34,104 @@ typedef struct {
 
 g_chkregOld_struct g_chkregOld = { { 0 }, { 0 } };
 
-u32 g_unk1540; // 0x00001540
-
-SceIdStorageLeafConsoleIdBlockConsoleIdCertificate g_consoleIdCertificate; // 0x00001480
-
 typedef struct {
-    SceIdStorageLeafUMD1 umd1; // 0
-    SceIdStorageLeafUMD2 umd2; // 512
-    SceIdStorageLeafUMD3 umd3; // 1024
-    SceIdStorageLeafUMD4 umd4; // 1536
-    SceIdStorageLeafUMD5 umd5; // 2048
-} SceChkregUMDData; // size = 5 * SCE_ID_STORAGE_LEAF_SIZE = 5 * 512 = 2560
-
-typedef struct {
-    SceChkregUMDData *pUmdData; // 0
+    u8 *pIdStorageUMDConfig; // 0
     u8 *pData; // 4
 } SceChkreg; // size = 8
 
-SceChkregUMDData g_umdData[5]; // 0x00000A80
+#define CHKREG_ID_STORAGE_UMD_CONFIG_SIZE    (5 * SCE_ID_STORAGE_LEAF_SIZE)
+
+u8 g_idStorageUMDConfig[CHKREG_ID_STORAGE_UMD_CONFIG_SIZE]; // 0x00000A80
 
 SceChkreg g_chkreg = {
-    .pUmdData = &g_umdData,
+    .pIdStorageUMDConfig = &g_idStorageUMDConfig,
     .pData = &g_unk1540,
 }; // 0x00000A00
 
-u32 g_unkA40; // 0x00000A40
-u32 g_unkA44; // 0x00000A44
+u32 g_UMDRegionCodeInfoPostIndex; // 0x00000A40
+u32 g_isUMDRegionCodesObtained; // 0x00000A44
+u32 g_isIDPSCertificateObtained; // 0x00000A48
 
-u32 g_isConsoleIdCertificateObtained; // 0x00000A48
+SceIdStorageIDPSCertificate g_IDPSCertificate; // 0x00001480
 
 SceUID g_semaId; // 0x00001538
 
+u32 g_unk1540; // 0x00001540
+
 // Subroutine sub_00000000 - Address 0x00000000
-s32 sub_00000000(void) {
-    s32 ret = 0;
-    u32 error = SCE_ERROR_OUT_OF_MEMORY;
-
-    u32 i = 0;
-    for (i = 0; i < 5; i++) {
-        ret = sceIdStorageReadLeaf((i + 0x102U) & 0xFFFF, g_chkregOld.buf);
-        
-        if ((ret < 0) && ((ret = sceIdStorageReadLeaf((i + 0x122) & 0xFFFF, g_chkregOld.buf)) < 0))
+s32 _sceChkregLookupUMDRegionCodeInfo(void)
+{
+    // 0x00000024 - 0x00000060
+    u32 i;
+    for (i = 0; i < 5; i++)
+    {
+        if (sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1 + i, &g_chkreg.pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK
+            || sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_ID_BACKUP_IDPS_OPEN_PSID_3_UMD_1 + i, &g_chkreg.pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK) // 0x0000003C & 0x0000010C
+        {
             return SCE_ERROR_NOT_FOUND;
-    }
-
-    ret = g_unk;
-    i = 0;
-
-    while(1) {
-        g_unk = g_unk + 2;
-        if (ret == 1) {
-            ret = ((i << 3 | 4U) + g_unk);
-            if (ret == 0) {
-                g_chkregOld.buf[0x40] = i + 1;
-                g_chkregOld.buf[0x44] = 1;
-                error = 0;
-            }
-            if (ret == 0x70000000) {
-                g_chkregOld.buf[0x40] = i + 1;
-                g_chkregOld.buf[0x44] = 1;
-                error = 0;
-            }
         }
-        
-        if (0xff < i + 1)
-            break;
-            
-        ret = g_unk;
-        i = i + 1;
     }
-    
-    return error;
+
+    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_chkreg.pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
+
+    // 0x00000064 - 0x00000094
+    for (i = 0; i < 256; i++)
+    {
+        if (pUMDRegionCodeInfo[i].regionCode == 1
+            && (pUMDRegionCodeInfo[i].unk4 == 0 || pUMDRegionCodeInfo[i].unk4 == 0x70000000)) // 0x00000084
+        {
+            // loc_000000B0
+
+            g_UMDRegionCodeInfoPostIndex = i + 1; // 0x000000B4
+            g_isUMDRegionCodesObtained = 1; // 0x000000C0
+
+            return SCE_ERROR_OK;
+        }
+    }
+
+    return SCE_ERROR_OUT_OF_MEMORY;
 }
 
 // Subroutine sub_00000128 - Address 0x00000128
-s32 sub_00000128(s32 arg0, s32 arg1)
+s32 _sceChkregCheckRegion(s32 arg0, s32 umdMediaTypeRegionId)
 {
-    u32 unk1 = 0;
-    s32 unk2 = 0;
-    u32 unk3 = 0;
-    
-    if (g_chkregOld.buf[0x40] != 0) {
-        unk2 = g_unk;
+    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_chkreg.pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
-        while(1) {
-            unk1 = unk3 << 3;
-            unk3++;
-            g_unk += 2;
-            
-            if ((arg1 == unk2) && (arg0 == (s32)((unk1 | 4) + g_unk)))
-                return 1;
-            
-            if (g_chkregOld.buf[0x40] <= unk3)
-                break;
-                
-            unk2 = g_unk;
+    // 0x00000138 - 0x00000164
+    u32 i;
+    for (i = 0; i < g_UMDRegionCodeInfoPostIndex; i++)
+    {
+        if (pUMDRegionCodeInfo[i].regionCode == umdMediaTypeRegionId
+            && pUMDRegionCodeInfo[i].unk4 == arg0) // 0x00000160
+        {
+            return SCE_TRUE;
         }
     }
 
-    return 0;
+    return SCE_FALSE;
 }
 
 // Subroutine sub_00000190 - Address 0x00000190
-s32 _sceChkregLookupConsoleIdCertificate(void)
+s32 _sceChkregLookupIDPSCertificate(void)
 {
-    /* Read unique console identifier data. */
-    if (sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_CONSOLE_ID, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OFFSET_BLOCK_CONSOLE_ID_CERTIFICATE, &g_consoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK
-        || sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_BACKUP_CONSOLE_ID, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OFFSET_BLOCK_CONSOLE_ID_CERTIFICATE, &g_consoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK) // 0x000001B0 & 0x000001F0
+    /* Obtain an IDPS certificate. */
+    if (sceIdStorageLookup(SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_IDPSCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK
+        || sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_BACKUP_IDPS_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_IDPSCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK) // 0x000001B0 & 0x000001F0
     {
         return SCE_ERROR_NOT_FOUND;
     }
 
-    g_isConsoleIdCertificateObtained = SCE_TRUE; // 0x000001D4
+    g_isIDPSCertificateObtained = SCE_TRUE; // 0x000001D4
 
     return SCE_ERROR_OK;
 }
 
 // Subroutine sub_0000020C - Address 0x0000020C
-s32 _sceChkregVerifyConsoleIdCertificate(void)
+s32 _sceChkregVerifyIDPSCertificate(void)
 {
     s32 status;
 
-    status = sceUtilsBufferCopyWithRange(NULL, 0, &g_consoleIdCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
+    status = sceUtilsBufferCopyWithRange(NULL, 0, &g_IDPSCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
 
     return (status != SCE_ERROR_OK)
         ? SCE_ERROR_INVALID_FORMAT
@@ -170,20 +146,20 @@ s32 _sceChkregInit(SceSize args, void *argp)
 
     // 0x00000258 - 0x0000026C
     u32 i;
-    for (i = 0; i < (sizeof *g_chkreg.pUmdData); i++)
+    for (i = 0; i < CHKREG_ID_STORAGE_UMD_CONFIG_SIZE; i++)
     {
-        ((u8 *)g_chkreg.pUmdData)[i] = 0;
+        ((u8 *)g_chkreg.pIdStorageUMDConfig)[i] = 0;
     }
 
     // 0x00000270 - 0x0000028C
-    for (i = 0; i < sizeof g_consoleIdCertificate; i++)
+    for (i = 0; i < sizeof g_IDPSCertificate; i++)
     {
-        ((u8 *)&g_consoleIdCertificate)[i] = 0;
+        ((u8 *)&g_IDPSCertificate)[i] = 0;
     }
 
-    g_unkA40 = 0; // 0x0x000002B0
-    g_unkA44 = 0;
-    g_isConsoleIdCertificateObtained = SCE_FALSE;
+    g_UMDRegionCodeInfoPostIndex = 0; // 0x0x000002B0
+    g_isUMDRegionCodesObtained = SCE_FALSE;
+    g_isIDPSCertificateObtained = SCE_FALSE;
 
     /* Create a module semaphore which acts as a mutex. */
     g_semaId = sceKernelCreateSema("SceChkreg", SCE_KERNEL_SA_THFIFO, 1, 1, NULL); // 0x000002BC
@@ -207,20 +183,20 @@ s32 _sceChkregEnd(SceSize args, void *argp)
 
     // 0x00000300 - 0x00000314
     u32 i;
-    for (i = 0; i < (sizeof *g_chkreg.pUmdData); i++)
+    for (i = 0; i < CHKREG_ID_STORAGE_UMD_CONFIG_SIZE; i++)
     {
-        ((u8 *)g_chkreg.pUmdData)[i] = 0;
+        ((u8 *)g_chkreg.pIdStorageUMDConfig)[i] = 0;
     }
 
     // 0x00000318 - 0x00000334
-    for (i = 0; i < sizeof g_consoleIdCertificate; i++)
+    for (i = 0; i < sizeof g_IDPSCertificate; i++)
     {
-        ((u8 *)&g_consoleIdCertificate)[i] = 0;
+        ((u8 *)&g_IDPSCertificate)[i] = 0;
     }
 
-    g_unkA40 = 0; // 0x00000348
-    g_unkA44 = 0;
-    g_isConsoleIdCertificateObtained = SCE_FALSE;
+    g_UMDRegionCodeInfoPostIndex = 0; // 0x00000348
+    g_isUMDRegionCodesObtained = SCE_FALSE;
+    g_isIDPSCertificateObtained = SCE_FALSE;
 
     /* Only stop the module when it is not currently used by other modules. */
 
@@ -239,19 +215,31 @@ s32 _sceChkregEnd(SceSize args, void *argp)
 }
 
 // Subroutine sceChkreg_driver_54495B19 - Address 0x00000390
-s32 sceChkregCheckRegion(u32 arg0, u32 arg1)
+s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId)
 {
-    s32 ret = 0;
+    s32 status1;
+    s32 status2;
 
-    if (sceKernelWaitSema(g_chkregOld_sema, 1, NULL) == 0) {
-        if ((g_chkregOld.buf[0x44] != 0) || ((ret = sub_00000000()) == 0))
-            ret = sub_00000128(0x80000000, (arg0 | arg1));
+    status1 = SCE_ERROR_SEMAPHORE; // 0x000003BC & 0x000003C8
 
-        if (sceKernelSignalSema(g_chkregOld_sema, 1) != 0)
-            ret = SCE_ERROR_SEMAPHORE;
+    /* Allow only single thread access. */
+    status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x000003C4
+    if (status2 == SCE_ERROR_OK)
+    {
+        if (g_isUMDRegionCodesObtained || (status1 = _sceChkregLookupUMDRegionCodeInfo()) == SCE_ERROR_OK) // 0x000003D8 & 0x000003E8
+        {
+            status1 = _sceChkregCheckRegion(0x80000000, umdMediaType | regionId); // 0x000003F4
+        }
+
+        /* Release acquired sema resource. */
+        status2 = sceKernelSignalSema(g_semaId, 1); // 0x00000404
+        if (status2 != SCE_ERROR_OK)
+        {
+            status1 = SCE_ERROR_SEMAPHORE;
+        }
     }
 
-    return ret;
+    return status1;
 }
 
 // Subroutine sceChkreg_driver_59F8491D - Address 0x00000438
@@ -266,13 +254,13 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
     status2 = sceKernelWaitSema(g_semaId, 1, NULL);
     if (status2 == SCE_ERROR_OK)
     {
-        if ((g_isConsoleIdCertificateObtained || (status1 = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
-            && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
+        if ((g_isIDPSCertificateObtained || (status1 = _sceChkregLookupIDPSCertificate()) == SCE_ERROR_OK)
+            && (status1 = _sceChkregVerifyIDPSCertificate()) == SCE_ERROR_OK)
         {
-            pPsCode->companyCode = g_consoleIdCertificate.consoleId.companyCcode;
-            pPsCode->productCode = g_consoleIdCertificate.consoleId.productCode;
-            pPsCode->productSubCode = g_consoleIdCertificate.consoleId.productSubCode;
-            pPsCode->factoryCode = g_consoleIdCertificate.consoleId.chassisCheck >> 2;
+            pPsCode->companyCode = g_IDPSCertificate.idps.companyCode;
+            pPsCode->productCode = g_IDPSCertificate.idps.productCode;
+            pPsCode->productSubCode = g_IDPSCertificate.idps.productSubCode;
+            pPsCode->factoryCode = g_IDPSCertificate.idps.chassisCheck >> 2;
         }
 
         /* Release acquired sema resource. */
