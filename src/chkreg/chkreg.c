@@ -340,10 +340,11 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
         if ((g_isIDPSCertificateObtained || (status1 = _sceChkregLookupIDPSCertificate()) == SCE_ERROR_OK)
             && (status1 = _sceChkregVerifyIDPSCertificate()) == SCE_ERROR_OK)
         {
-            /* PSCode.factory check */
+            /* PsCode.factoryCode check */
             if (((g_IDPSCertificate.idps.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
             {
-                *arg0 = (g_IDPSCertificate.idps.unk9[0] >> 2) | (g_IDPSCertificate.idps.chassisCheck << 6);
+                // uOFW note: Null check missing for arg0
+                *arg0 = (g_IDPSCertificate.idps.chassisCheck << 6) | (g_IDPSCertificate.idps.unk9[0] >> 2);
             }
             else
             {
