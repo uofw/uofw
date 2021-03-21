@@ -373,8 +373,8 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
     return status1;
 }
 
-// Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
-s32 sceChkreg_driver_7939C851(void)
+// Subroutine sceChkregGetPspModel - Address 0x0000079C
+s32 sceChkregGetPspModel(void)
 {
     s32 status;
     ScePsCode psCode;

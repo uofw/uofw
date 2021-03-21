@@ -91,6 +91,6 @@ s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1);
 
 s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1);
 
-s32 sceChkreg_driver_7939C851(void);
+s32 sceChkregGetPspModel(void);
 
 #endif // CHKREG_H
