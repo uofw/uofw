@@ -353,13 +353,13 @@ typedef enum
 typedef struct SceGeDisplayList
 {
     /** Next display list of the queue */
-    struct SceGeDisplayList *next;
+    struct SceGeDisplayList *next; // 0
     /** Previous display list */
-    struct SceGeDisplayList *prev;
+    struct SceGeDisplayList *prev; // 4
     /** Current display list state */
-    SceGeDisplayListState state;
+    u8 state; // SceGeDisplayListSignal / 8
     /** Current display list received signal */
-    SceGeDisplayListSignal signal;
+    u8 signal; // SceGeDisplayListSignal / 9
     /** 1 if context is up to date, 0 otherwise */
     u8 ctxUpToDate;
     /* (padding) */

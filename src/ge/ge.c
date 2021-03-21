@@ -313,9 +313,13 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define HW_GE_OADR2              HW(0xBD400128)
 #define HW_GE_GEOMETRY_CLOCK     HW(0xBD400200)
 #define HW_GE_UNK300             HW(0xBD400300)
+// RO
 #define HW_GE_INTERRUPT_TYPE1    HW(0xBD400304)
+// RW
 #define HW_GE_INTERRUPT_TYPE2    HW(0xBD400308)
+// WO
 #define HW_GE_INTERRUPT_TYPE3    HW(0xBD40030C)
+// WO
 #define HW_GE_INTERRUPT_TYPE4    HW(0xBD400310)
 #define HW_GE_EDRAM_ENABLED_SIZE HW(0xBD400400)
 #define HW_GE_EDRAM_REFRESH_UNK1 HW(0xBD500000)
@@ -506,8 +510,8 @@ SceKernelDeci2Ops g_Deci2Ops = { 0x3C,
      (void *)sceGeRegisterLogHandler}
 };
 
-// 66B4
-char save_regs[] = {
+// Bitfield containing the GE commands 
+char save_regs[] = { // 66B4
     0x07, 0x00, 0xFD, 0xFF,
     0xFF, 0xF1, 0xCF, 0x01,
     0xFC, 0x3F, 0xFB, 0xF9,
@@ -518,11 +522,40 @@ char save_regs[] = {
     0xFF, 0x5B, 0x7F, 0x03
 };
 
-#define SCE_GE_REG_LISTADDR 5
-#define SCE_GE_REG_RADR1 7
-#define SCE_GE_REG_RADR2 8
-#define SCE_GE_REG_UNK128 13
-#define SCE_GE_REG_EDRAM_SIZE 19
+typedef enum SceGeReg {
+    SCE_GE_REG_RESET = 0,
+    SCE_GE_REG_UNK004 = 1,
+    SCE_GE_REG_EDRAM_HW_SIZE = 2,
+    SCE_GE_REG_EXEC = 3,
+    SCE_GE_REG_UNK104 = 4,
+    SCE_GE_REG_LISTADDR = 5,
+    SCE_GE_REG_STALLADDR = 6,
+    SCE_GE_REG_RADR1 = 7,
+    SCE_GE_REG_RADR2 = 8,
+    SCE_GE_REG_VADR = 9,
+    SCE_GE_REG_IADR = 10,
+    SCE_GE_REG_OADR = 11,
+    SCE_GE_REG_OADR1 = 12,
+    SCE_GE_REG_OADR2 = 13,
+    SCE_GE_REG_UNK300 = 14,
+    SCE_GE_REG_INTERRUPT_TYPE1 = 15,
+    SCE_GE_REG_INTERRUPT_TYPE2 = 16,
+    SCE_GE_REG_INTERRUPT_TYPE3 = 17,
+    SCE_GE_REG_INTERRUPT_TYPE4 = 18,
+    SCE_GE_REG_EDRAM_ENABLED_SIZE = 19,
+    SCE_GE_REG_GEOMETRY_CLOCK = 20,
+    SCE_GE_REG_EDRAM_REFRESH_UNK1 = 21,
+    SCE_GE_REG_EDRAM_UNK10 = 22,
+    SCE_GE_REG_EDRAM_REFRESH_UNK2 = 23,
+    SCE_GE_REG_EDRAM_REFRESH_UNK3 = 24,
+    SCE_GE_REG_EDRAM_UNK40 = 25,
+    SCE_GE_REG_EDRAM_UNK50 = 26,
+    SCE_GE_REG_EDRAM_UNK60 = 27,
+    SCE_GE_REG_EDRAM_ADDR_TRANS_DISABLE = 28,
+    SCE_GE_REG_EDRAM_ADDR_TRANS_VALUE = 29,
+    SCE_GE_REG_EDRAM_UNK90 = 30,
+    SCE_GE_REG_EDRAM_UNKA0 = 31
+} SceGeReg;
 
 // 66D4
 volatile void *g_pAwRegAdr[32] = {
@@ -595,8 +628,8 @@ char g_szTbp[] = "RTBP0";
 // 6890
 void (*g_GeLogHandler) ();
 
-// 68C0
-SceGeContext _aw_ctx;
+/* The GE context, saved on reset & suspend (and restored on resume) */
+SceGeContext _aw_ctx; // 68C0
 
 // 70C0
 int g_uiEdramHwSize;
@@ -633,8 +666,12 @@ SceGeDisplayList g_displayLists[64];
 
 /******************************/
 
+/*
+ * Reset the GE. (Only used in sceGeBreak().)
+ */
 int _sceGeReset()
 {
+    // Start the GE reset
     int oldIntr = sceKernelCpuSuspendIntr();
     sceSysregAwRegABusClockEnable();
     pspSync();
@@ -643,10 +680,12 @@ int _sceGeReset()
     // 0144
     while ((HW_GE_RESET & 1) != 0)
         ;
+    // Save the current GE context
     sceGeSaveContext(&_aw_ctx);
     _aw_ctx.ctx[16] = HW_GE_GEOMETRY_CLOCK;
     sceSysregAwResetEnable();
     sceSysregAwResetDisable();
+    // Restart the GE, reinitializing registers
     HW_GE_EDRAM_UNK10 = 0;
     HW_GE_EXEC = 0;
     HW_GE_LISTADDR = 0;
@@ -663,6 +702,7 @@ int _sceGeReset()
     HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
     HW_GE_GEOMETRY_CLOCK = _aw_ctx.ctx[16];
     sceSysregSetMasterPriv(64, 1);
+    // Restore the GE context
     sceGeRestoreContext(&_aw_ctx);
     sceSysregSetMasterPriv(64, 0);
     sceSysregAwRegABusClockDisable();
@@ -670,16 +710,23 @@ int _sceGeReset()
     return 0;
 }
 
+/*
+ * Initialize the GE. (Used in module bootstart.)
+ */
 int sceGeInit()
 {
     sceSysregAwResetDisable();
+    // Enable the various clocks used by the GE.
     sceSysregAwRegABusClockEnable();
     sceSysregAwRegBBusClockEnable();
     sceSysregAwEdramBusClockEnable();
+    // Generate some unique mask used for the display list IDs
     g_dlMask = (HW_GE_CMD(SCE_GE_CMD_VADR) ^ HW_GE_CMD(SCE_GE_CMD_PRIM)
               ^ HW_GE_CMD(SCE_GE_CMD_BEZIER) ^ HW_GE_CMD(SCE_GE_CMD_SPLINE)
               ^ HW_GE_CMD(SCE_GE_CMD_WORLDD)) | 0x80000000;
+    // Initialize the GE EDRAM
     sceGeEdramInit();
+    // Reset registers & run the initialization display list
     HW_GE_EXEC = 0;
     u32 *dlist = &_aw_ctx.ctx[17];
     HW_GE_LISTADDR = 0;
@@ -695,6 +742,7 @@ int sceGeInit()
     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
     HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
     HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+    // Reset all the registers which are flagged as being registers which can be saved
     int i;
     for (i = 0; i < 256; i++) {
         if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
@@ -702,6 +750,7 @@ int sceGeInit()
         // 03A0
     }
 
+    // Reset all the bone, world, etc. matrices
     *(curDl++) = GE_MAKE_OP(SCE_GE_CMD_BONEN, 0);
     // 03BC
     for (i = 0; i < 96; i++)
@@ -728,6 +777,7 @@ int sceGeInit()
         *(curDl++) = GE_MAKE_OP(SCE_GE_CMD_TGEND, 0);
     *(curDl + 0) = GE_MAKE_OP(SCE_GE_CMD_PRIM, 0);
     *(curDl + 1) = GE_MAKE_OP(SCE_GE_CMD_END, 0);
+    // Execute the initialization display list
     sceKernelDcacheWritebackInvalidateRange(dlist, 1980);
     HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
     HW_GE_LISTADDR = (int)UCACHED(dlist);
@@ -739,11 +789,14 @@ int sceGeInit()
     while ((HW_GE_EXEC & 1) != 0)
         ;
     sceSysregSetMasterPriv(64, 0);
+    // Re-disable execution for now
     HW_GE_EXEC = 0;
     HW_GE_LISTADDR = 0;
     HW_GE_STALLADDR = 0;
     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
     HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+
+    // Initialize the GE interrupt handler
     sceKernelRegisterIntrHandler(SCE_GE_INT, 1, _sceGeInterrupt, 0, &g_GeIntrOpt);
 
     // 0534
@@ -752,9 +805,14 @@ int sceGeInit()
 
     sceKernelEnableIntr(SCE_GE_INT);
     sceSysregAwRegABusClockDisable();
+
+    // Register the sysevent handler (for suspend & resume)
     sceKernelRegisterSysEventHandler(&g_GeSysEv);
+    // Init the display list queue
     _sceGeQueueInit();
+    // Run/enable callbacks used to patch Genso Suikoden I&II
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
+    // Ensure callback3 is ran after usersystemlib is loaded
     if (libWork->cmdList == NULL) {
         // 05EC
         sceKernelSetInitCallback(_sceGeInitCallback3, 3, 0);
@@ -763,6 +821,7 @@ int sceGeInit()
 
     // 059C
     sceKernelSetInitCallback(_sceGeInitCallback4, 4, 0);
+    // Register deci2p (debug) operations
     void *ret = (void *)sceKernelDeci2pReferOperations();
     g_deci2p = ret;
     if (ret != NULL) {
@@ -773,13 +832,19 @@ int sceGeInit()
     return 0;
 }
 
+/*
+ * Stop the GE. (Used by rebootBefore only.)
+ */
 int sceGeEnd()
 {
     dbg_printf("sceGeEnd\n");
     _sceGeQueueEnd();
+    // Unregister the system event handler
     sceKernelUnregisterSysEventHandler(&g_GeSysEv);
+    // Disable the GE interrupt & subinterrupts
     sceKernelDisableIntr(SCE_GE_INT);
     sceKernelReleaseIntrHandler(SCE_GE_INT);
+    // Enable the ABus clock and stop execution
     sceSysregAwRegABusClockEnable();
     HW_GE_EXEC = 0;
     // 0640
@@ -787,6 +852,7 @@ int sceGeEnd()
         ;
 
     if (g_cmdList != NULL) {
+        // Execute a list which just does two empty calls (maybe to ensure we don't stop in the middle of a call?)
         int *cmdOut = &g_cmdList[16];
         cmdOut[0] = GE_MAKE_OP(SCE_GE_CMD_BASE, (((((int)&g_cmdList[20]) >> 24) & 0xF) << 16));
         cmdOut[1] = GE_MAKE_OP(SCE_GE_CMD_OFFSET, 0);
@@ -799,20 +865,24 @@ int sceGeEnd()
         HW_GE_LISTADDR = (int)UCACHED(cmdOut);
         HW_GE_STALLADDR = 0;
         pspSync();
+        // Wait for the list to be executed
         HW_GE_EXEC = 1;
         // 06E0
         while ((HW_GE_EXEC & 1) != 0)
             ;
     }
+    // Disable the ABus clock again
     sceSysregAwRegABusClockDisable();
     return 0;
 }
 
 // 070C
+// Part of the patching stuff for Genso Suikoden I&II : prepare stuff inside usersystemlib
 int _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribute__ ((unused)), void *arg2 __attribute__ ((unused)))
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
     if (libWork->cmdList != NULL) {
+        // Put an "empty" display list in libWork->cmdList
         s32 *uncachedDlist = UUNCACHED(libWork->cmdList);
         uncachedDlist[0] = GE_MAKE_OP(SCE_GE_CMD_FINISH, 0);
         uncachedDlist[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
@@ -822,6 +892,7 @@ int _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribut
     return 0;
 }
 
+// Part of the patching stuff for Genso Suikoden I&II : patch the game itself to use sceGeListUpdateStallAddr_lazy
 int _sceGeInitCallback4()
 {
     SceKernelGameInfo *info = sceKernelGetGameInfo();
@@ -830,6 +901,7 @@ int _sceGeInitCallback4()
         int oldIntr = sceKernelCpuSuspendIntr();
         if (strcmp(info->gameId, sadrupdate_bypass.name) == 0) {
             u32 *ptr = sadrupdate_bypass.ptr;
+            // Replace the syscall to sceGeListUpdateStallAddr by a jump to sceGeListUpdateStallAddr_lazy in usersystemlib
             if (ptr[0] == JR_RA && ptr[1] == syscOp) {
                 // 0804
                 ptr[0] = MAKE_JUMP(sceKernelGetUsersystemLibWork()->sceGeListUpdateStallAddr_lazy);
@@ -846,7 +918,10 @@ int _sceGeInitCallback4()
     return 0;
 }
 
-int sceGeGetReg(u32 regId)
+/*
+ * Read an internal GE register. See SceGeReg's definition for the list.
+ */
+int sceGeGetReg(SceGeReg regId)
 {
     dbg_printf("sceGeGetReg\n");
     if (regId >= 32)
@@ -865,12 +940,16 @@ int sceGeGetReg(u32 regId)
     return val;
 }
 
-int sceGeSetReg(u32 regId, u32 value)
+/*
+ * Write to an internal GE register. See SceGeReg's definition for the list.
+ */
+int sceGeSetReg(SceGeReg regId, u32 value)
 {
     dbg_printf("sceGeSetReg\n");
     if (regId >= 32)
         return SCE_ERROR_INVALID_INDEX;
-    if (regId >= SCE_GE_REG_LISTADDR && regId <= SCE_GE_REG_UNK128 && (value & 3) != 0)
+    // These registers being addresses, they need to be 4-aligned.
+    if (regId >= SCE_GE_REG_LISTADDR && regId <= SCE_GE_REG_OADR2 && (value & 3) != 0)
         return SCE_ERROR_INVALID_VALUE;
 
     // 092C
@@ -879,6 +958,7 @@ int sceGeSetReg(u32 regId, u32 value)
     int wasEnabled = sceSysregAwRegABusClockEnable();
     int ret;
     if ((HW_GE_EXEC & 1) == 0) {
+        // Call particular functions for RADR1 and RADR2 (return address from calls)
         if (regId == SCE_GE_REG_RADR1) {
             // 09EC
             _sceGeSetRegRadr1(value);
@@ -903,6 +983,9 @@ int sceGeSetReg(u32 regId, u32 value)
     return ret;
 }
 
+/*
+ * Get the value of a command (ie the last command ran for that operation, with its arguments)
+ */
 int sceGeGetCmd(u32 cmdOff)
 {
     dbg_printf("sceGeGetCmd\n");
@@ -922,6 +1005,11 @@ int sceGeGetCmd(u32 cmdOff)
     return cmd;
 }
 
+/*
+ * Set the value of a command.
+ * It is not as easy as reading it, as we need to run a display list setting it,
+ * and there is special care to take for some flow-controlling commands.
+ */
 int sceGeSetCmd(u32 cmdOff, u32 cmd)
 {
     dbg_printf("sceGeSetCmd\n");
@@ -931,13 +1019,16 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
     int oldIntr = sceKernelCpuSuspendIntr();
     int wasEnabled = sceSysregAwRegABusClockEnable();
     int ret = 0;
+    // Check if the GE is already busy
     if ((HW_GE_EXEC & 1) != 0) {
         ret = SCE_ERROR_BUSY;
         goto end;
     }
     int oldState = HW_GE_EXEC;
     int listAddr = HW_GE_LISTADDR;
+    // For all the branching/jumping functions
     if (cmdOff == SCE_GE_CMD_JUMP || cmdOff == SCE_GE_CMD_BJUMP || cmdOff == SCE_GE_CMD_CALL) {
+        // Check if the destination address is valid
         int addr = (((HW_GE_CMD(SCE_GE_CMD_BASE) << 8) & 0xFF000000) | (cmd & 0x00FFFFFF)) + HW_GE_OADR;
         if (!GE_VALID_ADDR(addr)) {
             // 0E68 dup
@@ -947,6 +1038,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             // 0B88
             if (cmdOff == SCE_GE_CMD_BJUMP) {
                 // 0E50
+                // If the condition is true, branch, otherwise just remove the corresponding bit for the register
                 if ((oldState & 2) == 0)
                     listAddr = addr;
                 else {
@@ -954,26 +1046,31 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
                     oldState &= 0xFFFFFFFD;
                 }
             } else if (cmdOff == SCE_GE_CMD_CALL) { // 0DE0
-                if ((oldState & 0x200) != 0) {
+                if ((oldState & 0x200) != 0) { // Double-nested call
                     // 0E48 dup
                     ret = SCE_ERROR_NOT_IMPLEMENTED;
                     goto end;
-                } else if ((oldState & 0x100) == 0) {
+                } else if ((oldState & 0x100) == 0) { // Not a nested call
                     // 0E24
+                    // Set the return address, jump, set the callee flag and set the destination address
                     _sceGeSetRegRadr1(listAddr + 4);
                     listAddr = addr;
                     oldState |= 0x100;
+                    // Save caller's OADR
                     HW_GE_OADR1 = HW_GE_OADR;
-                } else {
+                } else { // First-level nested call
+                    // Same as before but for a nested call
                     _sceGeSetRegRadr2(listAddr + 4);
                     oldState = (oldState & 0xFFFFFEFF) | 0x200;
                     listAddr = addr;
                     HW_GE_OADR2 = HW_GE_OADR;
                 }
             } else if (cmdOff == SCE_GE_CMD_JUMP) {
+                // Just jump directly
                 listAddr = addr;
             }
             // 0BA4 dup
+            // Nothing to execute in the display list as we set all the registers appropriately
             cmd = HW_GE_CMD(SCE_GE_CMD_NOP);
             cmdOff = 0;
         }
@@ -983,15 +1080,18 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             // 1410
             if ((oldState & 0x100) == 0) {
                 // 0E48 dup
+                // Cannot return from a non-called code!
                 ret = SCE_ERROR_NOT_IMPLEMENTED;
                 goto end;
             } else {
+                // Jump to the return address and restore OADR, and set to non-called state
                 listAddr = HW_GE_RADR1;
                 // 1404 dup
                 HW_GE_OADR = HW_GE_OADR1;
                 oldState &= 0xFFFFFEFF;
             }
-        } else {
+        } else { // Nested call
+            // Jump to the return address and restore OADR, and set to non-nested call state
             listAddr = HW_GE_RADR2;
             // 1404 dup
             HW_GE_OADR = HW_GE_OADR2;
@@ -1002,10 +1102,12 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         cmdOff = 0;
     } else if (cmdOff == SCE_GE_CMD_ORIGIN) {
         // 13C8
+        // Set the origin address
         HW_GE_OADR = listAddr;
         cmdOff = 0;
         cmd = HW_GE_CMD(SCE_GE_CMD_NOP);
     } else if (cmdOff == SCE_GE_CMD_PRIM || cmdOff == SCE_GE_CMD_BEZIER || cmdOff == SCE_GE_CMD_SPLINE) {
+        // Check if the vertex address is valid
         int addr = HW_GE_VADR;
         if (!GE_VALID_ADDR(addr)) {
             ret = SCE_ERROR_INVALID_POINTER;
@@ -1013,6 +1115,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         }
 
         // 0F14
+        // Check if the index address, if set, is valid
         if (((HW_GE_CMD(SCE_GE_CMD_VTYPE) >> 11) & 3) != 0)
         {
             int addr = HW_GE_IADR;
@@ -1022,6 +1125,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             }
         }
         // 0F70
+        // Check if the texture address, if set, is valid
         if ((HW_GE_CMD(SCE_GE_CMD_TME) & 1) != 0) {
             int count = (HW_GE_CMD(SCE_GE_CMD_TMODE) >> 16) & 7;
             // 0FC0
@@ -1038,6 +1142,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         }
     } else if (cmdOff == SCE_GE_CMD_AP2 && ((cmd >> 21) & 1) != 0) {
         // 12E4
+        // For AP2, if texture(s) are set, check if the addresses are valid
         int count = (HW_GE_CMD(SCE_GE_CMD_TMODE) >> 16) & 7;
         // 1328
         int i;
@@ -1051,6 +1156,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         }
     } else if (cmdOff == SCE_GE_CMD_CLOAD) {
         // 1240
+        // Check if the CLUT address is valid
         int addr = ((HW_GE_CMD(SCE_GE_CMD_CBW) << 8) & 0xFF000000) | (HW_GE_CMD(SCE_GE_CMD_CBP) & 0x00FFFFFF);
         if (!GE_VALID_ADDR(addr)) {
             // 0E68 dup
@@ -1058,6 +1164,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
             goto end;
         }
     } else if (cmdOff == SCE_GE_CMD_XSTART) {
+        // Check if the transfer addresses are valid
         int addr1 = ((HW_GE_CMD(SCE_GE_CMD_XBW1) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_XBP1) & 0x00FFFFFF);
         int addr2 = ((HW_GE_CMD(SCE_GE_CMD_XBW2) & 0x00FF0000) << 8) | (HW_GE_CMD(SCE_GE_CMD_XBP2) & 0x00FFFFFF);
         if (!GE_VALID_ADDR(addr1) || !GE_VALID_ADDR(addr2)) {
@@ -1067,42 +1174,47 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
         }
     }
     // 0BB0
-    int buf[32];
+    int cmdBuf[32];
     // 0BB8
     int stallAddr = HW_GE_STALLADDR;
-    int *ptr = (int *)(((int)buf | 0x3F) + 1);
+    // Align the command buffer used as a display list
+    int *dl = (int *)(((int)cmdBuf | 0x3F) + 1);
     int prevStatus = HW_GE_INTERRUPT_TYPE1;
+    // For FINISH & END, just run a FINISH/END sequence with the given command
     if (cmdOff == SCE_GE_CMD_FINISH) {
         // 0DC0
-        ptr[0] = GE_MAKE_OP(SCE_GE_CMD_FINISH, cmd);
-        ptr[1] = HW_GE_CMD(SCE_GE_CMD_END);
+        dl[0] = GE_MAKE_OP(SCE_GE_CMD_FINISH, cmd);
+        dl[1] = HW_GE_CMD(SCE_GE_CMD_END);
     } else if (cmdOff == SCE_GE_CMD_END) {
         // 0DA0
-        ptr[0] = HW_GE_CMD(SCE_GE_CMD_FINISH);
-        ptr[1] = GE_MAKE_OP(SCE_GE_CMD_END, cmd);
+        dl[0] = HW_GE_CMD(SCE_GE_CMD_FINISH);
+        dl[1] = GE_MAKE_OP(SCE_GE_CMD_END, cmd);
     } else if (cmdOff == SCE_GE_CMD_BASE) {
         // 0D78
-        ptr[0] = GE_MAKE_OP(SCE_GE_CMD_BASE, cmd);
-        ptr[1] = HW_GE_CMD(SCE_GE_CMD_FINISH);
-        ptr[2] = HW_GE_CMD(SCE_GE_CMD_END);
+        // For BASE, just run the BASE command and FINISH/END
+        dl[0] = GE_MAKE_OP(SCE_GE_CMD_BASE, cmd);
+        dl[1] = HW_GE_CMD(SCE_GE_CMD_FINISH);
+        dl[2] = HW_GE_CMD(SCE_GE_CMD_END);
     } else {
-        ptr[0] = GE_MAKE_OP(SCE_GE_CMD_BASE, 0x00400000 | (HW_GE_CMD(SCE_GE_CMD_BASE) & 0x00FF0000));
-        ptr[1] = GE_MAKE_OP(cmdOff, cmd);
-        ptr[2] = HW_GE_CMD(SCE_GE_CMD_BASE);
-        ptr[3] = HW_GE_CMD(SCE_GE_CMD_FINISH);
-        ptr[4] = HW_GE_CMD(SCE_GE_CMD_END);
+        // For the rest, set the BASE to 0x04000000, run our command, then restore BASE and FINISH/END
+        dl[0] = GE_MAKE_OP(SCE_GE_CMD_BASE, 0x00400000 | (HW_GE_CMD(SCE_GE_CMD_BASE) & 0x00FF0000));
+        dl[1] = GE_MAKE_OP(cmdOff, cmd);
+        dl[2] = HW_GE_CMD(SCE_GE_CMD_BASE);
+        dl[3] = HW_GE_CMD(SCE_GE_CMD_FINISH);
+        dl[4] = HW_GE_CMD(SCE_GE_CMD_END);
     }
     // 0C44
-    pspCache(0x1A, ptr);
+    pspCache(0x1A, dl);
+    // XXX 04g+ caching
     if ((pspCop0StateGet(24) & 1) != 0) {
         pspSync();
-        HW_GE_CTRL = ((int)ptr & 0x07FFFFC0) | 0xA0000001;
+        HW_GE_CTRL = ((int)dl & 0x07FFFFC0) | 0xA0000001;
         HW_GE_CTRL;
     }
     // 0C88
     sceSysregSetMasterPriv(64, 1);
     HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTFIN;
-    HW_GE_LISTADDR = (int)UCACHED(ptr);
+    HW_GE_LISTADDR = (int)UCACHED(dl);
     HW_GE_STALLADDR = 0;
     pspSync();
     HW_GE_EXEC = oldState | 1;
@@ -1603,7 +1715,8 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
 
 int _sceGeModuleStart()
 {
-    dbg_init(1, FB_NONE, FAT_HARDWARE);
+    //dbg_init(1, FB_NONE, FAT_HARDWARE);
+    dbg_init(1, FB_HARDWARE, FAT_NONE);
     dbg_printf("Doing init\n");
     sceGeInit();
     dbg_printf("Init ok\n");
@@ -1742,7 +1855,7 @@ int sceGeEdramSetSize(int size)
     if (size == 0x200000) {
         // 2944
         g_uiEdramSize = size;
-        sceGeSetReg(SCE_GE_REG_EDRAM_SIZE, 4);
+        sceGeSetReg(SCE_GE_REG_EDRAM_ENABLED_SIZE, 4);
         // 2934 dup
         sceSysregSetAwEdramSize(0);
     } else if (size == 0x400000) {
@@ -1750,7 +1863,7 @@ int sceGeEdramSetSize(int size)
         if (sceSysregGetTachyonVersion() <= 0x4FFFFF)
             return SCE_ERROR_INVALID_SIZE;
         g_uiEdramSize = size;
-        sceGeSetReg(SCE_GE_REG_EDRAM_SIZE, 2);
+        sceGeSetReg(SCE_GE_REG_EDRAM_ENABLED_SIZE, 2);
         // 2934 dup
         sceSysregSetAwEdramSize(1);
     } else
@@ -1848,6 +1961,7 @@ int _sceGeQueueInit()
     g_AwQueue.syscallId = sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr);
     SceKernelGameInfo *info = sceKernelGetGameInfo();
     g_AwQueue.patched = 0;
+    // Patch for Itadaki Street Portable (missing a cache flush function when enqueuing the first display list)
     if (info != NULL && strcmp(info->gameId, "ULJM05127") == 0) {
         g_AwQueue.patched = 1;
     }
@@ -3001,7 +3115,7 @@ int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
 
 int sceGeGetList(int dlId, SceGeDisplayList * outDl, int *outFlag)
 {
-    dbg_printf("sceGeGetList\n");
+    dbg_printf("sceGeGetList %d\n", sizeof(SceGeDisplayList));
     int oldIntr = sceKernelCpuSuspendIntr();
     if (!pspK1PtrOk(outDl) || !pspK1PtrOk(outFlag)) {
         // 4A8C
@@ -3016,17 +3130,8 @@ int sceGeGetList(int dlId, SceGeDisplayList * outDl, int *outFlag)
         return SCE_ERROR_INVALID_ID;
     }
     if (outDl != NULL) {
-        int *outPtr = (int *)outDl;
-        int *inPtr = (int *)dl;
         // 4AE8
-        do {
-            outPtr[0] = inPtr[0];
-            outPtr[1] = inPtr[1];
-            outPtr[2] = inPtr[2];
-            outPtr[3] = inPtr[3];
-            outPtr += 4;
-            inPtr += 4;
-        } while (inPtr != (int *)(dl + 64));
+        __builtin_memcpy(__builtin_assume_aligned(outDl, 4), __builtin_assume_aligned(dl, 4), sizeof(SceGeDisplayList));
     }
     // 4B14
     if (outFlag != NULL)
@@ -3259,6 +3364,7 @@ int _sceGeQueueInitCallback()
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
     if (libWork != NULL) {
+        // Pointer to the syscall in sub_00000208 (at 0x20C) in usersystemlib
         u32 *syscPtr = (void*)libWork->sceGeListUpdateStallAddr_lazy + 204; // TODO: replace with a difference of two functions from usersystemlib
         *syscPtr = MAKE_SYSCALL(g_AwQueue.syscallId);
         pspCache(0x1A, syscPtr);
@@ -3633,6 +3739,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
 
     // 5960
     dl = g_AwQueue.free_first;
+    dbg_printf("%d/%d/%p\n", dl->state, dl->signal, dl->ctx);
     if (dl == NULL) {
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);

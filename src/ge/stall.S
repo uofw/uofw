@@ -11,14 +11,14 @@ sceGeListUpdateStallAddr:
     lw    $v0, %lo(g_dlMask)($v0)
     lui   $v1, %hi(g_displayLists)
     addiu $v1, $v1, %lo(g_displayLists)
-    xor   $v0, $v0, $a0 # the SceGeDisplayList
+    xor   $v0, $v0, $a0 # pointer to the SceGeDisplayList
     subu  $v1, $v0, $v1
     sltiu $v1, $v1, 4096
     beqz  $v1, err_invalid_id # the display list isn't in g_displayLists
     ext   $t0, $a1, 0, 29 # uncached stall address
-    mfic  $v1, $0
+    mfic  $v1, $0 # disable interrupts
     mtic  $0,  $0
-    lbu   $t1, 8($v0)
+    lbu   $t1, 8($v0) # 
     lui   $t3, 0xBD40
     lui   $t9, %hi(g_GeLogHandler)
     xori  $t2, $t1, 0x2
