@@ -340,7 +340,17 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
         if ((g_isIDPSCertificateObtained || (status1 = _sceChkregLookupIDPSCertificate()) == SCE_ERROR_OK)
             && (status1 = _sceChkregVerifyIDPSCertificate()) == SCE_ERROR_OK)
         {
-            /* PsCode.factoryCode check */
+            /* 
+             * PsCode.factoryCode check:
+             * 
+             * The test is passed if the PsCode.factoryCode has the following value:
+             * 
+             *     XXXX XXXX XX10 0011
+             * 
+             * This means IDPS.chassisCheck needs to be:
+             * 
+             *     1000 11XX (values 0x8C - 0xF)
+             */
             if (((g_IDPSCertificate.idps.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
             {
                 // uOFW note: Null check missing for arg0
@@ -361,6 +371,12 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
     }
 
     return status1;
+}
+
+// Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
+s32 sceChkreg_driver_7939C851(void)
+{
+
 }
 
 // Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
