@@ -16,265 +16,6 @@
 
 #include "ge.h"
 
-char *_dbg_cmds[256] = {
-"NOP", // 0x00
-"VADR", // 0x01
-"IADR", // 0x02
-"UNK03",
-"PRIM", // 0x04
-"BEZIER", // 0x05
-"SPLINE", // 0x06
-"BBOX", // 0x07
-"JUMP", // 0x08
-"BJUMP", // 0x09
-"CALL", // 0x0A
-"RET", // 0x0B
-"END", // 0x0C
-"UNK0D",
-"SIGNAL", // 0x0E
-"FINISH", // 0x0F
-"BASE", // 0x10
-"UNK11",
-"VTYPE", // 0x12
-"OFFSET", // 0x13
-"ORIGIN", // 0x14
-"REGION1", // 0x15
-"REGION2", // 0x16
-"LTE", // 0x17
-"LE0", // 0x18
-"LE1", // 0x19
-"LE2", // 0x1A
-"LE3", // 0x1B
-"CLE", // 0x1C
-"BCE", // 0x1D
-"TME", // 0x1E
-"FGE", // 0x1F
-"DTE", // 0x20
-"ABE", // 0x21
-"ATE", // 0x22
-"ZTE", // 0x23
-"STE", // 0x24
-"AAE", // 0x25
-"PCE", // 0x26
-"CTE", // 0x27
-"LOE", // 0x28
-"UNK29",
-"BONEN", // 0x2A
-"BONED", // 0x2B
-"WEIGHT0", // 0x2C
-"WEIGHT1", // 0x2D
-"WEIGHT2", // 0x2E
-"WEIGHT3", // 0x2F
-"WEIGHT4", // 0x30
-"WEIGHT5", // 0x31
-"WEIGHT6", // 0x32
-"WEIGHT7", // 0x33
-"UNK34",
-"UNK35",
-"DIVIDE", // 0x36
-"PPM", // 0x37
-"PFACE", // 0x38
-"UNK39",
-"WORLDN", // 0x3A
-"WORLDD", // 0x3B
-"VIEWN", // 0x3C
-"VIEWD", // 0x3D
-"PROJN", // 0x3E
-"PROJD", // 0x3F
-"TGENN", // 0x40
-"TGEND", // 0x41
-"SX", // 0x42
-"SY", // 0x43                                                                                                                                                                           
-"SZ", // 0x44                                                                                                                                                                           
-"TX", // 0x45
-"TY", // 0x46
-"TZ", // 0x47
-"SU", // 0x48
-"SV", // 0x49
-"TU", // 0x4A
-"TV", // 0x4B
-"OFFSETX", // 0x4C
-"OFFSETY", // 0x4D
-"UNK4E",
-"UNK4F",
-"SHADE", // 0x50
-"NREV", // 0x51
-"UNK52",
-"MATERIAL", // 0x53
-"MEC", // 0x54
-"MAC", // 0x55
-"MDC", // 0x56
-"MSC", // 0x57
-"MAA", // 0x58
-"UNK59",
-"UNK5A",
-"MK", // 0x5B
-"AC", // 0x5C
-"AA", // 0x5D
-"LMODE", // 0x5E
-"LTYPE0", // 0x5F
-"LTYPE1", // 0x60
-"LTYPE2", // 0x61
-"LTYPE3", // 0x62
-"LX0", // 0x63
-"LY0", // 0x64
-"LZ0", // 0x65
-"LX1", // 0x66
-"LY1", // 0x67
-"LZ1", // 0x68
-"LX2", // 0x69
-"LY2", // 0x6A
-"LZ2", // 0x6B
-"LX3", // 0x6C
-"LY3", // 0x6D
-"LZ3", // 0x6E
-"LDX0", // 0x6F
-"LDY0", // 0x70
-"LDZ0", // 0x71
-"LDX1", // 0x72
-"LDY1", // 0x73
-"LDZ1", // 0x74
-"LDX2", // 0x75
-"LDY2", // 0x76
-"LDZ2", // 0x77
-"LDX3", // 0x78
-"LDY3", // 0x79
-"LDZ3", // 0x7A
-"LKA0", // 0x7B
-"LKB0", // 0x7C
-"LKC0", // 0x7D
-"LKA1", // 0x7E
-"LKB1", // 0x7F
-"LKC1", // 0x80
-"LKA2", // 0x81
-"LKB2", // 0x82
-"LKC2", // 0x83
-"LKA3", // 0x84
-"LKB3", // 0x85
-"LKC3", // 0x86
-"LKS0", // 0x87
-"LKS1", // 0x88
-"LKS2", // 0x89
-"LKS3", // 0x8A
-"LKO0", // 0x8B
-"LKO1", // 0x8C
-"LKO2", // 0x8D
-"LKO3", // 0x8E
-"LAC0", // 0x8F
-"LDC0", // 0x90
-"LSC0", // 0x91
-"LAC1", // 0x92
-"LDC1", // 0x93
-"LSC1", // 0x94
-"LAC2", // 0x95
-"LDC2", // 0x96
-"LSC2", // 0x97
-"LAC3", // 0x98
-"LDC3", // 0x99
-"LSC3", // 0x9A
-"CULL", // 0x9B
-"FBP", // 0x9C
-"FBW", // 0x9D
-"ZBP", // 0x9E
-"ZBW", // 0x9F
-"TBP0", // 0xA0
-"TBP1", // 0xA1
-"TBP2", // 0xA2
-"TBP3", // 0xA3
-"TBP4", // 0xA4
-"TBP5", // 0xA5
-"TBP6", // 0xA6
-"TBP7", // 0xA7
-"TBW0", // 0xA8
-"TBW1", // 0xA9
-"TBW2", // 0xAA
-"TBW3", // 0xAB
-"TBW4", // 0xAC
-"TBW5", // 0xAD
-"TBW6", // 0xAE
-"TBW7", // 0xAF
-"CBP", // 0xB0
-"CBW", // 0xB1
-"XBP1", // 0xB2
-"XBW1", // 0xB3
-"XBP2", // 0xB4
-"XBW2", // 0xB5
-"UNKB6",
-"UNKB7",
-"TSIZE0", // 0xB8
-"TSIZE1", // 0xB9
-"TSIZE2", // 0xBA
-"TSIZE3", // 0xBB
-"TSIZE4", // 0xBC
-"TSIZE5", // 0xBD
-"TSIZE6", // 0xBE
-"TSIZE7", // 0xBF
-"TMAP", // 0xC0
-"TSHADE", // 0xC1
-"TMODE", // 0xC2
-"TPF", // 0xC3
-"CLOAD", // 0xC4
-"CLUT", // 0xC5
-"TFILTER", // 0xC6
-"TWRAP", // 0xC7
-"TLEVEL", // 0xC8
-"TFUNC", // 0xC9
-"TEC", // 0xCA
-"TFLUSH", // 0xCB
-"TSYNC", // 0xCC
-"FOG1", // 0xCD
-"FOG2", // 0xCE
-"FC", // 0xCF
-"TSLOPE", // 0xD0
-"UNKD1",
-"FPF", // 0xD2
-"CMODE", // 0xD3
-"SCISSOR1", // 0xD4
-"SCISSOR2", // 0xD5
-"MINZ", // 0xD6
-"MAXZ", // 0xD7
-"CTEST", // 0xD8
-"CREF", // 0xD9
-"CMSK", // 0xDA
-"ATEST", // 0xDB
-"STEST", // 0xDC
-"SOP", // 0xDD
-"ZTEST", // 0xDE
-"BLEND", // 0xDF
-"FIXA", // 0xE0
-"FIXB", // 0xE1
-"DITH1", // 0xE2
-"DITH2", // 0xE3
-"DITH3", // 0xE4
-"DITH4", // 0xE5
-"LOP", // 0xE6
-"ZMSK", // 0xE7
-"PMSK1", // 0xE8
-"PMSK2", // 0xE9
-"XSTART", // 0xEA
-"XPOS1", // 0xEB
-"XPOS2", // 0xEC
-"UNKED",
-"XSIZE", // 0xEE
-"UNKEF",
-"X2", // 0xF0
-"Y2", // 0xF1
-"Z2", // 0xF2
-"S2", // 0xF3
-"T2", // 0xF4
-"Q2", // 0xF5
-"RGB2", // 0xF6
-"AP2", // 0xF7
-"F2", // 0xF8
-"I2", // 0xF9
-"UNKFA",
-"UNKFB",
-"UNKFC",
-"UNKFD",
-"UNKFE",
-"UNKFF",
-};
-
 SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
                                  | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_MODULE_BOOTSTART("_sceGeModuleStart");
@@ -837,7 +578,6 @@ int sceGeInit()
  */
 int sceGeEnd()
 {
-    dbg_printf("sceGeEnd\n");
     _sceGeQueueEnd();
     // Unregister the system event handler
     sceKernelUnregisterSysEventHandler(&g_GeSysEv);
@@ -923,7 +663,6 @@ int _sceGeInitCallback4()
  */
 int sceGeGetReg(SceGeReg regId)
 {
-    dbg_printf("sceGeGetReg\n");
     if (regId >= 32)
         return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
@@ -945,7 +684,6 @@ int sceGeGetReg(SceGeReg regId)
  */
 int sceGeSetReg(SceGeReg regId, u32 value)
 {
-    dbg_printf("sceGeSetReg\n");
     if (regId >= 32)
         return SCE_ERROR_INVALID_INDEX;
     // These registers being addresses, they need to be 4-aligned.
@@ -988,7 +726,6 @@ int sceGeSetReg(SceGeReg regId, u32 value)
  */
 int sceGeGetCmd(u32 cmdOff)
 {
-    dbg_printf("sceGeGetCmd\n");
     if (cmdOff >= 0xFF)
         return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
@@ -1012,7 +749,6 @@ int sceGeGetCmd(u32 cmdOff)
  */
 int sceGeSetCmd(u32 cmdOff, u32 cmd)
 {
-    dbg_printf("sceGeSetCmd\n");
     if (cmdOff >= 0xFF)
         return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
@@ -1243,7 +979,6 @@ end:
 
 int sceGeGetMtx(int id, int *mtx)
 {
-    dbg_printf("sceGeGetMtx\n");
     if (id < 0 || id >= 12)
         return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
@@ -1287,7 +1022,6 @@ int sceGeGetMtx(int id, int *mtx)
 
 int sceGeSetMtx(int id, int *mtx)
 {
-    dbg_printf("sceGeSetMtx\n");
     int ret;
     if (id < 0 || id >= 12)
         return SCE_ERROR_INVALID_INDEX;
@@ -1319,7 +1053,6 @@ int sceGeSetMtx(int id, int *mtx)
 
 int sceGeSaveContext(SceGeContext * ctx)
 {
-    dbg_printf("sceGeSaveContext\n");
     if (((int)ctx & 3) != 0)
         return SCE_ERROR_INVALID_POINTER;
     int oldK1 = pspShiftK1();
@@ -1404,7 +1137,6 @@ int sceGeSaveContext(SceGeContext * ctx)
 
 int sceGeRestoreContext(SceGeContext * ctx)
 {
-    dbg_printf("sceGeRestoreContext\n");
     int ret = 0;
     if (((int)ctx & 3) != 0)
         return SCE_ERROR_INVALID_POINTER;
@@ -1715,11 +1447,7 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
 
 int _sceGeModuleStart()
 {
-    //dbg_init(1, FB_NONE, FAT_HARDWARE);
-    dbg_init(1, FB_HARDWARE, FAT_NONE);
-    dbg_printf("Doing init\n");
     sceGeInit();
-    dbg_printf("Init ok\n");
     return 0;
 }
 
@@ -2099,14 +1827,11 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
                       __attribute__ ((unused)), int arg2
                       __attribute__ ((unused)))
 {
-    //dbg_printf("_sceGeFinishInterrupt\n");
     SceGeDisplayList *dl = g_AwQueue.curRunning;
     g_AwQueue.isBreak = 0;
     g_AwQueue.curRunning = NULL;
     if (dl != NULL) {
-        //dbg_printf("_sceGeFinishInterrupt: cur running != NULL\n");
         if (dl->signal == SCE_GE_DL_SIGNAL_SYNC) {
-            //dbg_printf("_sceGeFinishInterrupt: cur running = SYNC\n");
             // 351C
             dl->signal = SCE_GE_DL_SIGNAL_NONE;
             g_AwQueue.curRunning = dl;
@@ -2114,7 +1839,6 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
             pspSync();
             return;
         } else if (dl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
-            //dbg_printf("_sceGeFinishInterrupt: cur running = PAUSE\n");
             // 3468
             int state = HW_GE_EXEC;
             dl->flags = state;
@@ -2153,7 +1877,6 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
         // 309C
         if (dl != NULL) {
             if (dl->state == SCE_GE_DL_STATE_RUNNING) {
-                //dbg_printf("_sceGeFinishInterrupt: cur running = still running\n");
                 // 32DC
                 int *cmdList = (int *)HW_GE_LISTADDR;
                 u32 lastCmd1 = *(int *)UUNCACHED(cmdList - 2);
@@ -2222,7 +1945,6 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
     // 30B0
     SceGeDisplayList *dl2 = g_AwQueue.active_first;
     if (dl2 == NULL) {
-        //dbg_printf("_sceGeFinishInterrupt: active first = NULL\n");
         // 32B4
         HW_GE_EXEC = 0;
         pspSync();
@@ -2231,7 +1953,6 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
         // 3254
         _sceGeClearBp();
     } else {
-        //dbg_printf("_sceGeFinishInterrupt: active first != NULL\n");
         if (dl2->signal == SCE_GE_DL_SIGNAL_PAUSE) {
             // 3264
             dl2->state = SCE_GE_DL_STATE_PAUSED;
@@ -2299,10 +2020,8 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
     // 31C8
     if (dl != NULL) {
         u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
-        //dbg_printf("_sceGeFinishInterrupt: signal %d\n", idx);
         sceKernelSetEventFlag(g_AwQueue.listEvFlagIds[idx / 32], 1 << (idx % 32));
     }
-    //dbg_printf("_sceGeFinishInterrupt: end\n");
 }
 
 void
@@ -2578,7 +2297,6 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
 
 int sceGeListDeQueue(int dlId)
 {
-    dbg_printf("sceGeListDeQueue(%08x)\n", dlId);
     int ret;
     SceGeDisplayList *dl = (SceGeDisplayList *) (dlId ^ g_dlMask);
     int oldK1 = pspShiftK1();
@@ -2641,7 +2359,6 @@ int sceGeListDeQueue(int dlId)
 
 SceGeListState sceGeListSync(int dlId, int mode)
 {
-    dbg_printf("sceGeListSync(%08x, %d)\n", dlId, mode);
     int ret;
     SceGeDisplayList *dl = (SceGeDisplayList *) (dlId ^ g_dlMask);
     u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
@@ -2696,7 +2413,6 @@ SceGeListState sceGeListSync(int dlId, int mode)
 
     // 3DF0
     pspSetK1(oldK1);
-    dbg_printf(" -> sceGeListSync(%08x, %d) = %08x\n", dlId, mode, ret);
     return ret;
 }
 
@@ -2705,7 +2421,6 @@ SceGeListState sceGeListSync(int dlId, int mode)
  */
 SceGeListState sceGeDrawSync(int syncType)
 {
-    dbg_printf("sceGeDrawSync(%d)\n", syncType);
     int ret;
     int oldK1 = pspShiftK1();
     if (syncType == 0) {
@@ -2754,7 +2469,6 @@ SceGeListState sceGeDrawSync(int syncType)
     } else
         ret = SCE_ERROR_INVALID_MODE;
 
-    dbg_printf("-> sceGeDrawSync(%d) = %08x\n", syncType, ret);
     // 3F24
     pspSetK1(oldK1);
     return ret;
@@ -2762,7 +2476,6 @@ SceGeListState sceGeDrawSync(int syncType)
 
 int sceGeBreak(u32 resetQueue, void *arg1)
 {
-    dbg_printf("sceGeBreak\n");
     int ret;
     if (resetQueue >= 2)
         return SCE_ERROR_INVALID_MODE;
@@ -2883,7 +2596,6 @@ int sceGeBreak(u32 resetQueue, void *arg1)
 
 int sceGeContinue()
 {
-    dbg_printf("sceGeContinue\n");
     int oldK1 = pspShiftK1();
     int ret = 0;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -2956,7 +2668,6 @@ int sceGeContinue()
 
 int sceGeSetCallback(SceGeCallbackData * cb)
 {
-    dbg_printf("sceSetCallback(%08x)\n", (u32)cb);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(cb)
         || !pspK1PtrOk(cb->signal_func) || !pspK1PtrOk(cb->finish_func)) {
@@ -3002,7 +2713,6 @@ int sceGeSetCallback(SceGeCallbackData * cb)
 
 int sceGePutBreakpoint(int *inPtr, int size)
 {
-    dbg_printf("sceGePutBreakpoint\n");
     if (size >= 9)
         return SCE_ERROR_INVALID_SIZE;
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -3045,7 +2755,6 @@ int sceGePutBreakpoint(int *inPtr, int size)
 
 int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
 {
-    dbg_printf("sceGeGetBreakpoint\n");
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(outPtr, size * 8) || !pspK1PtrOk(arg2)) {
@@ -3080,7 +2789,6 @@ int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
 
 int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
 {
-    dbg_printf("sceGeListIdList\n");
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(outPtr, size * 4) || !pspK1PtrOk(totalCountPtr)) {
@@ -3115,7 +2823,6 @@ int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr)
 
 int sceGeGetList(int dlId, SceGeDisplayList * outDl, int *outFlag)
 {
-    dbg_printf("sceGeGetList %d\n", sizeof(SceGeDisplayList));
     int oldIntr = sceKernelCpuSuspendIntr();
     if (!pspK1PtrOk(outDl) || !pspK1PtrOk(outFlag)) {
         // 4A8C
@@ -3143,7 +2850,6 @@ int sceGeGetList(int dlId, SceGeDisplayList * outDl, int *outFlag)
 
 int sceGeGetStack(int stackId, SceGeStack *stack)
 {
-    dbg_printf("sceGeGetStack\n");
     SceGeDisplayList *dl = g_AwQueue.active_first;
     if (dl == NULL)
         return 0;
@@ -3182,7 +2888,6 @@ int sceGeGetStack(int stackId, SceGeStack *stack)
 
 int sceGeDebugBreak()
 {
-    dbg_printf("sceGeDebugBreak\n");
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_GeDeciBreak.busy != 0) {
         // 4CF4
@@ -3209,7 +2914,6 @@ int sceGeDebugBreak()
 
 int sceGeDebugContinue(int arg0)
 {
-    dbg_printf("sceGeDebugContinue\n");
     SceGeDisplayList *dl = g_AwQueue.active_first;
     if (dl == NULL)
         return 0;
@@ -3405,7 +3109,6 @@ int sceGeListEnQueueHead(void *list, void *stall, int cbid, SceGeListArgs * arg)
 
 int sceGeUnsetCallback(int cbId)
 {
-    dbg_printf("sceGeUnsetCallback(%08x)\n", cbId);
     int oldK1 = pspShiftK1();
     if (cbId < 0 || cbId >= 16) {
         // 528C
@@ -3632,34 +3335,8 @@ void _sceGeListLazyFlush()
     }
 }
 
-u32 _tmp_base = 0;
-void print_list(void *list, void *stall)
-{
-    u32 *curCmd;
-    for (curCmd = list; (void*)curCmd < stall || stall == NULL; curCmd++) {
-        dbg_printf("- cmd %08x [%s %06x]\n", *curCmd, _dbg_cmds[*curCmd >> 24], *curCmd & 0xFFFFFF);
-        if (*curCmd >> 24 == 0x10) { // base
-            _tmp_base = *curCmd & 0xFFFFFF;
-        }
-        if (*curCmd >> 24 == 0x0A) { // call
-            void *sublist = (void*)((_tmp_base << 8) | (*curCmd & 0xFFFFFF));
-            dbg_printf("==sublist beg at %08x==\n", sublist);
-            print_list(sublist, NULL);
-            dbg_printf("==sublist end==\n");
-        }
-        if (*curCmd >> 24 == 0x0C) {
-            break;
-        }
-        if (*curCmd >> 24 == 0x0B) {
-            break;
-        }
-    }
-}
-
 int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int head)
 {
-    dbg_printf("Enqueue list %08x, stall %08x, cbid %d, args %08x, head %d\n", list, stall, cbid, arg, head);
-    print_list(list, stall);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(list) || !pspK1PtrOk(stall) || !pspK1StaBufOk(arg, 16)) {
         pspSetK1(oldK1);
@@ -3739,7 +3416,6 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
 
     // 5960
     dl = g_AwQueue.free_first;
-    dbg_printf("%d/%d/%p\n", dl->state, dl->signal, dl->ctx);
     if (dl == NULL) {
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);
@@ -3857,7 +3533,6 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
 
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
-    dbg_printf("Enqueued with dlId %08x [list=%d]\n", dlId, idx);
     return dlId;
 }
 
