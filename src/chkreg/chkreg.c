@@ -373,7 +373,7 @@ s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
     return status1;
 }
 
-// Subroutine sceChkregGetPspModel - Address 0x0000079C
+// Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
 s32 sceChkregGetPspModel(void)
 {
     s32 status;
@@ -389,18 +389,21 @@ s32 sceChkregGetPspModel(void)
     {
         case SCE_PSP_PRODUCT_SUB_CODE_TA_079_TA_081:
         case SCE_PSP_PRODUCT_SUB_CODE_TA_082_TA_086:
-            return 1;
+            return SCE_CHKREG_PSP_MODEL_1000_SERIES;
         case SCE_PSP_PRODUCT_SUB_CODE_TA_085_TA_088:
-            return 2;
+            return SCE_CHKREG_PSP_MODEL_2000_SERIES;
         case SCE_PSP_PRODUCT_SUB_CODE_TA_090_TA_092:
         case SCE_PSP_PRODUCT_SUB_CODE_TA_093:
         case SCE_PSP_PRODUCT_SUB_CODE_TA_095:
-            return 3;
+            return SCE_CHKREG_PSP_MODEL_3000_SERIES;
         case SCE_PSP_PRODUCT_SUB_CODE_TA_091:
         case SCE_PSP_PRODUCT_SUB_CODE_TA_094:
         case SCE_PSP_PRODUCT_SUB_CODE_TA_096_TA_097:
-            return 5;
+            // uOFW note: Before the release of the PSP E-1000, '4' was returned for the PSP N-1000 series.
+            // In 6.60, however, both the PSP N-1000 and PSP E-1000 series are grouped together as value '5'.
+            // Why is that?
+            return SCE_CHKREG_PSP_MODEL_N1000_E1000_SERIES;
         default:
-            return 0;
+            return SCE_CHKREG_PSP_MODEL_UNKNOWN_SERIES;
     }
 }

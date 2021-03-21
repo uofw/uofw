@@ -91,6 +91,12 @@ s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1);
 
 s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1);
 
+#define SCE_CHKREG_PSP_MODEL_UNKNOWN_SERIES        0
+#define SCE_CHKREG_PSP_MODEL_1000_SERIES           1
+#define SCE_CHKREG_PSP_MODEL_2000_SERIES           2
+#define SCE_CHKREG_PSP_MODEL_3000_SERIES           3
+#define SCE_CHKREG_PSP_MODEL_N1000_E1000_SERIES    5
+
 s32 sceChkregGetPspModel(void);
 
 #endif // CHKREG_H
