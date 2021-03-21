@@ -222,7 +222,7 @@ s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId)
 
     status1 = SCE_ERROR_SEMAPHORE; // 0x000003BC & 0x000003C8
 
-    /* Allow only single thread access. */
+    /* Allow only one access at a time. */
     status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x000003C4
     if (status2 == SCE_ERROR_OK)
     {
@@ -250,7 +250,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
 
     status1 = SCE_ERROR_SEMAPHORE;
 
-    /* Allow only single thread access. */
+    /* Allow only one access at a time. */
     status2 = sceKernelWaitSema(g_semaId, 1, NULL);
     if (status2 == SCE_ERROR_OK)
     {
@@ -320,27 +320,46 @@ s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
     return error;
 }
 
-// Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8 -- Done
-s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1) {
-    s32 ret = SCE_ERROR_INVALID_INDEX;
+// Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8
+s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1)
+{
+    s32 status1;
+    s32 status2;
 
-    if (arg1 == 0) {
-        ret = SCE_ERROR_SEMAPHORE;
+    if (arg1 != 0) // 0x000006E4
+    {
+        return SCE_ERROR_INVALID_INDEX;
+    }
 
-        if ((sceKernelWaitSema(g_chkregOld_sema, 1, NULL)) == 0) {
-            if (((g_chkregOld.buf[0x48] != 0) || ((ret = sub_00000190()) == 0)) && ((ret = sub_0000020C()) == 0)) {
-                if ((((u32)g_pscode[6] << 0x18) >> 0x1a) == 0x23)
-                    *arg0 = g_pscode[6] << 6 | g_pscode[7] >> 2;
-                else
-                    ret = SCE_ERROR_INVALID_VALUE;
+    status1 = SCE_ERROR_SEMAPHORE;
+
+    /* Allow only one access at a time. */
+    status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x000006FC
+    if (status2 == SCE_ERROR_OK) // 0x000006FC
+    {
+        if ((g_isIDPSCertificateObtained || (status1 = _sceChkregLookupIDPSCertificate()) == SCE_ERROR_OK)
+            && (status1 = _sceChkregVerifyIDPSCertificate()) == SCE_ERROR_OK)
+        {
+            /* PSCode.factory check */
+            if (((g_IDPSCertificate.idps.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
+            {
+                *arg0 = (g_IDPSCertificate.idps.unk9[0] >> 2) | (g_IDPSCertificate.idps.chassisCheck << 6);
             }
-            
-            if ((sceKernelSignalSema(g_chkregOld_sema, 1)) != 0)
-                ret = SCE_ERROR_SEMAPHORE;
+            else
+            {
+                status1 = SCE_ERROR_INVALID_VALUE;
+            }
+        }
+
+        /* Release acquired sema resource. */
+        status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000075C
+        if (status2 != SCE_ERROR_OK) // 0x0000076C
+        {
+            status1 = SCE_ERROR_SEMAPHORE;
         }
     }
-    
-    return ret;
+
+    return status1;
 }
 
 // Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C
