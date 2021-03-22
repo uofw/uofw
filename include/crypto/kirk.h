@@ -55,6 +55,26 @@
 /*!< The length (1472 bit) of the certificate to verify. Used for example for ID Storage keys 0x100 and 0x101. */
 #define KIRK_CERT_LEN               (184)
 
+/* Kirk command specific return values */
+
+#define KIRK_OPERATION_SUCCESS      0x0
+#define KIRK_NOT_ENABLED            0x1
+#define KIRK_INVALID_MODE           0x2
+#define KIRK_HEADER_HASH_INVALID    0x3
+#define KIRK_DATA_HASH_INVALID      0x4
+#define KIRK_SIG_CHECK_INVALID      0x5
+#define KIRK_UNK_1                  0x6
+#define KIRK_UNK_2                  0x7
+#define KIRK_UNK_3                  0x8
+#define KIRK_UNK_4                  0x9
+#define KIRK_UNK_5                  0xA
+#define KIRK_UNK_6                  0xB
+#define KIRK_NOT_INITIALIZED        0xC
+#define KIRK_INVALID_OPERATION      0xD
+#define KIRK_INVALID_SEED_CODE      0xE
+#define KIRK_INVALID_SIZE           0xF
+#define KIRK_DATA_SIZE_ZERO         0x10
+
 
 typedef struct {
     SceSize dataSize;

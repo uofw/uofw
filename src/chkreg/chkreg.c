@@ -36,27 +36,38 @@ g_chkregOld_struct g_chkregOld = { { 0 }, { 0 } };
 
 typedef struct {
     u8 *pIdStorageUMDConfig; // 0
-    u8 *pData; // 4
+    u8 *pWorkBuffer; // 4
 } SceChkreg; // size = 8
 
-#define CHKREG_ID_STORAGE_UMD_CONFIG_SIZE    (5 * SCE_ID_STORAGE_LEAF_SIZE)
+#define CHKREG_UNK9BC_SIZE    0x14
 
-u8 g_idStorageUMDConfig[CHKREG_ID_STORAGE_UMD_CONFIG_SIZE]; // 0x00000A80
+const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
+{
+    0x5F, 0x7C, 0x9B, 0x91,
+    0x60, 0xFF, 0xB3, 0xCE,
+    0x41, 0x9E, 0xBD, 0x2A,
+    0x4E, 0x4B, 0x1B, 0x15,
+    0x2C, 0x2A, 0xDF, 0xA0
+}; // 0x000009BC
 
 SceChkreg g_chkreg = {
     .pIdStorageUMDConfig = &g_idStorageUMDConfig,
-    .pData = &g_unk1540,
+    .pWorkBuffer = &g_unk1540,
 }; // 0x00000A00
 
 u32 g_UMDRegionCodeInfoPostIndex; // 0x00000A40
 u32 g_isUMDRegionCodesObtained; // 0x00000A44
 u32 g_isIDPSCertificateObtained; // 0x00000A48
 
+#define CHKREG_ID_STORAGE_UMD_CONFIG_SIZE    (5 * SCE_ID_STORAGE_LEAF_SIZE)
+
+u8 g_idStorageUMDConfig[CHKREG_ID_STORAGE_UMD_CONFIG_SIZE]; // 0x00000A80
+
 SceIdStorageIDPSCertificate g_IDPSCertificate; // 0x00001480
 
 SceUID g_semaId; // 0x00001538
 
-u32 g_unk1540; // 0x00001540
+u8 g_unk1540[0x38]; // 0x00001540
 
 // Subroutine sub_00000000 - Address 0x00000000
 s32 _sceChkregLookupUMDRegionCodeInfo(void)
@@ -275,49 +286,85 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
 }
 
 // Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C
-s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1) {
-    s32 ret = 0;
-    s32 error = SCE_ERROR_SEMAPHORE;
+s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
+{
+    s32 status1;
+    s32 status2;
 
-    if ((ret = sceKernelWaitSema(g_chkregOld_sema, 1, 0)) == 0) {
-        g_unk2 = 0x34;
-        u32 i = 0;
+    status1 = SCE_ERROR_SEMAPHORE;
 
-        for (i = 0; i < 0x14; i++)
-            g_chkregOld.buf[0x8 + i] = g_chkregOld.unk2[i]; // 0xA00 + 0x8 = 0xA08
+    /* Allow only one access at a time. */
+    status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x00000554
+    if (status2 == SCE_ERROR_OK) // 0x0000055C
+    {
+        u8 *pWorkBuffer = g_chkreg.pWorkBuffer;
 
+        ((u32 *)pWorkBuffer)[0] = 0x34; // 0x00000570 -- TODO: Length of specific data to hash?
+
+        /* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
+
+        // 0x00000574 - 0x0000059C
+        u32 i;
+        for (i = 0; i < CHKREG_UNK9BC_SIZE; i++)
+        {
+            pWorkBuffer[0x4 + i] = g_unk9BC[i];
+        }
+
+        /* Copy 0x20 bytes of input data to work buffer. */
+
+        // 0x000005A0 - 0x000005C0
         for (i = 0; i < 0x10; i++)
-            g_chkregOld.buf[0x1C + i] = (arg0[i] + 0xD4); // 0xA08 + 0x14 = 0xA1C 
+        {
+            pWorkBuffer[0x4 + CHKREG_UNK9BC_SIZE + i] = arg0[0xD4 + i];
+        }
 
+        // 0x000005C4 - 0x000005E4
         for (i = 0; i < 0x10; i++)
-            g_chkregOld.buf[0x2C + i] = (arg0[i] + 0x140); // 0xA1C + 0x10 = 0xA2C
+        {
+            pWorkBuffer[0x4 + CHKREG_UNK9BC_SIZE + 0x10 + i] = arg0[0x140 + i];
+        }
 
-        error = 0;
-
-        if ((ret = sceUtilsBufferCopyWithRange(g_chkregOld.buf, 0x38, g_chkregOld.buf, 0x38, 0xB)) == 0) {
+        /* Compute SHA1 hash. */
+        status1 = sceUtilsBufferCopyWithRange(pWorkBuffer, 0x38, pWorkBuffer, 0x38, KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
+        if (status1 == SCE_ERROR_OK) // 0x00000604
+        {
+            /* Copy first 16 byte of computed hash to target buffer. */
             for (i = 0; i < 0x10; i++)
-                g_chkregOld.buf[i] = arg1[i];
-
-            error = 0;
-        }
-        else {
-            if (ret < 0)
-                error = SCE_ERROR_BUSY;
-            else {
-                error = SCE_ERROR_NOT_INITIALIZED;
-                if (ret != 0xC)
-                    error = SCE_ERROR_NOT_SUPPORTED;
+            {
+                arg1[i] = pWorkBuffer[i];
             }
+
+            status1 = SCE_ERROR_OK;
+        }
+        else if (status1 < SCE_ERROR_OK) // 0x0000060C
+        {
+            status1 = SCE_ERROR_BUSY;
+        }
+        else
+        {
+            // 0x00000614 - 0x00000628
+            status1 = (status1 != KIRK_NOT_INITIALIZED)
+                ? SCE_ERROR_NOT_SUPPORTED
+                : SCE_ERROR_NOT_INITIALIZED;
         }
 
-        for (i = 0; i < 0x38; i++)
-            g_chkregOld.buf[i] = 0;
+        /* Clear work buffer. */
 
-        if ((ret = sceKernelSignalSema(g_chkregOld_sema, 1)) != 0)
-            error = SCE_ERROR_SEMAPHORE;
+        // 0x0000062C - 0x00000644
+        for (i = 0; i < 0x38; i++)
+        {
+            pWorkBuffer[i] = 0;
+        }
+
+        /* Release acquired sema resource. */
+        status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C
+        if (status2 != SCE_ERROR_OK)
+        {
+            status1 = SCE_ERROR_SEMAPHORE;
+        }
     }
 
-    return error;
+    return status1;
 }
 
 // Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8

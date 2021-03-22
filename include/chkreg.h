@@ -87,7 +87,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode);
 
 s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId);
 
-s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1);
+s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1);
 
 /* QA flag */
 #define SCE_CHKREG_PS_FLAGS_QAF      0x00000001
