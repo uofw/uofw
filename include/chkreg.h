@@ -95,7 +95,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1);
 
 #define SCE_CHKREG_PS_FLAGS_INDEX_DEFAULT    0
 
-s32 sceChkregGetPsFlags(u8 *psFlags, s32 index);
+s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index);
 
 #define SCE_CHKREG_PSP_MODEL_UNKNOWN_SERIES        0
 #define SCE_CHKREG_PSP_MODEL_1000_SERIES           1

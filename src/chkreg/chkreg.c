@@ -368,7 +368,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
 }
 
 // Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8
-s32 sceChkregGetPsFlags(u8 *psFlags, s32 index)
+s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
 {
     s32 status1;
     s32 status2;
@@ -401,7 +401,7 @@ s32 sceChkregGetPsFlags(u8 *psFlags, s32 index)
             if (((g_IDPSCertificate.idps.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
             {
                 // uOFW note: Null check missing for arg0
-                *psFlags = (g_IDPSCertificate.idps.chassisCheck << 6) | (g_IDPSCertificate.idps.unk9[0] >> 2);
+                *pPsFlags = (g_IDPSCertificate.idps.chassisCheck << 6) | (g_IDPSCertificate.idps.unk9[0] >> 2);
             }
             else
             {
