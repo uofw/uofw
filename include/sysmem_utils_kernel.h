@@ -27,5 +27,3 @@ int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *unk);
 
 int UtilsForKernel_39FFB756(int);
 
-int UtilsForKernel_79D1C3FA(void);
-
