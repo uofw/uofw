@@ -33,12 +33,12 @@ const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
 
 u32 g_UMDRegionCodeInfoPostIndex; // 0x00000A40
 u32 g_isUMDRegionCodesObtained; // 0x00000A44
-u32 g_isIDPSCertificateObtained; // 0x00000A48
+u32 g_isConsoleIdCertificateObtained; // 0x00000A48
 
 #define CHKREG_ID_STORAGE_UMD_CONFIG_SIZE    (5 * SCE_ID_STORAGE_LEAF_SIZE)
 u8 g_idStorageUMDConfig[CHKREG_ID_STORAGE_UMD_CONFIG_SIZE]; // 0x00000A80
 
-SceIdStorageIDPSCertificate g_IDPSCertificate; // 0x00001480
+SceIdStorageConsoleIdCertificate g_ConsoleIdCertificate; // 0x00001480
 
 SceUID g_semaId; // 0x00001538
 
@@ -54,14 +54,14 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
     u32 i;
     for (i = 0; i < 5; i++)
     {
-        if (sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK
-            || sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_ID_BACKUP_IDPS_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK) // 0x0000003C & 0x0000010C
+        if (sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK
+            || sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_ID_BACKUP_CONSOLE_ID_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK) // 0x0000003C & 0x0000010C
         {
             return SCE_ERROR_NOT_FOUND;
         }
     }
 
-    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
+    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
     // 0x00000064 - 0x00000094
     for (i = 0; i < 256; i++)
@@ -84,7 +84,7 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
 // Subroutine sub_00000128 - Address 0x00000128
 s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 {
-    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
+    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
     // 0x00000138 - 0x00000164
     u32 i;
@@ -101,26 +101,26 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 }
 
 // Subroutine sub_00000190 - Address 0x00000190
-s32 _sceChkregLookupIDPSCertificate(void)
+s32 _sceChkregLookupConsoleIdCertificate(void)
 {
-    /* Obtain an IDPS certificate. */
-    if (sceIdStorageLookup(SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_IDPSCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK
-        || sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_BACKUP_IDPS_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_IDPSCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK) // 0x000001B0 & 0x000001F0
+    /* Obtain a ConsoleOd certificate. */
+    if (sceIdStorageLookup(SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_ConsoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK
+        || sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_BACKUP_CONSOLE_ID_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_ConsoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK) // 0x000001B0 & 0x000001F0
     {
         return SCE_ERROR_NOT_FOUND;
     }
 
-    g_isIDPSCertificateObtained = SCE_TRUE; // 0x000001D4
+    g_isConsoleIdCertificateObtained = SCE_TRUE; // 0x000001D4
 
     return SCE_ERROR_OK;
 }
 
 // Subroutine sub_0000020C - Address 0x0000020C
-s32 _sceChkregVerifyIDPSCertificate(void)
+s32 _sceChkregVerifyConsoleIdCertificate(void)
 {
     s32 status;
 
-    status = sceUtilsBufferCopyWithRange(NULL, 0, (u8 *)&g_IDPSCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
+    status = sceUtilsBufferCopyWithRange(NULL, 0, (u8 *)&g_ConsoleIdCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
 
     return (status != SCE_ERROR_OK)
         ? SCE_ERROR_INVALID_FORMAT
@@ -128,7 +128,7 @@ s32 _sceChkregVerifyIDPSCertificate(void)
 }
 
 // Subroutine module_start - Address 0x00000248
-s32 _sceChkregInit(SceSize args, void *argp)
+s32 _sceChkregInit(SceSize args, const void *argp)
 {
     (void)args;
     (void)argp;
@@ -141,14 +141,14 @@ s32 _sceChkregInit(SceSize args, void *argp)
     }
 
     // 0x00000270 - 0x0000028C
-    for (i = 0; i < sizeof g_IDPSCertificate; i++)
+    for (i = 0; i < sizeof g_ConsoleIdCertificate; i++)
     {
-        ((u8 *)&g_IDPSCertificate)[i] = 0;
+        ((u8 *)&g_ConsoleIdCertificate)[i] = 0;
     }
 
     g_UMDRegionCodeInfoPostIndex = 0; // 0x0x000002B0
     g_isUMDRegionCodesObtained = SCE_FALSE;
-    g_isIDPSCertificateObtained = SCE_FALSE;
+    g_isConsoleIdCertificateObtained = SCE_FALSE;
 
     /* Create a module semaphore which acts as a mutex. */
     g_semaId = sceKernelCreateSema("SceChkreg", SCE_KERNEL_SA_THFIFO, 1, 1, NULL); // 0x000002BC
@@ -160,7 +160,7 @@ s32 _sceChkregInit(SceSize args, void *argp)
 }
 
 // Subroutine module_stop - Address 0x000002E0
-s32 _sceChkregEnd(SceSize args, void *argp)
+s32 _sceChkregEnd(SceSize args, const void *argp)
 {
     (void)args;
     (void)argp;
@@ -178,14 +178,14 @@ s32 _sceChkregEnd(SceSize args, void *argp)
     }
 
     // 0x00000318 - 0x00000334
-    for (i = 0; i < sizeof g_IDPSCertificate; i++)
+    for (i = 0; i < sizeof g_ConsoleIdCertificate; i++)
     {
-        ((u8 *)&g_IDPSCertificate)[i] = 0;
+        ((u8 *)&g_ConsoleIdCertificate)[i] = 0;
     }
 
     g_UMDRegionCodeInfoPostIndex = 0; // 0x00000348
     g_isUMDRegionCodesObtained = SCE_FALSE;
-    g_isIDPSCertificateObtained = SCE_FALSE;
+    g_isConsoleIdCertificateObtained = SCE_FALSE;
 
     /* Only stop the module when it is not currently used by other modules. */
 
@@ -243,13 +243,13 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
     status2 = sceKernelWaitSema(g_semaId, 1, NULL);
     if (status2 == SCE_ERROR_OK)
     {
-        if ((g_isIDPSCertificateObtained || (status1 = _sceChkregLookupIDPSCertificate()) == SCE_ERROR_OK)
-            && (status1 = _sceChkregVerifyIDPSCertificate()) == SCE_ERROR_OK)
+        if ((g_isConsoleIdCertificateObtained || (status1 = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
+            && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
         {
-            pPsCode->companyCode = g_IDPSCertificate.idps.companyCode;
-            pPsCode->productCode = g_IDPSCertificate.idps.productCode;
-            pPsCode->productSubCode = g_IDPSCertificate.idps.productSubCode;
-            pPsCode->factoryCode = g_IDPSCertificate.idps.chassisCheck >> 2;
+            pPsCode->companyCode = g_ConsoleIdCertificate.consoleId.companyCode;
+            pPsCode->productCode = g_ConsoleIdCertificate.consoleId.productCode;
+            pPsCode->productSubCode = g_ConsoleIdCertificate.consoleId.productSubCode;
+            pPsCode->factoryCode = g_ConsoleIdCertificate.consoleId.chassisCheck >> 2;
         }
 
         /* Release acquired sema resource. */
@@ -362,8 +362,8 @@ s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
     status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x000006FC
     if (status2 == SCE_ERROR_OK) // 0x000006FC
     {
-        if ((g_isIDPSCertificateObtained || (status1 = _sceChkregLookupIDPSCertificate()) == SCE_ERROR_OK)
-            && (status1 = _sceChkregVerifyIDPSCertificate()) == SCE_ERROR_OK)
+        if ((g_isConsoleIdCertificateObtained || (status1 = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
+            && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
         {
             /* 
              * PsCode.factoryCode check:
@@ -376,10 +376,10 @@ s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
              * 
              *     1000 11XX (values 0x8C - 0xF)
              */
-            if (((g_IDPSCertificate.idps.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
+            if (((g_ConsoleIdCertificate.consoleId.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
             {
                 // uOFW note: Null check missing for arg0
-                *pPsFlags = (g_IDPSCertificate.idps.chassisCheck << 6) | (g_IDPSCertificate.idps.unk9[0] >> 2);
+                *pPsFlags = (g_ConsoleIdCertificate.consoleId.chassisCheck << 6) | (g_ConsoleIdCertificate.consoleId.unk9[0] >> 2);
             }
             else
             {

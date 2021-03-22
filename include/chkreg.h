@@ -7,7 +7,7 @@
 
 #include "common_header.h"
 
-/* Values (PSP product code/sub code, SceIDPS, ScePsCode) taken from: https://github.com/CelesteBlue-dev/PS-ConsoleId-wiki/blob/master/PS-ConsoleId-wiki.txt */
+/* Values (PSP product code/sub code, SceConsoleId, ScePsCode) taken from: https://github.com/CelesteBlue-dev/PS-ConsoleId-wiki/blob/master/PS-ConsoleId-wiki.txt */
 
 #define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT    0x00 /* Not in use. */
 #define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT       0x01 /* Development Tool DEM-1000 & test unit DTP-T1000 */
@@ -35,15 +35,13 @@
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_096_TA_097    0x09 /* PSP-E10XX 11g */
 
 /** 
- * This structure represents a unique per-console identifier. Known as:
- *   - "PSID" on the PSP (not to mixup with the term "OpenPSID" which describes a different set of identifier bytes)
- *   - ConsoleId on the PS Vita
- *   - IDPS on the PS3
+ * This structure represents a unique per-console identifier. It contains console specific information and can be used,
+ * for example, for DRM purposes and simple PSP hardware model checks.
  * 
- * Felix: 
- * Although Sony is using different names for this data structure on its consoles, "IDPS" is the term which is used by
- * the PS developer community on each Sony console. As such, I wnent with "SceIDPS" here instead of "ScePSID", even
- * though the API names like "sceOpenPSIDGetPSID()" will have to stay the same.
+ * @remark On the PSP, Sony uses the term "PSID" (not to mixup with the term "OpenPSID" which represents a different set of
+ * unique identifier bits). On later consoles, like the PS Vita and PS4, Sony uses the term "ConsoleId" for this set of
+ * identifier bits. To be consistent within the PS family, we are going with the term "ConsoleId" here, even though APIs like
+ * sceOpenPSIDGetPSID() (which returns the ConsoleId) will remain as originally named by Sony.
  */
 typedef struct {
 	/* Unknown. On retail set to 0. */
@@ -57,7 +55,7 @@ typedef struct {
 	/* Chassis check. */
 	u8 chassisCheck; // 8
 	u8 unk9[7]; // 9
-} SceIDPS; // size = 16
+} SceConsoleId; // size = 16
 
 typedef struct {
 	/* Company code. Set to 1. */
@@ -66,7 +64,7 @@ typedef struct {
 	u16 productCode; // 2
 	/* Product sub code. */
 	u16 productSubCode; // 4
-	/* SceIDPS.chassicCheck >> 2 */
+	/* SceConsoleId.chassicCheck >> 2 */
 	u16 factoryCode; // 6
 } ScePsCode; // size = 8
 
