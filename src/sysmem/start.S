@@ -417,11 +417,15 @@ sceSuspendForKernel_B2C9640B:
     addiu $a0, $a0, %lo(g_suspendCtx)
     j loc_0000032C
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_3FD3D324
+    j sceKernelL1DcacheWritebackAll
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -433,8 +437,8 @@ sceKernelDcacheWritebackAll:
     bnez $t8, loc_00000714
     move $at, $ra
 
-    .globl UtilsForUser_3FD3D324
-UtilsForUser_3FD3D324:
+    .globl sceKernelL1DcacheWritebackAll
+sceKernelL1DcacheWritebackAll:
     mfic $v0, $0
     mtic $zr, $0
     mfc0 $t0, COP0_STATE_CONFIG
@@ -480,15 +484,19 @@ loc_000006F0:
     sync
 
 loc_00000714:
-    jal UtilsForUser_3FD3D324
+    jal sceKernelL1DcacheWritebackAll
     nop
     j UtilsForUser_0939D45C
     move $ra, $at
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_AF3766BB
+    j sceKernelL1DcacheWritebackInvalidateAll
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -500,8 +508,8 @@ sceKernelDcacheWritebackInvalidateAll:
     bnez $t8, loc_00000784
     move $at, $ra
 
-    .globl UtilsForUser_AF3766BB
-UtilsForUser_AF3766BB:
+    .globl sceKernelL1DcacheWritebackInvalidateAll
+sceKernelL1DcacheWritebackInvalidateAll:
     mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 2048
     ext $t0, $t0, 6, 3
@@ -518,15 +526,19 @@ loc_00000768:
     sync
 
 loc_00000784:
-    jal UtilsForUser_AF3766BB
+    jal sceKernelL1DcacheWritebackInvalidateAll
     nop
     j UtilsForUser_485E430A
     move $ra, $at
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForKernel_AA9AF5CF
+    j sceKernelL1DcacheInvalidateAll
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -538,8 +550,8 @@ sceKernelDcacheInvalidateAll:
     bnez $t8, loc_00000804
     move $at, $ra
 
-    .globl UtilsForKernel_AA9AF5CF
-UtilsForKernel_AA9AF5CF:
+    .globl sceKernelL1DcacheInvalidateAll
+sceKernelL1DcacheInvalidateAll:
     mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 4096
     ext $t0, $t0, 6, 3
@@ -560,15 +572,19 @@ loc_000007E8:
     move $v0, $zr
 
 loc_00000804:
-    jal UtilsForKernel_AA9AF5CF
+    jal sceKernelL1DcacheInvalidateAll
     nop
     j UtilsForKernel_AF0C0173
     move $ra, $at
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_004D4DEE
+    j sceKernelL1DcacheWritebackRange
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -580,8 +596,8 @@ sceKernelDcacheWritebackRange:
     bnez $t8, loc_000008F0
     move $at, $ra
 
-    .globl UtilsForUser_004D4DEE
-UtilsForUser_004D4DEE:
+    .globl sceKernelL1DcacheWritebackRange
+sceKernelL1DcacheWritebackRange:
     srl $v0, $a1, 16
     bnez $v0, loc_0000087C
     addu $a2, $a0, $a1
@@ -642,18 +658,22 @@ loc_000008E0:
 
 loc_000008F0:
     move $t6, $a0
-    jal UtilsForUser_004D4DEE
+    jal sceKernelL1DcacheWritebackRange
     move $t7, $a1
     bltz $v0, loc_00000870
     move $ra, $at
     move $a0, $t6
     j UtilsForUser_601E43E6
     move $a1, $t7
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_1B0592A3
+    j sceKernelL1DcacheWritebackInvalidateRange
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -665,8 +685,8 @@ sceKernelDcacheWritebackInvalidateRange:
     bnez $t8, loc_000009EC
     move $at, $ra
 
-    .globl UtilsForUser_1B0592A3
-UtilsForUser_1B0592A3:
+    .globl sceKernelL1DcacheWritebackInvalidateRange
+sceKernelL1DcacheWritebackInvalidateRange:
     srl $v0, $a1, 16
     bnez $v0, loc_00000978
     addu $a2, $a0, $a1
@@ -727,18 +747,22 @@ loc_000009DC:
 
 loc_000009EC:
     move $t6, $a0
-    jal UtilsForUser_1B0592A3
+    jal sceKernelL1DcacheWritebackInvalidateRange
     move $t7, $a1
     bltz $v0, loc_0000096C
     move $ra, $at
     move $a0, $t6
     j UtilsForUser_7C5DC253
     move $a1, $t7
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForKernel_157A383A
+    j sceKernelL1DcacheInvalidateRange
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -750,8 +774,8 @@ sceKernelDcacheInvalidateRange:
     bnez $t8, loc_00000ADC
     move $at, $ra
 
-    .globl UtilsForKernel_157A383A
-UtilsForKernel_157A383A:
+    .globl sceKernelL1DcacheInvalidateRange
+sceKernelL1DcacheInvalidateRange:
     beqz $a1, loc_00000A68
     or $t0, $a0, $a1
     andi $t0, $t0, 0x3F
@@ -811,13 +835,15 @@ loc_00000ACC:
 
 loc_00000ADC:
     move $t6, $a0
-    jal UtilsForKernel_157A383A
+    jal sceKernelL1DcacheInvalidateRange
     move $t7, $a1
     bltz $v0, loc_00000A70
     move $ra, $at
     move $a0, $t6
     j UtilsForKernel_F192F2EC
     move $a1, $t7
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -920,11 +946,15 @@ loc_00000C28:
     move $v0, $zr
     jr $ra
     sync
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_740DF7F0
+    j sceKernelL1DcacheProbe
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -936,8 +966,8 @@ sceKernelDcacheProbe:
     bnez $t8, loc_00000CD0
     move $at, $ra
 
-    .globl UtilsForUser_740DF7F0
-UtilsForUser_740DF7F0:
+    .globl sceKernelL1DcacheProbe
+sceKernelL1DcacheProbe:
     mfic $v0, $0
     mtic $zr, $0
     srl $t0, $a0, 13
@@ -960,13 +990,15 @@ UtilsForUser_740DF7F0:
     xor $v0, $v0, $t0
 
 loc_00000CD0:
-    jal UtilsForUser_740DF7F0
+    jal sceKernelL1DcacheProbe
     nop
     jal UtilsForKernel_EC86074D
     move $v1, $v0
     move $ra, $at
     jr $ra
     max $v0, $v0, $v1
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -1000,11 +1032,15 @@ sceKernelDcacheReadTag:
     mtic $t0, $0
     jr $ra
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_DBBE9A46
+    j sceKernelL1DcacheProbeRange
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -1016,8 +1052,8 @@ sceKernelDcacheProbeRange:
     bnez $t8, loc_00000E50
     move $at, $ra
 
-    .globl UtilsForUser_DBBE9A46
-UtilsForUser_DBBE9A46:
+    .globl sceKernelL1DcacheProbeRange
+sceKernelL1DcacheProbeRange:
     mfc0 $t0, COP0_STATE_CONFIG
     beqz $a1, loc_00000E40
     move $v0, $zr
@@ -1083,7 +1119,7 @@ loc_00000E48:
 
 loc_00000E50:
     move $t6, $a0
-    jal UtilsForUser_DBBE9A46
+    jal sceKernelL1DcacheProbeRange
     move $t7, $a1
     move $a0, $t6
     move $a1, $t7
@@ -1092,11 +1128,15 @@ loc_00000E50:
     move $ra, $at
     jr $ra
     max $v0, $v0, $v1
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_7333E539
+    j sceKernelL1IcacheInvalidateAll
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -1108,8 +1148,8 @@ sceKernelIcacheInvalidateAll:
     bnez $t8, loc_00000EE8
     move $at, $ra
 
-    .globl UtilsForUser_7333E539
-UtilsForUser_7333E539:
+    .globl sceKernelL1IcacheInvalidateAll
+sceKernelL1IcacheInvalidateAll:
     mfc0 $t0, COP0_STATE_CONFIG
     li $t1, 4096
     ext $t0, $t0, 9, 3
@@ -1132,13 +1172,17 @@ loc_00000ECC:
 loc_00000EE8:
     jal UtilsForUser_485E430A
     nop
-    j UtilsForUser_7333E539
+    j sceKernelL1IcacheInvalidateAll
     move $ra, $at
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForKernel_43C9A8DB
+    j sceKernelL1IcacheInvalidateRange
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -1150,8 +1194,8 @@ sceKernelIcacheInvalidateRange:
     bnez $t8, loc_00000FF8
     move $at, $ra
 
-    .globl UtilsForKernel_43C9A8DB
-UtilsForKernel_43C9A8DB:
+    .globl sceKernelL1IcacheInvalidateRange
+sceKernelL1IcacheInvalidateRange:
     mfc0 $t0, COP0_STATE_CONFIG
     beqz $a1, loc_00000F64
     li $t1, 4096
@@ -1223,13 +1267,17 @@ loc_00000FF8:
     move $a3, $a1
     move $a0, $a2
     move $a1, $a3
-    j UtilsForKernel_43C9A8DB
+    j sceKernelL1IcacheInvalidateRange
     move $ra, $at
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
-    j UtilsForUser_F0155BCA
+    j sceKernelL1IcacheProbe
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
@@ -1243,8 +1291,8 @@ sceKernelIcacheProbe:
     bnez $t8, loc_00001098
     move $at, $ra
 
-    .globl UtilsForUser_F0155BCA
-UtilsForUser_F0155BCA:
+    .globl sceKernelL1IcacheProbe
+sceKernelL1IcacheProbe:
     mfic $v0, $0
     mtic $zr, $0
     nop
@@ -1266,19 +1314,21 @@ UtilsForUser_F0155BCA:
     or $v0, $t3, $t4
 
 loc_00001098:
-    jal UtilsForUser_F0155BCA
+    jal sceKernelL1IcacheProbe
     nop
     jal UtilsForKernel_EC86074D
     move $v1, $v0
     move $ra, $at
     jr $ra
     or $v0, $v0, $v1
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1120)
     addiu $ra, $ra, %lo(sub_1120)
 
-    .globl UtilsForUser_5C7F2B1A
-UtilsForUser_5C7F2B1A:
+    .globl sceKernelIcacheReadTagForUser
+sceKernelIcacheReadTagForUser:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x0, 0($a0)
@@ -1294,8 +1344,8 @@ UtilsForUser_5C7F2B1A:
     jr $ra
     nop
 
-    .globl UtilsForKernel_5C7F2B1A
-UtilsForKernel_5C7F2B1A:
+    .globl sceKernelIcacheReadTag
+sceKernelIcacheReadTag:
     mfic $t0, $0
     mtic $zr, $0
     cache 0x0, 0($a0)
@@ -1310,11 +1360,13 @@ UtilsForKernel_5C7F2B1A:
 sub_1120:
     move $ra, $t9
     eret
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_0939D45C
+    .globl UtilsForUser_0939D45C # sceKernel??DcacheWritebackAll
 UtilsForUser_0939D45C:
     lui $t0, 0xA7F0
     lui $t1, 0xA000
@@ -1359,11 +1411,13 @@ loc_000011A0:
     lw $zr, 0($t0)
     jr $ra
     move $v0, $zr
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_485E430A
+    .globl UtilsForUser_485E430A # sceKernel??DcacheWritebackInvalidateAll
 UtilsForUser_485E430A:
     lui $t0, 0xA7F0
     lui $t1, 0xB000
@@ -1408,11 +1462,13 @@ loc_00001240:
     lw $zr, 0($t0)
     jr $ra
     move $v0, $zr
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_AF0C0173
+    .globl UtilsForKernel_AF0C0173 # sceKernel??DcacheInvalidateAll
 UtilsForKernel_AF0C0173:
     lui $t0, 0xA7F0
     lui $t1, 0x5000
@@ -1436,31 +1492,37 @@ loc_0000129C:
     lw $zr, 0($t0)
     jr $ra
     move $v0, $zr
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_601E43E6
+    .globl UtilsForUser_601E43E6 # sceKernel??DcacheWritebackRange
 UtilsForUser_601E43E6:
     lui $v0, 0x2000
     lui $v1, 0xA000
     j loc_00001334
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_7C5DC253
+    .globl UtilsForUser_7C5DC253 # sceKernel??DcacheWritebackInvalidateRange
 UtilsForUser_7C5DC253:
     lui $v0, 0x3000
     lui $v1, 0xB000
     j loc_00001334
     nop
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_F192F2EC
+    .globl UtilsForKernel_F192F2EC # sceKernel??DcacheInvalidateRange
 UtilsForKernel_F192F2EC:
     or $t0, $a0, $a1
     andi $t0, $t0, 0x3F
@@ -1568,11 +1630,13 @@ loc_00001454:
 loc_00001458:
     jr $ra
     move $v0, $zr
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_EC86074D
+    .globl UtilsForKernel_EC86074D # sceKernel??I/DcacheProbe
 UtilsForKernel_EC86074D:
     li $t0, 19532
     lui $t1, 0x4C
@@ -1612,11 +1676,13 @@ loc_000014E0:
     ext $v0, $t3, 29, 1
     jr $ra
     addiu $v0, $v0, 1
+
+    # ?
     move $t9, $ra
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_2F80288E
+    .globl UtilsForKernel_2F80288E # sceKernel??DcacheProbeRange
 UtilsForKernel_2F80288E:
     li $t0, 19532
     lui $t1, 0x4C
@@ -1666,13 +1732,13 @@ sub_1594:
     move $ra, $t9
     eret
 
-    .globl UtilsForKernel_A6B0A6B8
+    .globl UtilsForKernel_A6B0A6B8 # return 1 if there's the additional cache?
 UtilsForKernel_A6B0A6B8:
     mfc0 $v0, $24
     jr $ra
     nop
 
-    .globl UtilsForKernel_39FFB756
+    .globl UtilsForKernel_39FFB756 # copy a function doing cache stuff (DcacheWritebackInvalidateAll?) to 0xBFC00F00 and run it there
 UtilsForKernel_39FFB756:
     lui $t0, 0xBFC0
     ori $t0, $t0, 0xF00
@@ -1767,7 +1833,7 @@ loc_000016DC:
     jr $ra
     mtic $t6, $0
 
-    .globl UtilsForKernel_66463BEC
+    .globl UtilsForKernel_66463BEC # while (*0xBD000004 & (arg0 & 5) != 0) {} (not called anywhere)
 UtilsForKernel_66463BEC:
     sync
     lui $v0, 0xBD00

@@ -406,7 +406,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
     return ret;
 }
 
-s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
+s32 sceKernelLoadExecNpDrm(char *file, SceKernelLoadExecParam *opt)
 {
     RunExecParams args;
     SceKernelLoadExecVSHParam vshParam;

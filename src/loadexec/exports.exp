@@ -54,9 +54,10 @@ PSP_EXPORT_END
 PSP_EXPORT_START(LoadExecForUser, 0x0011, 0x4001)
 PSP_EXPORT_FUNC_HASH(sceKernelExitGame)
 PSP_EXPORT_FUNC_HASH(sceKernelExitGameWithStatus)
+# sceKernelSafetyCheck1 according to ps3 NIDs, but doesn't match SHA1
 PSP_EXPORT_FUNC_NID(LoadExecForUser_362A956B, 0x362A956B)
 PSP_EXPORT_FUNC_HASH(sceKernelRegisterExitCallback)
-PSP_EXPORT_FUNC_NID(LoadExecForUser_8ADA38D3, 0x8ADA38D3)
+PSP_EXPORT_FUNC_HASH(sceKernelLoadExecNpDrm)
 PSP_EXPORT_FUNC_HASH(sceKernelLoadExec)
 PSP_EXPORT_FUNC_NID(LoadExecForUser_D1FB50DC, 0xD1FB50DC)
 PSP_EXPORT_END
