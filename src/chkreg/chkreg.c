@@ -21,26 +21,12 @@ SCE_MODULE_STOP("_sceChkregEnd");
 
 SCE_SDK_VERSION(SDK_VERSION);
 
-// TODO: Cleanup/Verify globals
-u32 g_unk;                  // 0x00000B30
-u8 g_pscode[KIRK_CERT_LEN]; // 0x00001480
-SceUID g_chkregOld_sema;       // 0x00001538
-u32 g_unk2;                 // 0x00001540
-
-typedef struct {
-    u8 buf[0x200];    // 0x00000A00 - 0x00000BF4
-    u8 unk2[0x14];    // 0x000009BC
-} g_chkregOld_struct;
-
-g_chkregOld_struct g_chkregOld = { { 0 }, { 0 } };
-
 typedef struct {
     u8 *pIdStorageUMDConfig; // 0
     u8 *pWorkBuffer; // 4
 } SceChkreg; // size = 8
 
 #define CHKREG_UNK9BC_SIZE    0x14
-
 const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
 {
     0x5F, 0x7C, 0x9B, 0x91,
@@ -60,7 +46,6 @@ u32 g_isUMDRegionCodesObtained; // 0x00000A44
 u32 g_isIDPSCertificateObtained; // 0x00000A48
 
 #define CHKREG_ID_STORAGE_UMD_CONFIG_SIZE    (5 * SCE_ID_STORAGE_LEAF_SIZE)
-
 u8 g_idStorageUMDConfig[CHKREG_ID_STORAGE_UMD_CONFIG_SIZE]; // 0x00000A80
 
 SceIdStorageIDPSCertificate g_IDPSCertificate; // 0x00001480
