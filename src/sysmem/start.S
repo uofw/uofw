@@ -486,7 +486,7 @@ loc_000006F0:
 loc_00000714:
     jal sceKernelL1DcacheWritebackAll
     nop
-    j UtilsForUser_0939D45C
+    j sceKernelL2cacheWritebackAll
     move $ra, $at
 
     # ?
@@ -528,7 +528,7 @@ loc_00000768:
 loc_00000784:
     jal sceKernelL1DcacheWritebackInvalidateAll
     nop
-    j UtilsForUser_485E430A
+    j sceKernelL2cacheWritebackInvalidateAll
     move $ra, $at
 
     # ?
@@ -574,7 +574,7 @@ loc_000007E8:
 loc_00000804:
     jal sceKernelL1DcacheInvalidateAll
     nop
-    j UtilsForKernel_AF0C0173
+    j sceKernelL2cacheInvalidateAll
     move $ra, $at
 
     # ?
@@ -663,7 +663,7 @@ loc_000008F0:
     bltz $v0, loc_00000870
     move $ra, $at
     move $a0, $t6
-    j UtilsForUser_601E43E6
+    j sceKernelL2cacheWritebackRange
     move $a1, $t7
 
     # ?
@@ -752,7 +752,7 @@ loc_000009EC:
     bltz $v0, loc_0000096C
     move $ra, $at
     move $a0, $t6
-    j UtilsForUser_7C5DC253
+    j sceKernelL2cacheWritebackInvalidateRange
     move $a1, $t7
 
     # ?
@@ -840,7 +840,7 @@ loc_00000ADC:
     bltz $v0, loc_00000A70
     move $ra, $at
     move $a0, $t6
-    j UtilsForKernel_F192F2EC
+    j sceKernelL2cacheInvalidateRange
     move $a1, $t7
 
     # ?
@@ -992,7 +992,7 @@ sceKernelL1DcacheProbe:
 loc_00000CD0:
     jal sceKernelL1DcacheProbe
     nop
-    jal UtilsForKernel_EC86074D
+    jal sceKernelL2cacheProbe
     move $v1, $v0
     move $ra, $at
     jr $ra
@@ -1123,7 +1123,7 @@ loc_00000E50:
     move $t7, $a1
     move $a0, $t6
     move $a1, $t7
-    jal UtilsForKernel_2F80288E
+    jal sceKernelL2cacheProbeRange
     move $v1, $v0
     move $ra, $at
     jr $ra
@@ -1170,7 +1170,7 @@ loc_00000ECC:
     move $v0, $zr
 
 loc_00000EE8:
-    jal UtilsForUser_485E430A
+    jal sceKernelL2cacheWritebackInvalidateAll
     nop
     j sceKernelL1IcacheInvalidateAll
     move $ra, $at
@@ -1263,7 +1263,7 @@ loc_00000FD8:
 
 loc_00000FF8:
     move $a2, $a0
-    jal UtilsForUser_7C5DC253
+    jal sceKernelL2cacheWritebackInvalidateRange
     move $a3, $a1
     move $a0, $a2
     move $a1, $a3
@@ -1316,7 +1316,7 @@ sceKernelL1IcacheProbe:
 loc_00001098:
     jal sceKernelL1IcacheProbe
     nop
-    jal UtilsForKernel_EC86074D
+    jal sceKernelL2cacheProbe
     move $v1, $v0
     move $ra, $at
     jr $ra
@@ -1366,8 +1366,8 @@ sub_1120:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_0939D45C # sceKernel??DcacheWritebackAll
-UtilsForUser_0939D45C:
+    .globl sceKernelL2cacheWritebackAll
+sceKernelL2cacheWritebackAll:
     lui $t0, 0xA7F0
     lui $t1, 0xA000
     ori $t1, $t1, 0x3F
@@ -1417,8 +1417,8 @@ loc_000011A0:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_485E430A # sceKernel??DcacheWritebackInvalidateAll
-UtilsForUser_485E430A:
+    .globl sceKernelL2cacheWritebackInvalidateAll
+sceKernelL2cacheWritebackInvalidateAll:
     lui $t0, 0xA7F0
     lui $t1, 0xB000
     ori $t1, $t1, 0x3F
@@ -1468,8 +1468,8 @@ loc_00001240:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_AF0C0173 # sceKernel??DcacheInvalidateAll
-UtilsForKernel_AF0C0173:
+    .globl sceKernelL2cacheInvalidateAll
+sceKernelL2cacheInvalidateAll:
     lui $t0, 0xA7F0
     lui $t1, 0x5000
     ori $t1, $t1, 0x3F
@@ -1498,8 +1498,8 @@ loc_0000129C:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_601E43E6 # sceKernel??DcacheWritebackRange
-UtilsForUser_601E43E6:
+    .globl sceKernelL2cacheWritebackRange
+sceKernelL2cacheWritebackRange:
     lui $v0, 0x2000
     lui $v1, 0xA000
     j loc_00001334
@@ -1510,8 +1510,8 @@ UtilsForUser_601E43E6:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForUser_7C5DC253 # sceKernel??DcacheWritebackInvalidateRange
-UtilsForUser_7C5DC253:
+    .globl sceKernelL2cacheWritebackInvalidateRange
+sceKernelL2cacheWritebackInvalidateRange:
     lui $v0, 0x3000
     lui $v1, 0xB000
     j loc_00001334
@@ -1522,8 +1522,8 @@ UtilsForUser_7C5DC253:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_F192F2EC # sceKernel??DcacheInvalidateRange
-UtilsForKernel_F192F2EC:
+    .globl sceKernelL2cacheInvalidateRange
+sceKernelL2cacheInvalidateRange:
     or $t0, $a0, $a1
     andi $t0, $t0, 0x3F
     bnez $t0, loc_00001328
@@ -1636,8 +1636,8 @@ loc_00001458:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_EC86074D # sceKernel??I/DcacheProbe
-UtilsForKernel_EC86074D:
+    .globl sceKernelL2cacheProbe
+sceKernelL2cacheProbe:
     li $t0, 19532
     lui $t1, 0x4C
     ori $t1, $t1, 0x4C
@@ -1682,8 +1682,8 @@ loc_000014E0:
     lui $ra, %hi(sub_1594)
     addiu $ra, $ra, %lo(sub_1594)
 
-    .globl UtilsForKernel_2F80288E # sceKernel??DcacheProbeRange
-UtilsForKernel_2F80288E:
+    .globl sceKernelL2cacheProbeRange
+sceKernelL2cacheProbeRange:
     li $t0, 19532
     lui $t1, 0x4C
     ori $t1, $t1, 0x4C
