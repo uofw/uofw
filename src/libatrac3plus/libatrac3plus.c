@@ -595,7 +595,7 @@ int sceAtracStartEntry(SceSize argSize __attribute__((unused)), const void *argB
     return (sceAtracReinit(2, 2) < 0);
 }
 
-int sceAtracEndEntry(void)
+int sceAtracEndEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     if (g_edramAddr != -1)
         sceAudiocodecReleaseEDRAM(&g_atracIds[0].codec);
