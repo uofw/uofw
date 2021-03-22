@@ -89,7 +89,13 @@ s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId);
 
 s32 sceChkreg_driver_9C6E1D34(u8 *arg0, u8 *arg1);
 
-s32 sceChkreg_driver_6894A027(u8 *arg0, s32 arg1);
+/* QA flag */
+#define SCE_CHKREG_PS_FLAGS_QAF      0x00000001
+#define SCE_CHKREG_PS_FLAGS_UNK2F    0x00000002
+
+#define SCE_CHKREG_PS_FLAGS_INDEX_DEFAULT    0
+
+s32 sceChkregGetPsFlags(u8 *psFlags, s32 index);
 
 #define SCE_CHKREG_PSP_MODEL_UNKNOWN_SERIES        0
 #define SCE_CHKREG_PSP_MODEL_1000_SERIES           1
