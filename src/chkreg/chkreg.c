@@ -21,25 +21,15 @@ SCE_MODULE_STOP("_sceChkregEnd");
 
 SCE_SDK_VERSION(SDK_VERSION);
 
-typedef struct {
-    u8 *pIdStorageUMDConfig; // 0
-    u8 *pWorkBuffer; // 4
-} SceChkreg; // size = 8
-
-#define CHKREG_UNK9BC_SIZE    0x14
+#define CHKREG_UNK9BC_SIZE    (0x14)
 const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
 {
     0x5F, 0x7C, 0x9B, 0x91,
     0x60, 0xFF, 0xB3, 0xCE,
     0x41, 0x9E, 0xBD, 0x2A,
     0x4E, 0x4B, 0x1B, 0x15,
-    0x2C, 0x2A, 0xDF, 0xA0
+    0x2C, 0x2A, 0xDF, 0xA0,
 }; // 0x000009BC
-
-SceChkreg g_chkreg = {
-    .pIdStorageUMDConfig = &g_idStorageUMDConfig,
-    .pWorkBuffer = &g_unk1540,
-}; // 0x00000A00
 
 u32 g_UMDRegionCodeInfoPostIndex; // 0x00000A40
 u32 g_isUMDRegionCodesObtained; // 0x00000A44
@@ -54,6 +44,9 @@ SceUID g_semaId; // 0x00001538
 
 u8 g_unk1540[0x38]; // 0x00001540
 
+u8 *g_pIdStorageUMDConfig = (u8 *)&g_idStorageUMDConfig; // 0x00000A00
+u8 *g_pWorkBuffer = (u8 *)&g_unk1540; // 0x00000A04
+
 // Subroutine sub_00000000 - Address 0x00000000
 s32 _sceChkregLookupUMDRegionCodeInfo(void)
 {
@@ -61,14 +54,14 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
     u32 i;
     for (i = 0; i < 5; i++)
     {
-        if (sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1 + i, &g_chkreg.pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK
-            || sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_ID_BACKUP_IDPS_OPEN_PSID_3_UMD_1 + i, &g_chkreg.pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK) // 0x0000003C & 0x0000010C
+        if (sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK
+            || sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_ID_BACKUP_IDPS_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK) // 0x0000003C & 0x0000010C
         {
             return SCE_ERROR_NOT_FOUND;
         }
     }
 
-    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_chkreg.pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
+    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
     // 0x00000064 - 0x00000094
     for (i = 0; i < 256; i++)
@@ -89,9 +82,9 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
 }
 
 // Subroutine sub_00000128 - Address 0x00000128
-s32 _sceChkregCheckRegion(s32 arg0, s32 umdMediaTypeRegionId)
+s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 {
-    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_chkreg.pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
+    SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_IDPS_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
     // 0x00000138 - 0x00000164
     u32 i;
@@ -127,7 +120,7 @@ s32 _sceChkregVerifyIDPSCertificate(void)
 {
     s32 status;
 
-    status = sceUtilsBufferCopyWithRange(NULL, 0, &g_IDPSCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
+    status = sceUtilsBufferCopyWithRange(NULL, 0, (u8 *)&g_IDPSCertificate, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); // 0x0x00000228
 
     return (status != SCE_ERROR_OK)
         ? SCE_ERROR_INVALID_FORMAT
@@ -144,7 +137,7 @@ s32 _sceChkregInit(SceSize args, void *argp)
     u32 i;
     for (i = 0; i < CHKREG_ID_STORAGE_UMD_CONFIG_SIZE; i++)
     {
-        ((u8 *)g_chkreg.pIdStorageUMDConfig)[i] = 0;
+        g_pIdStorageUMDConfig[i] = 0;
     }
 
     // 0x00000270 - 0x0000028C
@@ -181,7 +174,7 @@ s32 _sceChkregEnd(SceSize args, void *argp)
     u32 i;
     for (i = 0; i < CHKREG_ID_STORAGE_UMD_CONFIG_SIZE; i++)
     {
-        ((u8 *)g_chkreg.pIdStorageUMDConfig)[i] = 0;
+        g_pIdStorageUMDConfig[i] = 0;
     }
 
     // 0x00000318 - 0x00000334
@@ -207,7 +200,7 @@ s32 _sceChkregEnd(SceSize args, void *argp)
 
     /* Module still in use, don't stop it yet. */
 
-    SCE_KERNEL_STOP_FAIL;
+    return SCE_KERNEL_STOP_FAIL;
 }
 
 // Subroutine sceChkreg_driver_54495B19 - Address 0x00000390
@@ -282,7 +275,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
     status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x00000554
     if (status2 == SCE_ERROR_OK) // 0x0000055C
     {
-        u8 *pWorkBuffer = g_chkreg.pWorkBuffer;
+        u8 *pWorkBuffer = g_pWorkBuffer;
 
         ((u32 *)pWorkBuffer)[0] = 0x34; // 0x00000570 -- TODO: Length of specific data to hash?
 
