@@ -6,7 +6,7 @@
 #define IDSTORAGE_H
 
 #include "common_header.h"
-#include "chkreg.h"
+#include "openpsid_kernel.h"
 
 /* Size of an ID storage leaf. In byte. */
 #define SCE_ID_STORAGE_LEAF_SIZE   512

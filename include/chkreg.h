@@ -34,29 +34,6 @@
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_095           0x08 /* PSP-30XX 07g & 09g */
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_096_TA_097    0x09 /* PSP-E10XX 11g */
 
-/** 
- * This structure represents a unique per-console identifier. It contains console specific information and can be used,
- * for example, for DRM purposes and simple PSP hardware model checks.
- * 
- * @remark On the PSP, Sony uses the term "PSID" (not to mixup with the term "OpenPSID" which represents a different set of
- * unique identifier bits). On later consoles, like the PS Vita and PS4, Sony uses the term "ConsoleId" for this set of
- * identifier bits. To be consistent within the PS family, we are going with the term "ConsoleId" here, even though APIs like
- * sceOpenPSIDGetPSID() (which returns the ConsoleId) will remain as originally named by Sony.
- */
-typedef struct {
-	/* Unknown. On retail set to 0. */
-	u16 unk0; // 0
-	/* Company code. Set to 1. */
-	u16 companyCode; // 2
-	/* Product code. */
-	u16 productCode; // 4
-	/* Product sub code. */
-	u16 productSubCode; // 6
-	/* Chassis check. */
-	u8 chassisCheck; // 8
-	u8 unk9[7]; // 9
-} SceConsoleId; // size = 16
-
 typedef struct {
 	/* Company code. Set to 1. */
 	u16 companyCode; // 0
