@@ -249,7 +249,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
             pPsCode->companyCode = g_ConsoleIdCertificate.consoleId.companyCode;
             pPsCode->productCode = g_ConsoleIdCertificate.consoleId.productCode;
             pPsCode->productSubCode = g_ConsoleIdCertificate.consoleId.productSubCode;
-            pPsCode->factoryCode = g_ConsoleIdCertificate.consoleId.chassisCheck >> 2;
+            pPsCode->factoryCode = g_ConsoleIdCertificate.consoleId.factoryCode;
         }
 
         /* Release acquired sema resource. */
@@ -376,10 +376,10 @@ s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
              * 
              *     1000 11XX (values 0x8C - 0xF)
              */
-            if (((g_ConsoleIdCertificate.consoleId.chassisCheck >> 2) & 0x3F) == 0x23) // 0x00000748
+            if (g_ConsoleIdCertificate.consoleId.factoryCode == 0x23) // 0x00000748
             {
                 // uOFW note: Null check missing for arg0
-                *pPsFlags = (g_ConsoleIdCertificate.consoleId.chassisCheck << 6) | (g_ConsoleIdCertificate.consoleId.unk9[0] >> 2);
+                *pPsFlags = (g_ConsoleIdCertificate.consoleId.psFlagsMajor << 6) | (g_ConsoleIdCertificate.consoleId.psFlagsMinor);
             }
             else
             {

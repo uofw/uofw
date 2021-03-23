@@ -25,9 +25,12 @@ typedef struct {
 	u16 productCode; // 4
 	/* Product sub code. */
 	u16 productSubCode; // 6
-	/* Chassis check. */
-	u8 chassisCheck; // 8
-	u8 unk9[7]; // 9
+	u8 psFlagsMajor : 2; // 8
+	/* Factory code. */
+	u8 factoryCode : 6; // 8
+	u8 uniqueIdMajor : 2; // 9
+	u8 psFlagsMinor : 6; // 9
+	u8 uniqueIdMinor[6]; // 10
 } SceConsoleId; // size = 16
 
 #endif // OPENPSID_KERNEL_H
