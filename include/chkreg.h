@@ -9,20 +9,20 @@
 
 /* Values (PSP product code/sub code, SceConsoleId, ScePsCode) taken from: https://github.com/CelesteBlue-dev/PS-ConsoleId-wiki/blob/master/PS-ConsoleId-wiki.txt */
 
-#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT    0x00 /* Not in use. */
-#define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT       0x01 /* Development Tool DEM-1000 & test unit DTP-T1000 */
-#define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                0x02 /* Testing Tool DTP-H1500 */
-#define SCE_PRODUCT_CODE_CEX_JAPAN                       0x03 /* Retail Japan */
-#define SCE_PRODUCT_CODE_CEX_NORTH_AMERICA               0x04 /* Retail North America */
-#define SCE_PRODUCT_CODE_CEX_EUROPE_MIDDLE_EAST_AFRIKA   0x05 /* Retail Europe/Middle East/Afrika */
-#define SCE_PRODUCT_CODE_CEX_KOREA                       0x06 /* Retail South Korea */
-#define SCE_PRODUCT_CODE_CEX_UNITED_KINGDOM              0x07 /* Retail Great Britain/United Kingdom */
-#define SCE_PRODUCT_CODE_CEX_MEXIKO_LATIN_AMERICA        0x08 /* Retail Mexiko/Latin America */
-#define SCE_PRODUCT_CODE_CEX_AUSTRALIA_NEW_ZEALAND       0x09 /* Retail Australia/New Zealand */
-#define SCE_PRODUCT_CODE_CEX_HONGKONG_SINGAPORE          0x0A /* Retail Hong Kong/Singapore */
-#define SCE_PRODUCT_CODE_CEX_TAIWAN                      0x0B /* Retail Taiwan */
-#define SCE_PRODUCT_CODE_CEX_RUSSIA                      0x0C /* Retail Russia */
-#define SCE_PRODUCT_CODE_CEX_CHINA                       0x0D /* Retail China */
+#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT         0x00 /* Not in use. */
+#define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT            0x01 /* Development Tool DEM-1000 & test unit DTP-T1000 */
+#define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                     0x02 /* Testing Tool DTP-H1500 */
+#define SCE_PSP_PRODUCT_CODE_CEX_JAPAN                        0x03 /* Retail Japan */
+#define SCE_PSP_PRODUCT_CODE_CEX_NORTH_AMERICA                0x04 /* Retail North America */
+#define SCE_PSP_PRODUCT_CODE_CEX_EUROPE_MIDDLE_EAST_AFRIKA    0x05 /* Retail Europe/Middle East/Afrika */
+#define SCE_PSP_PRODUCT_CODE_CEX_KOREA                        0x06 /* Retail South Korea */
+#define SCE_PSP_PRODUCT_CODE_CEX_UNITED_KINGDOM               0x07 /* Retail Great Britain/United Kingdom */
+#define SCE_PSP_PRODUCT_CODE_CEX_MEXIKO_LATIN_AMERICA         0x08 /* Retail Mexiko/Latin America */
+#define SCE_PSP_PRODUCT_CODE_CEX_AUSTRALIA_NEW_ZEALAND        0x09 /* Retail Australia/New Zealand */
+#define SCE_PSP_PRODUCT_CODE_CEX_HONGKONG_SINGAPORE           0x0A /* Retail Hong Kong/Singapore */
+#define SCE_PSP_PRODUCT_CODE_CEX_TAIWAN                       0x0B /* Retail Taiwan */
+#define SCE_PSP_PRODUCT_CODE_CEX_RUSSIA                       0x0C /* Retail Russia */
+#define SCE_PSP_PRODUCT_CODE_CEX_CHINA                        0x0D /* Retail China */
 
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_079_TA_081    0x01 /* PSP-10XX 01g */
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_082_TA_086    0x02 /* PSP-10XX 01g */
