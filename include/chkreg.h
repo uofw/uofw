@@ -7,33 +7,10 @@
 
 #include "common_header.h"
 
-/* Values (PSP product code/sub code, SceConsoleId, ScePsCode) taken from: https://github.com/CelesteBlue-dev/PS-ConsoleId-wiki/blob/master/PS-ConsoleId-wiki.txt */
-
-#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT         0x00 /* Not in use. */
-#define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT            0x01 /* Development Tool DEM-1000 & test unit DTP-T1000 */
-#define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                     0x02 /* Testing Tool DTP-H1500 */
-#define SCE_PSP_PRODUCT_CODE_CEX_JAPAN                        0x03 /* Retail Japan */
-#define SCE_PSP_PRODUCT_CODE_CEX_NORTH_AMERICA                0x04 /* Retail North America */
-#define SCE_PSP_PRODUCT_CODE_CEX_EUROPE_MIDDLE_EAST_AFRIKA    0x05 /* Retail Europe/Middle East/Afrika */
-#define SCE_PSP_PRODUCT_CODE_CEX_KOREA                        0x06 /* Retail South Korea */
-#define SCE_PSP_PRODUCT_CODE_CEX_UNITED_KINGDOM               0x07 /* Retail Great Britain/United Kingdom */
-#define SCE_PSP_PRODUCT_CODE_CEX_MEXIKO_LATIN_AMERICA         0x08 /* Retail Mexiko/Latin America */
-#define SCE_PSP_PRODUCT_CODE_CEX_AUSTRALIA_NEW_ZEALAND        0x09 /* Retail Australia/New Zealand */
-#define SCE_PSP_PRODUCT_CODE_CEX_HONGKONG_SINGAPORE           0x0A /* Retail Hong Kong/Singapore */
-#define SCE_PSP_PRODUCT_CODE_CEX_TAIWAN                       0x0B /* Retail Taiwan */
-#define SCE_PSP_PRODUCT_CODE_CEX_RUSSIA                       0x0C /* Retail Russia */
-#define SCE_PSP_PRODUCT_CODE_CEX_CHINA                        0x0D /* Retail China */
-
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_079_TA_081    0x01 /* PSP-10XX 01g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_082_TA_086    0x02 /* PSP-10XX 01g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_085_TA_088    0x03 /* PSP-20XX 02g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_090_TA_092    0x04 /* PSP-30XX 03g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_091           0x05 /* PSP-N10XX 05g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_093           0x06 /* PSP-30XX 04g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_094           0x07 /* PSP-N10XX 05g - prototype only */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_095           0x08 /* PSP-30XX 07g & 09g */
-#define SCE_PSP_PRODUCT_SUB_CODE_TA_096_TA_097    0x09 /* PSP-E10XX 11g */
-
+/**
+ * This structure contains console specific information. It is a subset of the the ::SceConsoleId.
+ * Check <openpsid_kernel.h> for possible member values.
+ */
 typedef struct {
 	/* Company code. Set to 1. */
 	u16 companyCode; // 0

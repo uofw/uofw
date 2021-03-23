@@ -373,7 +373,7 @@ s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
              * 
              *     1000 11XX (values 0x8C - 0x8F, with the lower two bit being SceConsoleId.psFlagsMajor)
              */
-            if (g_ConsoleIdCertificate.consoleId.factoryCode == SCE_CONSOLE_ID_FACTORY_CODE_DIAG) // 0x00000748
+            if (g_ConsoleIdCertificate.consoleId.factoryCode == SCE_PSP_FACTORY_CODE_DIAG) // 0x00000748
             {
                 // uOFW note: Null check missing for pPsFlags
                 *pPsFlags = (g_ConsoleIdCertificate.consoleId.psFlagsMajor << 6) | (g_ConsoleIdCertificate.consoleId.psFlagsMinor);
