@@ -103,7 +103,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 // Subroutine sub_00000190 - Address 0x00000190
 s32 _sceChkregLookupConsoleIdCertificate(void)
 {
-    /* Obtain a ConsoleOd certificate. */
+    /* Obtain a ConsoleId certificate. */
     if (sceIdStorageLookup(SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_ConsoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK
         || sceIdStorageLookup(SCE_ID_STORAGE_LEAF_ID_BACKUP_CONSOLE_ID_OPEN_PSID_1, SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1, &g_ConsoleIdCertificate, KIRK_CERT_LEN) < SCE_ERROR_OK) // 0x000001B0 & 0x000001F0
     {
