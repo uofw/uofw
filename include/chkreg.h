@@ -41,7 +41,7 @@ typedef struct {
 	u16 productCode; // 2
 	/* Product sub code. */
 	u16 productSubCode; // 4
-	/* SceConsoleId.chassicCheck >> 2 */
+	/* Factory code. */
 	u16 factoryCode; // 6
 } ScePsCode; // size = 8
 

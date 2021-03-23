@@ -366,19 +366,16 @@ s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
             && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
         {
             /* 
-             * PsCode.factoryCode check:
+             * FactoryCode check:
              * 
-             * The test is passed if the PsCode.factoryCode has the following value:
+             * The PsFlags (which can include the QA flag, for example) are only returned when the factory code has been
+             * set to "Diag". As such, the 8th byte in the SceConsoleId data needs to be:
              * 
-             *     XXXX XXXX XX10 0011
-             * 
-             * This means IDPS.chassisCheck needs to be:
-             * 
-             *     1000 11XX (values 0x8C - 0xF)
+             *     1000 11XX (values 0x8C - 0x8F, with the lower two bit being SceConsoleId.psFlagsMajor)
              */
-            if (g_ConsoleIdCertificate.consoleId.factoryCode == 0x23) // 0x00000748
+            if (g_ConsoleIdCertificate.consoleId.factoryCode == SCE_CONSOLE_ID_FACTORY_CODE_DIAG) // 0x00000748
             {
-                // uOFW note: Null check missing for arg0
+                // uOFW note: Null check missing for pPsFlags
                 *pPsFlags = (g_ConsoleIdCertificate.consoleId.psFlagsMajor << 6) | (g_ConsoleIdCertificate.consoleId.psFlagsMinor);
             }
             else

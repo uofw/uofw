@@ -7,6 +7,8 @@
 
 #include "common_header.h"
 
+#define SCE_CONSOLE_ID_FACTORY_CODE_DIAG    35
+
 /**
  * This structure represents a unique per-console identifier. It contains console specific information and can be used,
  * for example, for DRM purposes and simple PSP hardware model checks.
@@ -25,10 +27,12 @@ typedef struct {
 	u16 productCode; // 4
 	/* Product sub code. */
 	u16 productSubCode; // 6
+	/* Upper two bit of PsFlags. */
 	u8 psFlagsMajor : 2; // 8
 	/* Factory code. */
 	u8 factoryCode : 6; // 8
 	u8 uniqueIdMajor : 2; // 9
+	/* Lower six bit of the PsFlags. Contain the QA flag, if set. */
 	u8 psFlagsMinor : 6; // 9
 	u8 uniqueIdMinor[6]; // 10
 } SceConsoleId; // size = 16
