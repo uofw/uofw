@@ -31,6 +31,10 @@ typedef struct {
  */
 s32 sceChkregGetPsCode(ScePsCode *pPsCode);
 
+#define SCE_CHKREG_UMD_MEDIA_TYPE_GAME     0x00
+#define SCE_CHKREG_UMD_MEDIA_TYPE_VIDEO    0x20
+#define SCE_CHKREG_UMD_MEDIA_TYPE_AUDIO    0x40
+
 #define SCE_PSP_REGION_JAPAN                        0x0
 #define SCE_PSP_REGION_NORTH_AMERICA                0x1
 #define SCE_PSP_REGION_EUROPE_MIDDLE_EAST_AFRICA    0x2
@@ -42,7 +46,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode);
 #define SCE_PSP_REGION_TAIWAN                       0x8
 #define SCE_PSP_REGION_RUSSIA                       0x9
 #define SCE_PSP_REGION_CHINA                        0xA
-#define SCE_PSP_REGION_UNKNOWN_15                   0xF
+#define SCE_PSP_REGION_UNKNOWN_15                   0xF /* Perhaps all regions to test?*/
 
 /**
  * Checks if the UMD with the given media type can be started for the specified region on the PSP system.
@@ -72,8 +76,8 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1);
  * PSP system parameters (such as the available RAM (32MB/64MB), the WLAN coexistency max clock frequency or whether the
  * Cross or Circle button acts as the [enter] button).
  * 
- * The Ps flags can only be successfully obtained on certain PSP systems (such as test hardware). On retail PSP systems,
- * an error is returned.
+ * The Ps flags can only be successfully obtained on certain PSP systems (such as test/development hardware). On retail
+ * PSP systems, an error is returned.
  * 
  * @param pPsFlags Pointer to an u8 variable which is to receive the Ps flags.
  * @param index Specify ::SCE_CHKREG_PS_FLAGS_INDEX_DEFAULT.
