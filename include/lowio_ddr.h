@@ -6,9 +6,8 @@
 
 int sceDdrFlush(int);
 
-int sceDdr_driver_00E36648(void);
-
-int sceDdr_driver_E0A39D3E(s32 arg0);
+int sceDdrGetPowerDownCounter(void);
+int sceDdrSetPowerDownCounter(s32 counter);
 
 // TODO: unsure about how many arguments (0/1/2 - opinions needed)
 s32 sceDdr_driver_0BAAE4C5(void);

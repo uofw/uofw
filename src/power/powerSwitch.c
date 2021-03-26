@@ -154,7 +154,7 @@ typedef struct {
      * at the time the PSP system is suspending.
      */
     s32 pllOutSelect; // 20480 (0x5000)
-    s32 unk20484; // 20484 (0x5004)
+    s32 powerDownCounter; // 20484 (0x5004)
     /* Contains resume data required to successfully resume the system from suspension. */
     ScePowerResumeInfo resumeInfo; // 20488 (0x5008) - 20696
     u32 unk20520[44]; // 20520 -- TODO: This might not actually be an array but choosing one for convenience for now
@@ -1310,10 +1310,9 @@ static s32 _scePowerSuspendOperation(s32 mode)
     g_Resume.pllOutSelect = pllOutSelect; // 0x00002054
     sysEventSuspendPayloadResumeData.pllOutSelect = pllOutSelect; // 0x00002068
 
-    // Reads a value for HW address 0xBD000044
-    s32 valBD000044 = sceDdr_driver_00E36648(); // 0x00002050
-    g_Resume.unk20484 = valBD000044; // 0x00002058
-    sysEventSuspendPayloadResumeData.unk44 = valBD000044; //0x00002060
+    s32 powerDownCounter = sceDdrGetPowerDownCounter(); // 0x00002050
+    g_Resume.powerDownCounter = powerDownCounter; // 0x00002058
+    sysEventSuspendPayloadResumeData.powerDownCounter = powerDownCounter; //0x00002060
 
     _scePowerFreqSuspend();
 
@@ -1572,7 +1571,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
     _scePowerFreqResume(0); // 0x0000220C
 
-    sceDdr_driver_E0A39D3E(g_Resume.unk20484); // 0x00002214 & 0x0000221C
+    sceDdrSetPowerDownCounter(g_Resume.powerDownCounter); // 0x00002214 & 0x0000221C
 
     sysEventResumePlayload.pResumeInfo = &g_Resume.resumeInfo; // 0x00002248
 

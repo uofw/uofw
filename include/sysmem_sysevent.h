@@ -114,7 +114,7 @@ typedef struct {
     u32 unk28; // 28
     s64 systemTimePreSuspendOp; // 32
     s32 pllOutSelect; // 40
-    s32 unk44; // 44
+    s32 powerDownCounter; // 44
     void (*pResumePoint)(ScePowerResumeInfo *); // 48
     SceKernelGameInfo *pSuspendedGameInfo; // 52
     u32 unk56; // 56
