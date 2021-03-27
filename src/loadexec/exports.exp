@@ -52,13 +52,13 @@ PSP_EXPORT_VAR_NID(g_unkCbInfo, 0xAE9EFC0D)
 PSP_EXPORT_END
 
 PSP_EXPORT_START(LoadExecForUser, 0x0011, 0x4001)
-PSP_EXPORT_FUNC_HASH(sceKernelExitGame)
-PSP_EXPORT_FUNC_HASH(sceKernelExitGameWithStatus)
+PSP_EXPORT_FUNC_NID(sceKernelExitGame, 0x05572A5F)
+PSP_EXPORT_FUNC_NID(sceKernelExitGameWithStatus, 0x2AC9954B)
 # sceKernelSafetyCheck1 according to ps3 NIDs, but doesn't match SHA1
 PSP_EXPORT_FUNC_NID(LoadExecForUser_362A956B, 0x362A956B)
-PSP_EXPORT_FUNC_HASH(sceKernelRegisterExitCallback)
-PSP_EXPORT_FUNC_HASH(sceKernelLoadExecNpDrm)
-PSP_EXPORT_FUNC_HASH(sceKernelLoadExec)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterExitCallback, 0x4AC57943)
+PSP_EXPORT_FUNC_NID(sceKernelLoadExecNpDrm, 0xAA5FC85B)
+PSP_EXPORT_FUNC_NID(sceKernelLoadExec, 0xBD2F1094)
 PSP_EXPORT_FUNC_NID(LoadExecForUser_D1FB50DC, 0xD1FB50DC)
 PSP_EXPORT_END
 
