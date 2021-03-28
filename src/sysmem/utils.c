@@ -20,14 +20,14 @@ int sceKernelDcacheInvalidateRangeForUser(const void *p, u32 size)
     return ret;
 }
 
-int UtilsForUser_157A383A(const void *p, u32 size)
+int sceKernelL1DcacheInvalidateRangeForUser(const void *p, u32 size)
 {
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
         ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
-        ret = UtilsForKernel_157A383A(p, size);
+        ret = sceKernelL1DcacheInvalidateRange(p, size);
     pspSetK1(oldK1);
     return ret;
 }
@@ -56,14 +56,14 @@ int sceKernelIcacheInvalidateRangeForUser(const void *p, u32 size)
     return ret;
 }
 
-int UtilsForUser_43C9A8DB(const void *p, u32 size)
+int sceKernelL1IcacheInvalidateRangeForUser(const void *p, u32 size)
 {
     int ret;
     int oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(p, size))
         ret = SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     else
-        ret = UtilsForKernel_43C9A8DB(p, size);
+        ret = sceKernelL1IcacheInvalidateRange(p, size);
     pspSetK1(oldK1);
     return ret;
 }
