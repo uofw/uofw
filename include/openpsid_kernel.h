@@ -9,9 +9,9 @@
 
 /* Values (PSP product code/sub code, SceConsoleId, ScePsCode) taken from: https://github.com/CelesteBlue-dev/PS-ConsoleId-wiki/blob/master/PS-ConsoleId-wiki.txt */
 
-#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT         0x00 /* Not in use. */
-#define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT            0x01 /* Development Tool DEM-1000 & test unit DTP-T1000 */
-#define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                     0x02 /* Testing Tool DTP-H1500 */
+#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT         0x00 /* Prototype / Test unit */
+#define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT            0x01 /* Devkit / Development Tool - DEM-1000 & test unit DTP-T1000 */
+#define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                     0x02 /* TestKit / Testing Kit - Testing Tool DTP-H1500 */
 #define SCE_PSP_PRODUCT_CODE_CEX_JAPAN                        0x03 /* Retail Japan */
 #define SCE_PSP_PRODUCT_CODE_CEX_NORTH_AMERICA                0x04 /* Retail North America */
 #define SCE_PSP_PRODUCT_CODE_CEX_EUROPE_MIDDLE_EAST_AFRIKA    0x05 /* Retail Europe/Middle East/Afrika */
