@@ -8,7 +8,7 @@
 #include "common_header.h"
 
 /**
- * This structure contains console specific information. It is a subset of the the ::SceConsoleId.
+ * This structure contains console specific information. It is a subset of the ::SceConsoleId.
  * Check <openpsid_kernel.h> for possible member values.
  */
 typedef struct {

@@ -28,11 +28,11 @@
 #define SCE_ID_STORAGE_LEAF_ID_BACKUP_UMD_5                           0x126
 
 /* Offset into the leaf [SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1] to the start of the first ConsoleId certificate. */
-#define SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1_OFFSET_IDPS_CERTIFICATE_1       0x38
+#define SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_1_OFFSET_CONSOLE_ID_CERTIFICATE_1    0x38
 /* Offset into the leaf [SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_2] to the start of the OpenPSID certificate. */
-#define SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_2_OFFSET_OPEN_PSID_CERTIFICATE    0x1D0
+#define SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_2_OFFSET_OPEN_PSID_CERTIFICATE       0x1D0
 
-#define SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES       0xB0
+#define SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES          0xB0
 
 /*
  * ID Storage layout (WIP):
@@ -54,7 +54,7 @@
  * followed by a single OpenPSID certificate (for a total size of 920 + 184 = 1104 bytes). 
  * 
  * Of these 5 certificates, only the first ConsoleId certificate and the OpenPSID certificate are used in the system.
- * It is unknown what the purpose the remaining four IDPS certificates is.
+ * It is unknown what the purpose the remaining four ConsoleId certificates is.
  * 
  * +------------------------------------------------------------+----------------
  * |                 unknown data (size: 0x38)                  |                |
@@ -91,7 +91,7 @@
 
 /*
  * This structure contains the ConsoleId (termed "PSID" on the PSP) and an ECDSA signature used to verify the correctness of the 
- * IDPS.
+ * ConsoleId.
  * The ConsoleId is used, for example, in PSN DRM, DNAS and system configuration (with its derived PSCode).
  */
 typedef struct {
