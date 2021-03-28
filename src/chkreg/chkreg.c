@@ -2,6 +2,22 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * uofw/src/chkreg/chkreg.c
+ *
+ * Check Region
+ * 
+ * The chkreg module is used as a resident library to provide several APIs to kernel modules to get hardware-specific
+ * information about the calling PSP system:
+ *
+ *    • The Ps code (a unique 16-byte value for the PSP system including hardware information like unit type
+ *      (debug/retail/...) and equipped motherboard version)
+ *    • The Ps flags which, for example, indicate whether special test/debug functionalities are available in the system
+ *      (QA flag)
+ *    • The PSP series the PSP model belongs to (PSP-1000 series,...)
+ *    • Whether or not specific region-protected UMD content can be played on the PSP system
+ */
+
 #include <common_imp.h>
 
 #include <chkreg.h>
