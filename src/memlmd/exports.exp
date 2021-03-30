@@ -24,13 +24,13 @@ PSP_EXPORT_END
 
 PSP_EXPORT_START(semaphore, 0x0011, 0x0001)
 # 0x00EEC06A
-PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopy)
+PSP_EXPORT_FUNC_NID(sceUtilsBufferCopy, 0x00EEC06A)
 # 0x4C537C72                
-PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopyWithRange)
+PSP_EXPORT_FUNC_NID(sceUtilsBufferCopyWithRange, 0x4C537C72)
 # 0x77E97079   
-PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopyByPollingWithRange)
+PSP_EXPORT_FUNC_NID(sceUtilsBufferCopyByPollingWithRange, 0x77E97079)
 # 0x8EEB7BF2
-PSP_EXPORT_FUNC_HASH(sceUtilsBufferCopyByPolling)
+PSP_EXPORT_FUNC_NID(sceUtilsBufferCopyByPolling, 0x8EEB7BF2)
 PSP_EXPORT_END
 
 PSP_END_EXPORTS
