@@ -2,6 +2,11 @@
    See the file COPYING for copying permission.
 */
 
+/** @defgroup Chkreg Chkreg Module
+ *  Region check and ConsoleId service.
+ * @{
+ */
+
 #ifndef CHKREG_H
 #define CHKREG_H
 
@@ -108,3 +113,5 @@ s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index);
 s32 sceChkregGetPspModel(void);
 
 #endif // CHKREG_H
+
+/** @} */
