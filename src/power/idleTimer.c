@@ -37,7 +37,7 @@
 #define POWER_IDLE_TIMER_NUM_SLOTS      8
 
 /* Enables the idle timer for the given slot. */
-#define POWER_IDLE_TIMER_IS_TIMER_ENABLED(t, i)     (((t) >> i) & 0x1)
+#define POWER_IDLE_TIMER_IS_TIMER_ENABLED(t, i)     (((t) >> (i)) & 0x1)
 
 /* Enables all idle timers. */
 #define POWER_IDLE_TIMER_ENABLE_ALL_TIMERS(t)       ((t) = (t) | (0xFFFFFFFF >> (32 - POWER_IDLE_TIMER_NUM_SLOTS)))

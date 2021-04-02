@@ -84,8 +84,7 @@ typedef enum {
     POWER_BATTERY_THREAD_OP_SET_BATT_VOLT = 11,
 } PowerBatteryThreadOperation;
 
-typedef struct 
-{
+typedef struct {
     u32 unk0;
     u8 unk4;
     u8 unk5;
