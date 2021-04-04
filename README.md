@@ -29,5 +29,5 @@ This project is licensed under the MIT license. It includes code from the PSPSDK
 ## Questions or need help?
 
 You can chat with us the following ways:
-* via the [PSP Homebrew Community](https://discord.gg/PVBqwtmD) Discord server (preferred)
+* via the [PSP Homebrew Community](https://discord.com/invite/bePrj9W) Discord server (preferred)
 * via e-mail: uofwteam@gmail.com
