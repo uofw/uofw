@@ -1947,12 +1947,6 @@ s32 scePowerGetBatteryRemainCapacity(void)
     return g_Battery.batteryRemainingCapacity; // 0x00005904
 }
 
-// TODO: uofw's CI currently uses an older toolchain which requires this pragma.
-// Once we've updated the consumed toolchain to a more recent version, we can remove this pragma
-// as the pragma to ignore "Wmaybe-uninitialized" set inside scePowerGetBatteryLifeTime() will
-// cover the case of "status" potentially being unitialized.
-#pragma GCC diagnostic ignored "-Wuninitialized"
-
 // Subroutine scePower_8EFB3FA2 - Address 0x00005910 - Aliases: scePower_driver_C79F9157
 s32 scePowerGetBatteryLifeTime(void)
 {
@@ -2023,8 +2017,6 @@ s32 scePowerGetBatteryLifeTime(void)
 
     return 0; /* Remaining battery lifetime cannot be estimated. */
 }
-
-#pragma GCC diagnostic pop
 
 // Subroutine scePower_28E12023 - Address 0x00005A30 - Aliases: scePower_driver_40870DAC
 s32 scePowerGetBatteryTemp(void)
