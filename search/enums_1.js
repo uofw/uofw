@@ -2,11 +2,11 @@ var searchData=
 [
   ['sceapplicationtype',['SceApplicationType',['../group__InitForKernel.html#ga50f0477e2fff36092d64053a36881cd8',1,'modulemgr_init.h']]],
   ['scebootmediumtype',['SceBootMediumType',['../group__InitForKernel.html#ga4d99a1a975df3b88173a41fa516e2a93',1,'modulemgr_init.h']]],
-  ['scectrlexternalinputmode',['SceCtrlExternalInputMode',['../group__Controller.html#ga4284796d5063074e02d4915af9d5ab04',1,'ctrl.h']]],
   ['scectrlpadbuttonmaskmode',['SceCtrlPadButtonMaskMode',['../group__Controller.html#ga9aca46c5af11b73d3a00e6911725bf01',1,'ctrl.h']]],
   ['scectrlpadbuttons',['SceCtrlPadButtons',['../group__Controller.html#ga6104b860a63a93d46fa4348f596e8548',1,'ctrl.h']]],
   ['scectrlpadinputmode',['SceCtrlPadInputMode',['../group__Controller.html#ga62ab7ac206d0514d11e60309f9621fb6',1,'ctrl.h']]],
   ['scectrlpadpollmode',['SceCtrlPadPollMode',['../group__Controller.html#ga17d4f10bb96061a642c0a2d0dad006ca',1,'ctrl.h']]],
+  ['scectrlport',['SceCtrlPort',['../group__Controller.html#ga184f67736f5be2b59a20e974799aaee6',1,'ctrl.h']]],
   ['sceexecfileattr',['SceExecFileAttr',['../group__Loadcore.html#ga95f11f1d387b7f449d120152ebdd78da',1,'loadcore.h']]],
   ['sceexecfileelftype',['SceExecFileElfType',['../group__Loadcore.html#gadd729faad5a09adb92f9099655dbccef',1,'loadcore.h']]],
   ['sceexecfilemodeattr',['SceExecFileModeAttr',['../group__Loadcore.html#gaf2f41164f95332df5f4cdfc55724142d',1,'loadcore.h']]],

@@ -97,8 +97,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Data Fields</h2></td></tr>
 <tr class="memitem:a4ac2b5681b0ebbcbc4cf5040f8ab69a9"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceCtrlInputDataTransferHandler.html#a4ac2b5681b0ebbcbc4cf5040f8ab69a9">unk1</a></td></tr>
 <tr class="separator:a4ac2b5681b0ebbcbc4cf5040f8ab69a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af7735d2e9e6dae4239917f0b68033f4c"><td class="memItemLeft" align="right" valign="top">s32(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceCtrlInputDataTransferHandler.html#af7735d2e9e6dae4239917f0b68033f4c">copyInputData</a> )(void *src, <a class="el" href="structSceCtrlData2.html">SceCtrlData2</a> *dest)</td></tr>
-<tr class="separator:af7735d2e9e6dae4239917f0b68033f4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fb107e1c4c23c03ae56595e17719c1d"><td class="memItemLeft" align="right" valign="top">s32(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceCtrlInputDataTransferHandler.html#a2fb107e1c4c23c03ae56595e17719c1d">copyInputData</a> )(void *pSrc, <a class="el" href="structSceCtrlData2.html">SceCtrlData2</a> *pDst)</td></tr>
+<tr class="separator:a2fb107e1c4c23c03ae56595e17719c1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This structure is used to copy external input data into PSP internal controller buffers. </p>
@@ -116,16 +116,16 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="af7735d2e9e6dae4239917f0b68033f4c"></a>
+<a class="anchor" id="a2fb107e1c4c23c03ae56595e17719c1d"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">s32(* SceCtrlInputDataTransferHandler::copyInputData) (void *src, <a class="el" href="structSceCtrlData2.html">SceCtrlData2</a> *dest)</td>
+          <td class="memname">s32(* SceCtrlInputDataTransferHandler::copyInputData) (void *pSrc, <a class="el" href="structSceCtrlData2.html">SceCtrlData2</a> *pDst)</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to a transfer function to copy input data into a PSP internal controller buffer. &lt;copyInputData&gt; should return a value &gt;= 0 on success, &lt; 0 otherwise. </p>
+<p>Pointer to a transfer function to copy input data into a PSP internal controller buffer. The function should return a value &gt;= 0 on success, &lt; 0 otherwise. </p>
 
 </div>
 </div>
@@ -135,7 +135,7 @@ Data Fields</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Apr 4 2021 18:26:03 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Mon Apr 5 2021 19:28:06 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>
