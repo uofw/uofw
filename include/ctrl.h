@@ -323,7 +323,7 @@ s32 sceCtrlSetSamplingMode(u8 mode);
 /**
  * Gets the current update interval of the internal controller data buffers.
  * 
- * @param cycle Pointer to an u32 variable which is to receive the current update interval (in microseconds).
+ * @param pCycle Pointer to an u32 variable which is to receive the current update interval (in microseconds).
  * 
  * @return 0.
  */
@@ -361,7 +361,7 @@ u32 sceCtrlGetIdleCancelKey(u32 *pResetButtonsMake, u32 *pResetButtonsPress, u32
                             u32 *pResetButtonsPressHoldMode);
 
 /**
- * @bried Specifies the buttons which, when being pressed, reset the idle timer. 
+ * @brief Specifies the buttons which, when being pressed, reset the idle timer. 
  * 
  * This function lets you specify buttons which reset the idle timer. If multiple buttons are specified the timer can be
  * resetted by simply pressing one of the specified buttons. A button combination is also possible.
@@ -414,11 +414,11 @@ s32 sceCtrlGetIdleCancelThreshold(s32 *pUnHoldThreshold, s32 *pHoldThreshold);
  * HOLD mode is inactive.
  * Set between 1 - 128 to specify the movement on either axis.
  * Set to 0 for idle timer to be canceled even if the analog stick is not moved (that is, the idle timer itself stops running).
- * Specify ::SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION for analog stick movement to not cancel the idle timer.
+ * Specify SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION for analog stick movement to not cancel the idle timer.
  * @param holdThreshold Movement needed by the analog stick to reset the idle timer. Used when HOLD mode is active.
  * Set between 1 - 128 to specify the movement on either axis.
  * Set to 0 for idle timer to be canceled even if the analog stick is not moved (that is, the idle timer itself stops running).
- * Specify ::SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION for analog stick movement to not cancel the idle timer.
+ * Specify SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION for analog stick movement to not cancel the idle timer.
  *
  * @return 0 on success.
  */
@@ -447,7 +447,7 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
  * Peek/Read functions.
  * 
  * @param externalPort Pass a valid element of ::SceCtrlPort (either 1 or 2).
- * @param transferHandler Pointer to a SceCtrlInputDataTransferHandler containing a function to copy the <inputSource>
+ * @param transferHandler Pointer to a SceCtrlInputDataTransferHandler containing a function to copy the @p inputSource
  *						into the PSP's controller buffers.
  * @param inputSource Pointer to buffer containing the Controller input data to copy to the PSP's 
  *					  controller buffers. It is passed as the source argument to the given transfer function.
