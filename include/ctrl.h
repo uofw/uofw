@@ -100,7 +100,7 @@ typedef struct {
 } SceCtrlData2;
 
 /** 
- * @brief This structure represents controller button latch data.
+ * This structure represents controller button latch data.
  * 
  * With each sampling cycle, the controller service compares the new pressed & released button states
  * with the previously collected pressed button states. This comparison will result in the following possible
@@ -131,11 +131,11 @@ typedef struct {
  * @see ::sceCtrlReadLatch()
  */
 typedef struct {
-    /* Button transitioned to press state. */
+    /** Button transitioned to press state. */
     u32 buttonMake;
-    /* Button transitioned to release state. */
+    /** Button transitioned to release state. */
     u32 buttonBreak;
-    /* Button is in the pressed state. */
+    /** Button is in the pressed state. */
     u32 buttonPress;
     /** Button is in the released state. */
     u32 buttonRelease;
