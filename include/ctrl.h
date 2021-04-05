@@ -265,35 +265,35 @@ enum SceCtrlPadButtonMaskMode {
 };
 
 /**
- * Initialize the controller device. Bind the controller driver to the controller device.
+ * Initializes the controller device. Bind the controller driver to the controller device.
  * 
  * @return 0 on success.
  */
 s32 sceCtrlInit(void);
 
 /**
- * Terminate the controller device. Unbind the controller driver from the controller device.
+ * Terminates the controller device. Unbind the controller driver from the controller device.
  * 
  * @return 0.
  */
 s32 sceCtrlEnd(void);
 
 /**
- * Suspend the controller driver and put the controller device into a low-power state.
+ * Suspends the controller driver and put the controller device into a low-power state.
  * 
  * @return 0.
  */
 s32 sceCtrlSuspend(void);
 
 /**
- * Resume the controller driver after and bring the controller device back from a low-power state.
+ * Resumes the controller driver after and bring the controller device back from a low-power state.
  * 
  * @return 0.
  */
 s32 sceCtrlResume(void);
 
 /**
- * Enable/disable controller device input.
+ * Enables/disables controller device input.
  * 
  * @param pollMode One of ::SceCtrlPadPollMode. If set to 0, no button/analog input is recognized.
  *                 Set to 1 to enable button/analog input.
@@ -303,7 +303,7 @@ s32 sceCtrlResume(void);
 u32 sceCtrlSetPollingMode(u8 pollMode);
 
 /**
- * Get the current controller device input mode.
+ * Gets the current controller device input mode.
  * 
  * @param pMode Pointer to an u8 variable which is to receive the current controller mode. One of ::SceCtrlPadInputMode.
  * 
@@ -312,7 +312,7 @@ u32 sceCtrlSetPollingMode(u8 pollMode);
 u32 sceCtrlGetSamplingMode(u8 *pMode);
 
 /**
- * Set the controller device input mode.
+ * Sets the controller device input mode.
  * 
  * @param mode The new controller input mode. One of ::SceCtrlPadInputMode.
  * 
@@ -321,7 +321,7 @@ u32 sceCtrlGetSamplingMode(u8 *pMode);
 s32 sceCtrlSetSamplingMode(u8 mode);
 
 /**
- * Get the current update interval of the internal controller data buffers.
+ * Gets the current update interval of the internal controller data buffers.
  * 
  * @param cycle Pointer to an u32 variable which is to receive the current update interval (in microseconds).
  * 
@@ -330,7 +330,7 @@ s32 sceCtrlSetSamplingMode(u8 mode);
 u32 sceCtrlGetSamplingCycle(u32 *pCycle);
 
 /**
- * Set the update frequency of the internal controller buffer. Default update interval 
+ * Sets the update frequency of the internal controller buffer. Default update interval 
  * is the VBlank interrupt (approximately 60 times per second).
  * 
  * @param cycle The new interval between two samplings of controller attributes in microseconds.
@@ -344,7 +344,7 @@ u32 sceCtrlGetSamplingCycle(u32 *pCycle);
 s32 sceCtrlSetSamplingCycle(u32 cycle);
 
 /**
- * Obtain the different cancel-idle-timer buttons.
+ * Obtains the different cancel-idle-timer buttons.
  * 
  * @param pResetButtonsMake Pointer to an u32 variable which is to receive the buttons resetting the idle timer when
  * being pressed a new time (not already being pressed). Not used when the system is in HOLD mode.
@@ -361,7 +361,7 @@ u32 sceCtrlGetIdleCancelKey(u32 *pResetButtonsMake, u32 *pResetButtonsPress, u32
                             u32 *pResetButtonsPressHoldMode);
 
 /**
- * @bried Specify the buttons which, when being pressed, reset the idle timer. 
+ * @bried Specifies the buttons which, when being pressed, reset the idle timer. 
  * 
  * This function lets you specify buttons which reset the idle timer. If multiple buttons are specified the timer can be
  * resetted by simply pressing one of the specified buttons. A button combination is also possible.
@@ -397,7 +397,7 @@ u32 sceCtrlSetIdleCancelKey(u32 resetButtonsMake, u32 resetButtonsPress, u32 res
 #define SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION    (-1)
 
 /**
- * Get the idle timer cancel movement threshold values for the analog stick.
+ * Gets the idle timer cancel movement threshold values for the analog stick.
  *
  * @param pUnHoldThreshold Pointer to a s32 variable which is to receive the treshold value when HOLD mode is inactive.
  * @param pHoldThreshold Pointer to a s32 variable which is to receive the treshold value when HOLD mode is active.
@@ -407,7 +407,7 @@ u32 sceCtrlSetIdleCancelKey(u32 resetButtonsMake, u32 resetButtonsPress, u32 res
 s32 sceCtrlGetIdleCancelThreshold(s32 *pUnHoldThreshold, s32 *pHoldThreshold);
 
 /**
- * Set analog stick movement threshold values for cancelling the idle timer. In case SCE_CTRL_INPUT_DIGITAL_ONLY is set as the 
+ * Sets analog stick movement threshold values for cancelling the idle timer. In case SCE_CTRL_INPUT_DIGITAL_ONLY is set as the 
  * input mode for the controller, analog stick movements will not result in cancelling the idle timer.
  *
  * @param unHoldThreshold Movement needed by the analog stick to reset the idle timer. Used when 
@@ -425,14 +425,14 @@ s32 sceCtrlGetIdleCancelThreshold(s32 *pUnHoldThreshold, s32 *pHoldThreshold);
 s32 sceCtrlSetIdleCancelThreshold(s32 unHoldThreshold, s32 holdThreshold);
 
 /**
- * Get the number of VBlanks which will be waited for when the PSP device is being suspended.
+ * Gets the number of VBlanks which will be waited for when the PSP device is being suspended.
  * 
  * @return The number of VBlanks to wait for.
  */
 s16 sceCtrlGetSuspendingExtraSamples(void);
 
 /**
- * Set a number of VBlanks which will be waited for when the PSP device is being suspended.
+ * Sets a number of VBlanks which will be waited for when the PSP device is being suspended.
  * 
  * @param suspendSamples The number of VBlanks. Between 0 - 300.
  * 
@@ -441,7 +441,7 @@ s16 sceCtrlGetSuspendingExtraSamples(void);
 s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples);
 
 /**
- * Set up internal controller buffers to receive external input data. Each input mode has its own
+ * Sets up internal controller buffers to receive external input data. Each input mode has its own
  * set of buffers. These buffers are of type ::SceCtrlData2. 
  * Note: This function has to be called initially in order to obtain external input data via the corresponding 
  * Peek/Read functions.
@@ -465,11 +465,11 @@ s32 sceCtrl_driver_E467BEC8(u8 externalPort, SceCtrlInputDataTransferHandler *tr
  *
  * Compared to ::sceCtrlReadLatch(), calling this API will not result in clearing the internal latch data. As such,
  * the data returned is the accumulated latch data since the last time ::sceCtrlReadLatch() was called. Consequently,
- * the returned data should not be relied on whether a button is currently in a pressed or release state.
+ * the returned data should not be relied on whether a button is currently in a pressed or released state.
  *
  * @param pLatch Pointer to a ::SceCtrlLatch variable which is to receive the accumulated button latch data.
  *
- * @return On succes, the number of times the controller service performed sampling since the last time
+ * @return On success, the number of times the controller service performed sampling since the last time
  * ::sceCtrlReadLatch() was called.
  * @return < 0 on error.
  * 
@@ -490,7 +490,7 @@ s32 sceCtrlPeekLatch(SceCtrlLatch *pLatch);
  * 
  * @param pLatch Pointer to a ::SceCtrlLatch variable which is to receive the current button latch data.
  * 
- * @return On succes, the number of times the controller service performed sampling since the last time
+ * @return On success, the number of times the controller service performed sampling since the last time
  * ::sceCtrlReadLatch() was called.
  * @return < 0 on error.
  * 
@@ -537,7 +537,9 @@ s32 sceCtrlPeekLatch(SceCtrlLatch *pLatch);
 s32 sceCtrlReadLatch(SceCtrlLatch *pLatch);
 
 /**
- * Obtain button data stored in the internal controller buffers. Does not wait for the next 
+ * @brief Retrieves controller state data by polling (positive logic).
+ *
+ * This function obtains button data stored in the internal controller buffers. Does not wait for the next 
  * update interval to be performed.  
  * The obtained data will be the latest transfered button data into the internal controller buffers.
  * 
@@ -568,7 +570,9 @@ s32 sceCtrlReadLatch(SceCtrlLatch *pLatch);
 s32 sceCtrlPeekBufferPositive(SceCtrlData *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Does not wait for the next 
+ * @brief Retrieves controller state data by polling (negative logic).
+ * 
+ * This fucntion obtains button data stored in the internal controller buffers. Does not wait for the next 
  * update interval to be performed. 
  * The obtained data will be the latest transfered button data into the internal controller buffers.
  * 
@@ -598,7 +602,9 @@ s32 sceCtrlPeekBufferPositive(SceCtrlData *pData, u8 nBufs);
 s32 sceCtrlPeekBufferNegative(SceCtrlData *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * @brief Retrieves controller state data by blocking (positive logic).
+ * 
+ * This function obtains button data stored in the internal controller buffers. Waits for the next update interval
  * before obtaining the data. The read data is the newest transfered data into the internal controller 
  * buffers.
  * 
@@ -612,7 +618,9 @@ s32 sceCtrlPeekBufferNegative(SceCtrlData *pData, u8 nBufs);
 s32 sceCtrlReadBufferPositive(SceCtrlData *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * @brief Retrieves controller state data by blocking (negative logic).
+ * 
+ * This function obtains button data stored in the internal controller buffers. Waits for the next update interval
  * before obtaining the data. The read data is the newest transfered data into the internal controller 
  * buffers.
  * 
@@ -626,7 +634,9 @@ s32 sceCtrlReadBufferPositive(SceCtrlData *pData, u8 nBufs);
 s32 sceCtrlReadBufferNegative(SceCtrlData *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * @brief Retrieves controller state data by polling (positive logic) with support for wireless controllers.
+ *
+ * This function Obtains button data stored in the internal controller buffers. Waits for the next update interval
  * before obtaining the data. The read data is the newest transfered data into the internal controller 
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  * 
@@ -643,7 +653,9 @@ s32 sceCtrlReadBufferNegative(SceCtrlData *pData, u8 nBufs);
 s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * @brief Retrieves controller state data by polling (negative logic) with support for wireless controllers.
+ *
+ * This function obtains button data stored in the internal controller buffers. Waits for the next update interval
  * before obtaining the data. The read data is the newest transfered data into the internal controller
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  *
@@ -660,7 +672,9 @@ s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * @brief Retrieves controller state data by blocking (positive logic) with support for wireless controllers.
+ *
+ * This function obtains button data stored in the internal controller buffers. Waits for the next update interval
  * before obtaining the data. The read data is the newest transfered data into the internal controller
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  *
@@ -677,7 +691,9 @@ s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 
 /**
- * Obtain button data stored in the internal controller buffers. Waits for the next update interval
+ * @brief Retrieves controller state data by blocking (negative logic) with support for wireless controllers.
+ *
+ * This function obtains button data stored in the internal controller buffers. Waits for the next update interval
  * before obtaining the data. The read data is the newest transfered data into the internal controller
  * buffers and can contain input state provided by external input devices such as a wireless controller.
  *
@@ -694,7 +710,7 @@ s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 
 /**
- * Disable a rapid-fire button event.
+ * Disables a rapid-fire button event.
  * 
  * @param slot The slot of the event to clear. Between 0 - 15.
  * 
@@ -703,7 +719,7 @@ s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs);
 s32 sceCtrlClearRapidFire(u8 slot);
 
 /**
- * Specify a rapid-fire event for one or more buttons.
+ * Specifies a rapid-fire event for one or more buttons.
  * 
  * @param slot      The slot used to set the custom values. Between 0 - 15. Up to 16 slots can be used.
  * @param uiMask    Comparison mask of the button operation for rapid-fire trigger. In order for the @p uiTrigger buttons
@@ -745,7 +761,7 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiD
                         u8 uiMake, u8 uiBreak);
 
 /**
- * Emulate values for the analog pad's X- and Y-axis.
+ * Emulates values for the analog pad's X- and Y-axis.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, 
  *             their settings are combined.
@@ -758,7 +774,7 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiD
 s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 uiMake);
 
 /**
- * Emulate buttons for the digital pad.
+ * Emulates buttons for the digital pad.
  * 
  * @param slot The slot used to set the custom values. Between 0 - 3. If multiple slots are used, 
  *             their settings are combined.
@@ -775,7 +791,7 @@ s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 uiMake);
 s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake);
 
 /**
- * Get the button mask settings applied to PSP buttons.
+ * Gets the button mask settings applied to PSP buttons.
  *
  * @param buttons The buttons to check for. One or more buttons of ::SceCtrlPadButtons.
  *
@@ -784,7 +800,7 @@ s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 u
 u32 sceCtrlGetButtonIntercept(u32 buttons);
 
 /**
- * Set a button mask mode for one or more buttons. You can only mask user mode buttons in user applications.
+ * Sets a button mask mode for one or more buttons. You can only mask user mode buttons in user applications.
  * Masking of kernel mode buttons is ignored as well as buttons used in kernel mode applications.
  * 
  * @param buttons The button value for which the button mask mode will be applied for. 
@@ -806,7 +822,7 @@ u32 sceCtrlGetButtonIntercept(u32 buttons);
 u32 sceCtrlSetButtonIntercept(u32 buttons, u32 buttonMaskMode);
 
 /**
- * Register a button callback.
+ * Registers a button callback.
  * 
  * @param slot The slot used to register the callback. Between 0 - 3.
  * @param buttonMask Bitwise OR'ed button values which will be checked for being pressed. One or more 
