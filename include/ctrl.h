@@ -121,14 +121,14 @@ typedef struct {
  * In other words, if a button is in the [make] state, then it is also in the [press] state. However, this is not the case
  * for the inverse. A button in the [press] state does not need to be in the [make] state.
  * 
- * These comparison results are stored internally as latch data and can be retrieved using the APIs ::sceCtrlPeekLatch() or 
+ * These comparison results are stored internally as latch data and can be retrieved using the APIs ::sceCtrlPeekLatch() and 
  * ::sceCtrlReadLatch(). ::SceCtrlPadButtons can be used to find out the state of each button.
  * 
- * @remark Customers can accomplish the same by using the different sceCtrl[Read/Peek]Buffer[Positive/Negative]() APIs
+ * @remark The same can be accomplished by using the different sceCtrl[Read/Peek]Buffer[Positive/Negative]() APIs
  * and comparing the currently collected button sampling data with the previously collected one.
  * 
- * @see sceCtrlPeekLatch()
- * @see sceCtrlReadLatch()
+ * @see ::sceCtrlPeekLatch()
+ * @see ::sceCtrlReadLatch()
  */
 typedef struct {
     /* Button transitioned to press state. */
@@ -149,9 +149,9 @@ typedef struct {
     s32 unk1;
     /** 
 	 * Pointer to a transfer function to copy input data into a PSP internal controller buffer. 
-	 * <copyInputData> should return a value >= 0 on success, < 0 otherwise.
+	 * The function should return a value >= 0 on success, < 0 otherwise.
 	 */
-	s32(*copyInputData)(void *src, SceCtrlData2 *dest);
+	s32 (*copyInputData)(void *pSrc, SceCtrlData2 *pDst);
 } SceCtrlInputDataTransferHandler;
 
 /**
