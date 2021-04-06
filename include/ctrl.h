@@ -107,15 +107,15 @@ typedef struct {
  * states for each button:
  *
  *    • [make]: The button has just been pressed with its prior state being the released state. Transition from
- *      'released' state to 'pressed' state.
- *    • [press]: The button is currently in the 'pressed' state.
+ *      'released' state to 'pressed' state.\n
+ *    • [press]: The button is currently in the 'pressed' state.\n
  *    • [break]: The button has just been released with its prior state being the 'pressed' state. Transition from
- *      'pressed' state to 'release' state.
+ *      'pressed' state to 'release' state.\n
  *    • [release]: The button is currently in the 'released' state.
  * 
  * It is possible for a button to (briefly) be in two states at the same time. Valid combinations are as follows:
  * 
- *    • [make] & [press] 
+ *    • [make] & [press]\n 
  *    • [break] & [release]   
  * 
  * In other words, if a button is in the [make] state, then it is also in the [press] state. However, this is not the case
@@ -131,9 +131,9 @@ typedef struct {
  * @see ::sceCtrlReadLatch()
  */
 typedef struct {
-    /** Button transitioned to press state. */
+    /** Button transitioned to pressed state. */
     u32 buttonMake;
-    /** Button transitioned to release state. */
+    /** Button transitioned to released state. */
     u32 buttonBreak;
     /** Button is in the pressed state. */
     u32 buttonPress;
@@ -514,7 +514,7 @@ s32 sceCtrlPeekLatch(SceCtrlLatch *pLatch);
  * 
  *    if (latchData.buttonBreak & SCE_CTRL_TRIANGLE)
  *    {
- *        // The Trangle button has just been released (transition from 'pressed' state to 'released' state)
+ *        // The Triangle button has just been released (transition from 'pressed' state to 'released' state)
  *    }
  * 
  *    if (latchData.buttonRelease & SCE_CTRL_CIRCLE)
