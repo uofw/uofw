@@ -107,9 +107,13 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This structure represents controller button latch data.</p>
 <p>With each sampling cycle, the controller service compares the new pressed &amp; released button states with the previously collected pressed button states. This comparison will result in the following possible states for each button:</p>
-<p>• [make]: The button has just been pressed with its prior state being the released state. Transition from 'released' state to 'pressed' state. • [press]: The button is currently in the 'pressed' state. • [break]: The button has just been released with its prior state being the 'pressed' state. Transition from 'pressed' state to 'release' state. • [release]: The button is currently in the 'released' state.</p>
+<p>• [make]: The button has just been pressed with its prior state being the released state. Transition from 'released' state to 'pressed' state.<br />
+ • [press]: The button is currently in the 'pressed' state.<br />
+ • [break]: The button has just been released with its prior state being the 'pressed' state. Transition from 'pressed' state to 'release' state.<br />
+ • [release]: The button is currently in the 'released' state.</p>
 <p>It is possible for a button to (briefly) be in two states at the same time. Valid combinations are as follows:</p>
-<p>• [make] &amp; [press] • [break] &amp; [release]</p>
+<p>• [make] &amp; [press]<br />
+ • [break] &amp; [release]</p>
 <p>In other words, if a button is in the [make] state, then it is also in the [press] state. However, this is not the case for the inverse. A button in the [press] state does not need to be in the [make] state.</p>
 <p>These comparison results are stored internally as latch data and can be retrieved using the APIs <a class="el" href="group__Controller.html#ga3a3ffd1ee4d1d6e93dfb95b5df8dfaaf" title="Gets the latch data. ">sceCtrlPeekLatch()</a> and <a class="el" href="group__Controller.html#ga3ecb327272afd0b00930e49b53324f98" title="Gets the latch data. ">sceCtrlReadLatch()</a>. <a class="el" href="group__Controller.html#ga6104b860a63a93d46fa4348f596e8548">SceCtrlPadButtons</a> can be used to find out the state of each button.</p>
 <dl class="section remark"><dt>Remarks</dt><dd>The same can be accomplished by using the different sceCtrl[Read/Peek]Buffer[Positive/Negative]() APIs and comparing the currently collected button sampling data with the previously collected one.</dd></dl>
@@ -126,7 +130,7 @@ Data Fields</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Button transitioned to press state. </p>
+<p>Button transitioned to pressed state. </p>
 
 </div>
 </div>
@@ -139,7 +143,7 @@ Data Fields</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Button transitioned to release state. </p>
+<p>Button transitioned to released state. </p>
 
 </div>
 </div>
@@ -175,7 +179,7 @@ Data Fields</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Apr 5 2021 19:43:00 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Apr 6 2021 21:07:24 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>
