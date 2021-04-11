@@ -284,35 +284,22 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
         /* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
 
         // 0x00000574 - 0x0000059C
-        u32 i;
-        for (i = 0; i < CHKREG_UNK9BC_SIZE; i++)
-        {
-            pWorkBuffer[0x4 + i] = g_unk9BC[i];
-        }
+        memcpy_inline(pWorkBuffer += 0x4, g_unk9BC, sizeof g_unk9BC);
 
         /* Copy 0x20 bytes of input data to work buffer. */
 
         // 0x000005A0 - 0x000005C0
-        for (i = 0; i < 0x10; i++)
-        {
-            pWorkBuffer[0x4 + CHKREG_UNK9BC_SIZE + i] = arg0[0xD4 + i];
-        }
+        memcpy_inline(pWorkBuffer += sizeof g_unk9BC, &arg0[0xD4], 0x10);
 
         // 0x000005C4 - 0x000005E4
-        for (i = 0; i < 0x10; i++)
-        {
-            pWorkBuffer[0x4 + CHKREG_UNK9BC_SIZE + 0x10 + i] = arg0[0x140 + i];
-        }
+        memcpy_inline(pWorkBuffer += 0x10, &arg0[0x140], 0x10);
 
         /* Compute SHA1 hash. */
-        status1 = sceUtilsBufferCopyWithRange(pWorkBuffer, 0x38, pWorkBuffer, 0x38, KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
+        status1 = sceUtilsBufferCopyWithRange(g_pWorkBuffer, 0x38, g_pWorkBuffer, 0x38, KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
         if (status1 == SCE_ERROR_OK) // 0x00000604
         {
             /* Copy first 16 byte of computed hash to target buffer. */
-            for (i = 0; i < 0x10; i++)
-            {
-                arg1[i] = pWorkBuffer[i];
-            }
+            memcpy_inline(arg1, g_pWorkBuffer, 0x10);
 
             status1 = SCE_ERROR_OK;
         }
@@ -331,7 +318,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
         /* Clear work buffer. */
 
         // 0x0000062C - 0x00000644
-        memset_inline(pWorkBuffer, 0, 0x38);
+        memset_inline(g_pWorkBuffer, 0, 0x38);
 
         /* Release acquired sema resource. */
         status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C

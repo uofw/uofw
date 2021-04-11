@@ -90,3 +90,12 @@ static inline void memset_inline(void *s, int c, SceSize size)
     }
 }
 
+static inline void memcpy_inline(void *dst, const void *src, SceSize size)
+{
+    u32 i;
+    for (i = 0; i < size; i++)
+    {
+        *(u8 *)(dst + i) = *(u8 *)(src + i);
+    }
+}
+
