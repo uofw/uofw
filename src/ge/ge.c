@@ -26,7 +26,6 @@ SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
 #pragma GCC diagnostic pop
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define HW_GE_CTRL               HW(0xA7F00000)
 #define HW_GE_RESET              HW(0xBD400000)
 #define HW_GE_UNK004             HW(0xBD400004)
 #define HW_GE_EDRAM_HW_SIZE      HW(0xBD400008)
@@ -941,11 +940,9 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
     }
     // 0C44
     pspCache(0x1A, dl);
-    // XXX 04g+ caching
     if ((pspCop0StateGet(24) & 1) != 0) {
         pspSync();
-        HW_GE_CTRL = ((int)dl & 0x07FFFFC0) | 0xA0000001;
-        HW_GE_CTRL;
+        pspL2CacheWriteback0(dl, 1);
     }
     // 0C88
     sceSysregSetMasterPriv(64, 1);
@@ -1228,10 +1225,7 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
         pspCache(0x1A, uncachedNewCmdList);
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
-            HW_GE_CTRL =
-                (((int)uncachedNewCmdList | 0x08000000) &
-                 0x0FFFFFC0) | 0xA0000000;
-            HW_GE_CTRL;
+            pspL2CacheWriteback1(uncachedNewCmdList, 0);
         }
         // 1E18
         cmdList[1] = GE_MAKE_OP(SCE_GE_CMD_BASE, (relAddr >> 24) << 16);
@@ -1250,10 +1244,7 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
         uncachedNewCmdList[0] = oldCmd;
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
-            HW_GE_CTRL =
-                (((int)uncachedNewCmdList | 0x08000000) &
-                 0x0FFFFFC0) | 0xA0000000;
-            HW_GE_CTRL;
+            pspL2CacheWriteback1(uncachedNewCmdList, 0);
         }
     }
     // 1ED0
@@ -1266,10 +1257,7 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
         pspCache(0x1A, uncachedNewCmdList);
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
-            HW_GE_CTRL =
-                (((int)uncachedNewCmdList | 0x08000000) &
-                 0x0FFFFFC0) | 0xA0000000;
-            HW_GE_CTRL;
+            pspL2CacheWriteback1(uncachedNewCmdList, 0);
         }
         // 1F50
         cmdList[1] = GE_MAKE_OP(SCE_GE_CMD_BASE, (relAddr >> 24) << 16);
@@ -1291,10 +1279,7 @@ int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
         pspCache(0x1A, uncachedNewCmdList);
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
-            HW_GE_CTRL =
-                (((int)uncachedNewCmdList | 0x08000000) &
-                 0x0FFFFFC0) | 0xA0000000;
-            HW_GE_CTRL;
+            pspL2CacheWriteback1(uncachedNewCmdList, 0);
         }
     }
     cmdList[0] = base;
@@ -1723,10 +1708,7 @@ int _sceGeQueueSuspend()
             pspCache(0x1A, &stall[1]);
             if ((pspCop0StateGet(24) & 1) != 0) {
                 pspSync();
-                HW_GE_CTRL =
-                    (((int)stall | 0x08000000) & 0x0FFFFFC0) | 0xA0000001;
-                HW_GE_CTRL = ((int)stall & 0x07FFFFC0) | 0xA0000001;
-                HW_GE_CTRL;
+                pspL2CacheWriteback10(stall, 1);
             }
             // 2ECC
             HW_GE_STALLADDR += 8;
@@ -3243,9 +3225,7 @@ void _sceGeWriteBp(int *list)
             pspCache(0x1A, &ptr2[1]);
             if ((pspCop0StateGet(24) & 1) != 0) {
                 pspSync();
-                HW_GE_CTRL =
-                    (((int)ptr2 | 0x08000000) & 0x0FFFFFC0) | 0xA0000001;
-                HW_GE_CTRL;
+                pspL2CacheWriteback1(ptr2, 1);
             }
         }
         // 5494
@@ -3267,9 +3247,7 @@ void _sceGeWriteBp(int *list)
             pspCache(0x1A, &ptr[1]);
             if ((pspCop0StateGet(24) & 1) != 0) {
                 pspSync();
-                HW_GE_CTRL =
-                    (((int)ptr | 0x08000000) & 0x0FFFFFC0) | 0xA0000001;
-                HW_GE_CTRL;
+                pspL2CacheWriteback1(ptr, 1);
             }
         }
         // 5504
@@ -3298,9 +3276,7 @@ void _sceGeClearBp()
         pspCache(0x1A, &out[1]);
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
-            HW_GE_CTRL =
-                (((int)out | 0x08000000) & 0x0FFFFFC0) | 0xA0000001;
-            HW_GE_CTRL;
+            pspL2CacheWriteback1(out, 1);
         }
         // 5684
     }
@@ -3315,9 +3291,7 @@ void _sceGeClearBp()
         pspCache(0x1A, &out[1]);
         if ((pspCop0StateGet(24) & 1) != 0) {
             pspSync();
-            HW_GE_CTRL =
-                (((int)out | 0x08000000) & 0x0FFFFFC0) | 0xA0000001;
-            HW_GE_CTRL;
+            pspL2CacheWriteback1(out, 1);
         }
         // 5728
     }
