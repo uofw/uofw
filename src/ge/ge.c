@@ -26,94 +26,6 @@ SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
 #pragma GCC diagnostic pop
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define HW_GE_RESET              HW(0xBD400000)
-#define HW_GE_UNK004             HW(0xBD400004)
-#define HW_GE_EDRAM_HW_SIZE      HW(0xBD400008)
-// RW bit 0x001: 0 = stopped, 1 = running
-// R  bit 0x002: 0 = branching condition true, 1 = false
-// R  bit 0x100: 1 = is at depth 1 (or 2) of calls
-// R  bit 0x200: 1 = is at depth 2 of calls
-#define HW_GE_EXEC               HW(0xBD400100)
-#define HW_GE_UNK104             HW(0xBD400104)
-#define HW_GE_LISTADDR           HW(0xBD400108)
-#define HW_GE_STALLADDR          HW(0xBD40010C)
-// first return address
-#define HW_GE_RADR1              HW(0xBD400110)
-// second return address
-#define HW_GE_RADR2              HW(0xBD400114)
-// address of vertices (for bezier etc)
-#define HW_GE_VADR               HW(0xBD400118)
-// address of indices (for bezier etc)
-#define HW_GE_IADR               HW(0xBD40011C)
-// address of the origin (set by ORIGIN, used by some signals)
-#define HW_GE_OADR               HW(0xBD400120)
-// same, for the first call
-#define HW_GE_OADR1              HW(0xBD400124)
-// same, for the second call
-#define HW_GE_OADR2              HW(0xBD400128)
-#define HW_GE_GEOMETRY_CLOCK     HW(0xBD400200)
-#define HW_GE_UNK300             HW(0xBD400300)
-// RO
-#define HW_GE_INTERRUPT_TYPE1    HW(0xBD400304)
-// RW
-#define HW_GE_INTERRUPT_TYPE2    HW(0xBD400308)
-// WO
-#define HW_GE_INTERRUPT_TYPE3    HW(0xBD40030C)
-// WO
-#define HW_GE_INTERRUPT_TYPE4    HW(0xBD400310)
-#define HW_GE_EDRAM_ENABLED_SIZE HW(0xBD400400)
-#define HW_GE_EDRAM_REFRESH_UNK1 HW(0xBD500000)
-#define HW_GE_EDRAM_UNK10        HW(0xBD500010)
-#define HW_GE_EDRAM_REFRESH_UNK2 HW(0xBD500020)
-#define HW_GE_EDRAM_REFRESH_UNK3 HW(0xBD500030)
-#define HW_GE_EDRAM_UNK40        HW(0xBD500040)
-#define HW_GE_EDRAM_UNK50        HW(0xBD500050)
-#define HW_GE_EDRAM_UNK60        HW(0xBD500060)
-#define HW_GE_EDRAM_ADDR_TRANS_DISABLE HW(0xBD500070)
-#define HW_GE_EDRAM_ADDR_TRANS_VALUE   HW(0xBD500080)
-#define HW_GE_EDRAM_UNK90        HW(0xBD500090)
-#define HW_GE_EDRAM_UNKA0        HW(0xBD5000A0)
-#define HW_GE_CMD(i)    HW(0xBD400800 + i * 4)
-#define HW_GE_BONES     ((vs32*)HWPTR(0xBD400C00))
-#define HW_GE_BONE(i)   ((vs32*)HWPTR(0xBD400C00 + i * 48))
-#define HW_GE_WORLDS    ((vs32*)HWPTR(0xBD400D80))
-#define HW_GE_VIEWS     ((vs32*)HWPTR(0xBD400DB0))
-#define HW_GE_PROJS     ((vs32*)HWPTR(0xBD400DE0))
-#define HW_GE_TGENS     ((vs32*)HWPTR(0xBD400E20))
-
-#define GE_SIGNAL_HANDLER_SUSPEND  0x01
-#define GE_SIGNAL_HANDLER_CONTINUE 0x02
-#define GE_SIGNAL_HANDLER_PAUSE    0x03
-#define GE_SIGNAL_SYNC             0x08
-#define GE_SIGNAL_JUMP             0x10
-#define GE_SIGNAL_CALL             0x11
-#define GE_SIGNAL_RET              0x12
-#define GE_SIGNAL_RJUMP            0x13
-#define GE_SIGNAL_RCALL            0x14
-#define GE_SIGNAL_OJUMP            0x15
-#define GE_SIGNAL_OCALL            0x16
-
-#define GE_SIGNAL_RTBP0            0x20
-#define GE_SIGNAL_RTBP1            0x21
-#define GE_SIGNAL_RTBP2            0x22
-#define GE_SIGNAL_RTBP3            0x23
-#define GE_SIGNAL_RTBP4            0x24
-#define GE_SIGNAL_RTBP5            0x25
-#define GE_SIGNAL_RTBP6            0x26
-#define GE_SIGNAL_RTBP7            0x27
-#define GE_SIGNAL_OTBP0            0x28
-#define GE_SIGNAL_OTBP1            0x29
-#define GE_SIGNAL_OTBP2            0x2A
-#define GE_SIGNAL_OTBP3            0x2B
-#define GE_SIGNAL_OTBP4            0x2C
-#define GE_SIGNAL_OTBP5            0x2D
-#define GE_SIGNAL_OTBP6            0x2E
-#define GE_SIGNAL_OTBP7            0x2F
-#define GE_SIGNAL_RCBP             0x30
-#define GE_SIGNAL_OCBP             0x38
-#define GE_SIGNAL_BREAK1           0xF0
-#define GE_SIGNAL_BREAK2           0xFF
-
 #define GE_MAKE_OP(cmd, arg) (((cmd) << 24) | ((arg) & 0x00FFFFFF))
 #define GE_VALID_ADDR(addr) ((int)(addr) >= 0 && \
          (ADDR_IS_SCRATCH(addr) || ADDR_IS_VRAM(addr) || ADDR_IS_RAM(addr)))
@@ -127,10 +39,9 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define SCE_GE_INTERNAL_REG_RADR1 2
 #define SCE_GE_INTERNAL_REG_RADR2 4
 
-#define SCE_GE_INTSIG 1
-#define SCE_GE_INTEND 2
-#define SCE_GE_INTFIN 4
-#define SCE_GE_INTERR 8
+#define SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS 0
+#define SCE_GE_SIGNAL_ERROR_STACK_OVERFLOW 1
+#define SCE_GE_SIGNAL_ERROR_STACK_UNDERFLOW 2
 
 /******************************/
 
@@ -439,7 +350,7 @@ int _sceGeReset()
     HW_GE_OADR2 = 0;
     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
     HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
-    HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+    HW_GE_INTERRUPT_TYPE2 = HW_GE_INTSIG | HW_GE_INTEND | HW_GE_INTFIN;
     HW_GE_GEOMETRY_CLOCK = _aw_ctx.ctx[16];
     sceSysregSetMasterPriv(64, 1);
     // Restore the GE context
@@ -481,7 +392,7 @@ int sceGeInit()
     HW_GE_OADR2 = 0;
     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
     HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
-    HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+    HW_GE_INTERRUPT_TYPE2 = HW_GE_INTSIG | HW_GE_INTEND | HW_GE_INTFIN;
     // Reset all the registers which are flagged as being registers which can be saved
     int i;
     for (i = 0; i < 256; i++) {
@@ -534,7 +445,7 @@ int sceGeInit()
     HW_GE_LISTADDR = 0;
     HW_GE_STALLADDR = 0;
     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
-    HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+    HW_GE_INTERRUPT_TYPE2 = HW_GE_INTSIG | HW_GE_INTEND | HW_GE_INTFIN;
 
     // Initialize the GE interrupt handler
     sceKernelRegisterIntrHandler(SCE_GE_INT, 1, _sceGeInterrupt, 0, &g_GeIntrOpt);
@@ -946,7 +857,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
     }
     // 0C88
     sceSysregSetMasterPriv(64, 1);
-    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTFIN;
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTFIN;
     HW_GE_LISTADDR = (int)UCACHED(dl);
     HW_GE_STALLADDR = 0;
     pspSync();
@@ -955,7 +866,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd)
     while ((HW_GE_EXEC & 1) != 0)
         ;
     // 0CD4
-    while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
+    while ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTFIN) == 0)
         ;
     HW_GE_LISTADDR = listAddr;
     HW_GE_STALLADDR = stallAddr;
@@ -1161,7 +1072,7 @@ int sceGeRestoreContext(SceGeContext * ctx)
     while ((HW_GE_EXEC & 1) != 0)
         ;
     int n304 = HW_GE_INTERRUPT_TYPE1;
-    HW_GE_INTERRUPT_TYPE4 = (old304 ^ HW_GE_INTERRUPT_TYPE1) & ~(SCE_GE_INTFIN | SCE_GE_INTSIG);
+    HW_GE_INTERRUPT_TYPE4 = (old304 ^ HW_GE_INTERRUPT_TYPE1) & ~(HW_GE_INTFIN | HW_GE_INTSIG);
     HW_GE_INTERRUPT_TYPE2 = old308;
     if ((n304 & 8) != 0)
         ret = -1;
@@ -1317,36 +1228,36 @@ _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
     int oldIntr = sceKernelCpuSuspendIntr();
     int attr = HW_GE_INTERRUPT_TYPE1;
     int unk1 = HW_GE_UNK004;
-    if ((attr & SCE_GE_INTERR) != 0) {
+    if ((attr & HW_GE_INTERR) != 0) {
         // 2228
-        HW_GE_INTERRUPT_TYPE4 = 8;
+        HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERR;
         _sceGeErrorInterrupt(attr, unk1, arg2);
     }
     // 2118
-    if ((attr & (SCE_GE_INTSIG | SCE_GE_INTFIN)) == (SCE_GE_INTSIG | SCE_GE_INTFIN)) {
+    if ((attr & (HW_GE_INTSIG | HW_GE_INTFIN)) == (SCE_GE_INTSIG | SCE_GE_INTFIN)) {
         // 2218
         Kprintf("GE INTSIG/INTFIN at the same time\n"); // 0x6324
     }
     // 2128
-    if ((attr & SCE_GE_INTFIN) == 0) {
+    if ((attr & HW_GE_INTFIN) == 0) {
         // signal and/or end
         // 21AC
-        if ((attr & SCE_GE_INTSIG) == 0 && (attr & SCE_GE_INTEND) != 0) {   // 2208
+        if ((attr & HW_GE_INTSIG) == 0 && (attr & HW_GE_INTEND) != 0) {   // 2208
             // 21FC dup
-            HW_GE_INTERRUPT_TYPE3 = SCE_GE_INTEND;
-        } else if ((attr & SCE_GE_INTSIG) != 0 && (attr & SCE_GE_INTEND) == 0) {
+            HW_GE_INTERRUPT_TYPE3 = HW_GE_INTEND;
+        } else if ((attr & HW_GE_INTSIG) != 0 && (attr & HW_GE_INTEND) == 0) {
             // 21FC dup
-            HW_GE_INTERRUPT_TYPE3 = SCE_GE_INTSIG;
+            HW_GE_INTERRUPT_TYPE3 = HW_GE_INTSIG;
         } else {
             // 21C0
             while ((HW_GE_EXEC & 1) != 0)
                 ;
-            HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTSIG | SCE_GE_INTEND;
-            HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND;
+            HW_GE_INTERRUPT_TYPE4 = HW_GE_INTSIG | HW_GE_INTEND;
+            HW_GE_INTERRUPT_TYPE2 = HW_GE_INTSIG | HW_GE_INTEND;
             _sceGeListInterrupt(attr, unk1, arg2);
         }
     } else {
-        if ((attr & SCE_GE_INTEND) == 0) {
+        if ((attr & HW_GE_INTEND) == 0) {
             // 2198
             Kprintf("CMD_FINISH must be used with CMD_END.\n"); // 0x6348
             HW_GE_EXEC = 0;
@@ -1354,8 +1265,8 @@ _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
         // 213C
         while ((HW_GE_EXEC & 1) != 0)
             ;
-        HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
-        HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTEND | SCE_GE_INTFIN;
+        HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
+        HW_GE_INTERRUPT_TYPE2 = HW_GE_INTEND | HW_GE_INTFIN;
         _sceGeFinishInterrupt(attr, unk1, arg2);
     }
 
@@ -1411,7 +1322,7 @@ s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void
         HW_GE_OADR2 = 0;
         HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERRUPT_TYPE1;
         HW_GE_INTERRUPT_TYPE3 = HW_GE_INTERRUPT_TYPE2;
-        HW_GE_INTERRUPT_TYPE2 = SCE_GE_INTSIG | SCE_GE_INTEND | SCE_GE_INTFIN;
+        HW_GE_INTERRUPT_TYPE2 = HW_GE_INTSIG | HW_GE_INTEND | HW_GE_INTFIN;
         HW_GE_EDRAM_ADDR_TRANS_DISABLE = _aw_ctx.ctx[10];
         HW_GE_EDRAM_ADDR_TRANS_VALUE = _aw_ctx.ctx[11];
         HW_GE_EDRAM_REFRESH_UNK1 = _aw_ctx.ctx[12];
@@ -1725,7 +1636,7 @@ int _sceGeQueueSuspend()
                 break;
             } else {
                 // 2F08
-                while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
+                while ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTFIN) == 0)
                     ;
                 stall[0] = oldCmd1;
                 stall[1] = oldCmd2;
@@ -1737,10 +1648,10 @@ int _sceGeQueueSuspend()
     }
 
     // 2C88
-    if ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTSIG) == 0 && (g_AwQueue.active_first->signal != SCE_GE_DL_SIGNAL_BREAK || g_AwQueue.isBreak != 0)) // 2DE8
+    if ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTSIG) == 0 && (g_AwQueue.active_first->signal != SCE_GE_DL_SIGNAL_BREAK || g_AwQueue.isBreak != 0)) // 2DE8
     {
         // 2CB0
-        while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
+        while ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTFIN) == 0)
             ;
     }
     // 2CC4
@@ -1756,7 +1667,7 @@ int _sceGeQueueSuspend()
     int old108 = HW_GE_LISTADDR;
     int old10C = HW_GE_STALLADDR;
     int old304 = HW_GE_INTERRUPT_TYPE1;
-    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTFIN;
+    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTFIN;
     HW_GE_LISTADDR = (int)UCACHED(stopCmd);
     HW_GE_STALLADDR = 0;
     HW_GE_EXEC = 1;
@@ -1764,7 +1675,7 @@ int _sceGeQueueSuspend()
     while ((HW_GE_EXEC & 1) != 0)
         ;
     // 2D94
-    while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
+    while ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTFIN) == 0)
         ;
     HW_GE_LISTADDR = old108;
     HW_GE_STALLADDR = old10C;
@@ -1786,17 +1697,17 @@ int _sceGeQueueResume()
     while ((HW_GE_EXEC & 1) != 0)
         ;
     // 2FD4
-    while ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTFIN) == 0)
+    while ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTFIN) == 0)
         ;
     sceSysregSetMasterPriv(64, 0);
     int oldFlag = g_GeSuspend.intrType;
     int flag = 0;
-    if ((oldFlag & SCE_GE_INTSIG) == 0)
-        flag |= SCE_GE_INTSIG;
-    if ((oldFlag & SCE_GE_INTEND) == 0)
-        flag |= SCE_GE_INTEND;
-    if ((oldFlag & SCE_GE_INTFIN) == 0)
-        flag |= SCE_GE_INTFIN;
+    if ((oldFlag & HW_GE_INTSIG) == 0)
+        flag |= HW_GE_INTSIG;
+    if ((oldFlag & HW_GE_INTEND) == 0)
+        flag |= HW_GE_INTEND;
+    if ((oldFlag & HW_GE_INTFIN) == 0)
+        flag |= HW_GE_INTFIN;
     HW_GE_INTERRUPT_TYPE4 = flag;
     HW_GE_LISTADDR = g_GeSuspend.listAddr;
     HW_GE_STALLADDR = (int)g_GeSuspend.stallAddr;
@@ -2032,7 +1943,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
     }
     // 3618
     switch ((lastCmd1 >> 16) & 0xFF) {
-    case GE_SIGNAL_HANDLER_SUSPEND:
+    case SCE_GE_SIGNAL_HANDLER_SUSPEND:
         // 3670
         if (g_AwQueue.sdkVer <= 0x02000010) {
             dl->state = SCE_GE_DL_STATE_PAUSED;
@@ -2050,7 +1961,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
         HW_GE_EXEC |= 1;
         break;
 
-    case GE_SIGNAL_HANDLER_CONTINUE:
+    case SCE_GE_SIGNAL_HANDLER_CONTINUE:
         // 3708
         HW_GE_EXEC |= 1;
         pspSync();
@@ -2062,27 +1973,27 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
         }
         break;
 
-    case GE_SIGNAL_HANDLER_PAUSE:
+    case SCE_GE_SIGNAL_HANDLER_PAUSE:
         dl->state = SCE_GE_DL_STATE_PAUSED;
         dl->signal = lastCmd2 & 0xFF;
         dl->signalData = lastCmd1;
         HW_GE_EXEC |= 1;
         break;
 
-    case GE_SIGNAL_SYNC:
+    case SCE_GE_SIGNAL_SYNC:
         // 3994
         dl->signal = SCE_GE_DL_SIGNAL_SYNC;
         HW_GE_EXEC |= 1;
         break;
 
-    case GE_SIGNAL_CALL:
-    case GE_SIGNAL_RCALL:
-    case GE_SIGNAL_OCALL:
+    case SCE_GE_SIGNAL_CALL:
+    case SCE_GE_SIGNAL_RCALL:
+    case SCE_GE_SIGNAL_OCALL:
         {
             // 3870
             if (dl->stackOff >= dl->numStacks) {
                 // 398C
-                _sceGeListError(lastCmd1, 1);
+                _sceGeListError(lastCmd1, SCE_GE_SIGNAL_ERROR_STACK_OVERFLOW);
                 break;
             }
             SceGeStack *curStack = &dl->stack[dl->stackOff++];
@@ -2106,9 +2017,9 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             // 3928
             int cmdOff = (lastCmd1 << 16) | (lastCmd2 & 0xFFFF);
             u32 *newCmdList;
-            if (((lastCmd1 >> 16) & 0xFF) == GE_SIGNAL_CALL)
+            if (((lastCmd1 >> 16) & 0xFF) == SCE_GE_SIGNAL_CALL)
                 newCmdList = (u32 *) cmdOff;
-            else if (((lastCmd1 >> 16) & 0xFF) == GE_SIGNAL_RCALL)
+            else if (((lastCmd1 >> 16) & 0xFF) == SCE_GE_SIGNAL_RCALL)
                 newCmdList = &cmdList[cmdOff / 4 - 2];
             else
                 newCmdList = HW_GE_OADR + (u32 *) cmdOff;
@@ -2116,7 +2027,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             // 395C
             if (((int)newCmdList & 3) != 0) {
                 // 397C
-                _sceGeListError(lastCmd1, 0);
+                _sceGeListError(lastCmd1, SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS);
             }
             // 396C
             HW_GE_LISTADDR = (int)UCACHED(newCmdList);
@@ -2125,16 +2036,16 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             break;
         }
 
-    case GE_SIGNAL_JUMP:
-    case GE_SIGNAL_RJUMP:
-    case GE_SIGNAL_OJUMP:
+    case SCE_GE_SIGNAL_JUMP:
+    case SCE_GE_SIGNAL_RJUMP:
+    case SCE_GE_SIGNAL_OJUMP:
         {
             // 377C
             int cmdOff = (lastCmd1 << 16) | (lastCmd2 & 0xFFFF);
             u32 *newCmdList;
-            if (((lastCmd1 >> 16) & 0xFF) == GE_SIGNAL_JUMP)
+            if (((lastCmd1 >> 16) & 0xFF) == SCE_GE_SIGNAL_JUMP)
                 newCmdList = (u32 *) cmdOff;
-            else if (((lastCmd1 >> 16) & 0xFF) == GE_SIGNAL_RJUMP)
+            else if (((lastCmd1 >> 16) & 0xFF) == SCE_GE_SIGNAL_RJUMP)
                 newCmdList = &cmdList[cmdOff / 4 - 2];
             else
                 newCmdList = HW_GE_OADR + (u32 *) cmdOff;
@@ -2142,7 +2053,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             // 37B4
             if (((int)newCmdList & 3) != 0) {
                 // 37D0
-                _sceGeListError(lastCmd1, 0);
+                _sceGeListError(lastCmd1, SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS);
             }
             // 37C4
             HW_GE_LISTADDR = (int)UCACHED(newCmdList);
@@ -2150,10 +2061,10 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             break;
         }
 
-    case GE_SIGNAL_RET:
+    case SCE_GE_SIGNAL_RET:
         // 37E0
         if (dl->stackOff == 0) {
-            _sceGeListError(lastCmd1, 2);
+            _sceGeListError(lastCmd1, SCE_GE_SIGNAL_ERROR_STACK_UNDERFLOW);
             return;
         }
         // 3804
@@ -2168,10 +2079,10 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
         pspSync();
         break;
 
-    case GE_SIGNAL_RTBP0: case GE_SIGNAL_RTBP1: case GE_SIGNAL_RTBP2: case GE_SIGNAL_RTBP3:
-    case GE_SIGNAL_RTBP4: case GE_SIGNAL_RTBP5: case GE_SIGNAL_RTBP6: case GE_SIGNAL_RTBP7:
-    case GE_SIGNAL_OTBP0: case GE_SIGNAL_OTBP1: case GE_SIGNAL_OTBP2: case GE_SIGNAL_OTBP3:
-    case GE_SIGNAL_OTBP4: case GE_SIGNAL_OTBP5: case GE_SIGNAL_OTBP6: case GE_SIGNAL_OTBP7:
+    case SCE_GE_SIGNAL_RTBP0: case SCE_GE_SIGNAL_RTBP1: case SCE_GE_SIGNAL_RTBP2: case SCE_GE_SIGNAL_RTBP3:
+    case SCE_GE_SIGNAL_RTBP4: case SCE_GE_SIGNAL_RTBP5: case SCE_GE_SIGNAL_RTBP6: case SCE_GE_SIGNAL_RTBP7:
+    case SCE_GE_SIGNAL_OTBP0: case SCE_GE_SIGNAL_OTBP1: case SCE_GE_SIGNAL_OTBP2: case SCE_GE_SIGNAL_OTBP3:
+    case SCE_GE_SIGNAL_OTBP4: case SCE_GE_SIGNAL_OTBP5: case SCE_GE_SIGNAL_OTBP6: case SCE_GE_SIGNAL_OTBP7:
         {
             // 39D0
             int off = (lastCmd1 << 16) | (lastCmd2 & 0xFFFF);
@@ -2184,7 +2095,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             // 39F0
             if (((int)newLoc & 0xF) != 0) {
                 // 3A50
-                _sceGeListError(lastCmd1, 0);
+                _sceGeListError(lastCmd1, SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS);
             }
             // 3A00
             int id = (lastCmd1 >> 16) & 0x7;
@@ -2198,8 +2109,8 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             break;
         }
 
-    case GE_SIGNAL_RCBP:
-    case GE_SIGNAL_OCBP:
+    case SCE_GE_SIGNAL_RCBP:
+    case SCE_GE_SIGNAL_OCBP:
         {
             // 3A80
             int off = (lastCmd1 << 16) | (lastCmd2 & 0xFFFF);
@@ -2212,7 +2123,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             // 3AA4
             if (((int)newLoc & 0xF) != 0) {
                 // 3AE8
-                _sceGeListError(lastCmd1, 0);
+                _sceGeListError(lastCmd1, SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS);
             }
             // 3AB4
             int *uncachedCmdPtr = UUNCACHED(lastCmdPtr1);
@@ -2225,8 +2136,8 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             break;
         }
 
-    case GE_SIGNAL_BREAK1:
-    case GE_SIGNAL_BREAK2:
+    case SCE_GE_SIGNAL_BREAK1:
+    case SCE_GE_SIGNAL_BREAK2:
         {
             // 3B08
             if (g_deci2p == NULL) {
@@ -2541,7 +2452,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             dl->signal = SCE_GE_DL_SIGNAL_BREAK;
             HW_GE_STALLADDR = 0;
             HW_GE_LISTADDR = (int)UUNCACHED(g_cmdList);
-            HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
+            HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
             HW_GE_EXEC = 1;
             pspSync();
             g_AwQueue.isBreak = 1;
@@ -2594,7 +2505,7 @@ int sceGeContinue()
                     // 448C
                     while ((HW_GE_EXEC & 1) != 0)
                         ;
-                    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
+                    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
                     if (dl->ctx != NULL && dl->ctxUpToDate == 0) {
                         // 4598
                         sceGeSaveContext(dl->ctx);
@@ -2608,7 +2519,7 @@ int sceGeContinue()
                     HW_GE_OADR1 = dl->oadr1;
                     HW_GE_OADR2 = dl->oadr2;
                     _sceGeSetBaseRadr(dl->base, dl->radr1, dl->radr2);
-                    HW_GE_INTERRUPT_TYPE4 = SCE_GE_INTEND | SCE_GE_INTFIN;
+                    HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
                     HW_GE_EXEC = dl->flags | 1;
                     pspSync();
                     g_AwQueue.curRunning = dl;
@@ -2906,7 +2817,7 @@ int sceGeDebugContinue(int arg0)
         return SCE_ERROR_BUSY;
     }
     int wasEnabled = sceSysregAwRegABusClockEnable();
-    if ((HW_GE_INTERRUPT_TYPE1 & SCE_GE_INTEND) != 0) {
+    if ((HW_GE_INTERRUPT_TYPE1 & HW_GE_INTEND) != 0) {
         // 5084
         if (!wasEnabled) {
             // 50A0
@@ -2918,7 +2829,7 @@ int sceGeDebugContinue(int arg0)
     int *cmdPtr = (int *)HW_GE_LISTADDR;
     u32 curCmd = *cmdPtr;
     int hasSignalFF = 0;
-    if ((curCmd >> 24) == SCE_GE_CMD_SIGNAL && ((curCmd >> 16) & 0xFF) == GE_SIGNAL_BREAK2) // 5044
+    if ((curCmd >> 24) == SCE_GE_CMD_SIGNAL && ((curCmd >> 16) & 0xFF) == SCE_GE_SIGNAL_BREAK2) // 5044
     {
         cmdPtr += 2;
         HW_GE_LISTADDR = (int)cmdPtr;
@@ -3115,54 +3026,54 @@ void _sceGeListError(u32 cmd, int err)  // err: 0 = alignment problem, 1: overfl
     char *cmdStr;
     switch (cmd)                // 0x6794 jump table
     {
-    case 0x10:
+    case SCE_GE_SIGNAL_JUMP:
         // 52D8
         cmdStr = "JUMP";
         break;
 
-    case 0x11:
+    case SCE_GE_SIGNAL_CALL:
         // 5358
         cmdStr = "CALL";
         break;
 
-    case 0x12:
+    case SCE_GE_SIGNAL_RET:
         // 5364
         cmdStr = "RET";
         break;
 
-    case 0x13:
+    case SCE_GE_SIGNAL_RJUMP:
         // 5370
         cmdStr = "RJUMP";
         break;
 
-    case 0x14:
+    case SCE_GE_SIGNAL_RCALL:
         // 537C
         cmdStr = "RCALL";
         break;
 
-    case 0x15:
+    case SCE_GE_SIGNAL_OJUMP:
         // 5388
         cmdStr = "OJUMP";
         break;
 
-    case 0x16:
+    case SCE_GE_SIGNAL_OCALL:
         // 5394
         cmdStr = "OCALL";
         break;
 
-    case 0x30:
+    case SCE_GE_SIGNAL_RCBP:
         // 53A0
         cmdStr = "RCBP";
         break;
 
-    case 0x38:
+    case SCE_GE_SIGNAL_OCBP:
         // 53D8
         cmdStr = "OCBP";
         break;
 
-    default:
+    default: // RTBP0~7 / OTBP0~7
         // 53AC
-        if (op >= 0x28)
+        if (op >= SCE_GE_SIGNAL_OTBP0)
             g_szTbp[0] = 'O';   // at 6880
         // 53C4
         cmdStr = g_szTbp;
@@ -3172,19 +3083,19 @@ void _sceGeListError(u32 cmd, int err)  // err: 0 = alignment problem, 1: overfl
 
     // 52E0
     switch (err) {
-    case 0:
+    case SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS:
         // 533C
         Kprintf("SCE_GE_SIGNAL_%s address error (MADR=0x%08X)\n",
                 cmdStr, curAddr);
         break;
 
-    case 1:
+    case SCE_GE_SIGNAL_ERROR_STACK_OVERFLOW:
         // 534C
         Kprintf("SCE_GE_SIGNAL_%s stack overflow (MADR=0x%08X)\n",
                 cmdStr, curAddr);
         break;
 
-    case 2:
+    case SCE_GE_SIGNAL_ERROR_STACK_UNDERFLOW:
         // 5328
         Kprintf("SCE_GE_SIGNAL_%s stack underflow (MADR=0x%08X)\n",
                 cmdStr, curAddr);
@@ -3215,7 +3126,7 @@ void _sceGeWriteBp(int *list)
             if ((bpCmd->unk0 & 3) == 0) {
                 // 55C4
                 if (cmd >> 24 != SCE_GE_CMD_END)
-                    ptr2[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, GE_SIGNAL_BREAK2 << 24);
+                    ptr2[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, SCE_GE_SIGNAL_BREAK2 << 24);
                 // 55CC
                 ptr2[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
             } else
@@ -3241,7 +3152,7 @@ void _sceGeWriteBp(int *list)
         bpCmd->unk12 = ptr[1];
         if ((((int)ptr ^ (int)prevList) & 0x1FFFFFFC) != 0) {
             // 5528
-            ptr[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, GE_SIGNAL_BREAK1 << 24);
+            ptr[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, SCE_GE_SIGNAL_BREAK1 << 24);
             ptr[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
             pspCache(0x1A, &ptr[0]);
             pspCache(0x1A, &ptr[1]);

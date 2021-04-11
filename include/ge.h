@@ -16,6 +16,9 @@
  * @{
  */
 
+/*
+ * List of commands accepted by the GE.
+ */
 #define SCE_GE_CMD_NOP 0x00
 #define SCE_GE_CMD_VADR 0x01
 #define SCE_GE_CMD_IADR 0x02
@@ -76,8 +79,8 @@
 #define SCE_GE_CMD_TGENN 0x40
 #define SCE_GE_CMD_TGEND 0x41
 #define SCE_GE_CMD_SX 0x42
-#define SCE_GE_CMD_SY 0x43                                                                                                                                                                           
-#define SCE_GE_CMD_SZ 0x44                                                                                                                                                                           
+#define SCE_GE_CMD_SY 0x43
+#define SCE_GE_CMD_SZ 0x44
 #define SCE_GE_CMD_TX 0x45
 #define SCE_GE_CMD_TY 0x46
 #define SCE_GE_CMD_TZ 0x47
@@ -263,6 +266,42 @@
 #define SCE_GE_MTX_PROJ  10
 #define SCE_GE_MTX_TGEN  11
 
+/*
+ * List of signals which can be sent using the SIGNAL command.
+ */
+#define SCE_GE_SIGNAL_HANDLER_SUSPEND  0x01
+#define SCE_GE_SIGNAL_HANDLER_CONTINUE 0x02
+#define SCE_GE_SIGNAL_HANDLER_PAUSE    0x03
+#define SCE_GE_SIGNAL_SYNC             0x08
+#define SCE_GE_SIGNAL_JUMP             0x10
+#define SCE_GE_SIGNAL_CALL             0x11
+#define SCE_GE_SIGNAL_RET              0x12
+#define SCE_GE_SIGNAL_RJUMP            0x13
+#define SCE_GE_SIGNAL_RCALL            0x14
+#define SCE_GE_SIGNAL_OJUMP            0x15
+#define SCE_GE_SIGNAL_OCALL            0x16
+
+#define SCE_GE_SIGNAL_RTBP0            0x20
+#define SCE_GE_SIGNAL_RTBP1            0x21
+#define SCE_GE_SIGNAL_RTBP2            0x22
+#define SCE_GE_SIGNAL_RTBP3            0x23
+#define SCE_GE_SIGNAL_RTBP4            0x24
+#define SCE_GE_SIGNAL_RTBP5            0x25
+#define SCE_GE_SIGNAL_RTBP6            0x26
+#define SCE_GE_SIGNAL_RTBP7            0x27
+#define SCE_GE_SIGNAL_OTBP0            0x28
+#define SCE_GE_SIGNAL_OTBP1            0x29
+#define SCE_GE_SIGNAL_OTBP2            0x2A
+#define SCE_GE_SIGNAL_OTBP3            0x2B
+#define SCE_GE_SIGNAL_OTBP4            0x2C
+#define SCE_GE_SIGNAL_OTBP5            0x2D
+#define SCE_GE_SIGNAL_OTBP6            0x2E
+#define SCE_GE_SIGNAL_OTBP7            0x2F
+#define SCE_GE_SIGNAL_RCBP             0x30
+#define SCE_GE_SIGNAL_OCBP             0x38
+#define SCE_GE_SIGNAL_BREAK1           0xF0
+#define SCE_GE_SIGNAL_BREAK2           0xFF
+
 /** Structure storing a stack (for CALL/RET) */
 typedef struct
 {
@@ -282,7 +321,7 @@ typedef void (*SceGeCallback)(int id, void *arg);
 
 /** Structure to hold the callback data */
 typedef struct
-{   
+{
     /** GE callback for the signal interrupt */
     SceGeCallback signal_func;
     /** GE callback argument for signal interrupt */
@@ -438,7 +477,7 @@ int sceGeGetReg(u32 regId);
  */
 int sceGeSetReg(u32 regId, u32 value);
 
-/** 
+/**
  * Gets a command (?).
  *
  * @param cmdOff The command ID.
