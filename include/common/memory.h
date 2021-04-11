@@ -81,7 +81,7 @@ static inline void pspClearMemory(void *ptr, int size) {
         pspClearMemory8(ptr, size);
 }
 
-static inline void memset_inline(void *s, int c, SceSize size)
+static inline void memsetInline(void *s, int c, SceSize size)
 {
     u32 i;
     for (i = 0; i < size; i++)
@@ -90,12 +90,12 @@ static inline void memset_inline(void *s, int c, SceSize size)
     }
 }
 
-static inline void memcpy_inline(void *dst, const void *src, SceSize size)
+static inline void memcpyInline(void *dest, const void *src, SceSize size)
 {
     u32 i;
     for (i = 0; i < size; i++)
     {
-        *(u8 *)(dst + i) = *(u8 *)(src + i);
+        *(u8 *)(dest + i) = *(u8 *)(src + i);
     }
 }
 

@@ -150,10 +150,10 @@ s32 _sceChkregInit(SceSize args, const void *argp)
     (void)argp;
 
     // 0x00000258 - 0x0000026C
-    memset_inline(g_pIdStorageUMDConfig, 0, sizeof g_idStorageUMDConfig);
+    memsetInline(g_pIdStorageUMDConfig, 0, sizeof g_idStorageUMDConfig);
 
     // 0x00000270 - 0x0000028C
-    memset_inline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
+    memsetInline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
 
     g_UMDRegionCodeInfoPostIndex = 0; // 0x0x000002B0
     g_isUMDRegionCodesObtained = SCE_FALSE;
@@ -180,10 +180,10 @@ s32 _sceChkregEnd(SceSize args, const void *argp)
     timeout = 1 * 1000 * 1000;
 
     // 0x00000300 - 0x00000314
-    memset_inline(g_pIdStorageUMDConfig, 0, sizeof g_idStorageUMDConfig);
+    memsetInline(g_pIdStorageUMDConfig, 0, sizeof g_idStorageUMDConfig);
 
     // 0x00000318 - 0x00000334
-    memset_inline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
+    memsetInline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
 
     g_UMDRegionCodeInfoPostIndex = 0; // 0x00000348
     g_isUMDRegionCodesObtained = SCE_FALSE;
@@ -284,22 +284,22 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
         /* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
 
         // 0x00000574 - 0x0000059C
-        memcpy_inline(pWorkBuffer += 0x4, g_unk9BC, sizeof g_unk9BC);
+        memcpyInline(pWorkBuffer += 0x4, g_unk9BC, sizeof g_unk9BC);
 
         /* Copy 0x20 bytes of input data to work buffer. */
 
         // 0x000005A0 - 0x000005C0
-        memcpy_inline(pWorkBuffer += sizeof g_unk9BC, &arg0[0xD4], 0x10);
+        memcpyInline(pWorkBuffer += sizeof g_unk9BC, &arg0[0xD4], 0x10);
 
         // 0x000005C4 - 0x000005E4
-        memcpy_inline(pWorkBuffer += 0x10, &arg0[0x140], 0x10);
+        memcpyInline(pWorkBuffer += 0x10, &arg0[0x140], 0x10);
 
         /* Compute SHA1 hash. */
         status1 = sceUtilsBufferCopyWithRange(g_pWorkBuffer, 0x38, g_pWorkBuffer, 0x38, KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
         if (status1 == SCE_ERROR_OK) // 0x00000604
         {
             /* Copy first 16 byte of computed hash to target buffer. */
-            memcpy_inline(arg1, g_pWorkBuffer, 0x10);
+            memcpyInline(arg1, g_pWorkBuffer, 0x10);
 
             status1 = SCE_ERROR_OK;
         }
@@ -318,7 +318,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
         /* Clear work buffer. */
 
         // 0x0000062C - 0x00000644
-        memset_inline(g_pWorkBuffer, 0, 0x38);
+        memsetInline(g_pWorkBuffer, 0, 0x38);
 
         /* Release acquired sema resource. */
         status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C
