@@ -16,6 +16,8 @@
 
 #include "ge.h"
 
+#include "ge_int.h"
+
 SCE_MODULE_INFO("sceGE_Manager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
                                  | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_MODULE_BOOTSTART("_sceGeModuleStart");
@@ -25,112 +27,6 @@ SCE_MODULE_REBOOT_BEFORE("_sceGeModuleRebootBefore");
 SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
 #pragma GCC diagnostic pop
 SCE_SDK_VERSION(SDK_VERSION);
-
-#define GE_MAKE_OP(cmd, arg) (((cmd) << 24) | ((arg) & 0x00FFFFFF))
-#define GE_VALID_ADDR(addr) ((int)(addr) >= 0 && \
-         (ADDR_IS_SCRATCH(addr) || ADDR_IS_VRAM(addr) || ADDR_IS_RAM(addr)))
-
-#define MAKE_SYSCALL(n)            (0x03FFFFFF & (((u32)(n) << 6) | 0x0000000C))
-#define MAKE_JUMP(f)               (0x08000000 | ((u32)(f)  & 0x0FFFFFFC)) 
-#define JR_RA                      (0x03E00008)
-#define NOP                        (0)
-
-#define SCE_GE_INTERNAL_REG_BASE_ADDR 1
-#define SCE_GE_INTERNAL_REG_RADR1 2
-#define SCE_GE_INTERNAL_REG_RADR2 4
-
-#define SCE_GE_SIGNAL_ERROR_INVALID_ADDRESS 0
-#define SCE_GE_SIGNAL_ERROR_STACK_OVERFLOW 1
-#define SCE_GE_SIGNAL_ERROR_STACK_UNDERFLOW 2
-
-/******************************/
-
-int _sceGeReset();
-int _sceGeInitCallback3(void *arg0, s32 arg1, void *arg2);
-int _sceGeInitCallback4();
-int _sceGeSetRegRadr1(int arg0);
-int _sceGeSetRegRadr2(int arg0);
-int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3);
-int _sceGeInterrupt(int arg0, int arg1, int arg2);
-s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
-int _sceGeModuleStart();
-int _sceGeModuleRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
-int _sceGeModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
-int _sceGeSetBaseRadr(int arg0, int arg1, int arg2);
-int _sceGeEdramResume();
-int _sceGeEdramSuspend();
-int _sceGeQueueInit();
-int _sceGeQueueSuspend();
-int _sceGeQueueResume();
-void _sceGeFinishInterrupt(int arg0, int arg1, int arg2);
-void _sceGeListInterrupt(int arg0, int arg1, int arg2);
-int sceGeDebugBreak();
-int sceGeDebugContinue(int arg0);
-int _sceGeQueueInitCallback();
-int _sceGeQueueEnd();
-int _sceGeQueueStatus(void);
-void _sceGeErrorInterrupt(int arg0, int arg1, int arg2);
-void _sceGeListError(u32 cmd, int err);
-void _sceGeWriteBp(int *list);
-void _sceGeClearBp();
-void _sceGeListLazyFlush();
-int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs * arg,
-                      int head);
-
-/****** Structures *********/
-
-typedef struct {
-    SceGeDisplayList *curRunning;
-    int isBreak;
-    SceGeDisplayList *active_first;  //  8
-    SceGeDisplayList *active_last;   // 12
-    SceGeDisplayList *free_first;    // 16
-    SceGeDisplayList *free_last;     // 20
-    SceUID drawingEvFlagId;     // 24
-    SceUID listEvFlagIds[2];    // 28, 32
-    SceGeStack stack[32];       // 36
-    int sdkVer;                 // 1060
-    int patched;                // 1064
-    int syscallId;
-    SceGeLazy *lazySyncData;
-} SceGeQueue;
-
-typedef struct {
-    int unk0;
-    int status;
-    int listAddr; // 8
-    int *stallAddr; // 12
-    int intrType; // 16
-    int sigCmd;
-    int finCmd;
-    int endCmd;
-} SceGeQueueSuspendInfo;
-
-typedef struct {
-    int unk0, unk4, unk8, unk12;
-} SceGeBpCmd;
-
-typedef struct {
-    int busy;
-    int clear;
-    int size;
-    int size2;
-    SceGeBpCmd cmds[10];
-} SceGeBpCtrl;
-
-typedef struct {
-    char *name;
-    u32 *ptr;
-} SadrUpdate;
-
-typedef struct {
-    char reg1;
-    char cmd;
-    char reg2;
-    char size;
-} SceGeMatrix;
-
-/********* Global values *********/
 
 // 6640
 SceIntrCb g_GeSubIntrFunc = {
@@ -172,41 +68,6 @@ char save_regs[] = { // 66B4
     0xEF, 0xFF, 0xFD, 0xFF,
     0xFF, 0x5B, 0x7F, 0x03
 };
-
-typedef enum SceGeReg {
-    SCE_GE_REG_RESET = 0,
-    SCE_GE_REG_UNK004 = 1,
-    SCE_GE_REG_EDRAM_HW_SIZE = 2,
-    SCE_GE_REG_EXEC = 3,
-    SCE_GE_REG_UNK104 = 4,
-    SCE_GE_REG_LISTADDR = 5,
-    SCE_GE_REG_STALLADDR = 6,
-    SCE_GE_REG_RADR1 = 7,
-    SCE_GE_REG_RADR2 = 8,
-    SCE_GE_REG_VADR = 9,
-    SCE_GE_REG_IADR = 10,
-    SCE_GE_REG_OADR = 11,
-    SCE_GE_REG_OADR1 = 12,
-    SCE_GE_REG_OADR2 = 13,
-    SCE_GE_REG_UNK300 = 14,
-    SCE_GE_REG_INTERRUPT_TYPE1 = 15,
-    SCE_GE_REG_INTERRUPT_TYPE2 = 16,
-    SCE_GE_REG_INTERRUPT_TYPE3 = 17,
-    SCE_GE_REG_INTERRUPT_TYPE4 = 18,
-    SCE_GE_REG_EDRAM_ENABLED_SIZE = 19,
-    SCE_GE_REG_GEOMETRY_CLOCK = 20,
-    SCE_GE_REG_EDRAM_REFRESH_UNK1 = 21,
-    SCE_GE_REG_EDRAM_UNK10 = 22,
-    SCE_GE_REG_EDRAM_REFRESH_UNK2 = 23,
-    SCE_GE_REG_EDRAM_REFRESH_UNK3 = 24,
-    SCE_GE_REG_EDRAM_UNK40 = 25,
-    SCE_GE_REG_EDRAM_UNK50 = 26,
-    SCE_GE_REG_EDRAM_UNK60 = 27,
-    SCE_GE_REG_EDRAM_ADDR_TRANS_DISABLE = 28,
-    SCE_GE_REG_EDRAM_ADDR_TRANS_VALUE = 29,
-    SCE_GE_REG_EDRAM_UNK90 = 30,
-    SCE_GE_REG_EDRAM_UNKA0 = 31
-} SceGeReg;
 
 // 66D4
 volatile void *g_pAwRegAdr[32] = {
@@ -547,15 +408,15 @@ int _sceGeInitCallback4()
 {
     SceKernelGameInfo *info = sceKernelGetGameInfo();
     if (info != NULL) {
-        u32 syscOp = MAKE_SYSCALL(sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr));
+        u32 syscOp = ALLEGREX_MAKE_SYSCALL(sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr));
         int oldIntr = sceKernelCpuSuspendIntr();
         if (strcmp(info->gameId, sadrupdate_bypass.name) == 0) {
             u32 *ptr = sadrupdate_bypass.ptr;
             // Replace the syscall to sceGeListUpdateStallAddr by a jump to sceGeListUpdateStallAddr_lazy in usersystemlib
-            if (ptr[0] == JR_RA && ptr[1] == syscOp) {
+            if (ptr[0] == ALLEGREX_MAKE_JR_RA && ptr[1] == syscOp) {
                 // 0804
-                ptr[0] = MAKE_JUMP(sceKernelGetUsersystemLibWork()->sceGeListUpdateStallAddr_lazy);
-                ptr[1] = NOP;
+                ptr[0] = ALLEGREX_MAKE_J(sceKernelGetUsersystemLibWork()->sceGeListUpdateStallAddr_lazy);
+                ptr[1] = ALLEGREX_MAKE_NOP;
                 pspCache(0x1A, ptr + 0);
                 pspCache(0x1A, ptr + 1);
                 pspCache(0x08, ptr + 0);
@@ -1234,7 +1095,7 @@ _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
         _sceGeErrorInterrupt(attr, unk1, arg2);
     }
     // 2118
-    if ((attr & (HW_GE_INTSIG | HW_GE_INTFIN)) == (SCE_GE_INTSIG | SCE_GE_INTFIN)) {
+    if ((attr & (HW_GE_INTSIG | HW_GE_INTFIN)) == (HW_GE_INTSIG | HW_GE_INTFIN)) {
         // 2218
         Kprintf("GE INTSIG/INTFIN at the same time\n"); // 0x6324
     }
@@ -2963,7 +2824,7 @@ int _sceGeQueueInitCallback()
     if (libWork != NULL) {
         // Pointer to the syscall in sub_00000208 (at 0x20C) in usersystemlib
         u32 *syscPtr = (void*)libWork->sceGeListUpdateStallAddr_lazy + 204; // TODO: replace with a difference of two functions from usersystemlib
-        *syscPtr = MAKE_SYSCALL(g_AwQueue.syscallId);
+        *syscPtr = ALLEGREX_MAKE_SYSCALL(g_AwQueue.syscallId);
         pspCache(0x1A, syscPtr);
         pspCache(0x08, syscPtr);
         g_AwQueue.lazySyncData = libWork->lazySyncData;
