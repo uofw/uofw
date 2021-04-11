@@ -81,3 +81,12 @@ static inline void pspClearMemory(void *ptr, int size) {
         pspClearMemory8(ptr, size);
 }
 
+static inline void memset_inline(void *s, int c, SceSize size)
+{
+    u32 i;
+    for (i = 0; i < size; i++)
+    {
+        *(u8 *)(s + i) = (u8)c;
+    }
+}
+

@@ -150,17 +150,10 @@ s32 _sceChkregInit(SceSize args, const void *argp)
     (void)argp;
 
     // 0x00000258 - 0x0000026C
-    u32 i;
-    for (i = 0; i < CHKREG_ID_STORAGE_UMD_CONFIG_SIZE; i++)
-    {
-        g_pIdStorageUMDConfig[i] = 0;
-    }
+    memset_inline(g_pIdStorageUMDConfig, 0, sizeof g_idStorageUMDConfig);
 
     // 0x00000270 - 0x0000028C
-    for (i = 0; i < sizeof g_ConsoleIdCertificate; i++)
-    {
-        ((u8 *)&g_ConsoleIdCertificate)[i] = 0;
-    }
+    memset_inline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
 
     g_UMDRegionCodeInfoPostIndex = 0; // 0x0x000002B0
     g_isUMDRegionCodesObtained = SCE_FALSE;
@@ -187,17 +180,10 @@ s32 _sceChkregEnd(SceSize args, const void *argp)
     timeout = 1 * 1000 * 1000;
 
     // 0x00000300 - 0x00000314
-    u32 i;
-    for (i = 0; i < CHKREG_ID_STORAGE_UMD_CONFIG_SIZE; i++)
-    {
-        g_pIdStorageUMDConfig[i] = 0;
-    }
+    memset_inline(g_pIdStorageUMDConfig, 0, sizeof g_idStorageUMDConfig);
 
     // 0x00000318 - 0x00000334
-    for (i = 0; i < sizeof g_ConsoleIdCertificate; i++)
-    {
-        ((u8 *)&g_ConsoleIdCertificate)[i] = 0;
-    }
+    memset_inline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
 
     g_UMDRegionCodeInfoPostIndex = 0; // 0x00000348
     g_isUMDRegionCodesObtained = SCE_FALSE;
@@ -345,10 +331,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
         /* Clear work buffer. */
 
         // 0x0000062C - 0x00000644
-        for (i = 0; i < 0x38; i++)
-        {
-            pWorkBuffer[i] = 0;
-        }
+        memset_inline(pWorkBuffer, 0, 0x38);
 
         /* Release acquired sema resource. */
         status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C
