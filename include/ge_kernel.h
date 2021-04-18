@@ -17,7 +17,7 @@
  * @{
  */
 
-/** State of a display list, internally */
+/** Internal state of a display list */
 typedef enum
 {
     /** No state assigned, the list is empty */
@@ -32,7 +32,7 @@ typedef enum
     SCE_GE_DL_STATE_PAUSED // 4
 } SceGeDisplayListState;
 
-/** Signal state of a display list */
+/** Internal signal state of a display list */
 typedef enum
 {
     /** No signal received */
@@ -102,10 +102,13 @@ int sceGeInit();
 /**
  * Ends the GE subsystem.
  *
- * @return Zer.o
+ * @return Zero.
  */
 int sceGeEnd();
 
+/**
+ * Identifiers for the GE hardware (DMA) registers which can be read and written
+ * by sceGeGetReg() and sceGeSetReg(). See the hardware documentation for more details. */
 typedef enum SceGeReg {
     SCE_GE_REG_RESET = 0,
     SCE_GE_REG_UNK004 = 1,
@@ -142,13 +145,13 @@ typedef enum SceGeReg {
 } SceGeReg;
 
 /**
- * Gets a GE hardware register.
+ * Gets the value of a GE hardware register.
  *
  * @param regId The register ID.
  *
  * @return The content of the register on success, otherwise less than zero.
  */
-int sceGeGetReg(u32 regId);
+int sceGeGetReg(SceGeReg regId);
 
 /**
  * Sets a GE hardware register.
@@ -158,13 +161,13 @@ int sceGeGetReg(u32 regId);
  *
  * @return Zero on success, otherwise less than zero.
  */
-int sceGeSetReg(u32 regId, u32 value);
+int sceGeSetReg(SceGeReg regId, u32 value);
 
 /**
- * Sets a command (?).
+ * Sets the value of a command register, as if the command was executed.
  *
  * @param cmdOff The command ID.
- * @param cmd The value to set the command to.
+ * @param cmd The value to set the command to. (Only the least significant 24 bits are used.)
  *
  * @return Zero on success, otherwise less than zero.
  */
@@ -173,12 +176,53 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd);
 /**
  * Sets a matrix.
  *
- * @param id The matrix ID (0 - 11)
+ * @param id The matrix ID, one of SCE_GE_MTX_*.
  * @param mtx The buffer storing the matrix.
  *
  * @return Zero on success, otherwise less than zero.
  */
 int sceGeSetMtx(int id, int *mtx);
+
+/**
+ * The value of the first argument passed to the log handler registered by sceGeRegisterLogHandler().
+ * The following arguments passed to the log handler depend on this.
+ */
+typedef enum SceGeLogType {
+    /** Display list was enqueued.
+     * Four arguments: display list ID, was enqueued as head, pointer to the command list,
+     * pointer to the stall address. */
+    SCE_GE_LOG_DL_ENQUEUED = 0,
+    /** Display list was dequeued.
+     * One argument: the display list ID. */
+    SCE_GE_LOG_DL_DEQUEUED = 1,
+    /** Display list's stall address was updated.
+     * Two arguments: the display list ID, and the new stall address. */
+    SCE_GE_LOG_DL_SADR_UPDATE = 2,
+    /** sceGeBreak() was triggered.
+     * One argument: whether the flag to reset the display list queue was set. */
+    SCE_GE_LOG_DL_BREAK = 3,
+    /** sceGeContinue() was triggered.
+     * One argument, always zero. */
+    SCE_GE_LOG_DL_CONTINUE = 4,
+    /** Display list is now running (when enqueued, when another display list finished,
+     * or when doing a sceGeContinue()). Three arguments: the display list ID, the pointer to
+     * its command list, the pointer to its stall address. */
+    SCE_GE_LOG_DL_RUNNING = 5,
+    /** Display list reached the ending FINISH/END sequence.
+     * Four arguments: display list ID, current pointer to the command list,
+     * and the two commands before it (in their running order). */
+    SCE_GE_LOG_DL_END = 6,
+    /** Display list caught a signal.
+     * Four arguments: display list ID, current pointer to the command list,
+     * and the two commands before it (in their running order). */
+    SCE_GE_LOG_DL_SIGNAL = 7,
+} SceGeLogType;
+
+/**
+ * A GE logging handler function. Takes a variable number of arguments depending on the
+ * logging type.
+ */
+typedef void (*SceGeLogHandler)(SceGeLogType logType, ...);
 
 /**
  * Registers a logging handler.
@@ -187,7 +231,7 @@ int sceGeSetMtx(int id, int *mtx);
  *
  * @return Zero.
  */
-int sceGeRegisterLogHandler(void (*handler)());
+int sceGeRegisterLogHandler(SceGeLogHandler handler);
 
 /**
  * Sets or unsets the geometry clock.
@@ -218,9 +262,9 @@ int sceGeEdramInit();
 int sceGeEdramSetRefreshParam(int arg0, int arg1, int arg2, int arg3);
 
 /**
- * Sets the EDRAM size.
+ * Sets the EDRAM size to be enabled.
  *
- * @param size The size (0x200000 or 0x400000).
+ * @param size The size (0x200000 or 0x400000). Will return an error if 0x400000 is specified for the PSP FAT.
  *
  * @return Zero on success, otherwise less than zero.
  */
@@ -234,14 +278,24 @@ int sceGeEdramSetSize(int size);
 int sceGeEdramGetHwSize();
 
 /**
- * Puts a breakpoint (used for debugging).
+ * A GE breakpoint.
+ */
+typedef struct SceGeBreakpoint {
+    /** The address of the command where to break. */
+    u32 bpAddr;
+    /** The number of times to break there. */
+    int bpCount;
+} SceGeBreakpoint;
+
+/**
+ * Put breakpoints in the display list execution.
  *
- * @param inPtr A list of breakpoints, each one using 2 ints: one for the breakpoint address, and another one for the number of stops to do at the specified address.
+ * @param inPtr A list of breakpoints to set.
  * @param size The number of breakpoints to set.
  *
  * @return Zero on success, otherwise less than zero.
  */
-int sceGePutBreakpoint(int *inPtr, int size);
+int sceGePutBreakpoint(SceGeBreakpoint *bp, int size);
 
 /**
  * Gets a breakpoint.

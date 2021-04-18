@@ -138,7 +138,7 @@ SceSysEventHandler g_GeSysEv =
 char g_szTbp[] = "RTBP0";
 
 // 6890
-void (*g_GeLogHandler) ();
+SceGeLogHandler g_GeLogHandler;
 
 /* The GE context, saved on reset & suspend (and restored on resume) */
 SceGeContext _aw_ctx; // 68C0
@@ -1221,7 +1221,7 @@ int _sceGeModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attr
     return 0;
 }
 
-int sceGeRegisterLogHandler(void (*handler) ())
+int sceGeRegisterLogHandler(SceGeLogHandler handler)
 {
     g_GeLogHandler = handler;
     return 0;
@@ -1648,7 +1648,7 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 // 3338
                 if (g_GeLogHandler != NULL) {
                     // 3418
-                    g_GeLogHandler(6, (int)dl ^ g_dlMask,
+                    g_GeLogHandler(SCE_GE_LOG_DL_END, (int)dl ^ g_dlMask,
                                  cmdList, lastCmd1, lastCmd2);
                 }
                 // 3348
@@ -1766,7 +1766,7 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
             pspSync();
             if (g_GeLogHandler != 0) {
                 // 321C
-                g_GeLogHandler(5, (int)dl2 ^ g_dlMask, dl2->list, dl2->stall);
+                g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, (int)dl2 ^ g_dlMask, dl2->list, dl2->stall);
             }
         }
     }
@@ -1800,7 +1800,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
     }
     if (g_GeLogHandler != NULL) {
         // 3BE8
-        g_GeLogHandler(7, (int)dl ^ g_dlMask, cmdList, lastCmd1, lastCmd2);
+        g_GeLogHandler(SCE_GE_LOG_DL_SIGNAL, (int)dl ^ g_dlMask, cmdList, lastCmd1, lastCmd2);
     }
     // 3618
     switch ((lastCmd1 >> 16) & 0xFF) {
@@ -2006,7 +2006,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 return;
             }
             int opt = 0;
-            if (((lastCmd1 >> 16) & 0xFF) == 0xFF) {
+            if (((lastCmd1 >> 16) & 0xFF) == SCE_GE_SIGNAL_BREAK2) {
                 // 3B6C
                 SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[0];
                 int i;
@@ -2097,7 +2097,7 @@ int sceGeListDeQueue(int dlId)
 
             if (g_GeLogHandler != NULL) {
                 // 3D70
-                g_GeLogHandler(1, dlId);
+                g_GeLogHandler(SCE_GE_LOG_DL_DEQUEUED, dlId);
             }
             ret = 0;
         } else
@@ -2342,7 +2342,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
 
     // 410C
     if (ret == 0 && g_GeLogHandler != NULL)
-        g_GeLogHandler(3, resetQueue);
+        g_GeLogHandler(SCE_GE_LOG_DL_BREAK, resetQueue);
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return ret;
@@ -2386,9 +2386,9 @@ int sceGeContinue()
                     g_AwQueue.curRunning = dl;
                     sceKernelClearEventFlag(g_AwQueue.drawingEvFlagId, ~2);
                     if (g_GeLogHandler != NULL) {
-                        g_GeLogHandler(4, 0);
+                        g_GeLogHandler(SCE_GE_LOG_DL_CONTINUE, 0);
                         if (g_GeLogHandler != NULL)
-                            g_GeLogHandler(5, (int)dl ^ g_dlMask, dl->list, dl->stall);
+                            g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, (int)dl ^ g_dlMask, dl->list, dl->stall);
                     }
                 } else {
                     // 45A8
@@ -2397,7 +2397,7 @@ int sceGeContinue()
             } else {
                 dl->state = SCE_GE_DL_STATE_QUEUED;
                 if (g_GeLogHandler != NULL)
-                    g_GeLogHandler(4, 0);
+                    g_GeLogHandler(SCE_GE_LOG_DL_CONTINUE, 0);
             }
         } else if (dl->state == SCE_GE_DL_STATE_RUNNING) {
             // 4428
@@ -2465,13 +2465,13 @@ int sceGeSetCallback(SceGeCallbackData * cb)
     return i;
 }
 
-int sceGePutBreakpoint(int *inPtr, int size)
+int sceGePutBreakpoint(SceGeBreakpoint *bp, int size)
 {
     if (size >= 9)
         return SCE_ERROR_INVALID_SIZE;
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
-    if (!pspK1DynBufOk(inPtr, size * 8)) {
+    if (!pspK1DynBufOk(bp, size * 8)) {
         // 4850 dup
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
@@ -2481,7 +2481,7 @@ int sceGePutBreakpoint(int *inPtr, int size)
     int i;
     for (i = 0; i < size; i++) {
         int (*func) (int, int, int) = (void *)*(int *)(g_deci2p + 36);
-        if (func(inPtr[i * 2], 4, 3) < 0) {
+        if (func(bp[i].bpAddr, 4, 3) < 0) {
             // 4850 dup
             pspSetK1(oldK1);
             sceKernelCpuResumeIntr(oldIntr);
@@ -2493,8 +2493,8 @@ int sceGePutBreakpoint(int *inPtr, int size)
     g_GeDeciBreak.size = size;
     // 47C8
     for (i = 0; i < g_GeDeciBreak.size; i++) {
-        g_GeDeciBreak.cmds[i].unk0 = inPtr[i * 2 + 0] & 0xFFFFFFFC;
-        g_GeDeciBreak.cmds[i].unk4 = inPtr[i * 2 + 1];
+        g_GeDeciBreak.cmds[i].unk0 = bp[i].bpAddr & 0xFFFFFFFC;
+        g_GeDeciBreak.cmds[i].unk4 = bp[i].bpCount;
     }
     // 47F4
     if (g_GeDeciBreak.busy == 0) {
@@ -3229,7 +3229,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         // 5BB8
         g_AwQueue.active_first = dl;
         if (g_GeLogHandler != NULL)
-            g_GeLogHandler(0, dlId, 1, list, stall);
+            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, dlId, 1, list, stall);
     } else if (g_AwQueue.active_first == NULL) {
         // 5A8C
         dl->state = SCE_GE_DL_STATE_RUNNING;
@@ -3257,9 +3257,9 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         g_AwQueue.curRunning = dl;
         sceKernelClearEventFlag(g_AwQueue.drawingEvFlagId, 0xFFFFFFFD);
         if (g_GeLogHandler != NULL) {
-            g_GeLogHandler(0, dlId, 0, list, stall);
+            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, dlId, 0, list, stall);
             if (g_GeLogHandler != NULL)
-                g_GeLogHandler(5, dlId, list, stall);
+                g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, dlId, list, stall);
         }
     } else {
         dl->state = SCE_GE_DL_STATE_QUEUED;
@@ -3268,7 +3268,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         g_AwQueue.active_last = dl;
         if (g_GeLogHandler != NULL) {
             // 5A6C
-            g_GeLogHandler(0, dlId, 0, list, stall);
+            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, dlId, 0, list, stall);
         }
     }
 
