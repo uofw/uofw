@@ -14,7 +14,7 @@
 #include "sysmem_utils_kernel.h"
 #include "threadman_kernel.h"
 
-#include "ge.h"
+#include "ge_kernel.h"
 
 #include "ge_int.h"
 
