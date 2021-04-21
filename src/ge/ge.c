@@ -2773,7 +2773,6 @@ int sceGeDebugContinue(int arg0)
         g_GeDeciBreak.size2 = 1;
         g_GeDeciBreak.cmds2[0].count = 1;
         g_GeDeciBreak.cmds2[0].addr = (int)nextCmdPtr1;
-        int maxCount = g_GeDeciBreak.size;
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[0];
         // 4E50
         int i;
