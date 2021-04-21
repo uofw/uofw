@@ -306,7 +306,7 @@ int sceGePutBreakpoint(SceGeBreakpoint *bp, int size);
  *
  * @return The number of stored breakpoints on success, otherwise less than zero.
  */
-int sceGeGetBreakpoint(int *outPtr, int size, int *arg2);
+int sceGeGetBreakpoint(SceGeBreakpoint *bp, int size, int *arg2);
 
 /**
  * Gets a list of the IDs of the display lists currently being in the queue.

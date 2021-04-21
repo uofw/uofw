@@ -82,15 +82,20 @@ typedef struct {
 } SceGeQueueSuspendInfo;
 
 typedef struct {
-    int unk0, unk4, unk8, unk12;
+    u32 addr; // 0
+    int count; // 4
+    int oldCmd1; // 8
+    int oldCmd2; // 12
 } SceGeBpCmd;
 
 typedef struct {
     int busy;
-    int clear;
+    // breakpoints are already set
+    int bpSet;
     int size;
     int size2;
-    SceGeBpCmd cmds[10];
+    SceGeBpCmd cmds[8];
+    SceGeBpCmd cmds2[2];
 } SceGeBpCtrl;
 
 typedef struct {

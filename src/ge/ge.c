@@ -162,7 +162,7 @@ SceGeQueueSuspendInfo g_GeSuspend;
 SceGeBpCtrl g_GeDeciBreak;
 
 // 75D0
-int g_cbhook;
+short g_cbhook;
 
 // 7600
 int *g_cmdList;
@@ -2013,10 +2013,10 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 opt = 1;
                 for (i = 0; i < g_GeDeciBreak.size; i++) {
                     // 3B90
-                    if (UCACHED(bpCmd->unk0) == UCACHED(lastCmdPtr1)) {
+                    if (UCACHED(bpCmd->addr) == UCACHED(lastCmdPtr1)) {
                         // 3BC0
-                        if (bpCmd->unk4 == 0
-                            || (bpCmd->unk4 != -1 && (--bpCmd->unk4) != 0))
+                        if (bpCmd->count == 0
+                            || (bpCmd->count != -1 && (--bpCmd->count) != 0))
                             opt = -1;
                         break;
                     }
@@ -2467,7 +2467,7 @@ int sceGeSetCallback(SceGeCallbackData * cb)
 
 int sceGePutBreakpoint(SceGeBreakpoint *bp, int size)
 {
-    if (size >= 9)
+    if (size > 8)
         return SCE_ERROR_INVALID_SIZE;
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
@@ -2493,13 +2493,13 @@ int sceGePutBreakpoint(SceGeBreakpoint *bp, int size)
     g_GeDeciBreak.size = size;
     // 47C8
     for (i = 0; i < g_GeDeciBreak.size; i++) {
-        g_GeDeciBreak.cmds[i].unk0 = bp[i].bpAddr & 0xFFFFFFFC;
-        g_GeDeciBreak.cmds[i].unk4 = bp[i].bpCount;
+        g_GeDeciBreak.cmds[i].addr = bp[i].bpAddr & 0xFFFFFFFC;
+        g_GeDeciBreak.cmds[i].count = bp[i].bpCount;
     }
     // 47F4
     if (g_GeDeciBreak.busy == 0) {
         // 4840
-        _sceGeWriteBp(0);
+        _sceGeWriteBp(NULL);
     }
     pspSetK1(oldK1);
     // 4804
@@ -2507,11 +2507,11 @@ int sceGePutBreakpoint(SceGeBreakpoint *bp, int size)
     return 0;
 }
 
-int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
+int sceGeGetBreakpoint(SceGeBreakpoint *outPtr, int size, int *bpCount)
 {
     int oldIntr = sceKernelCpuSuspendIntr();
     int oldK1 = pspShiftK1();
-    if (!pspK1DynBufOk(outPtr, size * 8) || !pspK1PtrOk(arg2)) {
+    if (!pspK1DynBufOk(outPtr, size * sizeof(*outPtr)) || !pspK1PtrOk(bpCount)) {
         // 48C0
         pspSetK1(oldK1);
         sceKernelCpuResumeIntr(oldIntr);
@@ -2525,16 +2525,16 @@ int sceGeGetBreakpoint(int *outPtr, int size, int *arg2)
     for (i = 0; i < g_GeDeciBreak.size; i++) {
         if (i < size) {
             count++;
-            outPtr[0] = bpCmd->unk0 & 0xFFFFFFFC;
-            outPtr[1] = bpCmd->unk4;
-            outPtr += 2;
+            outPtr->bpAddr = bpCmd->addr & 0xFFFFFFFC;
+            outPtr->bpCount = bpCmd->count;
+            outPtr++;
         }
         // 4930
         bpCmd++;
     }
     // 4940
-    if (arg2 != 0)
-        *arg2 = g_GeDeciBreak.size;
+    if (bpCount != NULL)
+        *bpCount = g_GeDeciBreak.size;
     // 4950
     pspSetK1(oldK1);
     sceKernelCpuResumeIntr(oldIntr);
@@ -2742,16 +2742,16 @@ int sceGeDebugContinue(int arg0)
                 int signalOp = (curCmd >> 16) & 0x000000FF;
                 int off = (curCmd << 16) | (*(cmdPtr + 1) & 0xFFFF);
                 nextCmdPtr1 = nextCmdPtr2;
-                if (signalOp != 0x10 && (signalOp != 0x11 || arg0 != 1)) {
+                if (signalOp != SCE_GE_SIGNAL_JUMP && (signalOp != SCE_GE_SIGNAL_CALL || arg0 != 1)) {
                     // 4F94
-                    if (signalOp == 0x13) {
+                    if (signalOp == SCE_GE_SIGNAL_RJUMP) {
                         // 4FAC
                         nextCmdPtr1 = cmdPtr + off;
                     } else {
-                        if (signalOp != 0x14 || arg0 != 1) {
+                        if (signalOp != SCE_GE_SIGNAL_RCALL || arg0 != 1) {
                             // 4FB4
-                            if (signalOp != 0x15) {
-                                if ((signalOp != 0x16 || arg0 != 1) && signalOp == 0x12 && dl->stackOff != 0)   // 4FDC
+                            if (signalOp != SCE_GE_SIGNAL_OJUMP) {
+                                if ((signalOp != SCE_GE_SIGNAL_OCALL || arg0 != 1) && signalOp == SCE_GE_SIGNAL_RET && dl->stackOff != 0)   // 4FDC
                                     nextCmdPtr1 = (int *)
                                         dl->stack[dl->stackOff - 1].stack[1];
                             } else {
@@ -2770,16 +2770,16 @@ int sceGeDebugContinue(int arg0)
         // (4E18)
         // (4E1C)
         // 4E20
-        g_GeDeciBreak.cmds[8].unk4 = 1;
         g_GeDeciBreak.size2 = 1;
-        g_GeDeciBreak.cmds[8].unk0 = (int)nextCmdPtr1;
+        g_GeDeciBreak.cmds2[0].count = 1;
+        g_GeDeciBreak.cmds2[0].addr = (int)nextCmdPtr1;
         int maxCount = g_GeDeciBreak.size;
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[0];
         // 4E50
         int i;
-        for (i = 0; i < maxCount; i++) {
+        for (i = 0; i < g_GeDeciBreak.size; i++) {
             // 4E50
-            if (UCACHED(bpCmd->unk0) == UCACHED(nextCmdPtr1)) {
+            if (UCACHED(bpCmd->addr) == UCACHED(nextCmdPtr1)) {
                 // 4F4C
                 g_GeDeciBreak.size2 = 0;
                 break;
@@ -2787,8 +2787,7 @@ int sceGeDebugContinue(int arg0)
             bpCmd++;
         }
         // 4E6C
-        op = *nextCmdPtr1 >> 24;
-        if (op == SCE_GE_CMD_SIGNAL && ((*nextCmdPtr1 >> 16) & 0xFF) == 0xFF) {   // 4F38
+        if ((*nextCmdPtr1 >> 24) == SCE_GE_CMD_SIGNAL && ((*nextCmdPtr1 >> 16) & 0xFF) == SCE_GE_SIGNAL_BREAK2) { // 4F38
             // 4F44 dup
             g_GeDeciBreak.size2 = 0;
         }
@@ -2799,11 +2798,12 @@ int sceGeDebugContinue(int arg0)
         // 4EA0
         int i;
         for (i = 0; i < g_GeDeciBreak.size; i++) {
-            if (UCACHED(bpCmd->unk0) == UCACHED(cmdPtr)) {
+            if (UCACHED(bpCmd->addr) == UCACHED(cmdPtr)) {
                 // 4F10
-                bpCmd->unk0 |= 1;
-                if (~bpCmd->unk4 != 0 && bpCmd->unk4 != 0)
-                    bpCmd->unk4--;
+                bpCmd->addr |= 1;
+                if (bpCmd->count != -1 && bpCmd->count != 0) {
+                    bpCmd->count--;
+                }
             }
             // 4EB4
             bpCmd++;
@@ -2971,27 +2971,27 @@ void _sceGeWriteBp(int *list)
 {
     if (g_deci2p == NULL)
         return;
-    if (g_GeDeciBreak.clear != 0)
+    if (g_GeDeciBreak.bpSet)
         return;
-    g_GeDeciBreak.clear = 1;
+    g_GeDeciBreak.bpSet = 1;
     int *prevList = list - 1;
     int i;
     for (i = 0; i < g_GeDeciBreak.size; i++) {
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[i];
-        int *ptr2 = (int *)(bpCmd->unk0 & 0xFFFFFFFC);
+        int *ptr2 = (int *)(bpCmd->addr & 0xFFFFFFFC);
         u32 cmd = ptr2[0];
-        bpCmd->unk8 = cmd;
-        bpCmd->unk12 = ptr2[1];
-        if (((bpCmd->unk0 ^ (int)prevList) & 0x1FFFFFFC) != 0) {
+        bpCmd->oldCmd1 = cmd;
+        bpCmd->oldCmd2 = ptr2[1];
+        if (((bpCmd->addr ^ (int)prevList) & 0x1FFFFFFC) != 0) {
             // 5574
-            if ((bpCmd->unk0 & 3) == 0) {
+            if ((bpCmd->addr & 3) == 0) {
                 // 55C4
                 if (cmd >> 24 != SCE_GE_CMD_END)
                     ptr2[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, SCE_GE_SIGNAL_BREAK2 << 24);
                 // 55CC
                 ptr2[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
             } else
-                bpCmd->unk0 = (int)ptr2;
+                bpCmd->addr = (int)ptr2;
             // 5580
             pspCache(0x1A, &ptr2[0]);
             pspCache(0x1A, &ptr2[1]);
@@ -3004,13 +3004,12 @@ void _sceGeWriteBp(int *list)
     }
 
     // 54A4
-    SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[8];
-
     // 54E0
     for (i = 0; i < g_GeDeciBreak.size2; i++) {
-        int *ptr = (int *)bpCmd->unk0;
-        bpCmd->unk8 = ptr[0];
-        bpCmd->unk12 = ptr[1];
+        SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds2[i];
+        int *ptr = (int *)bpCmd->addr;
+        bpCmd->oldCmd1 = ptr[0];
+        bpCmd->oldCmd2 = ptr[1];
         if ((((int)ptr ^ (int)prevList) & 0x1FFFFFFC) != 0) {
             // 5528
             ptr[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, SCE_GE_SIGNAL_BREAK1 << 24);
@@ -3023,7 +3022,6 @@ void _sceGeWriteBp(int *list)
             }
         }
         // 5504
-        bpCmd++;
     }
 
     // 5514
@@ -3034,16 +3032,16 @@ void _sceGeClearBp()
 {
     if (g_deci2p == NULL)
         return;
-    if (g_GeDeciBreak.clear == 0)
+    if (!g_GeDeciBreak.bpSet)
         return;
-    g_GeDeciBreak.clear = 0;
+    g_GeDeciBreak.bpSet = 0;
     // 5624
     int i;
     for (i = 0; i < g_GeDeciBreak.size2; i++) {
-        SceGeBpCmd *cmd = &g_GeDeciBreak.cmds[7 + (g_GeDeciBreak.size2 - i)];
-        int *out = (int *)cmd->unk0;
-        out[0] = cmd->unk8;
-        out[1] = cmd->unk12;
+        SceGeBpCmd *cmd = &g_GeDeciBreak.cmds2[g_GeDeciBreak.size2 - i - 1];
+        int *out = (int *)cmd->addr;
+        out[0] = cmd->oldCmd1;
+        out[1] = cmd->oldCmd2;
         pspCache(0x1A, &out[0]);
         pspCache(0x1A, &out[1]);
         if ((pspCop0StateGet(24) & 1) != 0) {
@@ -3055,10 +3053,10 @@ void _sceGeClearBp()
 
     // 5694, 56C4
     for (i = 0; i < g_GeDeciBreak.size; i++) {
-        SceGeBpCmd *cmd = &g_GeDeciBreak.cmds[7 + (g_GeDeciBreak.size - i)];
-        int *out = (int *)(cmd->unk0 & 0xFFFFFFFC);
-        out[0] = cmd->unk8;
-        out[1] = cmd->unk12;
+        SceGeBpCmd *cmd = &g_GeDeciBreak.cmds[g_GeDeciBreak.size - i - 1];
+        int *out = (int *)(cmd->addr & 0xFFFFFFFC);
+        out[0] = cmd->oldCmd1;
+        out[1] = cmd->oldCmd2;
         pspCache(0x1A, &out[0]);
         pspCache(0x1A, &out[1]);
         if ((pspCop0StateGet(24) & 1) != 0) {
