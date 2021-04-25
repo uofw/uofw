@@ -171,7 +171,7 @@ int *g_cmdList;
 int g_dlMask;
 
 // 7608
-void *g_deci2p;
+SceKernelDeci2Ops *g_deci2p;
 
 // 7640
 SceGeDisplayList g_displayLists[64];
@@ -334,12 +334,11 @@ int sceGeInit()
     // 059C
     sceKernelSetInitCallback(_sceGeInitCallback4, 4, 0);
     // Register deci2p (debug) operations
-    void *ret = (void *)sceKernelDeci2pReferOperations();
-    g_deci2p = ret;
-    if (ret != NULL) {
+    SceKernelDeci2Ops *ops = sceKernelDeci2pReferOperations();
+    g_deci2p = ops;
+    if (ops != NULL) {
         // 05D4
-        int (*func) (SceKernelDeci2Ops *) = (void *)*(int *)(ret + 28);
-        func(&g_Deci2Ops);
+        ops->ops[SCE_DECI2OP_GE_SETOPS](&g_Deci2Ops);
     }
     return 0;
 }
@@ -2036,8 +2035,7 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
 
             // 3B48
             do {
-                int (*func) (int) = (void *)*(int *)(g_deci2p + 32);
-                func(opt);
+                g_deci2p->ops[SCE_DECI2OP_GE_BREAK](opt);
                 opt = 0;
             } while (g_GeDeciBreak.busy != 0);
             break;
@@ -2480,8 +2478,7 @@ int sceGePutBreakpoint(SceGeBreakpoint *bp, int size)
     // 477C
     int i;
     for (i = 0; i < size; i++) {
-        int (*func) (int, int, int) = (void *)*(int *)(g_deci2p + 36);
-        if (func(bp[i].bpAddr, 4, 3) < 0) {
+        if (g_deci2p->ops[SCE_DECI2OP_GE_PUT_BP](bp[i].bpAddr, 4, 3) < 0) {
             // 4850 dup
             pspSetK1(oldK1);
             sceKernelCpuResumeIntr(oldIntr);
