@@ -89,7 +89,8 @@ typedef struct {
 } SceGeBpCmd;
 
 typedef struct {
-    int busy;
+    // reached a break state (through signal or sceGeBreak())
+    int inBreakState;
     // breakpoints are already set
     int bpSet;
     int size;

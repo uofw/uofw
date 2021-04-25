@@ -2000,11 +2000,13 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
     case SCE_GE_SIGNAL_BREAK2:
         {
             // 3B08
+            // If deci2p is not set, resume
             if (g_deci2p == NULL) {
                 HW_GE_EXEC |= 1;
                 return;
             }
             int opt = 0;
+            // Checked if it's a BREAK2 signal, ie break with count
             if (((lastCmd1 >> 16) & 0xFF) == SCE_GE_SIGNAL_BREAK2) {
                 // 3B6C
                 SceGeBpCmd *bpCmd = &g_GeDeciBreak.cmds[0];
@@ -2012,32 +2014,43 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 opt = 1;
                 for (i = 0; i < g_GeDeciBreak.size; i++) {
                     // 3B90
+                    // Check the matching break instruction
                     if (UCACHED(bpCmd->addr) == UCACHED(lastCmdPtr1)) {
                         // 3BC0
-                        if (bpCmd->count == 0
-                            || (bpCmd->count != -1 && (--bpCmd->count) != 0))
+                        if (bpCmd->count == 0) {
+                            // If the breakpoint count is already 0, don't break
                             opt = -1;
+                        } else if (bpCmd->count != -1) {
+                            // If the breakpoint count is -1, always break; otherwise, see if it reaches zero after being decreased
+                            bpCmd->count--;
+                            if (bpCmd->count != 0) {
+                                opt = -1;
+                            }
+                        }
                         break;
                     }
                     bpCmd++;
                 }
                 // 3BB0
+                // If the count is not valid, resume
                 if (opt < 0) {
                     HW_GE_EXEC |= 1;
                     return;
                 }
             }
             // 3B28
+            // Reset the GE list address and clear breakpoints
             HW_GE_LISTADDR = (int)lastCmdPtr1;
             _sceGeClearBp();
-            g_GeDeciBreak.busy = 1;
+            g_GeDeciBreak.inBreakState = 1;
             g_GeDeciBreak.size2 = 0;
 
             // 3B48
+            // Wait for the deci2p operation to resume the GE
             do {
                 g_deci2p->ops[SCE_DECI2OP_GE_BREAK](opt);
                 opt = 0;
-            } while (g_GeDeciBreak.busy != 0);
+            } while (g_GeDeciBreak.inBreakState);
             break;
         }
 
@@ -2494,7 +2507,7 @@ int sceGePutBreakpoint(SceGeBreakpoint *bp, int size)
         g_GeDeciBreak.cmds[i].count = bp[i].bpCount;
     }
     // 47F4
-    if (g_GeDeciBreak.busy == 0) {
+    if (!g_GeDeciBreak.inBreakState) {
         // 4840
         _sceGeWriteBp(NULL);
     }
@@ -2640,13 +2653,13 @@ int sceGeGetStack(int stackId, SceGeStack *stack)
 int sceGeDebugBreak()
 {
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (g_GeDeciBreak.busy != 0) {
+    if (g_GeDeciBreak.inBreakState) {
         // 4CF4
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_ALREADY;
     }
     g_GeDeciBreak.size2 = 0;
-    g_GeDeciBreak.busy = 1;
+    g_GeDeciBreak.inBreakState = 1;
     int wasEnabled = sceSysregAwRegABusClockEnable();
     HW_GE_EXEC = 0;
     // 4C9C
@@ -2663,13 +2676,16 @@ int sceGeDebugBreak()
     return 0;
 }
 
-int sceGeDebugContinue(int arg0)
+// byStep = 0: resume normal operation
+// byStep = 1: step-by-step including in the callee
+// byStep != {0,1}: step-by-step but stay in the caller if next instruction is a call
+int sceGeDebugContinue(int byStep)
 {
     SceGeDisplayList *dl = g_AwQueue.active_first;
     if (dl == NULL)
         return 0;
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (g_GeDeciBreak.busy == 0) {
+    if (!g_GeDeciBreak.inBreakState) {
         // 50B0
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_BUSY;
@@ -2692,7 +2708,7 @@ int sceGeDebugContinue(int arg0)
         cmdPtr += 2;
         HW_GE_LISTADDR = (int)cmdPtr;
         hasSignalFF = 1;
-        if (arg0 == 1) {
+        if (byStep == 1) {
             if (!wasEnabled)
                 sceSysregAwRegABusClockDisable();
             // 4EE8 dup
@@ -2701,9 +2717,9 @@ int sceGeDebugContinue(int arg0)
         }
     }
     // (4D80)
-    g_GeDeciBreak.busy = 0;
+    g_GeDeciBreak.inBreakState = 0;
     // 4D84
-    if (arg0 == 0) {
+    if (!byStep) {
         // 4F44 dup
         g_GeDeciBreak.size2 = 0;
     } else {
@@ -2711,7 +2727,8 @@ int sceGeDebugContinue(int arg0)
         int *nextCmdPtr1 = cmdPtr + 1;
         int flag = HW_GE_EXEC;
         int op = curCmd >> 24;
-        if ((op == SCE_GE_CMD_JUMP || op == SCE_GE_CMD_BJUMP) || (op == SCE_GE_CMD_CALL && arg0 == 1))
+        // We want to break on the next instruction, so we need to find where it is
+        if ((op == SCE_GE_CMD_JUMP || op == SCE_GE_CMD_BJUMP) || (op == SCE_GE_CMD_CALL && byStep == 1))
         {
             // 4DCC
             if (op != SCE_GE_CMD_BJUMP || (flag & 2) == 0) // 5038
@@ -2721,8 +2738,7 @@ int sceGeDebugContinue(int arg0)
         }
         // 4E00
         int *nextCmdPtr2 = cmdPtr + 2;
-        if (op == SCE_GE_CMD_RET)
-        {
+        if (op == SCE_GE_CMD_RET) {
             // 5004
             if ((flag & 0x200) == 0) {
                 // 5020
@@ -2730,37 +2746,25 @@ int sceGeDebugContinue(int arg0)
                     nextCmdPtr1 = (int *)HW_GE_RADR1;
             } else
                 nextCmdPtr1 = (int *)HW_GE_RADR2;
-        } else {
-            if (op == SCE_GE_CMD_FINISH)
-                nextCmdPtr1 = nextCmdPtr2;
-            else if (op == SCE_GE_CMD_SIGNAL)
-            {
-                // 4F54
-                int signalOp = (curCmd >> 16) & 0x000000FF;
-                int off = (curCmd << 16) | (*(cmdPtr + 1) & 0xFFFF);
-                nextCmdPtr1 = nextCmdPtr2;
-                if (signalOp != SCE_GE_SIGNAL_JUMP && (signalOp != SCE_GE_SIGNAL_CALL || arg0 != 1)) {
-                    // 4F94
-                    if (signalOp == SCE_GE_SIGNAL_RJUMP) {
-                        // 4FAC
-                        nextCmdPtr1 = cmdPtr + off;
-                    } else {
-                        if (signalOp != SCE_GE_SIGNAL_RCALL || arg0 != 1) {
-                            // 4FB4
-                            if (signalOp != SCE_GE_SIGNAL_OJUMP) {
-                                if ((signalOp != SCE_GE_SIGNAL_OCALL || arg0 != 1) && signalOp == SCE_GE_SIGNAL_RET && dl->stackOff != 0)   // 4FDC
-                                    nextCmdPtr1 = (int *)
-                                        dl->stack[dl->stackOff - 1].stack[1];
-                            } else {
-                                // 4FCC
-                                nextCmdPtr1 = (int *)HW_GE_OADR + off;
-                            }
-                        }
-                    }
-                } else {
-                    // 4F8C
-                    nextCmdPtr1 = (int *)off;
-                }
+        } else if (op == SCE_GE_CMD_FINISH) {
+            nextCmdPtr1 = nextCmdPtr2;
+        } else if (op == SCE_GE_CMD_SIGNAL) {
+            // 4F54
+            int signalOp = (curCmd >> 16) & 0x000000FF;
+            int off = (curCmd << 16) | (*(cmdPtr + 1) & 0xFFFF);
+            nextCmdPtr1 = nextCmdPtr2;
+            if (signalOp == SCE_GE_SIGNAL_JUMP || (signalOp == SCE_GE_SIGNAL_CALL && byStep == 1)) {
+                // 4F8C
+                nextCmdPtr1 = (int *)off;
+            } else if (signalOp == SCE_GE_SIGNAL_RJUMP || (signalOp == SCE_GE_SIGNAL_RCALL && byStep == 1)) { // 4F94
+                // 4FAC
+                nextCmdPtr1 = cmdPtr + off;
+            } else if (signalOp == SCE_GE_SIGNAL_OJUMP || (signalOp == SCE_GE_SIGNAL_OCALL && byStep == 1)) { // 4FB4
+                // 4FCC
+                nextCmdPtr1 = (int *)HW_GE_OADR + off;
+            } else if (signalOp == SCE_GE_SIGNAL_RET && dl->stackOff != 0) { // 4FDC
+                nextCmdPtr1 = (int *)
+                    dl->stack[dl->stackOff - 1].stack[1];
             }
         }
 
