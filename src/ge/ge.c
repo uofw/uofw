@@ -2,6 +2,36 @@
    See the file COPYING for copying permission.
 */
 
+/*
+ * This module is the interface with the GE, or Graphics Engine, PSP's GPU.
+ *
+ * The GE, also referred as 'Aw' in some function & variable names (this name
+ * being undocumented also in official documentations), and as RE+SE-90nm (Surface
+ * Engine + Rendering Engine), is a custom ASIC.
+ *
+ * Apart for some initialization stuff, mainly for the GE's Edram clock etc.,
+ * the low-level way to use the GE is very straightforward:
+ * 1) build a list of commands to send to the GE, called 'display list'
+ * 2) send its address to the GE
+ * 3) (optional) set a stall address so that GE's execution stops at a given address
+ *    (allows to send partial display lists to the GE)
+ * 4) set interrupt handlers for interrupts which will be triggered by the GE when
+ *    it encounters certain commands (END, FINISH and SIGNAL)
+ *
+ * This module is responsible for:
+ * - giving a higher-level interface to the GE
+ * - handling queues of display lists and execution & drawing synchronization
+ * - handling certain SIGNAL instructions to enhance the GE's abilities (for example,
+ *   allowing the user to make calls with greater depth)
+ * - giving a debugging interface to the developer: breakpoints, step-by-step execution, etc.
+ *
+ * Note that since even this module is quite low-level — although it's mostly accessible
+ * on the user level — most people use the GU user library (provided by Sony), which allows
+ * doing most of the drawing oneself, especially considering Sony does not provide a full
+ * specification of the GE commands.
+ */
+
+
 #include <common_imp.h>
 
 #include "interruptman.h"
