@@ -58,18 +58,17 @@ SCE_MODULE_REBOOT_PHASE("_sceGeModuleRebootPhase");
 #pragma GCC diagnostic pop
 SCE_SDK_VERSION(SDK_VERSION);
 
-// 6640
-SceIntrCb g_GeSubIntrFunc = {
+// Definitions for the GE interrupt handler (32 subintrs max, no callbacks)
+SceIntrCb g_GeSubIntrFunc = { // 6640
     0, 0, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL, NULL, NULL
 };
 
-// 666C
-SceIntrHandler g_GeIntrOpt = { 12, 0x00000020, &g_GeSubIntrFunc };
+SceIntrHandler g_GeIntrOpt = { sizeof(SceIntrHandler), 0x00000020, &g_GeSubIntrFunc }; // 666C
 
-// 6678
-SceKernelDeci2Ops g_Deci2Ops = { 0x3C,
+// Deci2Ops aka debugging functions accessible through developer tools
+SceKernelDeci2Ops g_Deci2Ops = { 0x3C, // 6678
     {
      (void *)sceGeGetReg,
      (void *)sceGeGetCmd,
@@ -87,7 +86,8 @@ SceKernelDeci2Ops g_Deci2Ops = { 0x3C,
      (void *)sceGeRegisterLogHandler}
 };
 
-// Bitfield containing the GE commands 
+// Bitfield containing the GE commands than can be reset just by running the command without an argument
+// and reset just by running the command as it was last ran
 char save_regs[] = { // 66B4
     0x07, 0x00, 0xFD, 0xFF,
     0xFF, 0xF1, 0xCF, 0x01,
@@ -99,8 +99,8 @@ char save_regs[] = { // 66B4
     0xFF, 0x5B, 0x7F, 0x03
 };
 
-// 66D4
-volatile void *g_pAwRegAdr[32] = {
+// Hardware addresses behind registers in sceGeGetReg()/sceGeSetReg()
+volatile void *g_pAwRegAdr[32] = { // 66D4
     &HW_GE_RESET,
     &HW_GE_UNK004,
     &HW_GE_EDRAM_HW_SIZE,
@@ -135,76 +135,82 @@ volatile void *g_pAwRegAdr[32] = {
     &HW_GE_EDRAM_UNKA0,
 };
 
-// 6754
-SadrUpdate sadrupdate_bypass = { "ULJM05086", (void *)0x08992414 };
+// Patch address for the Genso Suikoden I&II game (check _sceGeInitCallback3/4 for more info)
+SadrUpdate sadrupdate_bypass = { "ULJM05086", (void *)0x08992414 }; // 6754
 
-// 675C
-SceGeMatrix mtxtbl[] = {
-    {0x2A, 0x00, 0x2B, 0x0C},
-    {0x2A, 0x0C, 0x2B, 0x0C},
-    {0x2A, 0x18, 0x2B, 0x0C},
-    {0x2A, 0x24, 0x2B, 0x0C},
-    {0x2A, 0x30, 0x2B, 0x0C},
-    {0x2A, 0x3C, 0x2B, 0x0C},
-    {0x2A, 0x48, 0x2B, 0x0C},
-    {0x2A, 0x54, 0x2B, 0x0C},
-    {0x3A, 0x00, 0x3B, 0x0C},
-    {0x3C, 0x00, 0x3D, 0x0C},
-    {0x3E, 0x00, 0x3F, 0x10},
-    {0x40, 0x00, 0x41, 0x0C}
+// Information needed to set the matrices
+SceGeMatrix mtxtbl[SCE_GE_MTX_COUNT] = { // 675C
+    {SCE_GE_CMD_BONEN, 0x00, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x0C, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x18, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x24, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x30, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x3C, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x48, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_BONEN, 0x54, SCE_GE_CMD_BONED, 0x0C},
+    {SCE_GE_CMD_WORLDN, 0x00, SCE_GE_CMD_WORLDD, 0x0C},
+    {SCE_GE_CMD_VIEWN, 0x00, SCE_GE_CMD_VIEWD, 0x0C},
+    {SCE_GE_CMD_PROJN, 0x00, SCE_GE_CMD_PROJD, 0x10},
+    {SCE_GE_CMD_TGENN, 0x00, SCE_GE_CMD_TGEND, 0x0C}
 };
 
-// 678C
-int stopCmd[] = { GE_MAKE_OP(SCE_GE_CMD_FINISH, 0), GE_MAKE_OP(SCE_GE_CMD_END, 0) };
+// Display list ending sequence
+int stopCmd[] = { // 678C
+    GE_MAKE_OP(SCE_GE_CMD_FINISH, 0),
+    GE_MAKE_OP(SCE_GE_CMD_END, 0)
+};
 
-// 6840
-SceSysEventHandler g_GeSysEv =
-    { 64, "SceGe", 0x00FFFF00, _sceGeSysEventHandler, 0, 0, NULL, {0, 0, 0, 0,
+// The GE system event handler (for running _sceGeSysEventHandler() on suspend & resume)
+SceSysEventHandler g_GeSysEv = // 6840
+    { 64, "SceGe", 0x00FFFF00, _sceGeSysEventHandler, 0, 0, NULL, {0, 0, 0, 0, 
                                                                    0, 0, 0, 0,
                                                                    0}
 };
 
-// 6880
-char g_szTbp[] = "RTBP0";
+// Buffer used to store the strings RTBP0~7 / OTBP0~7
+char g_szTbp[] = "RTBP0"; // 6880
 
-// 6890
-SceGeLogHandler g_GeLogHandler;
+// A Ge logger, which presumably can be set by developers, used to log some Ge events
+// (running/ending a display list, signals, ...)
+SceGeLogHandler g_GeLogHandler; // 6890
 
-/* The GE context, saved on reset & suspend (and restored on resume) */
+// The GE context, saved on reset & suspend (and restored on resume)
 SceGeContext _aw_ctx; // 68C0
 
-// 70C0
-int g_uiEdramHwSize;
+// Set by sceGeEdramInit() and returned by sceGeEdramGetHwSize(), contains the Edram
+// hardware size (2MB or 4MB depending on the model)
+int g_uiEdramHwSize; // 70C0
 
-// 70C4
-int g_uiEdramSize;
+// Set by sceGeEdramInit() or sceGeEdramSetSize() and returned by sceGeEdramGetSize(),
+// contains the Edram size currently enabled
+int g_uiEdramSize; // 70C4
 
-// 70C8
-u16 g_edramAddrTrans;
+// The current edram memory width
+u16 g_edramAddrTrans; // 70C8
 
-// 70CC
-SceGeQueue g_AwQueue;
+// The display list queue
+SceGeQueue g_AwQueue; // 70CC
 
-// 7500
-SceGeQueueSuspendInfo g_GeSuspend;
+// Saved status of the current queue (on suspend & resuem)
+SceGeQueueSuspendInfo g_GeSuspend; // 7500
 
-// 7520
-SceGeBpCtrl g_GeDeciBreak;
+// Breakpoint information
+SceGeBpCtrl g_GeDeciBreak; // 7520
 
-// 75D0
-short g_cbhook;
+// Bitset: i-th bit is set if i-th callback is set (by sceGeSetCallback())
+u16 g_cbhook; // 75D0
 
-// 7600
-int *g_cmdList;
+// TODO
+int *g_cmdList; // 7600
 
-// 7604
-int g_dlMask;
+// The mask xor'ed with the display list addresses to give the display list ID
+u32 g_dlMask; // 7604
 
-// 7608
-SceKernelDeci2Ops *g_deci2p;
+// The deci2p operations set by the developper or devkit (presumably)
+SceKernelDeci2Ops *g_deci2p; // 7608
 
-// 7640
-SceGeDisplayList g_displayLists[64];
+// Buffer of display lists (used as a linked list, so their order in this list is not relevant)
+SceGeDisplayList g_displayLists[MAX_COUNT_DL]; // 7640
 
 /******************************/
 
@@ -830,17 +836,23 @@ int sceGeSetMtx(int id, int *mtx)
         return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
+    // Get the matrix info
     SceGeMatrix *curMtx = &mtxtbl[id];
-    char oldCmd = sceGeGetCmd(curMtx->reg1);
-    ret = sceGeSetCmd(curMtx->reg1, curMtx->cmd);
+    // Run the initialization command (for sending the instruction we're setting the matrix)
+    // after having saved its old state
+    u8 oldArg = sceGeGetCmd(curMtx->initCmd);
+    ret = sceGeSetCmd(curMtx->initCmd, curMtx->initCmdArg);
     if (ret >= 0) {
         // 1644
+        // Set the matrix
         int i;
-        for (i = 0; i < curMtx->size; i++)
-            sceGeSetCmd(curMtx->reg2, mtx[i]);
+        for (i = 0; i < curMtx->size; i++) {
+            sceGeSetCmd(curMtx->setCmd, mtx[i]);
+        }
 
         // 165C
-        sceGeSetCmd(curMtx->reg1, oldCmd);
+        // Reset the initialization command argument
+        sceGeSetCmd(curMtx->initCmd, oldArg);
         ret = 0;
     }
     // 1674
@@ -1391,17 +1403,17 @@ int sceGeEdramGetAddr()
     return 0x04000000;
 }
 
-int sceGeEdramSetAddrTranslation(int arg)
+int sceGeEdramSetAddrTranslation(int width)
 {
     int ret;
-    if (arg != 0 && arg != 0x200 && arg != 0x400
-        && arg != 0x800 && arg != 0x1000)
+    if (width != 0 && width != 0x200 && width != 0x400
+        && width != 0x800 && width != 0x1000)
         return SCE_ERROR_INVALID_VALUE;
 
     // 29AC
     int oldIntr = sceKernelCpuSuspendIntr();
-    g_edramAddrTrans = arg;
-    if (arg == 0) {
+    g_edramAddrTrans = width;
+    if (width == 0) {
         // 2A28
         if ((HW_GE_EDRAM_ADDR_TRANS_DISABLE & 1) == 0) {
             ret = HW_GE_EDRAM_ADDR_TRANS_VALUE << 1;
@@ -1411,9 +1423,9 @@ int sceGeEdramSetAddrTranslation(int arg)
     } else if ((HW_GE_EDRAM_ADDR_TRANS_DISABLE & 1) == 0) {
         // 2A0C
         ret = HW_GE_EDRAM_ADDR_TRANS_VALUE << 1;
-        HW_GE_EDRAM_ADDR_TRANS_VALUE = arg >> 1;
+        HW_GE_EDRAM_ADDR_TRANS_VALUE = width >> 1;
     } else {
-        HW_GE_EDRAM_ADDR_TRANS_VALUE = arg >> 1;
+        HW_GE_EDRAM_ADDR_TRANS_VALUE = width >> 1;
         HW_GE_EDRAM_ADDR_TRANS_DISABLE = 0;
         ret = 0;
     }
@@ -1449,7 +1461,7 @@ int _sceGeQueueInit()
 {
     // 2B10
     int i;
-    for (i = 0; i < 64; i++) {
+    for (i = 0; i < MAX_COUNT_DL; i++) {
         SceGeDisplayList *cur = &g_displayLists[i];
         cur->next = &g_displayLists[i + 1];
         cur->prev = &g_displayLists[i - 1];
@@ -1474,10 +1486,10 @@ int _sceGeQueueInit()
     g_AwQueue.listEvFlagIds[1] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     g_AwQueue.syscallId = sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr);
     SceKernelGameInfo *info = sceKernelGetGameInfo();
-    g_AwQueue.patched = 0;
+    g_AwQueue.cachePatch = 0;
     // Patch for Itadaki Street Portable (missing a cache flush function when enqueuing the first display list)
     if (info != NULL && strcmp(info->gameId, "ULJM05127") == 0) {
-        g_AwQueue.patched = 1;
+        g_AwQueue.cachePatch = 1;
     }
     return 0;
 }
@@ -2095,7 +2107,7 @@ int sceGeListDeQueue(int dlId)
     int ret;
     SceGeDisplayList *dl = (SceGeDisplayList *) (dlId ^ g_dlMask);
     int oldK1 = pspShiftK1();
-    if (dl < g_displayLists || dl >= &g_displayLists[64]) {
+    if (dl < g_displayLists || dl >= &g_displayLists[MAX_COUNT_DL]) {
         // 3D90
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_ID;
@@ -2159,7 +2171,7 @@ SceGeListState sceGeListSync(int dlId, int mode)
     u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
 
     int oldK1 = pspShiftK1();
-    if (idx >= 64) {
+    if (idx >= MAX_COUNT_DL) {
         // 3EE0
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_ID;
@@ -2228,7 +2240,7 @@ SceGeListState sceGeDrawSync(int syncType)
         if (ret >= 0) {
             // 3FF4
             int i;
-            for (i = 0; i < 64; i++) {
+            for (i = 0; i < MAX_COUNT_DL; i++) {
                 SceGeDisplayList *curDl = &g_displayLists[i];
                 if (curDl->state == SCE_GE_DL_STATE_COMPLETED) {
                     // 4010
@@ -2288,7 +2300,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             _sceGeReset();
             // 430C
             int i;
-            for (i = 0; i < 64; i++) {
+            for (i = 0; i < MAX_COUNT_DL; i++) {
                 SceGeDisplayList *cur = &g_displayLists[i];
                 cur->next = &g_displayLists[i + 1];
                 cur->prev = &g_displayLists[i - 1];
@@ -2625,7 +2637,7 @@ int sceGeGetList(int dlId, SceGeDisplayList * outDl, int *outFlag)
     }
     // 4AB8
     SceGeDisplayList *dl = (SceGeDisplayList *) (dlId ^ g_dlMask);
-    if (dl < g_displayLists || dl >= &g_displayLists[64]) {
+    if (dl < g_displayLists || dl >= &g_displayLists[MAX_COUNT_DL]) {
         // 4B40
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_INVALID_ID;
@@ -2848,6 +2860,7 @@ int sceGeDebugContinue(int byStep)
     return 0;
 }
 
+// Part of the patching stuff for Genso Suikoden I&II : set the callback in usersystemlib to call sceGeListUpdateStallAddr()
 int _sceGeQueueInitCallback()
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
@@ -3099,6 +3112,7 @@ void _sceGeClearBp()
     pspSync();
 }
 
+// Part of the patching stuff for Genso Suikoden I&II : call sceGeListUpdateStallAddr() regularly on some events on the last display list it wanted to update the stall address of
 void _sceGeListLazyFlush()
 {
     SceGeLazy *lazy = g_AwQueue.lazySyncData;
@@ -3157,8 +3171,8 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_POINTER;
     }
-    if (g_AwQueue.patched != 0 && pspK1IsUserMode()) {    // 5C94
-        g_AwQueue.patched--;
+    if (g_AwQueue.cachePatch != 0 && pspK1IsUserMode()) {    // 5C94
+        g_AwQueue.cachePatch--;
         sceKernelDcacheWritebackAll();
     }
 

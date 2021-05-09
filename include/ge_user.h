@@ -265,6 +265,7 @@
 #define SCE_GE_MTX_VIEW  9
 #define SCE_GE_MTX_PROJ  10
 #define SCE_GE_MTX_TGEN  11
+#define SCE_GE_MTX_COUNT 12
 
 /*
  * List of signals which can be sent using the SIGNAL command.

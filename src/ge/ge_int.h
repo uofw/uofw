@@ -18,6 +18,9 @@
 #define SCE_GE_SIGNAL_ERROR_STACK_OVERFLOW 1
 #define SCE_GE_SIGNAL_ERROR_STACK_UNDERFLOW 2
 
+// Maximum number of display lists which can be enqueued
+#define MAX_COUNT_DL 64
+
 /******************************/
 
 int _sceGeReset();
@@ -64,9 +67,13 @@ typedef struct {
     SceUID drawingEvFlagId;     // 24
     SceUID listEvFlagIds[2];    // 28, 32
     SceGeStack stack[32];       // 36
+    // The SDK version, since some variations of the behaviors happened with firmware updates
     int sdkVer;                 // 1060
-    int patched;                // 1064
+    // Used by Itadaki Street Portable: add a dcache writeback when enqueueing the firts display list
+    int cachePatch;             // 1064
+    // Patch for Gensou Suikoden I&II: the syscall number for sceGeListUpdateStallAddr()
     int syscallId;
+    // Patch for Gensou Suikoden I&II: the lazy list stall address update data
     SceGeLazy *lazySyncData;
 } SceGeQueue;
 
@@ -105,10 +112,10 @@ typedef struct {
 } SadrUpdate;
 
 typedef struct {
-    char reg1;
-    char cmd;
-    char reg2;
-    char size;
+    u8 initCmd;
+    u8 initCmdArg;
+    u8 setCmd;
+    u8 size;
 } SceGeMatrix;
 
 #endif

@@ -239,9 +239,13 @@ s32 sceKernelGetSystemStatus(void);
 s32 sceKernelSetSystemStatus(s32 newStatus);
 
 typedef struct {
+    // Last display list for which a UpdateStallAddr() was run
     s32 dlId;
+    // The stall address which was supposed to be set in the last call
     void *stall;
+    // Number of times an update has been called on the current dlId
     u32 count;
+    // Number of calls to updateStallAddr() required until we really set the address
     u32 max;
 } SceGeLazy;
 
