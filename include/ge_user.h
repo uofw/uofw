@@ -390,7 +390,7 @@ int sceGeGetCmd(u32 cmdOff);
 int sceGeGetMtx(int id, int *mtx);
 
 /**
- * Saves the current GE context into a structure.
+ * Saves the GE context of the current display list into a structure.
  *
  * @param ctx The structure to save the GE context in.
  *

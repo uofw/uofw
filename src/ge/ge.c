@@ -783,7 +783,7 @@ end:
 
 int sceGeGetMtx(int id, int *mtx)
 {
-    if (id < 0 || id >= 12)
+    if (id < 0 || id >= SCE_GE_MTX_COUNT)
         return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(mtx)) {
@@ -807,6 +807,9 @@ int sceGeGetMtx(int id, int *mtx)
             mtx[i] = HW_GE_TGENS[i];
         }
     } else {
+        // This case includes BONE matrices but also the WORLD and VIEW matrices which
+        // follow it and have the same size (while PROJ has a different size and TGEN follows it
+        // so can't be included here)
         // 14B0
         int i;
         for (i = 0; i < 12; i++) {
@@ -827,7 +830,7 @@ int sceGeGetMtx(int id, int *mtx)
 int sceGeSetMtx(int id, int *mtx)
 {
     int ret;
-    if (id < 0 || id >= 12)
+    if (id < 0 || id >= SCE_GE_MTX_COUNT)
         return SCE_ERROR_INVALID_INDEX;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(mtx)) {
@@ -873,13 +876,14 @@ int sceGeSaveContext(SceGeContext * ctx)
     }
     int oldIntr = sceKernelCpuSuspendIntr();
     int aBusWasEnabled = sceSysregAwRegABusClockEnable();
+    // If GE is running, abort
     if ((HW_GE_EXEC & 1) != 0) {
         // 1A8C
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return -1;
     }
-    u32 *curCmd = &ctx->ctx[17];
+    // Save all the main registers for the display list runtime
     ctx->ctx[0] = HW_GE_EXEC;
     ctx->ctx[1] = HW_GE_LISTADDR;
     ctx->ctx[2] = HW_GE_STALLADDR;
@@ -891,20 +895,23 @@ int sceGeSaveContext(SceGeContext * ctx)
     ctx->ctx[8] = HW_GE_OADR1;
     ctx->ctx[9] = HW_GE_OADR2;
 
-    vs32 *cmds = HWPTR(0xBD400800);
+    // Generate the commands to run on resume
+    u32 *curCmd = &ctx->ctx[17];
     // 17C8
+    // The commands in save_regs can be saved as-is
     int i;
     for (i = 0; i < 256; i++) {
         if (((save_regs[i / 8] >> (i & 7)) & 1) != 0)
-            *(curCmd++) = *cmds;
+            *(curCmd++) = HW_GE_CMD(i);
         // 1804
-        cmds++;
     }
+    // Check the address for CLOAD if a real address was specified by CBP/CBW
     int addr = (HW_GE_CMD(SCE_GE_CMD_CBP) & 0x00FFFFFF) | ((HW_GE_CMD(SCE_GE_CMD_CBW) << 8) & 0xFF000000);
     if (GE_VALID_ADDR(addr)) {
         // 1868
         *(curCmd++) = HW_GE_CMD(SCE_GE_CMD_CLOAD);
     }
+    // Save all the matrix statuses
     // 187C
     *(curCmd++) = GE_MAKE_OP(SCE_GE_CMD_BONEN, 0);
     // 1894
@@ -930,6 +937,7 @@ int sceGeSaveContext(SceGeContext * ctx)
     for (i = 0; i < 12; i++)
         *(curCmd++) = GE_MAKE_OP(SCE_GE_CMD_TGEND, HW_GE_TGENS[i]);
 
+    // Reset matrices numbers
     *(curCmd++) = HW_GE_CMD(SCE_GE_CMD_BONEN);
     *(curCmd++) = HW_GE_CMD(SCE_GE_CMD_WORLDN);
     *(curCmd++) = HW_GE_CMD(SCE_GE_CMD_VIEWN);
@@ -964,6 +972,7 @@ int sceGeRestoreContext(SceGeContext * ctx)
         pspSetK1(oldK1);
         return SCE_ERROR_BUSY;
     }
+    // Execute the display list built in sceGeSaveContext()
     int old304 = HW_GE_INTERRUPT_TYPE1;
     int old308 = HW_GE_INTERRUPT_TYPE2;
     HW_GE_INTERRUPT_TYPE3 = old308;
@@ -973,6 +982,7 @@ int sceGeRestoreContext(SceGeContext * ctx)
     // 1B64
     while ((HW_GE_EXEC & 1) != 0)
         ;
+    // Reset interrupt status and save the registers
     int n304 = HW_GE_INTERRUPT_TYPE1;
     HW_GE_INTERRUPT_TYPE4 = (old304 ^ HW_GE_INTERRUPT_TYPE1) & ~(HW_GE_INTFIN | HW_GE_INTSIG);
     HW_GE_INTERRUPT_TYPE2 = old308;
@@ -997,11 +1007,17 @@ int sceGeRestoreContext(SceGeContext * ctx)
     return ret;
 }
 
+/*
+ * Set the first (ie after the first CALL command) return address register (needs special care compared to the other registers)
+ */
 int _sceGeSetRegRadr1(int arg0)
 {
     return _sceGeSetInternalReg(SCE_GE_INTERNAL_REG_RADR1, 0, arg0, 0);
 }
 
+/*
+ * Set the second (ie after the second CALL command) return address register (needs special care compared to the other registers)
+ */
 int _sceGeSetRegRadr2(int arg0)
 {
     return _sceGeSetInternalReg(SCE_GE_INTERNAL_REG_RADR2, 0, 0, arg0);
