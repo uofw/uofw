@@ -270,18 +270,58 @@
 /*
  * List of signals which can be sent using the SIGNAL command.
  */
-#define SCE_GE_SIGNAL_HANDLER_SUSPEND  0x01
-#define SCE_GE_SIGNAL_HANDLER_CONTINUE 0x02
-#define SCE_GE_SIGNAL_HANDLER_PAUSE    0x03
-#define SCE_GE_SIGNAL_SYNC             0x08
-#define SCE_GE_SIGNAL_JUMP             0x10
-#define SCE_GE_SIGNAL_CALL             0x11
-#define SCE_GE_SIGNAL_RET              0x12
-#define SCE_GE_SIGNAL_RJUMP            0x13
-#define SCE_GE_SIGNAL_RCALL            0x14
-#define SCE_GE_SIGNAL_OJUMP            0x15
-#define SCE_GE_SIGNAL_OCALL            0x16
 
+/**
+ * In SDK versions <= 0x02000010, pause the display list, call the callback with the SIGNAL argument,
+ * and restart the display list in the state specified in the END instruction.
+ * Otherwise, just call the callback. Resume GE execution afterwards.
+ */
+#define SCE_GE_SIGNAL_HANDLER_SUSPEND  0x01
+/**
+ * Resume GE execution, then call the signal callback with the SIGNAL argument.
+ */
+#define SCE_GE_SIGNAL_HANDLER_CONTINUE 0x02
+/**
+ * Set the current display list's status to PAUSE, its signal to the END argument and its signal data
+ * to the SIGNAL command, then resume GE execution.
+ */
+#define SCE_GE_SIGNAL_HANDLER_PAUSE    0x03
+/**
+ * Set the current display list's signal to SYNC, then resume GE execution.
+ */
+#define SCE_GE_SIGNAL_SYNC             0x08
+/**
+ * Jump to the (s << 16) | (e & 0xFFFF) address, where s is SIGNAL's argument and e is END's
+ */
+#define SCE_GE_SIGNAL_JUMP             0x10
+/**
+ * Same as SCE_GE_SIGNAL_JUMP, but saving the status so we can use SCE_GE_SIGNAL_RET to return to the caller.
+ */
+#define SCE_GE_SIGNAL_CALL             0x11
+/**
+ * Return after using a SCE_GE_SIGNAL_*CALL signal.
+ */
+#define SCE_GE_SIGNAL_RET              0x12
+/**
+ * Same as SCE_GE_SIGNAL_JUMP, but where the address is relative to the current one.
+ */
+#define SCE_GE_SIGNAL_RJUMP            0x13
+/**
+ * Same as SCE_GE_SIGNAL_CALL, but where the address is relative to the current one.
+ */
+#define SCE_GE_SIGNAL_RCALL            0x14
+/**
+ * Same as SCE_GE_SIGNAL_JUMP, but where the address is relative to ORIGIN.
+ */
+#define SCE_GE_SIGNAL_OJUMP            0x15
+/**
+ * Same as SCE_GE_SIGNAL_CALL, but where the address is relative to ORIGIN.
+ */
+#define SCE_GE_SIGNAL_OCALL            0x16
+/**
+ * Run a TBP0/TBW0 pair with the same address as for SCE_GE_SIGNAL_RJUMP,
+ * taking ((e >> 16) & 0xFF) for the size.
+ */
 #define SCE_GE_SIGNAL_RTBP0            0x20
 #define SCE_GE_SIGNAL_RTBP1            0x21
 #define SCE_GE_SIGNAL_RTBP2            0x22
@@ -290,6 +330,10 @@
 #define SCE_GE_SIGNAL_RTBP5            0x25
 #define SCE_GE_SIGNAL_RTBP6            0x26
 #define SCE_GE_SIGNAL_RTBP7            0x27
+/**
+ * Run a TBP0/TBW0 pair with the same address as for SCE_GE_SIGNAL_OJUMP,
+ * taking ((e >> 16) & 0xFF) for the size.
+ */
 #define SCE_GE_SIGNAL_OTBP0            0x28
 #define SCE_GE_SIGNAL_OTBP1            0x29
 #define SCE_GE_SIGNAL_OTBP2            0x2A
@@ -298,9 +342,24 @@
 #define SCE_GE_SIGNAL_OTBP5            0x2D
 #define SCE_GE_SIGNAL_OTBP6            0x2E
 #define SCE_GE_SIGNAL_OTBP7            0x2F
+/**
+ * Same as SCE_GE_SIGNAL_RTBP0, for a CBP/CBW pair.
+ */
 #define SCE_GE_SIGNAL_RCBP             0x30
+/**
+ * Same as SCE_GE_SIGNAL_OTBP0, for a CBP/CBW pair.
+ */
 #define SCE_GE_SIGNAL_OCBP             0x38
+/**
+ * If deci2p operations are defined, break here and run the SCE_DECI2OP_GE_BREAK operation
+ * until it resumes operation.
+ */
 #define SCE_GE_SIGNAL_BREAK1           0xF0
+/**
+ * Same as SCE_GE_SIGNAL_BREAK1, but break only if the breakpoint counter is -1 or equal
+ * to the defined value (ie, we reached the breakpoint the number of times specified when
+ * the breakpoint was created).
+ */
 #define SCE_GE_SIGNAL_BREAK2           0xFF
 
 /** Structure storing a stack (for CALL/RET) */

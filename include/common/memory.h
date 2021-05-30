@@ -49,6 +49,8 @@
 #define UPALIGN8(v)     (((v) + 0x7) & 0xFFFFFFF8)
 #define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)
 
+#define ISALIGN4(v)     (((u32)(v) & 0x03) == 0)
+
 /* Clear memory partitioned in 1-Byte blocks. */
 static inline void pspClearMemory8(void *ptr, int size) {
     int i;

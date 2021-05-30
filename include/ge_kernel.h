@@ -92,6 +92,29 @@ typedef struct SceGeDisplayList
     SceGeStack *stack; // 60
 } SceGeDisplayList; // size: 64
 
+/** Structure storing a GE context (kernel definition of SceGeContext) */
+typedef struct
+{
+    u32 exec; // 0
+    u32 ladr; // 4
+    u32 sadr; // 8
+    u32 radr1; // 12
+    u32 radr2; // 16
+    u32 vadr; // 20
+    u32 iadr; // 24
+    u32 oadr; // 28
+    u32 oadr1; // 32
+    u32 oadr2; // 36
+    u32 edramTransDisable; // 40
+    u32 edramTransVal; // 44
+    u32 edramRefresh1; // 48
+    u32 edramRefresh2; // 52
+    u32 edramRefresh3; // 56
+    u32 edramUnk40; // 60
+    u32 geometryClock; // 64
+    u32 dl[495]; // 68
+} _SceGeContext;
+
 /**
  * Inits the GE subsystem.
  *

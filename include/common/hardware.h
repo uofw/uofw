@@ -61,7 +61,7 @@
 #define HW_GE_VADR               HW(0xBD400118)
 // RW: address of indices (for bezier etc)
 #define HW_GE_IADR               HW(0xBD40011C)
-// RW: address of the origin (set by ORIGIN, used by some signals)
+// RW: address of the origin (set by ORIGIN, destination address for JUMP/BJUMP/CALL after adding BASE and the address specified in the command)
 #define HW_GE_OADR               HW(0xBD400120)
 // RW: same, for the first call
 #define HW_GE_OADR1              HW(0xBD400124)
