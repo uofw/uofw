@@ -22,18 +22,18 @@ struct UsbEndpoint g_endp;  // 0x00000CAC
 // Exported in sceUsbAcc_internal, sceUsbAcc and sceUsbAcc_driver
 s32 sceUsbAccGetAuthStat(void)
 {
-    int intr = sceKernelCpuSuspendIntr();
-    s32 ret = 0;
-    
-    if (g_unk0) {
-        if (sceUsbBus_driver_8A3EB5D2() == 0)
-            ret = 0x80243701;
-    }
+	int intr = sceKernelCpuSuspendIntr();
+	s32 ret = 0;
+	
+	if (g_unk0) {
+		if (sceUsbBus_driver_8A3EB5D2() == 0)
+			ret = 0x80243701;
+	}
 	else
 		ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
-    
-    sceKernelCpuResumeIntr(intr);
-    return ret;
+		
+	sceKernelCpuResumeIntr(intr);
+	return ret;
 }
 
 // Subroutine sceUsbAccGetInfo - Address 0x00000068 - Aliases: sceUsbAcc_0CD7D4AA, sceUsbAcc_driver_0CD7D4AA
