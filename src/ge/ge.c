@@ -1562,7 +1562,7 @@ int _sceGeQueueInit()
         cur->prev = &g_displayLists[i - 1];
         cur->signal = SCE_GE_DL_SIGNAL_NONE;
         cur->state = SCE_GE_DL_STATE_NONE;
-        cur->ctxUpToDate = 0;
+        cur->isBusy = 0;
     }
 
     // Set the beginning and the end of the double-linked list
@@ -1751,64 +1751,64 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
                       __attribute__ ((unused)), int arg2
                       __attribute__ ((unused)))
 {
-    SceGeDisplayList *dl = g_AwQueue.curRunning;
+    SceGeDisplayList *curRunningDl = g_AwQueue.curRunning;
     // Disable break state
     g_AwQueue.isBreak = 0;
     // Unset the running display list
     g_AwQueue.curRunning = NULL;
-    if (dl != NULL) {
-        if (dl->signal == SCE_GE_DL_SIGNAL_SYNC) {
+    if (curRunningDl != NULL) {
+        if (curRunningDl->signal == SCE_GE_DL_SIGNAL_SYNC) {
             // If the SYNC signal was set, run pspSync() and resume execution directly
             // 351C
-            dl->signal = SCE_GE_DL_SIGNAL_NONE;
-            g_AwQueue.curRunning = dl;
+            curRunningDl->signal = SCE_GE_DL_SIGNAL_NONE;
+            g_AwQueue.curRunning = curRunningDl;
             HW_GE_EXEC |= 1;
             pspSync();
             return;
-        } else if (dl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
+        } else if (curRunningDl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
             // If the PAUSE signal was set, store the currectly running status
             // 3468
             int state = HW_GE_EXEC;
-            dl->flags = state;
-            dl->list = (int *)HW_GE_LISTADDR;
-            dl->radr1 = HW_GE_RADR1;
-            dl->radr2 = HW_GE_RADR2;
-            dl->oadr = HW_GE_OADR;
-            dl->oadr1 = HW_GE_OADR1;
-            dl->oadr2 = HW_GE_OADR2;
-            dl->base = HW_GE_CMD(SCE_GE_CMD_BASE);
-            if ((state & 0x200) == 0) {
-                dl->radr2 = 0;
-                dl->oadr2 = 0;
-                if ((state & 0x100) == 0) {
-                    dl->radr1 = 0;
-                    dl->oadr1 = 0;
+            curRunningDl->execState = state;
+            curRunningDl->list = (int *)HW_GE_LISTADDR;
+            curRunningDl->radr1 = HW_GE_RADR1;
+            curRunningDl->radr2 = HW_GE_RADR2;
+            curRunningDl->oadr = HW_GE_OADR;
+            curRunningDl->oadr1 = HW_GE_OADR1;
+            curRunningDl->oadr2 = HW_GE_OADR2;
+            curRunningDl->base = HW_GE_CMD(SCE_GE_CMD_BASE);
+            if (!(state & HW_GE_EXEC_DEPTH2)) {
+                curRunningDl->radr2 = 0;
+                curRunningDl->oadr2 = 0;
+                if (!(state & HW_GE_EXEC_DEPTH1)) {
+                    curRunningDl->radr1 = 0;
+                    curRunningDl->oadr1 = 0;
                 }
             }
             // 34E8
             // If the display list is the first active one, set the BREAK signal and run the signal callback
             // (otherwise, just execute the next one normally)
-            if (g_AwQueue.active_first == dl) {
+            if (g_AwQueue.active_first == curRunningDl) {
                 // 3500
-                dl->signal = SCE_GE_DL_SIGNAL_BREAK;
-                if (dl->cbId >= 0) {
-                    void *list = dl->list;
+                curRunningDl->signal = SCE_GE_DL_SIGNAL_BREAK;
+                if (curRunningDl->cbId >= 0) {
+                    void *list = curRunningDl->list;
                     // 3288 dup
                     if (g_AwQueue.sdkVer <= 0x02000010)
                         list = 0;
-                    sceKernelCallSubIntrHandler(SCE_GE_INT, dl->cbId * 2, dl->signalData, (int)list);    // call signal CB
+                    sceKernelCallSubIntrHandler(SCE_GE_INT, curRunningDl->cbId * 2, curRunningDl->signalData, (int)list);    // call signal CB
                 }
                 // 32A4
                 _sceGeClearBp();
                 return;
             }
-            dl = NULL;
+            curRunningDl = NULL;
         }
         // 309C
         // Interrupt the current running display list (if not in the PAUSE signal case)
-        if (dl != NULL) {
+        if (curRunningDl != NULL) {
             // If the display list is running, stop it (otherwise, do nothing)
-            if (dl->state == SCE_GE_DL_STATE_RUNNING) {
+            if (curRunningDl->state == SCE_GE_DL_STATE_RUNNING) {
                 // 32DC
                 // Expect a FINISH/END sequence
                 int *cmdList = (int *)HW_GE_LISTADDR;
@@ -1820,71 +1820,71 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 }
                 // 3328
                 // Set the DL state to 'completed'
-                dl->state = SCE_GE_DL_STATE_COMPLETED;
+                curRunningDl->state = SCE_GE_DL_STATE_COMPLETED;
                 // Expect the CALL/RET nesting to be correct (ie that we returned from all CALLs)
-                if (dl->stackOff != 0) {
+                if (curRunningDl->stackOff != 0) {
                     // 343C
                     Kprintf("_sceGeFinishInterrupt(): CALL/RET nesting corrupted\n");   // 63D8
                 }
                 // 3338
                 if (g_GeLogHandler != NULL) {
                     // 3418
-                    g_GeLogHandler(SCE_GE_LOG_DL_END, (int)dl ^ g_dlMask,
+                    g_GeLogHandler(SCE_GE_LOG_DL_END, (int)curRunningDl ^ g_dlMask,
                                  cmdList, finishCmd, endCmd);
                 }
                 // 3348
                 // Call the finish CB
-                if (dl->cbId >= 0) {
+                if (curRunningDl->cbId >= 0) {
                     if (g_AwQueue.sdkVer <= 0x02000010)
                         cmdList = NULL;
-                    sceKernelCallSubIntrHandler(SCE_GE_INT, dl->cbId * 2 + 1, finishCmd & 0xFFFF, (int)cmdList); // call finish CB
+                    sceKernelCallSubIntrHandler(SCE_GE_INT, curRunningDl->cbId * 2 + 1, finishCmd & 0xFFFF, (int)cmdList); // call finish CB
                 }
                 // 337C
                 // Restore the last saved context
-                if (dl->ctx != NULL) {
+                if (curRunningDl->ctx != NULL) {
                     // 3408
-                    sceGeRestoreContext(dl->ctx);
+                    sceGeRestoreContext(curRunningDl->ctx);
                 }
                 // Remove the current display list from the double-linked queue
                 // 338C
-                if (dl->prev != NULL)
-                    dl->prev->next = dl->next;
+                if (curRunningDl->prev != NULL)
+                    curRunningDl->prev->next = curRunningDl->next;
                 // 33A0
-                if (dl->next != NULL)
-                    dl->next->prev = dl->prev;
+                if (curRunningDl->next != NULL)
+                    curRunningDl->next->prev = curRunningDl->prev;
 
                 // Update active_first, active_last, free_first and free_last
                 // 33A8
-                if (g_AwQueue.active_first == dl)
-                    g_AwQueue.active_first = dl->next;
+                if (g_AwQueue.active_first == curRunningDl)
+                    g_AwQueue.active_first = curRunningDl->next;
 
                 // 33B8
-                if (g_AwQueue.active_last == dl) {
+                if (g_AwQueue.active_last == curRunningDl) {
                     // 3400
-                    g_AwQueue.active_last = dl->prev;
+                    g_AwQueue.active_last = curRunningDl->prev;
                 }
                 // 33C4
                 if (g_AwQueue.free_first == NULL) {
-                    g_AwQueue.free_first = dl;
+                    g_AwQueue.free_first = curRunningDl;
                     // 33F8
-                    dl->prev = NULL;
+                    curRunningDl->prev = NULL;
                 } else {
-                    g_AwQueue.free_last->next = dl;
-                    dl->prev = g_AwQueue.free_last;
+                    g_AwQueue.free_last->next = curRunningDl;
+                    curRunningDl->prev = g_AwQueue.free_last;
                 }
 
                 // 33E0
-                dl->state = SCE_GE_DL_STATE_COMPLETED;
-                dl->next = NULL;
-                g_AwQueue.free_last = dl;
+                curRunningDl->state = SCE_GE_DL_STATE_COMPLETED;
+                curRunningDl->next = NULL;
+                g_AwQueue.free_last = curRunningDl;
             }
         }
     }
 
     // Start the active_first display list
     // 30B0
-    SceGeDisplayList *dl2 = g_AwQueue.active_first;
-    if (dl2 == NULL) {
+    SceGeDisplayList *nextDl = g_AwQueue.active_first;
+    if (nextDl == NULL) {
         // There is no active list, stop execution, set the drawing event flag as finished
         // 32B4
         HW_GE_EXEC = 0;
@@ -1895,68 +1895,68 @@ _sceGeFinishInterrupt(int arg0 __attribute__ ((unused)), int arg1
         _sceGeClearBp();
     } else {
         // The first active display list received the PAUSE signal, set it in the paused state and set it in BREAK mode
-        if (dl2->signal == SCE_GE_DL_SIGNAL_PAUSE) {
+        if (nextDl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
             // 3264
-            dl2->state = SCE_GE_DL_STATE_PAUSED;
-            dl2->signal = SCE_GE_DL_SIGNAL_BREAK;
+            nextDl->state = SCE_GE_DL_STATE_PAUSED;
+            nextDl->signal = SCE_GE_DL_SIGNAL_BREAK;
             // Run the signal CB
-            if (dl2->cbId >= 0) {
-                void *list = dl2->list;
+            if (nextDl->cbId >= 0) {
+                void *list = nextDl->list;
                 // 3288 dup
                 if (g_AwQueue.sdkVer <= 0x02000010)
                     list = NULL;
-                sceKernelCallSubIntrHandler(SCE_GE_INT, dl2->cbId * 2,
-                                            dl2->signalData, (int)list);
+                sceKernelCallSubIntrHandler(SCE_GE_INT, nextDl->cbId * 2,
+                                            nextDl->signalData, (int)list);
             }
             // 32A4
             _sceGeClearBp();
             return;
         }
         // The display list is in the paused state, stop execution and don't do anything
-        if (dl2->state == SCE_GE_DL_STATE_PAUSED) {
+        if (nextDl->state == SCE_GE_DL_STATE_PAUSED) {
             // 324C
             sceSysregAwRegABusClockDisable();
             // 3254
             _sceGeClearBp();
         } else {
-            int *ctx2 = (int *)dl2->ctx;
-            dl2->state = SCE_GE_DL_STATE_RUNNING;
+            int *ctx2 = (int *)nextDl->ctx;
+            nextDl->state = SCE_GE_DL_STATE_RUNNING;
             // Update the new active display list context to the stopped display list, or save it directly if it doesn't exist
-            if (ctx2 != NULL && dl2->ctxUpToDate == 0) {
-                if (dl == NULL || dl->ctx == NULL) {
+            if (ctx2 != NULL && nextDl->isBusy == 0) {
+                if (curRunningDl == NULL || curRunningDl->ctx == NULL) {
                     // 323C
-                    sceGeSaveContext(dl2->ctx);
+                    sceGeSaveContext(nextDl->ctx);
                 } else {
                     // 310C
-                    __builtin_memcpy(__builtin_assume_aligned(ctx2, 4), __builtin_assume_aligned(dl->ctx, 4), sizeof(*dl->ctx));
+                    __builtin_memcpy(__builtin_assume_aligned(ctx2, 4), __builtin_assume_aligned(curRunningDl->ctx, 4), sizeof(*curRunningDl->ctx));
                 }
             }
             // (3138)
             // 313C
             // Resume execution with the new display list
-            dl2->ctxUpToDate = 1;
+            nextDl->isBusy = 1;
             HW_GE_EXEC = 0;
-            HW_GE_STALLADDR = (int)UCACHED(dl2->stall);
-            HW_GE_LISTADDR = (int)UCACHED(dl2->list);
-            HW_GE_OADR = dl2->oadr;
-            HW_GE_OADR1 = dl2->oadr1;
-            HW_GE_OADR2 = dl2->oadr2;
-            _sceGeSetBaseRadr(dl2->base, dl2->radr1, dl2->radr2);
+            HW_GE_STALLADDR = (int)UCACHED(nextDl->stall);
+            HW_GE_LISTADDR = (int)UCACHED(nextDl->list);
+            HW_GE_OADR = nextDl->oadr;
+            HW_GE_OADR1 = nextDl->oadr1;
+            HW_GE_OADR2 = nextDl->oadr2;
+            _sceGeSetBaseRadr(nextDl->base, nextDl->radr1, nextDl->radr2);
             pspSync();
-            g_AwQueue.curRunning = dl2;
-            HW_GE_EXEC = dl2->flags | 1;
+            g_AwQueue.curRunning = nextDl;
+            HW_GE_EXEC = nextDl->execState | 1;
             pspSync();
             if (g_GeLogHandler != 0) {
                 // 321C
-                g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, (int)dl2 ^ g_dlMask, dl2->list, dl2->stall);
+                g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, (int)nextDl ^ g_dlMask, nextDl->list, nextDl->stall);
             }
         }
     }
 
     // 31C8
     // Run the end event flag for the stopped DL
-    if (dl != NULL) {
-        u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+    if (curRunningDl != NULL) {
+        u32 idx = (curRunningDl - g_displayLists) / sizeof(SceGeDisplayList);
         sceKernelSetEventFlag(g_AwQueue.listEvFlagIds[idx / 32], 1 << (idx % 32));
     }
 }
@@ -2064,10 +2064,10 @@ _sceGeListInterrupt(int arg0 __attribute__ ((unused)), int arg1
             curStack->stack[5] = HW_GE_RADR1;
             curStack->stack[6] = HW_GE_RADR2;
             curStack->stack[7] = HW_GE_CMD(SCE_GE_CMD_BASE);
-            if ((dl->flags & 0x200) == 0) {
+            if (!(dl->execState & HW_GE_EXEC_DEPTH2)) {
                 dl->radr2 = 0;
                 dl->oadr2 = 0;
-                if ((dl->flags & 0x100) == 0) {
+                if (!(dl->execState & HW_GE_EXEC_DEPTH1)) {
                     dl->oadr1 = 0;
                     dl->radr1 = 0;
                 }
@@ -2288,7 +2288,7 @@ int sceGeListDeQueue(int dlId)
     // If the display list is in the NONE status, then it's not reserved and is invalid
     if (dl->state == SCE_GE_DL_STATE_NONE) {
         ret = SCE_ERROR_INVALID_ID;
-    } else if (dl->ctxUpToDate != 0) { // ???
+    } else if (dl->isBusy) {
         ret = SCE_ERROR_BUSY;
     } else {
         // Remove the display list from the double-linked queue
@@ -2340,7 +2340,6 @@ int sceGeListDeQueue(int dlId)
     return ret;
 }
 
-////// TODO ///////////////////////////
 SceGeListState sceGeListSync(int dlId, int mode)
 {
     int ret;
@@ -2348,6 +2347,7 @@ SceGeListState sceGeListSync(int dlId, int mode)
     u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
 
     int oldK1 = pspShiftK1();
+    // Check if the display list ID is valid
     if (idx >= MAX_COUNT_DL) {
         // 3EE0
         pspSetK1(oldK1);
@@ -2358,17 +2358,22 @@ SceGeListState sceGeListSync(int dlId, int mode)
     if (mode == 0) {
         // 3E84
         int oldIntr = sceKernelCpuSuspendIntr();
+        // Run the lazy flush patch
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
+        // Wait for the event flag corresponding to the display list
         ret = sceKernelWaitEventFlag(g_AwQueue.listEvFlagIds[idx / 32], 1 << (idx % 32), 0, 0, 0);
-        if (ret >= 0)
+        if (ret >= 0) {
             ret = SCE_GE_LIST_COMPLETED;
+        }
     } else if (mode == 1) {
         // Mode = 1: poll the current display list status
         // 3E10
+        // The state is basically given by the display list state
         switch (dl->state) {
         case SCE_GE_DL_STATE_QUEUED:
-            if (dl->ctxUpToDate != 0)
+            // If the list has been already running and is queued again, return PAUSED anyway
+            if (dl->isBusy)
                 ret = SCE_GE_LIST_PAUSED;
             else
                 ret = SCE_GE_LIST_QUEUED;
@@ -2376,12 +2381,14 @@ SceGeListState sceGeListSync(int dlId, int mode)
 
         case SCE_GE_DL_STATE_RUNNING:
             // 3E68
+            // If the current address is the stall address, the list must be stalled
             if ((int)dl->stall != HW_GE_LISTADDR)
                 ret = SCE_GE_LIST_DRAWING;
             else
                 ret = SCE_GE_LIST_STALLING;
             break;
 
+        // The last cases are straightforward
         case SCE_GE_DL_STATE_COMPLETED:
             ret = SCE_GE_LIST_COMPLETED;
             break;
@@ -2409,39 +2416,45 @@ SceGeListState sceGeDrawSync(int syncType)
 {
     int ret;
     int oldK1 = pspShiftK1();
+    // In this case, wait for the drawing to finish
     if (syncType == 0) {
         // 3FA4
         int oldIntr = sceKernelCpuSuspendIntr();
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
-        ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, 0, 0);
-        ret = 0;
+        // Wait for the drawing event flag to be triggered
+        ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, NULL, NULL);
         if (ret >= 0) {
             // 3FF4
             int i;
+            // Reset the state of all the completed display lists
             for (i = 0; i < MAX_COUNT_DL; i++) {
                 SceGeDisplayList *curDl = &g_displayLists[i];
                 if (curDl->state == SCE_GE_DL_STATE_COMPLETED) {
                     // 4010
                     curDl->state = SCE_GE_DL_STATE_NONE;
-                    curDl->ctxUpToDate = 0;
+                    curDl->isBusy = 0;
                 }
                 // 4000
             }
             ret = SCE_GE_LIST_COMPLETED;
         }
     } else if (syncType == 1) {
+        // Here, just poll the drawing status
         // 3F40
         int oldIntr = sceKernelCpuSuspendIntr();
+        // If there is no active display list, drawing must be finished
         SceGeDisplayList *dl = g_AwQueue.active_first;
         if (dl == NULL) {
             // 3F9C
             ret = SCE_GE_LIST_COMPLETED;
         } else {
+            // Otherwise, check the first or second display list (in case the first completed but is not removed from the queue yet)
             if (dl->state == SCE_GE_DL_STATE_COMPLETED)
                 dl = dl->next;
 
             // 3F68
+            // Return a value depending on the status of this display list
             if (dl != NULL) {
                 if ((int)dl->stall != HW_GE_LISTADDR)
                     ret = SCE_GE_LIST_DRAWING;
@@ -2472,9 +2485,10 @@ int sceGeBreak(u32 resetQueue, void *arg1)
         return SCE_ERROR_PRIV_REQUIRED;
     }
     int oldIntr = sceKernelCpuSuspendIntr();
-    SceGeDisplayList *dl = g_AwQueue.active_first;
-    if (dl != NULL) {
+    SceGeDisplayList *activeDl = g_AwQueue.active_first;
+    if (activeDl != NULL) {
         if (resetQueue) {
+            // Reset the whole GE and queue
             // 42F0
             _sceGeReset();
             // 430C
@@ -2485,7 +2499,7 @@ int sceGeBreak(u32 resetQueue, void *arg1)
                 cur->prev = &g_displayLists[i - 1];
                 cur->signal = SCE_GE_DL_SIGNAL_NONE;
                 cur->state = SCE_GE_DL_STATE_NONE;
-                cur->ctxUpToDate = 0;
+                cur->isBusy = 0;
             }
             g_AwQueue.free_last = &g_displayLists[63];
             g_AwQueue.curRunning = NULL;
@@ -2495,8 +2509,9 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             g_AwQueue.free_first = g_displayLists;
             g_AwQueue.active_first = NULL;
             ret = 0;
-        } else if (dl->state == SCE_GE_DL_STATE_RUNNING) {
+        } else if (activeDl->state == SCE_GE_DL_STATE_RUNNING) {
             // 4174
+            // Stop GE execution
             HW_GE_EXEC = 0;
             pspSync();
 
@@ -2506,21 +2521,21 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             if (g_AwQueue.curRunning != NULL) {
                 int *cmdList = (int *)HW_GE_LISTADDR;
                 int state = HW_GE_EXEC;
-                dl->list = cmdList;
-                dl->flags = state;
-                dl->stall = (int *)HW_GE_STALLADDR;
-                dl->radr1 = HW_GE_RADR1;
-                dl->radr2 = HW_GE_RADR2;
-                dl->oadr = HW_GE_OADR;
-                dl->oadr1 = HW_GE_OADR1;
-                dl->oadr2 = HW_GE_OADR2;
-                dl->base = HW_GE_CMD(SCE_GE_CMD_BASE);
-                if ((state & 0x200) == 0) {
-                    dl->radr2 = 0;
-                    dl->oadr2 = 0;
-                    if ((state & 0x100) == 0) {
-                        dl->radr1 = 0;
-                        dl->oadr1 = 0;
+                activeDl->list = cmdList;
+                activeDl->execState = state;
+                activeDl->stall = (int *)HW_GE_STALLADDR;
+                activeDl->radr1 = HW_GE_RADR1;
+                activeDl->radr2 = HW_GE_RADR2;
+                activeDl->oadr = HW_GE_OADR;
+                activeDl->oadr1 = HW_GE_OADR1;
+                activeDl->oadr2 = HW_GE_OADR2;
+                activeDl->base = HW_GE_CMD(SCE_GE_CMD_BASE);
+                if (!(state & HW_GE_EXEC_DEPTH2)) {
+                    activeDl->radr2 = 0;
+                    activeDl->oadr2 = 0;
+                    if (!(state & HW_GE_EXEC_DEPTH1)) {
+                        activeDl->radr1 = 0;
+                        activeDl->oadr1 = 0;
                     }
                 }
                 // 4228
@@ -2528,21 +2543,21 @@ int sceGeBreak(u32 resetQueue, void *arg1)
                 if (op == SCE_GE_CMD_SIGNAL || op == SCE_GE_CMD_FINISH)
                 {
                     // 42E8
-                    dl->list = cmdList - 1;
+                    activeDl->list = cmdList - 1;
                 } else if (op == SCE_GE_CMD_END) {
                     // 42E0
-                    dl->list = cmdList - 2;
+                    activeDl->list = cmdList - 2;
                 }
                 // 4258
-                if (dl->signal == SCE_GE_DL_SIGNAL_SYNC) {
+                if (activeDl->signal == SCE_GE_DL_SIGNAL_SYNC) {
                     // 42D4
-                    dl->list += 2;
+                    activeDl->list += 2;
                 }
                 // 4268
             }
             // 426C
-            dl->state = SCE_GE_DL_STATE_PAUSED;
-            dl->signal = SCE_GE_DL_SIGNAL_BREAK;
+            activeDl->state = SCE_GE_DL_STATE_PAUSED;
+            activeDl->signal = SCE_GE_DL_SIGNAL_BREAK;
             HW_GE_STALLADDR = 0;
             HW_GE_LISTADDR = (int)UUNCACHED(g_cmdList);
             HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
@@ -2550,21 +2565,21 @@ int sceGeBreak(u32 resetQueue, void *arg1)
             pspSync();
             g_AwQueue.isBreak = 1;
             g_AwQueue.curRunning = NULL;
-            ret = (int)dl ^ g_dlMask;
-        } else if (dl->state == SCE_GE_DL_STATE_PAUSED) {
+            ret = (int)activeDl ^ g_dlMask;
+        } else if (activeDl->state == SCE_GE_DL_STATE_PAUSED) {
             // 4130
             ret = SCE_ERROR_BUSY;
             if (g_AwQueue.sdkVer > 0x02000010) {
-                if (dl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
+                if (activeDl->signal == SCE_GE_DL_SIGNAL_PAUSE) {
                     // 4160
                     Kprintf("sceGeBreak(): can't break signal-pausing list\n"); // 64B4
                 } else
                     ret = SCE_ERROR_ALREADY;
             }
-        } else if (dl->state == SCE_GE_DL_STATE_QUEUED) {
+        } else if (activeDl->state == SCE_GE_DL_STATE_QUEUED) {
             // 40FC
-            dl->state = SCE_GE_DL_STATE_PAUSED;
-            ret = (int)dl ^ g_dlMask;
+            activeDl->state = SCE_GE_DL_STATE_PAUSED;
+            ret = (int)activeDl ^ g_dlMask;
         } else if (g_AwQueue.sdkVer >= 0x02000000)
             ret = SCE_ERROR_NOT_SUPPORTED;
         else
@@ -2599,13 +2614,13 @@ int sceGeContinue()
                     while ((HW_GE_EXEC & 1) != 0)
                         ;
                     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
-                    if (dl->ctx != NULL && dl->ctxUpToDate == 0) {
+                    if (dl->ctx != NULL && dl->isBusy == 0) {
                         // 4598
                         sceGeSaveContext(dl->ctx);
                     }
                     // 44BC
                     _sceGeWriteBp(dl->list);
-                    dl->ctxUpToDate = 1;
+                    dl->isBusy = 1;
                     HW_GE_LISTADDR = (int)UCACHED(dl->list);
                     HW_GE_STALLADDR = (int)UCACHED(dl->stall);
                     HW_GE_OADR = dl->oadr;
@@ -2613,7 +2628,7 @@ int sceGeContinue()
                     HW_GE_OADR2 = dl->oadr2;
                     _sceGeSetBaseRadr(dl->base, dl->radr1, dl->radr2);
                     HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
-                    HW_GE_EXEC = dl->flags | 1;
+                    HW_GE_EXEC = dl->execState | HW_GE_EXEC_RUNNING;
                     pspSync();
                     g_AwQueue.curRunning = dl;
                     sceKernelClearEventFlag(g_AwQueue.drawingEvFlagId, ~2);
@@ -3358,10 +3373,10 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     // 58FC
     int oldIntr = sceKernelCpuSuspendIntr();
     _sceGeListLazyFlush();
-    SceGeDisplayList *dl = g_AwQueue.active_first;
+    SceGeDisplayList *curDl = g_AwQueue.active_first;
     // 5920
-    while (dl != NULL) {
-        if (UCACHED((int)dl->list ^ (int)list) == NULL) {
+    while (curDl != NULL) {
+        if (UCACHED((int)curDl->list) == UCACHED((int)list)) {
             // 5C74
             Kprintf("_sceGeListEnQueue(): can't enqueue duplicated addr(MADR=0x%08X)\n", list); // 0x65B8
             if (oldVer)
@@ -3370,61 +3385,61 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
             pspSetK1(oldK1);
             return SCE_ERROR_BUSY;
         }
-        if (dl->ctxUpToDate && stack != NULL && dl->stack == stack && !oldVer) { // 5C44
+        if (curDl->isBusy && stack != NULL && curDl->stack == stack && !oldVer) { // 5C44
             Kprintf("_sceGeListEnQueue(): can't enqueue duplicated stack(STACK=0x%08X)\n", stack);  // 0x65FC
             // 5C60
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
             return SCE_ERROR_BUSY;
         }
-        dl = dl->next;
+        curDl = curDl->next;
         // 5954
     }
 
     // 5960
-    dl = g_AwQueue.free_first;
-    if (dl == NULL) {
+    SceGeDisplayList *newDl = g_AwQueue.free_first;
+    if (newDl == NULL) {
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_OUT_OF_MEMORY;
     }
-    if (dl->next == NULL) {
+    if (newDl->next == NULL) {
         g_AwQueue.free_last = NULL;
         // 5C3C
         g_AwQueue.free_first = NULL;
     } else {
-        g_AwQueue.free_first = dl->next;
-        dl->next->prev = NULL;
+        g_AwQueue.free_first = newDl->next;
+        newDl->next->prev = NULL;
     }
 
     // 5984
-    dl->prev = NULL;
-    dl->next = NULL;
-    if (dl == NULL) {
+    newDl->prev = NULL;
+    newDl->next = NULL;
+    if (newDl == NULL) {
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_OUT_OF_MEMORY;
     }
-    dl->ctxUpToDate = 0;
-    dl->signal = SCE_GE_DL_SIGNAL_NONE;
-    dl->cbId = pspMax(cbid, -1);
-    int dlId = (int)dl ^ g_dlMask;
-    dl->numStacks = numStacks;
-    dl->stack = stack;
-    dl->next = NULL;
-    dl->ctx = ctx;
-    dl->flags = 0;
-    dl->list = list;
-    dl->stall = stall;
-    dl->radr1 = 0;
-    dl->radr2 = 0;
-    dl->oadr = 0;
-    dl->oadr1 = 0;
-    dl->oadr2 = 0;
-    dl->base = 0;
-    dl->stackOff = 0;
+    newDl->isBusy = 0;
+    newDl->signal = SCE_GE_DL_SIGNAL_NONE;
+    newDl->cbId = pspMax(cbid, -1);
+    int newDlId = (int)newDl ^ g_dlMask;
+    newDl->numStacks = numStacks;
+    newDl->stack = stack;
+    newDl->next = NULL;
+    newDl->ctx = ctx;
+    newDl->execState = 0;
+    newDl->list = list;
+    newDl->stall = stall;
+    newDl->radr1 = 0;
+    newDl->radr2 = 0;
+    newDl->oadr = 0;
+    newDl->oadr1 = 0;
+    newDl->oadr2 = 0;
+    newDl->base = 0;
+    newDl->stackOff = 0;
     if (head != 0) {
         // 5B8C
         if (g_AwQueue.active_first != NULL) {
@@ -3435,29 +3450,29 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
                 pspSetK1(oldK1);
                 return SCE_ERROR_INVALID_VALUE;
             }
-            dl->state = SCE_GE_DL_STATE_PAUSED;
+            newDl->state = SCE_GE_DL_STATE_PAUSED;
             g_AwQueue.active_first->state = SCE_GE_DL_STATE_QUEUED;
-            dl->prev = NULL;
-            g_AwQueue.active_first->prev = dl;
-            dl->next = g_AwQueue.active_first;
+            newDl->prev = NULL;
+            g_AwQueue.active_first->prev = newDl;
+            newDl->next = g_AwQueue.active_first;
         } else {
-            dl->state = SCE_GE_DL_STATE_PAUSED;
-            dl->prev = NULL;
-            dl->next = NULL;
-            g_AwQueue.active_last = dl;
+            newDl->state = SCE_GE_DL_STATE_PAUSED;
+            newDl->prev = NULL;
+            newDl->next = NULL;
+            g_AwQueue.active_last = newDl;
         }
 
         // 5BB8
-        g_AwQueue.active_first = dl;
+        g_AwQueue.active_first = newDl;
         if (g_GeLogHandler != NULL)
-            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, dlId, 1, list, stall);
+            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, newDlId, 1, list, stall);
     } else if (g_AwQueue.active_first == NULL) {
         // 5A8C
-        dl->state = SCE_GE_DL_STATE_RUNNING;
-        dl->ctxUpToDate = 1;
-        dl->prev = NULL;
-        g_AwQueue.active_first = dl;
-        g_AwQueue.active_last = dl;
+        newDl->state = SCE_GE_DL_STATE_RUNNING;
+        newDl->isBusy = 1;
+        newDl->prev = NULL;
+        g_AwQueue.active_first = newDl;
+        g_AwQueue.active_last = newDl;
         sceSysregAwRegABusClockEnable();
         if (ctx != NULL)
             sceGeSaveContext(ctx);
@@ -3475,31 +3490,31 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         pspSync();
         HW_GE_EXEC = 1;
         pspSync();
-        g_AwQueue.curRunning = dl;
+        g_AwQueue.curRunning = newDl;
         sceKernelClearEventFlag(g_AwQueue.drawingEvFlagId, 0xFFFFFFFD);
         if (g_GeLogHandler != NULL) {
-            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, dlId, 0, list, stall);
+            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, newDlId, 0, list, stall);
             if (g_GeLogHandler != NULL)
-                g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, dlId, list, stall);
+                g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, newDlId, list, stall);
         }
     } else {
-        dl->state = SCE_GE_DL_STATE_QUEUED;
-        g_AwQueue.active_last->next = dl;
-        dl->prev = g_AwQueue.active_last;
-        g_AwQueue.active_last = dl;
+        newDl->state = SCE_GE_DL_STATE_QUEUED;
+        g_AwQueue.active_last->next = newDl;
+        newDl->prev = g_AwQueue.active_last;
+        g_AwQueue.active_last = newDl;
         if (g_GeLogHandler != NULL) {
             // 5A6C
-            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, dlId, 0, list, stall);
+            g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, newDlId, 0, list, stall);
         }
     }
 
     // 5A28
     // clear event flag for this DL
-    u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+    u32 idx = (newDl - g_displayLists) / sizeof(SceGeDisplayList);
     sceKernelClearEventFlag(g_AwQueue.listEvFlagIds[idx / 32], ~(1 << (idx % 32)));
 
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
-    return dlId;
+    return newDlId;
 }
 

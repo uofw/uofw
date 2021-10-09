@@ -60,6 +60,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs * arg,
 typedef struct {
     SceGeDisplayList *curRunning;
     int isBreak;
+    // Next display list planned to be executed (can be the current one, or not, in case another one was just inserted before the running one stopped)
     SceGeDisplayList *active_first;  //  8
     SceGeDisplayList *active_last;   // 12
     SceGeDisplayList *free_first;    // 16

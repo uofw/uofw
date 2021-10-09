@@ -56,14 +56,14 @@ typedef struct SceGeDisplayList
     u8 state; // SceGeDisplayListState / 8
     /** Current display list received signal */
     u8 signal; // SceGeDisplayListSignal / 9
-    /** 1 if context is up to date, 0 otherwise */
-    u8 ctxUpToDate;
+    /** 1 if the list is busy (ie has been running at least once and was not completed+sync'ed with a SceGeDrawSync() yet), 0 otherwise */
+    u8 isBusy;
     /* (padding) */
     char unused11;
     /** The display list context */
     SceGeContext *ctx; // 12
-    /** The display list flags */
-    int flags;
+    /** The display list execution state (see HW_GE_EXEC) */
+    int execState;
     /** Pointer to the list of commands */
     void *list; // 20
     /** Pointer to the stall address, where the display list will stop being executed */

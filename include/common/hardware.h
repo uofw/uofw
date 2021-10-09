@@ -46,6 +46,10 @@
 // R  bit 0x100: 1 = is at depth 1 (or 2) of calls
 // R  bit 0x200: 1 = is at depth 2 of calls
 #define HW_GE_EXEC               HW(0xBD400100)
+#define HW_GE_EXEC_RUNNING       0x001
+#define HW_GE_EXEC_BRANCHING     0x002
+#define HW_GE_EXEC_DEPTH1        0x100
+#define HW_GE_EXEC_DEPTH2        0x200
 // Never used, accessible through sceGeSet/GetReg() (SCE_GE_REG_UNK104)
 #define HW_GE_UNK104             HW(0xBD400104)
 // RW: address of the display list currently being run (not sure if it's the current point of
