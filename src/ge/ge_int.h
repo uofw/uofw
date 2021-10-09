@@ -99,12 +99,16 @@ typedef struct {
 typedef struct {
     // reached a break state (through signal or sceGeBreak())
     int inBreakState;
-    // breakpoints are already set
+    // breakpoints are enabled/written in the display list's command list
     int bpSet;
-    int size;
-    int size2;
-    SceGeBpCmd cmds[8];
-    SceGeBpCmd cmds2[2];
+    // Number of breakpoints
+    int numBp;
+    // Number of additional breakpoints used for step-by-step breaking
+    int numStepBp;
+    // List of breakpoints
+    SceGeBpCmd bpCmds[8];
+    // List of additional breakpoints used for step-by-step breaking
+    SceGeBpCmd stepBpCmds[2];
 } SceGeBpCtrl;
 
 typedef struct {
