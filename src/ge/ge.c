@@ -200,7 +200,7 @@ SceGeBpCtrl g_GeDeciBreak; // 7520
 // Bitset: i-th bit is set if i-th callback is set (by sceGeSetCallback())
 u16 g_cbhook; // 75D0
 
-// TODO
+// Command list space provided by usersystemlib, used for various usages but starting with a FINISH/END pair.
 int *g_cmdList; // 7600
 
 // The mask xor'ed with the display list addresses to give the display list ID
@@ -2940,14 +2940,12 @@ int sceGeDebugBreak()
 }
 
 /**
- * Exit 'break' state and continue display list execution
+ * Exit 'break' state and continue display list execution.
  *
  * @param byStep 0 to resume normal execution, 1 to run step-by-step, any other value to run step-by-step but do not step inside callees
  *
  * @return < 0 on error.
  */
-
-///// TODO
 int sceGeDebugContinue(int byStep)
 {
     SceGeDisplayList *activeDl = g_AwQueue.active_first;
@@ -2975,11 +2973,13 @@ int sceGeDebugContinue(int byStep)
     int *cmdPtr = (int *)HW_GE_LISTADDR;
     u32 curCmd = *cmdPtr;
     int isBreak2 = 0;
+    // If we're stopped on a BREAK2 signal (ie BREAK which is not for step-by-step), skip it (count must've already be handled by the signal handling)
     if ((curCmd >> 24) == SCE_GE_CMD_SIGNAL && ((curCmd >> 16) & 0xFF) == SCE_GE_SIGNAL_BREAK2) // 5044
     {
         cmdPtr += 2;
         HW_GE_LISTADDR = (int)cmdPtr;
         isBreak2 = 1;
+        // If we're running step-by-step, continue until the next BREAK1
         if (byStep == 1) {
             if (!wasEnabled)
                 sceSysregAwRegABusClockDisable();
@@ -2992,6 +2992,7 @@ int sceGeDebugContinue(int byStep)
     g_GeDeciBreak.inBreakState = 0;
     // 4D84
     if (!byStep) {
+        // If we're not running step-by-step, just resume normally
         // 4F44 dup
         g_GeDeciBreak.numStepBp = 0;
     } else {
@@ -3012,18 +3013,18 @@ int sceGeDebugContinue(int byStep)
         int *nextCmdPtr2 = cmdPtr + 2;
         if (op == SCE_GE_CMD_RET) {
             // 5004
-            if ((flag & 0x200) == 0) {
-                // 5020
-                if ((flag & 0x100) != 0)
-                    nextCmdPtr1 = (int *)HW_GE_RADR1;
-            } else
+            if (flag & HW_GE_EXEC_DEPTH2) {
                 nextCmdPtr1 = (int *)HW_GE_RADR2;
+            } else if (flag & HW_GE_EXEC_DEPTH1) { // 5020
+                nextCmdPtr1 = (int *)HW_GE_RADR1;
+            }
         } else if (op == SCE_GE_CMD_FINISH) {
             nextCmdPtr1 = nextCmdPtr2;
         } else if (op == SCE_GE_CMD_SIGNAL) {
             // 4F54
             int signalOp = (curCmd >> 16) & 0x000000FF;
             int off = (curCmd << 16) | (*(cmdPtr + 1) & 0xFFFF);
+            // Follow calls only if byStep == 1
             nextCmdPtr1 = nextCmdPtr2;
             if (signalOp == SCE_GE_SIGNAL_JUMP || (signalOp == SCE_GE_SIGNAL_CALL && byStep == 1)) {
                 // 4F8C
@@ -3043,11 +3044,13 @@ int sceGeDebugContinue(int byStep)
         // (4E18)
         // (4E1C)
         // 4E20
+        // Add a 'step' breakpoint on the next instruction
         g_GeDeciBreak.numStepBp = 1;
         g_GeDeciBreak.stepBpCmds[0].count = 1;
         g_GeDeciBreak.stepBpCmds[0].addr = (int)nextCmdPtr1;
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.bpCmds[0];
         // 4E50
+        // Do not enable the 'step' breakpoint if there is already a breakpoint at that address
         int i;
         for (i = 0; i < g_GeDeciBreak.numBp; i++) {
             // 4E50
@@ -3059,12 +3062,14 @@ int sceGeDebugContinue(int byStep)
             bpCmd++;
         }
         // 4E6C
+        // ... Or if that address already contains a BREAK2 instruction
         if ((*nextCmdPtr1 >> 24) == SCE_GE_CMD_SIGNAL && ((*nextCmdPtr1 >> 16) & 0xFF) == SCE_GE_SIGNAL_BREAK2) { // 4F38
             // 4F44 dup
             g_GeDeciBreak.numStepBp = 0;
         }
     }
     // 4E80
+    // Take the BREAK counts into account and temporarily disable the breakpoint
     if (isBreak2 == 0) {
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.bpCmds[0];
         // 4EA0
@@ -3082,6 +3087,7 @@ int sceGeDebugContinue(int byStep)
         }
     }
     // 4EC4
+    // Write the updated breakpoints to memory
     _sceGeWriteBp(cmdPtr);
     HW_GE_EXEC |= 1;
     sceKernelEnableIntr(SCE_GE_INT);
@@ -3105,6 +3111,11 @@ int _sceGeQueueInitCallback()
     return 0;
 }
 
+/**
+ * End the drawing queue.
+ *
+ * @return 0.
+ */
 int _sceGeQueueEnd()
 {
     sceKernelDeleteEventFlag(g_AwQueue.drawingEvFlagId);
@@ -3113,6 +3124,11 @@ int _sceGeQueueEnd()
     return 0;
 }
 
+/**
+ * Find out the queue status.
+ *
+ * @return 0 if no display list is active, -1 otherwise.
+ */
 int _sceGeQueueStatus(void)
 {
     if (g_AwQueue.active_first == NULL)
@@ -3120,6 +3136,9 @@ int _sceGeQueueStatus(void)
     return -1;
 }
 
+/**
+ * The display list error interrupt handler. Does not do anything on retail.
+ */
 void _sceGeErrorInterrupt(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)), int arg2 __attribute__((unused)))
 {
 }
@@ -3147,12 +3166,19 @@ int sceGeUnsetCallback(int cbId)
     sceKernelDisableSubIntr(SCE_GE_INT, cbId * 2 + 1);
     sceKernelReleaseSubIntrHandler(SCE_GE_INT, cbId * 2 + 0);
     sceKernelReleaseSubIntrHandler(SCE_GE_INT, cbId * 2 + 1);
+    // Release the callback id from the occupied list.
     g_cbhook &= ~(1 << cbId);
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return 0;
 }
 
+/**
+ * Output execution errors (using Kprintf) and run an exception on newer API versions.
+ *
+ * @param cmd The crashed command.
+ * @param err 0 if it is an alignment bug, 1 if it is an overflow bug, 2 if it is an underflow bug.
+ */
 void _sceGeListError(u32 cmd, int err)  // err: 0 = alignment problem, 1: overflow, 2: underflow
 {
     int op = (cmd >> 16) & 0xFF;
@@ -3240,6 +3266,11 @@ void _sceGeListError(u32 cmd, int err)  // err: 0 = alignment problem, 1: overfl
         pspBreak(0);
 }
 
+/**
+ * Write the breakpoints in memory.
+ *
+ * @param list A pointer to the display list's command list.
+ */
 void _sceGeWriteBp(int *list)
 {
     if (g_deci2p == NULL)
@@ -3248,24 +3279,30 @@ void _sceGeWriteBp(int *list)
         return;
     g_GeDeciBreak.bpSet = 1;
     int *prevList = list - 1;
+    // Handle classical breakpoints
     int i;
     for (i = 0; i < g_GeDeciBreak.numBp; i++) {
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.bpCmds[i];
         int *ptr2 = (int *)(bpCmd->addr & 0xFFFFFFFC);
+        // Backup old commands
         u32 cmd = ptr2[0];
         bpCmd->oldCmd1 = cmd;
         bpCmd->oldCmd2 = ptr2[1];
-        if (((bpCmd->addr ^ (int)prevList) & 0x1FFFFFFC) != 0) {
+        // If the breakpoint starts one instruction before the current display list, skip it
+        if ((bpCmd->addr & 0x1FFFFFFC) != ((int)prevList & 0x1FFFFFFC)) {
             // 5574
+            // If the address is aligned, register the breakpoint normally (unless command is an END)
             if ((bpCmd->addr & 3) == 0) {
                 // 55C4
-                if (cmd >> 24 != SCE_GE_CMD_END)
+                if (cmd >> 24 != SCE_GE_CMD_END) {
                     ptr2[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, SCE_GE_SIGNAL_BREAK2 << 24);
+                }
                 // 55CC
                 ptr2[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
-            } else
+            } else // Otherwise, remove the lower bits so that the breakpoint will be registered next time
                 bpCmd->addr = (int)ptr2;
             // 5580
+            // Flush all caches
             pspCache(0x1A, &ptr2[0]);
             pspCache(0x1A, &ptr2[1]);
             if ((pspCop0StateGet(24) & 1) != 0) {
@@ -3278,12 +3315,13 @@ void _sceGeWriteBp(int *list)
 
     // 54A4
     // 54E0
+    // Same but for step-by-step breakpoints
     for (i = 0; i < g_GeDeciBreak.numStepBp; i++) {
         SceGeBpCmd *bpCmd = &g_GeDeciBreak.stepBpCmds[i];
         int *ptr = (int *)bpCmd->addr;
         bpCmd->oldCmd1 = ptr[0];
         bpCmd->oldCmd2 = ptr[1];
-        if ((((int)ptr ^ (int)prevList) & 0x1FFFFFFC) != 0) {
+        if (((int)ptr & 0x1FFFFFFC) != ((int)prevList & 0x1FFFFFFC)) {
             // 5528
             ptr[0] = GE_MAKE_OP(SCE_GE_CMD_SIGNAL, SCE_GE_SIGNAL_BREAK1 << 24);
             ptr[1] = GE_MAKE_OP(SCE_GE_CMD_END, 0);
@@ -3300,6 +3338,10 @@ void _sceGeWriteBp(int *list)
     // 5514
     pspSync();
 }
+
+/**
+ * Clears breakpoints and restore display list code as it was before.
+ */
 
 void _sceGeClearBp()
 {
@@ -3353,6 +3395,17 @@ void _sceGeListLazyFlush()
     }
 }
 
+/**
+ * Enqueue a display list.
+ *
+ * @param list Pointer to the command list.
+ * @param stall The stall address for the list.
+ * @param cbid The callback ids for signal/finish (-1 if none).
+ * @param arg Display list parameters.
+ * @param head 1 if we want to enqueue the list at the beginning and execute it immediately, 0 otherwise.
+ *
+ * @return The new display list ID, or <0 on error.
+ */
 int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int head)
 {
     int oldK1 = pspShiftK1();
@@ -3369,6 +3422,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     // If set to 1, it will ignore duplicates
     int oldVer = 1;
     if (ver > 0x01FFFFFF) {
+        // In newer versions, the default stack size is zero.
         numStacks = 0;
         stack = NULL;
         oldVer = 0;
@@ -3396,11 +3450,13 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     }
     // (58DC)
     // 58E0
+    // Check that all pointers are 4-aligned.
     if ((((int)list | (int)stall | (int)ctx | (int)stack) & 3) != 0) {
         // 5CAC
         pspSetK1(oldK1);
         return SCE_ERROR_INVALID_POINTER;
     }
+    // Patching for Itadaki Street Portable
     if (g_AwQueue.cachePatch != 0 && pspK1IsUserMode()) {    // 5C94
         g_AwQueue.cachePatch--;
         sceKernelDcacheWritebackAll();
@@ -3409,6 +3465,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     // 58FC
     int oldIntr = sceKernelCpuSuspendIntr();
     _sceGeListLazyFlush();
+    // Check if there is a duplicated stack or display list address
     SceGeDisplayList *curDl = g_AwQueue.active_first;
     // 5920
     while (curDl != NULL) {
@@ -3433,6 +3490,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     }
 
     // 5960
+    // Get the first available display list.
     SceGeDisplayList *newDl = g_AwQueue.free_first;
     if (newDl == NULL) {
         // 5C24
@@ -3440,6 +3498,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
         pspSetK1(oldK1);
         return SCE_ERROR_OUT_OF_MEMORY;
     }
+    // Set the double-linked list accordingly.
     if (newDl->next == NULL) {
         g_AwQueue.free_last = NULL;
         // 5C3C
@@ -3452,12 +3511,13 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     // 5984
     newDl->prev = NULL;
     newDl->next = NULL;
-    if (newDl == NULL) {
+    if (newDl == NULL) { // Note: this check is useless since it is done above, possibly a minor mistake by Sony.
         // 5C24
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_OUT_OF_MEMORY;
     }
+    // Initialize all the fields of our fresh display list.
     newDl->isBusy = 0;
     newDl->signal = SCE_GE_DL_SIGNAL_NONE;
     newDl->cbId = pspMax(cbid, -1);
@@ -3477,21 +3537,26 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     newDl->base = 0;
     newDl->stackOff = 0;
     if (head != 0) {
+        // In this case, insert the display list at the head so it will be executed first once execution restarts.
         // 5B8C
         if (g_AwQueue.active_first != NULL) {
+            // Another display list is already active
             // 5BE0
             if (g_AwQueue.active_first->state != SCE_GE_DL_STATE_PAUSED) {
                 // 5C0C
+                // The display list at the head is still running, cannot execute ours!
                 sceKernelCpuResumeIntr(oldIntr);
                 pspSetK1(oldK1);
                 return SCE_ERROR_INVALID_VALUE;
             }
+            // Queue the currently active display list and put ours at the head instead.
             newDl->state = SCE_GE_DL_STATE_PAUSED;
             g_AwQueue.active_first->state = SCE_GE_DL_STATE_QUEUED;
             newDl->prev = NULL;
             g_AwQueue.active_first->prev = newDl;
             newDl->next = g_AwQueue.active_first;
         } else {
+            // No other display list active, put ours straightaway.
             newDl->state = SCE_GE_DL_STATE_PAUSED;
             newDl->prev = NULL;
             newDl->next = NULL;
@@ -3504,6 +3569,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
             g_GeLogHandler(SCE_GE_LOG_DL_ENQUEUED, newDlId, 1, list, stall);
     } else if (g_AwQueue.active_first == NULL) {
         // 5A8C
+        // No display list is active, so we run ours directly.
         newDl->state = SCE_GE_DL_STATE_RUNNING;
         newDl->isBusy = 1;
         newDl->prev = NULL;
@@ -3534,6 +3600,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
                 g_GeLogHandler(SCE_GE_LOG_DL_RUNNING, newDlId, list, stall);
         }
     } else {
+        // Another display list is already active: just put ours at the end of the queue.
         newDl->state = SCE_GE_DL_STATE_QUEUED;
         g_AwQueue.active_last->next = newDl;
         newDl->prev = g_AwQueue.active_last;
@@ -3545,7 +3612,7 @@ int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs *arg, int
     }
 
     // 5A28
-    // clear event flag for this DL
+    // Clear the event flag for this DL.
     u32 idx = (newDl - g_displayLists) / sizeof(SceGeDisplayList);
     sceKernelClearEventFlag(g_AwQueue.listEvFlagIds[idx / 32], ~(1 << (idx % 32)));
 

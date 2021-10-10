@@ -89,9 +89,13 @@ typedef struct {
     int endCmd;
 } SceGeQueueSuspendInfo;
 
+// Structure containing a single breakpoint
 typedef struct {
+    // The address to break on. Lower bits are set if we want to skip writing the breakpoint on the next occurrence, but are discarded afterwards.
     u32 addr; // 0
+    // Number of times we want to break (-1 = infinite)
     int count; // 4
+    // The two commands which the SIGNAL/END pair replaced
     int oldCmd1; // 8
     int oldCmd2; // 12
 } SceGeBpCmd;
