@@ -24,14 +24,14 @@ struct UsbEndpoint g_endp;  // 0x00000CAC
 s32 sceUsbAccGetAuthStat(void)
 {
     int intr = sceKernelCpuSuspendIntr();
-    s32 ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
+    s32 ret = 0;
     
-    if (g_usbBusDriverStarted) {
-        ret = 0;
-
+    if (g_unk0) {
         if (sceUsbBus_driver_8A3EB5D2() == 0)
             ret = 0x80243701;
     }
+    else
+        ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
         
     sceKernelCpuResumeIntr(intr);
     return ret;
@@ -75,19 +75,21 @@ s32 sceUsbAccGetInfo(u64 *arg)
 // Exported in sceUsbAcc_internal
 s32 sceUsbAcc_internal_2A100C1F(struct UsbdDeviceReq *req)
 {
-    s32 ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
+    s32 ret = 0;
     u8 *data = req->data;
 
     if (g_usbBusDriverStarted) {
-        ret = SCE_ERROR_USB_INVALID_ARGUMENT;
-        
         if ((data[3]) < 0x3D) {
             sceKernelDcacheWritebackRange(data, req->size);
             req->endp = &g_endp;
             req->size = data[3] + 4;
             ret = sceUsbbdReqSend(req);
         }
+        else
+            ret = SCE_ERROR_USB_INVALID_ARGUMENT;
     }
+    else
+        ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
     
     return ret;
 }
@@ -96,12 +98,12 @@ s32 sceUsbAcc_internal_2A100C1F(struct UsbdDeviceReq *req)
 // Exported in sceUsbAcc_internal
 s32 sceUsbAccRegisterType(u16 type)
 {
-    s32 ret = SCE_ERROR_USB_DRIVER_NOT_FOUND;
+    s32 ret = 0;
 
-    if ((g_type & type) == 0) {
-        ret = 0;
+    if ((g_type & type) == 0)
         g_type = g_type | type;
-    }
+    else
+        ret = SCE_ERROR_USB_DRIVER_NOT_FOUND;
     
     return ret;
 }
@@ -110,12 +112,12 @@ s32 sceUsbAccRegisterType(u16 type)
 // Exported in sceUsbAcc_internal
 s32 sceUsbAccUnregisterType(u16 type)
 {
-    s32 ret = SCE_ERROR_USB_DRIVER_NOT_FOUND;
+    s32 ret = 0;
     
-    if ((g_type & type) != 0) {
-        ret = 0;
+    if ((g_type & type) != 0)
         g_type = g_type & ~type;
-    }
+    else
+        ret = SCE_ERROR_USB_DRIVER_NOT_FOUND;
     
     return ret;
 }
