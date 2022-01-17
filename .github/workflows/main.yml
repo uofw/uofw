@@ -3,27 +3,27 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           sudo apt-get install doxygen
-          wget http://www.mirari.fr/VmX0 -O psptoolchain.deb
+          wget https://github.com/uofw/artifacts/releases/latest/download/psptoolchain.deb
           sudo dpkg --install psptoolchain.deb
       - name: Build project
         run: |
-          source /etc/profile.d/psptoolchain.sh
+          . /etc/profile.d/psptoolchain.sh
           make -k
       - name: Build documentation
-        run : |
+        run: |
           mkdir github-pages
           cd github-pages
           doxygen ../docs/Doxyfile
       - name: Deploy documentation
         if: github.ref == 'refs/heads/master'
-        uses: JamesIves/github-pages-deploy-action@3.7.1
+        uses: JamesIves/github-pages-deploy-action@4.1.0
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
