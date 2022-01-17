@@ -13,7 +13,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 // Globals
 struct UsbDriver g_drv;     // 0x00000CC4
-u8 g_unk0;                  // 0x00000D53
+u64 g_unk0;                 // 0x00000D10
+u8 g_usbBusDriverStarted;   // 0x00000D53
 u16 g_type;                 // 0x00000D50
 u8 g_unk2;                  // 0x00000D52
 struct UsbEndpoint g_endp;  // 0x00000CAC
@@ -23,14 +24,14 @@ struct UsbEndpoint g_endp;  // 0x00000CAC
 s32 sceUsbAccGetAuthStat(void)
 {
     int intr = sceKernelCpuSuspendIntr();
-    s32 ret = 0;
+    s32 ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
     
-    if (g_unk0) {
+    if (g_usbBusDriverStarted) {
+        ret = 0;
+
         if (sceUsbBus_driver_8A3EB5D2() == 0)
             ret = 0x80243701;
     }
-    else
-        ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
         
     sceKernelCpuResumeIntr(intr);
     return ret;
@@ -38,9 +39,36 @@ s32 sceUsbAccGetAuthStat(void)
 
 // Subroutine sceUsbAccGetInfo - Address 0x00000068 - Aliases: sceUsbAcc_0CD7D4AA, sceUsbAcc_driver_0CD7D4AA
 // Exported in sceUsbAcc_internal, sceUsbAcc and sceUsbAcc_driver
-s32 sceUsbAccGetInfo(void)
+s32 sceUsbAccGetInfo(u64 *arg)
 {
-    return 0;
+    s32 ret = 0;
+    s32 oldK1 = pspShiftK1();
+    int intr = sceKernelCpuSuspendIntr();
+    
+    if (g_usbBusDriverStarted) {
+        if (sceUsbBus_driver_8A3EB5D2() != 0) {
+            if (arg) {
+                if (((((u32)arg + 8) | (u32)arg) & (oldK1))) {
+                    *arg = g_unk0;
+                }
+            }
+            else
+                ret = SCE_ERROR_USB_INVALID_ARGUMENT;
+            
+            sceKernelCpuResumeIntr(intr);
+        }
+        else {
+            sceKernelCpuResumeIntr(intr);
+            ret = 0x80243701;
+        }
+    }
+    else {
+        sceKernelCpuResumeIntr(intr);
+        ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
+    }
+        
+    pspSetK1(oldK1);
+    return ret;
 }
 
 // Subroutine sceUsbAcc_internal_2A100C1F - Address 0x00000154 -- TODO: Verify
@@ -50,7 +78,7 @@ s32 sceUsbAcc_internal_2A100C1F(struct UsbdDeviceReq *req)
     s32 ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
     u8 *data = req->data;
 
-    if (g_unk0) {
+    if (g_usbBusDriverStarted) {
         ret = SCE_ERROR_USB_INVALID_ARGUMENT;
         
         if ((data[3]) < 0x3D) {
@@ -68,45 +96,47 @@ s32 sceUsbAcc_internal_2A100C1F(struct UsbdDeviceReq *req)
 // Exported in sceUsbAcc_internal
 s32 sceUsbAccRegisterType(u16 type)
 {
-    s32 error = SCE_ERROR_USB_DRIVER_NOT_FOUND;
+    s32 ret = SCE_ERROR_USB_DRIVER_NOT_FOUND;
 
     if ((g_type & type) == 0) {
-        error = 0;
+        ret = 0;
         g_type = g_type | type;
     }
     
-    return error;
+    return ret;
 }
 
 // Subroutine sceUsbAccUnregisterType - Address 0x000004E0 -- Done
 // Exported in sceUsbAcc_internal
 s32 sceUsbAccUnregisterType(u16 type)
 {
-    s32 error = SCE_ERROR_USB_DRIVER_NOT_FOUND;
+    s32 ret = SCE_ERROR_USB_DRIVER_NOT_FOUND;
     
     if ((g_type & type) != 0) {
-        error = 0;
+        ret = 0;
         g_type = g_type & ~type;
     }
     
-    return error;
+    return ret;
 }
 
 // Subroutine module_start - Address 0x00000518 -- Done
 s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    s32 ret = 0;
-    if ((ret = sceUsbbdRegister(&g_drv)) >= 0) {
+    if ((sceUsbbdRegister(&g_drv)) >= 0) {
         g_type = 0;
         g_unk2 = 0;
+        return 0;
     }
     
-    return (ret < 0)? 1: 0;
+    return 1;
 }
 
 // Subroutine module_stop - Address 0x00000558 -- Done
 s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    int ret = sceUsbbdUnregister(&g_drv);
-    return (ret < 0)? 1 : 0;
+    if (sceUsbbdUnregister(&g_drv) >= 0)
+        return 0;
+
+    return 1;
 }
