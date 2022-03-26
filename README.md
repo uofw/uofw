@@ -3,7 +3,7 @@ uOFW [![CI status](https://github.com/uofw/uofw/workflows/Build%20uOFW/badge.svg
 
 This project aims to reverse engineer the basic PSP kernel & hardware to create an up-to-date technical documentation of the system as well as to provide a free and open source vanilla firmware.
 
-To learn more about uOFW (including examples where it has been used by the PSP community), please check out [this presentation](https://github.com/uofw/uofw/blob/readme-update/docs/presentations/HDC_04_03_2021.pdf). 
+To learn more about uOFW (including examples where it has been used by the PSP community), please check out [this presentation](https://github.com/uofw/uofw/blob/master/docs/presentations/HDC_04_03_2021.pdf). 
 
 The current progress on the project can be found on the [Current Modules Status](//github.com/uofw/uofw/wiki/Current-Modules-Status) wiki page.
 
