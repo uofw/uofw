@@ -81,8 +81,9 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table);
 s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
 s32 resumeSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
 
-int SysMemInit(int args __attribute__((unused)), SysMemConfig *config)
+int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
+    SysMemConfig *config = (SysMemConfig *)argBlock;
     SceSysmemMemoryPartition mainPart;
     SceSysmemPartTable table;
     sceKernelRegisterDebugPutcharByBootloader(config->debugPutchar);
@@ -200,7 +201,7 @@ int SysMemReInit(SceSysmemMemoryPartition *mainPart)
             }
             // 10F64
             resumeIntr(oldIntr);
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
         }
     }
     // 10E78
@@ -401,7 +402,7 @@ s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount)
         break;
     default:
         // 115FC
-        return 0x800201BB;
+        return SCE_ERROR_KERNEL_ILLEGAL_TYPE;
     }
     // 11624
     SceSysmemUidCB *heapUid = g_HeapType;
@@ -410,7 +411,7 @@ s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount)
     if (!pspK1DynBufOk(uids, maxCount * 4) || !pspK1StaBufOk(totalCount, 4)) {
         // 11660
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // 11670
     s32 storedIdCount = 0;
@@ -565,7 +566,7 @@ s32 sceKernelSetUsersystemLibWork(s32 *cmdList, s32 (*sceGeListUpdateStallAddr_l
     s32 oldK1 = pspShiftK1();
     if (!pspK1PtrOk(cmdList) || !pspK1PtrOk(sceGeListUpdateStallAddr_lazy) || !pspK1PtrOk(lazy)) {
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // 11980
     g_UsersystemLibWork.cmdList = cmdList;

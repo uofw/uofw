@@ -227,7 +227,7 @@ s32 sceClockgenSetSpectrumSpreading(s32 mode)
 
     /* Try to update the spread-spectrum register. */
 
-    res = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
+    res = sceKernelLockMutex(g_Cy27040.mutex, 1, NULL);
     if (res < 0)
         return res;
 
@@ -242,7 +242,7 @@ s32 sceClockgenSetSpectrumSpreading(s32 mode)
 }
 
 //0x000002B4
-s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+int _sceClockgenModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     sceClockgenInit();
 
@@ -253,7 +253,7 @@ s32 _sceClockgenModuleStart(SceSize args __attribute__((unused)), void *argp __a
 }
 
 //0x00000320
-s32 _sceClockgenModuleRebootBefore(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceClockgenModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     s32 oldRegSS;
     s32 curRegSS;
@@ -280,7 +280,7 @@ s32 sceClockgenInit(void)
     sceI2cSetClock(4, 4);
 
     /* Create the mutex and register the sysevent handler */
-    mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, 0);
+    mutexId = sceKernelCreateMutex("SceClockgen", 1, 0, NULL);
 
     if (mutexId < 0)
         return mutexId;
@@ -408,7 +408,7 @@ static s32 _sceClockgenSetControl1(s32 bus, SceBool mode)
     s32 ret;
     s32 regClk;
 
-    ret = sceKernelLockMutex(g_Cy27040.mutex, 1, 0);
+    ret = sceKernelLockMutex(g_Cy27040.mutex, 1, NULL);
 
     if (ret < 0)
         return ret;

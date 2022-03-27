@@ -549,6 +549,8 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     if (numAlign >= 0)
                         continue;
                     numAlign = -numAlign;
+                    /* FALLTHRU */
+
                 case '-':
                     // DB70
                     flag |= 0x10;
@@ -612,6 +614,8 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 case 'D':
                     // DC64
                     flag |= 1;
+                    /* FALLTHRU */
+
                 case 'd':
                 case 'i': {
                     // DC70
@@ -662,6 +666,8 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 case 'O':
                     // DFE0
                     flag |= 1;
+                    /* FALLTHRU */
+
                 case 'o':
                     // DFEC
                     base = 8;
@@ -670,6 +676,8 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 case 'U':
                     // E028
                     flag |= 1;
+                    /* FALLTHRU */
+
                 case 'u':
                     // E034
                     base = 10;
@@ -678,6 +686,8 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 case 'X':
                     // E044
                     ciphers = "0123456789ABCDEF";
+                    /* FALLTHRU */
+
                 case 'x':
                     // E050
                     base = 16;
@@ -1191,11 +1201,15 @@ char *strncpy(char *dest, const char *src, int n)
     return dest;
 }
 
-u32 strnlen(const char *s, int maxlen)
+u32 strnlen(const char *s, u32 maxlen)
 {
-    int len = 0;
+    u32 len = 0;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
     if (s == NULL || maxlen == 0)
         return 0;
+#pragma GCC diagnostic pop
+
     // E9A4
     while (*(s++) != '\0')
     {

@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -57,89 +57,108 @@ enum SceApplicationType {
 /**
  * API types of an executable.
  */
-enum SceInitApiType {
+enum SceFileExecApiType {
+    SCE_EXEC_FILE_APITYPE_MODULE_KERNEL                  = 0x000,
+    SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_KERNEL           = 0x002,
+    SCE_EXEC_FILE_APITYPE_MODULE_KERNEL_BLOCK            = 0x003,
+    SCE_EXEC_FILE_APITYPE_MODULE_USER                    = 0x010,
+    SCE_EXEC_FILE_APITYPE_MODULE_MS                      = 0x011,
+    SCE_EXEC_FILE_APITYPE_MODULE_DNAS                    = 0x013,
+    SCE_EXEC_FILE_APITYPE_MODULE_NPDRM                   = 0x014,
+    SCE_EXEC_FILE_APITYPE_MODULE_VSH                     = 0x020,
+    SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_VSH              = 0x021,
+    SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN          = 0x030,
+    SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_MS               = 0x042,
+    SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_APP              = 0x043,
+    SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_BOOT_INIT_BTCNF  = 0x051,
+    SCE_EXEC_FILE_APITYPE_MODULE_BOOT_INIT_CONFIG        = 0x052,
+    SCE_EXEC_FILE_APITYPE_MODULE_DECI                    = 0x070,
     /** Unknown. */
-    SCE_INIT_APITYPE_UNK0x100       = 0x100,
+    SCE_EXEC_FILE_APITYPE_UNK100                         = 0x100,
     /** GAME EBOOT. */
-    SCE_INIT_APITYPE_GAME_EBOOT     = 0x110,
+    SCE_EXEC_FILE_APITYPE_GAME_EBOOT                     = 0x110,
     /** GAME BOOT. */
-    SCE_INIT_APITYPE_GAME_BOOT      = 0x111,
+    SCE_EXEC_FILE_APITYPE_GAME_BOOT                      = 0x111,
     /** Emulated EBOOT Memory-Stick. */
-    SCE_INIT_APITYPE_EMU_EBOOT_MS   = 0x112,
+    SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS                   = 0x112,
     /** Emulated BOOT Memory-Stick. */
-    SCE_INIT_APITYPE_EMU_BOOT_MS    = 0x113,
+    SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS                    = 0x113,
     /** Emulated EBOOT EF. */
-    SCE_INIT_APITYPE_EMU_EBOOT_EF   = 0x114,
+    SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF                   = 0x114,
     /** Emulated BOOT EF. */
-    SCE_INIT_APITYPE_EMU_BOOT_EF    = 0x115,
+    SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF                    = 0x115,
     /** NP-DRM Memory-Stick. */
-    SCE_INIT_APITYPE_NPDRM_MS       = 0x116, /* Distributed programs and data through the Playstation Store. */
+    SCE_EXEC_FILE_APITYPE_NPDRM_MS                       = 0x116, /* Distributed programs and data through the Playstation Store. */
+    /** Unknown. */
+    SCE_EXEC_FILE_APITYPE_UNK117                         = 0x117,
     /** NP-DRM EF. */
-    SCE_INIT_APITYPE_NPDRM_EF       = 0x118, /* NP-DRM: PlayStation Network Platform Digital Rights Management */
+    SCE_EXEC_FILE_APITYPE_NPDRM_EF                       = 0x118, /* NP-DRM: PlayStation Network Platform Digital Rights Management */
+    /** Unknown. */
+    SCE_EXEC_FILE_APITYPE_UNK119                         = 0x119,
     /** Executable on a disc. */
-    SCE_INIT_APITYPE_DISC           = 0x120,
+    SCE_EXEC_FILE_APITYPE_DISC                           = 0x120,
     /** Updater executable on a disc.*/
-    SCE_INIT_APITYPE_DISC_UPDATER   = 0x121,
+    SCE_EXEC_FILE_APITYPE_DISC_UPDATER                   = 0x121,
     /** Disc debugger. */
-    SCE_INIT_APITYPE_DISC_DEBUG     = 0x122,
+    SCE_EXEC_FILE_APITYPE_DISC_DEBUG                     = 0x122,
     /** NP-9660 game. */
-    SCE_INIT_APITYPE_DISC_EMU_MS1   = 0x123,
+    SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1                   = 0x123,
     /** Unknown. */
-    SCE_INIT_APITYPE_DISC_EMU_MS2   = 0x124,
+    SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2                   = 0x124,
     /** Unknown. */
-    SCE_INIT_APITYPE_DISC_EMU_EF1   = 0x125,
+    SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1                   = 0x125,
     /** Unknown. */
-    SCE_INIT_APITYPE_DISC_EMU_EF2   = 0x126,
+    SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2                   = 0x126,
     /** Game-sharing executable. */
-    SCE_INIT_APITYPE_USBWLAN        = 0x130,
+    SCE_EXEC_FILE_APITYPE_USBWLAN                        = 0x130,
     /** Unknown. */
-    SCE_INIT_APITYPE_USBWLAN_DEBUG  = 0x131,
+    SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG                  = 0x131,
     /** Unknown. */
-    SCE_INIT_APITYPE_UNK            = 0x132,
+    SCE_EXEC_FILE_APITYPE_UNK132                         = 0x132,
     /** Unknown. */
-    SCE_INIT_APITYPE_UNK_DEBUG      = 0x133,
+    SCE_EXEC_FILE_APITYPE_UNK133                         = 0x133,
     /** Unknown. */
-    SCE_INIT_APITYPE_MS1            = 0x140,
+    SCE_EXEC_FILE_APITYPE_MS1                            = 0x140,
     /** Unknown. */
-    SCE_INIT_APITYPE_MS2            = 0x141,
+    SCE_EXEC_FILE_APITYPE_MS2                            = 0x141,
     /** Unknown. */
-    SCE_INIT_APITYPE_MS3            = 0x142,
+    SCE_EXEC_FILE_APITYPE_MS3                            = 0x142,
     /** Applications (i.e. Comic Reader) */
-    SCE_INIT_APITYPE_MS4            = 0x143,
+    SCE_EXEC_FILE_APITYPE_MS4                            = 0x143,
     /** Playstation One executable. */
-    SCE_INIT_APITYPE_MS5            = 0x144,
+    SCE_EXEC_FILE_APITYPE_MS5                            = 0x144,
     /** Unknown. */
-    SCE_INIT_APITYPE_MS6            = 0x145,
+    SCE_EXEC_FILE_APITYPE_MS6                            = 0x145,
     /** Unknown. */
-    SCE_INIT_APITYPE_EF1            = 0x151,
+    SCE_EXEC_FILE_APITYPE_EF1                            = 0x151,
     /** Unknown. */
-    SCE_INIT_APITYPE_EF2            = 0x152,
+    SCE_EXEC_FILE_APITYPE_EF2                            = 0x152,
     /** Unknown. */
-    SCE_INIT_APITYPE_EF3            = 0x153,
+    SCE_EXEC_FILE_APITYPE_EF3                            = 0x153,
     /** Unknown. */
-    SCE_INIT_APITYPE_EF4            = 0x154,
+    SCE_EXEC_FILE_APITYPE_EF4                            = 0x154,
     /** Unknown. */
-    SCE_INIT_APITYPE_EF5            = 0x155,
+    SCE_EXEC_FILE_APITYPE_EF5                            = 0x155,
     /** Unknown. */
-    SCE_INIT_APITYPE_EF6            = 0x156,
+    SCE_EXEC_FILE_APITYPE_EF6                            = 0x156,
     /** Unknown. */
-    SCE_INIT_APITYPE_UNK_GAME1      = 0x160,
+    SCE_EXEC_FILE_APITYPE_UNK160                         = 0x160,
     /** Unknown. */
-    SCE_INIT_APITYPE_UNK_GAME2      = 0x161,
+    SCE_EXEC_FILE_APITYPE_UNK161                         = 0x161,
     /** Unknown. */
-    SCE_INIT_APITYPE_MLNAPP_MS      = 0x170,
+    SCE_EXEC_FILE_APITYPE_MLNAPP_MS                      = 0x170,
     /** Unknown. */
-    SCE_INIT_APITYPE_MLNAPP_EF      = 0x171,
+    SCE_EXEC_FILE_APITYPE_MLNAPP_EF                      = 0x171,
     /** Unknown. */
-    SCE_INIT_APITYPE_KERNEL_1       = 0x200,
+    SCE_EXEC_FILE_APITYPE_KERNEL_1                       = 0x200,
     /** Exit Game. */
-    SCE_INIT_APITYPE_VSH_1          = 0x210,
+    SCE_EXEC_FILE_APITYPE_VSH_1                          = 0x210,
     /** Exit VSH. */
-    SCE_INIT_APITYPE_VSH_2          = 0x220,
+    SCE_EXEC_FILE_APITYPE_VSH_2                          = 0x220,
     /** Kernel reboot. */
-    SCE_INIT_APITYPE_KERNEL_REBOOT  = 0x300,
+    SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT                  = 0x300,
     /** Debug. */
-    SCE_INIT_APITYPE_DEBUG          = 0x420  /* doesn't start reboot */
+    SCE_EXEC_FILE_APITYPE_DEBUG                          = 0x420  /* doesn't start reboot */
 };
 
 /** 
@@ -147,7 +166,7 @@ enum SceInitApiType {
  * currently booted module by Init.
  */
 typedef struct {
-    /** The API type of the currently loaded module. One of ::SceInitApiType. */
+    /** The API type of the currently loaded module. One of ::SceFileExecApiType. */
     s32 apiType; //0
     /** The address of a memory protection block of type ::SCE_PROTECT_INFO_TYPE_FILE_NAME. */
     void *fileModAddr; //4
@@ -196,14 +215,14 @@ typedef struct {
  * 
  * @return The boot medium type. One of ::SceBootMediumType.
  */
-s32 sceKernelBootFrom(void);
+u32 sceKernelBootFrom(void);
 
 /**
  * Get the boot medium of the executable calling this function. For PSP-GO only?
  * 
  * @return The boot medium type. One of ::SceBootMediumType.
  */
-s32 InitForKernel_9D33A110(void);
+u32 InitForKernel_9D33A110(void);
 
 /**
  * Get the application type of a module.
@@ -215,7 +234,7 @@ s32 sceKernelApplicationType(void);
 /**
  * Get the API type of a module.
  * 
- * @return The API type. One of ::SceInitApiType.
+ * @return The API type. One of ::SceFileExecApiType.
  */
 s32 sceKernelInitApitype(void);
 
@@ -227,13 +246,13 @@ s32 sceKernelInitApitype(void);
  * @param flag Defines the execute order of the callbacks. Pass 0 for earliest execution, 3 for latest.
  *             1 and 2 are between these two. Pass 4 - 7 for execution after Init loaded all modules, again
  *             4 is earliest, 7 is latest. 
- * @param status The returned status of bootCBFunc in case it was executed directly.
+ * @param pStatus The returned status of bootCBFunc in case it was executed directly.
  * 
  * @return SCE_ERROR_OK for directly executing the boot callback function. SCE_BOOT_CALLBACK_FUNCTION_QUEUED 
  *         indicates boot callback function was enqueued into other existing boot callbacks and will be called 
  *         when Init boots the rest of the system modules.
  */
-u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *status);
+u32 sceKernelSetInitCallback(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *pStatus);
 
 /**
  * Disabled debug function.
@@ -281,11 +300,11 @@ void *sceKernelInitDiscImage(void);
 /**
  * Get information about a paramSfo block of a module to boot.
  * 
- * @param size The size of the paramSfo block.
+ * @param pSize The size of the paramSfo block.
  * 
  * @return A pointer to the head address of the paramSfo block. 
  */
-void *sceKernelInitParamSfo(SceSize *size);
+void *sceKernelInitParamSfo(SceSize *pSize);
 
 /**
  * Get the LPT summary. Unknown.
@@ -303,7 +322,7 @@ s32 sceKernelInitLptSummary(void);
  * @return The memory block ID on success (greater than or equal to 0) or 
  *         SCE_ERROR_KERNEL_ILLEGAL_CHUNK_ID.
  */
-SceUID sceKernelGetChunk(SceUID chunkId);
+SceUID sceKernelGetChunk(s32 chunkId);
 
 /**
  * Register a chunk in the system.
@@ -314,7 +333,7 @@ SceUID sceKernelGetChunk(SceUID chunkId);
  * @return The blockId stored into the chunk on success, otherwise 
  *         SCE_ERROR_KERNEL_ILLEGAL_CHUNK_ID.
  */
-SceUID sceKernelRegisterChunk(SceUID chunkId, SceUID blockId);
+SceUID sceKernelRegisterChunk(s32 chunkId, SceUID blockId);
 
 /**
  * Release a used chunk.
@@ -324,7 +343,7 @@ SceUID sceKernelRegisterChunk(SceUID chunkId, SceUID blockId);
  * @return The new value of the chunk, typically -1, on success, otherwise 
  *         SCE_ERROR_KERNEL_ILLEGAL_CHUNK_ID.
  */
-SceUID sceKernelReleaseChunk(SceUID chunkId);
+s32 sceKernelReleaseChunk(SceUID chunkId);
 
 #endif	/* MODULEMGR_INIT_H */
 

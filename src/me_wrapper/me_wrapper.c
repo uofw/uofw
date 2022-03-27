@@ -44,7 +44,7 @@ int interruptHandler(int a0 __attribute__((unused)), int SceMediaEngineRpcWait)
 
 int initRpc()
 {
-	meRpc.mutex = sceKernelCreateMutex("SceMediaEngineRpc", 0x101, 0, 0);
+	meRpc.mutex = sceKernelCreateMutex("SceMediaEngineRpc", 0x101, 0, NULL);
 	if (meRpc.mutex < 0)
 		return meRpc.mutex;
 	meRpc.sema = sceKernelCreateSema("SceMediaEngineAvcPower" , 0x101, 1, 1, 0);
@@ -142,7 +142,7 @@ int sub_0x1000020(){
 
 int sub_0x1000002(int arg)
 {
-	sceKernelLockMutex(meRpc.mutex, 1, 0);
+	sceKernelLockMutex(meRpc.mutex, 1, NULL);
 	int argSr = arg >> 1;
 	int val = *(int*)0xbfc00714;
 	*(int*)0xbfc00710 = arg;
@@ -698,7 +698,7 @@ int sceMeAudio_driver_9A9E21EE(u32 codec, SceAudiocodecCodec *info) //same -310C
 	if (info->unk0 != 0x05100601)
 	    return -2;
 	if (info->edramAddr == 0)
-	    return 0x80000103;
+	    return SCE_ERROR_INVALID_POINTER;
 	info->unk36 = 0;
 	info->err = 0;
 	sceKernelDcacheWritebackInvalidateRange(info, 104);
@@ -1044,7 +1044,7 @@ void sceMeFree(void *ptr)
 /**************************sceMeCore_driver****************************/
 int sceMeRpcLock()
 {
-	return sceKernelLockMutex(meRpc.mutex, 1, 0);
+	return sceKernelLockMutex(meRpc.mutex, 1, NULL);
 }
 
 int sceMeRpcUnlock()
@@ -1120,7 +1120,7 @@ int sub_00001C30(void* data, int wait)
 int sceMeBootStart(u32 arg)
 {
 	if (arg >= 5)
-	    return 0x80000102;
+	    return SCE_ERROR_INVALID_INDEX;
 	int genArg = arg;
 	u32 tachyon = sceSysregGetTachyonVersion();
 	if (tachyon > 0x4fffff && genArg != 2) // > 01g
@@ -1145,7 +1145,7 @@ int sceMeBootStart(u32 arg)
 		meImage = "flash0:/kd/resource/me_blimg.img";
 	else
 		meImage = "flash0:/kd/resource/meimg.img";
-	SceUID fd = sceIoOpen(meImage, SCE_O_UNKNOWN0|SCE_O_RDONLY, 0);
+	SceUID fd = sceIoOpen(meImage, SCE_O_ENCRYPTED|SCE_O_RDONLY, 0);
 	if (fd < 0){
 		sceMeRpcUnlock();
 		return fd;
@@ -1155,7 +1155,7 @@ int sceMeBootStart(u32 arg)
 	if (size > 0x63FFF){
 		sceIoClose(fd);
 		sceMeRpcUnlock();
-		return 0x80000022;
+		return SCE_ERROR_OUT_OF_MEMORY;
 	}
 	sceSysregMeResetEnable();
 	void *address = (void*)((u32)0x883ff000 - (size & 0xffffffc0));
@@ -1163,7 +1163,7 @@ int sceMeBootStart(u32 arg)
 	sceIoClose(fd);
 	if (read != size){
 		sceMeRpcUnlock();
-		return (read < 0) ? read : (int)0x80000022;
+		return (read < 0) ? read : (int)SCE_ERROR_OUT_OF_MEMORY;
 	}
 	decrypt(address, read);
 	sub_00001C30(address, 1);
@@ -1187,7 +1187,7 @@ int sceMeCore_driver_FA398D71(int cmd, ...)
 {
     va_list ap;
     va_start(ap, cmd);
-	int ret = sceKernelLockMutex(meRpc.mutex, 1, 0);
+	int ret = sceKernelLockMutex(meRpc.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	int* meTable = (int*)0xbfc00600;

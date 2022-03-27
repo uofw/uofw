@@ -2,10 +2,10 @@
 # See the file COPYING for copying permission.
 
 TARGET = chnnlsv
-OBJS = chnnlsv.o exports.o imports.o
+OBJS = chnnlsv.o
 
 #DEBUG = 1
 
-LIBS = -lThreadManForKernel
+LIBS = -lThreadManForKernel -lpspsemaphore
 
 include ../../lib/build.mak

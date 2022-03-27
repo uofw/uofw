@@ -63,15 +63,15 @@ PSP_EXPORT_VAR_NID(intInfo + 116, 0xFD6B9CAB)
 PSP_EXPORT_END
 
 PSP_EXPORT_START(InterruptManager, 0x0011, 0x4000)
-PSP_EXPORT_FUNC_HASH(sceKernelSuspendSubIntr)
-PSP_EXPORT_FUNC_HASH(sceKernelResumeSubIntr)
-PSP_EXPORT_FUNC_HASH(sceKernelDisableSubIntr)
-PSP_EXPORT_FUNC_HASH(sceKernelRegisterSubIntrHandler)
+PSP_EXPORT_FUNC_NID(sceKernelSuspendSubIntr, 0x5CB5A78B)
+PSP_EXPORT_FUNC_NID(sceKernelResumeSubIntr, 0x7860E0DC)
+PSP_EXPORT_FUNC_NID(sceKernelDisableSubIntr, 0x8A389411)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterSubIntrHandler, 0xCA04A2B9)
 PSP_EXPORT_FUNC_NID(QueryIntrHandlerInfoForUser, 0xD2E8363F)
-PSP_EXPORT_FUNC_HASH(sceKernelReleaseSubIntrHandler)
-PSP_EXPORT_FUNC_HASH(sceKernelRegisterUserSpaceIntrStack)
-PSP_EXPORT_FUNC_HASH(sceKernelEnableSubIntr)
-PSP_EXPORT_FUNC_HASH(sceKernelIsSubInterruptOccured)
+PSP_EXPORT_FUNC_NID(sceKernelReleaseSubIntrHandler, 0xD61E6961)
+PSP_EXPORT_FUNC_NID(sceKernelRegisterUserSpaceIntrStack, 0xEEE43F47)
+PSP_EXPORT_FUNC_NID(sceKernelEnableSubIntr, 0xFB8E22EC)
+PSP_EXPORT_FUNC_NID(sceKernelIsSubInterruptOccured, 0xD938A4EC)
 PSP_EXPORT_END
 
 PSP_END_EXPORTS

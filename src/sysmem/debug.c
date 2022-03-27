@@ -10,7 +10,7 @@ s32 sceKernelApiEvaluationInit()
 
 s32 sceKernelRegisterApiEvaluation()
 {
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 s32 sceKernelApiEvaliationAddData()

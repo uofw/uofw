@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -27,7 +27,7 @@ typedef struct  {
     u8 modVersion[MODULE_VERSION_NUMBER_CATEGORY_SIZE];
     /** The name of the module. */
     char modName[SCE_MODULE_NAME_LEN];
-    /** Unknown. */
+    /** String terminator (always '\0'). */
     s8 terminal;
     /** The global pointer of the module. */
     void *gpValue;
@@ -37,7 +37,7 @@ typedef struct  {
      */
     void *entTop;
     /** 
-     * Pointer to the last line of the ,lib.ent section. This line is always 0 and 
+     * Pointer to the last line of the .lib.ent section. This line is always 0 and 
      * is known as ".lib.ent.btm". 
      */
     void *entEnd;
@@ -113,18 +113,38 @@ enum SceModulePrivilegeLevel {
     SCE_MODULE_KIRK_SEMAPHORE_LIB   = 0x4000,
 };
 
+#define SCE_MODULE_PRIVILEGE_LEVELS     (SCE_MODULE_MS | SCE_MODULE_USB_WLAN | SCE_MODULE_APP | SCE_MODULE_VSH | SCE_MODULE_KERNEL)
+
 #define SCE_MODINFO_SECTION_NAME        ".rodata.sceModuleInfo"
 
-/** Release X.Y.Z -> 0xXXYYZZZZ */
-#define SDK_VERSION                     0x06060010
+#define SDK_VERSION                     0x06060010 /** Release X.Y.Z -> 0xXXYYZZZZ */
 #define SCE_SDK_VERSION(ver)            const int module_sdk_version = ver
 
-#define SCE_MODULE_BOOTSTART(name)      int module_start(int arglen, void *argp) __attribute__((alias(name))); \
-                                        int module_bootstart(int arglen, void *argp) __attribute__((alias(name)))
+/**
+ * module START thread return value
+ */
+#define SCE_KERNEL_START_SUCCESS        (0) /** The module could be started successfully. */
+#define SCE_KERNEL_START_FAIL           (1) /** The module could not be started successfully. */
 
-#define SCE_MODULE_REBOOT_BEFORE(name)  int module_reboot_before(void) __attribute__((alias(name)))
-#define SCE_MODULE_REBOOT_PHASE(name)   int module_reboot_phase(void) __attribute__((alias(name)))
-#define SCE_MODULE_STOP(name)           int module_stop(void) __attribute__((alias(name)))
+#define SCE_KERNEL_RESIDENT             (SCE_KERNEL_START_SUCCESS) /** After executing its start function, the module will remain in memory (resident library). */
+#define SCE_KERNEL_NO_RESIDENT          (SCE_KERNEL_START_FAIL) /** The module will be unloaded after executing its start function. */
+
+/**
+ * module STOP thread return value
+ */
+#define SCE_KERNEL_STOP_SUCCESS         (0) /** The module could be stopped successfully. */
+#define SCE_KERNEL_STOP_FAIL            (1) /** The module could not be stopped successfully. */
+
+/**
+ * Module entry functions.
+ */
+#define SCE_MODULE_BOOTSTART(name)      int module_start(SceSize argSize, const void *argBlock) __attribute__((alias(name))); \
+                                        int module_bootstart(SceSize argSize, const void *argBlock) __attribute__((alias(name)))
+
+#define SCE_MODULE_REBOOT_BEFORE(name)  int module_reboot_before(void *arg0, s32 arg1, s32 arg2, s32 arg3) __attribute__((alias(name)))
+#define SCE_MODULE_REBOOT_BEFORE_FOR_USER(name)  int module_reboot_before(SceSize arglen, void *argp) __attribute__((alias(name)))
+#define SCE_MODULE_REBOOT_PHASE(name)   int module_reboot_phase(s32 arg1, void *arg2, s32 arg3, s32 arg4) __attribute__((alias(name)))
+#define SCE_MODULE_STOP(name)           int module_stop(SceSize argSize, const void *argBlock) __attribute__((alias(name)))
 
 #define SCE_MODULE_INFO(name, attributes, majorVersion, minorVersion) \
     __asm__ (                                                       \
