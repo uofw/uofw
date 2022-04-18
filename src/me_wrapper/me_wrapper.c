@@ -183,7 +183,7 @@ int sub_0x1000f()
 	return 0;
 }
 
-int eventHandler(int ev_id, char *ev_name __attribute__((unused)), void *param, int *result __attribute__((unused)))
+s32 eventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void *param, s32 *result __attribute__((unused)))
 {
 	if (!meStarted)
 		return 0;

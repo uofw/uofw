@@ -7,14 +7,14 @@
 
 #include "memory.h"
 
-s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 
 // 13FE0
 SceSysmemUidCB *g_MemBlockType;
@@ -1222,7 +1222,7 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
     return SCE_ERROR_KERNEL_ERROR;
 }
 
-s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
@@ -1232,7 +1232,7 @@ s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int fu
     return uid->uid;
 }
 
-s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
 {
     void *addr = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock)->addr;
     if (addr != NULL) {
@@ -1260,13 +1260,13 @@ s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId
     return uid->uid;
 }
 
-s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId __attribute__((unused)), va_list ap)
+s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId __attribute__((unused)), va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, 0x87089863, ap);
     return uid->uid;
 }
 
-s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
+s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
     s32 ret = sceKernelResizeMemoryBlock(uid->uid, va_arg(ap, s32), va_arg(ap, s32));
     if (ret != 0)
@@ -1274,7 +1274,7 @@ s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute
     return uid->uid;
 }
 
-s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
+s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid2;
@@ -1290,13 +1290,13 @@ s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribu
     return uid->uid;
 }
 
-s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
+s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
     _QueryMemoryInfo(va_arg(ap, u32), va_arg(ap, SceUID*), va_arg(ap, SceUID*));
     return uid->uid;
 }
 
-s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
+s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
     s32 ret = sceKernelQueryMemoryBlockInfo(uid->uid, va_arg(ap, SceSysmemMemoryBlockInfo *));
     if (ret != 0)
@@ -1304,7 +1304,7 @@ s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __att
     return uid->uid;
 }
 
-s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
+s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
     void **addrPtr = va_arg(ap, void**);
     SceSysmemUidCB *uid2;

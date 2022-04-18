@@ -24,8 +24,8 @@
 /******************************/
 
 int _sceGeReset();
-int _sceGeInitCallback3(void *arg0, s32 arg1, void *arg2);
-int _sceGeInitCallback4();
+s32 _sceGeInitCallback3(void *arg0, s32 arg1, void *arg2);
+s32 _sceGeInitCallback4();
 int _sceGeSetRegRadr1(int arg0);
 int _sceGeSetRegRadr2(int arg0);
 int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3);
