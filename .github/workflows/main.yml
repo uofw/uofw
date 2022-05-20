@@ -9,6 +9,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          apk add build-base
       - name: Build project
         run: |
           make -k
@@ -17,6 +20,11 @@ jobs:
           mkdir github-pages
           cd github-pages
           doxygen ../docs/Doxyfile
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Deploy documentation
         if: github.ref == 'refs/heads/master'
         uses: JamesIves/github-pages-deploy-action@4.1.0
