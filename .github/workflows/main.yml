@@ -15,11 +15,6 @@ jobs:
       - name: Build project
         run: |
           make -k
-      - name: Build documentation
-        run: |
-          mkdir github-pages
-          cd github-pages
-          doxygen ../docs/Doxyfile
   documentation:
     runs-on: ubuntu-latest
     steps:
