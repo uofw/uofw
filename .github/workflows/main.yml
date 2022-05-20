@@ -20,6 +20,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get install doxygen
+      - name: Build documentation
+        run: |
+          mkdir github-pages
+          cd github-pages
+          doxygen ../docs/Doxyfile
       - name: Deploy documentation
         if: github.ref == 'refs/heads/master'
         uses: JamesIves/github-pages-deploy-action@4.1.0
