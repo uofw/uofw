@@ -4,13 +4,14 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: pspdev/pspdev:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build project
         run: |
           make -k
-        uses: pspdev/pspdev@latest
       - name: Build documentation
         run: |
           mkdir github-pages
