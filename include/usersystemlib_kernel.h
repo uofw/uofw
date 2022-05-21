@@ -101,13 +101,13 @@ s32 sceKernelGetThreadId(void);
 s32 sceKernelCheckThreadStack(void);
 
 /**
- * \fixme Unknown.
+ * Gets a tls address.
  *
- * @param arg0 Unknown.
+ * @param uid Unique tls identifier.
  *
  * @return A pointer, otherwise NULL on error.
  */
-void *Kernel_Library_FA835CDE(s32 arg0);
+void *sceKernelGetTlsAddr(SceUID uid);
 
 
 /* Lightweight Mutex */
@@ -223,12 +223,12 @@ void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
  * See http://www.cplusplus.com/reference/cstring/memset/
  *
  * @param dst Pointer to the memory block to fill.
- * @param val Value to be set, casted to the u8 type.
+ * @param val Value to be set.
  * @param size Number of bytes to be set.
  *
  * @return Value of dst.
  */
-void *sceKernelMemset(void *dst, s32 val, SceSize size);
+void *sceKernelMemset(void *dst, s8 val, SceSize size);
 
 /** @} */
 

@@ -4,6 +4,10 @@
 
 #include "common_header.h"
 
+#define SCE_DECI2OP_GE_SETOPS 6
+#define SCE_DECI2OP_GE_BREAK 7
+#define SCE_DECI2OP_GE_PUT_BP 8
+
 typedef struct {   
     int size;
     int (*ops[])();

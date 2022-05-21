@@ -449,7 +449,7 @@ int writeFormatToCallback(int *arg0, char *format, int *args, int arg3)
                             a0 = *(int*)t1;
                             t1 += 4;
                             if (t3 != 0 && k1 & a0 < 0)
-                                return 0x800200D3;
+                                return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                             // 3414
                             v1 = *(int*)(sp + 36);
                             *(int*)a0 = v1;
@@ -460,7 +460,7 @@ int writeFormatToCallback(int *arg0, char *format, int *args, int arg3)
                             a0 = *(int*)t1;
                             t1 += 4;
                             if (fp != 0 && k1 & a0 < 0)
-                                return 0x800200D3;
+                                return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                             // 33EC
                             a3 = *(int*)(sp + 36);
                             *(short*)a0 = a3;
@@ -472,7 +472,7 @@ int writeFormatToCallback(int *arg0, char *format, int *args, int arg3)
                         a0 = *(int*)t1;
                         t1 += 4;
                         if (t0 != 0 && k1 & a0 < 0)
-                            return 0x800200D3;
+                            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                         // 33B8
                         t8 = *(int*)(sp + 36);
                         *(int*)a0 = t8;
@@ -497,7 +497,7 @@ int writeFormatToCallback(int *arg0, char *format, int *args, int arg3)
                     if (s2 == 0)
                         s2 = t9;
                     if (t8 != 0 && k1 & s2 < 0)
-                        return 0x800200D3;
+                        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
                     // 3464
                     if (s1 < 0)
                     {

@@ -70,7 +70,7 @@ int sub_10184()
             if (a1 < 23)
                 continue;
             if (a3 == 0) // ?
-                return 0x80000004;
+                return SCE_ERROR_NOT_SUPPORTED;
             break;
         }
     }
@@ -615,7 +615,7 @@ int sub_3804(int arg0, int arg1, int arg2)
 int sub_3824(int arg)
 {
     if (arg >= 64)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     else if (arg >= 32)
         return (unkVar2 >> (arg - 32)) & 1;
     else
@@ -643,14 +643,14 @@ int sub_397C(int arg0, int arg1)
     pspKernelSetK1(oldK1 << 11);
     if (a0 >= 64) {
         pspKernelSetK1(oldK1);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
     if (pspKernelGetK1() >= 0)
         return func_39CC();
     var = a0 - 10;
     if (var >= 42) {
         pspKernelSetK1(oldK1);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
     switch (var)
     {
@@ -665,7 +665,7 @@ int sub_397C(int arg0, int arg1)
     case 39:
     case 41:
         pspKernelSetK1(oldK1);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     default:
         {
         int addr;
@@ -1047,7 +1047,7 @@ int sub_78AC(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg
     v0 = sub_8DB8(arg2, arg4);
     s1 = v0;
     if (s1 == 0)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     a1 = *(int*)(s1 + 12);
     if (a1 == 0)
     {
@@ -1182,7 +1182,7 @@ int sub_78AC(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg
         {
             // 7CA0
             sub_8E54(s1);
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         }
         if (s0 == t7)
         {
@@ -1191,7 +1191,7 @@ int sub_78AC(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg
             v1 = (int)(char)a0;
             if (s4 == 0) {
                 sub_8E54(s1);
-                return 0x80010002;
+                return SCE_ERROR_ERRNO_FILE_NOT_FOUND;
             }
             // 7C78
             *(int*)(*(int*)(sp + 56)) = (v1 == 0) ? fp : -1;
@@ -1223,7 +1223,7 @@ int sub_78AC(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg
             a0 = *(int*)(sp + 56);
             if (a0 == 0) {
                 sub_8E54(s1);
-                return 0x80010002;
+                return SCE_ERROR_ERRNO_FILE_NOT_FOUND;
             }
             v1 = *(char*)s3;
             *(int*)(*(int*)(sp + 56)) = (v1 == 0) ? fp : -1;
@@ -1457,9 +1457,9 @@ int sub_8434(int arg)
 int sub_8534(int arg0, int arg1)
 {
     if (arg1 < 2)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     if (arg1 >= *(int*)(arg0 + 48))
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     v1 = *(int*)(a0 + 40)
     if (v1 == 0xFFF)
     {
@@ -1858,7 +1858,7 @@ int sub_8B74(int arg0, int arg1, int arg2, int arg3)
             {
                 // 8CDC
                 if (s0 != ' ')
-                    return 0x80010005;
+                    return SCE_ERROR_ERRNO_IO_ERROR;
                 if (a1 < 64)
                 {
                     bzero(arg1, 32);
@@ -2098,18 +2098,18 @@ int sub_9158(int arg0, char *name, int arg2, int arg3)
     int ptr2, ptr3;
     t0 = *(int*)(arg0 + 4);
     if (t0 < 0 || t0 >= fatUnitsNumber)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     // 91D0
     a2 = unkFatAddr + t0 * 628;
     if (*(int*)a2 & 1 == 0)
-        return 0x80020321;
+        return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
     // 9200
     s5 = a2;
     v0 = sub_A2C0(arg0, &ptr2, a2, name, &ptr3);
     if (v0 < 0)
     {
         // 9368
-        if (v0 != 0x80010002)
+        if (v0 != SCE_ERROR_ERRNO_FILE_NOT_FOUND)
             return v0;
         if (arg2 & 0x200 == 0)
             return v0;
@@ -2123,7 +2123,7 @@ int sub_9158(int arg0, char *name, int arg2, int arg3)
     {
         // 9358
         sub_8E54(ptr2);
-        return 0x80010015;
+        return SCE_ERROR_ERRNO_IS_DIRECTORY;
     }
     if (arg2 & 2 != 0)
     {
@@ -2131,13 +2131,13 @@ int sub_9158(int arg0, char *name, int arg2, int arg3)
         {
             // 9348
             sub_8E54(ptr2);
-            return 0x80020142;
+            return SCE_ERROR_KERNEL_ILLEGAL_ACCESS_CODE;
         }
         if (*(int*)s5 & 2 != 0)
         {
             // 9338
             sub_8E54(ptr2);
-            return 0x8001001E;
+            return SCE_ERROR_ERRNO_READ_ONLY;
         }
         if (arg2 & 0x400)
         {
@@ -2178,7 +2178,7 @@ int sub_9158(int arg0, char *name, int arg2, int arg3)
     {
         // 92AC
         sub_8E54(ptr2);
-        return 0x80010011;
+        return SCE_ERROR_ERRNO_FILE_ALREADY_EXISTS;
     }
     *(int*)(arg0 + 16) = ptr2;
     return 0;
@@ -2224,7 +2224,7 @@ int sub_9450(int arg0, int arg1, int arg2)
     {
         // 94F0
         if (arg2 != 0)
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
     else if (arg2 == 2)
     {
@@ -2232,13 +2232,13 @@ int sub_9450(int arg0, int arg1, int arg2)
         arg1 += *(int*)(a0 + 16);
     }
     else
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
 
     // 9488
     if (arg1 < 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     if (*(int*)(a0 + 16) < arg1)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     *(int*)(a0 + 20) = arg1;
     if (*(int*)(a0 + 12) != 0)
     {
@@ -2261,13 +2261,13 @@ int sub_99B8(int arg)
     sub_7CE0();
     a0 = *(int*)(arg + 4);
     if (a0 < 0 || a0 >= fatUnitsNumber)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     // 9A04
     s0 = unkFatAddr + a0 * 628;
     if (*(int*)s0 & 1 == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     if (*(int*)(s0 + 8) > 0)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     sub_CC10();
     v1 = unkFatVar1;
     // 9A5C
@@ -2288,7 +2288,7 @@ int sub_9B34(int arg)
     int sp[21]; // TODO: check size
     v0 = sub_CC70(sp);
     if (v0 < 0)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     *(int*)(arg0 + 12) = sp[4];
     *(int*)(arg0 + 16) = sp[5];
     *(int*)(arg0 + 20) = sp[6];
@@ -2421,13 +2421,13 @@ int sub_9E70(int arg0, int arg1, int arg2, int arg3, int arg4)
         arg2 -= 64;
         s3 = *(int*)(arg0 + 60);
         if (arg2 < 0)
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
     else
     {
         arg2 += t0;
         if (*(int*)(arg0 + 76) < arg2)
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         s3 = *(int*)(arg0 + 68) + (arg1 - 2) * *(int*)(arg0 + 72);
         if (arg3 != 0)
         {
@@ -2541,7 +2541,7 @@ int sub_A188(int arg0, int arg1)
     {
         v0 = sub_8534(unk, *(int*)(arg0 + 28));
         if (v0 | ~*(int*)(unk + 40) >= -10)
-            return 0x80010005;
+            return SCE_ERROR_ERRNO_IO_ERROR;
         *(int*)(arg0 + 28) = v0;
         *(int*)(arg0 + 24) = *(int*)(arg0 + 24) - *(int*)(unk + 76);
         v1 = *(int*)(unk + 76);
@@ -2589,7 +2589,7 @@ int sub_A2C0(int arg0, int arg1, int arg2, char *name, int arg4)
     else
     {
         if (*(name++) != '/')
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         // A334
         while (*(name++) != '/')
             ;
@@ -2613,7 +2613,7 @@ int sub_A2C0(int arg0, int arg1, int arg2, char *name, int arg4)
     // A3A0
     s0 = sub_8DB8(arg2, v1);
     if (s0 == 0)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     v0 = *(int*)(sp + 32);
     if (arg4 != 0)
         *(int*)arg4 = v0;
@@ -2722,7 +2722,7 @@ int sub_A558(int arg0, char *name, int arg2, int arg3, int arg4, int arg5)
         return v0;
     s0 = sub_8DB8(arg4, 0);
     if (s0 == 0)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     memcpy(s0 + 36, str, 32);
     *(int*)(arg0 + 16) = s0;
     *(int*)(s0 + 68) = ptr1;
@@ -2771,9 +2771,9 @@ int sub_A7F0(int arg0, int arg1, int arg2, int arg3)
     s2 = (arg2 >> 31) | (arg3 < 1);
     t1 = arg2 + arg3;
     if (s2 != 0)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     if (*(int*)(arg0 + 16) < t1)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     // A864
     t1 = *(int*)(arg0 + 24);
     t0 = t1 << 26;
@@ -2808,12 +2808,12 @@ int sub_A7F0(int arg0, int arg1, int arg2, int arg3)
 int sub_A8C8(int arg0, int arg1, int arg2, int arg3)
 {
     if ((arg2 >> 31) == 1 || arg3 == 0)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     if (*(int*)(a0 + 16) < arg2 + arg3)
-        return 0x80010005;;
+        return SCE_ERROR_ERRNO_IO_ERROR;;
     s2 = *(int*)(arg0 + 0) & 2;
     if (s2 != 0)
-        return 0x8001001E;
+        return SCE_ERROR_ERRNO_READ_ONLY;
     t3 = *(int*)(arg0 + 24);
     t0 = t3 << 26;
     if (t0 >= 0)
@@ -2856,7 +2856,7 @@ int sub_A9B4(int arg0, int arg1, int arg2, int arg3)
     // AA14
     s0 = unkFatVar2;
     if (s0 == 0)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     s4 = 9 - *(int*)(arg1 + 24);
     if (s4 < 0)
     {
@@ -2873,7 +2873,7 @@ int sub_A9B4(int arg0, int arg1, int arg2, int arg3)
             else
             {
                 if (*(int*)(s0 + 12) & 1 != 0)
-                    return 0x8001000B;
+                    return SCE_ERROR_ERRNO_RESOURCE_UNAVAILABLE;
                 // AB30
                 do
                 {
@@ -2951,11 +2951,11 @@ int sub_A9B4(int arg0, int arg1, int arg2, int arg3)
             }
             s0 = *(int*)(s0 + 4);
         } while (s0 != 0);
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     v1 = *(int*)(s0 + 12);
     if (v1 & 1 != 0)
-        return 0x8001000B;
+        return SCE_ERROR_ERRNO_RESOURCE_UNAVAILABLE;
     *(int*)(s0 + 16) = -1;
     *(int*)(s0 + 12) = v1 | 1;
     if (arg3 != 0)
@@ -2984,14 +2984,14 @@ int sub_AC5C(int arg0, int arg1, int arg2, int arg3, int arg4)
         arg2 -= 64;
         arg1 = *(int*)(a0 + 60);
         if (arg2 < 0)
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
     else
     {
         a3 = *(int*)(a0 + 76);
         arg2 += t0;
         if (a3 < arg2)
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         arg1 = (arg1 - 2) * *(int*)(arg0 + 72) + *(int*)(arg0 + 68);
         if (arg3 != 0)
         {
@@ -3084,9 +3084,9 @@ void sub_AE38(int arg0, int arg1)
 int sub_AEA8(int arg0, int arg1)
 {
     if (arg1 < 2)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     if (arg1 >= *(int*)(arg0 + 48))
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     v0 = sub_B0E4(arg0, arg1, 0);
     if (v0 < 0)
         return v0;
@@ -3101,7 +3101,7 @@ int sub_AF34(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5)
 {
     s0 = sub_8DB8(arg0, arg1);
     if (s0 == 0)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     a1 = *(int*)(s0 + 12);
     if (a1 == 0)
     {
@@ -3232,7 +3232,7 @@ int sub_B274(int arg0, int arg1, int arg2, int arg3)
     fp = *(int*)(arg0 + 8);
     v1 = sub_861C(arg3, arg2, 0, 0);
     if (v1 == 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     if (v1 == 1)
     {
         // B588
@@ -3245,7 +3245,7 @@ int sub_B274(int arg0, int arg1, int arg2, int arg3)
             {
                 // B5EC
                 if (arg1 == 0)
-                    return 0x8001001C;
+                    return SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE;
                 v0 = sub_B714(arg0, 1);
                 if (v0 < 0)
                     return v0;
@@ -3269,7 +3269,7 @@ int sub_B274(int arg0, int arg1, int arg2, int arg3)
                 v0 = sub_861C(arg3, arg2, s2, 0);
                 s6 = v0;
                 if (s6 == 0)
-                    return 0x80010016;
+                    return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                 // B528
                 do
                 {
@@ -3301,7 +3301,7 @@ int sub_B274(int arg0, int arg1, int arg2, int arg3)
             {
                 // B4E0
                 if (arg1 == 0)
-                    return 0x8001001C;
+                    return SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE;
                 v0 = sub_B714(arg0, 1);
                 if (v0 < 0)
                     return v0;
@@ -3402,7 +3402,7 @@ int sub_B714(int arg0, int arg1)
 {
     s0 = *(int*)(arg0 + 8);
     if (arg1 != 0 && *(int*)(arg0 + 12) == 0)
-        return 0x8001001C;
+        return SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE;
     // B750
     v0 = sub_BA7C(s0);
     s2 = v0;
@@ -3469,9 +3469,9 @@ int sub_B7F4(int arg0, int arg1, int arg2, int arg3)
             }
             // B87C
             if (s0 != 32)
-                return 0x80010005;
+                return SCE_ERROR_ERRNO_IO_ERROR;
             if (a2 < 64)
-                return 0x80010005;
+                return SCE_ERROR_ERRNO_IO_ERROR;
             v0 = sub_AC5C(s5, 0, a2, arg1, 32);
             if (v0 < 0)
                 return v0;
@@ -3569,7 +3569,7 @@ int sub_BA7C(int arg)
     }
     // BAD8
     *(int*)(arg + 96) = 2;
-    return 0x8001001C;
+    return SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE;
 }
                                                                                                                                                                       
 void sub_BB34(char *arg)
@@ -3792,12 +3792,12 @@ int sub_C318(int arg)
     }
     a0 = *(int*)(arg + 16);
     if (a0 == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     if (*(int*)(a0 + 0) == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     v1 = lflashOpt.u0;
     if (v1 & 1 == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     // C380
     a3 = lflashOpt.u608 - 1;
     lflashOpt.u608 = a3;
@@ -3834,7 +3834,7 @@ int sub_C3E4(int arg0, int arg1, int arg2)
     t6 = t7 << 23;
     t1 = (s4 > 0) + (t5 | t6);
     if (t1 >= t3)
-        return 0x8001000D;
+        return SCE_ERROR_ERRNO_NO_PERM;
     int cnt;
     // C4B0
     v0 = sub_E73C(arg0, &cnt);
@@ -3842,7 +3842,7 @@ int sub_C3E4(int arg0, int arg1, int arg2)
         return v0;
     v1 = lflashOpt.u28;
     if (arg2 & (v1 - 1)!= 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
 
     // C4E8
     s0 = arg2 / v1;
@@ -3907,11 +3907,11 @@ int sub_C7A0(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5)
 {
     int addr = *(int*)(arg0 + 16);
     if (arg1 != 0x3D001)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     if (arg5 < 68)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     if (arg4 == 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
 
     bzero(arg4, 68);
     *(int*)(arg4 + 16) = *(int*)(addr + 4);
@@ -3984,7 +3984,7 @@ int sub_CBDC(int arg0, int arg1)
 int sub_CC10()
 {
     if (unkNandFlags & 2 == 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     v0 = sub_C318(&nandOpt);
     if (v0 != 0)
         return v0;
@@ -3995,7 +3995,7 @@ int sub_CC10()
 int sub_CC70(int arg)
 {
     if (unkNandFlags & 2 == 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     return sub_C7A0(&nandOpt, 0x3D001, 0, 0, arg, 68);
 }
 
@@ -4004,19 +4004,19 @@ u64 sub_CCC4(int arg0, int arg1, int arg2)
     if ((unkNandFlags & 2) != 0)
         return sub_C6C0(&nandOpt, arg1, arg0, arg1, arg2);
     else
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
 }
 
 int sub_CD28(int arg0, int arg1)
 {
     if (unkNandFlags & 2 == 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     return sub_C3E4(&nandOpt, arg0, arg1);
 }
 
 void sub_CD78()
 {
-    return 0x80010086;
+    return SCE_ERROR_ERRNO_NOT_SUPPORTED;
 }
 
 int sub_CFBC(int arg0, int arg1, int arg2)
@@ -4392,7 +4392,7 @@ int sub_D9A4(int arg0, int arg1, int arg2)
 int sub_DB8C(int arg0, int arg1)
 {
     if (*(int*)(arg1 + 16) == 0)
-        return 0x8001001C;
+        return SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE;
     // DBE4
     short i;
     for (i = *(short*)(arg1 + 4); i < *(short*)(arg1 + 8); i++)
@@ -4412,7 +4412,7 @@ int sub_DB8C(int arg0, int arg1)
             s3 = v0;
             s5 = v0 & 0xFFFF;
             if (v0 == s2)
-                return 0x8001001C;
+                return SCE_ERROR_ERRNO_DEVICE_NO_FREE_SPACE;
             sub_D224(arg, v0, 0);
             sub_F144(1);
             sub_F640(*(int*)(arg + 36) * (s5 + 64));
@@ -4540,17 +4540,17 @@ int sub_E73C(int arg0, int arg1)
     t0 = *(int*)(arg0 + 16);
     a2 = &lflashOpt;
     if (t0 == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     a1 = *(int*)t0;
     if (a1 == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     v1 = lflashOpt.u0;
     if (v1 & 1 == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     if (v1 & 2 != 0)
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     if (v1 & 8 != 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     t5 = *(int*)(a2 + 32);
     t6 = *(int*)(a0 + 24);
     t7 = *(int*)(a0 + 28);
@@ -4756,11 +4756,11 @@ int sub_F28C(int arg0, int arg1, int arg2, int arg3)
 {
     int ret;
     if (arg3 >= 33)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if (((arg0 & 0x1F) + arg3) >= 33)
         return 0x80230008;
     if ((arg1 | arg2) & 3 != 0)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     nandOpt2.u8 = arg3;
     nandOpt2.u16 = arg1;
     nandOpt2.u20 = arg2;
@@ -4827,17 +4827,17 @@ int sub_F458(int arg0, int arg1, int arg2, int arg3, int arg4)
     s1 = arg2;
     s0 = arg3;
     if (v1 == 0)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if ((arg0 & 0x1F) + s0 >= 33)
         return 0x80230008;
     if (arg2 & 3 != 0)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     if ((arg1 == 0) && ((arg4 & 0x10) == 0)) // F62C
-        return 0x80000107;
+        return SCE_ERROR_INVALID_MODE;
 
     // F4CC
     if ((arg2 == 0) && ((arg4 & 0x20) == 0)) // F618
-        return 0x80000107;
+        return SCE_ERROR_INVALID_MODE;
 
     // F4D4
     while (sub_F0C4() == 0)

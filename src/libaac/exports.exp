@@ -1,0 +1,33 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_stop)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_VAR_HASH(module_start_thread_parameter)
+PSP_EXPORT_VAR_HASH(module_stop_thread_parameter)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceAac, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_HASH(sceAacGetInfoToAddStreamData)
+PSP_EXPORT_FUNC_HASH(sceAacTermResource)
+PSP_EXPORT_FUNC_HASH(sceAacExit)
+PSP_EXPORT_FUNC_HASH(sceAacGetSumDecodedSample)
+PSP_EXPORT_FUNC_HASH(sceAacGetLoopNum)
+PSP_EXPORT_FUNC_HASH(sceAacInitResource)
+PSP_EXPORT_FUNC_HASH(sceAacEndEntry)
+PSP_EXPORT_FUNC_HASH(sceAacStartEntry)
+PSP_EXPORT_FUNC_HASH(sceAacGetMaxOutputSample)
+PSP_EXPORT_FUNC_HASH(sceAacDecode)
+PSP_EXPORT_FUNC_HASH(sceAacNotifyAddStreamData)
+PSP_EXPORT_FUNC_HASH(sceAacSetLoopNum)
+PSP_EXPORT_FUNC_HASH(sceAacResetPlayPosition)
+PSP_EXPORT_FUNC_HASH(sceAacCheckStreamDataNeeded)
+PSP_EXPORT_FUNC_HASH(sceAacInit)
+PSP_EXPORT_FUNC_NID(sceAac_E955E83A, 0xE955E83A)
+PSP_EXPORT_FUNC_NID(sceAac_FA01FCB6, 0xFA01FCB6)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

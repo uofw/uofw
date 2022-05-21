@@ -7,7 +7,6 @@
 
 #include <memlmd.h>
 #include <mesgled.h>
-#include <modulemgr.h>
 #include "common_imp.h"
 #include "threadman_kernel.h"
 
@@ -168,6 +167,10 @@ enum SceLibAttr {
 
 /** Boot Callback function. */
 typedef s32 (*SceKernelBootCallbackFunction)(void *data, s32 arg, void *opt);
+
+/** Reboot preparation functions */
+typedef s32 (*SceKernelRebootBeforeForKernel)(void *arg1, s32 arg2, s32 arg3, s32 arg4);
+typedef s32 (*SceKernelRebootPhaseForKernel)(s32 arg1, void *arg2, s32 arg3, s32 arg4);
 
 /** 
  * This structure represents a function stub belonging to same privilege-level linked libraries, 
@@ -561,6 +564,8 @@ typedef struct {
     u32 unk124;
 } SceLoadCoreBootInfo; //size = 128
 
+#define SCE_KERNEL_MAX_MODULE_SEGMENT   (4) /** The maximum number of segments a module can have. */
+
 /**
  * This structure represents executable file information used to load the file.
  */
@@ -593,10 +598,10 @@ typedef struct {
     /** Unknown. */
     u32 unk44;
     /** 
-     * The size of the largest module segment. Should normally be "textSize", but technically can 
-     * be any other segment. 
+     * The total size of the loadable segments of the executable. Contains for example the size
+     * of the .text, .data and .bss segment.
      */
-    SceSize largestSegSize; //48
+    SceSize modCodeSize; //48
     /** The size of the TEXT segment. */
     SceSize textSize; //52
     /** The size of the DATA segment. */
@@ -636,7 +641,7 @@ typedef struct {
      */
     u32 isSignChecked; //100
     /** Unknown. */
-    u32 unk104;
+    char *secureInstallId; // 104
     /** The size of the GZIP compression overlap. */
     SceSize overlapSize; //108
     /** Pointer to the first resident library entry table of the module. */
@@ -665,6 +670,25 @@ typedef struct {
     u32 maxSegAlign; //188
 } SceLoadCoreExecFileInfo;
 
+/** SceModule.status */
+#define SCE_MODULE_USER_MODULE  (0x100)
+
+/** SceModule.status */
+// TODO: Change name to something like *_MCB_STATE
+#define GET_MCB_STATUS(status)              (status & 0xF)
+#define SET_MCB_STATUS(v, m)                (v = (v & ~0xF) | m)
+
+enum ModuleMgrMcbStatus {
+    MCB_STATUS_NOT_LOADED = 0,
+    MCB_STATUS_LOADING = 1,
+    MCB_STATUS_LOADED = 2,
+    MCB_STATUS_RELOCATED = 3,
+    MCB_STATUS_STARTING = 4,
+    MCB_STATUS_STARTED = 5,
+    MCB_STATUS_STOPPING = 6,
+    MCB_STATUS_STOPPED = 7
+};
+
 /** The SceModule structure represents a loaded module in memory. */
 typedef struct SceModule {
     /** Pointer to the next registered module. Modules are connected via a linked list. */
@@ -678,8 +702,8 @@ typedef struct SceModule {
 	u8 version[MODULE_VERSION_NUMBER_CATEGORY_SIZE]; //6
     /** The module's name. There can be several modules loaded with the same name. */
 	char modName[SCE_MODULE_NAME_LEN]; //8
-    /** Unknown. */
-	u8 terminal; //35
+    /** String terminator (always '\0'). */
+	char terminal; //35
     /** 
      * The status of the module. Contains information whether the module has been started, stopped, 
      * is a user module, etc.
@@ -694,7 +718,7 @@ typedef struct SceModule {
     /** The thread ID of a user module. */
 	SceUID userModThid; //48
     /** The ID of the memory block belonging to the module. */
-	SceUID memId; //52
+	SceUID moduleBlockId; //52
     /** The ID of the TEXT segment's memory partition. */
 	SceUID mpIdText; //56
     /** The ID of the DATA segment's memory partition. */
@@ -714,7 +738,7 @@ typedef struct SceModule {
 	SceKernelThreadEntry moduleStart; //80
     /** 
      * A pointer to the (required) module's stop entry function. This function is executed during 
-     * the module's startup. 
+     * the module's stopping phase. 
      */
 	SceKernelThreadEntry moduleStop; //84
     /** 
@@ -726,12 +750,12 @@ typedef struct SceModule {
      * A pointer to a module's rebootBefore entry function. This function is probably executed 
      * before a reboot. 
      */
-	SceKernelThreadEntry moduleRebootBefore; //92
+    SceKernelRebootBeforeForKernel moduleRebootBefore; //92
     /** 
      * A pointer to a module's rebootPhase entry function. This function is probably executed 
      * during a reboot. 
      */
-	SceKernelThreadEntry moduleRebootPhase; //96
+    SceKernelRebootPhaseForKernel moduleRebootPhase; //96
     /** 
      * The entry address of the module. It is the offset from the start of the TEXT segment to the 
      * program's entry point. 
@@ -779,8 +803,8 @@ typedef struct SceModule {
 	u32 countRegVal; //212
     /** The segment checksum of the module's segments. */
     u32 segmentChecksum; //216
-    /** Unknown. */
-    u32 unk220; //220
+    /** TEXT segment checksum of the module. */
+    u32 textSegmentChecksum; //220
     /** Unknown. */
     u32 unk224; //224
 } SceModule; //size = 228
@@ -886,7 +910,7 @@ s32 sceKernelLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size
  * @param size The number of entry tables to unlink.
  * @return 
  */
-s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
+s32 sceKernelUnlinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
 
 /**
  * Load a module. This function is used to boot modules during the start of Loadcore. In order for 

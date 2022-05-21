@@ -3,6 +3,36 @@
 */
 
 #include <lowio_nand.h>
+#include <common_imp.h>
+
+typedef struct {
+	u8	user_ecc[3]; //0
+	u8	reserved; //3
+	u8	block_fmt; //4
+	u8	block_stat; //5
+	union {
+		u16 lbn;
+		struct {
+			u8 idx;
+			u8 ver;
+		} IdStorId;
+	}
+	union {
+		u32 	id;	/* 0x38 0x4a 0xc6 0x6d for IPL area */
+		struct {
+			u8 formatted;
+			u8 readonly;
+		} IdStorInfo;
+	}
+	u8	spare_ecc[2];
+	u8	reserved[2];
+} SceNandSpare_t;
+
+typedef enum {
+	USER_ECC_IN_SPARE	= 0x01,
+	NO_AUTO_USER_ECC	= 0x10,
+	NO_AUTO_SPARE_ECC	= 0x20
+} SceNandEccMode_t;
 
 typedef enum {
 	STATE_INVALID			= -1,
@@ -122,7 +152,7 @@ sceNandInit2(void)
 	memset(&sceNandInfo, 0, 0x40); //SysclibForKernel_10F3BB61
 	sceSysregEmcsmBusClockEnable(); //sceSysreg_driver_F97D9D73
 	sceSysregEmcsmIoEnable(); //sceSysreg_driver_9DD1F821
-	sceNandInfo.mutex_id = sceKernelCreateMutex("SceNand", 0x801, 0, 0); //ThreadManForKernel_B7D098C6
+	sceNandInfo.mutex_id = sceKernelCreateMutex("SceNand", 0x801, 0, NULL); //ThreadManForKernel_B7D098C6
 	sceNandInfo.event_id = sceKernelCreateEventFlag("SceNand", 1, 0, 0); //ThreadManForKernel_55C20A00
 	sceNandInfo.clock_enabled = 0;
 	KDebugForKernel_E892D9A1();
@@ -294,7 +324,7 @@ sceNandLock(int mode)
 {
 	int ret;
 
-	if ((ret = sceKernelLockMutex(sceNandInfo.mutex_id, 1, 2) < 0)) //ThreadManForKernel_B011B11F
+    if ((ret = sceKernelLockMutex(sceNandInfo.mutex_id, 1, (u32 *)2) < 0)) //ThreadManForKernel_B011B11F
 		return ret;
 
 	if (!sceNandInfo.clock_enabled) {

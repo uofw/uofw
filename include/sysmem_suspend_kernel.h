@@ -4,24 +4,24 @@
 
 #include "common_header.h"
 
-int sceKernelRegisterResumeHandler(int reg, int (*handler)(int unk, void *param), void *param);
-int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param);
+s32 sceKernelRegisterResumeHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param);
+s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param);
 
 #define SCE_KERNEL_POWER_LOCK_DEFAULT       (0)
-int sceKernelPowerLock(int lockType);
-int sceKernelPowerLockForUser(int lockType);
-int sceKernelPowerUnlock(int lockType);
-int sceKernelPowerUnlockForUser(int lockType);
+s32 sceKernelPowerLock(s32 lockType);
+s32 sceKernelPowerLockForUser(s32 lockType);
+s32 sceKernelPowerUnlock(s32 lockType);
+s32 sceKernelPowerUnlockForUser(s32 lockType);
 
 #define SCE_KERNEL_POWER_TICK_DEFAULT       (0) /** Cancel all timers. */
 #define SCE_KERNEL_POWER_TICK_SUSPEND_ONLY	(1) /** Cancel auto-suspend-related timer. */				
 #define SCE_KERNEL_POWER_TICK_LCD_ONLY		(6) /** Cancel LCD-related timer .*/	
-int sceKernelPowerTick(int tickType);
+s32 sceKernelPowerTick(s32 tickType);
 
 #define SCE_KERNEL_VOLATILE_MEM_DEFAULT		(0)
-int sceKernelVolatileMemLock(int unk, void **ptr, int *size);
-int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size);
-int sceKernelVolatileMemUnlock(int unk);
+s32 sceKernelVolatileMemLock(s32 unk, void **ptr, s32 *size);
+s32 sceKernelVolatileMemTryLock(s32 unk, void **ptr, s32 *size);
+s32 sceKernelVolatileMemUnlock(s32 unk);
 
-int sceKernelPowerRebootStart(int);
+s32 sceKernelPowerRebootStart(s32);
 

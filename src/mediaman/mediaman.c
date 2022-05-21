@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013, 2014 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -7,12 +7,15 @@
  * 
  * sceUmd_driver - an interface for the UMD Manager module.
  *
+ * 1) Assigns the filesystem, the block device and the alias name for the UMD drive.
+ * 
+ * 2) Provides functions to handle UMD drive media changes.
+ *
  */
 
 #include <common_imp.h>
 #include <interruptman.h>
 #include <iofilemgr_kernel.h>
-#include <modulemgr.h>
 #include <sysmem_kernel.h>
 #include <sysmem_sysclib.h>
 
@@ -31,7 +34,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define SCE_UMD_FILE_SYSTEM_NAME_LEN        (32)
 
-#define SCE_UMD_PHYSICAL_DEVICE_NAME        "umd0:"
+#define SCE_UMD_BLOCK_DEVICE_NAME           "umd0:"
 #define SCE_UMD_FILE_SYSTEM_DEVICE_NAME     "isofs0:"
 
 #define SCE_UMD_DEVICE_NOT_ASSIGNED         (0)
@@ -40,20 +43,24 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define SCE_UMD_REPLACE_STATUS_PROHIBITED   (1 << 0)
 #define SCE_UMD_REPLACE_STATUS_ALLOWED      (1 << 1)
 
+/* Supported UMD drive states which can be waited for. */
+#define UMD_SUPPORTED_WAIT_DRIVE_STATES     (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY \
+                                              | SCE_UMD_READABLE)
+
 /* This structure defines a Media Manager Control Block. */
 typedef struct {
     u32 umdActivateCallbackGp;
     u32 umdDeactivateCallbackGp;
     u32 umdInfoCallbackGp;
-    u32 unk12;
+	u32 umdMediaPresentCallbackGp;
     u32 umdReplaceCallbackGp;
     void *umdActivateCallbackParam;
     void *umdDeactivateCallbackParam;
     SceUmdDiscInfo *umdInfoCallbackDiscInfo;
-    void *unk32;
+	void *umdMediaPresentCallbackParam;
     u32 unk36;
     s32 (*umdInfoCallback)(SceUmdDiscInfo *info);
-    s32 (*unk44)(void *param);
+	s32 (*umdMediaPresentCallback)(void *param);
     s32 (*umdActivateCallback)(s32 mode, void *param);
     s32 (*umdDeactivateCallback)(s32 mode, void *param);
     s32 (*umdReplaceCallback)(s32 status);
@@ -99,7 +106,7 @@ static s32 _umdGetDiscInfo(SceUmdDiscInfo *pDiscInfo)
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     
     if (g_mediaMan.umdInfoCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
     
     oldGp = pspSetGp(g_mediaMan.umdInfoCallbackGp);
     
@@ -124,7 +131,7 @@ static s32 _mountUMDDevice(s32 mode, const char *aliasName)
         if (g_isAssigned)
             return SCE_ERROR_ERRNO_DEVICE_BUSY;
             
-        status = sceIoAssign(aliasName, SCE_UMD_PHYSICAL_DEVICE_NAME, SCE_UMD_FILE_SYSTEM_DEVICE_NAME, SCE_MT_RDONLY, 
+        status = sceIoAssign(aliasName, SCE_UMD_BLOCK_DEVICE_NAME, SCE_UMD_FILE_SYSTEM_DEVICE_NAME, SCE_MT_RDONLY, 
                 &data, sizeof data);
         if (status != SCE_ERROR_OK) {
             g_isAssigned = SCE_UMD_DEVICE_NOT_ASSIGNED;
@@ -169,7 +176,7 @@ static s32 sub_0000021C(s32 mode)
     s32 status;
     
     if (g_mediaMan.umdActivateCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
     
     oldGp = pspSetGp(g_mediaMan.umdActivateCallbackGp);
     
@@ -186,7 +193,7 @@ static s32 sub_00000278(s32 mode)
     s32 status;
     
     if (g_mediaMan.umdDeactivateCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
     
     oldGp = pspSetGp(g_mediaMan.umdDeactivateCallbackGp);
     
@@ -209,18 +216,20 @@ s32 sceUmd_040A7090(s32 errorState)
         return errorState;
     
     switch (errorState) {
-    case 0x80010070:
-        return SCE_ERROR_ERRNO_FILE_ADDR_IN_USE;
-    case 0x80010071:
-        return SCE_ERROR_ERRNO_CONNECTION_ABORTED;
-    case 0x80010074:
-        return SCE_ERROR_ERRNO_FILE_TIMEOUT;
-    case 0x80010086:
-        return SCE_ERROR_ERRNO_FUNCTION_NOT_SUPPORTED;
-    case 0x80010087:
-        return SCE_ERROR_ERRNO_NO_MEDIA;
-    case 0x8001B006:
-        return SCE_ERROR_ERRNO_INVALID_MEDIUM;
+    case SCE_ERROR_ERRNO_NAME_TOO_LONG:
+        return SCE_ERROR_ERRNO150_ENAMETOOLONG;
+    case SCE_ERROR_ERRNO_EADDRINUSE:
+        return SCE_ERROR_ERRNO150_EADDRINUSE;
+    case SCE_ERROR_ERRNO_CONNECTION_ABORTED:
+        return SCE_ERROR_ERRNO150_ECONNABORTED;
+    case SCE_ERROR_ERRNO_ETIMEDOUT:
+        return SCE_ERROR_ERRNO150_ETIMEDOUT;
+    case SCE_ERROR_ERRNO_NOT_SUPPORTED:
+        return SCE_ERROR_ERRNO150_ENOTSUP;
+    case SCE_ERROR_ERRNO_ENOMEDIUM:
+        return SCE_ERROR_ERRNO150_ENOMEDIUM;
+    case SCE_ERROR_ERRNO_WRONG_MEDIUM_TYPE:
+        return SCE_ERROR_ERRNO150_EMEDIUMTYPE;
     default:
         return errorState;
     }
@@ -301,12 +310,12 @@ static s32 sub_000004DC(void)
     u32 oldGp;
     s32 status;
     
-    if (g_mediaMan.unk44 == NULL)
+	if (g_mediaMan.umdMediaPresentCallback == NULL)
         return SCE_ERROR_OK;
     
-    oldGp = pspSetGp(g_mediaMan.unk12);
+	oldGp = pspSetGp(g_mediaMan.umdMediaPresentCallbackGp);
     
-    status = g_mediaMan.unk44(g_mediaMan.unk32);
+	status = g_mediaMan.umdMediaPresentCallback(g_mediaMan.umdMediaPresentCallbackParam);
     
     pspSetGp(oldGp);
     return status;
@@ -343,30 +352,30 @@ u32 sceUmdUnRegisterGetUMDInfoCallBack(void)
 }
 
 //Subroutine sceUmd_63517CBA - Address 0x000005CC 
-u32 sceUmd_63517CBA(s32 (*arg0)(void *), void *arg1)
+u32 sceUmdRegisterMediaPresentCallBack(s32(*MediaPresentCallback)(void *), void *param)
 {
     s32 intrState;
     
     intrState = sceKernelCpuSuspendIntr();
     
-    g_mediaMan.unk44 = arg0;
-    g_mediaMan.unk32 = arg1;
-    g_mediaMan.unk12 = pspGetGp();
+	g_mediaMan.umdMediaPresentCallback = MediaPresentCallback;
+	g_mediaMan.umdMediaPresentCallbackParam = param;
+	g_mediaMan.umdMediaPresentCallbackGp = pspGetGp();
     
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
 }
 
 //Subroutine sceUmd_1471F63D - Address 0x00000620
-u32 sceUmd_1471F63D(void)
+u32 sceUmdUnRegisterMediaPresentCallBack(void)
 {
     s32 intrState;
     
     intrState = sceKernelCpuSuspendIntr();
     
-    g_mediaMan.unk32 = NULL;
-    g_mediaMan.unk12 = 0;
-    g_mediaMan.unk44 = NULL;
+	g_mediaMan.umdMediaPresentCallbackParam = NULL;
+	g_mediaMan.umdMediaPresentCallbackGp = 0;
+	g_mediaMan.umdMediaPresentCallback = NULL;
     
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
@@ -430,7 +439,7 @@ u32 sceUmdRegisterDeactivateCallBack(s32 (*deactivateCallback)(s32, void *), voi
     return SCE_ERROR_OK;
 }
 
-s32 sceUmdModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 sceUmdModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {   
     s32 intrState;
     
@@ -442,7 +451,7 @@ s32 sceUmdModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__
     g_umdFileSystem[2] = 'D';
     g_umdFileSystem[3] = ':';
       
-    g_eventId = sceKernelCreateEventFlag("SceMediaManUser", 0x201, 0, NULL);
+    g_eventId = sceKernelCreateEventFlag("SceMediaManUser", SCE_KERNEL_EA_MULTI | 0x1, 0, NULL);
     if (g_eventId < 0) 
         return SCE_KERNEL_NO_RESIDENT;
     
@@ -503,7 +512,7 @@ static s32 sub_0000094C(void)
     s32 status;
    
     if (g_mediaMan.unk60 == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
  
     s32 oldGp = pspSetGp(g_mediaMan.unk36);
        
@@ -644,10 +653,10 @@ s32 sceUmdWaitDriveStat(s32 umdState)
     oldK1 = pspShiftK1();
     eventId = sceUmdGetUserEventFlagId();
         
-    if (!(umdState & (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY | SCE_UMD_READABLE)))
+    if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT; 
        
-    status = sceKernelWaitEventFlag(eventId, umdState, SCE_EVENT_WAITOR, &resultBits, NULL);
+    status = sceKernelWaitEventFlag(eventId, umdState, SCE_KERNEL_EW_OR, &resultBits, NULL);
        
     pspSetK1(oldK1);
     return status;
@@ -665,7 +674,7 @@ s32 sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout)
     oldK1 = pspShiftK1();
     eventId = sceUmdGetUserEventFlagId();
         
-    if (!(umdState & (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY | SCE_UMD_READABLE)))
+    if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
        
     if (timeout != 0)
@@ -673,7 +682,7 @@ s32 sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout)
     else
         pTimeout = NULL;
        
-    status = sceKernelWaitEventFlag(eventId, umdState, SCE_EVENT_WAITOR, &resultBits, pTimeout);
+    status = sceKernelWaitEventFlag(eventId, umdState, SCE_KERNEL_EW_OR, &resultBits, pTimeout);
     
     pspSetK1(oldK1);
     return status;
@@ -691,7 +700,7 @@ s32 sceUmdWaitDriveStatCB(u32 umdState, u32 timeout)
     oldK1 = pspShiftK1();
     eventId = sceUmdGetUserEventFlagId();
         
-    if (!(umdState & (SCE_UMD_MEDIA_OUT | SCE_UMD_MEDIA_IN | SCE_UMD_NOT_READY | SCE_UMD_READY | SCE_UMD_READABLE)))
+    if (!(umdState & UMD_SUPPORTED_WAIT_DRIVE_STATES))
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
        
     if (timeout != 0)
@@ -699,7 +708,7 @@ s32 sceUmdWaitDriveStatCB(u32 umdState, u32 timeout)
     else
         pTimeout = NULL;
    
-    status = sceKernelWaitEventFlagCB(eventId, umdState, SCE_EVENT_WAITOR, &outBits, pTimeout);
+    status = sceKernelWaitEventFlagCB(eventId, umdState, SCE_KERNEL_EW_OR, &outBits, pTimeout);
     pspSetK1(oldK1);
     return status;
 }
@@ -780,7 +789,7 @@ static s32 _setUmdReplaceStatus(u32 replaceStatus)
     s32 status;
    
     if (g_mediaMan.umdReplaceCallback == NULL)
-        return SCE_ERROR_UMD_NO_MEDIUM;
+        return SCE_UMD_ERROR_NO_MEDIUM;
  
     s32 oldGp = pspSetGp(g_mediaMan.umdReplaceCallbackGp);
        
@@ -819,7 +828,7 @@ s32 sceUmdReplacePermit(void)
 }
 
 //Subroutine sceUmd_AD1444AB - Address 0x00000F4C - Aliases: sceUmdUser_B103FA38
-s32 sceUmd_AD1444AB(void)
+s32 sceUmdUseUMDInMsUsbWlan(void)
 {
     s32 oldK1;
     s32 status;
@@ -833,7 +842,7 @@ s32 sceUmd_AD1444AB(void)
 }
 
 //Subroutine sceUmd_F0C51280 - Address 0x00000F78 - Aliases: sceUmdUser_14C6C45C
-s32 sceUmd_F0C51280(void)
+s32 sceUmdUnuseUMDInMsUsbWlan(void)
 {
     s32 oldK1;
     s32 status;

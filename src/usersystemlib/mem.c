@@ -18,12 +18,12 @@ void *sceKernelMemcpy(void *dst, const void *src, SceSize size)
 }
 
 // FIXME: naive, not reversed!
-void *sceKernelMemset(void *dst, s32 val, SceSize size)
+void *sceKernelMemset(void *dst, s8 val, SceSize size)
 {
     u8 *dst8 = (u8*)dst;
 
     while (size--) {
-        *(dst8++) = (u8)val;
+        *(dst8++) = val;
     }
 
     return dst;
