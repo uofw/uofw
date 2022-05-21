@@ -1,5 +1,5 @@
-/** Copyright (C) 2011, 2012 The uOFW team
-   See the file COPYING for copying permission.
+/** Copyright (C) 2011, 2012, 2013 The uOFW team
+   See the file COPYING for copying permission.\n
 */
 
 #ifndef LOADCORE_H
@@ -11,15 +11,19 @@
 #include "threadman_kernel.h"
 
 /** @defgroup Loadcore Loadcore Module
+ * Module loader and library import/export manager.
  *
  * @{	
  */
 
-/** The maximum number of segments a module can have. */
-#define SCE_KERNEL_MAX_MODULE_SEGMENT           (4)
+/** Library number category minor. */
+#define LIBRARY_VERSION_MINOR                   (0)
 
-/** The module is not a resident one, meaning it won't stay in memory and act as a resident library. */
-#define SCE_KERNEL_NO_RESIDENT                  (1)
+/** Library number category major. */
+#define LIBRARY_VERSION_MAJOR                   (1)
+
+/** Current number category size for libraries. */
+#define LIBRARY_VERSION_NUMBER_CATEGORY_SIZE    (2)
 
 /** The length of the old resident library entry table format (without the members unk16 - uk19). */
 #define LIBRARY_ENTRY_TABLE_OLD_LEN             (4)
@@ -35,6 +39,68 @@
 
 /** The possible number of libraries with different hash values. */
 #define LOADCORE_LIB_HASH_TABLE_SIZE            (128)
+
+/** Indicates that a boot callback function was added to the internal boot callback queue. */
+#define SCE_BOOT_CALLBACK_FUNCTION_QUEUED       (1)
+
+/** The protected information block is allocated. */
+#define SCE_PROTECT_INFO_STATE_IS_ALLOCATED     (1 << 0)
+
+/** Indicates the type of the protected information block is a file name. */
+#define SCE_PROTECT_INFO_TYPE_FILE_NAME         (0x2)
+
+/** Indicates the type of the protected information block is a VSH param. */
+#define SCE_PROTECT_INFO_TYPE_VSH_PARAM         (0x4)
+
+/** Indicates the type of the protected information block is a disc image. */
+#define SCE_PROTECT_INFO_TYPE_DISC_IMAGE        (0x40)
+
+/** Indicates protected information block belongs to a NPDRM package. */
+#define SCE_PROTECT_INFO_TYPE_NPDRM_DATA        (0x80)
+
+/** Indicates the type of the protected information block is a user param. */
+#define SCE_PROTECT_INFO_TYPE_USER_PARAM        (0x100)
+
+/** Indicates the type of the protected information block is a param.sfo. */
+#define SCE_PROTECT_INFO_TYPE_PARAM_SFO         (0x400)
+
+/** 
+ * Get the state of a protected information block. 
+ * 
+ * @param attr SceLoadCoreProtectInfo.attr
+ */
+#define GET_PROTECT_INFO_STATE(attr)            ((u32)(attr) >> 16)
+
+/** 
+ * Set a new state of a protected information block. 
+ * 
+ * @param state The new state to set.
+ * @param src SceLoadCoreProtectInfo.attr
+ */
+#define SET_PROTECT_INFO_STATE(state, src)      (((state) << 16) | (src))
+
+/** 
+ * Remove a state entry of a protected information block. 
+ * 
+ * @param state The state entry to remove.
+ * @param src SceLoadCoreProtectInfo.attr
+ */
+#define REMOVE_PROTECT_INFO_STATE(state, src)   ((~((state) << 16)) & (src))
+
+/**
+ * Get the type of a protected information block. 
+ * 
+ * @param attr SceLoadCoreProtectInfo.attr
+ */
+#define GET_PROTECT_INFO_TYPE(attr)             ((attr) & 0xFFFF)
+
+/**
+ * Set the type of a protected information block.
+ * 
+ * @param type The new type to set.
+ * @param src SceLoadCoreProtectInfo.attr
+ */
+#define SET_PROTECT_INFO_TYPE(type, src)        (((type) & 0xFFFF) | (src))
 
 /** 
  * Executable File Attributes.
@@ -100,7 +166,11 @@ enum SceLibAttr {
 };
 
 /** Boot Callback function. */
-typedef s32 (*SceKernelBootCallbackFunction)(s32 count, s32 arg, void *opt);
+typedef s32 (*SceKernelBootCallbackFunction)(void *data, s32 arg, void *opt);
+
+/** Reboot preparation functions */
+typedef s32 (*SceKernelRebootBeforeForKernel)(void *arg1, s32 arg2, s32 arg3, s32 arg4);
+typedef s32 (*SceKernelRebootPhaseForKernel)(s32 arg1, void *arg2, s32 arg3, s32 arg4);
 
 /** 
  * This structure represents a function stub belonging to same privilege-level linked libraries, 
@@ -156,7 +226,7 @@ typedef struct {
      * register another version of an already registered resident library, make sure that the new 
      * library has a higher version than all its currently registered versions.
      */
-    u8   version[2]; //4
+    u8   version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //4
     /** The library's attributes. One or more of ::SceLibAttr. */
     s16  attribute; //6
     /** 
@@ -194,7 +264,7 @@ typedef struct {
      * library shouldn't be higher than the version(s) of the corresponding resident library/libraries. 
      * Linking won't be performed in such a case.
      */
-	u8 version[2]; //4
+	u8 version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //4
     /** The library's attributes. Can be set to either SCE_LIB_NO_SPECIAL_ATTR or SCE_LIB_WEAK_IMPORT. */
 	u16 attribute; //6
     /**
@@ -243,7 +313,7 @@ typedef struct SceStubLibrary {
     /** 
      * The version of the library. This member is set by the corresponding stub library entry table. 
      */
-    u8 version[2]; //12
+    u8 version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //12
     /** 
      * The library's attributes. This member is set by the corresponding stub library entry table. 
      */
@@ -295,7 +365,7 @@ typedef struct SceResidentLibrary {
      * The version of the library. This member is set by the corresponding resident library entry 
      * table. 
      */
-    u8 version[2]; //8
+    u8 version[LIBRARY_VERSION_NUMBER_CATEGORY_SIZE]; //8
     /** 
      * The library's attributes. This member is set by the corresponding resident library entry table. 
      */
@@ -369,8 +439,19 @@ typedef struct {
     /** Start address of the protected info. */
     u32 addr;
     /** The size of the protected info. */
-    u32 size; // 4
-    /** The attributes of the protected info. */
+    SceSize size; // 4
+    /**
+     *   31         16 15        0\n
+     *  +-------------+-----------+\n
+     *  |  S T A T E  |  T Y P E  |\n
+     *  +-------------+-----------+\n
+     * 
+     * Bits 31 - 16:
+     *      The current state of the protected information.
+     * 
+     * Bits 15 - 0:
+     *      The type of the protected information.
+     */
     u32 attr; // 8
     /** The partition ID of the protected info block. */
     SceUID partId; // 12
@@ -392,15 +473,19 @@ typedef struct {
     /** The buffer with the entire file content. */
     u8 *modBuf; //4
     /** The size of the module. */
-    u32 modSize; //8
+    SceSize modSize; //8
     /** Unknown. */
     s32 unk12; //12
     /** Attributes. */
     u32 attr; //16
-    /** Unknown. */
-    s32 unk_20; //20
+    /** 
+     * Contains the API type of the module prior to the allocation of memory for the module. 
+     * Once memory is allocated, ::bootData contains the ID of that memory partition.
+     */
+    s32 bootData; //20
     /** The size of the arguments passed to the module's entry function? */
     u32 argSize; //24
+    /** The partition ID of the arguments passed to the module's entry function? */
     SceUID argPartId; //28
 } SceLoadCoreBootModuleInfo;
 
@@ -438,11 +523,11 @@ typedef struct {
      /** Unknown. */
     s32 unk44;
      /** Unknown. */
-    s32 unk48;
+    s32 buildVersion;
      /** Unknown. */
     s32 unk52;
     /** The path/name of a boot configuration file. */
-    u8 *configFile; // 56
+    char *configFile; // 56
     /** Unknown. */
     s32 unk60;
     /** Unknown. */
@@ -479,6 +564,8 @@ typedef struct {
     u32 unk124;
 } SceLoadCoreBootInfo; //size = 128
 
+#define SCE_KERNEL_MAX_MODULE_SEGMENT   (4) /** The maximum number of segments a module can have. */
+
 /**
  * This structure represents executable file information used to load the file.
  */
@@ -511,10 +598,10 @@ typedef struct {
     /** Unknown. */
     u32 unk44;
     /** 
-     * The size of the largest module segment. Should normally be "textSize", but technically can 
-     * be any other segment. 
+     * The total size of the loadable segments of the executable. Contains for example the size
+     * of the .text, .data and .bss segment.
      */
-    SceSize largestSegSize; //48
+    SceSize modCodeSize; //48
     /** The size of the TEXT segment. */
     SceSize textSize; //52
     /** The size of the DATA segment. */
@@ -554,7 +641,7 @@ typedef struct {
      */
     u32 isSignChecked; //100
     /** Unknown. */
-    u32 unk104;
+    char *secureInstallId; // 104
     /** The size of the GZIP compression overlap. */
     SceSize overlapSize; //108
     /** Pointer to the first resident library entry table of the module. */
@@ -583,6 +670,25 @@ typedef struct {
     u32 maxSegAlign; //188
 } SceLoadCoreExecFileInfo;
 
+/** SceModule.status */
+#define SCE_MODULE_USER_MODULE  (0x100)
+
+/** SceModule.status */
+// TODO: Change name to something like *_MCB_STATE
+#define GET_MCB_STATUS(status)              (status & 0xF)
+#define SET_MCB_STATUS(v, m)                (v = (v & ~0xF) | m)
+
+enum ModuleMgrMcbStatus {
+    MCB_STATUS_NOT_LOADED = 0,
+    MCB_STATUS_LOADING = 1,
+    MCB_STATUS_LOADED = 2,
+    MCB_STATUS_RELOCATED = 3,
+    MCB_STATUS_STARTING = 4,
+    MCB_STATUS_STARTED = 5,
+    MCB_STATUS_STOPPING = 6,
+    MCB_STATUS_STOPPED = 7
+};
+
 /** The SceModule structure represents a loaded module in memory. */
 typedef struct SceModule {
     /** Pointer to the next registered module. Modules are connected via a linked list. */
@@ -593,11 +699,11 @@ typedef struct SceModule {
      * The version of the module. Consists of a major and minor part. There can be several modules 
      * loaded with the same name and version.
      */
-	u8 version[2]; //6
+	u8 version[MODULE_VERSION_NUMBER_CATEGORY_SIZE]; //6
     /** The module's name. There can be several modules loaded with the same name. */
 	char modName[SCE_MODULE_NAME_LEN]; //8
-    /** Unknown. */
-	u8 terminal; //35
+    /** String terminator (always '\0'). */
+	char terminal; //35
     /** 
      * The status of the module. Contains information whether the module has been started, stopped, 
      * is a user module, etc.
@@ -610,9 +716,9 @@ typedef struct SceModule {
     /** The module's UID. */
 	SceUID modId; //44
     /** The thread ID of a user module. */
-	SceUID userModThid; //480
+	SceUID userModThid; //48
     /** The ID of the memory block belonging to the module. */
-	SceUID memId; //52
+	SceUID moduleBlockId; //52
     /** The ID of the TEXT segment's memory partition. */
 	SceUID mpIdText; //56
     /** The ID of the DATA segment's memory partition. */
@@ -632,7 +738,7 @@ typedef struct SceModule {
 	SceKernelThreadEntry moduleStart; //80
     /** 
      * A pointer to the (required) module's stop entry function. This function is executed during 
-     * the module's startup. 
+     * the module's stopping phase. 
      */
 	SceKernelThreadEntry moduleStop; //84
     /** 
@@ -644,12 +750,12 @@ typedef struct SceModule {
      * A pointer to a module's rebootBefore entry function. This function is probably executed 
      * before a reboot. 
      */
-	SceKernelThreadEntry moduleRebootBefore; //92
+    SceKernelRebootBeforeForKernel moduleRebootBefore; //92
     /** 
      * A pointer to a module's rebootPhase entry function. This function is probably executed 
      * during a reboot. 
      */
-	SceKernelThreadEntry moduleRebootPhase; //96
+    SceKernelRebootPhaseForKernel moduleRebootPhase; //96
     /** 
      * The entry address of the module. It is the offset from the start of the TEXT segment to the 
      * program's entry point. 
@@ -697,8 +803,8 @@ typedef struct SceModule {
 	u32 countRegVal; //212
     /** The segment checksum of the module's segments. */
     u32 segmentChecksum; //216
-    /** Unknown. */
-    u32 unk220; //220
+    /** TEXT segment checksum of the module. */
+    u32 textSegmentChecksum; //220
     /** Unknown. */
     u32 unk224; //224
 } SceModule; //size = 228
@@ -804,7 +910,7 @@ s32 sceKernelLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size
  * @param size The number of entry tables to unlink.
  * @return 
  */
-s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
+s32 sceKernelUnlinkLibraryEntries(SceStubLibraryEntryTable *libStubTable, u32 size);
 
 /**
  * Load a module. This function is used to boot modules during the start of Loadcore. In order for 
@@ -909,13 +1015,13 @@ SceLoadCore *sceKernelQueryLoadCoreCB(void);
  *                   (up to init.prx) have been booted.
  * @param flag Defines the execute order of the callbacks. Pass 0 for earliest execution, 3 for latest.
  *             1 and 2 are between these two.
- * @param bootCallback The boot callback list used to store the boot callback function into. 
+ * @param status The returned status of bootCBFunc in case it was executed directly.
  * 
  * @return 0 for directly executing the boot callback function. 1 indicates boot callback function 
  *           was enqueued into other existing boot callbacks and will be called after init.prx got 
  *           booted. 
  */
-s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, SceBootCallback *bootCallback);
+s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *status);
 
 /**
  * Does nothing but a simple return, probably a debug function.

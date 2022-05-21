@@ -1,5 +1,7 @@
 #include <common_imp.h>
 
+#include "intr.h"
+
 typedef struct
 {
     int size; // 0
@@ -29,106 +31,106 @@ typedef struct
 } SceResumeHandler;
 
 // 140F4
-int g_numPowerLock;
+int g_iTempPowerLock;
 // 140F8
-ScePowerHandlers *g_powerHandlers;
+ScePowerHandlers *g_pPowerHandlers;
 // 140FC
-SceSuspendHandler g_suspendHandlers[32];
+SceSuspendHandler g_SuspendHandlers[32];
 // 1427C
-SceResumeHandler g_resumeHandlers[32];
+SceResumeHandler g_ResumeHandlers[32];
 
 int sceKernelSuspendInit(void)
 {
     int i;
     // CB1C
     for (i = 0; i < 32; i++)
-        g_suspendHandlers[i].handler = NULL;
+        g_SuspendHandlers[i].handler = NULL;
     // CB38
     for (i = 0; i < 32; i++)
-        g_resumeHandlers[i].handler = NULL;
+        g_ResumeHandlers[i].handler = NULL;
     return 0;
 }
 
 int sceKernelRegisterPowerHandlers(ScePowerHandlers *handlers)
 {
-    g_powerHandlers = handlers;
-    return g_numPowerLock;
+    g_pPowerHandlers = handlers;
+    return g_iTempPowerLock;
 }
 
 int sceKernelPowerLock(int unk)
 {
-    if (g_powerHandlers == NULL)
+    if (g_pPowerHandlers == NULL)
     {
         // CB90
         int oldIntr = suspendIntr();
-        g_numPowerLock++;
+        g_iTempPowerLock++;
         resumeIntr(oldIntr);
         return 0;
     }
-    return g_powerHandlers->lock(unk);
+    return g_pPowerHandlers->lock(unk);
 }
 
 int sceKernelPowerLockForUser(int unk)
 {
-    if (g_powerHandlers != NULL)
-        return g_powerHandlers->lockForUser(unk);
+    if (g_pPowerHandlers != NULL)
+        return g_pPowerHandlers->lockForUser(unk);
     return 0;
 }
 
 int sceKernelPowerUnlock(int unk)
 {
-    if (g_powerHandlers == NULL)
+    if (g_pPowerHandlers == NULL)
     {
         // CB90
         int oldIntr = suspendIntr();
-        g_numPowerLock--;
+        g_iTempPowerLock--;
         resumeIntr(oldIntr);
         return 0;
     }
-    return g_powerHandlers->unlock(unk);
+    return g_pPowerHandlers->unlock(unk);
 }
 
 int sceKernelPowerUnlockForUser(int unk)
 {
-    if (g_powerHandlers != NULL)
-        return g_powerHandlers->unlockForUser(unk);
+    if (g_pPowerHandlers != NULL)
+        return g_pPowerHandlers->unlockForUser(unk);
     return 0;
 }
 
 int sceKernelPowerTick(int unk)
 {
-    if (g_powerHandlers != NULL) {
+    if (g_pPowerHandlers != NULL) {
         // CCA0
-        return g_powerHandlers->tick(unk);
+        return g_pPowerHandlers->tick(unk);
     }
     return 0;
 }
 
 int sceKernelVolatileMemLock(int unk, void **ptr, int *size)
 {
-    if (g_powerHandlers != NULL)
-        return g_powerHandlers->memLock(unk, ptr, size);
+    if (g_pPowerHandlers != NULL)
+        return g_pPowerHandlers->memLock(unk, ptr, size);
     return -1;
 }
 
 int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size)
 {
-    if (g_powerHandlers != NULL)
-        return g_powerHandlers->memTryLock(unk, ptr, size);
+    if (g_pPowerHandlers != NULL)
+        return g_pPowerHandlers->memTryLock(unk, ptr, size);
     return -1;
 }
 
 int sceKernelVolatileMemUnlock(int unk)
 {
-    if (g_powerHandlers != NULL)
-        return g_powerHandlers->memUnlock(unk);
+    if (g_pPowerHandlers != NULL)
+        return g_pPowerHandlers->memUnlock(unk);
     return -1;
 }
 
 int sceKernelPowerRebootStart(int unk)
 {
-    if (g_powerHandlers != NULL)
-        return g_powerHandlers->rebootStart(unk);
+    if (g_pPowerHandlers != NULL)
+        return g_pPowerHandlers->rebootStart(unk);
     return 0;
 }
 
@@ -137,7 +139,7 @@ int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param
     if (reg < 0 || reg >= 32)
         return -1;
     int oldIntr = suspendIntr();
-    SceSuspendHandler *cur = &g_suspendHandlers[reg];
+    SceSuspendHandler *cur = &g_SuspendHandlers[reg];
     cur->handler = handler;
     cur->param = param;
     cur->gp = pspGetGp();
@@ -150,7 +152,7 @@ int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *pa
     if (reg < 0 || reg >= 32)
         return -1;
     int oldIntr = suspendIntr();
-    SceResumeHandler *cur = &g_resumeHandlers[reg];
+    SceResumeHandler *cur = &g_ResumeHandlers[reg];
     cur->handler = handler;
     cur->param = param;
     cur->gp = pspGetGp();
@@ -161,7 +163,7 @@ int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *pa
 int sceKernelDispatchSuspendHandlers(int unk)
 {
     int oldGp = pspGetGp();
-    SceSuspendHandler *cur = &g_suspendHandlers[0];
+    SceSuspendHandler *cur = &g_SuspendHandlers[0];
     int i;
     // CEB0
     for (i = 0; i < 32; i++)
@@ -182,7 +184,7 @@ int sceKernelDispatchSuspendHandlers(int unk)
 int sceKernelDispatchResumeHandlers(int unk)
 {
     int oldGp = pspGetGp();
-    SceResumeHandler *cur = &g_resumeHandlers[31];
+    SceResumeHandler *cur = &g_ResumeHandlers[31];
     // CF40
     int i;
     for (i = 0; i < 32; i++)

@@ -1,9 +1,9 @@
-# Copyright (C) 2011, 2012 The uOFW team
+# Copyright (C) 2011, 2012, 2013 The uOFW team
 # See the file COPYING for copying permission.
 
+#include "../../include/common_asm.h"
+
     .text
-    .set noat
-    .set noreorder
 
     .global sceKernelDcacheWBinvAll
     .global sceKernelIcacheClearAll
@@ -14,13 +14,13 @@
 
     .ent sceKernelDcacheWBinvAll
 sceKernelDcacheWBinvAll:
-    mfc0    $a2, $16
+    mfc0    $a2, COP0_STATE_CONFIG
     ext     $a1, $a2, 6, 3
     li      $a0, 1
     addiu   $v0, $a1, 12
     sllv    $a1, $a0, $v0
     srl     $a0, $a1, 1
-    beqz    $a0, exit1
+    beqz    $a0, exit
     move    $v1, $zero
 
 loc_0000746C:
@@ -30,7 +30,7 @@ loc_0000746C:
     sltu    $a3, $v1, $a0 
     bnez    $a3, loc_0000746C
 
-exit1:
+exit:
     jr      $ra
     nop
     .end sceKernelDcacheWBinvAll
@@ -41,13 +41,13 @@ exit1:
 ##
     .ent sceKernelIcacheClearAll
 sceKernelIcacheClearAll:
-    mfc0       $a2, $16
+    mfc0       $a2, COP0_STATE_CONFIG
     ext        $a1, $a2, 9, 3
     li         $a0, 1
     addiu      $v0, $a1, 12
     sllv       $a1, $a0, $v0
     srl        $a0, $a1, 1
-    beqz       $a0, exit2
+    beqz       $a0, exit1
     move       $v1, $zero
 
 loc_000074AC:		
@@ -58,7 +58,7 @@ loc_000074AC:
     bnez       $a3, loc_000074AC
     nop        
 
-exit2:
+exit1:
     jr         $ra
     nop  
     .end sceKernelIcacheClearAll

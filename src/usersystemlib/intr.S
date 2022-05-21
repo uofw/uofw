@@ -1,6 +1,8 @@
 # Copyright (C) 2011, 2012, 2013 The uOFW team
 # See the file COPYING for copying permission.
 
+#include "../../include/common_asm.h"
+
     .text
     .set noat
     .set noreorder
@@ -17,8 +19,8 @@
 
     .ent sceKernelCpuSuspendIntr
 sceKernelCpuSuspendIntr:
-    mfic        $v0, $0
-    mtic        $0, $0
+    mfic        $v0, INTR_CTRL_STATE
+    mtic        $zero, INTR_CTRL_STATE
     nop
     nop
     nop
@@ -36,7 +38,7 @@ sceKernelCpuSuspendIntr:
 
     .ent sceKernelCpuResumeIntr
 sceKernelCpuResumeIntr:
-    mtic        $a0, $0
+    mtic        $a0, INTR_CTRL_STATE
     nop
     nop
     nop

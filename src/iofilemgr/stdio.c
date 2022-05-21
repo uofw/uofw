@@ -53,9 +53,9 @@ SceIoDrvFuncs g_TtyOps = // 6948
 
 SceIoDrv g_TtyDevTbl = { "ttyproxy", 0x00000003, 0x00000001, "TTY2MsgPipe PROXY", &g_TtyOps }; // 69A0
 
-int g_stdin = -1; // 6AD0
-int g_stdout = -1; // 6AD4
-int g_stderr = -1; // 6AD8
+SceUID g_stdin = -1; // 6AD0
+SceUID g_stdout = -1; // 6AD4
+SceUID g_stderr = -1; // 6AD8
 
 int g_debugRead; // 6AF0
 int g_pipeList[6]; // 6AF4
@@ -169,6 +169,7 @@ int stdoutReset(int flags, SceMode mode)
 void printf_char(void *ctx, int ch)
 {   
     dbg_printf("Calling %s\n", __FUNCTION__);
+    if (ch < 0x200) dbg_printf("print %c\n", ch);
     if (ch == 0x200) {
         *(short*)(ctx + 2) = 0;
         return;
@@ -377,7 +378,9 @@ char *fdgets(char *s, int fd)
                 *curS = '\0';
                 return NULL;
             }
+            /* FALLTHRU */
         case '\n':
+            /* FALLTHRU */
         case '\r':
             // 0748
             if (sceKernelDebugEcho() != 0)
@@ -386,6 +389,7 @@ char *fdgets(char *s, int fd)
             return s;
         case '\t':
             c = ' ';
+            /* FALLTHRU */
         default:
             // 06DC
             if ((look_ctype_table(c) & 0x97) != 0 && curS < end)
@@ -446,13 +450,13 @@ char *gets(char *s)
 int sceKernelStdioRead()
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 int sceKernelStdioLseek()
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 void sceKernelStdioSendChar()
@@ -463,19 +467,19 @@ void sceKernelStdioSendChar()
 int sceKernelStdioWrite()
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 int sceKernelStdioClose()
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 int sceKernelStdioOpen()
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return 0x80020001;
+    return SCE_ERROR_KERNEL_ERROR;
 }
 
 int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
@@ -602,14 +606,14 @@ int _sceTtyProxyDevClose(SceIoIob *iob)
 SceOff _sceTtyProxyDevLseek()
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return 0x80020323;
+    return SCE_ERROR_KERNEL_BAD_FILE_DESCRIPTOR;
 }
 
 int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribute__((unused)), int inlen __attribute__((unused)), void *outdata __attribute__((unused)), int outlen __attribute__((unused)))
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     if (cmd != 0x00134002)
-        return 0x80020324;
+        return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     int oldK1 = pspShiftK1();
     int k1 = 24;
     if (sceIoGetIobUserLevel(iob) == 8)
@@ -639,12 +643,12 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
         return 0;
     }
     if (sceKernelGetThreadmanIdType(id) == 7)
-        return 0x800200D2;
-    SceSysmemUIDControlBlock *blk;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
+    SceSysmemUidCB *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
-        return 0x800200D1;
-    if (pspK1IsUserMode() && (blk->parent->attribute & 2) != 0)
-        return 0x800200D1;
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
+    if (pspK1IsUserMode() && (blk->PARENT0->attr & 2) != 0)
+        return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     SceKernelMppInfo mpp;
     mpp.size = 56;
     int ret = sceKernelReferMsgPipeStatus(id, &mpp);

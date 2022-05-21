@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -6,17 +6,50 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
-#define SCE_MODULE_NAME_LEN         (27)
+#include "../pspmoduleexport.h"
 
+/** The maximum length of a module name. */
+#define SCE_MODULE_NAME_LEN                     (27)
+
+/** SceModuleInfo.modVersion */
+#define MODULE_VERSION_MINOR                    (0)
+#define MODULE_VERSION_MAJOR                    (1)
+#define MODULE_VERSION_NUMBER_CATEGORY_SIZE     (2) /* current number category size */
+
+/** Module Info section data. */
 typedef struct  {
+    /** 
+     * The attributes of a module. Bitwise OR'ed values from ::SceModuleAttribute 
+     * and ::SceModulePrivilegeLevel. 
+     */
     u16 modAttribute;
-    u8 modVersion[2];
+    /** The module version. Contains two number categories, minor, major. */
+    u8 modVersion[MODULE_VERSION_NUMBER_CATEGORY_SIZE];
+    /** The name of the module. */
     char modName[SCE_MODULE_NAME_LEN];
+    /** String terminator (always '\0'). */
     s8 terminal;
+    /** The global pointer of the module. */
     void *gpValue;
+    /** 
+     * Pointer to the first resident library entry table of the module. 
+     * This section is known as ".lib.ent". 
+     */
     void *entTop;
+    /** 
+     * Pointer to the last line of the .lib.ent section. This line is always 0 and 
+     * is known as ".lib.ent.btm". 
+     */
     void *entEnd;
+    /** 
+     * Pointer to the first stub library entry table of the module. 
+     * This section is known as "lib.stub". 
+     */
     void *stubTop;
+    /** 
+     * Pointer to the last line of the lib.stub section. This line is always 0 and 
+     * is known as ".lib.stub.btm". 
+     */
     void *stubEnd;
 } SceModuleInfo;
 
@@ -41,6 +74,8 @@ extern char _gp[];
  * Module type attributes. 
  */
 enum SceModuleAttribute {
+    /** No module attributes. */
+    SCE_MODULE_ATTR_NONE             = 0x0000,
     /** Resident module - stays in memory. You cannot unload such a module. */
     SCE_MODULE_ATTR_CANT_STOP        = 0x0001,
     /** 
@@ -66,7 +101,9 @@ enum SceModulePrivilegeLevel {
     SCE_MODULE_MS                   = 0x0200,
     /** Module Gamesharing. */
     SCE_MODULE_USB_WLAN             = 0x0400,
+    /** Application module. */
     SCE_MODULE_APP                  = 0x0600,
+    /** VSH module. */
     SCE_MODULE_VSH                  = 0x0800,
     /** Highest permission. */
     SCE_MODULE_KERNEL               = 0x1000,
@@ -76,17 +113,40 @@ enum SceModulePrivilegeLevel {
     SCE_MODULE_KIRK_SEMAPHORE_LIB   = 0x4000,
 };
 
-#define SDK_VERSION                     0x06060010
+#define SCE_MODULE_PRIVILEGE_LEVELS     (SCE_MODULE_MS | SCE_MODULE_USB_WLAN | SCE_MODULE_APP | SCE_MODULE_VSH | SCE_MODULE_KERNEL)
+
+#define SCE_MODINFO_SECTION_NAME        ".rodata.sceModuleInfo"
+
+#define SDK_VERSION                     0x06060010 /** Release X.Y.Z -> 0xXXYYZZZZ */
 #define SCE_SDK_VERSION(ver)            const int module_sdk_version = ver
 
-#define SCE_MODULE_BOOTSTART(name)      int module_start(int arglen, void *argp) __attribute__((alias(name))); \
-                                        int module_bootstart(int arglen, void *argp) __attribute__((alias(name)))
+/**
+ * module START thread return value
+ */
+#define SCE_KERNEL_START_SUCCESS        (0) /** The module could be started successfully. */
+#define SCE_KERNEL_START_FAIL           (1) /** The module could not be started successfully. */
 
-#define SCE_MODULE_REBOOT_BEFORE(name)  int module_reboot_before(void) __attribute__((alias(name)))
-#define SCE_MODULE_REBOOT_PHASE(name)   int module_reboot_phase(void) __attribute__((alias(name)))
-#define SCE_MODULE_STOP(name)           int module_stop(void) __attribute__((alias(name)))
+#define SCE_KERNEL_RESIDENT             (SCE_KERNEL_START_SUCCESS) /** After executing its start function, the module will remain in memory (resident library). */
+#define SCE_KERNEL_NO_RESIDENT          (SCE_KERNEL_START_FAIL) /** The module will be unloaded after executing its start function. */
 
-#define SCE_MODULE_INFO(name, attributes, major_version, minor_version) \
+/**
+ * module STOP thread return value
+ */
+#define SCE_KERNEL_STOP_SUCCESS         (0) /** The module could be stopped successfully. */
+#define SCE_KERNEL_STOP_FAIL            (1) /** The module could not be stopped successfully. */
+
+/**
+ * Module entry functions.
+ */
+#define SCE_MODULE_BOOTSTART(name)      int module_start(SceSize argSize, const void *argBlock) __attribute__((alias(name))); \
+                                        int module_bootstart(SceSize argSize, const void *argBlock) __attribute__((alias(name)))
+
+#define SCE_MODULE_REBOOT_BEFORE(name)  int module_reboot_before(void *arg0, s32 arg1, s32 arg2, s32 arg3) __attribute__((alias(name)))
+#define SCE_MODULE_REBOOT_BEFORE_FOR_USER(name)  int module_reboot_before(SceSize arglen, void *argp) __attribute__((alias(name)))
+#define SCE_MODULE_REBOOT_PHASE(name)   int module_reboot_phase(s32 arg1, void *arg2, s32 arg3, s32 arg4) __attribute__((alias(name)))
+#define SCE_MODULE_STOP(name)           int module_stop(SceSize argSize, const void *argBlock) __attribute__((alias(name)))
+
+#define SCE_MODULE_INFO(name, attributes, majorVersion, minorVersion) \
     __asm__ (                                                       \
     "    .set push\n"                                               \
     "    .section .lib.ent.top, \"a\", @progbits\n"                 \
@@ -111,9 +171,9 @@ enum SceModulePrivilegeLevel {
     extern char __lib_ent_top[], __lib_ent_bottom[];                \
     extern char __lib_stub_top[], __lib_stub_bottom[];              \
     const SceModuleInfo module_info                                 \
-        __attribute__((section(".rodata.sceModuleInfo"),            \
+        __attribute__((section(SCE_MODINFO_SECTION_NAME),            \
                    aligned(16), unused)) = {                        \
-      attributes, { minor_version, major_version }, name, 0, _gp,   \
+      attributes, { minorVersion, majorVersion }, name, 0, _gp,   \
       __lib_ent_top, __lib_ent_bottom,                              \
       __lib_stub_top, __lib_stub_bottom                             \
     }

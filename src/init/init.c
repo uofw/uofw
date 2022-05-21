@@ -1,1179 +1,963 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
-#include <common_imp.h>
-
-#define IS_JUMP(op) ((op & 0xFC000000) == 0x0C000000)
-#define JUMP(ref, addr) ((ref & 0xF0000000) | ((addr & 0x03FFFFFFF) << 2))
-
-// 21F8
-char g_pspbtcnfPath[] = "/kd/pspbtcnf.txt";
-
-char g_220C[] = "SceInitFileName";
-char g_221C[] = "SceInitUserParam";
-char g_2230[] = "SceInitVSHParam";
-char g_2240[] = "SceInitParamsfo";
-char g_2250[] = "SceInitDiscImage";
-
-char g_2294[] = "InitThreadEntry";
-
-char g_22A4[] = "backup area";
-
-typedef struct {
-    char *game;
-    int **strcpy256;
-    int numStrcpy256;
-    int **wcscpy256;
-    int numWcscpy256;
-} SceJumpFixup;
-
-int *g_2840[] = {(int*)0x089C07AC};
-int *g_2844[] = {(int*)0x0888EA48, (int*)0x0888EA84, (int*)0x0888EAB4, (int*)0x0888EAF0, (int*)0x0888EB20, (int*)0x0888EB88, (int*)0x0888EBB8};
-int *g_2860[] = {(int*)0x089C08F0};
-int *g_2864[] = {(int*)0x0888EA40, (int*)0x0888EA7C, (int*)0x0888EAAC, (int*)0x0888EAE8, (int*)0x0888EB18, (int*)0x0888EB80, (int*)0x0888EBB0};
-int *g_2880[] = {(int*)0x089C0928};
-int *g_2884[] = {(int*)0x0888EA48, (int*)0x0888EA84, (int*)0x0888EAB4, (int*)0x0888EAF0, (int*)0x0888EB20, (int*)0x0888EB88, (int*)0x0888EBB8};
-
-char g_ULUS10141[] = "ULUS10141";
-char g_ULES00557[] = "ULES00557";
-char g_ULES00558[] = "ULES00558";
-char g_ULES00559[] = "ULES00559";
-char g_ULES00560[] = "ULES00560";
-char g_ULES00561[] = "ULES00561";
-char g_ULES00562[] = "ULES00562";
-char g_ULAS42082[] = "ULAS42082";
-char g_ULKS46066[] = "ULKS46066";
-char g_ULJM05213[] = "ULJM05213";
-
-// 22E4
-SceJumpFixup jumpFixups[] =
-{
-    {g_ULUS10141, g_2840, 1, g_2844, 7},
-    {g_ULES00557, g_2840, 1, g_2844, 1},
-    {g_ULES00558, g_2840, 1, g_2844, 1},
-    {g_ULES00559, g_2840, 1, g_2844, 1},
-    {g_ULES00560, g_2840, 1, g_2844, 1},
-    {g_ULES00561, g_2840, 1, g_2844, 1},
-    {g_ULES00562, g_2840, 1, g_2844, 1},
-    {g_ULAS42082, g_2880, 1, g_2884, 1},
-    {g_ULKS46066, g_2880, 1, g_2884, 1},
-    {g_ULJM05213, g_2860, 1, g_2864, 1}
-};
-
-typedef struct
-{
-    int unk_0; // module filename?
-    void *buf; // module buffer?
-    int size; // PRX size?
-    int unk_12;
-    int attr;
-    int unk_20;
-    int argSize;
-    int argPartId;
-} SceLoadCoreBootModuleInfo;
-
-typedef struct
-{
-    int addr;
-    int size; // 4
-    int attr; // 8
-    SceUID partId; // 12
-    int unk_16;
-    int unk_20;
-    int unk_24;
-} SceLoadCoreProtectInfo;
-
-typedef struct
-{ 
-    int membase; // 0
-    int memsize; // 4
-    int loadedMods; // 8
-    int numMods; // 12
-    SceLoadCoreBootModuleInfo *mods; // 16
-    int unk_20;
-    char unk_24;
-    char unk_25[3]; // ?
-    int numProts; // 28
-    SceLoadCoreProtectInfo *prots; // 32
-    int modProtId;
-    int modArgProtId; // 40
-    int unk_44;
-    int unk_48; // 48
-    int unk_52;
-    char *configfile; // 56
-    int unk_60;
-    // the following wasn't in UTOPIA's structure
-    int unk_64;
-    int unk_68;
-    int unk_72;
-    int unk_76;
-} SceLoadCoreBootInfo;
-
-typedef struct
-{
-    int addr;
-    int size;
-} SceResetVectorInfo;
-
-typedef struct
-{
-    int type;
-    int addr;
-    int addr2;
-    SceResetVectorInfo resetVectorInfo;
-    int unk20;
-    int hasCfgFile; // 24
-    int unk28, unk32, unk...
-} SceInit;
-
-SceInit g_init; // 28A0
-
-// -------------------------------
-
-// 0000
-/* 'bzero' two times. Used for "reset vector", sets a buffer to 0.
- *
- * buf: The buffer to empty.
- * param: size The size of the buffer.
+/**
+ * uofw/src/init/init.c
+ * 
+ * Init is responsible for loading the rest of the PSP kernel modules
+ * listed in the PSP boot configuration file (as of now: /kd/pspbtcnf.txt) 
+ * right below Init.
+ * 
+ * When the user starts a game, an application or an updater in the XMB, the
+ * PSP kernel reboots and Init initializes the kernel modules again, as well
+ * as the corresponding game/application/updater modules.
+ * 
+ * Init itself is loaded and started by Loadcore and stops and unloads itself
+ * after loading all the modules it has to.
  */
-void bzero2(int *buf, int size)
-{
-    int *curBuf = buf;
-    // 000C
-    do
-    {
-        *(curBuf++) = 0;
-    } while (buf + size != curBuf);
-    // 0018 -> WTF?
-    curBuf = buf;
-    do
-    {
-        *(curBuf++) = 0;
-    } while (buf + size != curBuf);
-    BREAK(0);
-}
 
-// 0028
-void strcpy256(char *dst, char *src)
-{
-    int i;
-    for (i = 255; i >= 0; i--)
-    {
-        char c = (i == 0) ? '\0' : *dst;
-        dst++;
-        *src = c;
-        if (c == '\0')
-            break;
-        src++;
-    }
-}
+#include <common_imp.h>
+#include <init.h>
+#include <interruptman.h>
+#include <iofilemgr_kernel.h>
+#include <iofilemgr_stdio.h>
+#include <loadcore.h>
+#include <loadexec_kernel.h>
+#include <modulemgr_init.h>
+#include <modulemgr_kernel.h>
+#include <modulemgr_user.h>
+#include <sysmem_user.h>
+#include <sysmem_kernel.h>
+#include <sysmem_kdebug.h>
+#include <sysmem_sysclib.h>
+#include <sysmem_suspend_kernel.h>
+#include <sysmem_utils_kernel.h>
+#include <threadman_kernel.h>
 
-// 0054
-void wcscpy256(short *dst, short *src)
-{
-    int i;
-    for (i = 255; i >= 0; i--)
-    {
-        short c = (i == 0) ? '\0' : *dst;
-        dst++;
-        *src = c;
-        if (c == '\0')
-            break;
-        src++;
-    }
-}
+#include "init_int.h"
+#include "libcUtils.h"
+#include "gamePatching.h"
 
-void sub_0080()
-{
-    void *info = sceKernelGetGameInfo();
-    int lastStrcpyOp, lastWcscpyOp;
-    lastStrcpyOp = lastWcscpyOp = 0;
-    if (info == NULL)
-        return;
-    // 00C4
-    int j;
-    for (j = 0; j < 10; j++)
-    {
-        if (strcmp(info + 68, jumpFixups[j].game) == 0)
-        {
-            // 00E8
-            int i;
-            for (i = 0; i < jumpFixups[j].numStrcpy256; i++)
-            {
-                int *ptr = jumpFixups[j].strcpy256[i];
-                if (IS_JUMP(*ptr)) {
-                    lastStrcpyOp = JUMP((int)ptr, *ptr);
-                    *ptr = JUMP(0, 0x08800000);
-                }
-                // 0128
-            }
-            // 0140
-            // 0150
-            for (i = 0; i < jumpFixups[j].numWcscpy256; i++)
-            {
-                int *ptr = jumpFixups[j].wcscpy256[i];
-                if (IS_JUMP(*ptr)) {
-                    lastWcscpyOp = JUMP((int)ptr, *ptr);
-                    *ptr = JUMP(0, 0x08800000 + wcscpy256 - strcpy256);
-                }
-                // 0194
-            }
-            // 01AC
-        }
-        // 01B0
-    }
-    if (lastWcscpyOp != 0 || lastStrcpyOp != 0) {
-        // 01D0
-        memcpy(0x08800000, strcpy256, (int)&sub_0080 - strcpy256);
-    }
-    // 01EC
-    UtilsForKernel_79D1C3FA();
-}
+SCE_MODULE_INFO(INIT_MODULE_NAME, SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 
+                1, 11);
+SCE_MODULE_BOOTSTART("InitInit");
+SCE_SDK_VERSION(SDK_VERSION);
 
-void sub_0218(SceLoadCoreBootInfo *bootInfo)
-{
-    char *src = bootInfo->configfile;
-    if (src == NULL)
-    {
-        // 024C
-        AT_SW(0, &g_init.hasCfgFile);
-    }
+#define RAM_SIZE_32_MB                      (0x2000000)
+
+/* 
+ * The PSP boot configuration file containing the kernel modules to boot and
+ * and the order in which each module is booted. 
+ */
+#define PSP_BOOT_CONFIG_FILE_PATH           "/kd/pspbtcnf.txt"
+
+/* The size of the PSP boot configuration file copy used by Init. */
+#define INIT_BOOT_CONFIG_FILE_COPY_SIZE     (256)
+
+/* Init's internal control block. */
+SceInit *g_init;
+
+/* Pointer to a memory clear function executed in StopInit(). */
+void (*g_MemClearFunc)(void *, SceSize);
+/* The start address of the memory block to clear. */
+void *g_MemBase;
+/* The size of the particular memory block to clear. */
+SceSize g_MemSize;
+
+/* A check if there is a PSP_BOOT_CONFIG_FILE. */
+SceBool g_hasConfigFile;
+/* A copy of a subpart of the PSP_BOOT_CONFIG_FILE. */
+char g_configFileCopy[INIT_BOOT_CONFIG_FILE_COPY_SIZE];
+
+/* A buffer containing information about a NP-DRM module. */
+SceNpDrm g_npDrmData;
+
+/* A copy of the module's boot information used by Init to boot the module. */
+SceLoadCoreBootModuleInfo g_mod;
+
+/* Initialize Init's control block. */
+static void InitCBInit(const SceLoadCoreBootInfo *bootInfo)
+{   
+    if (bootInfo->configFile == NULL)
+        g_hasConfigFile = SCE_FALSE;
     else {
-        strncpy(&g_28A0 + 28, src, 256);
-        AT_SW(1, &g_init.hasCfgFile);
+        strncpy(g_configFileCopy, bootInfo->configFile, sizeof g_configFileCopy);
+        g_hasConfigFile = SCE_TRUE;
     }
-    // 0254
-    *(int*)(g_28A0 + 92) = 0x100;
-    *(int*)(g_28A0 + 96) = 1;
-    AT_SW(-1, &g_28A0 + 296);
-    AT_SW(0, &g_28A0 + 300);
-    g_init.type = 0;
-    *(int*)(g_28A0 + 104) = 0;
-    *(int*)(g_28A0 + 108) = 0;
-    *(int*)(g_28A0 + 124) = 0;
-    AT_SW(32, &g_28A0 + 288);
-    g_init.addr = 0;
-    g_init.addr2 = 0;
-    *(int*)(g_28A0 + 100) = 0;
-    *(int*)(g_28A0 + 112) = 0;
-    *(int*)(g_28A0 + 116) = 0;
-    *(int*)(g_28A0 + 120) = 0;
-    // 02BC
-    int i;
-    for (i = 0; i < 16; i++)
-        AT_SBADD(0, &g_28A0 + 304, i);
+    
+    g_init->applicationType = SCE_INIT_APPLICATION_VSH;
+    g_init->numPowerLocks = 1;
+    g_init->apiType = 0;
+    g_init->lptSummary = 0;
+    g_init->fileModAddr = NULL;
+    g_init->discModAddr = NULL;
+    g_init->paramSfoBase = NULL;
+    g_init->paramSfoSize = 0;
+    g_init->bootCallbacks1 = NULL;
+    g_init->curBootCallback1 = NULL;
+    g_init->bootCallbacks2 = NULL;
+    g_init->curBootCallback2 = NULL;
+    
+    g_npDrmData.size = sizeof(SceNpDrm);
+    g_npDrmData.fileOffset = SCE_KERNEL_VALUE_UNITIALIZED;
+    
+    u32 i;
+    for (i = 0; i < sizeof g_npDrmData.keyData; i++)
+        g_npDrmData.keyData[i] = 0;
 }
 
-int sub_02E0(int err)
+/* Exit Init and restart the kernel. */
+static s32 ExitInit(s32 error)
 {
-    *(int*)(g_28A0 + 12) = 48;
-    int blkId = InitForKernel_2C6E9FE9(0);
-    void *ptr;
-    if (blkId <= 0)
-    {
-        // 032C
-        ptr = g_28A0 + 60;
-        *(int*)(ptr + 0) = 32;
-        *(int*)(ptr + 4) = 32; 
-        *(int*)(ptr + 8) = 0;
-        *(int*)(ptr + 16) = 0;
+    void *blk;
+    SceUID blkId;
+    
+    g_init->vshParam.size = sizeof(SceKernelLoadExecVSHParam);
+    blkId = sceKernelGetChunk(0);
+    if (blkId <= 0) {
+        blk = &g_init->unk60;
+        g_init->unk60 = 32;
+        g_init->unk64 = 32; 
+        g_init->unk68 = 0;
+        g_init->unk76 = 0;
+    } else
+        blk = sceKernelGetBlockHeadAddr(blkId);
+
+    *(s32 *)(blk + 24) = error;
+    g_init->vshParam.args = *(s32 *)blk;
+    g_init->vshParam.configFile = PSP_BOOT_CONFIG_FILE_PATH;
+    g_init->vshParam.vshmainArgp = blk;
+    g_init->vshParam.string = NULL;
+    g_init->vshParam.argp = blk;
+    g_init->vshParam.vshmainArgs = *(s32 *)blk;
+    g_init->vshParam.key = NULL;
+    
+    blkId = sceKernelGetChunk(4);
+    if (blkId <= 0) {
+        g_init->vshParam.extArgp = NULL;
+        g_init->vshParam.extArgs = 0;
+    } else {
+        g_init->vshParam.extArgs = SysMemForKernel_CC31DEAD(blkId);
+        g_init->vshParam.extArgp = sceKernelGetBlockHeadAddr(blkId);
     }
-    else
-        ptr = sceKernelGetBlockHeadAddr(blkId);
-    // 0348
-    *(int*)(ptr + 24) = err;
-    *(int*)(g_28A0 + 16) = *(int*)(ptr + 0);
-    *(int*)(g_28A0 + 36) = g_pspbtcnfPath;
-    *(int*)(g_28A0 + 32) = ptr;
-    *(int*)(g_28A0 + 40) = 0;
-    *(int*)(g_28A0 + 20) = ptr;
-    *(int*)(g_28A0 + 28) = *(int*)(ptr + 0);
-    g_init.hasCfgFile = 0;
-    blkId = InitForKernel_2C6E9FE9(4);
-    if (blkId <= 0)
-    {
-        // 03C0
-        *(int*)(g_28A0 + 52) = 0;
-        *(int*)(g_28A0 + 48) = 0;
-    }
-    else {
-        *(int*)(g_28A0 + 48) = SysMemForKernel_CC31DEAD(blkId);
-        *(int*)(g_28A0 + 52) = sceKernelGetBlockHeadAddr(blkId);
-    }
-    // 03C8
-    sceKernelExitVSHKernel(g_28A0 + 12);
-    return 0;
+    /* Reboot the kernel. */
+    sceKernelExitVSHKernel(&g_init->vshParam);
+    return SCE_ERROR_OK;
 }
 
-int sub_03F4()
+/* Check if the kernel has to be re-started. */
+static u32 ExitCheck(void)
 {
-    int partId = InitForKernel_2C6E9FE9();
-    if (partId > 0)
-    {
-        int addr = sceKernelGetBlockHeadAddr(partId);
-        int arg = *(int*)(addr + 20);
-        if (arg != 0)
-            sub_02E0(arg);
-    }
-    return 0;
+    SceUID blkId;
+    void *blk;
+    
+    blkId = sceKernelGetChunk(0);
+    if (blkId <= 0)
+        return SCE_ERROR_OK;
+    
+    blk = sceKernelGetBlockHeadAddr(blkId);
+    s32 arg = *(s32 *)(blk + 20);
+    if (arg != 0)
+        ExitInit(arg);
+        
+    return SCE_ERROR_OK;
 }
 
-void sub_0438()
+static void PowerUnlock(void)
 {
     sceKernelSetSystemStatus(0x20000);
-    if (*(int*)(g_28A0 + 96) != 0 && sceSuspendForKernel_3AEE7261(0) >= 0)
-        *(int*)(g_28A0 + 96)--;
+    if (g_init->numPowerLocks != 0 && sceKernelPowerUnlock(SCE_KERNEL_POWER_LOCK_DEFAULT) >= SCE_ERROR_OK)
+        g_init->numPowerLocks--;
 }
 
-int sub_048C(int arg)
+/* Call the registered boot callbacks of the loaded modules. */
+static void invoke_init_callback(s32 arg)
 {
-    int i, unk;
-    int *ptr;
-    if (arg >= 4)
-    {
-        // 04DC
-        ptr = *(int*)(g_28A0 + 120);
+    s32 i; 
+    s32 unk;
+    SceBootCallback *bootCallBacks;
+    SceKernelBootCallbackFunction bootCbFunc;
+    
+    if (arg >= 4) {
+        bootCallBacks = g_init->bootCallbacks2;
         i = 4;
         unk = 5;
-    }
-    else
-    {
-        ptr = *(int*)(g_28A0 + 112);
+    } else {
+        bootCallBacks = g_init->bootCallbacks1;
         i = 0;
         unk = 4;
     }
-    int starti = i;
-    // 04EC
-    // 04F0
-    for (; i <= arg; i++)
-    {
-        int *curPtr = ptr;
-        if ((arg == unk - 1) && (arg == i))
-        {
-            if (arg >= 4)
-                *(int*)(g_28A0 + 120) = 0;
+    s32 starti = i;
+    
+    for (; i <= arg; i++) {
+        if ((arg == (unk - 1)) && (arg == i)) {
+            if (arg >= 4) //0x00000514
+                g_init->bootCallbacks2 = NULL;
             else
-                *(int*)(g_28A0 + 112) = 0;
+                g_init->bootCallbacks1 = NULL;
         }
-        // 0520
-        // 0530
-        while (*curPtr != 0)
-        {
-            int ptr = *curPtr;
-            if (starti + (ptr & 3) == i)
-            {
-                int (*func)(char*, int, int) = (ptr & 0xFFFFFFFC);
-                if (i != unk - 1)
-                    func((char*)ptr, 1, 0);
+        s32 j;
+        for (j = 0; bootCallBacks[j].bootCBFunc != NULL; j++) { 
+            if ((starti + ((s32)bootCallBacks[j].bootCBFunc & 3)) == i) {
+                bootCbFunc = (SceKernelBootCallbackFunction)((s32)bootCallBacks[j].bootCBFunc & ~0x3);
+                if (i != (unk - 1))
+                    bootCbFunc((void *)bootCallBacks, 1, NULL);
                 else
-                    func((char*)curPtr + 2, 0, 0);
-                // 0564
+                    bootCbFunc(((void *)&bootCallBacks[j]) + 2, 0, NULL);
             }
-            curPtr += 2;
-            // 056C
         }
-        // 057C
-        if (i == arg - 1 && ptr < curPtr)
-        {
-            // 0590
-            do
-            {
-                curPtr -= 2;
-                if ((*curPtr & 3) + starti >= arg)
+        if (i == (arg - 1)) {
+            while (j > 0) {
+                j--; //0x00000590
+                if ((((s32)bootCallBacks[j].bootCBFunc & 3) + starti) >= arg)
                     break;
-                *curPtr = 0;
-            } while (ptr < curPtr);
-            // 05B4
+                bootCallBacks[j].bootCBFunc = NULL;
+            }
         }
-        // 05B8
     }
 }
 
-int sub_05F0()
-{
-    sub_048C(3);
-    sub_0080();
+static u32 sub_05F0(void)
+{   
+    s32 pspModel;
+    s32 apiType;
+    s32 intrState;
+    
+    invoke_init_callback(3);
+    patchGames();   
     sceKernelSetDNAS(0);
-    int oldIntr = sceKernelCpuSuspendIntr();
-    if (sceKernelGetModel() >= 3)
-    {
-        switch (InitForKernel_7233B5BC())
-        {
-        case 256:
-        case 272:
-        case 768:
+    
+    intrState = sceKernelCpuSuspendIntr();
+    
+    pspModel = sceKernelGetModel();
+    if (pspModel >= PSP_4000) {
+        apiType = sceKernelApplicationType();
+        switch (apiType) {
+        case SCE_INIT_APPLICATION_VSH: 
+        case SCE_INIT_APPLICATION_UPDATER: 
+        case SCE_INIT_APPLICATION_POPS:
             UtilsForKernel_39FFB756(81);
             break;
-    
-        case 512:
         default:
             UtilsForKernel_39FFB756(0);
             break;
         }
     }
-    // 0684
-    sceKernelCpuResumeIntr(oldIntr);
-    sub_0438();
-    return 0;
+    sceKernelCpuResumeIntr(intrState);
+    PowerUnlock();
+    return SCE_ERROR_OK;
 }
 
-int sub_06A8(SceLoadCoreBootInfo *bootInfo)
+/* 
+ * Free memory used by protected modules and free the memory containing the 
+ * information about the modules to boot on a kernel (re-)start.
+ */
+static s32 CleanupPhase1(SceLoadCoreBootInfo *bootInfo)
 {
-    if (g_init.addr2 > 0)
-        return 0;
-    AT_SW(g_init.addr2 + 1, &g_init.addr2);
-    // 06F4
-    int i;
-    for (i = 0; i < bootInfo->numProts; i++)
-    {
-        SceLoadCoreProtectInfo *prot = &bootInfo->prots[i];
-        if ((prot->attr & 0xFFFF) == 0x200 && (prot->attr & 0x10000) != 0) {
-            sceKernelFreePartitionMemory(prot->partId);
-            prot->attr &= 0xFFFEFFFF;
-        }
-        // (0734)
-        // 0738
-    }
-    // 0744
-    if (bootInfo->mods == NULL)
-        return 0;
-    int sp1, sp2[3];
-    int ret = sceKernelQueryMemoryInfo(bootInfo->mods, &sp1, sp2);
-    if (ret < 0)
-        return ret;
-    sceKernelFreePartitionMemory(sp2[0]);
-    return 0;
-}
-
-int sub_0790(SceLoadCoreBootInfo *bootInfo)
-{
-    int i;
-    for (i = 0; i < bootInfo->numProts; i++)
-    {
-        SceLoadCoreProtectInfo *prot = &bootInfo->prots[i];
-        switch (prot->attr & 0xFFFF)
-        {
-        case 256:
-        case 512:
-            // (085C)
-            // 0860
-            if ((prot->addr & 0x10000) != 0) {
-                sceKernelFreePartitionMemory(prot->partId);
-                prot->attr &= 0xFFFEFFFF;
-            }
-            break;
+    SceUID partId;
+    SceUID blkId;
+    s32 status;
     
-        case 2:
-            // 082C
-            if ((prot->addr & 0x10000) != 0)
-            {
+    if ((u32)g_init->discModAddr > 0)
+        return SCE_ERROR_OK;
+    
+    g_init->discModAddr += 1;
+    
+    s32 i;
+    for (i = 0; i < bootInfo->numProtects; i++) {
+        SceLoadCoreProtectInfo *prot = &bootInfo->protects[i];
+        if (GET_PROTECT_INFO_TYPE(prot->attr) == 0x200 
+                && (GET_PROTECT_INFO_STATE(prot->attr) & SCE_PROTECT_INFO_STATE_IS_ALLOCATED)) {
+            sceKernelFreePartitionMemory(prot->partId);
+            prot->attr = REMOVE_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, prot->attr);
+        }
+    }
+    if (bootInfo->modules == NULL)
+        return SCE_ERROR_OK;
+    
+    status = sceKernelQueryMemoryInfo((u32)bootInfo->modules, &partId, &blkId);
+    if (status < SCE_ERROR_OK)
+        return status;
+    
+    sceKernelFreePartitionMemory(blkId);
+    return SCE_ERROR_OK;
+}
+
+/*
+ * Free memory used by protected modules, free the memory containing protection
+ * information and free the memory holding the kernel boot information.
+ */
+static s32 CleanupPhase2(SceLoadCoreBootInfo *bootInfo)
+{
+    SceUID partId;
+    SceUID blkId;
+    s32 status;
+    
+    s32 i;
+    for (i = 0; i < bootInfo->numProtects; i++) {
+        SceLoadCoreProtectInfo *prot = &bootInfo->protects[i];
+        switch (GET_PROTECT_INFO_TYPE(prot->attr)) { 
+        case SCE_PROTECT_INFO_TYPE_USER_PARAM: case 0x200:
+            if (GET_PROTECT_INFO_STATE(prot->attr) & SCE_PROTECT_INFO_STATE_IS_ALLOCATED) {
                 sceKernelFreePartitionMemory(prot->partId);
-                prot->attr &= 0xFFFEFFFF;
-                g_init.addr = 0;
+                prot->attr = REMOVE_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, prot->attr);
+            }
+            break;
+        case SCE_PROTECT_INFO_TYPE_FILE_NAME:
+            if (GET_PROTECT_INFO_STATE(prot->attr) & SCE_PROTECT_INFO_STATE_IS_ALLOCATED) {
+                sceKernelFreePartitionMemory(prot->partId);
+                prot->attr = REMOVE_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, prot->attr);
+                g_init->fileModAddr = NULL;
             }
             break;
         }
-        // (0880)
-        // 0884
     }
-    int unk, partId;
-    // 0894
-    if (bootInfo->prots != NULL)
-    {
-        int ret = sceKernelQueryMemoryInfo(bootInfo->prots, &unk, &partId);
-        if (ret < 0)
-            return ret;
+    if (bootInfo->protects != NULL) {
+        status = sceKernelQueryMemoryInfo((u32)bootInfo->protects, &partId, &blkId);
+        if (status < SCE_ERROR_OK)
+            return status;
+        
         sceKernelFreePartitionMemory(partId);
     }
-    // 08C0
-    sceKernelQueryMemoryInfo(bootInfo, &unk, &partId);
+    sceKernelQueryMemoryInfo((u32)bootInfo, &partId, &blkId);
     sceKernelFreePartitionMemory(partId);
-    return 0;
+    return SCE_ERROR_OK;
 }
 
-void sub_08F8(SceLoadCoreBootInfo *bootInfo)
+/* Allocate memory for protected modules. */
+static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
 {
-    int sp[16];
-    // 092C
-    int i;
-    for (i = 0; i < bootInfo->numProts; i++)
-    {
-        SceLoadCoreProtectInfo *info = &bootInfo->prots[i];
-        switch (info->attr)
-        {
-        case 0x2:
-            // 09A8
-            if (info->size != 0)
-            {
-                SceUID id = sceKernelAllocPartitionMemory(1, g_220C, 1, info->size, 0);
-                if (id > 0)
-                {
-                    int addr = sceKernelGetBlockHeadAddr(id);
-                    memmove(addr, info->addr, info->size);
-                    info->addr = addr;
-                    info->partId = id;
-                    info->attr |= 0x10000;
+    SceUID partId;
+    SceSysmemMemoryBlockInfo blkInfo;
+    
+    s32 i;
+    for (i = 0; i < bootInfo->numProtects; i++) {
+        SceLoadCoreProtectInfo *protectInfo = &bootInfo->protects[i];
+        switch (GET_PROTECT_INFO_TYPE(protectInfo->attr)) { 
+        case SCE_PROTECT_INFO_TYPE_FILE_NAME:
+            if (protectInfo->size != 0) { //0x000009AC
+                partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitFileName", 
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
+                if (partId > 0) {
+                    void *addr = sceKernelGetBlockHeadAddr(partId);
+                    memmove(addr, (void *)protectInfo->addr, protectInfo->size);
+                    
+                    protectInfo->addr = (u32)addr;
+                    protectInfo->partId = partId;
+                    protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
                 }
             }
-            // (0A08)
-            // 0A0C
             if (i == bootInfo->modProtId)
-                g_init.addr = info->addr;
+                g_init->fileModAddr = (void *)protectInfo->addr;
             break;
-        case 0x4:
-            // 0A8C
-            if (info->size != 0)
-            {
-                SceUID id = sceKernelAllocPartitionMemory(1, g_2230, 1, info->size, 0);
-                if (id > 0)
-                {
-                    sp[0] = 56;
-                    sceKernelQueryMemoryBlockInfo(id, sp);
-                    int addr = sp[10];
-                    memmove(addr, info->addr, info->size);
-                    info->addr = addr;
-                    info->attr |= 0x10000;
-                    info->partId = id;
-                    *(int*)(addr + 4) = info->attr;
-                    *(int*)(addr + 0) = sp[11];
-                    *(int*)(addr + 24) = 0;
-                    *(int*)(addr + 20) = 0;
-                    sceKernelRegisterChunk(0, id);
+        case SCE_PROTECT_INFO_TYPE_VSH_PARAM: 
+            if (protectInfo->size != 0) {
+                partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitVSHParam", 
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
+                if (partId > 0) {
+                    blkInfo.size = sizeof blkInfo;
+                    sceKernelQueryMemoryBlockInfo(partId, &blkInfo);
+                    void *addr = (void *)blkInfo.addr;
+                    memmove(addr, (void *)protectInfo->addr, protectInfo->size);
+                    
+                    protectInfo->addr = (u32)addr;
+                    protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
+                    protectInfo->partId = partId;
+                    
+                    *(u32 *)(addr + 4) = 32;
+                    *(u32 *)(addr + 0) = blkInfo.memSize;
+                    *(s32 *)(addr + 24) = 0;
+                    *(s32 *)(addr + 20) = 0;
+                    sceKernelRegisterChunk(0, partId);
                 }
             }
             break;
-        case 0x40:
-            // 0BA0
-            if (info->size != 0)
-            {
-                SceUID id = sceKernelAllocPartitionMemory(1, g_2250, 1, info->size, 0);
-                if (id > 0)
-                {
-                    int addr = sceKernelGetBlockHeadAddr(id);
-                    memmove(addr, info->addr, info->size);
-                    info->addr = addr;
-                    info->attr |= 0x10000;
-                    info->partId = id;
-                    sceKernelRegisterChunk(3, id);
-                    g_init.addr2 = addr;
+        case SCE_PROTECT_INFO_TYPE_DISC_IMAGE:
+            if (protectInfo->size != 0) {
+                partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitDiscImage", 
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
+                if (partId > 0) {
+                    void *addr = sceKernelGetBlockHeadAddr(partId);
+                    memmove(addr, (void *)protectInfo->addr, protectInfo->size);
+                    
+                    protectInfo->addr = (u32)addr;
+                    protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
+                    protectInfo->partId = partId;
+                    
+                    sceKernelRegisterChunk(3, partId);
+                    g_init->discModAddr = addr;
                 }
             }
             break;
-        case 0x80:
-            // 0C1C
-            if (info->size != 0 && *(int*)(info->addr + 0) == info->size)
-                memcpy(&g_28A0 + 288, info->addr, 32);
+        case SCE_PROTECT_INFO_TYPE_NPDRM_DATA: 
+            if ((protectInfo->size) != 0 && (*(u32 *)(protectInfo->addr) == sizeof(SceNpDrm)))
+                memcpy(&g_npDrmData, (void *)protectInfo->addr, sizeof(SceNpDrm));
             break;
-        case 0x100:
-            // 0A28
-            if (info->size != 0)
-            {
-                SceUID id = sceKernelAllocPartitionMemory(1, g_221C, 1, info->size, 0);
-                if (id > 0)
-                {
-                    int addr = sceKernelGetBlockHeadAddr(id);
-                    memmove(addr, info->addr, info->size);
-                    info->addr = addr;
-                    info->attr |= 0x10000;
-                    info->partId = id;
+        case SCE_PROTECT_INFO_TYPE_USER_PARAM:
+            if (protectInfo->size != 0) {
+                partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitUserParam", 
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
+                if (partId > 0) {
+                    void *addr = sceKernelGetBlockHeadAddr(partId);
+                    memmove(addr, (void *)protectInfo->addr, protectInfo->size);
+                    
+                    protectInfo->addr = (u32)addr;
+                    protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
+                    protectInfo->partId = partId;
                 }
             }
             break;
-        case 0x400:
-            // 0B20
-            if (info->size != 0)
-            {
-                SceUID id = sceKernelAllocPartitionMemory(1, g_2240, 1, info->size, 0);
-                if (id > 0)
-                {
-                    int addr = sceKernelGetBlockHeadAddr(id);
-                    memmove(addr, info->addr, info->size);
-                    info->addr = addr;
-                    info->attr |= 0x10000;
-                    info->partId = id;
-                    sceKernelRegisterChunk(4, id);
-                    *(int*)(g_28A0 + 100) = addr;
-                    *(int*)(g_28A0 + 104) = info->size;
+        case SCE_PROTECT_INFO_TYPE_PARAM_SFO:
+            if (protectInfo->size != 0) { //0x00000B24
+                partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitParamsfo", 
+                        SCE_KERNEL_SMEM_High, protectInfo->size, 0);
+                if (partId > 0) { //0x00000B40
+                    void *addr = sceKernelGetBlockHeadAddr(partId);
+                    memmove(addr, (void *)protectInfo->addr, protectInfo->size);
+                    
+                    protectInfo->addr = (u32)addr;
+                    protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
+                    protectInfo->partId = partId;
+                    
+                    sceKernelRegisterChunk(4, partId);
+                    g_init->paramSfoBase = addr;
+                    g_init->paramSfoSize = protectInfo->size;
                 }
             }
             break;
         }
-        // (0C48)
-        // 0C4C
     }
-    // 0C5C
-    if (sceKernelGetChunk(0) < 0)
-    {
-        SceUID id = sceKernelAllocPartitionMemory(1, g_2230, 1, 32, 0);
-        if (id > 0)
-        {
-            sp[0] = 56;
-            sceKernelQueryMemoryBlockInfo(id, sp);
-            int addr = sp[10];
-            *(int*)(addr + 4) = 32;
-            *(int*)(addr + 0) = sp[11];
-            *(int*)(addr + 24) = 0;
-            *(int*)(addr + 8) = 0;
-            *(int*)(addr + 12) = 0;
-            *(int*)(addr + 16) = 0;
-            *(int*)(addr + 20) = 0;
-            sceKernelRegisterChunk(0, id);
+    if (sceKernelGetChunk(0) < SCE_ERROR_OK) {
+        partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitVSHParam", 
+                SCE_KERNEL_SMEM_High, 32, 0);
+        if (partId > 0) {
+            blkInfo.size = sizeof blkInfo;
+            sceKernelQueryMemoryBlockInfo(partId, &blkInfo);
+            
+            void *addr = (void *)blkInfo.addr;
+            *(s32 *)(addr + 4) = 32;
+            *(s32 *)(addr + 0) = blkInfo.memSize;
+            *(s32 *)(addr + 24) = 0;
+            *(s32 *)(addr + 8) = 0;
+            *(s32 *)(addr + 12) = 0;
+            *(s32 *)(addr + 16) = 0;
+            *(s32 *)(addr + 20) = 0;
+            sceKernelRegisterChunk(0, partId);
         }
     }
 }
 
-int sub_0CFC(SceLoadCoreBootModuleInfo *mod)
+static SceBool sub_0CFC(SceLoadCoreBootModuleInfo *mod)
 {
     SceSysmemPartitionInfo partInfo;
-    sceKernelQueryMemoryPartitionInfo(6, &partInfo);
-    return (int)UCACHED(mod->buf + mod->size) >= partInfo.startAddr;
+    
+    partInfo.size = sizeof(SceSysmemPartitionInfo);
+    sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_SC_USER_PARTITION, &partInfo);
+    
+    return ((u32)UCACHED(mod->modBuf + mod->modSize)) >= partInfo.startAddr;
 }
 
-int sub_0D4C()
+/* Clear memory blocks used by booted modules. */
+static s32 ClearFreeBlock(void)
 {
-    sceKernelFillFreeBlock(1, 0);
-    sceKernelFillFreeBlock(5, 0);
-    sceSuspendForKernel_A569E425(0);
-    int ret = sceKernelFillFreeBlock(2, 0);
-    sceKernelMemoryExtendSize();
-    sceKernelFillFreeBlock(8, 0);
-    sceKernelFillFreeBlock(11, 0);
+    s32 status;
+    
+    sceKernelFillFreeBlock(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0);
+    sceKernelFillFreeBlock(SCE_KERNEL_VSHELL_PARTITION, 0);
+    
+    sceKernelVolatileMemUnlock(SCE_KERNEL_VOLATILE_MEM_DEFAULT);
+    
+    status = sceKernelFillFreeBlock(SCE_KERNEL_PRIMARY_USER_PARTITION, 0);
+    
+    sceKernelMemoryExtendSize(); //0x00000D84
+    
+    sceKernelFillFreeBlock(SCE_KERNEL_EXTENDED_SC_KERNEL_PARTITION, 0);
+    sceKernelFillFreeBlock(SCE_KERNEL_VSHELL_KERNEL_PARTITION, 0);
+    
     sceKernelMemoryShrinkSize();
-    sceKernelMemset32(0x80010000, 0, 0x4000);
-    return ret;
+    
+    sceKernelMemset32((void *)SCE_SCRATCHPAD_ADDR_K0, 0, SCE_SCRATCHPAD_SIZE);
+    return status;
 }
 
-int sub_0DD0(SceLoadCoreBootInfo *bootInfo)
+static u32 sub_0DD0(SceLoadCoreBootInfo *bootInfo)
 {
-    if (sceKernelIsDevelopmentToolMode() == 0 || bootInfo->unk_24 != 0)
+    if (sceKernelIsDevelopmentToolMode() == SCE_FALSE || bootInfo->unk24 != 0)
         return 0;
-    return (InitForKernel_7233B5BC() == 0x200);
+    return (sceKernelApplicationType() == SCE_INIT_APPLICATION_GAME);
 }
 
-int sub_0E1C(void *buf)
+/* Load the modules listed in the PSP boot configuration file. */
+static SceUID LoadModuleAnchorInBtcnf(char *file)
 {
-    void *curBuf = buf;
-    void *argBuf = buf;
-    int type = g_init.type;
-    int ret;
-    switch (type - 272) // TODO: switch table at 0x23B0 loaded with $AT
-    {
-    case 0: case 1: case 2: case 3: case 4: case 5:
-        // 0E6C
-        ret = sceKernelLoadModuleWithApitype2(type, argBuf, 0, 0);
-        curBuf = NULL;
+    char *uFile = file;
+    SceUID status;
+    
+    switch (g_init->apiType) {
+    case SCE_EXEC_FILE_APITYPE_GAME_EBOOT: 
+    case SCE_EXEC_FILE_APITYPE_GAME_BOOT: 
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS: 
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS: 
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: 
+    case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF:
+        status = sceKernelLoadModuleForLoadExecForUser(g_init->apiType, file, 0, NULL);
+        uFile = NULL;
         break;
-    case 6:
-    case 8:
-        // 0E84
-        ret = ModuleMgrForKernel_30727524(argBuf, *(int*)(&g_28A0 + 296), *(int*)(&g_28A0 + 300), &g_28A0 + 304, 0, 0);
-        curBuf = NULL;
+    case SCE_EXEC_FILE_APITYPE_NPDRM_MS: 
+    case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
+        status = sceKernelLoadModuleForLoadExecNpDrm(g_init->apiType, file, g_npDrmData.fileOffset, (const char*)g_npDrmData.keyData, 0, NULL);
+        uFile = NULL;
         break;
-    case 16:
-        // 0EB8
-        ret = sceKernelLoadModuleDisc(argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_DISC:
+        status = sceKernelLoadModuleForLoadExecVSHDisc(file, 0, NULL);
         break;
-    case 17:
-        // 0F0C
-        ret = sceKernelLoadModuleDiscUpdater(type, argBuf, 0, 0);
-        loc_0FFC();
+    case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
+        status = sceKernelLoadModuleForLoadExecVSHDiscUpdater(file, 0, NULL);
         break;
-    case 18:
-        // 0F24
-        if (sceKernelIsToolMode() == 0)
-            ret = 0x800200D1;
+    case SCE_EXEC_FILE_APITYPE_DISC_DEBUG:
+        if (sceKernelIsToolMode() == SCE_FALSE)
+            status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         else
-            ret = sceKernelLoadModuleDiscDebug(argBuf, 0, 0);
+            status = sceKernelLoadModuleForLoadExecVSHDiscDebug(file, 0, NULL);
         break;
-    case 19:
-    case 21:
-    case 96: case 97:
-        // 0ED0
-        ret = ModuleMgrForKernel_1B91F6EC(type, argBuf, 0, 0);
-        curBuf = g_init.addr2;
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: 
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
+        status = sceKernelLoadModuleForLoadExecVSHDiscEmu(g_init->apiType, file, 0, NULL);
+        uFile = (char *)g_init->discModAddr;
         break;
-    case 20:
-    case 22:
-        // 0EE8
-        ret = ModuleMgrForKernel_C2A5E6CA(type, argBuf, 0, 0);
-        curBuf = g_init.addr2;
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
+        status = ModuleMgrForKernel_C2A5E6CA(g_init->apiType, file, 0, NULL);
+        uFile = (char *)g_init->discModAddr;
         break;
-    case 48:
-    case 65:
-        // 0F4C
-        ret = sceKernelLoadModuleMs1(type, argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_MS1: 
+    case SCE_EXEC_FILE_APITYPE_EF1:
+        status = sceKernelLoadModuleForLoadExecVSHMs1(g_init->apiType, file, 0, NULL);
         break;
-    case 49:
-    case 66:
-        // 0F64
-        ret = sceKernelLoadModuleForLoadExecVSHMs2(type, argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_MS2: 
+    case SCE_EXEC_FILE_APITYPE_EF2:
+        status = sceKernelLoadModuleForLoadExecVSHMs2(g_init->apiType, file, 0, NULL);
         break;
-    case 50:
-    case 67:
-        // 0F7C
-        ret = sceKernelLoadModuleMs3(type, argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_MS3: 
+    case SCE_EXEC_FILE_APITYPE_EF3:
+        status = sceKernelLoadModuleForLoadExecVSHMs3(g_init->apiType, file, 0, NULL);
         break;
-    case 51:
-    case 68:
-        // 0F94
-        ret = sceKernelLoadModuleMs4(type, argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_MS4: 
+    case SCE_EXEC_FILE_APITYPE_EF4:
+        status = sceKernelLoadModuleForLoadExecVSHMs4(g_init->apiType, file, 0, NULL);
         break;
-    case 52:
-    case 69:
-        // 0FAC
-        ret = sceKernelLoadModuleForLoadExecVSHMs5(type, argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_MS5: 
+    case SCE_EXEC_FILE_APITYPE_EF5:
+        status = sceKernelLoadModuleForLoadExecVSHMs5(g_init->apiType, file, 0, NULL);
         break;
-    case 53:
-    case 70:
-        // 0FC4
-        ret = ModuleMgrForKernel_245B698D(type, argBuf, 0, 0);
+    case SCE_EXEC_FILE_APITYPE_MS6: 
+    case SCE_EXEC_FILE_APITYPE_EF6:
+        status = sceKernelLoadModuleForLoadExecVSHMs6(g_init->apiType, file, 0, NULL);
         break;
-    case 80: case 81:
-        // 0FDC
-        ret = ModuleMgrForKernel_8DD336D4(type, argBuf, 0, 0);
-        break;
-
-    default:
-        // 0FF4
-        ret = 0x800200D1;
-        break;
-    }
-    // 0FFC
-    if (ret >= 0 && curBuf != NULL)
-        SysMemForKernel_BFE08689(curBuf);
-    return ret;
-}
-
-int sub_1038(void *buf, int opt)
-{
-    int type = g_init.type;
-    int ret;
-    switch (type)
-    {
-    case 304: case 306:
-        // (10CC)
-        // 10D0
-        ret = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(type, buf, 0, 0);
-        break;
-    case 305: case 307:
-        // 10E8
-        if (sceKernelIsToolMode() == 0)
-            ret = 0x800200D1;
-        else
-            ret = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(type, buf, 0, 0);
-        break;
-    case 512:
-        // 111C
-        ret = sceKernelLoadModuleBufferForExitVSHKernel(type, 0, 0, opt);
-        break;
-    case 528:
-        // 1148
-        ret = sceKernelLoadModuleBufferForExitGame(type, 0, 0, opt);
-        break;
-    case 544:
-        // 1130
-        ret = sceKernelLoadModuleBufferForExitVSHVSH(type, 0, 0, opt);
-        break;
-    case 768:
-        // 1160
-        ret = sceKernelLoadModuleBufferForRebootKernel(type, 0, 0, opt);
+    case SCE_EXEC_FILE_APITYPE_UNK160:
+    case SCE_EXEC_FILE_APITYPE_UNK161:
+        status = ModuleMgrForKernel_8DD336D4(g_init->apiType, file, 0, NULL);
         break;
     default:
-        // 1174
-        ret = 0x800200D1;
+        status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
         break;
     }
-    // 1178
-    SysMemForKernel_BFE08689(0);
-    return ret;
+    if (status >= 0 && uFile != NULL)
+        SysMemForKernel_BFE08689(uFile);
+    return status;
 }
 
-void sub_1198(char *s, int line) // probably some masked debug thing
+/* Load modules (via their buffers) listed in the PSP boot configuration file. */
+static SceUID LoadModuleBufferAnchorInBtcnf(void *modBuf, s32 opt)
 {
-    int oldIntr = sceKernelCpuSuspendIntr();
-    if (g_init.resetVectorInfo.size > 0x2000000)
-        AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 2, 0xBC100040);
+    SceUID status;
+    
+    switch (g_init->apiType) {
+    case SCE_EXEC_FILE_APITYPE_USBWLAN: 
+    case SCE_EXEC_FILE_APITYPE_UNK132:
+        status = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(g_init->apiType, modBuf, 0, NULL);
+        break;
+    case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: 
+    case SCE_EXEC_FILE_APITYPE_UNK133:
+        if (sceKernelIsToolMode() == SCE_FALSE)
+            status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
+        else
+            status = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(g_init->apiType, modBuf, 0, NULL);
+        break;
+    case SCE_EXEC_FILE_APITYPE_KERNEL_1:
+        status = sceKernelLoadModuleBufferForExitVSHKernel(modBuf, 0, NULL, opt);
+        break;
+    case SCE_EXEC_FILE_APITYPE_VSH_1:
+        status = sceKernelLoadModuleBufferForExitGame(modBuf, 0, NULL, opt);
+        break;
+    case SCE_EXEC_FILE_APITYPE_VSH_2:
+        status = sceKernelLoadModuleBufferForExitVSHVSH(modBuf, 0, NULL, opt);
+        break;
+    case SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT:
+        status = sceKernelLoadModuleBufferForRebootKernel(modBuf, 0, NULL, opt);
+        break;
+    default:
+        status = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
+        break;
+    }
+    SysMemForKernel_BFE08689(NULL);
+    return status;
+}
+
+/* Stop the kernel initialization process. */
+static void StopInit(const char *str __attribute__((unused)), s32 line __attribute__((unused)))
+{
+    s32 intrState = sceKernelCpuSuspendIntr();
+    
+    HW(HW_RAM_SIZE) &= ~(RAM_TYPE_32_MB | RAM_TYPE_64_MB);
+    if (g_MemSize > RAM_SIZE_32_MB)
+        HW(HW_RAM_SIZE) |= RAM_TYPE_64_MB;
     else
-        AT_SW((*(int*)(0xBC100040) & 0xFFFFFFFC) | 1, 0xBC100040);
-    memset(0xBFC00000, 0, 0x1000);
-    memcpy(0xBFC00000, &bzero2, &bzero2 + sizeof(bzero2));
-    g_init.addr = 0xBFC00000;
-    int (*_resetVector)(int, int) = 0xBFC00000;
-    _resetVector(g_init.resetVectorInfo.addr, g_init.resetVectorInfo.size);
-    sceKernelCpuResumeIntr(oldIntr);
+        HW(HW_RAM_SIZE) |= RAM_TYPE_32_MB;
+    
+    memset((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE);
+    memcpy((void *)HWPTR(HW_RESET_VECTOR), initClearMem, INIT_CLEAR_MEM_SIZE);
+    g_MemClearFunc = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR);
+    g_MemClearFunc(g_MemBase, g_MemSize);
+    
+    sceKernelCpuResumeIntr(intrState);
+    
     for (;;)
         ;
 }
 
-// 1240
-int InitThreadEntry(int argSize, int args[2])
+/* 
+ * Load all the modules listed in the PSP boot config file right below init. 
+ * Also load game modules if the user restarts the kernel by executing a game.
+ */
+static void InitThreadEntry(SceSize args, void *argp)
 {
-    char foundMod = 0;
-    if (argSize < 8)
+    SceBool foundMod;
+    SceUID threadId;
+    SceLoadCoreBootInfo *bootInfo;
+    s32 modStatus1, modStatus2;
+    
+    if (args < 8)
         return;
-    SceLoadCoreBootInfo *bootInfo = args[1];
-    sceKernelWaitThreadEnd(args[0]);
-    if (sceKernelIsDevelopmentToolMode() != 0)
-        printf("devkit version 0x%08x\n", 0x06060000);
-    // 12B4
-    if (bootInfo->unk_48 != 0)
-        printf("build version 0x%08x\n");
-    // 12CC
-    // TODO: $sp is modified but $fp is backup'ed from $sp and $fp is used as the stack during all the function; $sp is set to the original $fp value at the end
-    int sp = pspGetSp();
-    sp = sp - ALIGN_16_UP(bootInfo->numMods * sizeof(SceLoadCoreBootModuleInfo));
-    pspSetSp(sp);
-    *(int*)sp = 0;
-    *(int*)(g_28A0 + 112) = sp;
-    *(int*)(g_28A0 + 116) = sp;
-    sp = sp - ALIGN_16_UP(bootInfo->numMods * sizeof(SceLoadCoreBootModuleInfo));
-    pspSetSp(sp);
-    *(int*)sp = 0;
-    *(int*)(g_28A0 + 120) = sp;
-    *(int*)(g_28A0 + 108) = bootInfo->unk_76;
-    *(int*)(g_28A0 + 124) = bootInfo->unk_24;
-    if (bootInfo->unk_24 == 0)
-    {
-        // 1380
-        SceLoadCoreBootModuleInfo *mod = &bootInfo->mods[bootInfo->numMods - 1];
-        if ((mod->attr & 2) != 0)
-            g_init.type = mod->unk_20;
-        // 13AC
-        if (sceKernelIsDevelopmentToolMode() == 0)
-        {
-            // 13EC
-            *(int*)(g_28A0 + 92) = 256;
+    
+    threadId = ((u32 *)argp)[0];
+    bootInfo = (SceLoadCoreBootInfo *)((u32 *)argp)[1];
+    
+    foundMod = SCE_FALSE;
+    
+    sceKernelWaitThreadEnd(threadId, NULL);
+    
+    if (sceKernelIsDevelopmentToolMode() != SCE_FALSE)
+        printf("devkit version 0x%08x\n", SDK_VERSION);
+    
+    if (bootInfo->buildVersion != 0)
+        printf("build version 0x%08x\n", bootInfo->buildVersion);
+    
+    SceBootCallback bootCallbacks[bootInfo->numModules];
+    SceBootCallback *tmpBootCb = (SceBootCallback *)UPALIGN16((u32)bootCallbacks);
+    tmpBootCb->bootCBFunc = NULL;
+    g_init->bootCallbacks1 = tmpBootCb;
+    g_init->curBootCallback1 = tmpBootCb;
+    
+    SceBootCallback bootCallbacks2[bootInfo->numModules];
+    tmpBootCb = (SceBootCallback *)UPALIGN16((u32)bootCallbacks2);
+    tmpBootCb->bootCBFunc = NULL;
+    g_init->bootCallbacks2 = tmpBootCb;
+    g_init->curBootCallback2 = tmpBootCb;
+    
+    g_init->lptSummary = bootInfo->unk76;
+    
+    if (bootInfo->unk24 == 0) {
+        SceLoadCoreBootModuleInfo *mod = &bootInfo->modules[bootInfo->numModules - 1];
+        if (mod->attr & 2)
+            g_init->apiType = mod->bootData;
+
+        if (sceKernelIsDevelopmentToolMode() != SCE_FALSE && sceKernelDipsw(29) != 1)
+            g_init->applicationType = SCE_INIT_APPLICATION_GAME;
+        else
+            g_init->applicationType = SCE_INIT_APPLICATION_VSH;
+    } else {
+        if (bootInfo->unk24 >= 3) {
+            g_init->applicationType = SCE_INIT_APPLICATION_VSH;
+            StopInit(__FUNCTION__, __LINE__);
         }
-        else if (sceKernelDipsw(29) != 1)
-            *(int*)(g_28A0 + 92) = 512; // 13E4 dup
-        else {
-            // 13D8/13E4 dup
-            *(int*)(g_28A0 + 92) = 256;
-        }
-    }
-    else
-    {
-        if (bootInfo->unk_24 >= 3)
-        {
-            // 13FC
-            *(int*)(g_28A0 + 92) = 256;
-            // 18EC dup
-            sub_1198(g_2294, 2028); // this function never returns
-        }
-        g_init.type = bootInfo->mods[bootInfo->numMods - 1].unk_20;
-        switch (bootInfo->mods[bootInfo->numMods - 1].unk_20 - 272) // TODO: jump table loaded using $AT??
-        {
-        case 0: case 1: case 2: case 3: case 4: case 5: case 6:
-        case 8:
-        case 16:
-        case 18: case 19: case 20: case 21: case 22:
-        case 32: case 33: case 34: case 35:
-        case 49: case 50:
-        case 53:
-        case 66: case 67:
-        case 70:
-        case 80:
-        case 96: case 97:
-            // 13E0
-            *(int*)(g_28A0 + 92) = 512;
+        g_init->apiType = bootInfo->modules[bootInfo->numModules - 1].bootData;
+        switch (g_init->apiType) {
+        case SCE_EXEC_FILE_APITYPE_GAME_EBOOT: case SCE_EXEC_FILE_APITYPE_GAME_BOOT: case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS: 
+        case SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS: case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF: 
+        case SCE_EXEC_FILE_APITYPE_NPDRM_MS: case SCE_EXEC_FILE_APITYPE_NPDRM_EF:
+        case SCE_EXEC_FILE_APITYPE_DISC: case SCE_EXEC_FILE_APITYPE_DISC_DEBUG: case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1: 
+        case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS2: case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
+        case SCE_EXEC_FILE_APITYPE_USBWLAN: case SCE_EXEC_FILE_APITYPE_USBWLAN_DEBUG: case SCE_EXEC_FILE_APITYPE_UNK132: 
+        case SCE_EXEC_FILE_APITYPE_UNK133:
+        case SCE_EXEC_FILE_APITYPE_MS2: case SCE_EXEC_FILE_APITYPE_MS3: case SCE_EXEC_FILE_APITYPE_MS6:
+        case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF6:
+        case SCE_EXEC_FILE_APITYPE_UNK160:
+        case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
+            g_init->applicationType = SCE_INIT_APPLICATION_GAME;
             break;
-
-        case 17:
-        case 48:
-        case 65:
-            // 1368
-            *(int*)(g_28A0 + 92) = 272;
+        case SCE_EXEC_FILE_APITYPE_DISC_UPDATER:
+        case SCE_EXEC_FILE_APITYPE_MS1:
+        case SCE_EXEC_FILE_APITYPE_EF1:
+            g_init->applicationType = SCE_INIT_APPLICATION_UPDATER;
             break;
-
-        case 51:
-        case 68:
-            // 1370
-            *(int*)(g_28A0 + 92) = 1024;
+        case SCE_EXEC_FILE_APITYPE_MS4:
+        case SCE_EXEC_FILE_APITYPE_EF4:
+            g_init->applicationType = SCE_INIT_APPLICATION_APP;
             break;
-
-        case 52:
-        case 69:
-            // 1378
-            *(int*)(g_28A0 + 92) = 768;
+        case SCE_EXEC_FILE_APITYPE_MS5:
+        case SCE_EXEC_FILE_APITYPE_EF5:
+            g_init->applicationType = SCE_INIT_APPLICATION_POPS;
             break;
-
         default:
-            // 13D8 dup
-            *(int*)(g_28A0 + 92) = 256;
+            g_init->applicationType = SCE_INIT_APPLICATION_VSH;
             break;
         }
     }
-    // 1410
-    int v = g_init.type - 276;
-    // TODO: jump table using $AT??
-    if (v ==  0 || v ==  1 || v ==  4 || v == 17
-     || v == 30 || v == 31 || v == 62 || v == 63
-     || v == 64 || v == 65 || v == 66 || v == 93)
-    {
-        // 1440
+    switch (g_init->apiType) {
+    case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF: case SCE_EXEC_FILE_APITYPE_NPDRM_EF: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
+    case SCE_EXEC_FILE_APITYPE_UNK132: case SCE_EXEC_FILE_APITYPE_UNK133:
+    case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF4: 
+    case SCE_EXEC_FILE_APITYPE_EF5: case SCE_EXEC_FILE_APITYPE_EF6: 
+    case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
         SysMemForKernel_40B744A4(127);
-    }
-    else
-    {
-        // 1448
+        break;
+    default:
         SysMemForKernel_40B744A4(0);
+        break;
     }
-    // 144C
-    if (bootInfo->loadedMods < bootInfo->numMods)
-    {
+        
+    if (bootInfo->loadedModules < bootInfo->numModules) {
         SceSysmemPartitionInfo partInfo;
-        partInfo.size = 16;
-        int curMod = bootInfo->numMods;
-        sceKernelQueryMemoryPartitionInfo(5, &partInfo);
-        int i;
-        // 1498
-        for (i = bootInfo->loadedMods; i < bootInfo->numMods; i++)
-        {
-            if ((bootInfo->mods[i].attr & 1) != 0) {
+        partInfo.size = sizeof(SceSysmemPartitionInfo);
+        sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_VSHELL_PARTITION, &partInfo);
+        s32 curMod = bootInfo->numModules; //0x00001478
+        
+        s32 i;
+        for (i = bootInfo->loadedModules; i < (s32)bootInfo->numModules; i++) {
+            if (bootInfo->modules[i].attr & 0x1) {
                 curMod = i;
                 break;
             }
         }
-        // 14C0
         void *buf = UCACHED(partInfo.startAddr);
-        // 14D8
-        for (i = curMod; i < bootInfo->numMods; i++)
-        {
-            SceLoadCoreBootModuleInfo *mod = &bootInfo->mods[i];
-            if (sub_0CFC(mod))
-            {
-                sceKernelMemmove(buf, mod->buf, mod->size);
-                mod->buf = buf;
-                buf = ALIGN_64_UP(buf + mod->size);
+        SceLoadCoreBootModuleInfo *mod;
+        for (i = curMod; i < (s32)bootInfo->numModules; i++) {
+            mod = &bootInfo->modules[i];
+            if (sub_0CFC(mod) == SCE_TRUE) {
+                sceKernelMemmove(buf, mod->modBuf, mod->modSize);
+                mod->modBuf = buf;
+                buf = (void *)UPALIGN64((u32)buf + mod->modSize);
             }
         }
-        // 152C
-        for (i = bootInfo->numMods - 1; i >= 0; i--)
-        {
-            SceLoadCoreBootModuleInfo *mod = &bootInfo->mods[i];
-            if ((mod->attr & 2) != 0)
-            {
-                int protId = bootInfo->modProtId;
-                foundMod = 1;
-                if (protId != -1)
-                {
-                    SceLoadCoreProtectInfo *prot = &bootInfo->prots[protId];
-                    mod->size = prot->size;
-                    mod->buf = prot->addr;
-                    if ((prot->attr & 2) != 0)
-                    {
+        
+        for (i = bootInfo->numModules - 1; i >= 0; i--) {
+            SceLoadCoreBootModuleInfo *mod = &bootInfo->modules[i];
+            if (mod->attr & 2) {
+                foundMod = SCE_TRUE;
+                
+                SceUID protId = bootInfo->modProtId;
+                if (protId != SCE_KERNEL_VALUE_UNITIALIZED) {
+                    SceLoadCoreProtectInfo *prot = &bootInfo->protects[protId];
+                    mod->modSize = prot->size;
+                    mod->modBuf = (u8 *)prot->addr;
+                    if (GET_PROTECT_INFO_TYPE(prot->attr) & SCE_PROTECT_INFO_TYPE_FILE_NAME) {
                         mod->attr |= 4;
-                        g_init.addr = prot->addr;
+                        g_init->fileModAddr = (void *)prot->addr;
                     }
                 }
-                // 15AC
                 protId = bootInfo->modArgProtId;
-                if (protId != -1)
-                {
-                    SceLoadCoreProtectInfo *prot = &bootInfo->prots[protId];
+                if (protId != SCE_KERNEL_VALUE_UNITIALIZED) { 
+                    SceLoadCoreProtectInfo *prot = &bootInfo->protects[protId];
                     mod->argPartId = prot->partId;
-                    mod->argSize   = prot->size;
+                    mod->argSize = prot->size;
                 }
             }
-            // 15DC
-            if (sub_0CFC(mod) == 0)
-                mod->unk_20 = 0;
-            else
-            {
-                SceUID id = sceKernelAllocPartitionMemory(2, g_22A4, 1, mod->size, 0);
-                int addr = sceKernelGetBlockHeadAddr(id);
-                sceKernelMemmoveWithFill(addr, mod->buf, mod->size, 0);
-                mod->unk_20 = id;
-                mod->buf = addr;
+            if (sub_0CFC(mod) == SCE_FALSE)
+                mod->bootData = 0;
+            else {
+                SceUID partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_USER_PARTITION, "backup area", 1, 
+                        mod->modSize, 0);
+                void *addr = sceKernelGetBlockHeadAddr(partId);
+                sceKernelMemmoveWithFill(addr, mod->modBuf, mod->modSize, 0);
+                mod->bootData = partId;
+                mod->modBuf = addr;
             }
-            // 1634
         }
-        // 1648
-        for (i = bootInfo->loadedMods; i < bootInfo->numMods; i++)
-        {
-            if (i == curMod)
-            {
-                if (*(int*)(g_28A0 + 92) != 512)
-                {
-                    // trollol my name is Sony and I love making my code look like enigmas; "encrypted" string for "flash2:/opnssmp.bin"
-                    int str[5] = {0x8C9E9399, 0xD0C5CD97, 0x8C918F90, 0xD18F928C, 0xFF91969D};
-                    int j;
-                    for (j = 0; j < 20; j++)
-                        ((char*)str)[j] = ~((char*)str)[j];
-                    int argp = *(int*)(sceKernelGetGameInfo() + 216);
-                    int status;
-                    SceIoStat stat;
-                    if (argp != 0 && sceIoGetstat(str, &stat) >= 0)
-                    {
-                        char started = 0;
-                        SceUID id = sceKernelLoadModule(str, 0, 0);
-                        if (id >= 0)
-                        {
-                            if (sceKernelStartModule(id, 4, &argp, &status, 0) >= 0)
-                                started = 1;
-                            else
-                                sceKernelUnloadModule(id);
-                        }
-                        if (!started) {
-                            // 173C
-                            sceIoRemove(str);
+        
+        for (i = bootInfo->loadedModules; i < (s32)bootInfo->numModules; i++) {
+            if (i == curMod && g_init->applicationType == SCE_INIT_APPLICATION_GAME) {
+                /*
+                 * "Encrypted" string for "flash2:/opnssmp.bin"
+                 * The file opnssmp.bin is used for EBOOT decryption.
+                 * 
+                 * "Decrypt" the string to load the module opnssmp.bin.
+                 */
+                s32 opnssmpFile[] = { 0x8C9E9399, 0xD0C5CD97, 0x8C918F90, 0xD18F928C, 0xFF91969D };
+                u32 j;
+                for (j = 0; j < sizeof opnssmpFile; j++)
+                    ((char *)opnssmpFile)[j] = ~((char *)opnssmpFile)[j];
+                    
+                SceKernelGameInfo *gameInfo = sceKernelGetGameInfo();
+                void *argp = (void *)gameInfo->unk216;
+                SceIoStat stat;
+                if (argp != NULL && sceIoGetstat((char *)opnssmpFile, &stat) >= SCE_ERROR_OK) {
+                    SceUID modId = sceKernelLoadModule((char *)opnssmpFile, 0, NULL);
+                    if (modId >= SCE_ERROR_OK) {
+                        if (sceKernelStartModule(modId, sizeof argp, &argp, &modStatus1, NULL) < SCE_ERROR_OK) {
+                            sceKernelUnloadModule(modId);
+                            sceIoRemove((char *)opnssmpFile);
                         }
                     }
                 }
             }
-            // 1744
-            // 1748
-            SceLoadCoreBootModuleInfo *mod = &bootInfo->mods[i];
-            if (mod->unk_20 != 0)
-                sceKernelFreePartitionMemory(mod->unk_20);
-            // 176C
+            SceLoadCoreBootModuleInfo *mod = &bootInfo->modules[i];
+            if (mod->bootData != 0)
+                sceKernelFreePartitionMemory(mod->bootData);
+
             SceUID modId;
-            if ((mod->attr & 2) == 0)
-            {
-                // 1824
-                char unkStruct[18]; // TODO
-                ((int *)unkStruct)[ 0] = 20;
-                ((int *)unkStruct)[ 2] = (mod->attr >> 16) & 0xFF;
-                ((char*)unkStruct)[17] = 1;
-                ((int *)unkStruct)[ 1] = (mod->attr >> 16) & 0xFF;
-                ((char*)unkStruct)[16] = 0;
-                if ((mod->attr & 4) == 0)
-                {
-                    // 1868
-                    modId = ModuleMgrForKernel_EF7A7F02(mod->size, mod->buf, 0, unkStruct, (mod->attr >> 8) & 1);
-                    if (modId > 0)
-                        sceKernelMemset32(mod->buf, 0, mod->size);
-                }
-                else
-                    modId = ModuleMgrForKernel_25E1F458(mod->buf, 0);
-            }
-            else
-            {
-                SceLoadCoreBootModuleInfo *mod2 = *(int*)(&g_28A0 + 320);
-                memmove(mod2, mod, 32);
-                mod = mod2;
-                sub_06A8(bootInfo);
-                sub_03F4();
-                if (sub_0DD0(bootInfo) == 0)
-                {
-                    if (((g_28A0 + 320 + 16) & 4) != 0)
-                        modId = sub_0E1C(g_28A0 + 320 + 4);
-                    else
-                    {
-                        // 17DC
-                        modId = sub_1038(g_28A0 + 320 + 4, (mod->attr >> 8) & 1);
-                        if (modId > 0)
-                            sceKernelMemset32(g_28A0 + 320 + 4, 0, g_28A0 + 320 + 8);
+            if ((mod->attr & 2) == 0) {
+                SceKernelLMOption options = {
+                    .size = sizeof(SceKernelLMOption),
+                    .mpIdText = (mod->attr >> 16) & 0xFF,
+                    .mpIdData = (mod->attr >> 16) & 0xFF,
+                    .position = SCE_KERNEL_LM_POS_LOW,
+                    .access = SCE_KERNEL_LM_ACCESS_NOSEEK,
+                };
+                if ((mod->attr & 4) == 0) {
+                    modId = sceKernelLoadModuleBufferBootInitBtcnf(mod->modSize, (u32 *)mod->modBuf, 0, &options, 
+                            (mod->attr >> 8) & 1);
+                    if (modId > SCE_ERROR_OK)
+                        sceKernelMemset32(mod->modBuf, 0, mod->modSize);
+                } else
+                    modId = sceKernelLoadModuleBootInitBtcnf((u32 *)mod->modBuf, 0, &options);
+            } else {
+                memmove(&g_mod, mod, sizeof(SceLoadCoreBootModuleInfo));
+                
+                CleanupPhase1(bootInfo);
+                ExitCheck();
+                
+                if (sub_0DD0(bootInfo) == 0) {
+                    if (g_mod.attr & 4)
+                        modId = LoadModuleAnchorInBtcnf((char *)g_mod.modBuf); //TODO: Shouldn't it be g_mod.modPath?
+                    else {
+                        modId = LoadModuleBufferAnchorInBtcnf(g_mod.modBuf, (mod->attr >> 8) & 1);
+                        if (modId > SCE_ERROR_OK)
+                            sceKernelMemset32(g_mod.modBuf, 0, g_mod.modSize);
                     }
-                    // 180C
-                    if (modId < 0)
-                        sub_02E0(modId);
-                }
-                else
-                    modId = 0x80020001;
+                    if (modId < SCE_ERROR_OK)
+                        ExitInit(modId);
+                } else
+                    modId = SCE_ERROR_KERNEL_ERROR;
             }
-            // (1898)
-            // 189C
-            if ((mod->attr & 2) != 0) {
-                sub_0D4C();
+            if (mod->attr & 2) {
+                ClearFreeBlock();
                 sub_05F0();
             }
-            // 18B8
-            if (modId >= 0)
-            {
-                int ret, status;
-                // 18F4
-                if (mod->argPartId == 0 || mod->argSize == 0) {
-                    // 1920
-                    ret = sceKernelStartModule(modId, 0, 0, &status, 0);
-                }
+            if (modId >= 0) {
+                s32 status;
+                if (mod->argPartId == 0 || mod->argSize == 0)
+                    status = sceKernelStartModule(modId, 0, NULL, &modStatus2, NULL);
                 else
-                    ret = sceKernelStartModule(modId, mod->argSize, sceKernelGetBlockHeadAddr(mod->argPartId), &status, 0);
-                // 1928
-                if (ret < 0 && (mod->attr & 2) != 0)
-                    sub_02E0(ret);
-                // 1954
-            }
-            else if ((mod->attr & 2) == 0 || sub_0DD0(bootInfo) == 0)
-            {
-                // 18E0
-                // 18EC dup
-                sub_1198(g_2294, 2313); // this function never returns
-            }
-            // 1958
+                    status = sceKernelStartModule(modId, mod->argSize, sceKernelGetBlockHeadAddr(mod->argPartId), &modStatus2, 
+                            NULL);
+                if (status < SCE_ERROR_OK && (mod->attr & 2))
+                    ExitInit(status);
+            } else if ((mod->attr & 2) == 0 || sub_0DD0(bootInfo) == 0)
+                StopInit(__FUNCTION__, __LINE__);
+            
             if (mod->argPartId != 0)
                 sceKernelFreePartitionMemory(mod->argPartId);
-            // 196C
-            bootInfo->loadedMods++;
-            if ((mod->attr & 2) != 0)
+            
+            bootInfo->loadedModules++;
+            if (mod->attr & 2)
                 break;
         }
     }
-    // 1994
-    sub_06A8(bootInfo);
-    sub_0790(bootInfo);
-    if (foundMod == 0)
-        sub_0D4C();
-    // 19B4
+    /* 
+     * All modules have been booted now:
+     *      Step 1: Free the memory containing the boot information.
+     */
+    CleanupPhase1(bootInfo);
+    CleanupPhase2(bootInfo);
+    if (foundMod == SCE_FALSE)
+        ClearFreeBlock();
+
     printf("Loading all modules ... Ready\n");
+    
     if (sceKernelGetSystemStatus() == 0)
         sub_05F0();
-    // 19D8
-    if (foundMod == 1)
-        sub_048C(4);
-    // 19E8
-    int *ptr = sceKernelDeci2pReferOperations();
-    if (ptr != NULL)
-    {
-        void (*func)(int) = *(int*)(ptr + 8);
+
+    /* Step 2: Call the last module boot callbacks. */
+    if (foundMod == SCE_TRUE)
+        invoke_init_callback(4);
+
+    void *ptr = sceKernelDeci2pReferOperations();
+    if (ptr != NULL) {
+        void (*func)(s32) = (void (*)(s32))*(s32 *)(ptr + 8);
         func(2);
     }
-    // 1A08
-    sceKernelStopUnloadSelfModuleWithStatusKernel(1, 0, 0, 0, 0);
+    
+    /* Step3: Init stops and unloads itself now. */
+    sceKernelStopUnloadSelfModuleWithStatus(SCE_KERNEL_NO_RESIDENT, 0, NULL, NULL, NULL);
 }
 
-/* The module start function. */
-int module_bootstart(int unused, SceLoadCoreBootInfo *bootInfo)
+#ifdef INSTALLER
+/* Reference to patch.S (needed because when patching init, SystemControl only has access to its bootstart's address)*/
+asm(".word init_patch\n");
+#endif
+
+/* Setup the boot process of the rest of the PSP kernel modules. */
+s32 InitInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
-    AT_SW(bootInfo->membase, &g_init.resetVectorInfo.addr);
-    AT_SW(bootInfo->memsize, &g_init.resetVectorInfo.size);
-    AT_SW(InitForKernel_040C934B(), g_28A0);
-    sub_0218(bootInfo);
-    int threadId = sceKernelGetThreadId();
-    if (threadId < 0)
+    SceUID threadId;
+     
+    const SceLoadCoreBootInfo *bootInfo = argBlock;
+    g_MemBase = bootInfo->memBase;
+    g_MemSize = bootInfo->memSize;
+    
+    g_init = sceKernelQueryInitCB();
+    InitCBInit(bootInfo);
+    
+    threadId = sceKernelGetThreadId();
+    if (threadId < SCE_ERROR_OK)
         return threadId;
-    sub_08F8(bootInfo);
-    SceLoadCoreBootModuleInfo *mods = bootInfo->mods;
-    if (bootInfo->unk_24 == 0 && (u32)mods->buf <= 0x88FFFFFF)
-    {
-        void *minStart = (void*)-1;
+    
+    ProtectHandling(bootInfo);
+    
+    SceLoadCoreBootModuleInfo *modules = bootInfo->modules;
+    if (bootInfo->unk24 == 0 && (u32)modules->modBuf <= (SCE_USERSPACE_GAME_ADDR_K0 - 1)) {
+        void *minStart = (void *)SCE_KERNEL_VALUE_UNITIALIZED;
         void *maxEnd = NULL;
-        int i;
-        // 1AE4
-        for (i = 0; i < bootInfo->numMods; i++)
-        {
-            void *start = mods[i].buf;
-            void *end = start + mods[i].size;
+        
+        s32 i;
+        for (i = 0; i < (s32)bootInfo->numModules; i++) {
+            void *start = modules[i].modBuf;
+            void *end = start + modules[i].modSize;
             if (maxEnd < end)
                 maxEnd = end;
             if (start < minStart)
                 minStart = start;
         }
-        // 1B0C
-        AT_ADDI(minStart, 0x77A00000);
-        sceKernelMemset32(0x88600000, 0, minStart);
-        sceKernelMemset32(maxEnd, 0, 0x88800000 - (int)maxEnd);
-    }
-    else {
-        // 1B38
-        sceKernelMemset32(0x88600000, 0, 0x200000);
-    }
-    // 1B40
-    SceUID id = sceKernelCreateThread("SceKernelInitThread", InitThreadEntry, 32, 0x4000, 0, 0);
-    int sp[2];
-    sp[0] = threadId;
-    sp[1] = bootInfo;
-    return sceKernelStartThread(id, 8, sp);
+        minStart += 0x77A00000;
+        sceKernelMemset32((void *)REBOOT_BASE_ADDR_K0, 0, (u32)minStart);
+        sceKernelMemset32(maxEnd, 0, SCE_USERSPACE_ADDR_K0 - (u32)maxEnd);
+    } else
+        sceKernelMemset32((void *)REBOOT_BASE_ADDR_K0, 0, SCE_USERSPACE_ADDR_K0 - REBOOT_BASE_ADDR_K0);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+    SceUID id = sceKernelCreateThread("SceKernelInitThread", (SceKernelThreadEntry)InitThreadEntry, 
+            SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL);
+#pragma GCC diagnostic pop
+    
+    u32 threadArgs[2] = { 
+        threadId, 
+        (u32)bootInfo, 
+    };
+    return sceKernelStartThread(id, sizeof threadArgs, threadArgs);
 }
 

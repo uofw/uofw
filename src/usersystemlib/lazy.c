@@ -6,7 +6,7 @@
 
 s32 sub_00000208(s32 dlId  __attribute__((unused)), void *stall  __attribute__((unused)))
 {
-    /* The syscall instruction is patched at runtime by ge.prx */
+    /* The syscall instruction is patched at runtime by ge.prx to run sceGeListUpdateStallAddr */
     asm __volatile__ (
         ".set noat\n"
         ".set noreorder\n"
@@ -18,11 +18,12 @@ s32 sub_00000208(s32 dlId  __attribute__((unused)), void *stall  __attribute__((
     return 0;
 }
 
-// sceGe_lazy_31129B95
+// This function replaces sceGeListUpdateStallAddr() in a patched game (Gensou Suikoden I&II)
 s32 sceGe_lazy_31129B95(s32 dlId, void *stall)
 {
     s32 ret;
 
+    // Updating the same display list stall address again: update g_lazy.stall and skip if count < max (= 100)
     if (dlId == g_lazy.dlId) {
         g_lazy.stall = stall;
 
@@ -35,6 +36,7 @@ s32 sceGe_lazy_31129B95(s32 dlId, void *stall)
         }
     }
 
+    // Update the stall address of the last display list and reset g_lazy.dlId
     if (g_lazy.dlId >= 0) {
         SceBool idErr = 0;
 
@@ -50,12 +52,14 @@ s32 sceGe_lazy_31129B95(s32 dlId, void *stall)
         }
     }
 
+    // Update the specified display list stall address
     ret = sub_00000208(dlId, stall);
 
     if (ret < 0) {
         return ret;
     }
 
+    // Set the 'lazy' status to the display list we updated the stall address of
     do {
         if (pspLl(&g_lazy.dlId) >= 0) {
             return ret;

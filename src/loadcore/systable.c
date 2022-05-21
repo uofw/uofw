@@ -102,8 +102,12 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    sysCallTable->tableSize = SYSCALL_TABLE_SIZE;
    
    //0x000003B0 - 0x000003C8
-   for (i = 0; i < SYSCALL_TABLE_FUNCTION_TABLE_ENTRIES; i++) 
+   for (i = 0; i < SYSCALL_TABLE_FUNCTION_TABLE_ENTRIES; i++) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
         sysCallTable->syscalls[i] = (void (*)())UndefSyscall;
+#pragma GCC diagnostic pop
+   }
     
    //0x000003D0 - 0x000003F8
    initialSysEntTable[0].next = NULL;      
@@ -122,7 +126,7 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    //0x00000424 - 0x00000440
    /* Initialize the first SYSCALL table entry. */
    g_pSysEntControl->next = NULL; 
-   g_pSysEntControl->inUse = FALSE;
+   g_pSysEntControl->inUse = SCE_FALSE;
    g_pSysEntControl->numEntries = SYSCALL_TABLE_DEFAULT_ENTRIES;
    g_pSysEntControl->startAddr = 0;
    
@@ -175,7 +179,7 @@ s32 AllocSysTable(u16 numEntries)
           * used by another request. 
           */ 
          if (sysTableEntry->numEntries == numEntries) { //0x000004F4
-             sysTableEntry->inUse = TRUE;
+             sysTableEntry->inUse = SCE_TRUE;
              return sysTableEntry->startAddr;
          }
          /* 
@@ -196,12 +200,12 @@ s32 AllocSysTable(u16 numEntries)
                  newSysTableEntry = g_pFreeSysEnt; //0x00000544
                  g_pFreeSysEnt = g_pFreeSysEnt->next;
              }
-             newSysTableEntry->inUse = FALSE; //0x00000550
+             newSysTableEntry->inUse = SCE_FALSE; //0x00000550
              newSysTableEntry->startAddr = sysTableEntry->startAddr + numEntries; //0x0000055C
              newSysTableEntry->numEntries = sysTableEntry->numEntries - numEntries;
              newSysTableEntry->next = sysTableEntry->next;
              
-             sysTableEntry->inUse = TRUE; //0x00000578
+             sysTableEntry->inUse = SCE_TRUE; //0x00000578
              sysTableEntry->numEntries = numEntries;
              sysTableEntry->next = newSysTableEntry;
              
@@ -251,11 +255,11 @@ SceSysCallEntryTable *FreeSysTable(u32 sysTableEntryAddr)
        curSysTableEntry->startAddr != sysTableEntryAddr; curSysTableEntry = curSysTableEntry->next)
          prevSysTableEntry = curSysTableEntry; 
 
-    if (curSysTableEntry == NULL || curSysTableEntry->inUse == FALSE) //0x00000614 & 0x00000624
+    if (curSysTableEntry == NULL || curSysTableEntry->inUse == SCE_FALSE) //0x00000614 & 0x00000624
         return NULL;
 
     /* Once found, mark it as being unused. */
-    curSysTableEntry->inUse = FALSE; //0x00000630 & 0x00000638     
+    curSysTableEntry->inUse = SCE_FALSE; //0x00000630 & 0x00000638     
     
     /*
      * If the previous system-call-entry-table is currently being 
@@ -263,7 +267,7 @@ SceSysCallEntryTable *FreeSysTable(u32 sysTableEntryAddr)
      * table back into the list of currently free system call 
      * entry-tables if it was unlinked from it during allocation process.
      */
-    if (prevSysTableEntry != NULL && prevSysTableEntry->inUse == FALSE) { //0x00000634        
+    if (prevSysTableEntry != NULL && prevSysTableEntry->inUse == SCE_FALSE) { //0x00000634        
         prevSysTableEntry->numEntries += curSysTableEntry->numEntries; //0x0000065C & 0x00000664
         prevSysTableEntry->next = curSysTableEntry->next; //0x0000066C 
         

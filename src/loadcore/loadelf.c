@@ -1,18 +1,18 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
 /*
- * uOFW/trunk/src/loadcore/loadelf.c
+ * uofw/src/loadcore/loadelf.c
  * 
  * Loadelf represents most of the basic API of the File Loader.  It is
  * responsible for performing checks on loadable ELF files and loading 
  * them.  Loading them also implies taking care of any relocation of the 
  * files if needed.
  * 
- * The File Loader defines two possible loadable file types for modules:
+ * The File Loader defines two possible object file types for modules:
  *    a) a static ELF
- *    b) a relocatable ELF - named PRX (Playstation Relocatable Executable)
+ *    b) a relocatable object file - named PRX (Playstation Relocatable Executable)
  * 
  * PRX comes with a few unique attributes compared to normal ELF's:
  *    a) Customized Program Headers
@@ -23,8 +23,8 @@
  * Module segment order:
  * 
  * A single module needs to have at least three segments and max 
- * SCE_KERNEL_MAX_MODULE_SEGMENT segments.  These segments are located in 
- * sequence and each has a size of 16 bytes:
+ * SCE_KERNEL_MAX_MODULE_SEGMENT segments.  These segments are typically 
+ * located in consecutive order:
  *    Segment       Description
  * 
  *    TEXT          Includes instruction code and data structures used for
@@ -80,7 +80,7 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     lowAddr = maxAddr = maxOffset = 0;
     
     sceHeader = (SceHeader *)buf;
-    if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC) { //0x00003FE0
+    if (((sceHeader->magic[0] << 24) | (sceHeader->magic[1] << 16) | (sceHeader->magic[2] << 8) | sceHeader->magic[3]) == SCE_MAGIC) { //0x00003FE0
         if (sceHeader->hdrVersion == SCE_HEADER_BETA_VERSION)
             return SCE_ERROR_KERNEL_CANNOT_USE_BETA_VER_MODULE;
         
@@ -98,25 +98,25 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         return size;
     
     if (!(execInfo->modeAttribute & SCE_EXEC_FILE_NO_COMPRESSION)) { //0x00003FF8        
-        execInfo->isDecrypted = FALSE; //0x00004008
+        execInfo->isDecrypted = SCE_FALSE; //0x00004008
         if ((u32)buf & (SCE_HEADER_SIZE - 1)) { //0x00004004
             execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF;
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
         
         pspHeader = (PspHeader *)buf;
-        if (((u32 *)pspHeader->magic)[0] == PSP_MAGIC) { //0x00004018
+        if (((pspHeader->magic[0] << 24) | (pspHeader->magic[1] << 16) | (pspHeader->magic[2] << 8) | pspHeader->magic[3]) == PSP_MAGIC) { //0x00004018
             execInfo->modInfoAttribute = pspHeader->modAttribute; //0x00004298
             if (pspHeader->decryptMode == 0) //0x000042A0
-                execInfo->modInfoAttribute = pspHeader->modAttribute & ~SCE_PRIVILEGED_MODULES; //0x000042B0              
+                execInfo->modInfoAttribute = pspHeader->modAttribute & ~SCE_MODULE_PRIVILEGE_LEVELS; //0x000042B0              
 
             execInfo->decSize = pspHeader->elfSize; //0x000042BC
             execInfo->execAttribute = pspHeader->compAttribute;
             execInfo->execSize = pspHeader->pspSize; //0x000042C8
-            execInfo->isKernelMod = FALSE;
+            execInfo->isKernelMod = SCE_FALSE;
             execInfo->entryAddr = pspHeader->bootEntry; //0x000042D4
             if (IS_KERNEL_ADDR(pspHeader->modInfoOffset) && pspHeader->decryptMode) //0x000042DC & 0x00004378
-                execInfo->isKernelMod = TRUE; //0x00004384
+                execInfo->isKernelMod = SCE_TRUE; //0x00004384
 
             execInfo->moduleInfoOffset = pspHeader->modInfoOffset & 0x1FFFFFFF; //0x000042E8
             execInfo->overlapSize = 0; //0x000042F4
@@ -149,13 +149,13 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         }
         //0x0000404C
         if (execInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED) { //0x00004050
-            execInfo->isCompressed = TRUE; //0x00004060
+            execInfo->isCompressed = SCE_TRUE; //0x00004060
             buf = execInfo->topAddr;
             execInfo->fileBase = execInfo->topAddr; //0x00004064
         }       
     }
-    execInfo->topAddr = (void *)LOADCORE_ERROR; //0x0000406C
-    execInfo->largestSegSize = 0; //0x00004078
+    execInfo->topAddr = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000406C
+    execInfo->modCodeSize = 0; //0x00004078
     execInfo->maxSegAlign = 0; //0x0000407C
     
     elfHeader = (Elf32_Ehdr *)buf;
@@ -202,6 +202,8 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                 execInfo->moduleInfoOffset = elfProgHeader->p_paddr & 0x1FFFFFFF; //0x00004184
             }
             execInfo->topAddr = (void *)elfProgHeader->p_vaddr; //0x0000418C
+
+            // TODO: Fix the loop condition: != PT_LOAD -> == PT_LOAD
             if (nSegments > 0 && elfProgHeader->p_type == PT_LOAD) { //0x00004190 & 0x000041A0
                 //0x00004200 - (0x00004244) - 0x0000425C
                 for (i = 0; i < nSegments && elfProgHeader->p_type != PT_LOAD; i++, elfProgHeader++) {
@@ -215,9 +217,9 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                          execInfo->maxSegAlign = elfProgHeader->p_align; //0x00004240
                 }
             }
-            execInfo->largestSegSize = maxAddr - lowAddr; //0x000041B0
+            execInfo->modCodeSize = maxAddr - lowAddr; //0x000041B0
             if (execInfo->elfType == SCE_EXEC_FILE_ELF) { //0x000041B8
-                execInfo->largestSegSize = maxAddr - (lowAddr & 0xFFFFFF00); //0x000041D8
+                execInfo->modCodeSize = maxAddr - (lowAddr & 0xFFFFFF00); //0x000041D8
                 
                 if (execInfo->execSize == 0) //0x000041D4
                     execInfo->execSize = maxOffset; //0x000041E8
@@ -256,7 +258,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     execInfo->bssSize = 0;
     
     sceHeader = (SceHeader *)buf;
-    if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC) { //0x00004408
+    if (((sceHeader->magic[0] << 24) | (sceHeader->magic[1] << 16) | (sceHeader->magic[2] << 8) | sceHeader->magic[3]) == SCE_MAGIC) { //0x00004408
         if (sceHeader->hdrVersion == SCE_HEADER_BETA_VERSION) { //0x000048D8
             execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
             return SCE_ERROR_KERNEL_CANNOT_USE_BETA_VER_MODULE;
@@ -306,10 +308,10 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     //0x00004498
     switch (execInfo->elfType) {
     case SCE_EXEC_FILE_TYPE_PRX:
-        isPrx = TRUE; //jumps to 0x000044A0
+        isPrx = SCE_TRUE; //jumps to 0x000044A0
         break;
     case SCE_EXEC_FILE_TYPE_ELF:
-        isPrx = FALSE; //jumps to 0x000046AC
+        isPrx = SCE_FALSE; //jumps to 0x000046AC
         break;
     default: 
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
@@ -336,23 +338,23 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         execInfo->importsInfo = modInfo->stubTop; //0x000044F8
         
         if (!execInfo->isDecrypted) { //0x000044F4
-            if (modInfo->modAttribute & SCE_PRIVILEGED_MODULES) { //0x0000469C
+            if (modInfo->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) { //0x0000469C
                 execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             }
         }
         else {
-            if ((modInfo->modAttribute & SCE_PRIVILEGED_MODULES) && (execInfo->modInfoAttribute & SCE_PRIVILEGED_MODULES)) { //0x00004504 & 0x00004514
+            if ((modInfo->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) && (execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS)) { //0x00004504 & 0x00004514
                 execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             }
         }
         
-        execInfo->modInfoAttribute |= (modInfo->modAttribute & ~SCE_PRIVILEGED_MODULES); //0x00004554
+        execInfo->modInfoAttribute |= (modInfo->modAttribute & ~SCE_MODULE_PRIVILEGE_LEVELS); //0x00004554
         if (execInfo->isDecrypted) //0x00004550
             return SCE_ERROR_OK;  
            
-        if ((execInfo->modInfoAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) { //0x00004558 - 0x00004590
+        if ((execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) { //0x00004558 - 0x00004590
             execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
@@ -404,7 +406,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     execInfo->importsSize = modInfo->stubEnd - modInfo->stubTop; //0x000046F0
     execInfo->importsInfo = modInfo->stubTop; //0x000046F8
     
-    tmpModAttr = modInfo->modAttribute & SCE_PRIVILEGED_MODULES;
+    tmpModAttr = modInfo->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS;
     if (!execInfo->isDecrypted) { //0x000046F4
         if (tmpModAttr) { //0x000048A4
             execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
@@ -419,14 +421,14 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         }
     }
     
-    execInfo->modInfoAttribute |= (tmpModAttr & ~SCE_PRIVILEGED_MODULES); //0x00004730
+    execInfo->modInfoAttribute |= (tmpModAttr & ~SCE_MODULE_PRIVILEGE_LEVELS); //0x00004730
     /* Don't load ELF into Kernel memory. */
     if (IS_KERNEL_ADDR(execInfo->topAddr)) { //0x0000472C
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
     /* Don't load privileged ELF. */
-    if (execInfo->modInfoAttribute & SCE_PRIVILEGED_MODULES) { //0x00004738
+    if (execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) { //0x00004738
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
@@ -548,7 +550,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     segmentPtr = NULL;
     
     sceHeader = (SceHeader *)buf;
-    if (((u32 *)sceHeader->magic)[0] == SCE_MAGIC) { //0x00004948
+    if (((sceHeader->magic[0] << 24) | (sceHeader->magic[1] << 16) | (sceHeader->magic[2] << 8) | sceHeader->magic[3]) == SCE_MAGIC) { //0x00004948
         if (sceHeader->hdrVersion == SCE_HEADER_BETA_VERSION) //0x00004E3C
             return SCE_ERROR_KERNEL_CANNOT_USE_BETA_VER_MODULE;
             
@@ -630,7 +632,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
             /* Ensure 256-Byte alignment of the ELF block. */         
             size = UPALIGN256(size) - (execInfo->segmentAddr[0] & 0xFFFFFF00); //0x00004DD8 & 0x00004DE0 & 0x00004DEC
             blockId = sceKernelAllocPartitionMemory(execInfo->partitionId, ELF_MEMORY_BLOCK_NAME, SCE_KERNEL_SMEM_Addr, 
-                                                    size, (void *)(execInfo->segmentAddr[0] & 0xFFFFFF00)); //0x00004DF4
+                                                    size, execInfo->segmentAddr[0] & 0xFFFFFF00); //0x00004DF4
             
             execInfo->memBlockId = blockId; //0x00004DFC
             if (blockId < 0)
@@ -662,10 +664,10 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                  return SCE_ERROR_KERNEL_ERROR;
              }
         }
-        if ((s32)execInfo->entryAddr != LOADCORE_ERROR) //0x00004B54
+        if ((s32)execInfo->entryAddr != SCE_KERNEL_VALUE_UNITIALIZED) //0x00004B54
             execInfo->entryAddr += (u32)execInfo->topAddr; //0x00004B5C
         
-        if (execInfo->exportsInfo != (void *)LOADCORE_ERROR) //0x00004B74
+        if (execInfo->exportsInfo != (void *)SCE_KERNEL_VALUE_UNITIALIZED) //0x00004B74
             execInfo->exportsInfo += (u32)execInfo->topAddr; //0x00004B7C
         
         if (elfProgHeader->p_type == PT_PRX_RELOC) { //0x00004B88
@@ -916,7 +918,7 @@ static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Re
     for (i = 0; i < fileSize; i += k) {
          type = ELF32_R_TYPE(relocInfo[i].r_info); //0x000052E4
          ofsSegIndex = ELF32_R_OFS_BASE(relocInfo[i].r_info); //0x000052C0
-         addrSegIndex = ELF32_R_ADDR_BASE(relocInfo[i].r_info >> 16); //0x000052C8
+         addrSegIndex = ELF32_R_ADDR_BASE(relocInfo[i].r_info); //0x000052C8
          
          k = 1; //0x000052C4
                  
@@ -1011,163 +1013,163 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
     u8 *tag;
     u32 i;
     
-    checkCompAttr = FALSE;
+    checkCompAttr = SCE_FALSE;
     
     /* Permit decryption modes dependent on the module/API type. */
     switch (execInfo->apiType) {
     case 0: case 2: case 32: case 33: case 81:
-        if (((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_VSH || header->decryptMode != 3) && //0x00005D2C
-          ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) && //0x00005D08
+        if (((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_VSH || header->decryptMode != 3) && //0x00005D2C
+          ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) && //0x00005D08
           (header->modAttribute > SCE_MODULE_VSH || header->decryptMode != 4)) //0x0000578C   
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;     
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 3:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 4) //0x00005DA8 & 0x0000578C
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 4) //0x00005DA8 & 0x0000578C
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; 
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 16:
-        if (((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) && //0x00005D6C
-          ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 4)) //0x00005D9C
+        if (((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) && //0x00005D6C
+          ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 4)) //0x00005D9C
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 19:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || (header->decryptMode != 18 && //0x00005E30
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || (header->decryptMode != 18 && //0x00005E30
           (header->decryptMode != 19 || sceKernelIsToolMode() == 0))) //0x00005E50 & 0x00005E38
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;  
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 20:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 23) //0x00005DEC
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 23) //0x00005DEC
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 17: case 48: case 66:
-        if (((header->modAttribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_USER && header->decryptMode != 4) && //0x00005D60 & 0x00005790
-          (((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_KERNEL) || header->decryptMode - 1 >= 2)) //0x00005D6C & 0x00005D14
+        if (((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_USER && header->decryptMode != 4) && //0x00005D60 & 0x00005790
+          (((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_KERNEL) || header->decryptMode - 1 >= 2)) //0x00005D6C & 0x00005D14
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 67:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_APP || header->decryptMode != 22) //0x00005E1C & 0x00005E28
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_APP || header->decryptMode != 22) //0x00005E1C & 0x00005E28
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 80:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) //0x00005D6C & 0x00005D1C
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) //0x00005D6C & 0x00005D1C
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 112:
         //TODO: Check this.
-        if ((sceKernelIsToolMode() == 0 || (header->modAttribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_APP) && //0x00005F98 & 0x00005FB4
+        if ((sceKernelIsToolMode() == 0 || (header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_APP) && //0x00005F98 & 0x00005FB4
           (header->modAttribute != SCE_MODULE_KERNEL || header->decryptMode - 1 >= 2) && //0x00005D08 & 0x00005D1C
           (header->modAttribute != SCE_MODULE_VSH || header->decryptMode != 3) && (header->modAttribute != 0 || 
            header->decryptMode != 4)) //0x00005D30
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 272: case 274:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 0) //0x00005F7C & 0x00005F88
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 0) //0x00005F7C & 0x00005F88
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 275: case 277:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 9) //0x00005F48
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 9) //0x00005F48
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 276: 
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 0) //0x00005F7C & 0x00005F88
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 0) //0x00005F7C & 0x00005F88
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 278: case 280:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 23) //0x00006044 & 0x00005F64
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 23) //0x00006044 & 0x00005F64
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 273: case 288:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 9) //0x00005F50 & 0x00005F64
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 9) //0x00005F50 & 0x00005F64
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 289:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_VSH || header->decryptMode != 3) //0x00006308 & 0x00005790
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_VSH || header->decryptMode != 3) //0x00006308 & 0x00005790
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 290:
-        if (sceKernelIsToolMode() == 0 || (header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || //0x000060C0 & 0x000060D8
+        if (sceKernelIsToolMode() == 0 || (header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || //0x000060C0 & 0x000060D8
          ((header->decryptMode & 0xFF) != 0 && (header->decryptMode & 0xFF) != 9)) //0x000057B4 & 0x00005F64
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 305: case 307:
-        if (sceKernelIsToolMode() == 0 || (header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USB_WLAN || //0x0000617C & 0x00006190
+        if (sceKernelIsToolMode() == 0 || (header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USB_WLAN || //0x0000617C & 0x00006190
          (header->decryptMode - 10) >= 2) //0x00005D18
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x0000579C
     case 304: case 306:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USB_WLAN || header->decryptMode != 10) //0x00006120
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USB_WLAN || header->decryptMode != 10) //0x00006120
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x00005798
     case 320:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_VSH || header->decryptMode != 12) //0x00006244
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_VSH || header->decryptMode != 12) //0x00006244
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x00005798
     case 325:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS || header->decryptMode != 21) //0x000062A8 & 0x000062C0/0x00005790
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_MS || header->decryptMode != 21) //0x000062A8 & 0x000062C0/0x00005790
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x00005798
     case 323: case 340:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_APP || header->decryptMode != 14) //0x00006224 & 0x000061F8
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_APP || header->decryptMode != 14) //0x00006224 & 0x000061F8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         status = CheckTick(modBuf); //0x00006200
         if (status < SCE_ERROR_OK) //0x00006208
             return status; 
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x00005798
     case 324: case 341:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS || header->decryptMode != 20) //0x000061C0
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_MS || header->decryptMode != 20) //0x000061C0
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x00005790
     case 342:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS || header->decryptMode != 21) //0x000062B0
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_MS || header->decryptMode != 21) //0x000062B0
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //00005790
 
     //TODO: Check these
     case 291: case 292: case 294: case 353:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER || header->decryptMode != 25) //0x0000613C & 0x00005F64
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER || header->decryptMode != 25) //0x0000613C & 0x00005F64
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         break; //0x000057B4
     case 512: case 528: case 544: case 768:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_VSH || header->decryptMode != 3) //0x00006314 & 0x00005D30 & 0x00005790
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_VSH || header->decryptMode != 3) //0x00006314 & 0x00005D30 & 0x00005790
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        checkCompAttr = TRUE;
+        checkCompAttr = SCE_TRUE;
         break; //0x00005798
 
     default:
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
 
-    if (checkCompAttr == TRUE && header->compAttribute & SCE_EXEC_FILE_ELF) //0x0000579C
+    if (checkCompAttr == SCE_TRUE && header->compAttribute & SCE_EXEC_FILE_ELF) //0x0000579C
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     /* Decrypt the executable file. */
     switch (header->decryptMode) { //0x000057D0
     case DECRYPT_MODE_NO_EXEC: 
-        execInfo->isDecrypted = FALSE; //0x000057D8
+        execInfo->isDecrypted = SCE_FALSE; //0x000057D8
         break;
     case DECRYPT_MODE_BOGUS_MODULE: case DECRYPT_MODE_KERNEL_MODULE:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_KERNEL) //0x000058C8
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_KERNEL) //0x000058C8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
-        if (execInfo->isSignChecked == TRUE) { //0x000058D4
+        if (execInfo->isSignChecked == SCE_TRUE) { //0x000058D4
             if (g_prepareGetLengthFunc(modBuf, execInfo->execSize) != 0) //0x000058F0
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             
@@ -1187,10 +1189,10 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         } else if (g_getLengthFunc(modBuf, execInfo->execSize, newSize) != 0) //0x00005958
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_VSH_MODULE:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_VSH) //0x000059B0
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_VSH) //0x000059B0
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         if (execInfo->isSignChecked) { //0x000059BC
@@ -1208,10 +1210,10 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         if (sceMesgLed_driver_5C3A61FE(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_USER_MODULE:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) //0x00005A48
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) //0x00005A48
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         if (execInfo->isSignChecked) { //0x00005A54
@@ -1229,121 +1231,121 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
         if (sceMesgLed_driver_2CB700EC(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x57DC    
     case DECRYPT_MODE_UMD_GAME_EXEC:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) //0x00005AE0
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) //0x00005AE0
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;        
                 
         if (sceMesgLed_driver_337D0DD3(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_GAMESHARING_EXEC:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USB_WLAN) //0x00005B0C
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USB_WLAN) //0x00005B0C
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         if (sceMesgLed_driver_4EAB9850(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_11:
         if (sceKernelIsToolMode() != SCE_ERROR_OK) //0x00005B34
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USB_WLAN) //0x00005B48
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USB_WLAN) //0x00005B48
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
         if (sceMesgLed_driver_B2CDAC3F(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_MS_UPDATER:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_VSH) //0x00005B74
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_VSH) //0x00005B74
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         if (sceMesgLed_driver_C79E3488(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC           
     case DECRYPT_MODE_DEMO_EXEC:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS) //0x00005BA0
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_MS) //0x00005BA0
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         if (sceMesgLed_driver_21AFFAAC(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_APP_MODULE:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_APP) //0x00005BCC
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_APP) //0x00005BCC
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         if (sceMesgLed_driver_C00DAD75(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_18:
-        if (sceMesgLed_driver_CED2C075(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_CED2C075(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_19:
-        if (sceMesgLed_driver_C7D1C16B(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_C7D1C16B(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_POPS_EXEC:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS) //0x00005C30
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_MS) //0x00005C30
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_EBB4613D(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_EBB4613D(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_21:             
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_MS) //0x00005C60
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_MS) //0x00005C60
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_66B348B2(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_66B348B2(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_22:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_APP) //0x00005C90
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_APP) //0x00005C90
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
         if (sceMesgLed_driver_B2D95FDF(modBuf, execInfo->execSize, newSize) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_23:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) //0x00005CB8
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) //0x00005CB8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_91E0A9AD(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_91E0A9AD(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     case DECRYPT_MODE_UNKNOWN_25:
-        if ((header->modAttribute & SCE_PRIVILEGED_MODULES) != SCE_MODULE_USER) //0x00005CE4
+        if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) //0x00005CE4
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
-        if (sceMesgLed_driver_31D6D8AA(modBuf, execInfo->execSize, newSize, execInfo->unk104) != SCE_ERROR_OK) //0x00005958
+        if (sceMesgLed_driver_31D6D8AA(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        execInfo->isDecrypted = TRUE;
+        execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
     default:
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;            
@@ -1356,7 +1358,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; //0x000058B4
     } else if (execInfo->topAddr == NULL) { //0x000057F0
         return SCE_ERROR_OK; 
-    } else if (execInfo->topAddr == (void *)LOADCORE_ERROR) {//0x00005800
+    } else if (execInfo->topAddr == (void *)SCE_KERNEL_VALUE_UNITIALIZED) {//0x00005800
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
     
@@ -1384,7 +1386,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
     if (status < SCE_ERROR_OK) { //0x00005868
         return status; //0x00005884
     } else if ((u32)status == execInfo->decSize) { //0x0005874
-        execInfo->isDecompressed = TRUE; //0x00005890
+        execInfo->isDecompressed = SCE_TRUE; //0x00005890
         return status; //0x00005884
     } 
     else //0x5884
@@ -1402,7 +1404,7 @@ static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execI
     u32 i;
     u32 maxSegEnd = 0;
     
-    execInfo->largestSegSize = 0; //0x00006328
+    execInfo->modCodeSize = 0; //0x00006328
     execInfo->topAddr = (void *)header->segAddress[0]; //0x00006334
     execInfo->maxSegAlign = 0; //0x00006338
     
@@ -1417,7 +1419,7 @@ static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execI
                  maxSegEnd = header->segAddress[i] + header->segSize[i];
         }
     }
-    execInfo->largestSegSize = maxSegEnd - (u32)execInfo->topAddr;
+    execInfo->modCodeSize = maxSegEnd - (u32)execInfo->topAddr;
 }
 
 //sub_000063C0

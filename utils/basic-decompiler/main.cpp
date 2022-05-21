@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011 - 2014 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -51,12 +51,14 @@ std::map<std::string, Instruction> instructions =
     {"bnel", {"R0 R1 l0", "%R0 != %R1"}},
     {"bnez", {"R0 l0", "%R0 != 0"}},
     {"bnezl", {"R0 l0", "%R0 != 0"}},
-    {"bgez", {"R0 l0", "%R0 >= 0"}},
-    {"bgezl", {"R0 l0", "%R0 >= 0"}},
-    {"blez", {"R0 l0", "%R0 <= 0"}},
-    {"blezl", {"R0 l0", "%R0 <= 0"}},
-    {"bltz", {"R0 l0", "%R0 < 0"}},
-    {"bltzl", {"R0 l0", "%R0 < 0"}},
+    {"bgez", {"R0 l0", "(s32)%R0 >= 0"}},
+    {"bgezl", {"R0 l0", "(s32)%R0 >= 0"}},
+    {"blez", {"R0 l0", "(s32)%R0 <= 0"}},
+    {"blezl", {"R0 l0", "(s32)%R0 <= 0"}},
+    {"bltz", {"R0 l0", "(s32)%R0 < 0"}},
+    {"bltzl", {"R0 l0", "(s32)%R0 < 0"}},
+    {"bgtz", {"R0 l0", "(s32)%R0 > 0"}},
+    {"bgtzl", {"R0 l0", "(s32)%R0 > 0"}},
 
     {"jal", {"f0", "v0, v1 = %f0"}},
     {"jr", {"x0", "%x0"}},
@@ -79,12 +81,12 @@ std::map<std::string, Instruction> instructions =
     {"sllv", {"r0 R1 R2", "%r0 = %R1 << %R2"}},
     {"srl", {"r0 R1 i0", "%r0 = (u32)%R1 >> %i0"}},
     {"srlv", {"r0 R1 R2", "%r0 = (u32)%R1 >> %R2"}},
-    {"sra", {"r0 R1 i0", "%r0 = %R1 >> %i0"}},
-    {"srav", {"r0 R1 R2", "%r0 = %R1 >> %R2"}},
+    {"sra", {"r0 R1 i0", "%r0 = (s32)%R1 >> %i0"}},
+    {"srav", {"r0 R1 R2", "%r0 = (s32)%R1 >> %R2"}},
 
-    {"slt", {"r0 R1 R2", "%r0 = %R1 < %R2"}},
+    {"slt", {"r0 R1 R2", "%r0 = (s32)%R1 < (s32)%R2"}},
     {"sltu", {"r0 R1 R2", "%r0 = (u32)%R1 < (u32)%R2"}},
-    {"slti", {"r0 R1 i0", "%r0 = %R1 < %i0"}},
+    {"slti", {"r0 R1 i0", "%r0 = (s32)%R1 < (s32)%i0"}},
     {"sltiu", {"r0 R1 i0", "%r0 = (u32)%R1 < (u32)%i0"}},
 
     // special instructions, not using the format because they're too complicated

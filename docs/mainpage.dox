@@ -1,0 +1,21 @@
+/**
+@author uOFW
+@brief Documentation file for Mainpage, and defgroups.
+@file
+*/
+
+/**
+@mainpage uOFW - The uOFW API for the PSP (Playstation Portable) Kernel 6.60.
+
+This documentation contains exported functions by reverse-engineered PSP modules.\n
+It is aimed at those people who want to write applications for the PSP and want 
+to get an overview about the functions they can use.
+
+This documentation does not provide detailed information about the internals of the PSP kernel;\n
+if you want to learn more about the inner-works of the kernel, please take a look here: https://github.com/uofw/uofw/tree/master/src
+
+This documentation is still incomplete, and we are working hard on adding more documented modules to it.
+
+If you find mistakes in this documentation or have suggestions how to improve it, please contact us via e-mail\n
+or join us in our IRC chat room, called #uofw on the FreeNode server.
+*/

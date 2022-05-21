@@ -1,24 +1,26 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011, 2012, 2013 The uOFW team
    See the file COPYING for copying permission.
 */
 
 /*
- * uOFW/trunk/src/loadcore/loadcore.c
+ * uofw/src/loadcore/loadcore.c
  * 
- * Loadcore - Basic API for the Module Manager and File Loader of the 
- * Program Loader.
+ * Loadcore - low-level API for the Program Loader.
+ *
+ * The Program Loader loads modules - i.e from flash memory, Memory-Sticks or UMDs -
+ * into memory, relocates modules and manages the loaded modules.
+ * The loader consists of a high-level API provided by the Module Manager and a
+ * low-level API provided by Loadcore.
  * 
- * The Program Loader handles the loading/relocating of modules and
- * manages modules in memory.  It contains two layers, the Module Manager
- * and the File Loader.  The Module Manager performs linking between
- * modules and registers/deletes resident libraries provided by modules.
- * Its basic API is implemented in loadcore.c.
+ * The low-level API is further divided into a Module Linker and a File Loader.
+ * The Module Linker performs linking between modules and manages resident libraries 
+ * provided by modules. It is implemented in loadcore.c.
  * 
- * The File Loader is responsible for loading object files and for
- * registering/deleting modules.  Its basic API is implemented in module.c
+ * The File Loader is responsible for loading object files, managing modules in memory
+ * and for placing relocatable modules in memory.  It is implemented in module.c
  * and loadelf.c
  * 
- * Specific tasks:
+ * loadcore.c - specific tasks:
  *    1) Continue booting the rest of the system modules.  Every module upto
  *       init.prx (including init) will be booted and its resident libraries
  *       will be registered as well as its stub libraries being linked.  
@@ -28,10 +30,11 @@
  * 
  */
 
+#include <init.h>
 #include <interruptman.h>
 #include <loadcore.h>
 #include <memlmd.h>
-#include <modulemgr.h>
+#include <modulemgr_nids.h>
 #include <sysmem_kdebug.h>
 #include <sysmem_utils_kernel.h>
 
@@ -55,13 +58,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define SVALALIGN4(v)                           ((s32)((((u32)((s32)(v) >> 31)) >> 30) + (v)) >> 2)
 
-#define INIT_MODULE_NAME                        "sceInit"
-#define MEMLMD_MODULE_NAME                      "memlmd"
-
 #define LOADCORE_CYCLIC_POLYNOMIAL_HASH_RADIAX  (5)
 
-#define RAM_TYPE_32_MB                          (1)
-#define RAM_TYPE_64_MB                          (2)
 #define RAM_SIZE_32_MB                          (0x2000000)
 
 #define LOADCORE_HEAP_SIZE                      (4096)
@@ -71,9 +69,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 
 #define STUB_LIBRARY_CONTROL_BLOCKS             (90)
 #define TOP_STUB_LIBRARY_CONTROL_BLOCK          (STUB_LIBRARY_CONTROL_BLOCKS - 1)
-
-#define LIBRARY_VERSION_MINOR                   (0)
-#define LIBRARY_VERSION_MAJOR                   (1)
 
 #define LOADCORE_LIBRARY_NAME                   "LoadCoreForKernel"
 #define LOADCORE_EXPORTED_FUNCTIONS             (34)
@@ -99,8 +94,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define JR_RA                                   (0x03E00008)
 
 #define SECONDARY_MODULE_ID_START_VALUE         (0x10001)
-
-#define SCE_BOOT_CALLBACK_FUNCTION_QUEUED       (1)
 
 #define SCE_PRIMARY_SYSCALL_HANDLER_SYSCALL_ID  (0x15)
 
@@ -281,6 +274,8 @@ static SceStubLibrary g_LoadCoreLibStubs[STUB_LIBRARY_CONTROL_BLOCKS]; //0x00008
  * When freeing a currently used control block g_FreeLibStub is set to 
  * point to that specific control block.
  */
+
+s32 g_SyscallIntrRegSave[7]; //0x000080C0
 static SceStubLibrary *g_FreeLibStub; //0x000080E4
 
 s32 g_ToolBreakMode; //0x000083C4
@@ -318,34 +313,6 @@ const u32 g_hashinfo[8] = {
     0x00190080,
     0x00180100,
     0x00170200
-};
-
-//0x00008038
-const u32 g_hashData[24] = {
-    0x2CDEEB73, 
-    0xF7E529B9, 
-    0xF85FB599,
-    0xA8B6B2D3,
-    0xA0811E0E,
-    0xF91FE045,
-    0x51339FF7,
-    0xBF9F32B2,
-    0x89F0A05E,
-    0xF413FE28,
-    0x1F24A87E,
-    0x7C1ADFE2,
-    0x3D3203F8,
-    0x4C6E9246,
-    0x4DCA0BCB,
-    0x71A9322A,
-    0x7EAEEDE2,
-    0xC7BACA41,
-    0xC38D13D2,
-    0xE54A1434,
-    0x0FC5364D,
-    0xF2EA99AA,
-    0x7A418AA1,
-    0xFEC29EA1,
 };
 
 /*
@@ -387,7 +354,7 @@ const u32 g_loadCoreExportTable[LOADCORE_EXPORT_TABLE_ENTRIES] = {
     NID_SCE_KERNEL_SET_BOOT_CALLBACK_LEVEL,
     NID_SCE_KERNEL_CHECK_PSP_CONFIG,   
     (u32)sceKernelDeleteModule,
-    (u32)sceKernelUnLinkLibraryEntries,
+    (u32)sceKernelUnlinkLibraryEntries,
     (u32)sceKernelMaskLibraryEntries,
     (u32)sceKernelLoadCoreLock,
     (u32)sceKernelLoadExecutableObject,
@@ -496,7 +463,7 @@ static SceResidentLibrary *FreeLibEntCB(SceResidentLibrary *libEntry)
 {      
     if (libEntry->libNameInHeap) {
         sceKernelFreeHeapMemory(g_loadCoreHeap(), libEntry->libName); 
-        libEntry->libNameInHeap = FALSE;
+        libEntry->libNameInHeap = SCE_FALSE;
     }       
     if (libEntry >= &g_LoadCoreLibEntries[0] && libEntry <= &g_LoadCoreLibEntries[TOP_RESIDENT_LIBRARY_CONTROL_BLOCK]) { //0x00000170 & 0x0000017C    
         libEntry->next = g_FreeLibEnt;
@@ -554,9 +521,9 @@ static SceStubLibrary *NewLibStubCB(void)
  */
 static SceStubLibrary *FreeLibStubCB(SceStubLibrary *stubLib)
 {  
-    if (stubLib->libNameInHeap == TRUE) { //0x000002A8
+    if (stubLib->libNameInHeap == SCE_TRUE) { //0x000002A8
         sceKernelFreeHeapMemory(g_loadCoreHeap(), stubLib->libName2); //0x0000031C       
-        stubLib->libNameInHeap = FALSE;
+        stubLib->libNameInHeap = SCE_FALSE;
     }           
     if (stubLib >= &g_LoadCoreLibStubs[0] && stubLib <= &g_LoadCoreLibStubs[TOP_STUB_LIBRARY_CONTROL_BLOCK]) { //0x000002C0 & 0x000002CC
         stubLib->next = g_FreeLibStub;
@@ -706,9 +673,10 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
  * 
  * Returns 0 on success.   
  */
-s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp) 
+s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
-    s32 i;
+    u32 i;
+    for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
     s32 seedPart1;
     s32 status;    
     s32 linkLibsRes;
@@ -716,8 +684,8 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     SceLoadCoreBootInfo *bootInfo = NULL;
     SysMemThreadConfig *sysMemThreadConfig = NULL;         
     
-    bootInfo = ((SceLoadCoreBootInfo **)argp)[0];
-    sysMemThreadConfig = ((SysMemThreadConfig **)argp)[1]; //0x00000B38
+    bootInfo = ((SceLoadCoreBootInfo **)argBlock)[0];
+    sysMemThreadConfig = ((SysMemThreadConfig **)argBlock)[1]; //0x00000B38
     g_MemSize = bootInfo->memSize; //0x00000B44
     g_MemBase = bootInfo->memBase; //0x00000B48
     
@@ -730,8 +698,8 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
     //0x00000B78 - 0x00000BA4
     g_loadCore.sysCallTableSeed = seedPart1 + 0x2000;
     g_loadCore.secModId = SECONDARY_MODULE_ID_START_VALUE;
-    g_loadCore.loadCoreHeapId = LOADCORE_ERROR;
-    g_loadCore.linkedLoadCoreStubs = FALSE;
+    g_loadCore.loadCoreHeapId = SCE_KERNEL_VALUE_UNITIALIZED;
+    g_loadCore.linkedLoadCoreStubs = SCE_FALSE;
     g_loadCore.sysCallTable = NULL;
     g_loadCore.unk520 = 0;
     g_loadCore.unLinkedStubLibs = NULL;
@@ -759,8 +727,8 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
         sceKernelSetCompareLatestSubType(sysMemThreadConfig->CompareLatestSubType); //0x00000E58
 
     /* register Sysmem's kernel resident libraries. */             
-    for (i = 0; i < sysMemThreadConfig->userLibStart; i++) { //0x00000BF0 & 0x00000BFC - 0x00000C24
-         if (sceKernelRegisterLibrary(sysMemThreadConfig->exportLib[i]) != SCE_ERROR_OK)
+    for (i = 0; i < sysMemThreadConfig->numKernelLibs; i++) { //0x00000BF0 & 0x00000BFC - 0x00000C24
+         if (sceKernelRegisterLibrary(sysMemThreadConfig->kernelLibs[i]) != SCE_ERROR_OK)
              StopLoadCore();
     } 
     status = sceKernelRegisterLibrary(&loadCoreKernelLib); //0x00000C2C
@@ -769,7 +737,7 @@ s32 loadCoreInit(SceSize argc __attribute__((unused)), void *argp)
 
     linkLibsRes = sceKernelLinkLibraryEntries(sysMemThreadConfig->loadCoreImportTables, 
                                               sysMemThreadConfig->loadCoreImportTablesSize); //0x00000CD0
-    g_loadCore.linkedLoadCoreStubs = TRUE;
+    g_loadCore.linkedLoadCoreStubs = SCE_TRUE;
     
     g_UpdateCacheAll = UpdateCacheAllDynamic; //0x00000D1C
     g_UpdateCacheDataAll = UpdateCacheDataAllDynamic; //0x00000D20
@@ -937,7 +905,7 @@ s32 sceKernelLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
 }
 
 //Subroutine LoadCoreForKernel_0295CFCE - Address 0x00001130 
-s32 sceKernelUnLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
+s32 sceKernelUnlinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
 {
     void *curStubLibEntryTable;
     
@@ -967,7 +935,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     tmpBlockId = 0;
     
     execInfo->apiType = 0x50; //0x000011DC
-    execInfo->isSignChecked = TRUE;
+    execInfo->isSignChecked = SCE_TRUE;
     execInfo->topAddr = NULL;
     execInfo->modeAttribute = 0;
     
@@ -979,7 +947,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     
     if (execInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED) { //0x00001208
         blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, LOADCORE_GZIP_BUFFER_NAME, 
-                                                SCE_KERNEL_SMEM_High, execInfo->decSize, NULL); //0x00001224
+                                                SCE_KERNEL_SMEM_High, execInfo->decSize, 0); //0x00001224
         tmpBlockId = blockId;
         execInfo->topAddr = sceKernelGetBlockHeadAddr(blockId); //0x00001230        
         status = sceKernelCheckExecFile(bootModInfo->modBuf, execInfo); //0x00001240
@@ -996,18 +964,18 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     //0x0000126C - 0x00001290
     switch (execInfo->elfType) {
     case SCE_EXEC_FILE_TYPE_PRX: case SCE_EXEC_FILE_TYPE_PRX_2:
-        isPrx = TRUE; //jumps to 0x00001298
+        isPrx = SCE_TRUE; //jumps to 0x00001298
         break;
     default: 
-        isPrx = FALSE;
+        isPrx = SCE_FALSE;
         break;
     }  
     if (!isPrx)
         StopLoadCore();
     
-    if ((execInfo->modInfoAttribute & SCE_PRIVILEGED_MODULES) == SCE_MODULE_KERNEL) { //0x000012A4
+    if ((execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) == SCE_MODULE_KERNEL) { //0x000012A4
         blockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, LOADCORE_KERNEL_PRX_BUFFER_NAME, 
-                                                SCE_KERNEL_SMEM_Low, execInfo->largestSegSize, NULL); //0x0000134C
+                                                SCE_KERNEL_SMEM_Low, execInfo->modCodeSize, 0); //0x0000134C
         //TODO: Add NULL-pointer check, Sony forgot it.
         *modMemId = blockId;
         execInfo->topAddr = sceKernelGetBlockHeadAddr(blockId); //0x00001360
@@ -1024,7 +992,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     }
     StopLoadCore();
     //Note: This return statement isn't included in original loadcore.
-    return LOADCORE_ERROR;
+    return SCE_KERNEL_VALUE_UNITIALIZED;
 }
 
 //Subroutine sub_00001694
@@ -1074,7 +1042,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
      * by the System Memory Manager module.
      */
     memBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceLoadCoreBootInfo", 
-                                               SCE_KERNEL_SMEM_High, sizeof(SceLoadCoreBootInfo), NULL);
+                                               SCE_KERNEL_SMEM_High, sizeof(SceLoadCoreBootInfo), 0);
     if (memBlockId < 0) //0x00001704
         StopLoadCore(); 
     
@@ -1092,7 +1060,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     if (loadCoreBootInfo->numModules > 0) { //0x0000173C
         size = loadCoreBootInfo->numModules * sizeof(SceLoadCoreBootModuleInfo);
         memBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceLoadCoreBootModuleInfo", 
-                                                   SCE_KERNEL_SMEM_High, size, NULL); //0x00001758
+                                                   SCE_KERNEL_SMEM_High, size, 0); //0x00001758
         if (memBlockId < 0) //0x00001760
             StopLoadCore();
        
@@ -1115,7 +1083,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     if (loadCoreBootInfo->numProtects != 0) { //0x000017B4
         size = loadCoreBootInfo->numProtects * sizeof(SceLoadCoreProtectInfo); //0x00002290
         memBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceLoadCoreProtectInfo", 
-                                                   SCE_KERNEL_SMEM_High, size, NULL); //0x000022AC
+                                                   SCE_KERNEL_SMEM_High, size, 0); //0x000022AC
         if (memBlockId < 0) //0x000022B4
             StopLoadCore();
       
@@ -1156,7 +1124,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
           * Step 3: Link the stub libraries of the recently loaded module
           *         with the currently registered resident libraries. 
           */
-         if (((s32)execInfo.importsInfo) != LOADCORE_ERROR && 
+         if (((s32)execInfo.importsInfo) != SCE_KERNEL_VALUE_UNITIALIZED && 
            sceKernelLinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize) < SCE_ERROR_OK)
              StopLoadCore(); //0x000020E0
       
@@ -1175,7 +1143,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
           * its loaded resident libraries.
           */
          if (mod == NULL) {
-             sceKernelUnLinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001F24
+             sceKernelUnlinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001F24
           
              /*
               * In order to unregister the module's resident libraries, we search
@@ -1209,7 +1177,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
          *         (and similar ones).  Boot the module by calling its entry point.
          */ 
         else {
-            mod->memId = modMemId; //0x000018C0
+            mod->moduleBlockId = modMemId; //0x000018C0
             sceKernelRegisterModule(mod); //0x000018BC
 
             //0x000018C4 - 0x00001904
@@ -1220,7 +1188,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
                      ProcessModuleExportEnt(mod, curExportTable); //0x00001F14
             }           
             mod->segmentChecksum = sceKernelSegmentChecksum(mod); //0x00001908
-            mod->unk220 = 0; //0x0000191C
+            mod->textSegmentChecksum = 0; //0x0000191C
             
             /* Load and boot every system module up to init.prx. */
             if (strcmp(mod->modName, INIT_MODULE_NAME) == 0) //0x00001928
@@ -1240,7 +1208,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
              * unregister its resident libraries.
              */
             else if (status == SCE_KERNEL_NO_RESIDENT) { //0x00001954
-                sceKernelUnLinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001C90
+                sceKernelUnlinkLibraryEntries(execInfo.importsInfo, execInfo.importsSize); //0x00001C90
                 
                 exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x00001C98 - 0x00001CA4
                 for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
@@ -1268,9 +1236,11 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     }  
     //0x00001978 - 0x000019B8
     for (i = 0; i < loadCoreBootInfo->numProtects; i++) {
-         if (((loadCoreBootInfo->protects[i].attr & 0xFFFF) == 0x200) && (loadCoreBootInfo->protects[i].attr & 0x10000)) { //0x000019A8 & 0x00001C6C
+         if ((GET_PROTECT_INFO_TYPE(loadCoreBootInfo->protects[i].attr) == 0x200) 
+                 && (GET_PROTECT_INFO_STATE(loadCoreBootInfo->protects[i].attr) & SCE_PROTECT_INFO_STATE_IS_ALLOCATED)) { //0x000019A8 & 0x00001C6C
              sceKernelFreePartitionMemory(loadCoreBootInfo->protects[i].partId); //0x00001C74
-             loadCoreBootInfo->protects[i].attr &= ~0x10000; //0x00001C84
+             loadCoreBootInfo->protects[i].attr = REMOVE_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, 
+                                                                             loadCoreBootInfo->protects[i].attr); //0x00001C84
          }
     }
     sceKernelSetGetLengthFunction(NULL); //0x000019BC
@@ -1279,8 +1249,9 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
     
     //0x000019DC - 0x00001A0C
     /* Register the System Memory Manager user mode resident libraries. */
-    for (i = 0; i < threadConfig->numExportLibs - threadConfig->userLibStart; i++)
-         sceKernelRegisterLibrary(threadConfig->exportEntryTables[i]); //0x000019F0
+    u32 n;
+    for (n = 0; n < threadConfig->numExportLibs - threadConfig->numKernelLibs; n++)
+         sceKernelRegisterLibrary(threadConfig->userLibs[n]); //0x000019F0
        
     if (mod == NULL) //0x00001A10
         StopLoadCore(); //0x00001BDC
@@ -1306,26 +1277,27 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
      */
     //0x00001A44 - 0x00001AA0
     for (i = 0; i < 4; i++) {
-         if (i == 3) //0x00001A58
-             g_loadCore.bootCallBacks = NULL; //0x00001A5C
+        if (i == 3) //0x00001A58
+            g_loadCore.bootCallBacks = NULL; //0x00001A5C
         
          //0x00001A60 & 0x00001A78 - 0x00001A90
-         for (j = 0; g_loadCore.bootCallBacks[j].bootCBFunc != NULL; j++) {  
-              if (((s32)(g_loadCore.bootCallBacks[j].bootCBFunc) & 3) == i) { //0x00001A7C                   
-                  bootCbFunc = (SceKernelBootCallbackFunction)(((u32)g_loadCore.bootCallBacks[j].bootCBFunc) & ~0x3); //0x00001B18
-                  if (i == 3) //0x00001B1C 
-                      bootCbFunc((s32)(((void *)g_loadCore.bootCallBacks) + 2), 1, NULL); //0x00001A80 & 0x00001B44    
-                  else
-                      bootCbFunc((s32)g_loadCore.bootCallBacks, 1, NULL); //0x00001B34              
-              }
+         for (j = 0; bootCallbacks[j].bootCBFunc != NULL; j++) {  
+             if (((s32)(bootCallbacks[j].bootCBFunc) & 3) == i) { //0x00001A7C                   
+                 bootCbFunc = (SceKernelBootCallbackFunction)(((u32)bootCallbacks[j].bootCBFunc) & ~0x3); //0x00001B18
+                 if (i == 3) //0x00001B1C 
+                     bootCbFunc(((void *)&bootCallbacks[j]) + 2, 1, NULL); //0x00001A80 & 0x00001B44    
+                 else
+                     bootCbFunc(bootCallbacks, 1, NULL); //0x00001B34              
+             }
          }
          if (i == 2) { //0x00001A94
              //0x00001AE0 & 00001AF0 - 0x00001B14
-             for (; j > 0; j--) {
-                  if (((u32)g_loadCore.bootCallBacks[j].bootCBFunc & 3) == 3) //0x00001B00
-                      break;
+             while (j > 0) {
+                 j--; //0x00001AF0
+                 if (((u32)bootCallbacks[j].bootCBFunc & 3) == 3) //0x00001B00
+                     break;
                  
-                  g_loadCore.bootCallBacks[j].bootCBFunc = NULL; //0x00001B0C
+                 bootCallbacks[j].bootCBFunc = NULL; //0x00001B0C
              }
         }
     }   
@@ -1397,19 +1369,19 @@ SceLoadCore *sceKernelQueryLoadCoreCB(void)
 }
 
 //Subroutine LoadCoreForKernel_F976EF41 - Address 0x000025E0
-s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, SceBootCallback *bootCallback)
+s32 sceKernelSetBootCallbackLevel(SceKernelBootCallbackFunction bootCBFunc, u32 flag, s32 *status)
 {
     if (g_loadCore.bootCallBacks != NULL) { //0x00002614
         g_loadCore.bootCallBacks->bootCBFunc = bootCBFunc + (flag & 3); //0x00002650
         g_loadCore.bootCallBacks->gp = sceKernelGetModuleGPByAddressForKernel((u32)bootCBFunc); //0x0000264C & 0x00002658
-        g_loadCore.bootCallBacks = &g_loadCore.bootCallBacks[1]; //0x00002664
+        g_loadCore.bootCallBacks += 1; //0x00002664
         g_loadCore.bootCallBacks->bootCBFunc = NULL; //0x0000266C
         
         return SCE_BOOT_CALLBACK_FUNCTION_QUEUED;
     }    
-    bootCBFunc(1, 0, NULL); //0x0000261C     
-    if (bootCallback != NULL) //0x00002624
-        bootCallback->bootCBFunc = bootCBFunc + (flag & 3); //0x0000262C
+    s32 result = bootCBFunc((void*)1, 0, NULL); //0x0000261C     
+    if (status != NULL) //0x00002624
+        *status = result; //0x0000262C
      
     return SCE_ERROR_OK;   
 }
@@ -1577,7 +1549,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
                   * Step 3: Register the library if it has a newer version than the
                   *         currently registered libraries.
                   */
-                 versionDiff = ((u16 *)nLib->version)[0] - ((u16 *)curLib->version)[0]; //0x00002DB0
+                 versionDiff = ((nLib->version[1] << 8) | nLib->version[0]) - ((curLib->version[1] << 8) | curLib->version[0]); //0x00002DB0
                  libRegStatus = (versionDiff > 0) ? LIB_REGISTRATION_OK : LIB_REGISTRATION_NOT_NEEDED; //0x00002DBC                                 
              }               
          }
@@ -1768,27 +1740,28 @@ static s32 ReleaseLibEntCB(SceResidentLibrary *lib, SceResidentLibrary **prevLib
 
     if (lib->stubLibs != NULL) { //0x00002E08
         for (curStubLib = *stubLibPtr; curStubLib; curStubLib = *stubLibPtr) { //0x00002E24 - 0x00002EC0  
-             if (!(curStubLib->attribute & SCE_LIB_WEAK_IMPORT)) //0x00002E2C
-                 stubLibPtr = &curStubLib->next; //0x00002E30
-                 continue;
+            if (!(curStubLib->attribute & SCE_LIB_WEAK_IMPORT)) { //0x00002E2C
+                stubLibPtr = &curStubLib->next; //0x00002E30
+                continue;
+            }
             
-             nextStubLib = curStubLib->next; //0x00002E38
-             curStubLib->next = g_loadCore.unLinkedStubLibs; //0x00002E3C
-             g_loadCore.unLinkedStubLibs = curStubLib; //0x00002E44
+            nextStubLib = curStubLib->next; //0x00002E38
+            curStubLib->next = g_loadCore.unLinkedStubLibs; //0x00002E3C
+            g_loadCore.unLinkedStubLibs = curStubLib; //0x00002E44
 
-             //0x00002E58 - 0x00002E70
-             for (i = 0; i < curStubLib->stubCount; i++) {
-                  curStubLib->stubTable[i].sc.returnAddr = SYSCALL_NOT_LINKED;
-                  curStubLib->stubTable[i].sc.syscall = NOP;
-             }
-             curStubLib->status &= ~STUB_LIBRARY_LINKED; //0x00002E84
-             g_UpdateCacheRange(curStubLib->stubTable, curStubLib->stubCount * sizeof(SceStub)); //0x00002E8C
+            //0x00002E58 - 0x00002E70
+            for (i = 0; i < curStubLib->stubCount; i++) {
+                curStubLib->stubTable[i].sc.returnAddr = SYSCALL_NOT_LINKED;
+                curStubLib->stubTable[i].sc.syscall = NOP;
+            }
+            curStubLib->status &= ~STUB_LIBRARY_LINKED; //0x00002E84
+            g_UpdateCacheRange(curStubLib->stubTable, curStubLib->stubCount * sizeof(SceStub)); //0x00002E8C
              
-             aUnLinkVariableStub(lib, (SceStubLibraryEntryTable *)curStubLib->libName, curStubLib->isUserLib); //0x00002EA0
-             if (curStubLib->vStubCount != 0) //0x00002EB0
-                 g_UpdateCacheAll(); //0x00002FBC
+            aUnLinkVariableStub(lib, (SceStubLibraryEntryTable *)curStubLib->libName, curStubLib->isUserLib); //0x00002EA0
+            if (curStubLib->vStubCount != 0) //0x00002EB0
+                g_UpdateCacheAll(); //0x00002FBC
            
-             *stubLibPtr = nextStubLib; //0x00002EB8
+            *stubLibPtr = nextStubLib; //0x00002EB8
         }
         /* 
          * Verify if there are still stub libraries linked with specified
@@ -1861,7 +1834,7 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
 {
     u32 i;
     s32 status;
-    u32 dupStubLib; /* TRUE = stub library duplicated */
+    u32 dupStubLib; /* SCE_TRUE = stub library duplicated */
     void *curStubTable;
     void *stubTableMemRange;
     SceStubLibrary *stubLib;
@@ -1893,7 +1866,7 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
           * SCE_LIB_WEAK_IMPORT, we ignore that linking failure and proceed.
           */
          if (status == EXPORT_LIB_CANNOT_BE_LINKED || !(stubLib->attribute & SCE_LIB_WEAK_IMPORT)) { //0x00003168 & 0x00003178
-             sceKernelUnLinkLibraryEntries(stubLibEntryTable, size); //0x00003214
+             sceKernelUnlinkLibraryEntries(stubLibEntryTable, size); //0x00003214
              FreeLibStubCB(stubLib); //0x0000321C
              return SCE_ERROR_KERNEL_LIBRARY_NOT_FOUND;
          }
@@ -1905,15 +1878,15 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
           * stub libraries.  If this is true, we free the current stub library's
           * instance.  Otherwise, it is added to the linked-list.
           */
-         dupStubLib = FALSE;
+         dupStubLib = SCE_FALSE;
          for (curUnlinkedStubLib = g_loadCore.unLinkedStubLibs; curUnlinkedStubLib; 
             curUnlinkedStubLib = curUnlinkedStubLib->next) {              
               if (curUnlinkedStubLib->libStubTable == stubLib->libStubTable) { //0x00003194
                   FreeLibStubCB(stubLib); //0x00003204
-                  dupStubLib = TRUE; //0x0000320C
+                  dupStubLib = SCE_TRUE; //0x0000320C
               }
          }
-         if (dupStubLib == FALSE) {
+         if (dupStubLib == SCE_FALSE) {
              stubLib->next = g_loadCore.unLinkedStubLibs; //0x000031B4
              g_loadCore.unLinkedStubLibs = stubLib; //0x000031BC
              
@@ -1976,18 +1949,18 @@ static s32 UnLinkLibraryEntry(SceStubLibraryEntryTable *stubLibEntryTable)
                   curLib->stubLibs = curStubLib->next; //0x0000340C
               }
               else {
-                  stubLibUnlinked = FALSE;
+                  stubLibUnlinked = SCE_FALSE;
                   //0x0000338C - 0x000033AC
                   for (curStubLib2 = firstStubLib->next, prevStubLib = firstStubLib; curStubLib2; 
                      prevStubLib = curStubLib2, curStubLib2 = curStubLib2->next) {
                        if (curStubLib2 == curStubLib) { //0x0000339C
                            prevStubLib->next = curStubLib->next; //0x000033BC
                            curStubLib->next = NULL; //0x000033C0
-                           stubLibUnlinked = TRUE;
+                           stubLibUnlinked = SCE_TRUE;
                            break;
                        }
                   }
-                  if (stubLibUnlinked == FALSE)
+                  if (stubLibUnlinked == SCE_FALSE)
                       return SCE_ERROR_KERNEL_ERROR; //0x000033B4
               }
               curStubLib->status &= ~(STUB_LIBRARY_LINKED | STUB_LIBRARY_EXCLUSIVE_LINK | 0x4); //0x000033CC
@@ -2040,7 +2013,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->stubCount; i++) {        
          switch (lib->entryTable[i]) { 
          case NID_MODULE_REBOOT_PHASE: //0x00003450
-             mod->moduleRebootPhase = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
+             mod->moduleRebootPhase = (SceKernelRebootPhaseForKernel)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003678
              break;
          case NID_MODULE_BOOTSTART: //0x000035DC
              mod->moduleBootstart = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003658
@@ -2052,7 +2025,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
              mod->moduleStop = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x00003610
              break;
          case NID_MODULE_REBOOT_BEFORE: //0x00003478
-             mod->moduleRebootBefore = (SceKernelThreadEntry)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
+             mod->moduleRebootBefore = (SceKernelRebootBeforeForKernel)lib->entryTable[lib->vStubCount + lib->stubCount + i]; //0x000035D4
              break;
          }         
     }
@@ -2060,19 +2033,19 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     for (i = 0; i < lib->vStubCount; i++) {
          switch (lib->entryTable[lib->vStubCount + i]) {
          case NID_MODULE_STOP_THREAD_PARAM: //0x000034D0
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleStopThreadPriority = entryThread->initPriority; //0x000035A4
              mod->moduleStopThreadStacksize = entryThread->stackSize; //0x000035AC
              mod->moduleStopThreadAttr = entryThread->attr; //0x000035B8
              break;
          case NID_MODULE_REBOOT_BEFORE_THREAD_PARAM: //0x00003544
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleRebootBeforeThreadPriority = entryThread->initPriority; //0x0000356C
              mod->moduleRebootBeforeThreadStacksize = entryThread->stackSize; //0x00003574
              mod->moduleRebootBeforeThreadAttr = entryThread->attr; //0x00003580
              break;               
          case NID_MODULE_START_THREAD_PARAM: //0x000034E0
-             entryThread = (SceModuleEntryThread *)lib->entryTable[lib->stubCount + 2 * lib->vStubCount + i];
+             entryThread = (SceModuleEntryThread *)lib->entryTable[2 * lib->stubCount + lib->vStubCount + i];
              mod->moduleStartThreadPriority = entryThread->initPriority; //0x00003520
              mod->moduleStartThreadStacksize = entryThread->stackSize; //0x00003528
              mod->moduleStartThreadAttr = entryThread->attr; //0x00003530
@@ -2190,7 +2163,7 @@ static s32 aLinkLibEntries(SceStubLibrary *stubLib)
          if (strcmp(stubLib->libName, curLib->libName) != 0) //0x00003C88
              continue;
          
-         if ((((u16 *)curLib->version)[0] - ((u16 *)stubLib->version)[0]) < 0) //0x00003C9C
+         if ((((curLib->version[1] << 8) | curLib->version[0]) - ((stubLib->version[1] << 8) | stubLib->version[0])) < 0) //0x00003C9C
              continue;
                  
          status = EXPORT_LIB_CANNOT_BE_LINKED; //0x00003CB4
@@ -2249,22 +2222,22 @@ s32 sceKernelCheckPspConfig(u8 *file, u32 size)
     
     pspHdr = (PspHeader *)file;
             
-    if (((u32 *)pspHdr->magic)[0] != PSP_MAGIC) //0x00003DB8
-        return LOADCORE_ERROR;
+    if (((pspHdr->magic[0] << 24) | (pspHdr->magic[1] << 16) | (pspHdr->magic[2] << 8) | pspHdr->magic[3]) != PSP_MAGIC) //0x00003DB8
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     if (g_prepareGetLengthFunc != NULL && g_prepareGetLengthFunc(file, size) != 0) //0x00003DE8 & 0x00003DF8
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
             
     status = CheckLatestSubType(file); //0x00003E00
     if (status == 0) //0x00003E08
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     if (g_setMaskFunc == NULL) //0x00003E1C
         return SCE_ERROR_KERNEL_LIBRARY_IS_NOT_LINKED;
     
     status = g_setMaskFunc(0, HWPTR(0xBFC00200)); //0x00003E2C
     if (status != 0) //0x00003E34
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     if (g_getLengthFunc == NULL) { //0x00003E44
         /* Decrypt a module. */
@@ -2274,7 +2247,7 @@ s32 sceKernelCheckPspConfig(u8 *file, u32 size)
         status = g_getLengthFunc(file, size, &newSize); //0x00003E50
     
     if (status != 0)
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     return newSize;
 }
@@ -2286,7 +2259,7 @@ s32 CheckLatestSubType(u8 *file)
     s32 status;
     u8 *tag;
     
-    tag = (u8 *)&((PspHeader *)file)->tag;    
+    tag = (u8 *)&((PspHeader *)file)->tag; 
     subType = tag[0] << 24 | tag[1] << 16 | tag[2] << 8 | tag[3]; //0x00003E90 - 0x00003EB8   
     if (g_compareLatestSubType == NULL) //0x00003EC4
         status = memlmd_9D36A439(subType); //0x00003ED8
@@ -2303,24 +2276,24 @@ s32 sceKernelLoadRebootBin(u8 *file, u32 size)
     s32 status;
     SceSysmemPartitionInfo partInfo;   
     
-    partInfo.size = 16; //0x00003F10
+    partInfo.size = sizeof(SceSysmemPartitionInfo); //0x00003F10
     status = sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, &partInfo); //0x00003F0C
     if (status < SCE_ERROR_OK)
-        return LOADCORE_ERROR; //0x00003F14
+        return SCE_KERNEL_VALUE_UNITIALIZED; //0x00003F14
     
     if ((u32)file < partInfo.startAddr) //0x00003F24
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     if ((partInfo.startAddr + partInfo.memSize) < (u32)(file + size)) //0x00003F38
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     status = CheckLatestSubType(file); //0x00003F58
     if (status == 0) //0x00003F64
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     status = memlmd_F26A33C3(0, HWPTR(0xBFC00200)); //0x00003F70
     if (status != SCE_ERROR_OK) //0x00003F84
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
     
     status = memlmd_CF03556B(file, size, &newSize); //0x00003F8C
     if (status != SCE_ERROR_OK) //0x00003F94
@@ -2348,7 +2321,7 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
     /* Protect Kernel memory from User Mode. */
     if (isUserLib && (IS_KERNEL_ADDR(libEntryTable) || IS_KERNEL_ADDR(libEntryTable->libName) || 
       IS_KERNEL_ADDR(libEntryTable->entryTable))) //0x00003698        
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
       
     addr = (u32 *)g_hashinfo;
     addr2 = (u32 *)g_hashinfo;
@@ -2398,7 +2371,7 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
      */
     if (IS_KERNEL_ADDR(libEntryTable->libName)) { //0x00003794
         lib->libName = (char *)libEntryTable->libName; //0x0000379C
-        lib->libNameInHeap = FALSE;
+        lib->libNameInHeap = SCE_FALSE;
         lib->sysTableEntryStartIndex = 0;     
         return SCE_ERROR_OK;
     }
@@ -2409,7 +2382,7 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
         return SCE_ERROR_KERNEL_ERROR;
 
     memcpy(lib->libName, libEntryTable->libName, len + 1); //0x000037F4
-    lib->libNameInHeap = TRUE;
+    lib->libNameInHeap = SCE_TRUE;
     lib->sysTableEntryStartIndex = 0;
 
     return SCE_ERROR_OK;
@@ -2433,7 +2406,7 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
     if (isUserLib && (IS_KERNEL_ADDR(stubLibEntryTable) || IS_KERNEL_ADDR(stubLibEntryTable->libName) || 
       IS_KERNEL_ADDR(stubLibEntryTable->nidTable) || IS_KERNEL_ADDR(stubLibEntryTable->stubTable) || 
       IS_KERNEL_ADDR(stubLibEntryTable->vStubTable))) //0x0000386C
-        return LOADCORE_ERROR;     
+        return SCE_KERNEL_VALUE_UNITIALIZED;     
     
     stubLib->isUserLib = isUserLib;
     stubLib->libStubTable = stubLibEntryTable;
@@ -2470,7 +2443,7 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
      */
     if (IS_KERNEL_ADDR(stubLibEntryTable->libName)) {        
         stubLib->libName2 = (char *)stubLibEntryTable->libName; //0x00003930
-        stubLib->libNameInHeap = FALSE;
+        stubLib->libNameInHeap = SCE_FALSE;
         return SCE_ERROR_OK;
     }
     
@@ -2478,10 +2451,10 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
     len = strlen(stubLibEntryTable->libName);           
     stubLib->libName2 = sceKernelAllocHeapMemory(g_loadCoreHeap(), len + 1);            
     if (stubLib->libName == NULL) 
-        return LOADCORE_ERROR;
+        return SCE_KERNEL_VALUE_UNITIALIZED;
             
     memcpy(stubLib->libName2, stubLibEntryTable->libName, len + 1);
-    stubLib->libNameInHeap = TRUE;
+    stubLib->libNameInHeap = SCE_TRUE;
     return SCE_ERROR_OK;                        
 }
 
@@ -2545,7 +2518,7 @@ static __inline__ void StopLoadCore(void)
     hwRamType |= (g_MemSize > RAM_SIZE_32_MB) ? RAM_TYPE_64_MB : RAM_TYPE_32_MB; //0x00001598          
     HW(HW_RAM_SIZE) = hwRamType; //0x000015B4
             
-    sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, 0x1000); //0x000015B8
+    sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE); //0x000015B8
     memcpy((void *)HWPTR(HW_RESET_VECTOR), loadCoreClearMem, 0x28); //0x000015D4
     g_MemClearFun = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR); //0x000015F0
     g_MemClearFun(g_MemBase, g_MemSize); //0x000015EC

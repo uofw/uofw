@@ -1,9 +1,8 @@
 # Copyright (C) 2011, 2012 The uOFW team
 # See the file COPYING for copying permission.
 
-#include "common.S"
+#include "common_asm.h"
 
-    .text
     .globl sceKernelCpuSuspendIntr
 sceKernelCpuSuspendIntr:
     mfic $v0, $0

@@ -29,7 +29,7 @@ __inline__ u32 getCyclicPolynomialHash(const char *str, u32 radix, u32 hashTable
     addressMask = hashTableSize - 1;
     /* Computes sum from i = 0 to len of x^(r(n-i))*toHash[i] */
     for (i = 0; i < len; i++) {
-         hash = (hash << radix | hash >> (sizeof(u32) - radix)); //x^r * hash
+         hash = (hash << radix | hash >> (8 * sizeof(u32) - radix)); //x^r * hash
          hash ^= str[i]; //hash + toHash[i]
     }
     hash ^= (hash >> 8) ^ (hash >> 16) ^ (hash >> 24);

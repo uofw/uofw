@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-__inline__ u32 getCyclicPolynomialHash(const char *str, u32 radix, u32 hashTableSize);
+u32 getCyclicPolynomialHash(const char *str, u32 radix, u32 hashTableSize);
 
 
 #ifdef	__cplusplus

@@ -16,7 +16,7 @@ SCE_MODULE_INFO(
     SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START,
     1, 6
 );
-SCE_MODULE_START_THREAD_PARAMETER(3, 0x20, 0x400, 0);
+SCE_MODULE_START_THREAD_PARAMETER(3, SCE_KERNEL_MODULE_INIT_PRIORITY, 0x400, 0);
 SCE_MODULE_BOOTSTART("_UsersystemLibInit");
 SCE_SDK_VERSION(SDK_VERSION);
 
@@ -31,7 +31,7 @@ SceThread *g_thread; // 2bc0
 static s32 g_cmdList[CMD_LIST_SIZE]; // 2c00
 
 // module_start
-s32 _UsersystemLibInit(SceSize argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _UsersystemLibInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     // InterruptManager_EEE43F47
     sceKernelRegisterUserSpaceIntrStack(

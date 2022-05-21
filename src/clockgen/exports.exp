@@ -1,0 +1,26 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_reboot_before)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceClockgen_driver, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceClockgenGetRegValue, 0x0FD28D8B)
+PSP_EXPORT_FUNC_NID(sceClockgenInit, 0x29160F5D)
+PSP_EXPORT_FUNC_NID(sceClockgenEnd, 0x36F9B49D)
+PSP_EXPORT_FUNC_NID(sceClockgenSetProtocol, 0x3F6B7C6B)
+PSP_EXPORT_FUNC_NID(sceClockgenSetup, 0x50F22765)
+PSP_EXPORT_FUNC_NID(sceClockgenLeptonClkEnable, 0x7FF82F6F)
+PSP_EXPORT_FUNC_NID(sceClockgenAudioClkEnable, 0xA1D23B2C)
+PSP_EXPORT_FUNC_NID(sceClockgenSetSpectrumSpreading, 0xC9AF3102)
+PSP_EXPORT_FUNC_NID(sceClockgenGetRevision, 0xCE36529C)
+PSP_EXPORT_FUNC_NID(sceClockgenAudioClkSetFreq, 0xDAB6E612)
+PSP_EXPORT_FUNC_NID(sceClockgenLeptonClkDisable, 0xDBE5F283)
+PSP_EXPORT_FUNC_NID(sceClockgenAudioClkDisable, 0xDED4C698)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

@@ -16,11 +16,30 @@ typedef struct
     s32 readSample; // 28
     void *outBuf; // 32
     s32 decodedSample; // 36
-    s32 sampleRate; // 40
-    s8 unk44;
-    s8 unk45;
-    s8 unk46;
-    s8 unk47;
+
+   /* Note: this part is probably completely different depending on the codec. This should be cleaned up. */
+    union {
+        struct {
+            s8 u40;
+            s8 u41;
+            s8 u42;
+            s8 u43;
+        } v8;
+        s32 v32;
+    } unk40; // samplerate?
+    union {
+        struct {
+            u8 u44;
+            s8 u45;
+            s8 u46;
+            s8 u47;
+        } v8;
+        struct {
+            s16 u44;
+            s16 u46;
+        } v16;
+        s32 v32;
+    } unk44;
     s32 unk48;
     s32 unk52;
     s32 unk56;

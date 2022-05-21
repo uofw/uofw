@@ -1,18 +1,21 @@
 #include <common_imp.h>
+#include <sysmem_sysevent.h>
+
+#include "intr.h"
 
 // 140F0
-SceSysEventHandler *g_sysEvHandlers;
+SceSysEventHandler *g_pHandlers;
 
-int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
+s32 sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
 {
     int oldIntr = suspendIntr();
     if (handler->busy != 0)
     {
         // C8A8
         resumeIntr(oldIntr);
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     }
-    SceSysEventHandler *cur = g_sysEvHandlers;
+    SceSysEventHandler *cur = g_pHandlers;
     SceSysEventHandler *prev = NULL;
     // C84C
     while (cur != NULL)
@@ -22,7 +25,7 @@ int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
             // C88C
             if (prev == NULL) {
                 // C8A0
-                g_sysEvHandlers = cur->next;
+                g_pHandlers = cur->next;
             }
             else
                 prev->next = cur->next;
@@ -34,20 +37,20 @@ int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler)
     // C864
     resumeIntr(oldIntr);
     if (cur == NULL)
-        return 0x80020068;
+        return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     return 0;
 }
 
-int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* param, int* result, int break_nonzero, SceSysEventHandler **break_handler)
+s32 sceKernelSysEventDispatch(s32 ev_type_mask, s32 ev_id, char* ev_name, void* param, s32* result, s32 break_nonzero, SceSysEventHandler **break_handler)
 {
     int oldGp = pspGetGp();
     int ret = 0;
     int oldIntr = suspendIntr();
-    SceSysEventHandler *cur = g_sysEvHandlers;
+    SceSysEventHandler *cur = g_pHandlers;
     // C928
     while (cur != NULL)
     {
-        if ((cur->type_mask & ev_type_mask) != 0)
+        if ((cur->typeMask & ev_type_mask) != 0)
         {
             // C984
             cur->busy = 1;
@@ -74,16 +77,16 @@ int sceKernelSysEventDispatch(int ev_type_mask, int ev_id, char* ev_name, void* 
     return ret;
 }
 
-int sceKernelSysEventInit(void)
+s32 sceKernelSysEventInit(void)
 {
-    g_sysEvHandlers = NULL;
+    g_pHandlers = NULL;
     return 0;
 }
 
-int sceKernelIsRegisterSysEventHandler(SceSysEventHandler* handler)
+s32 sceKernelIsRegisterSysEventHandler(SceSysEventHandler* handler)
 {
     int oldIntr = suspendIntr();
-    SceSysEventHandler *cur = g_sysEvHandlers;
+    SceSysEventHandler *cur = g_pHandlers;
     // CA24
     while (cur != NULL)
     {
@@ -96,11 +99,11 @@ int sceKernelIsRegisterSysEventHandler(SceSysEventHandler* handler)
     return (cur != NULL);
 }
 
-int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler)
+s32 sceKernelRegisterSysEventHandler(SceSysEventHandler* handler)
 {
     int oldIntr1 = suspendIntr();
     int oldIntr2 = suspendIntr();
-    SceSysEventHandler *cur = g_sysEvHandlers;
+    SceSysEventHandler *cur = g_pHandlers;
     // CA90
     while (cur != NULL)
     {
@@ -111,21 +114,21 @@ int sceKernelRegisterSysEventHandler(SceSysEventHandler* handler)
     // CAA4
     resumeIntr(oldIntr2);
     if (cur == NULL)
-    {   
+    {
         handler->busy = 0;
         // CAE0
         handler->gp = pspGetGp();
-        handler->next = g_sysEvHandlers;
-        g_sysEvHandlers = handler;
+        handler->next = g_pHandlers;
+        g_pHandlers = handler;
         resumeIntr(oldIntr1);
         return 0;
     }
     resumeIntr(oldIntr1);
-    return 0x80020067;
+    return SCE_ERROR_KERNEL_HANDLER_ALREADY_EXISTS;
 }
 
 SceSysEventHandler *sceKernelReferSysEventHandler(void)
 {
-    return g_sysEvHandlers;
+    return g_pHandlers;
 }
 

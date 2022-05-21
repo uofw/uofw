@@ -15,7 +15,7 @@
 
 #include <syscon.h>
 
-#include "syscon.h"
+#include "syscon_int.h"
 
 SCE_MODULE_INFO("sceSYSCON_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_START | SCE_MODULE_ATTR_EXCLUSIVE_LOAD
                                   | SCE_MODULE_ATTR_CANT_STOP, 1, 11);
@@ -92,6 +92,34 @@ typedef struct {
     u8 hr;
     u8 baryonStatus2;
     SceSysconCallback callbacks[SYSCON_CB_COUNT];
+    /*
+     *  31      24 23         16 15  8 7            0
+     * +----------+-------------+-----+--------------+
+     * |  Unused  |   Version   | Unk |   Unit Type  |
+     * +----------+-------------+-----+--------------+
+     *
+     * Bit 7 - 0:
+     *      The unit type: 0 = dev unit, 1 = retail unit
+     *
+     * Bit 15 - 8:
+     *      Unknown. Value can be != 0x00
+     * 
+     * Bit 16 - 24:
+     *      The actual Baryon hardware version. Possible values below:
+     * 
+     *      PSP 1000 (PSP Fat) series       : 0x01, 0x02, 0x03, 0x04, 0x11, 0x12
+     *      PSP 2000 (PSP Slim) series      : 0x22, 0x23, 0x24
+     *      PSP 3000 (PSP Bright) series    : 0x26, 0x28, 0x2C, 0x2E
+     *      PSP N-1000 (PSP Go) series      : 0x30
+     *      PSP E-1000 (PSP Street) series  : 0x40
+     * 
+     * Bit 31 - 24:
+     *      Seems to be unused. Always 0.
+     * 
+     * Remarks:
+     *      This info has been taken from 
+     *      https://playstationdev.wiki/pspdevwiki/index.php?title=Motherboards#Comparison_Table
+     */
     s32 baryonVersion;
     s8 timeStampStr[16];
     /* Set to 1 if model is PSP 2k or newer. */
@@ -110,7 +138,7 @@ SceSysconPacket g_GetStatus2Cmd;
 
 SceSyscon g_Syscon;
 
-s32 _sceSysconModuleRebootBefore(void)
+s32 _sceSysconModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
 {
     if (g_Syscon.unk376 != 0) {
         sceSyscon_driver_765775EB(0);
@@ -704,12 +732,12 @@ s32 _sceSysconGpioIntr(s32 subIntr __attribute__((unused)), s32 args __attribute
 s32 sceSysconCmdExec(SceSysconPacket *packet, u32 flags)
 {   
     if (sceKernelIsIntrContext())
-        return 0x80000030;
+        return SCE_ERROR_ILLEGAL_CONTEXT;
 
     if (g_Syscon.pollingMode == 0 && pspMfic() == 0)
-        return 0x80000031;
+        return SCE_ERROR_CPUDI;
     if (g_Syscon.pollingMode != 0 && pspMfic() != 0)
-        return 0x80000031;
+        return SCE_ERROR_CPUDI;
     s32 ret = sceSysconCmdExecAsync(packet, flags, NULL, NULL);
     if (ret < 0)
         return ret;
@@ -809,11 +837,11 @@ s32 sceSysconCmdCancel(SceSysconPacket *packet)
         off = 0;
     }
     SceSysconPacket *cur = g_Syscon.packetList[off];
-    s32 ret = 0x80000025;
+    s32 ret = SCE_ERROR_NOT_FOUND;
     SceSysconPacket *prev = NULL;
     while (cur != NULL) {
         if (cur == packet) {
-            ret = 0x80000021;
+            ret = SCE_ERROR_BUSY;
             if ((cur->status & 0x20000) != 0)
                 goto end;
             if (prev == NULL) {
@@ -849,7 +877,7 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, u32 noWait)
 {
     if (noWait != 0) {
         if (noWait != 1)
-            return 0x80000107;
+            return SCE_ERROR_INVALID_MODE;
         if (packet == NULL) {
             if (g_Syscon.packetList[0] == NULL &&
               g_Syscon.packetList[1] == NULL &&
@@ -862,11 +890,11 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, u32 noWait)
             return 1;
     } else if (g_Syscon.pollingMode == 0) {
         if (sceKernelIsIntrContext() != 0)
-            return 0x80000030;
+            return SCE_ERROR_ILLEGAL_CONTEXT;
         s32 oldIntr = sceKernelCpuSuspendIntr();
         if (oldIntr == 0) {
             sceKernelCpuResumeIntr(0);
-            return 0x80000031;
+            return SCE_ERROR_CPUDI;
         }
         if ((packet->status & 0x80000) != 0) {
             sceKernelCpuResumeIntr(oldIntr);
@@ -914,7 +942,7 @@ s32 sceSysconCmdSync(SceSysconPacket *packet, u32 noWait)
 s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
 {   
     if (ptr == NULL)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     SceSysconPacket packet;
     s32 buf[4];
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
@@ -930,7 +958,7 @@ s32 _sceSysconCommonRead(s32 *ptr, s32 cmd)
     return 0;
 }
 
-s32 _sceSysconModuleStart(s32 argc __attribute__((unused)), void *argp __attribute__((unused)))
+s32 _sceSysconModuleStart(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     sceSysconInit();
     return 0;
@@ -1387,7 +1415,7 @@ s32 sceSysconGetTimeStamp(s8 *timeStamp)
 {   
     SceSysconPacket packet;
     if (timeStamp == NULL)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_GET_TIMESTAMP;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
     s32 ret = sceSysconCmdExec(&packet, 0);
@@ -1402,11 +1430,11 @@ s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size)
 {   
     SceSysconPacket packet;
     if ((size < 1 || size >= 3) && size != 4 && size != 8)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if ((dst % size) != 0)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     if (dst + size >= 33)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_WRITE_SCRATCHPAD;
     packet.tx[PSP_SYSCON_TX_LEN] = size + 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = (dst << 2) | ((size / 2) != 4 ? size / 2 : 3);
@@ -1418,11 +1446,11 @@ s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size)
 {
     SceSysconPacket packet;
     if ((size < 1 || size >= 3) && size != 4 && size != 8)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if ((src % size) != 0)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     if (src + size > 32)
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_READ_SCRATCHPAD;
     packet.tx[PSP_SYSCON_TX_LEN] = 3;
     packet.tx[PSP_SYSCON_TX_DATA(0)] = (src << 2) | ((size >> 1) != 4) ? (size >> 1) : 3;
@@ -1479,7 +1507,7 @@ s32 sceSysconReceiveSetParam(u32 id, void *param)
 s32 sceSysconCtrlTachyonWDT(s32 wdt)
 {   
     if (wdt >= 0x80)
-        return 0x800001FE;
+        return SCE_ERROR_INVALID_VALUE;
     return _sceSysconCommonWrite(wdt == 0 ? 0 : wdt | 0x80, PSP_SYSCON_CMD_CTRL_TACHYON_WDT, 3);
 }
 
@@ -1489,7 +1517,7 @@ s32 sceSysconResetDevice(u32 reset, u32 mode)
         if (mode != 1) {
             reset = 0x41;
             if (mode != 2)
-                return 0x80000107;
+                return SCE_ERROR_INVALID_MODE;
         }
     } else if (mode != 0)
         reset |= 0x80;
@@ -1574,7 +1602,7 @@ s32 sceSysconGetBaryonVersion(s32 *baryonVersion)
 
 s32 sceSysconGetGValue(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconGetPowerSupplyStatus(s32 *status)
@@ -1584,7 +1612,7 @@ s32 sceSysconGetPowerSupplyStatus(s32 *status)
 
 s32 sceSysconGetFallingDetectTime(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconGetWakeUpFactor(void *factor)
@@ -1602,7 +1630,7 @@ s32 sceSysconGetVideoCable(s32 *cable)
     u32 ver = _sceSysconGetBaryonVersion() >> 16;
     if ((ver & 0xF0) == 0 || (ver & 0xF0) == 0x10) {
         *cable = 0;
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     }
     return _sceSysconCommonRead(cable, PSP_SYSCON_CMD_GET_VIDEO_CABLE);
 }
@@ -1679,10 +1707,10 @@ s32 sceSysconCtrlLED(u32 led, u32 set)
     case 3:
         ledMask = 0x10;
         if (_sceSysconGetPommelType() < 0x300)
-            return 0x80000004;
+            return SCE_ERROR_NOT_SUPPORTED;
         break;
     default:
-        return 0x80000102;
+        return SCE_ERROR_INVALID_INDEX;
     }
     setMask = 0;
     if (set != 0) {
@@ -1698,7 +1726,7 @@ s32 sceSysconCtrlDvePower(s8 power)
 {
     u32 type = _sceSysconGetPommelType();
     if (type < 0x300)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     if (type >= 0x301) {
         s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_DVE_POWER, 3);
         if (ret >= 0)
@@ -1798,18 +1826,18 @@ s32 sceSysconGetPolestarVersion(s32 *polestar)
 s32 sceSysconCtrlVoltage(s32 arg0, s32 arg1)
 {   
     if (_sceSysconGetPommelType() != 0x100 && arg0 >= 4 && arg0 < 6)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     return _sceSysconCommonWrite(((arg1 & 0xFFFF) << 8) | (arg0 & 0xFF), PSP_SYSCON_CMD_CTRL_VOLTAGE, 5);
 }
 
 s32 sceSysconGetGSensorVersion(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconCtrlGSensor(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconGetPowerStatus(s32 *status)
@@ -1873,7 +1901,7 @@ s32 sceSysconCtrlWlanPower(s8 power)
 s32 sceSysconCtrlHddPower(s8 power)
 {
     if (_sceSysconGetPommelType() < 0x500)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_HDD_POWER, 3);
     if (ret >= 0)
         g_Syscon.hddPower = power;
@@ -1894,7 +1922,7 @@ s32 sceSysconCtrlUsbPower(s8 power)
 {   
     u8 version = _sceSysconGetBaryonVersion() >> 16;
     if ((version & 0xF0) == 0 || (version & 0xF0) == 0x10 || ((version & 0xFF) >= 0x20 && (version & 0xFF) < 0x22))
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = _sceSysconCommonWrite(power, PSP_SYSCON_CMD_CTRL_USB_POWER, 3);
     if (ret >= 0)
         g_Syscon.usbPower = power;
@@ -1914,7 +1942,7 @@ s32 sceSysconForbidChargeBattery(void)
 s32 sceSysconCtrlTachyonVmePower(s8 power)
 {
     if (_sceSysconGetPommelType() != 0x100)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = sceSysconCtrlPower(2, power);
     if (ret >= 0)
         g_Syscon.tachyonVmePower = power;
@@ -1924,7 +1952,7 @@ s32 sceSysconCtrlTachyonVmePower(s8 power)
 s32 sceSysconCtrlTachyonAwPower(s8 power)
 {
     if (_sceSysconGetPommelType() != 0x100)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = sceSysconCtrlPower(4, power);
     if (ret >= 0)
         g_Syscon.tachyonAwPower = power;
@@ -1934,7 +1962,7 @@ s32 sceSysconCtrlTachyonAwPower(s8 power)
 s32 sceSysconCtrlLcdPower(s8 power)
 {
     if (_sceSysconGetPommelType() >= 0x300)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 ret = sceSysconCtrlPower(0x80000, power);
     if (ret >= 0)
         g_Syscon.lcdPower = power;
@@ -1943,12 +1971,12 @@ s32 sceSysconCtrlLcdPower(s8 power)
 
 s32 sceSysconGetGSensorCarib(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconSetGSensorCarib(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconWritePolestarReg(u8 reg, s16 val)
@@ -1972,12 +2000,12 @@ s32 sceSysconReadPolestarReg(u8 reg, s16 *val)
 
 s32 sceSysconWriteGSensorReg(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconReadGSensorReg(void)
 {
-    return 0x80000004;
+    return SCE_ERROR_NOT_SUPPORTED;
 }
 
 s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
@@ -2015,11 +2043,13 @@ s32 sceSysconBatteryGetInfo(s32 *info)
 s32 sceSysconGetBattVolt(s32 *volt)
 {   
     u8 version =_sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) != 0x29 &&
-      (version & 0xFF) != 0x2A &&
+    /* Note Sony also does the following tautological check:
+         if ((version & 0xF0) == 0x29)
+    */
+    if ((version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 val;
     s32 ret = _sceSysconCommonRead(&val, PSP_SYSCON_CMD_GET_BATT_VOLT);
     if (ret < 0)
@@ -2031,11 +2061,13 @@ s32 sceSysconGetBattVolt(s32 *volt)
 s32 sceSysconGetBattVoltAD(s32 *volt1, s32 *volt2)
 {
     u8 version = _sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) != 0x29 &&
-      (version & 0xFF) != 0x2A &&
+    /* Note Sony also does the following tautological check:
+         if ((version & 0xF0) == 0x29)
+    */
+    if ((version & 0xFF) != 0x2A &&
       (version & 0xF0) != 0x30 &&
       (version & 0xF0) != 0x40)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     s32 val;
     s32 ret = _sceSysconCommonRead(&val, PSP_SYSCON_CMD_GET_BATT_VOLT_AD);
     if (ret < 0)
@@ -2144,11 +2176,13 @@ s32 sceSysconBatteryGetChargeTime(s32 *time)
 s32 _sceSysconBatteryCommon(u32 cmd, s32 *ptr)
 {
     u32 version = _sceSysconGetBaryonVersion() >> 16;
-    if ((version & 0xF0) == 0x29 ||
-     (version & 0xFF) == 0x2A ||
+    /* Note Sony also does the following tautological check:
+         if ((version & 0xF0) == 0x29)
+    */
+    if ((version & 0xFF) == 0x2A ||
      (version & 0xF0) == 0x30 ||
      (version & 0xF0) == 0x40)
-        return 0x80000004;
+        return SCE_ERROR_NOT_SUPPORTED;
     SceSysconPacket packet;
     packet.tx[PSP_SYSCON_TX_CMD] = cmd;
     packet.tx[PSP_SYSCON_TX_LEN] = 2;
@@ -2246,7 +2280,7 @@ s32 sub_4150(s32 arg0, s32 arg1, s32 arg2)
     if (ret < 0)
         return ret;
     if (packet.rx[PSP_SYSCON_RX_LEN] != 3)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     return 0;
 }
 
