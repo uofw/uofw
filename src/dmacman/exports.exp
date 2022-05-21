@@ -1,0 +1,36 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_bootstart)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_reboot_before)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(DmacManForKernel, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceKernelDmaExit, 0x1C46158A)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpLLIConcatenate, 0x1FC036B7)
+PSP_EXPORT_FUNC_NID(sceKernelDmaChReserve, 0x2E3BC333)
+PSP_EXPORT_FUNC_NID(sceKernelDmaRegisterDdrFlush, 0x32757C57)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpEnQueue, 0x3BDEA96C)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpSetupMemcpy, 0x3FAD5844)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpAlloc, 0x59615199)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpQuit, 0x5AF32783)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpFree, 0x745E19EF)
+PSP_EXPORT_FUNC_NID(sceKernelDmaSoftRequest, 0x7B9634E1)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpSetupLink, 0x7D21A2EF)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpAssignMultiple, 0x904110FC)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpDeQueue, 0x92700CCD)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpAllCancel, 0xA84B084B)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpSetupNormal, 0xCE467D9B)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpSetCallback, 0xD0358BE9)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOnDebugMode, 0xD3F62265)
+PSP_EXPORT_FUNC_NID(sceKernelDmaChExclude, 0xD8BC3120)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpSync, 0xDB286D65)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpConcatenate, 0xE18A93A5)
+PSP_EXPORT_FUNC_NID(sceKernelDmaOpAssign, 0xF64BAB99)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS
