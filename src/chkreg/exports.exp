@@ -1,0 +1,19 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_stop)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceChkreg_driver, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceChkregCheckRegion, 0x54495B19)
+PSP_EXPORT_FUNC_NID(sceChkregGetPsCode, 0x59F8491D)
+PSP_EXPORT_FUNC_NID(sceChkreg_driver_6894A027, 0x6894A027)
+PSP_EXPORT_FUNC_NID(sceChkreg_driver_7939C851, 0x7939C851)
+PSP_EXPORT_FUNC_NID(sceChkreg_driver_9C6E1D34, 0x9C6E1D34)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

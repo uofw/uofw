@@ -1,0 +1,31 @@
+# Copyright (C) 2011, 2012 The uOFW team
+# See the file COPYING for copying permission.
+
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+# These four lines are mandatory (although you can add other functions like module_stop)
+# syslib is a psynonym for the single mandatory export.
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_FUNC_HASH(module_stop)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceMlnBridge_msapp_driver, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_driver_0ED6A564, 0x0ED6A564)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_driver_C41F1B67, 0xC41F1B67)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceMlnBridge_msapp, 0x0011, 0x4001)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_0398DEFF,0x0398DEFF)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_3811BA77,0x3811BA77)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_494B3B0B,0x494B3B0B)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_7AD66017,0x7AD66017)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_CC6037D7,0xCC6037D7)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_D527DEB0,0xD527DEB0)
+PSP_EXPORT_FUNC_NID(sceMlnBridge_msapp_F02B9478,0xF02B9478)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

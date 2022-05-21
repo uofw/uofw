@@ -381,30 +381,37 @@ int sceMcctrl_1EDFD6BB(u8 *arg1, u8 *arg2) {
              g_12C4[i] = 0; //0x000000F0
         }
         
+        // TODO: certificate placed at &g_12C4[76]
         retVal = sub_00000E70(&g_12C4[76], 184); //0x000000F8 - 0x00000100
         status = 0x80530012; //0x00000104 & 0x0000010C
         
         if (retVal == 0) { //0x00000108
+            // Verify placed certificate
             retVal = sub_00000FC4(&g_12C4[76]); //0x00000114
             status = 0x80530012; //0x00000118 & 0x00000120
             
             if (retVal == 0) { //0x0000011C
+                // Generate (public, private)-key pair
                 retVal = sub_00000F68(&g_12C4[16]); //0x00000124
                 status = 0x80530010; //0x0000012C & 0x00000140
                 
                 if (retVal == 0) { //0x0000013C
                     //0x00000130 & 0x00000134 & 0x00000138 & 0x00000144 - 0x00000154
                     for (i = 0; i < 40; i++) {
+                        /* Copy public key into g_13E4[16+i]. */
                          g_13E4[16+i] = g_12C4[36+i]; //0x00000148 & 0x0000015C
                     }
                     //0x00000160 - 0x00000180
                     for (i = 0; i < 96; i++) {
+                        // Copy 96 bytes of certificate into &g_13E4[56]
                          g_13E4[56+i] = g_12C4[76+i]; //0x00000170 & 0x00000184
                     }
+                    // Copy a 20 byte PRN into first 16 bytes of g_13e4
                     sub_00000EB4(g_13E4, 16); //0x0000018C
                     retVal = sub_00000BC0(g_13E4, arg2, 176); //0x0000019C
                     status = retVal; //0x000001A8
                     if (retVal == 0) { //0x000001A4
+                        // Copy a 20 byte PRN into first 16 bytes of g_12c4
                         sub_00000EB4(g_12C4, 16); //0x000001B0
                         status = sub_00000BC0(g_12C4, arg1, 288); //0x000001C0
                     }                    

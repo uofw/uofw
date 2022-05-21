@@ -8,11 +8,11 @@
 
 s32 _CreateMemoryPartition(SceSysmemMemoryPartition *part, u32 attr, u32 addr, u32 size);
 
-s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 partition_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
-s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap);
+s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 partition_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
+s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 
 // 145A8
 SceSysmemUidCB *g_PartType;
@@ -156,7 +156,7 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
         // 40E0
         sceKernelDeleteUID(uid->uid);
         resumeIntr(oldIntr);
-        return 0x800200D5;
+        return SCE_ERROR_KERNEL_MEMORY_AREA_IS_OVERLAP;
     }
     if (size != 0 && part->size != 0) {
         SceSysmemCtlBlk *ctlBlk = part->firstCtlBlk;
@@ -187,12 +187,12 @@ s32 sceKernelQueryMemoryPartitionInfo(s32 mpid, SceSysmemPartitionInfo *info)
 {
     SceSysmemMemoryPartition *part = MpidToCB(mpid);
     if (part == NULL || info == NULL)
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     s32 oldIntr = suspendIntr();
     if (info->size != 16) {
         // 419C
         resumeIntr(oldIntr);
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     }
     /* Note: there was unused $sp storing here, probably unoptimized crap */
     info->attr = part->attr & 0xF;
@@ -284,7 +284,7 @@ u32 sceKernelPartitionTotalMemSize(s32 mpid)
 {
     SceSysmemMemoryPartition *part = MpidToCB(mpid);
     if (part == NULL)
-        return 0x800200D6;
+        return SCE_ERROR_KERNEL_ILLEGAL_PARTITION_ID;
     return part->size;
 }
 
@@ -294,7 +294,7 @@ u32 sceKernelTotalMemSize(void)
     SceSysmemMemoryPartition *part = MpidToCB(2);
     pspSetK1(oldK1);
     if (part == NULL)
-        return 0x800200D6;
+        return SCE_ERROR_KERNEL_ILLEGAL_PARTITION_ID;
     return part->size;
 }
 
@@ -355,7 +355,7 @@ s32 sceKernelFillFreeBlock(s32 mpid, u32 c)
 {
     SceSysmemMemoryPartition *part = MpidToCB(mpid);
     if (part == NULL)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     s32 oldIntr = suspendIntr();
     SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
     // 45BC
@@ -380,7 +380,7 @@ s32 sceKernelFillFreeBlock(s32 mpid, u32 c)
     return 0;
 }
 
-s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
     SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
@@ -392,18 +392,18 @@ s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, in
     return uid->uid;
 }
 
-s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int funcId, va_list ap)
+s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
 {
     SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     if (part == MpidToCB(1))
-        return 0x800200D7;
+        return SCE_ERROR_KERNEL_PARTITION_IN_USE;
     if (part->firstCtlBlk->usedSeg != 0)
-        return 0x800200D7;
+        return SCE_ERROR_KERNEL_PARTITION_IN_USE;
     SceSysmemMemoryPartition *cur = g_MemInfo.main;
     // 4750
     for (;;) {
         if (cur == NULL)
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
         if (cur->next == part)
             break;
         cur = cur->next;
@@ -415,17 +415,17 @@ s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, int fu
     return uid->uid;
 }
 
-s32 partition_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
+s32 partition_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     return uid->uid;
 }
 
-s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap __attribute__((unused)))
+s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     return uid->uid;
 }
 
-s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), int funcId __attribute__((unused)), va_list ap)
+s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
     s32 *size = va_arg(ap, s32*);
     SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
@@ -456,7 +456,7 @@ s32 _CreateMemoryPartition(SceSysmemMemoryPartition *part, u32 attr, u32 addr, u
     u32 startAddr = g_MemInfo.memAddr & 0x1FFFFFFF;
     if (part->size != 0) {
         if (physAddr < startAddr || physAddr + size > startAddr + g_MemInfo.memSize)
-            return 0x800200D4;
+            return SCE_ERROR_KERNEL_MEMORY_AREA_OUT_OF_RANGE;
         SceSysmemMemoryPartition *cur = g_MemInfo.main;
         // 48D4
         // 48E0
@@ -464,7 +464,7 @@ s32 _CreateMemoryPartition(SceSysmemMemoryPartition *part, u32 attr, u32 addr, u
             u32 curAddr = cur->addr & 0x1FFFFFFF;
             if ((physAddr > curAddr && physAddr < curAddr + cur->size) || // start of the partition in another partition
                 (physAddr + size > curAddr && physAddr + size < curAddr + cur->size)) // end of the partition in another partition
-                return 0x800200D5;
+                return SCE_ERROR_KERNEL_MEMORY_AREA_IS_OVERLAP;
             cur = cur->next;
             // 4924
         }
@@ -521,17 +521,17 @@ SceSysmemSeg *AddrToSeg(SceSysmemMemoryPartition *part, void *addr)
 SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u32 addr)
 {
     if (type > 4)
-        return 0x800200D8;
+        return SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK_ALLOC_TYPE;
     if ((type == 3 || type == 4) &&
         (addr == 0 || (addr & (addr - 1)) != 0))
-        return 0x800200E4;
+        return SCE_ERROR_KERNEL_ILLEGAL_ALIGNMENT_SIZE;
     // 4B64
     s32 oldIntr = suspendIntr();
     SceSysmemMemoryPartition *part = MpidToCB(mpid);
     if (part == NULL) {
         // 4CAC
         resumeIntr(oldIntr);
-        return 0x800200D6;
+        return SCE_ERROR_KERNEL_ILLEGAL_PARTITION_ID;
     }
     u8 flag = 0xFF;
     if (!pspK1IsUserMode())
@@ -557,7 +557,7 @@ SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u
         Kprintf("\tmax size 0x%x\n", PartitionQueryMaxFreeMemSize(part));
         sceKernelDeleteUID(uid->uid);
         resumeIntr(oldIntr);
-        return 0x800200D9;
+        return SCE_ERROR_KERNEL_FAILED_ALLOC_MEMBLOCK;
     }
     memBlock->size = (size + 0xFF) & 0xFFFFFF00;
     memBlock->part = part;
@@ -578,12 +578,12 @@ SceUID sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, u32 type, u32 
     }
     if ((info.attr & 2) == 0) {
         pspSetK1(oldK1);
-        return 0x800200D6;
+        return SCE_ERROR_KERNEL_ILLEGAL_PARTITION_ID;
     }
     if (!pspK1PtrOk(name) || (type == 2 && !pspK1PtrOk((void *)addr))) { // 4D8C
         // 4D94
         pspSetK1(oldK1);
-        return 0x800200D3;
+        return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // 4D54
     ret = sceKernelAllocPartitionMemory(mpid, name, type, size, addr);

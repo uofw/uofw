@@ -35,7 +35,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         {
             // 0188
             sceKernelCpuResumeIntr(oldIntr);
-            return 0x80000021;
+            return SCE_ERROR_BUSY;
         }
         curId++;
     }
@@ -63,7 +63,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         int i;
         for (i = 0; i < numAT3Id + numAT3plusId; i++)
         {
-            curId->codec.edramAddr = g_edramAddr;
+            curId->codec.edramAddr = (void *)g_edramAddr;
             curId->codec.unk20 = 1;
             if (i >= numAT3plusId)
             {
@@ -80,7 +80,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
             }
             // 0130
             if (g_edramAddr + 0x19000 < count)
-                return 0x80000022;
+                return SCE_ERROR_OUT_OF_MEMORY;
             curId->info.state = -1;
             curId++;
         }
@@ -532,8 +532,8 @@ int sceAtracLowLevelDecode(int atracID, void *inBuf, int *arg2, void *outBuf, in
     // 1234
     if (sceAudiocodecDecode(&g_atracIds[atracID].codec, info->codec) != 0)
         return 0x80630002;
-    *arg2 = g_atracIds[atracID].codec.unk28;
-    *arg4 = g_atracIds[atracID].codec.unk36;
+    *arg2 = g_atracIds[atracID].codec.readSample;
+    *arg4 = g_atracIds[atracID].codec.decodedSample;
     return 0;
 }
 
@@ -590,12 +590,12 @@ int resetId(SceAtracId *info)
     return 0;
 }
 
-int sceAtracStartEntry(void)
+int sceAtracStartEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     return (sceAtracReinit(2, 2) < 0);
 }
 
-int sceAtracEndEntry(void)
+int sceAtracEndEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     if (g_edramAddr != -1)
         sceAudiocodecReleaseEDRAM(&g_atracIds[0].codec);
@@ -729,7 +729,7 @@ int allocEdram(void)
     ret = sceAudiocodecGetEDRAM(&g_atracIds[0].codec, 0x1001);
     if (ret < 0)
         return ret;
-    g_edramAddr = g_atracIds[0].codec.edramAddr;
+    g_edramAddr = (int)g_atracIds[0].codec.edramAddr;
     return 0;
 }
 

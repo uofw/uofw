@@ -1,416 +1,488 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) 2011 - 2016 The uOFW team
    See the file COPYING for copying permission.
 */
 
 /** 
- * ddrdb.h
+ * uofw/src/openpsid/ddrdb.c
  *
- * @author _Felix_
- * @version 6.60
- * 
- * Reverse engineered ddrdb library of the SCE PSP system.
  */
 
-#include <stdlib.h>
-#include "../../include/openpsid_ddrdb.h"
+#include <common_imp.h>
+#include <crypto/kirk.h>
+#include <dnas_error.h>
+#include <memlmd.h>
+#include <openpsid_ddrdb.h>
+#include <threadman_kernel.h>
 
-int sceUtilsBufferCopyWithRange(void *outbuff, int outsize, void *inbuff, int insize, int cmd);
+/* Check if object <o> is a multiple of the AES block length. */
+#define IS_AES_BLOCK_LEN_MULTIPLE(o)    (((o) & (KIRK_AES_BLOCK_LEN - 1)) == 0)
 
-u8 ddrdbBuf[SCE_DDRDB_MAX_BUFFER_SIZE+SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE] __attribute__((aligned(4))); //0x00003D00
-const u8 ddrdbBuf2[40] = { 0x44, 0x2E, 0x79, 0xE6, //0
-                           0x7B, 0xA2, 0xEB, 0x6C, //4                       
-                           0x4B, 0x37, 0xDF, 0xCA, //8
-                           0xD8, 0x4F, 0x50, 0x99, //12
-                           0xEB, 0xDF, 0x0A, 0xE8, //16
-                           0x73, 0xDE, 0x66, 0x3E, //20
-                           0x32, 0x8D, 0xE5, 0xFF, //24
-                           0x65, 0x1C, 0x22, 0x91, //28
-                           0x8D, 0x03, 0x8C, 0x01, //32
-                           0xC9, 0xC3, 0x22, 0x38  //36
-                         }; //0x0000394C
+/* Work area used to contain the KIRK input/output data. */
+u8 g_workData1[SCE_DNAS_USER_DATA_MAX_LEN + sizeof(KirkAESHeader)] __attribute__((aligned(4))); //0x00003D00
 
-SceUID semaId; //0x00004540 
+const u8 g_pubKeySigForUser[KIRK_ECDSA_PUBLIC_KEY_LEN] = {
+    0x44, 0x2E, 0x79, 0xE6, //0
+    0x7B, 0xA2, 0xEB, 0x6C, //4                       
+    0x4B, 0x37, 0xDF, 0xCA, //8
+    0xD8, 0x4F, 0x50, 0x99, //12
+    0xEB, 0xDF, 0x0A, 0xE8, //16
+    0x73, 0xDE, 0x66, 0x3E, //20
+    0x32, 0x8D, 0xE5, 0xFF, //24
+    0x65, 0x1C, 0x22, 0x91, //28
+    0x8D, 0x03, 0x8C, 0x01, //32
+    0xC9, 0xC3, 0x22, 0x38  //36
+}; //0x0000394C
+
+/* Pointer to the work area used to hold the KIRK input/output data. */
+u8 *g_pWorkData = g_workData1; // 0x00003A80
+
+SceUID g_semaId; //0x00004540 
 
 /* Subroutine sceDdrdb_driver_B33ACB44 - Address 0x00002CB0 */
-int sceDdrdbDecrypt(u8 buf[], int size) {
-    int status;
-    int sizeVal;
-    int retVal;
-    int i;
+s32 sceDdrdbDecrypt(u8 *pSrcData, SceSize size) 
+{
+    s32 status;
+    s32 workSize;
+    s32 tmpStatus;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1, 0); //0x00002CF0
-    if (status != 0) { //0x00002CF8
-        return SCE_ERROR_SEMAPHORE; //0x00002CDC & 0x00002CE0
-    }
-    if (size <= SCE_DDRDB_MAX_BUFFER_SIZE) { //0x00002CFC & 0x00002CD0
-        if ((size & 0xF) == 0) { //0x00002D04 & 0x00002D08
-            //Fill in the header of the buffer to be decrypted.           
-            _sw(5, ddrdbBuf); //0x00002D8C
-            _sw(0, &ddrdbBuf[4]); //0x00002DA8
-            _sw(0, &ddrdbBuf[8]); //0x00002DB0
-            _sw(0xB, &ddrdbBuf[12]); //0x00002DA0
-            _sw(size, &ddrdbBuf[16]); //0x00002DA4
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002CF0
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    if (size <= SCE_DNAS_USER_DATA_MAX_LEN && IS_AES_BLOCK_LEN_MULTIPLE(size)) { //0x00002CFC & 0x00002CD0
+         // 0x00002D8C - 0x00002DA4
+
+        /* Set up the work area for KIRK. */
+        KirkAESHeader *pAesHdr = (KirkAESHeader *)g_pWorkData;
+        pAesHdr->mode = 5;
+        pAesHdr->unk4 = 0;
+        pAesHdr->unk8 = 0;
+        pAesHdr->keyIndex = 0xB;
+        pAesHdr->dataSize = size;
+
+        /* Copy data to be decrypted into work area. */
+        u8 *pData = g_pWorkData + sizeof(KirkAESHeader);
+        for (i = 0; i < size; i++) //0x00002DB4 - 0x00002DD0
+            pData[i] = pSrcData[i];
+
+        workSize = size + sizeof(KirkAESHeader); //0x00002DD8
+        status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x00002DF0 & 0x00002DF8
+
+        /* Decrypt the specified data. */
+        tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, workSize, g_pWorkData, workSize, KIRK_CMD_DECRYPT_AES_CBC_IV_NONE); //0x00002DEC
+        if (tmpStatus == SCE_ERROR_OK) { //0x00002DF4
             
-            if (size != 0) { //0x00002D90 & 0x00002DAC
-                //0x00002DB4 - 0x00002DD0
-                for (i = 0; i < size; i++) {
-                     ddrdbBuf[SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE+i] = buf[i]; //0x00002C50
-                }
-            }
-            sizeVal = size + SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE; //0x00002DD8
-            retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, sizeVal, ddrdbBuf, sizeVal, 7); //0x00002DEC
-            status = 0x80530300; //0x00002DF0 & 0x00002DF8
-            if (retVal == 0) { //0x00002DF4
-                if (size > 0) { //0x00002DFC
-                    //0x00002E04 - 0x00002E20
-                    for (i = 0; i < size; i++) {
-                         buf[i] = ddrdbBuf[SCE_DDRDB_DECRYPTED_BUFFER_HEADER_SIZE+i]; //0x00002E20
-                    }
-                }
-                status = 0; //0x00002E20
-            }
+            /* Copy the computed data back into the provided buffer. */
+            for (i = 0; i < size; i++) //0x00002E04 - 0x00002E20
+                /*
+                 * UOFW: Is this correct? We are copying <size> bytes from the beginning of the
+                 * the work data, which includes the KIRK AES header. If the header is still 
+                 * inside the workData after decryption, we copy wrong data over and miss out
+                 * the last <sizeof(KirkAESHeader)> bits of the data to be decrypted.
+                 *
+                 * Note: sceDdrdbEncrypt() assumes the header is still there and skips it accordingly.
+                 */
+                pSrcData[i] = g_pWorkData[i]; //0x00002E20
+
+            status = SCE_ERROR_OK; //0x00002E20
         }
     }
     else {
-        status = 0x80530301; //0x00002D10 & 0x00002D18
-        sizeVal = size + 20; //0x00002D14
+        status = SCE_DNAS_ERROR_INVALID_ARGUMENTS; //0x00002D10 & 0x00002D18
+
+        /* 
+         * UOFW: size here is > SCE_DDRDB_MAX_BUFFER_SIZE, so more data gets cleared 
+         * below then neccessary. Depending on size, we even clear data which does not 
+         * belong to the work area.
+         * Another note: Why do we have to clear any data in this case? The work area 
+         * wasn't set up. workSize should be 0.
+         */
+        workSize = size + sizeof(KirkAESHeader); //0x00002D14
     }
-    if (sizeVal != 0) { //0x00002D1C
-        //0x00002D20 - 0x00002D3C
-        for (i = 0; i < sizeVal; i++) {
-             ddrdbBuf[i] = 0;
-        }
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x00002D44
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002D4C & 0x00002D50 & 0x00002D54
+
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) // 0x00002D20 - 0x00002D3C
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x00002D44
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x00002D4C & 0x00002D50 & 0x00002D54
 }
 
 /* Subroutine sceDdrdb_driver_05D50F41 - Address 0x00002B3C */
-int sceDdrdbEncrypt(u8 buf[], int size) {
-    int status;
-    int sizeVal;
-    int retVal;
-    int i;
+s32 sceDdrdbEncrypt(u8 *pSrcData, SceSize size) 
+{
+    s32 status;
+    SceSize workSize;
+    s32 tmpStatus;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1, 0); //0x00002B78
-    if (status != 0) {
-        return SCE_ERROR_SEMAPHORE; //0x00002B68 & 0x00002B6C
-    }
-    if (size <= SCE_DDRDB_MAX_BUFFER_SIZE) { //0x00002B84 & 0x00002B88
-        if ((size & 0xF) == 0) { //0x00002B8C & 0x00002B90
-            //Fill in the header of the buffer to be encrypted.
-            _sw(4, ddrdbBuf); //0x00002C10
-            _sw(0, &ddrdbBuf[4]); //0x00002C28
-            _sw(0, &ddrdbBuf[8]); //0x00002C30
-            _sw(0xB, &ddrdbBuf[12]); //0x00002C20
-            _sw(size, &ddrdbBuf[16]); //0x00002C24
-            
-            if (size != 0) { //0x00002C2C
-                //0x00002C34 - 0x00002C50
-                for (i = 0; i < size; i++) {
-                     ddrdbBuf[SCE_DDRDB_ENCRYPTED_BUFFER_HEADER_SIZE +i] = buf[i]; //0x00002C50
-                }
-            }
-            sizeVal = size + SCE_DDRDB_ENCRYPTED_BUFFER_HEADER_SIZE ; //0x00002C58
-            retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, sizeVal, ddrdbBuf, sizeVal, 4); //0x00002C6C
-            status = 0x80530300;
-            if (retVal == 0) { //0x00002C74
-                if (retVal < size) { //0x00002C80
-                    //0x00002C84 - 0x00002CA4
-                    for (i = 0; i < size; i++) {
-                         buf[i] = ddrdbBuf[SCE_DDRDB_ENCRYPTED_BUFFER_HEADER_SIZE +i];
-                    }
-                }
-                status = 0; //0x00002CAC
-            }
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002B78
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    if (size <= SCE_DNAS_USER_DATA_MAX_LEN && IS_AES_BLOCK_LEN_MULTIPLE(size)) { // 0x00002B84 & 0x00002B90
+        // 0x00002C10 - 0x00002C24
+
+        /* Set up the work area for KIRK. */
+        KirkAESHeader *pAesHdr = (KirkAESHeader *)g_pWorkData;
+        pAesHdr->mode = 4;
+        pAesHdr->unk4 = 0;
+        pAesHdr->unk8 = 0;
+        pAesHdr->keyIndex = 0xB;
+        pAesHdr->dataSize = size;
+
+        /* Copy data to be encrypted into work area. */
+        u8 *pData = g_pWorkData + sizeof(KirkAESHeader);
+        for (i = 0; i < size; i++) // 0x00002C34 - 0x00002C50
+            pData[i] = pSrcData[i]; //0x00002C50
+
+        workSize = size + sizeof(KirkAESHeader); //0x00002C58
+        status = SCE_DNAS_ERROR_OPERATION_FAILED;
+
+        /* Encrypt the specified data. */
+        tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, workSize, g_pWorkData, workSize, KIRK_CMD_ENCRYPT_AES_CBC_IV_NONE); //0x00002C6C
+        if (tmpStatus == SCE_ERROR_OK) { //0x00002C74    
+
+            /* Copy encrypted data into provided buffer. */
+            for (i = 0; i < size; i++)
+                pSrcData[i] = pData[i];
+
+            status = SCE_ERROR_OK; //0x00002CAC
         }
     }
     else {
-        status = 0x80530301; //0x00002B98 & 0x00002BA0
-        sizeVal = size + 20; //0x00002B9Cf
+        status = SCE_DNAS_ERROR_INVALID_ARGUMENTS; // 0x00002BA0
+
+        /*
+        * UOFW: size here is > SCE_DDRDB_MAX_BUFFER_SIZE, so more data gets cleared
+        * below then neccessary. Depending on size, we even clear data which does not
+        * belong to the work area.
+        * Another note: Why do we have to clear any data in this case? The work area
+        * wasn't set up. workSize should be 0.
+        */
+        workSize = size + sizeof(KirkAESHeader); //0x00002B9C
     }
-    if (sizeVal != 0) { //0x00002BA4
-        //0x00002BB0 - 0x00002BC4
-        for (i = 0; i < sizeVal; i++) {
-              ddrdbBuf[i] = 0;
-        }
-    }
-    status = sceKernelSignalSema(semaId, 1);
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002BD4 - 0x00002BDC
+    
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) //0x00002BB0 - 0x00002BC4
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1);
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x00002BD4 - 0x00002BDC
 }
 
 /* Subroutine sceDdrdb_driver_40CB752A - Address 0x000029C0 */
-int sceDdrdbHash(u8 srcBuf[], int size, u8 hash[SCE_DDRDB_HASH_BUFFER_SIZE]) {
-    int status;
-    int sizeVal;
-    int retVal;
-    int i;
+s32 sceDdrdbHash(u8 *pSrcData, SceSize size, u8 *pDigest) 
+{
+    s32 status;
+    s32 tmpStatus;
+    SceSize workSize;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1); //0x00002A04
-    if (status != 0) { //0x00002A0C
-        return SCE_ERROR_SEMAPHORE; //0x000029F4 & 0x000029F8
-    }
-    sizeVal = size + 4; //0x00002A20
-    if (size <= SCE_DDRDB_MAX_BUFFER_SIZE) { //0x00002A1C
-        //Fill in the header of the source buffer.
-        _sw(size, ddrdbBuf); //0x00002A28 
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002A04
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    workSize = size + sizeof(KirkSHA1Hdr); //0x00002A20
+    if (size <= SCE_DNAS_USER_DATA_MAX_LEN) { //0x00002A1C
+
+        /* Set up the work area for KIRK. */
+        KirkSHA1Hdr *pSha1Hdr = (KirkSHA1Hdr *)g_pWorkData;
+        pSha1Hdr->dataSize = size; // 0x00002A28 
         
-        if (size != 0) { //0x00002A30
-            //0x00002A2C - 0x00002A54
-            for (i = 0; i < size; i++) {
-                 ddrdbBuf[SCE_DDRDB_HASH_BUFFER_HEADER_SIZE+i] = srcBuf[i]; //0x00002A54
-            }
-        }
-        sizeVal = size + SCE_DDRDB_HASH_BUFFER_HEADER_SIZE; //0x00002A5C
-        retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, SCE_DDRDB_HASH_BUFFER_SIZE, ddrdbBuf, sizeVal, 11); //0x00002A70
-        status = 0x80530300; //0x00002A74 & 0x00002A7C
-        if (retVal == 0) { //0x00002A9C
-            //0x00002A80 - 0x00002AA0
-            for (i = 0; i < SCE_DDRDB_HASH_BUFFER_SIZE; i++) {
-                hash[i] = ddrdbBuf[i]; //0x00002A9C
-            }
-            status = 0; //0x00002AA4
-        }
-    }
-    if (sizeVal < SCE_DDRDB_HASH_BUFFER_SIZE) { //0x00002AAC
-        //0x00002AB0 - 0x00002ACC
-        for (i = 0; i < SCE_DDRDB_HASH_BUFFER_SIZE; i++) {
-             ddrdbBuf[i] = 0; //0x00002ACC
+        /* Copy data used for hash computation to work area. */
+        u8 *pData = g_pWorkData + sizeof(KirkSHA1Hdr);
+        for (i = 0; i < size; i++)
+            pData[i] = pSrcData[i]; //0x00002A54
+
+        workSize = size + sizeof(KirkSHA1Hdr); //0x00002A5C
+        status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x00002A74 & 0x00002A7C
+
+        /* Compute the SHA-1 hash value of the specified data. */
+        tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, KIRK_SHA1_DIGEST_LEN, g_pWorkData, workSize, KIRK_CMD_HASH_GEN_SHA1); //0x00002A70
+        if (tmpStatus == SCE_ERROR_OK) { //0x00002A9C
+
+            /* Copy hash value into provided buffer. */
+            for (i = 0; i < KIRK_SHA1_DIGEST_LEN; i++) //0x00002A80 - 0x00002AA0
+                pDigest[i] = g_pWorkData[i];
+
+            status = SCE_ERROR_OK; //0x00002AA4
         }
     }
-    else {
-        if (sizeVal != 0) { //0x00002B14
-            //0x00002B1C - 0x00002B30
-            for (i = 0; i < sizeVal; i++) {
-                ddrdbBuf[i] = 0; //0x00002B30
-            }
-        }
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x00002AD4
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002ADC & 0x00002AE0 & 0x00002AE4
+
+    /* Clear at least <KIRK_SHA1_DIGEST_LEN> bits of the working area. */
+    for (i = 0; i < KIRK_SHA1_DIGEST_LEN; i++) // 0x00002AAC
+        g_pWorkData[i] = 0; //0x00002B30
+
+    /* Use casts here to handle potential underflow situation. */
+    for (i = 0; (s32)i < (s32)(workSize - KIRK_SHA1_DIGEST_LEN); i++) // 0x00002B1C - 0x00002B30
+        g_pWorkData[KIRK_SHA1_DIGEST_LEN + i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x00002AD4
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : tmpStatus; //0x00002ADC & 0x00002AE0 & 0x00002AE4
 }
 
 /* Subroutine sceDdrdb_driver_F970D54E - Address 0x00002570 */
-int sceDdrdbMul1(u8 destBuf[SCE_DDRDB_MUL1_BUFFER_SIZE]) {
-    int status = 0x80530300; //0x00002594 & 0x00002598
-    int retVal;
-    int i;
+s32 sceDdrdbMul1(u8 *pKeyData) 
+{
+    s32 status;
+    s32 tmpStatus;
+    SceSize workSize;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1); //0x000025A0
-    if (status != 0) { //0x000025A8
-        return SCE_ERROR_SEMAPHORE; //0x000025B0 & 0x000025B4
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x000025A0
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    status = SCE_DNAS_ERROR_OPERATION_FAILED; // 0x00002598
+    workSize = KIRK_ECDSA_PUBLIC_KEY_LEN + KIRK_ECDSA_PRIVATE_KEY_LEN;
+
+    /* Compute a (public, private) key pair. */
+    tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, workSize, NULL, 0, KIRK_CMD_KEY_GEN_ECDSA); //0x000025E8
+    if (tmpStatus == SCE_ERROR_OK) { // 0x000025F0
+
+        /* Copy the computed key pair into the provided buffer. */
+        for (i = 0; i < workSize; i++) // 0x000025F8 & 0x00002618
+            pKeyData[i] = g_pWorkData[i]; //0x00002618
+
+        status = SCE_ERROR_OK;
     }
-    retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, SCE_DDRDB_MUL1_BUFFER_SIZE, NULL, 0, 12); //0x000025E8
-    if (retVal == 0) { //0x000025F0
-        //0x000025F8 & 0x00002618
-        for (i = 0; i < SCE_DDRDB_MUL1_BUFFER_SIZE; i++) {
-             destBuf[i] = ddrdbBuf[i]; //0x00002618
-        }        
-    }
-    //0x00002620 - 0x00002638
-    for (i = 0; i < SCE_DDRDB_MUL1_BUFFER_SIZE; i++) {
-         ddrdbBuf[i] = 0; //0x00002638
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x00002640
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002648 & 0x0000264C & 0x00002654
+
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) // 0x00002620 - 0x00002638
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x00002640
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x00002648 & 0x0000264C & 0x00002654
 }
 
 /* Subroutine sceDdrdb_driver_EC05300A - Address 0x00002658 */
-int sceDdrdbMul2(u8 srcBuf[20], u8 srcBuf1[40], u8 destBuf[SCE_DDRDB_MUL2_DEST_BUFFER_SIZE]) {
-    int status;
-    int retVal;
-    int i;
+s32 sceDdrdbMul2(u8 *pPrivKey, u8 *pBasePoint, u8 *pNewPoint) 
+{
+    s32 status;
+    s32 tmpStatus;
+    SceSize workSize;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1); //0x00002698
-    if (status != 0) { //0x000026A0
-        return SCE_ERROR_SEMAPHORE; //0x0000268C & 0x00002690
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); // 0x00002698
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    /* Set up the work area. */
+    for (i = 0; i < KIRK_ECDSA_PRIVATE_KEY_LEN; i++) // 0x000026A4 - 0x000026C8
+        g_pWorkData[i] = pPrivKey[i]; //0x000026C8
+
+    for (i = 0; i < KIRK_ECDSA_POINT_LEN; i++) // 0x000026CC - 0x000026EC
+        g_pWorkData[KIRK_ECDSA_PRIVATE_KEY_LEN + i] = pBasePoint[i]; //0x000026EC
+
+    status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x00002708 & 0x00002710
+
+    /* Compute a new point on the elliptic curve using the provided key and curve base point. */
+    tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, KIRK_ECDSA_POINT_LEN,
+        g_pWorkData, KIRK_ECDSA_PRIVATE_KEY_LEN, 
+        KIRK_CMD_POINT_MULTIPLICATION_ECDSA
+        ); //0x00002704
+    if (tmpStatus == SCE_ERROR_OK) { //0x0000270C
+
+        /* Copy the computed point into the provided buffer. */
+        for (i = 0; i < KIRK_ECDSA_POINT_LEN; i++) //0x00002714 - 0x00002734
+            pNewPoint[i] = g_pWorkData[i];
+
+        status = SCE_ERROR_OK;
     }
-    //0x000026A4 - 0x000026C8
-    for (i = 0; i < 20; i++) {
-         ddrdbBuf[i] = srcBuf[i]; //0x000026C8
-    }
-    //0x000026CC - 0x000026EC
-    for (i = 0; i < 40; i++) {
-         ddrdbBuf[20+i] = srcBuf1[i]; //0x000026EC
-    }
-    retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, SCE_DDRDB_MUL2_DEST_BUFFER_SIZE, ddrdbBuf, SCE_DDRDB_MUL2_SOURCE_BUFFER_SIZE, 13); //0x00002704
-    status = 0x80530300; //0x00002708 & 0x00002710
-    if (retVal == 0) { //0x0000270C
-        //0x00002714 - 0x00002734
-        for (i = 0; i < SCE_DDRDB_MUL2_DEST_BUFFER_SIZE; i++) {
-             destBuf[i] = ddrdbBuf[i]; //0x00002734
-        }      
-    }
-    //0x00002740 - 0x00002754
-    for (i = 0; i < SCE_DDRDB_MUL2_SOURCE_BUFFER_SIZE; i++) {
-         ddrdbBuf[i] = 0; //0x00002754
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x0000275C
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002764 & 0x00002764 & 0x0000276C
+    workSize = KIRK_ECDSA_PRIVATE_KEY_LEN + KIRK_ECDSA_POINT_LEN;
+    
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) //0x00002740 - 0x00002754
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x0000275C
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x00002764 & 0x00002764 & 0x0000276C
 }
 
 /* Subroutine sceDdrdb_driver_E27CE4CB - Address 0x00002358 */
-int sceDdrdbSigvry(u8 srcBuf0[40], u8 sha1[20], u8 srcBuf2[40]) {
-    int status;
-    int i;
+s32 sceDdrdbSigvry(u8 *pPubKey, u8 *pData, u8 *pSig) 
+{
+    s32 status;
+    s32 tmpStatus;
+    SceSize workSize;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1); //0x00002398
-    if (status != 0) { //0x000023A0
-        return SCE_ERROR_SEMAPHORE; //0x0000238C & 0x00002390
-    }
-    //0x000023AC - 0x000023C8
-    for (i = 0; i < 40; i++) {
-         ddrdbBuf[i] = srcBuf0[i]; //0x000023C8
-    }
-    //0x000023CC - 0x000023EC
-    for (i = 0; i < 20; i++) {
-         ddrdbBuf[40+i] = sha1[i]; //0x000023EC
-    }
-    //0x000023F0 - 0x00002410
-    for (i = 0; i < 40; i++) {
-         ddrdbBuf[60+i] = srcBuf2[i]; //0x00002410
-    }
-    status = sceUtilsBufferCopyWithRange(NULL, 0, ddrdbBuf, SCE_DDRDB_SIGVRY_BUFFER_SIZE, 17); //0x00002428
-    status = (status != 0) ? 0x80530300 : 0; //0x0000242C - 0x00002434
-    //0x00002438 - 0x00002450
-    for (i = 0; i < SCE_DDRDB_SIGVRY_BUFFER_SIZE; i++) {
-         ddrdbBuf[i] = 0; //0x00002450
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x00002458
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002460 - 0x00002468
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); // 0x00002398
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    /* Set up the work area. */
+    for (i = 0; i < KIRK_ECDSA_PUBLIC_KEY_LEN; i++) // 0x000023AC - 0x000023C8
+        g_pWorkData[i] = pPubKey[i]; // 0x000023C8
+
+    for (i = 0; i < KIRK_ECDSA_SRC_DATA_LEN; i++) // 0x000023CC - 0x000023EC
+        g_pWorkData[KIRK_ECDSA_PUBLIC_KEY_LEN + i] = pData[i]; // 0x000023EC
+
+    for (i = 0; i < KIRK_ECDSA_SIG_LEN; i++) // 0x000023CC - 0x000023EC
+        g_pWorkData[KIRK_ECDSA_PUBLIC_KEY_LEN + KIRK_ECDSA_SRC_DATA_LEN + i] = pSig[i]; // 0x00002410
+
+    workSize = KIRK_ECDSA_PUBLIC_KEY_LEN + KIRK_ECDSA_SRC_DATA_LEN + KIRK_ECDSA_SIG_LEN;
+
+    /* Verify the provided signature. */
+    tmpStatus = sceUtilsBufferCopyWithRange(NULL, 0, g_pWorkData, workSize, KIRK_CMD_SIG_VER_ECDSA); //0x00002428
+    status = (tmpStatus != SCE_ERROR_OK) ? SCE_DNAS_ERROR_OPERATION_FAILED : SCE_ERROR_OK; //0x0000242C - 0x00002434
+
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) //0x00002438 - 0x00002450
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x00002458
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x00002460 - 0x00002468
 }
 
 /* Subroutine sceDdrdb_driver_370F456A - Address 0x00002494 */
-int sceDdrdbCertvry(u8 buf[SCE_DDRDB_CERTVRY_BUFFER_SIZE]) {
-    int status;
-    int i;
+s32 sceDdrdbCertvry(u8 *pCert) 
+{
+    s32 status;
+    s32 tmpStatus;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1); //0x000024C4
-    if (status != 0) { //0x000024CC
-        return SCE_ERROR_SEMAPHORE; //0x000024B8 & 0x000024BC
-    }
-    //0x000024D4 & 0x000024F4
-    for (i = 0; i < SCE_DDRDB_CERTVRY_BUFFER_SIZE; i++) {
-         ddrdbBuf[i] = buf[i]; //0x000024F4
-    }
-    status = sceUtilsBufferCopyWithRange(NULL, 0, ddrdbBuf, SCE_DDRDB_CERTVRY_BUFFER_SIZE, 18); //0x0000250C
-    status = (status != 0) ? 0x80530300 : 0; //0x00002510 - 0x00002518
-    //0x0000251C - 0x00002534
-    for (i = 0; i < SCE_DDRDB_CERTVRY_BUFFER_SIZE; i++) {
-         ddrdbBuf[i] = 0; //0x00002534
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x0000253C
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002544 - 0x0000254C
+    status = sceKernelWaitSema(g_semaId, 1, NULL); //0x000024C4
+    if (status != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE; 
+
+    /* Set up the work area. */
+    for (i = 0; i < KIRK_CERT_LEN; i++) //0x000024D4 & 0x000024F4
+        g_pWorkData[i] = pCert[i]; //0x000024F4
+
+    /* Verify the provided certificate. */
+    tmpStatus = sceUtilsBufferCopyWithRange(NULL, 0, g_pWorkData, KIRK_CERT_LEN, KIRK_CMD_CERT_VER); //0x0000250C
+    status = (tmpStatus != SCE_ERROR_OK) ? SCE_DNAS_ERROR_OPERATION_FAILED : SCE_ERROR_OK; //0x00002510 - 0x00002518
+
+    /* Clear the work area. */
+    for (i = 0; i < KIRK_CERT_LEN; i++) //0x0000251C - 0x00002534
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x0000253C
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status;
 }
 
 /* sceDdrdb_driver_B24E1391 - Address 0x00002798 */
-int sceDdrdbSiggen(u8 inbuf[32], u8 sha1[20], u8 outbuf[40]) {
-    int status;
-    int retVal; 
-    int i;
+s32 sceDdrdbSiggen(u8 *pPrivKey, u8 *pSrcData, u8 *pSig) 
+{
+    s32 status;
+    s32 tmpStatus; 
+    SceSize workSize;
+    u32 i;
     
-    status = sceKernelWaitSema(semaId, 1); //0x000027D8
-    if (status != 0) { //0x000027E0
-        return SCE_ERROR_SEMAPHORE; //0x000027CC & 0x000027E0
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x000027D8
+    if (tmpStatus != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+    
+    /* Setup the work area. */
+    for (i = 0; i < 32; i++) //0x000027E4 - 0x00002808
+        g_pWorkData[i] = pPrivKey[i];
+    
+    for (i = 0; i < KIRK_ECDSA_SRC_DATA_LEN; i++) //0x0000280C - 0x0000282C
+        g_pWorkData[i] = pSrcData[i];
+
+    workSize = 32 + KIRK_ECDSA_SRC_DATA_LEN;
+    status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x00002848 & 0x00002850
+
+    /* Compute the signature for the provided data. */
+    tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, workSize, g_pWorkData, workSize, KIRK_CMD_SIG_GEN_ECDSA); //0x00002844
+    if (tmpStatus == SCE_ERROR_OK) { //0x0000284C
+
+        /* Copy the computed signature into the provided buffer. */
+        for (i = 0; i < KIRK_ECDSA_SIG_LEN; i++) //0x00002854 - 0x00002874
+            pSig[i] = g_pWorkData[i]; //0x00002874
+
+        status = SCE_ERROR_OK;
     }
-    //0x000027E4 - 0x00002808
-    for (i = 0; i < 32; i++) {
-         ddrdbBuf[i] = inbuf[i]; //0x00002808
-    }
-    //0x0000280C - 0x0000282C
-    for (i = 0; i < 20; i++) {
-         ddrdbBuf[i] = sha1[i]; //0x0000282C
-    }
-    retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, 52, ddrdbBuf, 52, 16); //0x00002844
-    status = 0x80530300; //0x00002848 & 0x00002850
-    if (retVal == 0) { //0x0000284C
-        //0x00002854 - 0x00002874
-        for (i = 0; i < 40; i++) {
-             outbuf[i] = ddrdbBuf[i]; //0x00002874
-        }
-        
-    }
-    //0x00002880 - 0x00002894
-    for (i = 0; i < 52; i++) {
-         ddrdbBuf[i] = 0; //0x00002894
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x0000289C
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x000028A4 - 0x000028AC
+    
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) //0x00002880 - 0x00002894
+        g_pWorkData[i] = 0;
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x0000289C
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x000028A4 - 0x000028AC
 }
 
 /* Subroutine sceDdrdb_driver_B8218473 - Address 0x000028D8 */
-int sceDdrdbPrngen(u8 buf[SCE_DDRDB_PRNG_BUFFER_SIZE]) {
-    int status = 0x80530300; //0x000028FC & 0x00002900
-    int retVal;
-    int i;
+s32 sceDdrdbPrngen(u8 *pDstData) 
+{
+    s32 status;
+    s32 tmpStatus;
+    u32 i;
+
+    status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x000028FC
     
-    status = sceKernelWaitSema(semaId, 1); //0x00002908
-    if (status != 0) { //0x00002910
-        return SCE_ERROR_SEMAPHORE; //0x00002918 & 0x0000291C
+    status = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002908
+    if (status != SCE_ERROR_OK)
+        return SCE_ERROR_SEMAPHORE;
+
+    /* Compute a pseudorandom number. */
+    tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, KIRK_PRN_LEN, NULL, 0, KIRK_CMD_PRN_GEN); //0x00002950
+    if (tmpStatus == SCE_ERROR_OK) { //0x00002958
+
+        /* Copy computed number into provided buffer. */
+        for (i = 0; i < KIRK_PRN_LEN; i++) //0x00002960 - 0x00002980
+            pDstData[i] = g_pWorkData[i]; //0x00002980
+
+        status = SCE_ERROR_OK;
     }
-    retVal = sceUtilsBufferCopyWithRange(ddrdbBuf, SCE_DDRDB_PRNG_BUFFER_SIZE, NULL, 0, 14); //0x00002950
-    if (retVal == 0) { //0x00002958
-        //0x00002960 - 0x00002980
-        for (i = 0; i < SCE_DDRDB_PRNG_BUFFER_SIZE; i++) {
-             buf[i] = ddrdbBuf[i]; //0x00002980
-        }     
-    }
-    //0x00002988 - 0x000029A0
-    for (i = 0; i < SCE_DDRDB_PRNG_BUFFER_SIZE; i++) {
-         ddrdbBuf[i] = 0; //0x000029A0
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x000029A8
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x000029B0 - 0x000029BC
+    
+    /* Clear the work area. */
+    for (i = 0; i < KIRK_PRN_LEN; i++) // 0x00002988 - 0x000029A0
+        g_pWorkData[i] = 0; 
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x000029A8
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x000029B0 - 0x000029BC
 }
 
 /* Subroutine sceDdrdb_F013F8BF - Address 0x00002E2C */
-int sceDdrdb_F013F8BF(u8 srcBuf1[20], u8 srcBuf2[40]) {
-    int bufAddr;
-    int status;
-    u32 k1;
-    int i;
+// Name: sceDdrdbSigvryForUser ?
+s32 sceDdrdb_F013F8BF(u8 *pData, u8 *pSig) 
+{
+    s32 status;
+    s32 tmpStatus;
+    SceSize workSize;
+    s32 oldK1;
+    u32 i;
     
-    k1 = pspSdkGetK1();
-    pspSdkSetK1(k1 << 11); //0x00002E30
-    
-    bufAddr = srcBuf1 + 20; //0x00002E2C
-    bufAddr |= srcBuf1; //0x00002E34
-    
-    if ((bufAddr & pspSdkGetK1()) < 0) { //0x00002E3C & 0x00002E68
-        pspSdkSetK1(k1); 
-        return SCE_ERROR_PRIV_REQUIRED; //0x00002E84 - 0x00002E88
-    } 
-    bufAddr = srcBuf2 + 40; //0x00002E70
-    bufAddr |= srcBuf2; //0x00002E74
-    if ((bufAddr & pspSdkGetK1()) < 0) { //0x00002E78 & 0x00002E7C
-        pspSdkSetK1(k1); 
+    oldK1 = pspShiftK1();
+
+    /* Check if the provided buffers are located in userland. */
+    if (!pspK1StaBufOk(pData, KIRK_SHA1_DIGEST_LEN) || !pspK1StaBufOk(pSig, KIRK_ECDSA_SIG_LEN)) { // 0x00002E68 & 0x00002E7C
+        pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-                
-    status = sceKernelWaitSema(semaId, 1); //0x00002EC4
-    if (status != 0) { //0x00002ECC
-        pspSdkSetK1(k1);
-        return SCE_ERROR_SEMAPHORE; //0x00002EC8 & 0x00002EE0
+         
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002EC4
+    if (tmpStatus != SCE_ERROR_OK) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_SEMAPHORE;
     }
-    //0x00002ED4 - 0x00002F00
-    for (i = 0; i < 40; i++) {
-         ddrdbBuf[i] = ddrdbBuf2[i]; //0x00002F00
-    }
-    //0x00002F04 - 0x00002F24
-    for (i = 0; i < 20; i++) {
-         ddrdbBuf[40+i] = srcBuf1[i]; 
-    }
-    //0x00002F28 - 0x00002F48
-    for (i = 0; i < 40; i++) {
-         ddrdbBuf[60+i] = srcBuf2[i]; //0x00002F48
-    }
-    status = sceUtilsBufferCopyWithRange(NULL, 0, ddrdbBuf, 100, 17); //0x00002F60
-    status = (status != 0) ? SCE_ERROR_INVALID_VALUE : 0; //0x00002F64 - 0x00002F6C
-    //0x00002F70 - 0x00002F88
-    for (i = 0; i < 100; i++) {
-         ddrdbBuf[i] = 0; //0x00002F88
-    }
-    status = sceKernelSignalSema(semaId, 1); //0x00002F90
-    pspSdkSetK1(k1);
-    return (status != 0) ? SCE_ERROR_SEMAPHORE : 0; //0x00002F98 - 0x00002FA4
+
+    /* Set up the work area. */
+    for (i = 0; i < KIRK_ECDSA_PUBLIC_KEY_LEN; i++) // 0x00002ED4 - 0x00002F00
+        g_pWorkData[i] = g_pubKeySigForUser[i]; // 0x00002F00
+
+    for (i = 0; i < KIRK_SHA1_DIGEST_LEN; i++) //0x00002F04 - 0x00002F24
+        g_pWorkData[KIRK_ECDSA_PUBLIC_KEY_LEN + i] = pData[i];
+
+    for (i = 0; i < KIRK_ECDSA_SIG_LEN; i++) //0x00002F28 - 0x00002F48
+        g_pWorkData[KIRK_ECDSA_PUBLIC_KEY_LEN + KIRK_SHA1_DIGEST_LEN + i] = pSig[i]; //0x00002F48
+
+    workSize = KIRK_ECDSA_PUBLIC_KEY_LEN + KIRK_SHA1_DIGEST_LEN + KIRK_ECDSA_SIG_LEN;
+
+    /* Verify the provided signature. */
+    tmpStatus = sceUtilsBufferCopyWithRange(NULL, 0, g_pWorkData, workSize, KIRK_CMD_SIG_VER_ECDSA); //0x00002F60
+    status = (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_INVALID_VALUE : SCE_ERROR_OK; //0x00002F64 - 0x00002F6C
+    
+    /* Clear the work area. */
+    for (i = 0; i < workSize; i++) //0x00002F70 - 0x00002F88
+        g_pWorkData[i] = 0; //0x00002F88
+
+    tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x00002F90
+
+    pspSetK1(oldK1);
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status; //0x00002F98 - 0x00002FA4
 }

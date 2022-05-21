@@ -1,6 +1,7 @@
 /* Copyright (C) 2011, 2012 The uOFW team
    See the file COPYING for copying permission.
 */
+#include <common_header.h>
 
 int sub_11860()
 {
@@ -12,13 +13,13 @@ int sub_9508(int arg0, char *flashName, char *lflashName, int arg3)
     a0 = *(int*)(arg0 + 4);
     s0 = arg3;
     if (a0 < 0)
-        return 0x80010018
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES
     if (a0 >= fatUnitsNumber)
-        return 0x80010018;
+        return SCE_ERROR_ERRNO_TOO_MANY_OPEN_SYSTEM_FILES;
     // 956C
     s1 = unkFatAddr2 + a0 * 628;
     if (*(int*)(s1 + 0) & 1 != 0)
-        return 0x80010010;
+        return SCE_ERROR_ERRNO_DEVICE_BUSY;
     bzero(s1, 628);
     if (s0 & 1 == 0)
         s0 = 0x4000003;
@@ -83,7 +84,7 @@ int sub_9508(int arg0, char *flashName, char *lflashName, int arg3)
     *(int*)(s1 + 36) = a2;
     if (a2 - 9 >= 4) {
         sub_CC10();
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     a1 = *(char*)(sp + 2);
     s0 = clz(a1);
@@ -94,19 +95,19 @@ int sub_9508(int arg0, char *flashName, char *lflashName, int arg3)
         t6 = -1;
     if (t6 >= 8) {
         sub_CC10();
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     *(int*)(s1 + 76) = a1 << (a2 & 0x1F);
     *(int*)(s1 + 72) = a2;
     if (*(short*)(sp + 4) == 0) {
         sub_CC10();
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     v0 = *(char*)(sp + 6);
     *(int*)(s1 + 56) = v0;
     if (v0 < 2) {
         sub_CC10();
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     a1 = *(short*)(sp + 10);
     *(int*)(s1 + 64) = *(short*)(sp + 8);
@@ -133,7 +134,7 @@ int sub_9508(int arg0, char *flashName, char *lflashName, int arg3)
     // 97A4
     if (a0 < *(int*)(sp + 16)) {
         sub_CC10();
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     t7 = *(short*)(sp + 12);
     *(int*)(s1 + 52) = t7;
@@ -155,7 +156,7 @@ int sub_9508(int arg0, char *flashName, char *lflashName, int arg3)
     }
     if (*(short*)(sp + 14) != 0xAA55) {
         sub_CC10();
-        return 0x80010005;
+        return SCE_ERROR_ERRNO_IO_ERROR;
     }
     // 9838
     v0 = *(short*)(sp + 4);
@@ -176,7 +177,7 @@ int sub_9508(int arg0, char *flashName, char *lflashName, int arg3)
             {
                 // 997C
                 sub_CC10();
-                return 0x80010005;
+                return SCE_ERROR_ERRNO_IO_ERROR;
             }
         }
         // 98B4
@@ -251,7 +252,7 @@ int sub_C2DC(int arg0, int arg1, int arg2, int arg3)
 {
     int addr = unkHugeTab;
     if (addr == 0)
-        return 0x8001000C;
+        return SCE_ERROR_ERRNO_NO_MEMORY;
     sub_E568(arg0, arg1, arg2, arg3, addr);
     return 0;
 }
@@ -273,7 +274,7 @@ FlashOpt nandOpt; // 0x88639050: unsure
 int sub_C988(char *path, int arg1, int arg2)
 {
     if (unkNandFlags & 2 != 0)
-        return 0x80010010;
+        return SCE_ERROR_ERRNO_DEVICE_BUSY;
     v0 = sub_C934(13); // if not already initialized, initialize lflash
     if (v0 != 0)
         return v0;
@@ -358,12 +359,12 @@ int sub_E568(int arg0, int arg1, int arg2, int arg3, int arg4)
     if (v0 < 0)
         return v0;
     if (arg1 == 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     v0 = sub_EDFC(arg1, &ptr1, &ptr2, &ptr3);
     if (v0 < 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     if (ptr >= 16)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     v1 = lflashOpt.u0;
     a3 = arg2 & 0x800;
     if (v1 & 1 == 0)
@@ -391,7 +392,7 @@ int sub_E568(int arg0, int arg1, int arg2, int arg3, int arg4)
         a1 = v1 + arg0;
         v0 = *(int*)(a1 + 96);
         if (v0 == 0)
-            return 0x80010013;
+            return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
         if (arg2 & 0x800 == 0)
             lflashOpt.u0 |= 1;
         else
@@ -401,24 +402,24 @@ int sub_E568(int arg0, int arg1, int arg2, int arg3, int arg4)
         return 0;
     }
     if (a3 != 0)
-        return 0x80010010;
+        return SCE_ERROR_ERRNO_DEVICE_BUSY;
     if (v1 & 0x10 != 0)
-        return 0x80010010;
+        return SCE_ERROR_ERRNO_DEVICE_BUSY;
     // E640
     if (a1 < 0)
     {
         // E688
         if (v1 & 8 == 0)
-            return 0x80010016;
+            return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         ptr2 = 0;
         a1 = 0;
     }
     else if (v1 & 8 != 0)
-        return 0x80010016;
+        return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     // E654
     t7 = &lflashOpt + (a1 << 5);
     if (*(int*)(t7 + 96) == 0)
-        return 0x80010013;
+        return SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
     *(int*)(arg0 + 16) = t7 + 96;
     lflashOpt.u608++;
     return 0;
@@ -735,11 +736,11 @@ int sub_F234(int arg0, int arg1)
 int sub_F72C(int arg0, int arg1, int arg2)
 {
     if (arg2 >= 33)
-        return 0x80000104;
+        return SCE_ERROR_INVALID_SIZE;
     if ((arg2 + (arg0 & 0x1F)) >= 33)
         return 0x80230008;
     if (arg1 == 0)
-        return 0x80000103;
+        return SCE_ERROR_INVALID_POINTER;
     int i;
     // F794
     for (i = 0; i < arg2; i++)

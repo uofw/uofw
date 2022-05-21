@@ -4,7 +4,7 @@
 include ../../lib/common.mak
 
 INCLUDE = -I../../include
-WARNINGS = -Wall -Wextra -Werror
+WARNINGS = -Wall -Wextra -Werror -Wno-pragmas
 
 # Only keep builtins for memcpy, memset for their inline function
 BUILTINS_DISABLE = -fno-builtin-bcmp \
@@ -27,6 +27,7 @@ BUILTINS_DISABLE = -fno-builtin-bcmp \
 				   -fno-builtin-strcmp \
 				   -fno-builtin-strcpy \
 				   -fno-builtin-strlen \
+				   -fno-builtin-strnlen \
 				   -fno-builtin-strncmp \
 				   -fno-builtin-strncpy \
 				   -fno-builtin-strpbrk \

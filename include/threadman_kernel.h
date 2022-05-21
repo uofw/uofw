@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012, 2013 The uOFW team
+/* Copyright (C) 2011 - 2015 The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -6,33 +6,65 @@
 #define	THREADMAN_KERNEL_H
 
 #include "common_header.h"
-
 #include "threadman_user.h"
 
 /* Threads */
 
 typedef s32 (*SceKernelThreadEntry)(SceSize args, void *argp);
 
+typedef s32 (*SceKernelRebootKernelThreadEntry)(s32 arg1, u32 arg2, s32 arg3, s32 arg4);
+
 typedef struct {
     SceSize     size;
     SceUID      stackMpid;
 } SceKernelThreadOptParam;
 
-/* thread priority */
-#define SCE_KERNEL_USER_HIGHEST_PRIORITY        16
-#define SCE_KERNEL_MODULE_INIT_PRIORITY         32
-#define SCE_KERNEL_USER_LOWEST_PRIORITY         111
+#define SCE_KERNEL_THREAD_ID_SELF               (0) /* UID representing calling thread. */
 
-SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, int initPriority,
-                             int stackSize, SceUInt attr, SceKernelThreadOptParam *option);
+/** 
+ * thread priority - lower numbers mean higher priority 
+ */
+#define SCE_KERNEL_INVALID_PRIORITY             (0)
+#define SCE_KERNEL_HIGHEST_PRIORITY_KERNEL      (1)
+#define SCE_KERNEL_HIGHEST_PRIORITY_USER        (16)
+#define SCE_KERNEL_MODULE_INIT_PRIORITY         (32)
+#define SCE_KERNEL_LOWEST_PRIORITY_USER         (111)
+#define SCE_KERNEL_LOWEST_PRIORITY_KERNEL       (126)
+
+/* thread size */
+#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (4 * 1024) /* 4 KB */
+#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (256 * 1024) /* 256 KB */
+
+/* thread attributes */
+#define SCE_KERNEL_TH_VSH_MODE                  (0xC0000000) /* Thread runs in VSH mode. */
+#define SCE_KERNEL_TH_APP_MODE                  (0xB0000000) /* Thread runs in Application mode. */
+#define SCE_KERNEL_TH_USB_WLAN_MODE             (0xA0000000) /* Thread runs in USB_WLAN mode. */
+#define SCE_KERNEL_TH_MS_MODE                   (0x90000000) /* Thread runs in MS mode. */
+#define SCE_KERNEL_TH_USER_MODE                 (0x80000000) /* Thread runs in User mode. */
+#define SCE_KERNEL_TH_NO_FILLSTACK              (0x00100000)
+#define SCE_KERNEL_TH_CLEAR_STACK               (0x00200000) /* Specifies that thread memory area should be cleared to 0 when deleted. */
+#define SCE_KERNEL_TH_LOW_STACK                 (0x00400000) /* Specifies that the stack area is allocated from the lower addresses in memory, not the higher ones. */
+#define SCE_KERNEL_TH_UNK_800000                (0x00800000)
+#define SCE_KERNEL_TH_USE_VFPU                  (0x00004000) /* Specifies that the VFPU is available. */
+#define SCE_KERNEL_TH_NEVERUSE_FPU              (0x00002000)
+
+#define SCE_KERNEL_TH_DEFAULT_ATTR              (0)
+
+#define SCE_KERNEL_AT_THFIFO                    (0x00000000) /* Waiting threads are queued on a FIFO basis. */
+#define SCE_KERNEL_AT_THPRI                     (0x00000100) /* Waiting threads are queued based on priority. */
+
+SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, s32 initPriority,
+                             SceSize stackSize, SceUInt attr, SceKernelThreadOptParam *option);
 int sceKernelDeleteThread(SceUID thid);
 int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
-int sceKernelExitThread(int status);
+int sceKernelSuspendThread(SceUID thid);
+int sceKernelExitThread(s32 status);
+s32 sceKernelExitDeleteThread(s32 exitStatus);
 int sceKernelTerminateDeleteThread(SceUID thid);
 int sceKernelDelayThread(SceUInt delay);
 int sceKernelChangeThreadPriority(SceUID thid, int priority);
 int sceKernelGetThreadCurrentPriority(void);
-int sceKernelGetThreadId(void);
+s32 sceKernelGetThreadId(void);
 int sceKernelIsUserModeThread(void);
 int sceKernelWaitThreadEnd(SceUID thid, SceUInt *timeout);
 int sceKernelWaitThreadEndCB(SceUID thid, SceUInt *timeout);
@@ -40,6 +72,13 @@ int sceKernelReleaseWaitThread(SceUID thid);
 int sceKernelSuspendAllUserThreads(void);
 
 unsigned int sceKernelGetSystemTimeLow(void);
+
+enum SceUserLevel {
+    SCE_USER_LEVEL_MS       = 1,
+    SCE_USER_LEVEL_USBWLAN  = 2,
+    SCE_USER_LEVEL_APP      = 3,
+    SCE_USER_LEVEL_VSH      = 4,
+};
 int sceKernelGetUserLevel(void);
 
 typedef enum {
@@ -64,17 +103,39 @@ SceKernelIdListType sceKernelGetThreadmanIdType(SceUID uid);
 
 /* Mutexes */
 
-int sceKernelCreateMutex(char *, int, int, int);
-int sceKernelTryLockMutex(int, int);
-int sceKernelLockMutex(int, int, int);
-int sceKernelUnlockMutex(int, int);
-int sceKernelDeleteMutex(int);
+typedef struct {
+    SceSize     size;
+} SceKernelMutexOptParam;
+
+typedef struct {
+    SceSize     size;
+    char        name[SCE_UID_NAME_LEN + 1];
+    SceUInt     attr;
+    s32         initCount;
+    s32         currentCount;
+    SceUID      currentOwner;
+    s32         numWaitThreads;
+} SceKernelMutexInfo;
+
+/* Mutex attributes */
+#define SCE_KERNEL_MUTEX_ATTR_TH_FIFO       (SCE_KERNEL_AT_THFIFO)
+#define SCE_KERNEL_MUTEX_ATTR_TH_PRI        (SCE_KERNEL_AT_THPRI)
+#define SCE_KERNEL_MUTEX_ATTR_RECURSIVE     (0x0200) /*Allow recursive locks by threads that own the mutex. */
+
+s32 sceKernelCreateMutex(char *name, s32 attr, s32 initCount, const SceKernelMutexOptParam *pOption);
+s32 sceKernelDeleteMutex(SceUID mutexId);
+s32 sceKernelLockMutex(SceUID mutexId, s32 lockCount, u32 *pTimeout);
+s32 sceKernelLockMutexCB(SceUID mutexId, s32 lockCount, u32 *pTimeout);
+s32 sceKernelTryLockMutex(SceUID mutexId, s32 lockCount);
+s32 sceKernelUnlockMutex(SceUID mutexId, s32 unlockCount);
+s32 sceKernelCancelMutex(SceUID mutexId, s32 newLockCount, s32 *pNumWaitThreads);
+s32 sceKernelReferMutexStatus(SceUID mutexId, SceKernelMutexInfo *pInfo);
 
 /* Event flags */
 
 typedef struct {
     SceSize     size;
-    char        name[32];
+    char        name[SCE_UID_NAME_LEN + 1];
     SceUInt     attr;
     SceUInt     initPattern;
     SceUInt     currentPattern;
@@ -88,16 +149,6 @@ typedef struct {
 /* Event flag attributes. */
 #define SCE_KERNEL_EA_SINGLE            (0x0000)    /** Multiple thread waits are prohibited. */ 
 #define SCE_KERNEL_EA_MULTI             (0x0200)    /** Multiple thread waits are permitted. */
-
-// NOTE: Deprecated. These types will be replaced  by the below wait modes in future revisions.
-enum SceEventFlagWaitTypes {
-    /** Wait for all bits in the pattern to be set */
-    SCE_EVENT_WAITAND = 0,
-    /** Wait for one or more bits in the pattern to be set */
-    SCE_EVENT_WAITOR = 1,
-    /** Clear the wait pattern when it matches */
-    SCE_EVENT_WAITCLEAR = 0x20
-};
 
 /* Event flag wait modes. */
 #define SCE_KERNEL_EW_AND               (0x00)      /** Wait for all bits in the bit pattern to be set. */
@@ -129,7 +180,7 @@ int sceKernelCancelMsgPipe(SceUID uid, int *psend, int *precv);
 
 typedef struct {
     SceSize size;
-    char    name[32];
+    char    name[SCE_UID_NAME_LEN + 1];
     SceUInt attr;
     int     bufSize;
     int     freeSize;
@@ -147,13 +198,16 @@ typedef struct {
 
 typedef struct {
     SceSize     size;
-    char        name[32];
+    char        name[SCE_UID_NAME_LEN + 1];
     SceUInt     attr;
     int         initCount;
     int         currentCount;
     int         maxCount;
     int         numWaitThreads;
 } SceKernelSemaInfo;
+
+#define SCE_KERNEL_SA_THFIFO    (0x0000)            /* A FIFO queue is used for the waiting thread */
+#define SCE_KERNEL_SA_THPRI     (0x0100)            /* The waiting thread is queued by its thread priority */
 
 SceUID sceKernelCreateSema(const char *name, SceUInt attr, int initVal, int maxVal, SceKernelSemaOptParam *option);
 int sceKernelDeleteSema(SceUID semaid);
@@ -195,7 +249,7 @@ typedef s32 (*SceKernelCallbackFunction)(s32 arg1, s32 arg2, void *arg);
 
 typedef struct {
     SceSize size;
-    char name[32];
+    char name[SCE_UID_NAME_LEN + 1];
     SceUID threadId;
     SceKernelCallbackFunction callback;
     void *common;
@@ -224,7 +278,7 @@ int sceKernelCancelVpl(SceUID uid, int *pnum);
 
 typedef struct {
 	SceSize 	size;
-	char 	name[32];
+    char 	name[SCE_UID_NAME_LEN + 1];
 	SceUInt 	attr;
 	int 	poolSize;
 	int 	freeSize;
@@ -249,7 +303,7 @@ int sceKernelCancelFpl(SceUID uid, int *pnum);
 
 typedef struct {
     SceSize 	size;
-    char 	name[32];
+    char 	name[SCE_UID_NAME_LEN + 1];
     SceUInt 	attr;
     int 	blockSize;
     int 	numBlocks;

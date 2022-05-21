@@ -16,17 +16,6 @@
 extern "C" {
 #endif
 
-#define NID_MODULE_BOOTSTART                                0xD3744BE0
-#define NID_MODULE_REBOOT_PHASE                             0xADF12745
-#define NID_MODULE_REBOOT_BEFORE                            0x2F064FA6
-#define NID_MODULE_REBOOT_BEFORE_THREAD_PARAM               0xF4F4299D
-#define NID_MODULE_START                                    0xD632ACDB
-#define NID_MODULE_START_THREAD_PARAM                       0x0F7C276C
-#define NID_MODULE_STOP                                     0xCEE8593C
-#define NID_MODULE_STOP_THREAD_PARAM                        0xCF0CC697
-#define NID_MODULE_INFO                                     0xF01D73A7
-#define NID_MODULE_SDK_VERSION                              0x11B97506
-
 /* LoadCore exported function NIDs. */
 #define NID_SCE_KERNEL_DELETE_MODULE                        0x001B57BB
 #define NID_SCE_KERNEL_UNLINK_LIBRARY_ENTRIES               0x0295CFCE

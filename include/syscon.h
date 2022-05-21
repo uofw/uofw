@@ -17,10 +17,11 @@
  */
 
 #define PSP_SYSCON_CMD_NOP                           0x00
-#define PSP_SYSCON_CMD_GET_BARYON                    0x01
+#define PSP_SYSCON_CMD_GET_BARYON_VERSION            0x01
 #define PSP_SYSCON_CMD_GET_DIGITAL_KEY               0x02
 #define PSP_SYSCON_CMD_GET_ANALOG                    0x03
 
+#define PSP_SYSCON_CMD_GET_TACHYON_TEMP              0x05
 #define PSP_SYSCON_CMD_GET_DIGITAL_KEY_ANALOG        0x06
 #define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY        0x07
 #define PSP_SYSCON_CMD_GET_KERNEL_DIGITAL_KEY_ANALOG 0x08
@@ -50,6 +51,8 @@
 #define PSP_SYSCON_CMD_RESET_DEVICE                  0x32
 #define PSP_SYSCON_CMD_CTRL_ANALOG_XY_POLLING        0x33
 #define PSP_SYSCON_CMD_CTRL_HR_POWER                 0x34
+#define PSP_SYSCON_CMD_POWER_STANDBY                 0x35
+#define PSP_SYSCON_CMD_POWER_SUSPEND                 0x36
 
 #define PSP_SYSCON_CMD_GET_BATT_VOLT_AD              0x37
 
@@ -103,6 +106,16 @@
 #define PSP_SYSCON_RX_LEN (1)
 #define PSP_SYSCON_RX_RESPONSE (2)
 #define PSP_SYSCON_RX_DATA(i) (3 + (i))
+
+/** 
+ * Below are macros to extract Baryon specific info returned by _sceSysconGetBaryonVersion() 
+ * and sceSysconGetBaryonVersion().  
+ */
+
+#define PSP_SYSCON_BARYON_GET_UNIT_TYPE(v)      ((v) & 0xFF) /* 0 = Dev version, 1 = Retail */
+#define PSP_SYSCON_BARYON_GET_VERSION_MAJOR(v)  (((v) >> 20) & 0xF)
+#define PSP_SYSCON_BARYON_GET_VERSION_MINOR(v)  (((v) >> 16) & 0xF)
+
 
 /** 
  * PSP Hardware LEDs which can be turned ON/OFF 
@@ -772,6 +785,11 @@ s32 sceSysconWriteScratchPad(u32 dst, void *src, u32 size);
  */
 s32 sceSysconReadScratchPad(u32 src, void *dst, u32 size);
 
+#define SCE_SYSCON_SET_PARAM_POWER_BATTERY_SUSPEND_CAPACITY     0
+#define SCE_SYSCON_SET_PARAM_POWER_BATTERY_TTC                  4
+
+#define SCE_SYSCON_SET_PARAM_PAYLOAD_SIZE   8
+
 /**
  * Set a parameter (used by power).
  *
@@ -852,6 +870,15 @@ s32 sceSysconGetBaryonVersion(s32 *baryonVersion);
  * @return < 0.
  */
 s32 sceSysconGetGValue(void);
+
+/* Returned power supply status flags by ::sceSysconGetPowerSupplyStatus() */
+
+/* Indicates that a battery is equipped. */
+#define SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_EQUIPPED                 0x00000002    
+/* Indicates that remaining battery life is short (PSP-2000 and later). */
+#define SCE_SYSCON_POWER_SUPPLY_STATUS_IS_LOW_BATTERY_02G_AND_LATER     0x00000020
+/* Indicates that the battery is currently charging (using an AC adapter). */
+#define SCE_SYSCON_POWER_SUPPLY_STATUS_BATTERY_CHARGING                 0x00000080
 
 /**
  * Get the power supply status.
