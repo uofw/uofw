@@ -67,7 +67,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_MAX_INTERNAL_CONTROLLER_BUFFER     (CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS - 1)
 
 /* The center position of the analog stick on both axes. */
-#define CTRL_ANALOG_PAD_CENTER_VALUE            (0x80)
+#define CTRL_ANALOG_PAD_CENTER_VALUE            (0x80) // TODO: Replace with SCE_CTRL_ANALOG_PAD_CENTER_VALUE
 
 /* The minimum position of the analog stick on both axes. */
 #define CTRL_ANALOG_PAD_MIN_VALUE               (0)
