@@ -63,7 +63,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         int i;
         for (i = 0; i < numAT3Id + numAT3plusId; i++)
         {
-            curId->codec.edramAddr = g_edramAddr;
+            curId->codec.edramAddr = (void *)g_edramAddr;
             curId->codec.unk20 = 1;
             if (i >= numAT3plusId)
             {
@@ -532,8 +532,8 @@ int sceAtracLowLevelDecode(int atracID, void *inBuf, int *arg2, void *outBuf, in
     // 1234
     if (sceAudiocodecDecode(&g_atracIds[atracID].codec, info->codec) != 0)
         return 0x80630002;
-    *arg2 = g_atracIds[atracID].codec.unk28;
-    *arg4 = g_atracIds[atracID].codec.unk36;
+    *arg2 = g_atracIds[atracID].codec.readSample;
+    *arg4 = g_atracIds[atracID].codec.decodedSample;
     return 0;
 }
 
@@ -729,7 +729,7 @@ int allocEdram(void)
     ret = sceAudiocodecGetEDRAM(&g_atracIds[0].codec, 0x1001);
     if (ret < 0)
         return ret;
-    g_edramAddr = g_atracIds[0].codec.edramAddr;
+    g_edramAddr = (int)g_atracIds[0].codec.edramAddr;
     return 0;
 }
 
