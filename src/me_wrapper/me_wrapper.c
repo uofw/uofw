@@ -183,7 +183,7 @@ int sub_0x1000f()
 	return 0;
 }
 
-int eventHandler(int ev_id, char *ev_name __attribute__((unused)), void *param, int *result __attribute__((unused)))
+s32 eventHandler(s32 ev_id, char *ev_name __attribute__((unused)), void *param, s32 *result __attribute__((unused)))
 {
 	if (!meStarted)
 		return 0;
@@ -664,13 +664,13 @@ int sub_00001240(int codec, SceAudiocodecCodec *info, int error)
 		case 0x1000: //at3+
 			sceMeCore_driver_635397BB(106, &info->err, info->edramAddr);
 			if (error >= 256)
-			    info->unk36 = 0;
+			    info->decodedSample = 0;
 			return error < 256 ? -3 : -4;
 
 		case 0x1001://at3
 			sceMeCore_driver_635397BB(113, &info->err, info->edramAddr);
 			if (error >= 256)
-			    info->unk36 = 0;
+			    info->decodedSample = 0;
 			return error < 256 ? -3 : -4;
 
 		case 0x1002://mp3
@@ -680,13 +680,13 @@ int sub_00001240(int codec, SceAudiocodecCodec *info, int error)
 		case 0x1003://aac
 			sceMeCore_driver_635397BB(145, &info->err, info->edramAddr);
 			if (error >= 256)
-			    info->unk36 = 0;
+			    info->decodedSample = 0;
 			return error < 256 ? -3 : -4;
 
 		case 0x1005://wma
 			sceMeCore_driver_635397BB(230, &info->err, info->edramAddr);
 			if (error < 0)
-			    info->unk36 = 0;
+			    info->decodedSample = 0;
 			return error >=0 ? -3 : -4;
 	}
 	return -1;
@@ -699,7 +699,7 @@ int sceMeAudio_driver_9A9E21EE(u32 codec, SceAudiocodecCodec *info) //same -310C
 	    return -2;
 	if (info->edramAddr == 0)
 	    return SCE_ERROR_INVALID_POINTER;
-	info->unk36 = 0;
+	info->decodedSample = 0;
 	info->err = 0;
 	sceKernelDcacheWritebackInvalidateRange(info, 104);
 	int ret = 0;
@@ -717,10 +717,10 @@ int sceMeAudio_driver_9A9E21EE(u32 codec, SceAudiocodecCodec *info) //same -310C
 			ret = sceMeCore_driver_FA398D71(140, info);
 		break;
 		case 0x1003:
-			ret = sceMeCore_driver_FA398D71(144, info->inBuf, &info->unk28, info->outBuf, &info->unk36, info->edramAddr);
+			ret = sceMeCore_driver_FA398D71(144, info->inBuf, &info->readSample, info->outBuf, &info->decodedSample, info->edramAddr);
 		break;
 		case 0x1005:
-			ret = sceMeCore_driver_FA398D71(229, info->inBuf, info->unk60, &info->unk64, info->outBuf, &info->unk36, &info->unk68, info->edramAddr);
+			ret = sceMeCore_driver_FA398D71(229, info->inBuf, info->unk60, &info->unk64, info->outBuf, &info->decodedSample, &info->unk68, info->edramAddr);
 		break;
 		default:
 			return -1;

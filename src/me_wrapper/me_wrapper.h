@@ -13,7 +13,7 @@ typedef struct{
 int sceMeRpcLock();
 int sceMeRpcUnlock();
 int sub_00001C30(void* data, int wait);
-int sceMeBootStart(unsigned int bootCode);
+int sceMeBootStart(u32 bootCode);
 int sceMePowerControlAvcPower(int arg0);
 
 extern void me_boot_code_end();

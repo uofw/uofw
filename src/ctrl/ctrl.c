@@ -67,7 +67,7 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_MAX_INTERNAL_CONTROLLER_BUFFER     (CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS - 1)
 
 /* The center position of the analog stick on both axes. */
-#define CTRL_ANALOG_PAD_CENTER_VALUE            (0x80)
+#define CTRL_ANALOG_PAD_CENTER_VALUE            (0x80) // TODO: Replace with SCE_CTRL_ANALOG_PAD_CENTER_VALUE
 
 /* The minimum position of the analog stick on both axes. */
 #define CTRL_ANALOG_PAD_MIN_VALUE               (0)
@@ -115,8 +115,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define CTRL_SAMPLING_MODES                     (2)
 #define CTRL_SAMPLING_MODE_MAX_MODE             (CTRL_SAMPLING_MODES - 1)
 
-/* The total number of different external input sources for the controller data. */
-#define CTRL_NUM_EXTERNAL_INPUT_MODES			(2)
+/* The total number of external ports for which controller data can be obtained. */
+#define CTRL_NUM_EXTERNAL_PORTS			        (2)
 
 /* The maximum number of button callbacks which can be registered. */
 #define CTRL_BUTTON_CALLBACK_SLOTS              (4)
@@ -457,20 +457,20 @@ typedef struct {
      * time period where they are being pressed.  They reset the timer when HOLD 
      * mode is inactive. 
      */
-    s32 oneTimeIdleResetButtons;
+    s32 resetButtonsMake;
     /* Group of buttons which reset the PSP's idle timer during every frame where
      * they are being pressed.  They reset the timer when HOLD mode is inactive. 
      */
-    s32 allTimeIdleResetButtons;
+    s32 resetButtonsPress;
     /* Group of buttons which reset the PSP's idle timer the first frame of a 
      * time period where they are being pressed.  They reset the timer when HOLD 
      * mode is active. 
      */
-    s32 oneTimeIdleHoldModeResetButtons;
+    s32 resetButtonsMakeHoldMode;
     /* Group of buttons which reset the PSP's idle timer during every frame where
      * they are being pressed.  They reset the timer when HOLD mode is active. 
      */
-    s32 allTimeIdleHoldModeResetButtons;
+    s32 resetButtonsPressHoldMode;
     /* Analog Stick threshold used to cancel the PSP's idle timer when
      * HOLD mode is inactive.
      */
@@ -484,9 +484,9 @@ typedef struct {
     /* Unknown. */
     s32 unk768;
     /* Pointers to transferHandlers to copy external input data into the PSP internal controller buffers. */
-	SceCtrlInputDataTransferHandler *transferHandler[CTRL_NUM_EXTERNAL_INPUT_MODES];
+	SceCtrlInputDataTransferHandler *transferHandler[CTRL_NUM_EXTERNAL_PORTS];
     /* Pointers to external input data buffers to copy via the <transferHandler>. */
-	void *extInputDataSource[CTRL_NUM_EXTERNAL_INPUT_MODES];
+	void *extInputDataSource[CTRL_NUM_EXTERNAL_PORTS];
 } SceCtrl;
 
 static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result);
@@ -629,10 +629,10 @@ s32 sceCtrlInit(void)
         g_ctrl.idleResetAllSupportedButtons = 0x1FFF3F9;
         break;
     }
-    g_ctrl.oneTimeIdleResetButtons = CTRL_ALL_SUPPORTED_BUTTONS; 
-    g_ctrl.allTimeIdleResetButtons = CTRL_ALL_TIME_IDLE_TIMER_RESET_BUTTONS;
-    g_ctrl.oneTimeIdleHoldModeResetButtons = 0x390E0000;
-    g_ctrl.allTimeIdleHoldModeResetButtons = 0;
+    g_ctrl.resetButtonsMake = CTRL_ALL_SUPPORTED_BUTTONS; 
+    g_ctrl.resetButtonsPress = CTRL_ALL_TIME_IDLE_TIMER_RESET_BUTTONS;
+    g_ctrl.resetButtonsMakeHoldMode = 0x390E0000;
+    g_ctrl.resetButtonsPressHoldMode = 0;
     g_ctrl.unHoldThreshold = CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER;
     g_ctrl.holdThreshold = CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER;
 
@@ -718,13 +718,13 @@ u32 sceCtrlSetPollingMode(u8 pollMode)
     return SCE_ERROR_OK;
 }
 
-u32 sceCtrlGetSamplingMode(u8 *mode) 
+u32 sceCtrlGetSamplingMode(u8 *pMode) 
 {
     s32 oldK1;
     
     oldK1 = pspShiftK1();     
-    if (pspK1PtrOk(mode))
-        *mode = g_ctrl.samplingMode[!pspK1IsUserMode()];
+    if (pspK1PtrOk(pMode))
+        *pMode = g_ctrl.samplingMode[!pspK1IsUserMode()];
 
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
@@ -752,13 +752,13 @@ s32 sceCtrlSetSamplingMode(u8 mode)
     return prevMode;
 }
 
-u32 sceCtrlGetSamplingCycle(u32 *cycle) 
+u32 sceCtrlGetSamplingCycle(u32 *pCycle) 
 {
     s32 oldK1;
 
     oldK1 = pspShiftK1();
-    if (pspK1PtrOk(cycle))
-        *cycle = g_ctrl.updateCycle;
+    if (pspK1PtrOk(pCycle))
+        *pCycle = g_ctrl.updateCycle;
     
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
@@ -801,70 +801,85 @@ s32 sceCtrlSetSamplingCycle(u32 cycle)
     return prevCycle;
 }
 
-u32 sceCtrlGetIdleCancelKey(u32 *oneTimeResetButtons, u32 *allTimeResetButtons, u32 *oneTimeHoldResetButtons, 
-                            u32 *allTimeHoldResetButtons)
+u32 sceCtrlGetIdleCancelKey(u32 *pResetButtonsMake, u32 *pResetButtonsPress, u32 *pResetButtonsMakeHoldMode,
+                            u32 *pResetButtonsPressHoldMode)
 {  
-    if (oneTimeResetButtons != NULL)
-        *oneTimeResetButtons = g_ctrl.oneTimeIdleResetButtons;
+    if (pResetButtonsMake != NULL)
+        *pResetButtonsMake = g_ctrl.resetButtonsMake;
 
-    if (allTimeResetButtons != NULL)
-        *allTimeResetButtons = g_ctrl.allTimeIdleResetButtons;
+    if (pResetButtonsPress != NULL)
+        *pResetButtonsPress = g_ctrl.resetButtonsPress;
 
-    if (oneTimeHoldResetButtons != NULL)
-        *oneTimeHoldResetButtons = g_ctrl.oneTimeIdleHoldModeResetButtons;
+    if (pResetButtonsMakeHoldMode != NULL)
+        *pResetButtonsMakeHoldMode = g_ctrl.resetButtonsMakeHoldMode;
 
-    if (allTimeHoldResetButtons != NULL)
-        *allTimeHoldResetButtons = g_ctrl.allTimeIdleHoldModeResetButtons;
+    if (pResetButtonsPressHoldMode != NULL)
+        *pResetButtonsPressHoldMode = g_ctrl.resetButtonsPressHoldMode;
 
     return SCE_ERROR_OK;
 }
 
-u32 sceCtrlSetIdleCancelKey(u32 oneTimeResetButtons, u32 allTimeResetButtons, u32 oneTimeHoldResetButtons, 
-                            u32 allTimeHoldResetButtons)
+u32 sceCtrlSetIdleCancelKey(u32 resetButtonsMake, u32 resetButtonsPress, u32 resetButtonsMakeHoldMode,
+                            u32 resetButtonsPressHoldMode)
 {      
-    g_ctrl.oneTimeIdleResetButtons = oneTimeResetButtons; 
-    g_ctrl.allTimeIdleResetButtons = allTimeResetButtons;
-    g_ctrl.oneTimeIdleHoldModeResetButtons = oneTimeHoldResetButtons;
-    g_ctrl.allTimeIdleHoldModeResetButtons = allTimeHoldResetButtons;
+    g_ctrl.resetButtonsMake = resetButtonsMake;
+    g_ctrl.resetButtonsPress = resetButtonsPress;
+    g_ctrl.resetButtonsMakeHoldMode = resetButtonsMakeHoldMode;
+    g_ctrl.resetButtonsPressHoldMode = resetButtonsPressHoldMode;
 
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlGetIdleCancelThreshold(s32 *iUnHoldThreshold, s32 *iHoldThreshold) 
+s32 sceCtrlGetIdleCancelThreshold(s32 *pUnHoldThreshold, s32 *pHoldThreshold)
 {
     s32 oldK1;
     s32 intrState;
 
     oldK1 = pspShiftK1();  
-    if (!pspK1PtrOk(iUnHoldThreshold) || !pspK1PtrOk(iHoldThreshold)) {
+    if (!pspK1PtrOk(pUnHoldThreshold) || !pspK1PtrOk(pHoldThreshold)) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }   
 
     intrState = sceKernelCpuSuspendIntr();
     
-    if (iUnHoldThreshold != NULL)
-        *iUnHoldThreshold = (g_ctrl.unHoldThreshold == CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER) ? -1 : g_ctrl.unHoldThreshold;
+    if (pUnHoldThreshold != NULL)
+    {
+        *pUnHoldThreshold = (g_ctrl.unHoldThreshold == CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER)
+            ? SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION
+            : g_ctrl.unHoldThreshold;
+    }
   
-    if (iHoldThreshold != NULL)
-        *iHoldThreshold = (g_ctrl.holdThreshold == CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER) ? -1 : g_ctrl.holdThreshold;
+    if (pHoldThreshold != NULL)
+    {
+        *pHoldThreshold = (g_ctrl.holdThreshold == CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER) 
+            ? SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION
+            : g_ctrl.holdThreshold;
+    }
   
     sceKernelCpuResumeIntr(intrState);
     pspSetK1(oldK1);
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlSetIdleCancelThreshold(s32 iUnHoldThreshold, s32 iHoldThreshold) 
+s32 sceCtrlSetIdleCancelThreshold(s32 unHoldThreshold, s32 holdThreshold) 
 {
     s32 intrState;
-    
-    if (((iUnHoldThreshold < -1 || iUnHoldThreshold > 128) && iHoldThreshold < -1) || iHoldThreshold > 128)
+
+    if (unHoldThreshold < -1 || unHoldThreshold > 128
+        || holdThreshold < -1 || holdThreshold > 128)
+    {
         return SCE_ERROR_INVALID_VALUE;
+    }
     
     intrState = sceKernelCpuSuspendIntr();
 
-    g_ctrl.holdThreshold = (iHoldThreshold == -1) ? CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER : iHoldThreshold;
-    g_ctrl.unHoldThreshold = (iUnHoldThreshold == -1) ? CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER : iUnHoldThreshold;
+    g_ctrl.holdThreshold = (holdThreshold == SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION) 
+        ? CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER 
+        : holdThreshold;
+    g_ctrl.unHoldThreshold = (unHoldThreshold == SCE_CTRL_IDLE_CANCEL_TRESHOLD_NO_CANCELLATION) 
+        ? CTRL_ANALOG_PAD_NO_CANCEL_IDLE_TIMER 
+        : unHoldThreshold;
 
     sceKernelCpuResumeIntr(intrState);
     return SCE_ERROR_OK;
@@ -884,63 +899,64 @@ s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples)
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrl_driver_E467BEC8(u8 inputMode, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
+s32 sceCtrl_driver_E467BEC8(u8 externalPort, SceCtrlInputDataTransferHandler *transferHandler, void *inputSource)
 {
     SceUID poolId;
 	SceCtrlData2 *ctrlBuf;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_DUALSHOCK_3 || inputMode != SCE_CTRL_EXTERNAL_INPUT_UNKNOWN_2)
+	if (externalPort != SCE_CTRL_PORT_DS3 || externalPort != SCE_CTRL_PORT_UNKNOWN_2)
         return SCE_ERROR_INVALID_VALUE;
     
-	if (g_ctrl.transferHandler[inputMode - 1] == NULL) {
+	if (g_ctrl.transferHandler[externalPort - 1] == NULL) {
         poolId = sceKernelCreateFpl("SceCtrlBuf", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 0, 
                                     2 * sizeof(SceCtrlData2) * CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS, 1, NULL);
         if (poolId < 0)
             return poolId;
 
         sceKernelTryAllocateFpl(poolId, (void **)&ctrlBuf);
-		g_ctrl.kernelModeData.pCtrlInputBuffers[inputMode] = ctrlBuf + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
-		g_ctrl.userModeData.pCtrlInputBuffers[inputMode] = ctrlBuf;
+		g_ctrl.kernelModeData.pCtrlInputBuffers[externalPort] = ctrlBuf + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS;
+		g_ctrl.userModeData.pCtrlInputBuffers[externalPort] = ctrlBuf;
     }
-	g_ctrl.extInputDataSource[inputMode - 1] = inputSource;
-	g_ctrl.transferHandler[inputMode - 1] = transferHandler;
+	g_ctrl.extInputDataSource[externalPort - 1] = inputSource;
+	g_ctrl.transferHandler[externalPort - 1] = transferHandler;
     
     return SCE_ERROR_OK;
 }
 
-s32 sceCtrlPeekLatch(SceCtrlLatch *latch) 
+s32 sceCtrlPeekLatch(SceCtrlLatch *pLatch) 
 {
-    SceCtrlInternalData *latchPtr;
+    SceCtrlInternalData *pCtrlStateData;
     s32 intrState;
     s32 oldK1;
 
     oldK1 = pspShiftK1();
     intrState = sceKernelCpuSuspendIntr();
 
-    if (!pspK1PtrOk(latch)) {
+    if (!pspK1PtrOk(pLatch)) {
         sceKernelCpuResumeIntr(intrState);
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
     
     if (pspK1IsUserMode())
-        latchPtr = &g_ctrl.userModeData;
+        pCtrlStateData = &g_ctrl.userModeData;
     else
-        latchPtr = &g_ctrl.kernelModeData;
+        pCtrlStateData = &g_ctrl.kernelModeData;
 
-    latch->buttonMake = latchPtr->btnMake;
-    latch->buttonBreak = latchPtr->btnBreak;
-    latch->buttonPress = latchPtr->btnPress;
-    latch->buttonRelease = latchPtr->btnRelease;
+    pLatch->buttonMake = pCtrlStateData->btnMake;
+    pLatch->buttonBreak = pCtrlStateData->btnBreak;
+    pLatch->buttonPress = pCtrlStateData->btnPress;
+    pLatch->buttonRelease = pCtrlStateData->btnRelease;
 
     sceKernelCpuResumeIntr(intrState);
     pspSetK1(oldK1);
-    return latchPtr->readLatchCount;
+
+    return pCtrlStateData->readLatchCount;
 }
 
-s32 sceCtrlReadLatch(SceCtrlLatch *latch) 
+s32 sceCtrlReadLatch(SceCtrlLatch *pLatch) 
 {
-    SceCtrlInternalData *latchPtr;
+    SceCtrlInternalData *pCtrlStateData;
     s32 intrState;
     s32 readLatchCount;
     s32 oldK1;
@@ -948,73 +964,74 @@ s32 sceCtrlReadLatch(SceCtrlLatch *latch)
     oldK1 = pspShiftK1();
     intrState = sceKernelCpuSuspendIntr();
 
-    if (!pspK1PtrOk(latch)) {
+    if (!pspK1PtrOk(pLatch)) {
         sceKernelCpuResumeIntr(intrState);
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
     
     if (pspK1IsUserMode())
-        latchPtr = &g_ctrl.userModeData;
+        pCtrlStateData = &g_ctrl.userModeData;
     else
-        latchPtr = &g_ctrl.kernelModeData;
+        pCtrlStateData = &g_ctrl.kernelModeData;
 
-    readLatchCount = latchPtr->readLatchCount;
-    latchPtr->readLatchCount = 0;
+    readLatchCount = pCtrlStateData->readLatchCount;
+    pCtrlStateData->readLatchCount = 0;
     
-    latch->buttonMake = latchPtr->btnMake;
-    latch->buttonBreak = latchPtr->btnBreak;
-    latch->buttonPress = latchPtr->btnPress;
-    latch->buttonRelease = latchPtr->btnRelease;
+    pLatch->buttonMake = pCtrlStateData->btnMake;
+    pLatch->buttonBreak = pCtrlStateData->btnBreak;
+    pLatch->buttonPress = pCtrlStateData->btnPress;
+    pLatch->buttonRelease = pCtrlStateData->btnRelease;
 
-    latchPtr->btnMake = 0;
-    latchPtr->btnBreak = 0;
-    latchPtr->btnPress = 0;
-    latchPtr->btnRelease = 0;
+    pCtrlStateData->btnMake = 0;
+    pCtrlStateData->btnBreak = 0;
+    pCtrlStateData->btnPress = 0;
+    pCtrlStateData->btnRelease = 0;
 
     sceKernelCpuResumeIntr(intrState);
-    pspSetK1(oldK1); 
+    pspSetK1(oldK1);
+
     return readLatchCount;
 }
 
-s32 sceCtrlPeekBufferPositive(SceCtrlData *data, u8 nBufs) 
+s32 sceCtrlPeekBufferPositive(SceCtrlData *pData, u8 nBufs) 
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, SCE_CRTL_PORT_PSP, PEEK_BUFFER_POSITIVE);
 }
 
-s32 sceCtrlPeekBufferNegative(SceCtrlData *data, u8 nBufs) 
+s32 sceCtrlPeekBufferNegative(SceCtrlData *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, PEEK_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, SCE_CRTL_PORT_PSP, PEEK_BUFFER_NEGATIVE);
 }
 
-s32 sceCtrlReadBufferPositive(SceCtrlData *data, u8 nBufs) 
+s32 sceCtrlReadBufferPositive(SceCtrlData *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_POSITIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, SCE_CRTL_PORT_PSP, READ_BUFFER_POSITIVE);
 }
 
-s32 sceCtrlReadBufferNegative(SceCtrlData *data, u8 nBufs) 
+s32 sceCtrlReadBufferNegative(SceCtrlData *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)data, nBufs, SCE_CTRL_EXTERNAL_INPUT_NONE, READ_BUFFER_NEGATIVE);
+	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, SCE_CRTL_PORT_PSP, READ_BUFFER_NEGATIVE);
 }
 
-s32 sceCtrlPeekBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs) 
+s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_POSITIVE_EXTRA);
+	return _sceCtrlReadBuf(pData, nBufs, port, PEEK_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlPeekBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
+s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf(data, nBufs, inputMode, PEEK_BUFFER_NEGATIVE_EXTRA);
+	return _sceCtrlReadBuf(pData, nBufs, port, PEEK_BUFFER_NEGATIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferPositive2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
+s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_POSITIVE_EXTRA);
+	return _sceCtrlReadBuf(pData, nBufs, port, READ_BUFFER_POSITIVE_EXTRA);
 }
 
-s32 sceCtrlReadBufferNegative2(u32 inputMode, SceCtrlData2 *data, u8 nBufs)
+s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs)
 {
-	return _sceCtrlReadBuf(data, nBufs, inputMode, READ_BUFFER_NEGATIVE_EXTRA);
+	return _sceCtrlReadBuf(pData, nBufs, port, READ_BUFFER_NEGATIVE_EXTRA);
 }
 
 s32 sceCtrlClearRapidFire(u8 slot) 
@@ -1399,7 +1416,7 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
     u8 aXCenterOffset, aYCenterOffset;
     u8 idleVal;
     u8 sampling;
-    u32 oneTimeIdleResetButtons, allTimeIdleResetButtons;
+    u32 resetButtonsMake, resetButtonsPress;
     u32 idleResetButtons;
 
 	(void)argp;
@@ -1519,18 +1536,18 @@ static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp)
         if (g_ctrl.cancelIdleTimer == SCE_FALSE) {
             newButtons = prevButtons ^ curButtons;
             if ((curButtons & SCE_CTRL_HOLD) == 0) {
-                oneTimeIdleResetButtons = g_ctrl.oneTimeIdleResetButtons;
-                allTimeIdleResetButtons = g_ctrl.allTimeIdleResetButtons;
+                resetButtonsMake = g_ctrl.resetButtonsMake;
+                resetButtonsPress = g_ctrl.resetButtonsPress;
                 idleVal = g_ctrl.unHoldThreshold;
             }
             else {
-                oneTimeIdleResetButtons = g_ctrl.oneTimeIdleHoldModeResetButtons;
-                allTimeIdleResetButtons = g_ctrl.allTimeIdleHoldModeResetButtons;
+                resetButtonsMake = g_ctrl.resetButtonsMakeHoldMode;
+                resetButtonsPress = g_ctrl.resetButtonsPressHoldMode;
                 idleVal = g_ctrl.holdThreshold;
             }
-            oneTimeIdleResetButtons &= newButtons;
-            allTimeIdleResetButtons &= curButtons;
-            idleResetButtons = oneTimeIdleResetButtons | allTimeIdleResetButtons;
+            resetButtonsMake &= newButtons;
+            resetButtonsPress &= curButtons;
+            idleResetButtons = resetButtonsMake | resetButtonsPress;
                
             idleResetButtons &= g_ctrl.idleResetAllSupportedButtons;
             if (idleResetButtons == 0) {
@@ -1670,7 +1687,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
          ctrlKernelBuf->rsrv[i] = 0;
 
 	/* Check for additionally registered input data transfers. */
-	for (i = 0; i < CTRL_NUM_EXTERNAL_INPUT_MODES; i++) {
+	for (i = 0; i < CTRL_NUM_EXTERNAL_PORTS; i++) {
 		if (g_ctrl.transferHandler[i] != NULL) {
 			 ctrlKernelBufExt = (SceCtrlData2 *)g_ctrl.kernelModeData.pCtrlInputBuffers[i + 1] + g_ctrl.kernelModeData.curUpdatableBufIndex;
              ctrlKernelBufExt->timeStamp = sysTimeLow;
@@ -2011,7 +2028,7 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
  * 
  * Returns the number of read internal controller data buffers.
  */
-static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode) 
+static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 port, u8 mode) 
 {
     SceCtrlInternalData *intDataPtr;
     SceCtrlData2 *ctrlBuf;
@@ -2026,10 +2043,10 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
 	if (nBufs >= CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
         return SCE_ERROR_INVALID_SIZE;
 
-	if (inputMode > CTRL_NUM_EXTERNAL_INPUT_MODES)
+	if (port > CTRL_NUM_EXTERNAL_PORTS)
         return SCE_ERROR_INVALID_VALUE;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE && (mode & READ_BUFFER_POSITIVE))
+	if (port != SCE_CRTL_PORT_PSP && (mode & READ_BUFFER_POSITIVE))
         return SCE_ERROR_NOT_SUPPORTED;
 
     oldK1 = pspShiftK1();
@@ -2044,7 +2061,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
 	else
         intDataPtr = &g_ctrl.kernelModeData;
 
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE && intDataPtr->pCtrlInputBuffers[inputMode] == NULL)
+	if (port != SCE_CRTL_PORT_PSP && intDataPtr->pCtrlInputBuffers[port] == NULL)
         return SCE_ERROR_NOT_SUPPORTED;
 
     /*
@@ -2091,10 +2108,10 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
         startBufIndex = (startBufIndex < 0) ? startBufIndex + CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS : startBufIndex;
         numReadIntBufs = nBufs;
     }
-	if (inputMode != SCE_CTRL_EXTERNAL_INPUT_NONE)
-		ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
+	if (port != SCE_CRTL_PORT_PSP)
+		ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[port] + startBufIndex;
     else
-		ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+		ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[port] + startBufIndex);
 
     if (numReadIntBufs < 0) {
         sceKernelCpuResumeIntr(intrState);
@@ -2137,7 +2154,7 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
            if (mode >= PEEK_BUFFER_POSITIVE_EXTRA) {
 			   pData->rsrv[0] = 0;
 			   pData->rsrv[1] = 0;
-			   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_NONE) {
+			   if (port == SCE_CRTL_PORT_PSP) {
 				   pData->rX = CTRL_ANALOG_PAD_CENTER_VALUE;
 				   pData->rY = CTRL_ANALOG_PAD_CENTER_VALUE;
 				   pData->rsrv[2] = 0;
@@ -2171,10 +2188,10 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 inputMode, u8 mode
 		   if (startBufIndex == CTRL_NUM_INTERNAL_CONTROLLER_BUFFERS)
 			   startBufIndex = 0;
 
-		   if (inputMode == SCE_CTRL_EXTERNAL_INPUT_NONE)
-			   ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex);
+		   if (port == SCE_CRTL_PORT_PSP)
+			   ctrlBuf = (SceCtrlData2 *)((SceCtrlData *)intDataPtr->pCtrlInputBuffers[port] + startBufIndex);
            else
-			   ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[inputMode] + startBufIndex;
+			   ctrlBuf = (SceCtrlData2 *)intDataPtr->pCtrlInputBuffers[port] + startBufIndex;
     }
     sceKernelCpuResumeIntr(intrState);
     pspSetK1(oldK1);

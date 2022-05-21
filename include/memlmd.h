@@ -98,6 +98,9 @@ s32 memlmd_2F3D7E2D(void);
 * @return 0 on success.
 */
 int sceUtilsBufferCopyWithRange(u8* outbuff, int outsize, u8* inbuff, int insize, int cmd);
+int sceUtilsBufferCopyByPollingWithRange(u8* outbuff, int outsize, u8* inbuff, int insize, int cmd);
+int sceUtilsBufferCopy(u8* outbuff, u8 *inbuff, int cmd);
+int sceUtilsBufferCopyByPolling(u8* outbuff, u8 *inbuff, int cmd);
 
 #endif	/* MEMLMD_H */
 

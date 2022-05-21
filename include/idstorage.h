@@ -141,3 +141,4 @@ s32 sceIdStorageLookup(u16 key, u32 offset, void *pBuf, u32 len);
 s32 sceIdStorageReadLeaf(u16 id, void *buf);
 
 #endif // IDSTORAGE_H
+
