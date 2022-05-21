@@ -78,8 +78,8 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
 int SysMemReInit(SceSysmemMemoryPartition *mainPart);
 
 void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table);
-s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
-s32 resumeSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)));
+s32 suspendSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
+s32 resumeSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 
 int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
@@ -700,7 +700,7 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)
     }
 }
 
-s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)))
+s32 suspendSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     SysmemRegSave[0]  = HW(0xBC100040);
     SysmemRegSave[1]  = HW(0xBC000000) & 0xFEDCEDCF;
@@ -717,7 +717,7 @@ s32 suspendSysmem(int unk __attribute__((unused)), void *param __attribute__((un
     return 0;
 }
 
-s32 resumeSysmem(int unk __attribute__((unused)), void *param __attribute__((unused)))
+s32 resumeSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     HW(0xBC100040) = SysmemRegSave[0];
     HW(0xBC000000) = SysmemRegSave[1] & 0xCDEFDEFC;

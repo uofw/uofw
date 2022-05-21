@@ -361,7 +361,7 @@ typedef struct SceSysmemUidLookupFunc {
     SceSysmemUidFunc func;
 } SceSysmemUidLookupFunc;
 
-s32 sceKernelCallUIDFunction(SceUID id, int funcId, ...);
+s32 sceKernelCallUIDFunction(SceUID id, s32 funcId, ...);
 s32 sceKernelCallUIDObjFunction(SceSysmemUidCB *uid, s32 funcId, ...);
 int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, SceSysmemUidFunc *func, SceSysmemUidCB **parentUidWithFunc);
 s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);

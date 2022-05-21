@@ -201,7 +201,7 @@ SceGeBpCtrl g_GeDeciBreak; // 7520
 u16 g_cbhook; // 75D0
 
 // Command list space provided by usersystemlib, used for various usages but starting with a FINISH/END pair.
-int *g_cmdList; // 7600
+s32 *g_cmdList; // 7600
 
 // The mask xor'ed with the display list addresses to give the display list ID
 u32 g_dlMask; // 7604
@@ -399,7 +399,7 @@ int sceGeEnd()
 
     if (g_cmdList != NULL) {
         // Execute a list which just does two empty calls (maybe to ensure we don't stop in the middle of a call?)
-        int *cmdOut = &g_cmdList[16];
+        s32 *cmdOut = &g_cmdList[16];
         cmdOut[0] = GE_MAKE_OP(SCE_GE_CMD_BASE, (((((int)&g_cmdList[20]) >> 24) & 0xF) << 16));
         cmdOut[1] = GE_MAKE_OP(SCE_GE_CMD_OFFSET, 0);
         cmdOut[2] = GE_MAKE_OP(SCE_GE_CMD_CALL, (int)&g_cmdList[20]);
@@ -424,7 +424,7 @@ int sceGeEnd()
 
 // 070C
 // Part of the patching stuff for Genso Suikoden I&II : prepare stuff inside usersystemlib
-int _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribute__ ((unused)), void *arg2 __attribute__ ((unused)))
+s32 _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribute__ ((unused)), void *arg2 __attribute__ ((unused)))
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
     if (libWork->cmdList != NULL) {
@@ -439,7 +439,7 @@ int _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribut
 }
 
 // Part of the patching stuff for Genso Suikoden I&II : patch the game itself to use sceGeListUpdateStallAddr_lazy
-int _sceGeInitCallback4()
+s32 _sceGeInitCallback4()
 {
     SceKernelGameInfo *info = sceKernelGetGameInfo();
     if (info != NULL) {
@@ -1035,7 +1035,7 @@ int _sceGeSetRegRadr2(int radr2)
  */
 int _sceGeSetInternalReg(int type, int base, int radr1, int radr2)
 {
-    int *cmdList = g_cmdList;
+    s32 *cmdList = g_cmdList;
     if (cmdList == NULL)
         return 0;
     int oldIntr = sceKernelCpuSuspendIntr();

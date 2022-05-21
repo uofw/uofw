@@ -100,7 +100,7 @@ int audioSRCOutputDmaCb(int arg0, int arg1);
 int audioInputSetup();
 int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5);
 int audioInput(int sampleCount, int freq, void *buf);
-int audioInputThread();
+s32 audioInputThread();
 int audioInputDmaCb(int arg0, int arg1);
 
 SceAudio g_audio;
@@ -200,7 +200,7 @@ int dmaUpdate(int arg)
 
 // 02B8
 /* The audio mixer thread. */
-int audioMixerThread()
+s32 audioMixerThread()
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     u32 sp0[128];
@@ -1422,7 +1422,7 @@ int audioSRCOutput(int vol, void *buf)
  *
  * Returns 0.
  */
-int audioInputThread()
+s32 audioInputThread()
 {
     dbg_printf("Running %s\n", __FUNCTION__);
     // 2478

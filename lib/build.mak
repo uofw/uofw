@@ -27,6 +27,7 @@ BUILTINS_DISABLE = -fno-builtin-bcmp \
 				   -fno-builtin-strcmp \
 				   -fno-builtin-strcpy \
 				   -fno-builtin-strlen \
+				   -fno-builtin-strnlen \
 				   -fno-builtin-strncmp \
 				   -fno-builtin-strncpy \
 				   -fno-builtin-strpbrk \
