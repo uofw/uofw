@@ -76,20 +76,41 @@ $(function() {
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160; </div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &quot;common_header.h&quot;</span></div>
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160; </div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpQuit(u32*);</div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpAssign(u32*, <span class="keywordtype">int</span>, <span class="keywordtype">int</span>, <span class="keywordtype">int</span>, <span class="keywordtype">int</span>);</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpSetCallback(u32*, <span class="keywordtype">int</span> (*)(<span class="keywordtype">int</span>, <span class="keywordtype">int</span>), <span class="keywordtype">int</span>);</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpSetupLink(u32*, <span class="keywordtype">int</span>, u32*);</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpEnQueue(u32*);</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpDeQueue(u32*);</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;u32 *sceKernelDmaOpAlloc(<span class="keywordtype">void</span>);</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpFree(u32*);</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="keywordtype">int</span> DmacManForKernel_E18A93A5(<span class="keywordtype">void</span>*, <span class="keywordtype">void</span>*);</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="keyword">typedef</span> <span class="keyword">struct </span>SceDmaOp {</div>
+<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;    <span class="keyword">struct </span>SceDmaOp *unk0; <span class="comment">// Prev (for unrelated ops)</span></div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;    <span class="keyword">struct </span>SceDmaOp *unk4; <span class="comment">// Next (for unrelated ops)</span></div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;    <span class="keyword">struct </span>SceDmaOp *unk8; <span class="comment">// Prev (for linked ops)</span></div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    <span class="keyword">struct </span>SceDmaOp *next; <span class="comment">// Next (for linked ops)</span></div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    u32 unk16;</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;    u32 unk20;</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;    int (*callback)(int, int);</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    u16 unk28;      <span class="comment">// Status</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    u16 unk30;</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    u32 unk32;</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    u32 unk36;</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;    u32 unk40;</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;    u32 unk44;</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    u32 unk48;</div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    u16 unk52;      <span class="comment">// id?</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;    u16 unk54;      <span class="comment">// num ops in link</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;    u32 unk56;</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;    u32 unk60;</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;} SceDmaOp;</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpQuit(SceDmaOp*);</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpAssign(SceDmaOp*, <span class="keywordtype">int</span>, <span class="keywordtype">int</span>, <span class="keywordtype">int</span>, <span class="keywordtype">int</span>);</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpSetCallback(SceDmaOp*, <span class="keywordtype">int</span> (*)(<span class="keywordtype">int</span>, <span class="keywordtype">int</span>), <span class="keywordtype">int</span>);</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpSetupLink(SceDmaOp*, <span class="keywordtype">int</span>, u32*);</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpEnQueue(SceDmaOp*);</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="keywordtype">int</span> sceKernelDmaOpDeQueue(SceDmaOp*);</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;SceDmaOp *sceKernelDmaOpAlloc(<span class="keywordtype">void</span>);</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;s32 sceKernelDmaOpFree(SceDmaOp*);</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="keywordtype">int</span> DmacManForKernel_E18A93A5(<span class="keywordtype">void</span>*, <span class="keywordtype">void</span>*);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat May 21 2022 16:21:01 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sat May 21 2022 16:45:25 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>
