@@ -9,13 +9,13 @@ typedef struct
     s32 unk0;
     s32 unk4;
     s32 err; // 8
-    s32 edramAddr; // 12
+    void *edramAddr; // 12
     s32 neededMem; // 16
     s32 unk20;
     void *inBuf; // 24
-    s32 unk28;
+    s32 readSample; // 28
     void *outBuf; // 32
-    s32 unk36;
+    s32 decodedSample; // 36
 
    /* Note: this part is probably completely different depending on the codec. This should be cleaned up. */
     union {
@@ -26,7 +26,7 @@ typedef struct
             s8 u43;
         } v8;
         s32 v32;
-    } unk40;
+    } unk40; // samplerate?
     union {
         struct {
             u8 u44;
