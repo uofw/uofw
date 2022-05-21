@@ -81,13 +81,13 @@ $(function() {
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;    s32 unk0;</div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;    s32 unk4;</div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    s32 err; <span class="comment">// 8</span></div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    s32 edramAddr; <span class="comment">// 12</span></div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    <span class="keywordtype">void</span> *edramAddr; <span class="comment">// 12</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;    s32 neededMem; <span class="comment">// 16</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;    s32 unk20;</div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    <span class="keywordtype">void</span> *inBuf; <span class="comment">// 24</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    s32 unk28;</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    s32 readSample; <span class="comment">// 28</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    <span class="keywordtype">void</span> *outBuf; <span class="comment">// 32</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    s32 unk36;</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    s32 decodedSample; <span class="comment">// 36</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;   <span class="comment">/* Note: this part is probably completely different depending on the codec. This should be cleaned up. */</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    <span class="keyword">union </span>{</div>
@@ -98,7 +98,7 @@ $(function() {
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;            s8 u43;</div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;        } v8;</div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;        s32 v32;</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    } unk40;</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    } unk40; <span class="comment">// samplerate?</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    <span class="keyword">union </span>{</div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;        <span class="keyword">struct </span>{</div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;            u8 u44;</div>
@@ -142,7 +142,7 @@ $(function() {
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat May 21 2022 16:04:10 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sat May 21 2022 16:15:03 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>
