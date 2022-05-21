@@ -2,6 +2,7 @@
    See the file COPYING for copying permission.
 */
 
+#include <lowio_nand.h>
 #include <common_imp.h>
 
 typedef struct {
@@ -626,9 +627,9 @@ sceNandReadStatus(void)
  * raw reads to the nand will just return rubbish). 
  */
 int
-sceNandSetScramble(u32 scrmb)
+sceNandSetScramble(u32 scramble)
 {
-	g_scramble = scrmb;
+	g_scramble = scramble;
 	return 0;
 }
 
@@ -1028,7 +1029,7 @@ sceNandDetectChip(void)
 
 /* sceNand_driver_B2B021E5 */
 int
-sceNandWriteBlockWithVerify(u32 ppn, void *user, void spare)
+sceNandWriteBlockWithVerify(u32 ppn, void *user, void *spare)
 {
 	int ret;
 	int i = 0;
