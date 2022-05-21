@@ -5,14 +5,14 @@
 
 typedef struct
 {
-    int (*handler)(int unk, void* param);
+    s32 (*handler)(s32 unk, void* param);
     int gp;
     void *param;
 } SceSuspendHandler;
 
 typedef struct
 {
-    int (*handler)(int unk, void* param);
+    s32 (*handler)(s32 unk, void* param);
     int gp;
     void *param;
 } SceResumeHandler;
@@ -44,7 +44,7 @@ int sceKernelRegisterPowerHandlers(const ScePowerHandlers *handlers)
     return g_iTempPowerLock;
 }
 
-int sceKernelPowerLock(int unk)
+s32 sceKernelPowerLock(s32 unk)
 {
     if (g_pPowerHandlers == NULL)
     {
@@ -57,14 +57,14 @@ int sceKernelPowerLock(int unk)
     return g_pPowerHandlers->lock(unk);
 }
 
-int sceKernelPowerLockForUser(int unk)
+s32 sceKernelPowerLockForUser(s32 unk)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->lockForUser(unk);
     return 0;
 }
 
-int sceKernelPowerUnlock(int unk)
+s32 sceKernelPowerUnlock(s32 unk)
 {
     if (g_pPowerHandlers == NULL)
     {
@@ -77,7 +77,7 @@ int sceKernelPowerUnlock(int unk)
     return g_pPowerHandlers->unlock(unk);
 }
 
-int sceKernelPowerUnlockForUser(int unk)
+s32 sceKernelPowerUnlockForUser(s32 unk)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->unlockForUser(unk);
@@ -114,14 +114,14 @@ int sceKernelVolatileMemUnlock(int unk)
     return -1;
 }
 
-int sceKernelPowerRebootStart(int unk)
+s32 sceKernelPowerRebootStart(s32 unk)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->rebootStart(unk);
     return 0;
 }
 
-int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param)
+s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;
@@ -134,7 +134,7 @@ int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param
     return 0;
 }
 
-int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *param)
+s32 sceKernelRegisterResumeHandler(s32 reg, s32 (*handler)(s32, void*), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;

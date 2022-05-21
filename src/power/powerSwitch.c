@@ -1331,6 +1331,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
     // so we will aim to use the same load/store instructions here -- even if 
     // it might not be perfectly optimized (such as no dedicated source buffer alignment 
     // check.
+    void *volatile scratchpad = (void *)SCE_SCRATCHPAD_ADDR_K1;
     if (((u32)g_Resume.scratchpad % 4 == 0) && ((u32)SCE_SCRATCHPAD_ADDR_K1 % 4 == 0)) // 0x0000203C & 0x00002074
     {
         // 0x00002690 - 0x00002684
@@ -1339,17 +1340,18 @@ static s32 _scePowerSuspendOperation(s32 mode)
             (void *)__builtin_assume_aligned(SCE_SCRATCHPAD_ADDR_K1, 4), 
             SCE_SCRATCHPAD_SIZE);*/
 
-        __builtin_memcpy(&g_Resume.scratchpad, (void *)SCE_SCRATCHPAD_ADDR_K1, SCE_SCRATCHPAD_SIZE);
+        __builtin_memcpy(&g_Resume.scratchpad, scratchpad, SCE_SCRATCHPAD_SIZE);
     }
     else 
     {
         // 0x00002080 - 0x000020C8       
-        __builtin_memcpy(&g_Resume.scratchpad, (void *)SCE_SCRATCHPAD_ADDR_K1, SCE_SCRATCHPAD_SIZE);
+        __builtin_memcpy(&g_Resume.scratchpad, scratchpad, SCE_SCRATCHPAD_SIZE);
     }
 
     /* Copy the hardware-reset-vector content to the power service. */
 
     // uofw: The same note as directly above applies here as well.
+    void *volatile resetVector = (void *)HW_RESET_VECTOR;
     if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x000020D8 & 0x000020E0
     {
         // 0x0000265C - 0x00002688
@@ -1358,12 +1360,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
             (void *)__builtin_assume_aligned(HW_RESET_VECTOR, 4),
             HW_RESET_VECTOR_SIZE);*/
 
-        __builtin_memcpy(&g_Resume.hwResetVector, (void *)HW_RESET_VECTOR, HW_RESET_VECTOR_SIZE);
+        __builtin_memcpy(&g_Resume.hwResetVector, resetVector, HW_RESET_VECTOR_SIZE);
     }
     else
     {
         // 0x000020EC - 0x000020C8       
-        __builtin_memcpy(&g_Resume.hwResetVector, (void *)HW_RESET_VECTOR, HW_RESET_VECTOR_SIZE);
+        __builtin_memcpy(&g_Resume.hwResetVector, resetVector, HW_RESET_VECTOR_SIZE);
     }
 
     // loc_0000213C
@@ -1469,6 +1471,7 @@ static s32 _scePowerSuspendOperation(s32 mode)
 
             /* Write back the saved hardware-reset-vector content. */
 
+            void *volatile resetVector = resetVector;
             if (((u32)&g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x00002574 & 0x0000257C
             {
                 // 0x000025A0 - 0x000025EC
@@ -1477,12 +1480,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
                     (void *)__builtin_assume_aligned(g_Resume.hwResetVector, 4),
                     HW_RESET_VECTOR_SIZE);*/
 
-                __builtin_memcpy((void *)HW_RESET_VECTOR, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
+                __builtin_memcpy(resetVector, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
             }
             else
             {
                 // 0x000025F4 - 0x0000261C       
-                __builtin_memcpy((void *)HW_RESET_VECTOR, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
+                __builtin_memcpy(resetVector, (void *)g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
             }
 
             /* Increase the resume counter. */
@@ -1561,12 +1564,12 @@ static s32 _scePowerSuspendOperation(s32 mode)
             (void *)__builtin_assume_aligned(&g_Resume.scratchpad, 4),
             SCE_SCRATCHPAD_SIZE);*/
 
-        __builtin_memcpy((void *)SCE_SCRATCHPAD_ADDR_K1, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
+        __builtin_memcpy(scratchpad, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
     }
     else
     {
         // 0x00002490 - 0x000024C0       
-        __builtin_memcpy((void *)SCE_SCRATCHPAD_ADDR_K1, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
+        __builtin_memcpy(scratchpad, &g_Resume.scratchpad, SCE_SCRATCHPAD_SIZE);
     }
 
     _scePowerFreqResume(0); // 0x0000220C
@@ -1775,6 +1778,7 @@ static void _scePowerResumePoint(ScePowerResumeInfo *pResumeInfo)
     // it might not be perfectly optimized (such as no dedicated source buffer alignment 
     // check.
 
+    void *volatile resetVector = (void *)HW_RESET_VECTOR;
     if (((u32)g_Resume.hwResetVector % 4 == 0) && ((u32)HW_RESET_VECTOR % 4 == 0)) // 0x0000203C & 0x00002074
     {
         // 0x00002918 - 0x00002940
@@ -1783,12 +1787,12 @@ static void _scePowerResumePoint(ScePowerResumeInfo *pResumeInfo)
             (void *)__builtin_assume_aligned(&g_Resume.hwResetVector, 4),
             HW_RESET_VECTOR_SIZE);*/
 
-        __builtin_memcpy((void *)HW_RESET_VECTOR, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
+        __builtin_memcpy(resetVector, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
     }
     else
     {
         // 0x000028C4 - 0x0000290C       
-        __builtin_memcpy((void *)HW_RESET_VECTOR, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
+        __builtin_memcpy(resetVector, &g_Resume.hwResetVector, HW_RESET_VECTOR_SIZE);
     }
 
     /* Increase the resume counter. */
@@ -1931,7 +1935,7 @@ s32 scePowerGetPowerSwMode(void)
 }
 
 //Subroutine scePower_driver_1EC2D4E4 - Address 0x00002B78
-s32 scePowerRebootStart(int arg0)
+s32 scePowerRebootStart(s32 arg0)
 {
     (void)arg0;
 

@@ -656,7 +656,7 @@ s32 scePowerWaitRequestCompletion(void);
  *
  * @return Always SCE_ERROR_OK.
  */
-s32 scePowerRebootStart(int arg0);
+s32 scePowerRebootStart(s32 arg0);
 
 /**
  * Gets the number of times resume processing was performed for the PSP system (between two cold boots).

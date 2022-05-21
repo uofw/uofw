@@ -9,7 +9,7 @@
  * It provides public APIs to set the frequencies for the PLL clock, the CPU clock and the bus clock of the
  * PSP system.
  * 
- * • PLL clock
+ * ? PLL clock
  *   The following hardware components operate with the PLL clock:
  *      - DDR memory
  * 
@@ -25,7 +25,7 @@
  *   component. The power service just tells lowio which one of the fixed PLL clock frequencies now represents
  *   the current PLL clock frequency and "lowio" then proceeds to actually change the clock frequency.
  * 
- * • CPU clock
+ * ? CPU clock
  *   The following hardware components operate with the CPU clock:
  *      - Integer pipeline
  *      - FPU pipeline
@@ -36,7 +36,7 @@
  *   PLL clock frequency contols the maximum allowed CPU clock frequency. Specifically, the CPU cannot be set
  *   to operate at a higher clock frequency than the PLL clock frequency.
  * 
- * • Bus clock
+ * ? Bus clock
  *   The following hardware components operate with the bus clock:
  *      - VFPU write buffer
  *      - Scratchpad memory
@@ -58,7 +58,7 @@
 
 #include <common_imp.h>
 #include <display.h>
-#include <ge.h>
+#include <ge_kernel.h>
 #include <interruptman.h>
 #include <lowio_ddr.h>
 #include <power_kernel.h>

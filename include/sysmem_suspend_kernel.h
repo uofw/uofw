@@ -10,15 +10,15 @@ s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 unk, void *param
 typedef struct
 {
     int size; // 0
-    int (*tick)(int); // 4
-    int (*lock)(int); // 8
-    int (*unlock)(int); // 12
-    int (*lockForUser)(int); // 16
-    int (*unlockForUser)(int); // 20
-    int (*rebootStart)(int); // 24
-    int (*memLock)(int, void**, SceSize *); // 28
-    int (*memTryLock)(int, void**, SceSize *); // 32
-    int (*memUnlock)(int); // 36
+    s32 (*tick)(s32); // 4
+    s32 (*lock)(s32); // 8
+    s32 (*unlock)(s32); // 12
+    s32 (*lockForUser)(s32); // 16
+    s32 (*unlockForUser)(s32); // 20
+    s32 (*rebootStart)(s32); // 24
+    s32 (*memLock)(s32, void**, SceSize *); // 28
+    s32 (*memTryLock)(s32, void**, SceSize *); // 32
+    s32 (*memUnlock)(s32); // 36
 } ScePowerHandlers;
 
 int sceKernelRegisterPowerHandlers(const ScePowerHandlers* handlers);
