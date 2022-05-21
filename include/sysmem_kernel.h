@@ -239,9 +239,13 @@ s32 sceKernelGetSystemStatus(void);
 s32 sceKernelSetSystemStatus(s32 newStatus);
 
 typedef struct {
+    // Last display list for which a UpdateStallAddr() was run
     s32 dlId;
+    // The stall address which was supposed to be set in the last call
     void *stall;
+    // Number of times an update has been called on the current dlId
     u32 count;
+    // Number of calls to updateStallAddr() required until we really set the address
     u32 max;
 } SceGeLazy;
 
@@ -357,7 +361,7 @@ typedef struct SceSysmemUidLookupFunc {
     SceSysmemUidFunc func;
 } SceSysmemUidLookupFunc;
 
-s32 sceKernelCallUIDFunction(SceUID id, int funcId, ...);
+s32 sceKernelCallUIDFunction(SceUID id, s32 funcId, ...);
 s32 sceKernelCallUIDObjFunction(SceSysmemUidCB *uid, s32 funcId, ...);
 int sceKernelLookupUIDFunction(SceSysmemUidCB *uid, int id, SceSysmemUidFunc *func, SceSysmemUidCB **parentUidWithFunc);
 s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);

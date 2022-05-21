@@ -11,6 +11,7 @@
 
 #include "common/types.h"
 
+#include "common/allegrex.h"
 #include "common/constant.h"
 #include "common/cop0.h"
 #include "common/debug.h"

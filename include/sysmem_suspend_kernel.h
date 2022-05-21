@@ -4,8 +4,8 @@
 
 #include "common_header.h"
 
-int sceKernelRegisterResumeHandler(int reg, int (*handler)(int unk, void *param), void *param);
-int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param);
+s32 sceKernelRegisterResumeHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param);
+s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param);
 
 typedef struct
 {
@@ -27,10 +27,10 @@ int sceKernelDispatchSuspendHandlers(int unk);
 int sceKernelDispatchResumeHandlers(int unk);
 
 #define SCE_KERNEL_POWER_LOCK_DEFAULT       (0)
-int sceKernelPowerLock(int lockType);
-int sceKernelPowerLockForUser(int lockType);
-int sceKernelPowerUnlock(int lockType);
-int sceKernelPowerUnlockForUser(int lockType);
+s32 sceKernelPowerLock(s32 lockType);
+s32 sceKernelPowerLockForUser(s32 lockType);
+s32 sceKernelPowerUnlock(s32 lockType);
+s32 sceKernelPowerUnlockForUser(s32 lockType);
 
 /** Cancels all timers. */
 #define SCE_KERNEL_POWER_TICK_DEFAULT			0     
@@ -45,7 +45,7 @@ int sceKernelVolatileMemLock(int unk, void **ptr, SceSize *size);
 int sceKernelVolatileMemTryLock(int unk, void **ptr, SceSize *size);
 int sceKernelVolatileMemUnlock(int unk);
 
-int sceKernelPowerRebootStart(int);
+s32 sceKernelPowerRebootStart(s32);
 
 int sceSuspendForKernel_67B59042(int arg0);
 int sceSuspendForKernel_B2C9640B(int arg0);

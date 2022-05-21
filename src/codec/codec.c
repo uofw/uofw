@@ -56,7 +56,7 @@ Codec g_codec =
     0
 };
 
-int sysEvHandler(int ev_id, char* ev_name, void* param, int* result);
+s32 sysEvHandler(s32 ev_id, char* ev_name, void* param, s32* result);
 
 // 0FB4
 SceSysEventHandler g_sysEv = {
@@ -435,7 +435,7 @@ int sceCodec_driver_277DFFB6(void)
 }
 
 // 0A28
-int sysEvHandler(int ev_id, char* ev_name __attribute__((unused)), void* param __attribute__((unused)), int* result __attribute__((unused)))
+s32 sysEvHandler(s32 ev_id, char* ev_name __attribute__((unused)), void* param __attribute__((unused)), s32* result __attribute__((unused)))
 {
     switch (ev_id)
     {

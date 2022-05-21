@@ -17,7 +17,7 @@
 #include <common_imp.h>
 
 #include <display.h>
-#include <ge.h>
+#include <ge_user.h>
 
 #include "scr_printf.h"
 

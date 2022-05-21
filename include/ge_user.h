@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -16,6 +16,9 @@
  * @{
  */
 
+/*
+ * List of commands accepted by the GE.
+ */
 #define SCE_GE_CMD_NOP 0x00
 #define SCE_GE_CMD_VADR 0x01
 #define SCE_GE_CMD_IADR 0x02
@@ -76,8 +79,8 @@
 #define SCE_GE_CMD_TGENN 0x40
 #define SCE_GE_CMD_TGEND 0x41
 #define SCE_GE_CMD_SX 0x42
-#define SCE_GE_CMD_SY 0x43                                                                                                                                                                           
-#define SCE_GE_CMD_SZ 0x44                                                                                                                                                                           
+#define SCE_GE_CMD_SY 0x43
+#define SCE_GE_CMD_SZ 0x44
 #define SCE_GE_CMD_TX 0x45
 #define SCE_GE_CMD_TY 0x46
 #define SCE_GE_CMD_TZ 0x47
@@ -262,6 +265,102 @@
 #define SCE_GE_MTX_VIEW  9
 #define SCE_GE_MTX_PROJ  10
 #define SCE_GE_MTX_TGEN  11
+#define SCE_GE_MTX_COUNT 12
+
+/*
+ * List of signals which can be sent using the SIGNAL command.
+ */
+
+/**
+ * In SDK versions <= 0x02000010, pause the display list, call the callback with the SIGNAL argument,
+ * and restart the display list in the state specified in the END instruction.
+ * Otherwise, just call the callback. Resume GE execution afterwards.
+ */
+#define SCE_GE_SIGNAL_HANDLER_SUSPEND  0x01
+/**
+ * Resume GE execution, then call the signal callback with the SIGNAL argument.
+ */
+#define SCE_GE_SIGNAL_HANDLER_CONTINUE 0x02
+/**
+ * Set the current display list's status to PAUSE, its signal to the END argument and its signal data
+ * to the SIGNAL command, then resume GE execution.
+ */
+#define SCE_GE_SIGNAL_HANDLER_PAUSE    0x03
+/**
+ * Set the current display list's signal to SYNC, then resume GE execution.
+ */
+#define SCE_GE_SIGNAL_SYNC             0x08
+/**
+ * Jump to the (s << 16) | (e & 0xFFFF) address, where s is SIGNAL's argument and e is END's
+ */
+#define SCE_GE_SIGNAL_JUMP             0x10
+/**
+ * Same as SCE_GE_SIGNAL_JUMP, but saving the status so we can use SCE_GE_SIGNAL_RET to return to the caller.
+ */
+#define SCE_GE_SIGNAL_CALL             0x11
+/**
+ * Return after using a SCE_GE_SIGNAL_*CALL signal.
+ */
+#define SCE_GE_SIGNAL_RET              0x12
+/**
+ * Same as SCE_GE_SIGNAL_JUMP, but where the address is relative to the current one.
+ */
+#define SCE_GE_SIGNAL_RJUMP            0x13
+/**
+ * Same as SCE_GE_SIGNAL_CALL, but where the address is relative to the current one.
+ */
+#define SCE_GE_SIGNAL_RCALL            0x14
+/**
+ * Same as SCE_GE_SIGNAL_JUMP, but where the address is relative to ORIGIN.
+ */
+#define SCE_GE_SIGNAL_OJUMP            0x15
+/**
+ * Same as SCE_GE_SIGNAL_CALL, but where the address is relative to ORIGIN.
+ */
+#define SCE_GE_SIGNAL_OCALL            0x16
+/**
+ * Run a TBP0/TBW0 pair with the same address as for SCE_GE_SIGNAL_RJUMP,
+ * taking ((e >> 16) & 0xFF) for the size.
+ */
+#define SCE_GE_SIGNAL_RTBP0            0x20
+#define SCE_GE_SIGNAL_RTBP1            0x21
+#define SCE_GE_SIGNAL_RTBP2            0x22
+#define SCE_GE_SIGNAL_RTBP3            0x23
+#define SCE_GE_SIGNAL_RTBP4            0x24
+#define SCE_GE_SIGNAL_RTBP5            0x25
+#define SCE_GE_SIGNAL_RTBP6            0x26
+#define SCE_GE_SIGNAL_RTBP7            0x27
+/**
+ * Run a TBP0/TBW0 pair with the same address as for SCE_GE_SIGNAL_OJUMP,
+ * taking ((e >> 16) & 0xFF) for the size.
+ */
+#define SCE_GE_SIGNAL_OTBP0            0x28
+#define SCE_GE_SIGNAL_OTBP1            0x29
+#define SCE_GE_SIGNAL_OTBP2            0x2A
+#define SCE_GE_SIGNAL_OTBP3            0x2B
+#define SCE_GE_SIGNAL_OTBP4            0x2C
+#define SCE_GE_SIGNAL_OTBP5            0x2D
+#define SCE_GE_SIGNAL_OTBP6            0x2E
+#define SCE_GE_SIGNAL_OTBP7            0x2F
+/**
+ * Same as SCE_GE_SIGNAL_RTBP0, for a CBP/CBW pair.
+ */
+#define SCE_GE_SIGNAL_RCBP             0x30
+/**
+ * Same as SCE_GE_SIGNAL_OTBP0, for a CBP/CBW pair.
+ */
+#define SCE_GE_SIGNAL_OCBP             0x38
+/**
+ * If deci2p operations are defined, break here and run the SCE_DECI2OP_GE_BREAK operation
+ * until it resumes operation.
+ */
+#define SCE_GE_SIGNAL_BREAK1           0xF0
+/**
+ * Same as SCE_GE_SIGNAL_BREAK1, but break only if the breakpoint counter is -1 or equal
+ * to the defined value (ie, we reached the breakpoint the number of times specified when
+ * the breakpoint was created).
+ */
+#define SCE_GE_SIGNAL_BREAK2           0xFF
 
 /** Structure storing a stack (for CALL/RET) */
 typedef struct
@@ -282,7 +381,7 @@ typedef void (*SceGeCallback)(int id, void *arg);
 
 /** Structure to hold the callback data */
 typedef struct
-{   
+{
     /** GE callback for the signal interrupt */
     SceGeCallback signal_func;
     /** GE callback argument for signal interrupt */
@@ -321,81 +420,6 @@ typedef enum
     SCE_GE_LIST_PAUSED
 } SceGeListState;
 
-/** State of a display list, internally */
-typedef enum
-{
-    /** No state assigned, the list is empty */
-    SCE_GE_DL_STATE_NONE = 0,
-    /** The list has been queued */
-    SCE_GE_DL_STATE_QUEUED, // 1
-    /** The list is being executed */
-    SCE_GE_DL_STATE_RUNNING, // 2
-    /** The list was completed and will be removed */
-    SCE_GE_DL_STATE_COMPLETED, // 3
-    /** The list has been paused by a signal */
-    SCE_GE_DL_STATE_PAUSED // 4
-} SceGeDisplayListState;
-
-/** Signal state of a display list */
-typedef enum
-{
-    /** No signal received */
-    SCE_GE_DL_SIGNAL_NONE = 0,
-    /** The break signal was received */
-    SCE_GE_DL_SIGNAL_BREAK, // 1
-    /** The pause signal was received */
-    SCE_GE_DL_SIGNAL_PAUSE, // 2
-    /** The sync signal was received */
-    SCE_GE_DL_SIGNAL_SYNC // 3
-} SceGeDisplayListSignal;
-
-/** Structure holding a display list */
-typedef struct SceGeDisplayList
-{
-    /** Next display list of the queue */
-    struct SceGeDisplayList *next;
-    /** Previous display list */
-    struct SceGeDisplayList *prev;
-    /** Current display list state */
-    SceGeDisplayListState state;
-    /** Current display list received signal */
-    SceGeDisplayListSignal signal;
-    /** 1 if context is up to date, 0 otherwise */
-    u8 ctxUpToDate;
-    /* (padding) */
-    char unused11;
-    /** The display list context */
-    SceGeContext *ctx; // 12
-    /** The display list flags */
-    int flags;
-    /** Pointer to the list of commands */
-    void *list; // 20
-    /** Pointer to the stall address, where the display list will stop being executed */
-    void *stall; // 24
-    /** Internal data */
-    int unk28;
-    /** Internal data */
-    int unk32;
-    /** Internal data */
-    int unk36;
-    /** Internal data */
-    int unk40;
-    /** Internal data */
-    int unk44;
-    /** Internal data */
-    int unk48;
-    /** The callbacks id set with sceGeSetCallback() */
-    short cbId; // 52
-    /** Some argument passed to the interrupt handler when calling the subintrs */
-    u16 unk54;
-    /** The number of stacks of the display list */
-    short numStacks; // 56
-    /** The offset of the current stack */
-    u16 stackOff; // 58
-    /** A pointer to the list of stacks */
-    SceGeStack *stack; // 60
-} SceGeDisplayList; // size: 64
-
 /**
  * Updates the stall address.
  *
@@ -406,39 +430,6 @@ typedef struct SceGeDisplayList
 int sceGeListUpdateStallAddr(int dlId, void *stall);
 
 /**
- * Inits the GE subsystem.
- *
- * @return Zero.
- */
-int sceGeInit();
-
-/**
- * Ends the GE subsystem.
- *
- * @return Zer.o
- */
-int sceGeEnd();
-
-/**
- * Gets a GE hardware register.
- *
- * @param regId The register ID.
- *
- * @return The content of the register on success, otherwise less than zero.
- */
-int sceGeGetReg(u32 regId);
-
-/**
- * Sets a GE hardware register.
- *
- * @param regId The register ID.
- * @param value The value to set the register to.
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGeSetReg(u32 regId, u32 value);
-
-/** 
  * Gets a command (?).
  *
  * @param cmdOff The command ID.
@@ -446,16 +437,6 @@ int sceGeSetReg(u32 regId, u32 value);
  * @return The command on success, otherwise less than zero.
  */
 int sceGeGetCmd(u32 cmdOff);
-
-/**
- * Sets a command (?).
- *
- * @param cmdOff The command ID.
- * @param cmd The value to set the command to.
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGeSetCmd(u32 cmdOff, u32 cmd);
 
 /**
  * Gets a matrix.
@@ -468,17 +449,7 @@ int sceGeSetCmd(u32 cmdOff, u32 cmd);
 int sceGeGetMtx(int id, int *mtx);
 
 /**
- * Sets a matrix.
- *
- * @param id The matrix ID (0 - 11)
- * @param mtx The buffer storing the matrix.
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGeSetMtx(int id, int *mtx);
-
-/**
- * Saves the current GE context into a structure.
+ * Saves the GE context of the current display list into a structure.
  *
  * @param ctx The structure to save the GE context in.
  *
@@ -494,52 +465,6 @@ int sceGeSaveContext(SceGeContext *ctx);
  * @return Zero on success, otherwise less than zero.
  */
 int sceGeRestoreContext(SceGeContext *ctx);
-
-/**
- * Registers a logging handler.
- *
- * @param handler The handler function.
- *
- * @return Zero.
- */
-int sceGeRegisterLogHandler(void (*handler)());
-
-/**
- * Sets or unsets the geometry clock.
- *
- * @param opt The value whose first bit enables or disables the geometry clock.
- *
- * @return The old state.
- */
-int sceGeSetGeometryClock(int opt);
-
-/**
- * Inits the EDRAM memory.
- *
- * @return Zero.
- */
-int sceGeEdramInit();
-
-/**
- * Sets the EDRAM refresh parameters.
- *
- * @param arg0 Unknown (0 or 1).
- * @param arg1 Unknown (0 to 0x7FFFFF).
- * @param arg2 Unknown (0 to 0x3FF).
- * @param arg3 Unknown (0 to 0xF).
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGeEdramSetRefreshParam(int arg0, int arg1, int arg2, int arg3);
-
-/**
- * Sets the EDRAM size.
- *
- * @param size The size (0x200000 or 0x400000).
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGeEdramSetSize(int size);
 
 /**
  * Gets the EDRAM address.
@@ -563,13 +488,6 @@ int sceGeEdramSetAddrTranslation(int arg);
  * @return The EDRAM size.
  */
 int sceGeEdramGetSize();
-
-/**
- * Gets the EDRAM physical size.
- *
- * @return The EDRAM physical size.
- */
-int sceGeEdramGetHwSize();
 
 /**
  * Dequeues a list.
@@ -624,49 +542,6 @@ int sceGeContinue();
  * @return The callbacks id on success, otherwise less than zero.
  */
 int sceGeSetCallback(SceGeCallbackData *cb);
-
-/**
- * Puts a breakpoint (used for debugging).
- *
- * @param inPtr A list of breakpoints, each one using 2 ints: one for the breakpoint address, and another one for the number of stops to do at the specified address.
- * @param size The number of breakpoints to set.
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGePutBreakpoint(int *inPtr, int size);
-
-/**
- * Gets a breakpoint.
- *
- * @param outPtr The list of breakpoints (check sceGePutBreakpoint()).
- * @param size The number of breakpoints to read.
- * @param arg2 A pointer where will be stored the total number of breakpoints.
- *
- * @return The number of stored breakpoints on success, otherwise less than zero.
- */
-int sceGeGetBreakpoint(int *outPtr, int size, int *arg2);
-
-/**
- * Gets a list of the IDs of the display lists currently being in the queue.
- *
- * @param outPtr A buffer that will store the display lists' ID.
- * @param size The number of IDs to store.
- * @param totalCountPtr A point where will be stored the total number of display lists.
- *
- * @return The number of stored list IDs on success, otherwise less than zero.
- */
-int sceGeGetListIdList(int *outPtr, int size, int *totalCountPtr);
-
-/**
- * Gets a display list from its ID.
- *
- * @param dlId The display list ID.
- * @param outDl A pointer where the display list will be stored.
- * @param outFlag A pointer where will be stored (outDl->state << 2) | outDl->signal.
- *
- * @return Zero on success, otherwise less than zero.
- */
-int sceGeGetList(int dlId, SceGeDisplayList *outDl, int *outFlag);
 
 /**
  * Gets a stack from the current display list, using its ID.

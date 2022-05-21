@@ -3,19 +3,26 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
+    container:
+      image: pspdev/pspdev:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          apk add build-base
+      - name: Build project
+        run: |
+          make -k
+  documentation:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           sudo apt-get install doxygen
-          wget https://github.com/uofw/artifacts/releases/latest/download/psptoolchain.deb
-          sudo dpkg --install psptoolchain.deb
-      - name: Build project
-        run: |
-          . /etc/profile.d/psptoolchain.sh
-          make -k
       - name: Build documentation
         run: |
           mkdir github-pages

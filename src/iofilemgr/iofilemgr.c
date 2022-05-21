@@ -107,8 +107,8 @@ SceIoDrvFuncs _nullcon_function =
 // 6A7C
 SceIoDrv _dummycon_driver = { "dummy_drv_iofile", 0, 0x00000800, "DUMMY_DRV", &_nullcon_function };
 
-int iob_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, int funcid, va_list ap);
-int iob_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, int funcid, va_list ap);
+s32 iob_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcid, va_list ap);
+s32 iob_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcid, va_list ap);
 
 // 6A90
 SceSysmemUidLookupFunc IobFuncs[] =
@@ -197,7 +197,7 @@ int delete_alias_tbl(SceIoAlias *alias);
 SceIoAlias *lookup_alias_tbl(char *drive);
 SceIoDeviceList *lookup_device_list(const char *drive);
 void free_cwd(void *ktls);
-int async_loop(SceSize args, void *argp);
+s32 async_loop(SceSize args, void *argp);
 
 int sceIoChangeAsyncPriority(int fd, int prio)
 {
@@ -1642,7 +1642,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
     if (arg1 != 0 && !pspK1IsUserMode())
         arg1 = 0;
     // 3170
-    int *ptr = g_UIDs;
+    SceUID *ptr = g_UIDs;
     int count = 0;
     if (arg1 != 0)
     {
@@ -3200,21 +3200,21 @@ int _nulldev_write(SceIoIob *iob __attribute__((unused)), const char *data, int 
     return len;
 }
 
-int iob_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, int funcid, va_list ap)
+s32 iob_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcid, va_list ap)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcid, ap);
     return cb->uid;
 }
 
-int iob_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, int funcid, va_list ap)
+s32 iob_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcid, va_list ap)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcid, ap);
     return 0;
 }
 
-int async_loop(SceSize args __attribute__((unused)), void *argp)
+s32 async_loop(SceSize args __attribute__((unused)), void *argp)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob = *(SceIoIob**)argp;

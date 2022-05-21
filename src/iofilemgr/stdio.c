@@ -53,9 +53,9 @@ SceIoDrvFuncs g_TtyOps = // 6948
 
 SceIoDrv g_TtyDevTbl = { "ttyproxy", 0x00000003, 0x00000001, "TTY2MsgPipe PROXY", &g_TtyOps }; // 69A0
 
-int g_stdin = -1; // 6AD0
-int g_stdout = -1; // 6AD4
-int g_stderr = -1; // 6AD8
+SceUID g_stdin = -1; // 6AD0
+SceUID g_stdout = -1; // 6AD4
+SceUID g_stderr = -1; // 6AD8
 
 int g_debugRead; // 6AF0
 int g_pipeList[6]; // 6AF4
