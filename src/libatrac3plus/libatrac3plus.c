@@ -35,7 +35,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         {
             // 0188
             sceKernelCpuResumeIntr(oldIntr);
-            return 0x80000021;
+            return SCE_ERROR_BUSY;
         }
         curId++;
     }
@@ -63,7 +63,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         int i;
         for (i = 0; i < numAT3Id + numAT3plusId; i++)
         {
-            curId->codec.edramAddr = g_edramAddr;
+            curId->codec.edramAddr = (void *)g_edramAddr;
             curId->codec.unk20 = 1;
             if (i >= numAT3plusId)
             {
@@ -73,14 +73,14 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
             }
             else
             {
-                curId->codec.unk40 = 40;
-                curId->codec.unk41 = 92;
+                curId->codec.unk40.v8.u40 = 40;
+                curId->codec.unk40.v8.u41 = 92;
                 curId->info.codec = 0x1000;
                 count += g_needMemAT3plus;
             }
             // 0130
             if (g_edramAddr + 0x19000 < count)
-                return 0x80000022;
+                return SCE_ERROR_OUT_OF_MEMORY;
             curId->info.state = -1;
             curId++;
         }
@@ -532,8 +532,8 @@ int sceAtracLowLevelDecode(int atracID, void *inBuf, int *arg2, void *outBuf, in
     // 1234
     if (sceAudiocodecDecode(&g_atracIds[atracID].codec, info->codec) != 0)
         return 0x80630002;
-    *arg2 = g_atracIds[atracID].codec.unk28;
-    *arg4 = g_atracIds[atracID].codec.unk36;
+    *arg2 = g_atracIds[atracID].codec.readSample;
+    *arg4 = g_atracIds[atracID].codec.decodedSample;
     return 0;
 }
 
@@ -590,12 +590,12 @@ int resetId(SceAtracId *info)
     return 0;
 }
 
-int sceAtracStartEntry(void)
+int sceAtracStartEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     return (sceAtracReinit(2, 2) < 0);
 }
 
-int sceAtracEndEntry(void)
+int sceAtracEndEntry(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     if (g_edramAddr != -1)
         sceAudiocodecReleaseEDRAM(&g_atracIds[0].codec);
@@ -715,8 +715,8 @@ SceAtracId *_sceAtracGetContextAddress(int atracID)
 // 182C
 int allocEdram(void)
 {
-    g_atracIds[0].codec.unk40 = 40;
-    g_atracIds[1].codec.unk41 = 92;
+    g_atracIds[0].codec.unk40.v8.u40 = 40;
+    g_atracIds[1].codec.unk40.v8.u41 = 92;
     int ret = sceAudiocodecCheckNeedMem(&g_atracIds[0].codec, 0x1000);
     if (ret < 0)
         return ret;
@@ -729,7 +729,7 @@ int allocEdram(void)
     ret = sceAudiocodecGetEDRAM(&g_atracIds[0].codec, 0x1001);
     if (ret < 0)
         return ret;
-    g_edramAddr = g_atracIds[0].codec.edramAddr;
+    g_edramAddr = (int)g_atracIds[0].codec.edramAddr;
     return 0;
 }
 
@@ -765,7 +765,7 @@ int getOutputChan(SceAtracIdInfo *info, SceAudiocodecCodec *codec)
         // 199C
         return codec->unk72;
     }
-    if (codec->unk40 >= 14 && codec->unk40 < 16)
+    if (codec->unk40.v8.u40 >= 14 && codec->unk40.v8.u40 < 16)
         return codec->unk52;
     return 2;
 }
@@ -1030,7 +1030,7 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
                         return 0x80630006;
                     curOff += 4; // skip channel mask
                     short unk = readWaveData(in, &curOff, 2); // err.. it should be GUID
-                    *(short*)info->unk4 = unk;
+                    info->unk4.v16 = unk;
                     if ((unk & 0xFFFF) != readWaveData(in, &curOff, 2))
                         return 0x80630006;
                     if (readWaveData(in, &curOff, 4) != validBitsPerSample)
@@ -1064,9 +1064,9 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
                         }
                     }
                     // 2064
-                    info->unk4[0] = in[curOff + 28];
-                    info->unk4[1] = in[curOff + 29];
-                    if (((info->unk4[0] >> 2) & 7) != info->channels)
+                    info->unk4.v8[0] = in[curOff + 28];
+                    info->unk4.v8[1] = in[curOff + 29];
+                    if (((info->unk4.v8[0] >> 2) & 7) != info->channels)
                         return 0x80630006;
                     fmt = 0x1000;
                     cksize -= 52;
@@ -1191,8 +1191,8 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
                 if (cur->unk0 == id->info.sampleSize)
                 {
                     // 25F0
-                    if (cur->unk3 == *(u16*)&info->unk4) {
-                        id->codec.unk40 = cur->unk2;
+                    if (cur->unk3 == info->unk4.v16) {
+                        id->codec.unk40.v8.u40 = cur->unk2;
                         return 0;
                     }
                 }
@@ -1201,9 +1201,9 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
             }
             return 0x80630008;
         }
-        id->codec.unk40 = info->unk4[0];
+        id->codec.unk40.v8.u40 = info->unk4.v8[0];
         id->codec.unk48 = 0;
-        id->codec.unk41 = info->unk4[1];
+        id->codec.unk40.v8.u41 = info->unk4.v8[1];
         return ret;
     }
     return 0x80630008;
@@ -1322,7 +1322,7 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
     for (i = 0; i < 5; i++)
     {
         if (unk->unk0 == *(int*)(arg1 + 8) && unk->unk2 == *(int*)(arg1 + 0)) { // 27A0
-            codec->unk40 = unk->unk3;
+            codec->unk40.v8.u40 = unk->unk3;
             return 0;
         }
         // 2784
@@ -1426,15 +1426,15 @@ int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
             // 28D0
             if (*(u16*)(curSp + 2) == *(int*)(arg1 + 0))
             {
-                codec->unk41 = *(u8*)(curSp + 5);
-                codec->unk40 = *(u8*)(curSp + 4);
+                codec->unk40.v8.u41 = *(u8*)(curSp + 5);
+                codec->unk40.v8.u40 = *(u8*)(curSp + 4);
                 codec->unk56 = 0;
-                codec->unk42 = 0;
-                codec->unk43 = 0;
-                codec->unk44 = 0;
-                codec->unk45 = 0;
-                codec->unk46 = 0;
-                codec->unk47 = 0;
+                codec->unk40.v8.u42 = 0;
+                codec->unk40.v8.u43 = 0;
+                codec->unk44.v8.u44 = 0;
+                codec->unk44.v8.u45 = 0;
+                codec->unk44.v8.u46 = 0;
+                codec->unk44.v8.u47 = 0;
                 codec->unk48 = 0;
             }
             return 0;
@@ -2055,8 +2055,8 @@ int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info)
             return 0x80631005;
         info->factSz = 0;
         info->dataBlkSz = ((aa3->unk32 & 0x3FF) << 3) + 8;
-        info->unk4[0] = ((aa3->unk32 >> 8) & 3) | 0x28;
-        info->unk4[1] = aa3->unk32 & 0xFF;
+        info->unk4.v8[0] = ((aa3->unk32 >> 8) & 3) | 0x28;
+        info->unk4.v8[1] = aa3->unk32 & 0xFF;
     }
     else
     {
@@ -2067,10 +2067,10 @@ int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info)
         info->dataBlkSz = (aa3->unk32 & 0x3FF) << 3;
         if ((aa3->unk32 & 0x20000) == 0) {
             // 39A0
-            *(short*)info->unk4 = 0;
+            info->unk4.v16 = 0;
         }
         else
-            *(short*)info->unk4 = 1;
+            info->unk4.v16 = 1;
         // 3990
         info->factSz = 0;
     }

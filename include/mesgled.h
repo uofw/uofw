@@ -16,11 +16,11 @@ s32 sceMesgLed_driver_B2CDAC3F(u8 *buf, u32 size, u32 *newSize);
 s32 sceMesgLed_driver_C79E3488(u8 *buf, u32 size, u32 *newSize);
 s32 sceMesgLed_driver_21AFFAAC(u8 *buf, u32 size, u32 *newSize);
 s32 sceMesgLed_driver_C00DAD75(u8 *buf, u32 size, u32 *newSize);
-s32 sceMesgLed_driver_CED2C075(u8 *buf, u32 size, u32 *newSize, u32 arg4);
-s32 sceMesgLed_driver_C7D1C16B(u8 *buf, u32 size, u32 *newSize, u32 arg4);
-s32 sceMesgLed_driver_EBB4613D(u8 *buf, u32 size, u32 *newSize, u32 arg4);
-s32 sceMesgLed_driver_66B348B2(u8 *buf, u32 size, u32 *newSize, u32 arg4);
+s32 sceMesgLed_driver_CED2C075(u8 *buf, u32 size, u32 *newSize, void *arg4);
+s32 sceMesgLed_driver_C7D1C16B(u8 *buf, u32 size, u32 *newSize, void *arg4);
+s32 sceMesgLed_driver_EBB4613D(u8 *buf, u32 size, u32 *newSize, void *arg4);
+s32 sceMesgLed_driver_66B348B2(u8 *buf, u32 size, u32 *newSize, void *arg4);
 s32 sceMesgLed_driver_B2D95FDF(u8 *buf, u32 size, u32 *newSize);
-s32 sceMesgLed_driver_91E0A9AD(u8 *buf, u32 size, u32 *newSize, u32 arg4);
-s32 sceMesgLed_driver_31D6D8AA(u8 *buf, u32 size, u32 *newSize, u32 arg4);
+s32 sceMesgLed_driver_91E0A9AD(u8 *buf, u32 size, u32 *newSize, void *arg4);
+s32 sceMesgLed_driver_31D6D8AA(u8 *buf, u32 size, u32 *newSize, void *arg4);
 

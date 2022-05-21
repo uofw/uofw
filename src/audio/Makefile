@@ -4,7 +4,7 @@
 TARGET = audio
 OBJS = audio.o
 
-DEBUG = 1
+DEBUG = 0
 
 LIBS = -lsceCodec_driver -lInterruptManagerForKernel -lSysclibForKernel -lThreadManForKernel -lsceSysEventForKernel -lSysMemForKernel -lDmacManForKernel -lsceDdr_driver -lsceSysreg_driver -lsceClockgen_driver -lUtilsForKernel
 

@@ -4,7 +4,7 @@
 TARGET = ge
 OBJS = stall.o ge.o
 
-DEBUG = 1
+DEBUG = 0
 
 LIBS = -lInterruptManagerForKernel -lThreadManForKernel -lsceSysreg_driver -lKDebugForKernel -lUtilsForKernel -lsceSysEventForKernel -lSysMemForKernel -lSysclibForKernel -lInitForKernel
 

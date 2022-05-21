@@ -99,5 +99,5 @@ void patchGames(void)
     if (lastWcscpyOp != 0 || lastStrcpyOp != 0) {
         memcpy((void *)SCE_USERSPACE_ADDR_KU0, strcpy256, (u32)&patchGames - (u32)strcpy256);
     }
-    UtilsForKernel_79D1C3FA();
+    sceKernelDcacheWritebackAll();
 }

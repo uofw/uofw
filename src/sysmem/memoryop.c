@@ -127,9 +127,9 @@ s32 sceKernelSetDdrMemoryProtection(u32 addr, u32 size, u32 set)
 {
     // A684
     if (!ADDR_IS_KERNEL_RAM(addr))
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     if (!ADDR_IS_KERNEL_RAM(addr + size - 1))
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     u32 numParts = size >> 18;
     u32 firstPart = ((addr & 0x1FFFFFFF) >> 18) & 0x1F;
     u32 i;

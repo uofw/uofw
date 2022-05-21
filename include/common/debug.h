@@ -40,3 +40,11 @@ static inline void dbg_puts()
 }
 #endif
 
+/* Fills the framebuffer with the (r, g, b) color */
+static inline void dbg_fbfill(u8 r, u8 g, u8 b) {
+    u32 i;
+    for (i = 0; i < 480 * 272 * 2; i++)
+        *(int*)(0x44000000 + i * 4) = r | (g << 8) | (b << 16);
+}
+
+

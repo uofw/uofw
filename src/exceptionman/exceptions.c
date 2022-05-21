@@ -37,7 +37,7 @@ char g_stackCtx[192] = {0};
 // 1640
 SceExceptions ExcepManCB = { { NULL }, { NULL }, NULL, NULL, { { NULL, NULL } }};
 
-int ExcepManInit(void)
+int ExcepManInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
 {
     dbg_init(1, FB_HARDWARE, FAT_HARDWARE);
     dbg_printf("-- ExcepManInit()\n");
@@ -233,7 +233,7 @@ void build_exectbl(void)
         }
         // 0918
     }
-    int op = *(int*)(syscallHandler);
+    u32 op = syscallHandler;
     // 0948
     for (i = 0; i < 32; i++)
     {
@@ -255,7 +255,7 @@ void build_exectbl(void)
         }
         // 0964
     }
-    *(int*)(syscallHandler) = op;
+    syscallHandler = op;
 }
 
 SceExceptionHandler *newExcepCB(void)

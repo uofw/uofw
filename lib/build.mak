@@ -4,7 +4,7 @@
 include ../../lib/common.mak
 
 INCLUDE = -I../../include
-WARNINGS = -Wall -Wextra -Werror
+WARNINGS = -Wall -Wextra -Werror -Wno-pragmas
 
 # Only keep builtins for memcpy, memset for their inline function
 BUILTINS_DISABLE = -fno-builtin-bcmp \
@@ -27,6 +27,7 @@ BUILTINS_DISABLE = -fno-builtin-bcmp \
 				   -fno-builtin-strcmp \
 				   -fno-builtin-strcpy \
 				   -fno-builtin-strlen \
+				   -fno-builtin-strnlen \
 				   -fno-builtin-strncmp \
 				   -fno-builtin-strncpy \
 				   -fno-builtin-strpbrk \
@@ -49,9 +50,8 @@ EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
 EXPORT_C=$(PRX_EXPORTS:.exp=.c)
 
 ifeq ($(DEBUG),1)
-CFLAGS += -DDEBUG -I$(PSPSDK)/include
-LDFLAGS += -L$(PSPSDK)/lib
-LIBS := -ldebug -lpspdebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
+CFLAGS += -DDEBUG
+LIBS := -ldebug $(LIBS) -lSysclibForKernel -lsceDisplay -lsceGe_user -lIoFileMgrForKernel -lsceSyscon_driver
 endif
 ifeq ($(INSTALLER),1)
 CFLAGS += -DINSTALLER

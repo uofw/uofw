@@ -108,7 +108,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
         v1++;
         t0 = a0 << (v1 & 0x1F);
         if (v1 >= 33)
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
     } while (t0 < a2);
 
     t6 = v1;
@@ -118,7 +118,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
     // 5828
     v1 = *(short*)(a3 + 0);
     if (v1 != 0)
-        return 0x80020001;
+        return SCE_ERROR_KERNEL_ERROR;
     v1 = *(char*)(a3 + 4);
     t5 = *(char*)(a3 + 2);
     s3 = *(char*)(a3 + 3);
@@ -173,7 +173,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
         t7 = v1 < t8;
         t4 = a3 + 2;
         if (t7 == 0)
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
         t3 = unkString2[v1]
         v1 = t3 & 1;
         a0 = t5 + t6;
@@ -189,14 +189,14 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             s2 = a1 & 0xFFFF;
             s0 = s2 < a2;
             if (s0 == 0)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             v1 = t3 & 6;
             s0 = t0 >> (a0 & 0x1F);
             if (v1 != 0)
             {
                 t0 = 4;
                 if (v1 != t0)
-                    return 0x80020001;
+                    return SCE_ERROR_KERNEL_ERROR;
                 s0 = *(int*)t4; // unaligned reading
                 t4 = a3 + 6;
             }
@@ -206,7 +206,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             t7 = 1;
             a0 = t6 + t5;
             if (v1 != 1)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             t2 = a0 + s3;
             v0 = t1 - t2;
             t7 = t0 << (v0 & 0x1F);
@@ -217,7 +217,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             t2 = a1 & 0xFFFF;
             t7 = t2 < t9;
             if (t7 == 0)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             t7 = t1 - a0;
             v1 = t0 << t7;
             a1 = t5 - a0;
@@ -227,10 +227,10 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             a0 = s2 < a2;
             t7 = a1 & 0xFFFF;
             if (a0 == 0)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             a0 = t7 < a2;
             if (a0 != 0)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             v1 = t3 & 6;
             a1 = 2;
             t2 = unkString1[t2];
@@ -255,7 +255,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
                 s0 = 4;
                 // 5BE0
                 if (v1 != s0)
-                    return 0x80020001;
+                    return SCE_ERROR_KERNEL_ERROR;
                 s0 = *(int*)t4; // unaligned reading
                 t4 = a3 + 6;
             }
@@ -263,7 +263,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             {
                 a0 = t0 << 16;
                 if (v1 != 0)
-                    return 0x80020001;
+                    return SCE_ERROR_KERNEL_ERROR;
                 a1 = s3 + t6;
                 v1 = a1 + t5;
                 t0 = v1 + 16;
@@ -277,7 +277,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             a0 = *(int*)(a1 + 32);
             a3 = s0 < a0;
             if (a3 == 0)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
             v1 = t3 & 0x38;
             t3 = 8;
             if (v1 == t3)
@@ -299,7 +299,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
                         // 5BB8
                         if (v1 == 24)
                             s7 = *(int*)t4; // unaligned reading
-                        return 0x80020001;
+                        return SCE_ERROR_KERNEL_ERROR;
                     }
                     s7 = *(short*)t4;
                     t4 += 2;
@@ -308,7 +308,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
                 {
                     s7 = 0;
                     if (v1 != 0)
-                        return 0x80020001;
+                        return SCE_ERROR_KERNEL_ERROR;
                 }
             }
         
@@ -322,7 +322,7 @@ void applySegmentRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             t1 = *(int*)(a1 + 0);
         
             if (t2 >= 8)
-                return 0x80020001;
+                return SCE_ERROR_KERNEL_ERROR;
         
             switch (t2)
             {
@@ -429,7 +429,7 @@ int sub_5C7C(int arg0, int arg1, int arg2, int arg3) // arg1: ELF buffer
     if ((arg0 == 0) || (arg1 == 0)
      || (arg3 == 0) || (arg2 >> 31)
      || (arg2 >= 2))
-        return 0x800200D2;
+        return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
 
     *(arg1 + 28) = arg0;
     // 5CF4
@@ -582,11 +582,11 @@ int sub_5678(int arg0, int arg1)
     if (sub_17FC((*(char*)(arg0 + 208) << 24) | (*(char*)(arg0 + 209) << 16) | (*(char*)(arg0 + 210) << 8) | *(char*)(arg0 + 211)) == 0)
         return -1;
     if (callback3 == NULL)
-        return 0x8002013A;
+        return SCE_ERROR_KERNEL_LIBRARY_IS_NOT_LINKED;
     if (callback3(0, 0xBFC00200) != 0)
         return -1;
     if (callback1 == NULL)
-        return 0x8002013A;
+        return SCE_ERROR_KERNEL_LIBRARY_IS_NOT_LINKED;
     if (callback1(arg0, arg1, &v) != 0)
         return -1;
     return v;
@@ -670,28 +670,28 @@ int sub_6014(int arg)
     int bufAddr = *(int*)(arg + 28);
     int header = *(int*)(bufAddr + 0);
     if (header == 0x4543537E) // ~SCE
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     if (bufAddr & 0x3F != 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     if (header != 0x5053507E) // ~PSP
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     if (*(int*)(bufAddr + 52) >= 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     if (*(char*)(bufAddr + 124) == 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     short unk = *(unsigned short*)(bufAddr + 6);
     if (unk != 0)
     {   
         if (unk & 0xE != 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         if (unk & 0xF0FE != 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         unk &= 0xF00;
         if (unk == 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         if (unk != 512)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
     
     // 60CC
@@ -710,7 +710,7 @@ int sub_60FC(int arg0, int arg1)
     if (*(int*)(arg0 + 72) & 1 == 0)
         return 0;
     if (*(int*)(arg0 + 8) != 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     file = (char*)(arg0 + 28);
     if (file[124] == 0 || file[124] == 2)
     {   
@@ -718,18 +718,18 @@ int sub_60FC(int arg0, int arg1)
         if (callback1 == NULL
          || callback2 == NULL
          || callback3 == NULL)
-            return 0x8002013A;
+            return SCE_ERROR_KERNEL_LIBRARY_IS_NOT_LINKED;
 
         // 61B4
         int ret = callback2(file, *(int*)(arg0 + 16));
         if (ret != 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         if (sub_17FC((file[208] << 24)
                    | (file[209] << 16)
                    | (file[210] <<  8)
                    | (file[211] <<  0)) == 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         // ?????
         if (sub_17FC((file[208] << 24)
@@ -746,7 +746,7 @@ int sub_60FC(int arg0, int arg1)
         *(int*)(arg0 + 72) |= 2;
         return ret;
     }
-    return 0x80020148;
+    return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 }
 
 int sub_6284(int arg0, int arg1)
@@ -878,7 +878,7 @@ int sub_6428(int arg)
         return 0;
     }
     if (var & 0xF00 != 0x200)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     // 6484
     for (i = 0; i < 4; i++)
@@ -890,7 +890,7 @@ int sub_6428(int arg)
             // 64A8
             for (i = 0; i < 4; i++)
                 if (buf[i] != kl4eStr[i])
-                    return 0x80020148;
+                    return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
     }
     
@@ -898,7 +898,7 @@ int sub_6428(int arg)
     if (ret < 0)
         return ret;
     if (ret != *(int*)(arg + 92))
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     *(int*)(arg + 84) = 1;
     *(int*)(arg + 28) = *(int*)(arg + 36);
@@ -911,15 +911,15 @@ void sub_653C(int arg)
 {   
     int bufPtr = *(arg + 28);
     if (*(short*)(bufPtr + 4) != 257)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     // 6584
     if (*(int*)(bufPtr + 16) != 0x8FFA0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     if (*(int*)(bufPtr + 28) < 52)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     if ((unsigned int)(*(int*)(bufPtr + 32)) - 1 < 51)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     v0 = sub_68E8(bufPtr, arg);
     if (v0 < 0)
@@ -931,7 +931,7 @@ void sub_653C(int arg)
     a0 = *(int*)(arg + 76);
     *(int*)(arg + 40) = *(int*)(bufPtr + 24);
     if (a0 == 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     v1 = bufPtr + a0;
     *(int*)(arg + 80) = v1;
     t9 = *(int*)(v1 + 36);
@@ -945,7 +945,7 @@ void sub_653C(int arg)
     if (*(int*)(arg + 72) & 1 == 0)
         return 0;
     if (a3 & 0x1E00 != 0x1000)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     return 0;
 }
 
@@ -968,7 +968,7 @@ void sub_68E8(int arg0, int arg1)
             v1 = *(int*)(a0 + 4);
             t0++;
             if (v1 != 0 && ((v1 > 0x2000000) || (*(int*)(a0 + 16) + v1 > 0x2000000)))
-                return 0x80020148;
+                return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             
             // 694C
             a0 += 32;
@@ -978,7 +978,7 @@ void sub_68E8(int arg0, int arg1)
     // 6954
     t1 = t3 & 0xFFFF;
     if (t1 <= 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     // 6978
     while (*(int*)(a3 + 0) != 1)
@@ -986,22 +986,22 @@ void sub_68E8(int arg0, int arg1)
         t1--;
         a3 += 32;
         if (t1 <= 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
     
     // 698C
     if (t1 <= 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
     if (*(int*)(a3 + 0) == 1)
     {   
         v0 = *(int*)(a3 + 12)
         // 69B4
         if (v0 >= 0)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         v1 = *(int*)(a3 + 8);
         if (v0 == v1)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         v0 &= 1;
         t2 = v1;
         t0 = 0;
@@ -1024,7 +1024,7 @@ void sub_68E8(int arg0, int arg1)
         *(int*)(t4 + 48) = t5 - t2;
         return 0;
     }
-    return 0x80020148;
+    return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 }
 
 // 6A44
@@ -1040,7 +1040,7 @@ void sub_6A44(int arg0, int arg1)
         v0 = a0 & 0xFFFF;
         t6 = a0 & 0xFFFF;
         if (v0 != 0 && v0 >= v1)
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
         // 6A94
         t4 = t6 * 40 + a3;
@@ -1061,7 +1061,7 @@ void sub_6A44(int arg0, int arg1)
                 {   
                     // 6D38
                     printf("%4d/%4d: max 0x%08x < sh_name 0x%08x\n", s1, a2, t2, t0);
-                    return 0x80020148;
+                    return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 }
                 a3 = *(int*)(s0 + 16);
                 if (a0 < a3)
@@ -1077,7 +1077,7 @@ void sub_6A44(int arg0, int arg1)
                     printf("%4d: sh_addralign 0x%08x\n", s1, *(int*)(s0 + 32));
                     printf("%4d: sh_entsize   0x%08x\n", s1, *(int*)(s0 + 36));
                     printf("%4d: 0x%08x < sh_offset 0x%08x\n", s1, 0x2000000, *(int*)(s0 + 16));
-                    return 0x80020148;
+                    return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 }
                 a3 += *(int*)(s0 + 20);
                 s0 += 40;
@@ -1085,7 +1085,7 @@ void sub_6A44(int arg0, int arg1)
                 {                                                                                                                                                   
                     // 6C64                                                                                                                                         
                     printf("%4d: 0x%08x < sh_offset+sh_size 0x%08x\n", s1, 0x2000000, a3);
-                    return 0x80020148;
+                    return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 }
                 s1++;
             } while (s1 < a2);
@@ -1203,7 +1203,7 @@ void applyRelocs(int arg0, int arg1) // 666C
     *(int*)(t5 + 32) = a3;
     *(int*)(t5 + 48) = a2;
     if (t1 <= 1)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     t8 = *(int*)(s0 + 32);
     t3 = 32;
     if (t8 == t7)
@@ -1233,7 +1233,7 @@ void applyRelocs(int arg0, int arg1) // 666C
             *(int*)(t0 + 48) = t9;
             t0 += 4;
             if (t2 == 0)
-                return 0x80020148;
+                return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
             t9 = *(int*)v0;
         } while (t9 == 1);
     }
@@ -1241,13 +1241,13 @@ void applyRelocs(int arg0, int arg1) // 666C
     // 6700
     t0 = t4 << 5;
     if (t2 == 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     t2 = s0 + t0;
     t0 = *(int*)(t2 + 0);
     t3 = 0x8FFFFF60 + t0;
     t1 = t3 < 2;
     if (t1 == 0)
-        return 0x80020148;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     *(int*)(s1 + 132) = t4;
     a1 = 1;
     *(int*)(s1 + 136) = *(int*)(t5 + 0);
@@ -1306,7 +1306,7 @@ void applyRelocs(int arg0, int arg1) // 666C
     else
     {
         if (t0 != 0x700000A1)
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
         v0 = applySegmentRelocs(s1, s5, t7, t6 + *(int*)(t2 + 4), *(int*)(t2 + 16), *(int*)(t2 + 24));
     }
 
@@ -1344,7 +1344,7 @@ int applySectionRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
          || a1 >= a2
          || a3 >= newa2) {
             printf("../loadcore/loadelf_boot.c:%s:internal error !\n", "ApplyPspRelSection");
-            return 0x80020001;
+            return SCE_ERROR_KERNEL_ERROR;
         }
         a2 = newa2;
         t5 = *(int*)(v1 + 16);
@@ -1505,7 +1505,7 @@ int applySectionRelocs(int arg0, int arg1, int arg2, int arg3, int arg4)
             printf("********************\n");
             printf("PSP cannot load this image\n");
             printf("unacceptable relocation type: 0x%x\n", s0);
-            return 0x80020148;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
     
         // (6E40)
