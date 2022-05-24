@@ -39,3 +39,6 @@ ipch/
 
 # Other VS-generated files
 /Debug
+
+# Visual Studio Code
+/.vscode
