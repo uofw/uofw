@@ -1573,22 +1573,19 @@ static s32 CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehd
 static s32 CheckTick(u8 *modBuf)
 {
     s32 status;
-    u32 buf[2];
-    u32 tick[2];
+    u64 currentTick;
+    u64 expireTick;
     
-    status = sceUtilsGetModuleExpireTick(modBuf, 0x160, buf); //0x000067C4
+    status = sceUtilsGetModuleExpireTick(modBuf, 0x160, &expireTick); //0x000067C4
     //getModuleParam error
     if (status < SCE_ERROR_OK) //0x000067E0
         return (status == (s32)SCE_ERROR_NOT_SUPPORTED) ? SCE_ERROR_OK : status; //0x000067D4
     
-    status = sceKernelRtcGetTick((u64 *)tick); //0x000067E8
+    status = sceKernelRtcGetTick(&currentTick); //0x000067E8
     if (status < SCE_ERROR_OK)
         return status;
     
-    if (buf[1] < tick[1]) //0x00006808
-        return 0x8001003E;
-    
-    if ((buf[1] == tick[1]) && (buf[0] < tick[0])) //0x00006810
+    if (expireTick < currentTick) //0x00006808 - 0x00006810
         return 0x8001003E;
 
     return SCE_ERROR_OK;
