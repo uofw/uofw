@@ -38,31 +38,35 @@
  * Decryption mode executable file types.
  */
 enum SceExecFileDecryptMode {
-    /* Not an executable. */
-    DECRYPT_MODE_NO_EXEC = 0,
-    /* 1.50 Kernel module. */
-    DECRYPT_MODE_BOGUS_MODULE = 1,
-    DECRYPT_MODE_KERNEL_MODULE = 2,
-    DECRYPT_MODE_VSH_MODULE = 3,
-    DECRYPT_MODE_USER_MODULE = 4,
-    DECRYPT_MODE_UMD_GAME_EXEC = 9,
-    DECRYPT_MODE_GAMESHARING_EXEC = 10,
-    /* USB/WLAN module. */
-    DECRYPT_MODE_UNKNOWN_11 = 11,
-    DECRYPT_MODE_MS_UPDATER = 12,
-    DECRYPT_MODE_DEMO_EXEC = 13,
-    DECRYPT_MODE_APP_MODULE = 14,
-    DECRYPT_MODE_UNKNOWN_18 = 18,
-    DECRYPT_MODE_UNKNOWN_19 = 19,
-    DECRYPT_MODE_POPS_EXEC = 20,
-    /* MS module. */
-    DECRYPT_MODE_UNKNOWN_21 = 21,
-    /* APP module. */
-    DECRYPT_MODE_UNKNOWN_22 = 22,
-    /* USER module. */
-    DECRYPT_MODE_UNKNOWN_23 = 23,
-    /* USER module. */
-    DECRYPT_MODE_UNKNOWN_25 = 25,
+    DECRYPT_MODE_NO_EXEC                    = 0, /* Not an executable. */
+    DECRYPT_MODE_BOGUS_MODULE               = 1, /* 1.50 Kernel module. */
+    DECRYPT_MODE_KERNEL_MODULE              = 2,
+    DECRYPT_MODE_VSH_MODULE                 = 3,
+    DECRYPT_MODE_USER_MODULE                = 4,
+    DECRYPT_MODE_UMD_GAME_EXEC              = 9,
+    DECRYPT_MODE_GAMESHARING_EXEC           = 10,
+    DECRYPT_MODE_GAMESHARING_EXEC_DEVTOOL   = 11,
+    DECRYPT_MODE_MS_UPDATER                 = 12,
+    DECRYPT_MODE_DEMO_EXEC                  = 13,
+    DECRYPT_MODE_APP_MODULE                 = 14,
+    /**
+     * Game data/patch for retail console installed via SCE install utility API.
+     * Note the installed data is tied to the PSP device it was created from.
+     */
+    DECRYPT_MODE_MS_GAME_PATCH              = 18, // 0x12
+    DECRYPT_MODE_MS_GAME_PATCH_DEVTOOL      = 19, // 0x13
+    DECRYPT_MODE_POPS_EXEC                  = 20, // 0x14
+    /** SCE_MODULE_MS module (POPS/Demo) with secure install ID. POPS demo exec? */
+    DECRYPT_MODE_UNKNOWN_21                 = 21, // 0x15
+    /** SCE_MODULE_APP module. APP demo exec? */
+    DECRYPT_MODE_UNKNOWN_22                 = 22, // 0x16
+    /** SCE_MODULE_USER module with secure install ID. */
+    DECRYPT_MODE_UNKNOWN_23                 = 23, // 0x17
+    /**
+     * Game patch (PBOOT.PBP) for retail console (eg. SOCOM FTB 3). 
+     * This module can be decrypted with any PSP device.
+     */
+    DECRYPT_MODE_MS_GAME_PBOOT              = 25, // 0x19
 };
 
 typedef struct {

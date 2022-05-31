@@ -1338,7 +1338,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
 
         execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
-    case DECRYPT_MODE_UNKNOWN_25:
+    case DECRYPT_MODE_MS_GAME_PBOOT:
         if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) //0x00005CE4
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                 
