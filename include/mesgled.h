@@ -4,9 +4,24 @@
 
 #include <common_header.h>
 
-//TODO doc
-s32 sceMesgLed_driver_9E3C79D9(u8 *psp, u32 pspSize, u64 *appTicks);
-// s32 sceMesgLed_driver_9E3C79D9(u8 *modBuf, u32 arg1, u32 *buf);
+/**
+ * Get the module expiration time in RTC tick units.
+ * An expired module is considered invalid, and cannot be run.
+ *
+ * Supported tags (2g):
+ * - 0xADF305F0 (demo executable)
+ * - 0x279D05F0 (application module)
+ *
+ * @note The RTC tick time is a 64-bits number stored at offset 0xE4 of the ~PSP header.
+ *       Only a few PRX tags support this.
+ *
+ * @param psp ~PSP module header structure (MUST be aligned on a 64-bytes boundary).
+ * @param pspSize Size of the ~PSP header (MUST be >= 0x160 bytes).
+ * @param expireTick Required pointer to receive the expiration time in RTC tick units.
+ *
+ * @return 0 success; < 0 SCE driver error
+ */
+s32 sceUtilsGetModuleExpireTick(u8 *psp, u32 pspSize, u64 *expireTick); // sceMesgLed_driver_9E3C79D9
 
 /**
  * Decrypt a VSH module (mode 3 DECRYPT_MODE_VSH_MODULE).

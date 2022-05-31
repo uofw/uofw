@@ -1576,7 +1576,7 @@ static s32 CheckTick(u8 *modBuf)
     u32 buf[2];
     u32 tick[2];
     
-    status = sceMesgLed_driver_9E3C79D9(modBuf, 0x160, buf); //0x000067C4
+    status = sceUtilsGetModuleExpireTick(modBuf, 0x160, buf); //0x000067C4
     //getModuleParam error
     if (status < SCE_ERROR_OK) //0x000067E0
         return (status == (s32)SCE_ERROR_NOT_SUPPORTED) ? SCE_ERROR_OK : status; //0x000067D4
