@@ -70,36 +70,109 @@ $(function() {
 <div class="title">mesgled.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">/* Copyright (C) 2011, 2012 The uOFW team</span></div>
+<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">/* Copyright (C) 2022 The uOFW team</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="comment">   See the file COPYING for copying permission.</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="comment">*/</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160; </div>
-<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &quot;common_header.h&quot;</span></div>
+<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &lt;common_header.h&gt;</span></div>
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160; </div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;s32 sceWmd_driver_7A0E484C(<span class="keywordtype">void</span> *data, u32 inSize, u32 *outSize);</div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160; </div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;s32 sceMesgLed_driver_9E3C79D9(u8 *modBuf, u32 arg1, u32 *buf);</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160; </div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;s32 sceMesgLed_driver_5C3A61FE(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;s32 sceMesgLed_driver_2CB700EC(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;s32 sceMesgLed_driver_337D0DD3(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;s32 sceMesgLed_driver_4EAB9850(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;s32 sceMesgLed_driver_B2CDAC3F(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;s32 sceMesgLed_driver_C79E3488(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;s32 sceMesgLed_driver_21AFFAAC(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;s32 sceMesgLed_driver_C00DAD75(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;s32 sceMesgLed_driver_CED2C075(u8 *buf, u32 size, u32 *newSize, <span class="keywordtype">void</span> *arg4);</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;s32 sceMesgLed_driver_C7D1C16B(u8 *buf, u32 size, u32 *newSize, <span class="keywordtype">void</span> *arg4);</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;s32 sceMesgLed_driver_EBB4613D(u8 *buf, u32 size, u32 *newSize, <span class="keywordtype">void</span> *arg4);</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;s32 sceMesgLed_driver_66B348B2(u8 *buf, u32 size, u32 *newSize, <span class="keywordtype">void</span> *arg4);</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;s32 sceMesgLed_driver_B2D95FDF(u8 *buf, u32 size, u32 *newSize);</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;s32 sceMesgLed_driver_91E0A9AD(u8 *buf, u32 size, u32 *newSize, <span class="keywordtype">void</span> *arg4);</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;s32 sceMesgLed_driver_31D6D8AA(u8 *buf, u32 size, u32 *newSize, <span class="keywordtype">void</span> *arg4);</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;s32 sceUtilsGetModuleExpireTick(u8 *psp, u32 pspSize, u64 *expireTick); <span class="comment">// sceMesgLed_driver_9E3C79D9</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;s32 sceUtilsGetLoadModuleCLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_5C3A61FE</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;s32 sceUtilsGetLoadModuleCLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_3783B0AD</span></div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160; </div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;s32 sceUtilsGetLoadModuleDLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_2CB700EC</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160; </div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;s32 sceUtilsGetLoadModuleDLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_308D37FF</span></div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;s32 sceUtilsGetLoadModuleILength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_337D0DD3</span></div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;s32 sceUtilsGetLoadModuleILengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_792A6126</span></div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160; </div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;s32 sceUtilsGetLoadModuleJLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_4EAB9850</span></div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160; </div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;s32 sceUtilsGetLoadModuleJLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_4BE02A12</span></div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160; </div>
+<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;s32 sceUtilsGetLoadModuleKLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_B2CDAC3F</span></div>
+<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160; </div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;s32 sceUtilsGetLoadModuleKLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_B5596BE4</span></div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160; </div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;s32 sceUtilsGetLoadModuleLLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_C79E3488</span></div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160; </div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;s32 sceUtilsGetLoadModuleLLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_6BF453D3</span></div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160; </div>
+<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;s32 sceUtilsGetLoadModuleMLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_21AFFAAC</span></div>
+<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160; </div>
+<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;s32 sceUtilsGetLoadModuleMLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_52B6E552</span></div>
+<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160; </div>
+<div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160;s32 sceUtilsGetLoadModuleNLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_C00DAD75</span></div>
+<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160; </div>
+<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;s32 sceUtilsGetLoadModuleNLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_F8485C9C</span></div>
+<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160; </div>
+<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;s32 sceUtilsGetLoadModuleRLength(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgLed_driver_CED2C075</span></div>
+<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160; </div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;s32 sceUtilsGetLoadModuleSLength(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgLed_driver_C7D1C16B</span></div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160; </div>
+<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;s32 sceUtilsGetLoadModuleTLength(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgLed_driver_EBB4613D</span></div>
+<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160; </div>
+<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;s32 sceUtilsGetLoadModuleULength(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgLed_driver_66B348B2</span></div>
+<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160; </div>
+<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;s32 sceUtilsGetLoadModuleVLength(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_B2D95FDF</span></div>
+<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160; </div>
+<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;s32 sceUtilsGetLoadModuleVLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgLed_driver_C9ABD2F2</span></div>
+<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160; </div>
+<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;s32 sceUtilsGetLoadModuleWLength(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgLed_driver_91E0A9AD</span></div>
+<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160; </div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;s32 sceUtilsGetLoadModuleYLength(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgLed_driver_31D6D8AA</span></div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160; </div>
+<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;s32 sceResmapPrepare(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceResmap_driver_E5659590</span></div>
+<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160; </div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;s32 sceResmapPrepareByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceResmap_driver_4434E59F</span></div>
+<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160; </div>
+<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;s32 sceDbmanSelect(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceDbman_driver_B2B8C3F9</span></div>
+<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160; </div>
+<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;s32 sceDbmanSelectByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceDbman_driver_34B53D46</span></div>
+<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160; </div>
+<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;s32 sceNwman_driver_9555D68D(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceNwman_driver_9555D68D</span></div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160; </div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;<span class="comment">//TODO reverse sceResmgr_driver_8E6C62C8</span></div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;s32 sceResmgr_driver_8E6C62C8(<span class="keywordtype">void</span> *data); <span class="comment">// sceResmgr_driver_8E6C62C8</span></div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160; </div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;s32 sceResmgr_driver_9DC14891(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceResmgr_driver_9DC14891</span></div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160; </div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;<span class="comment">/* Same as sceResmgr_driver_8E6C62C8() for user mode. */</span></div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;s32 sceResmgr_8E6C62C8(<span class="keywordtype">void</span> *data); <span class="comment">// sceResmgr_8E6C62C8</span></div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160; </div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;<span class="comment">/* Same as sceResmgr_driver_9DC14891() for user mode.</span></div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;<span class="comment"> * Imported by vsh/module/vshmain.prx module. */</span></div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;s32 sceResmgr_9DC14891(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceResmgr_9DC14891</span></div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160; </div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;s32 sceMesgd_driver_102DC8AF(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgd_driver_102DC8AF</span></div>
+<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160; </div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;s32 sceMesgd_driver_ADD0CB66(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceMesgd_driver_ADD0CB66</span></div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160; </div>
+<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160;s32 sceWmd_driver_7A0E484C(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceWmd_driver_7A0E484C</span></div>
+<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160; </div>
+<div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160;s32 sceWmd_driver_B7CE9041(u8 *psp, u32 pspSize, u32 *pNewSize); <span class="comment">// sceWmd_driver_B7CE9041</span></div>
+<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160; </div>
+<div class="line"><a name="l00474"></a><span class="lineno">  474</span>&#160;s32 sceDbsvrGetData(u8 out[20]); <span class="comment">// sceDbsvr_driver_94561901</span></div>
+<div class="line"><a name="l00475"></a><span class="lineno">  475</span>&#160; </div>
+<div class="line"><a name="l00508"></a><span class="lineno">  508</span>&#160;s32 sceUtilsPrepareGetLoadModuleRLength(u8 *psp, u32 pspSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgIns_driver_D062B635</span></div>
+<div class="line"><a name="l00509"></a><span class="lineno">  509</span>&#160; </div>
+<div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160;s32 sceUtilsPrepareGetLoadModuleSLength(u8 *psp, u32 pspSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// sceMesgIns_driver_4A03F940</span></div>
+<div class="line"><a name="l00528"></a><span class="lineno">  528</span>&#160; </div>
+<div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160;s32 scePauth_driver_98B83B5D(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// scePauth_driver_98B83B5D</span></div>
+<div class="line"><a name="l00541"></a><span class="lineno">  541</span>&#160; </div>
+<div class="line"><a name="l00554"></a><span class="lineno">  554</span>&#160;s32 scePauth_driver_F7AA47F6(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// scePauth_driver_F7AA47F6</span></div>
+<div class="line"><a name="l00555"></a><span class="lineno">  555</span>&#160; </div>
+<div class="line"><a name="l00556"></a><span class="lineno">  556</span>&#160;<span class="comment">/* Same as scePauth_driver_98B83B5D() / scePauth_driver_F7AA47F6() for user mode. */</span></div>
+<div class="line"><a name="l00557"></a><span class="lineno">  557</span>&#160;s32 scePauth_98B83B5D(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// scePauth_98B83B5D</span></div>
+<div class="line"><a name="l00558"></a><span class="lineno">  558</span>&#160;s32 scePauth_F7AA47F6(u8 *psp, u32 pspSize, u32 *pNewSize, <span class="keyword">const</span> <span class="keywordtype">char</span> *secureId); <span class="comment">// scePauth_F7AA47F6</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat May 21 2022 16:49:03 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 1 2022 17:49:15 for uOFW by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>
