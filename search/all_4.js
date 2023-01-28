@@ -13,8 +13,8 @@ var searchData=
   ['devp_5fhi_64',['devp_hi',['../structUsbDriver.html#a395ef63b40e5f5c1a4e08ff723efa5e9',1,'UsbDriver']]],
   ['directcall_65',['DirectCall',['../structDirectCall.html',1,'']]],
   ['discmodaddr_66',['discModAddr',['../structSceInit.html#adbd2c96b1103780165b34e25e2776812',1,'SceInit']]],
-  ['dynamic_20network_20authentication_20system_67',['Dynamic Network Authentication System',['../group__DNAS.html',1,'']]],
-  ['dnas_20errors_68',['DNAS Errors',['../group__DNAS__ERROR.html',1,'']]],
-  ['dpadsensea_69',['DPadSenseA',['../structSceCtrlData2.html#ad7aff4e6d94a8120ce779eb73cffd2ad',1,'SceCtrlData2']]],
-  ['dpadsenseb_70',['DPadSenseB',['../structSceCtrlData2.html#a9a0096ac6e4a1311fb3d4108d5d8a902',1,'SceCtrlData2']]]
+  ['dnas_20errors_67',['DNAS Errors',['../group__DNAS__ERROR.html',1,'']]],
+  ['dpadsensea_68',['DPadSenseA',['../structSceCtrlData2.html#ad7aff4e6d94a8120ce779eb73cffd2ad',1,'SceCtrlData2']]],
+  ['dpadsenseb_69',['DPadSenseB',['../structSceCtrlData2.html#a9a0096ac6e4a1311fb3d4108d5d8a902',1,'SceCtrlData2']]],
+  ['dynamic_20network_20authentication_20system_70',['Dynamic Network Authentication System',['../group__DNAS.html',1,'']]]
 ];

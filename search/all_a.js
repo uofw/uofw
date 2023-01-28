@@ -13,7 +13,7 @@ var searchData=
   ['library_5fversion_5fminor_150',['LIBRARY_VERSION_MINOR',['../group__Loadcore.html#gabce5652c4e61f4d009c6c8a3362f30c1',1,'loadcore.h']]],
   ['library_5fversion_5fnumber_5fcategory_5fsize_151',['LIBRARY_VERSION_NUMBER_CATEGORY_SIZE',['../group__Loadcore.html#gaedd8cb264d52ac2da5a2896617e3c64f',1,'loadcore.h']]],
   ['libstubtable_152',['libStubTable',['../structSceStubLibrary.html#aa8b4a95950111620b2f35c8f1572736c',1,'SceStubLibrary']]],
-  ['link_153',['link',['../structUsbDriver.html#a06247582d3e31e3e2c21e95b16213ac1',1,'UsbDriver::link()'],['../structUsbdDeviceReq.html#a9f605d951d27669ae377e590d0f156f6',1,'UsbdDeviceReq::link()']]],
+  ['link_153',['link',['../structUsbdDeviceReq.html#a9f605d951d27669ae377e590d0f156f6',1,'UsbdDeviceReq::link()'],['../structUsbDriver.html#a06247582d3e31e3e2c21e95b16213ac1',1,'UsbDriver::link()']]],
   ['linkedloadcorestubs_154',['linkedLoadCoreStubs',['../structSceLoadCore.html#abe2840ea47b898160a4d08618bb17f75',1,'SceLoadCore']]],
   ['list_155',['list',['../structSceGeDisplayList.html#aa29d4123280d70ed969648a52715c4a1',1,'SceGeDisplayList']]],
   ['loadcore_20module_156',['Loadcore Module',['../group__Loadcore.html',1,'']]],

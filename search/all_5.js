@@ -8,7 +8,7 @@ var searchData=
   ['endpoints_76',['endpoints',['../structUsbDriver.html#ae16871cccecc440a5c97bdcda3277934',1,'UsbDriver']]],
   ['entend_77',['entEnd',['../structSceModuleInfo.html#af8eaaf8d08218b3bea5c690be14c5713',1,'SceModuleInfo']]],
   ['entryaddr_78',['entryAddr',['../structSceLoadCoreExecFileInfo.html#ac196b9915a75240696b066152fbc1b32',1,'SceLoadCoreExecFileInfo::entryAddr()'],['../structSceModule.html#a21f7314e68e9797ec3ece053acc745a3',1,'SceModule::entryAddr()'],['../structSceKernelModuleInfo.html#ae5b73076674a5f59ada0a5e8c60ab7a5',1,'SceKernelModuleInfo::entryAddr()'],['../structSceKernelModuleInfoV1.html#a8fb4b3819ad1383fd10107d08d93bb6d',1,'SceKernelModuleInfoV1::entryAddr()']]],
-  ['entrytable_79',['entryTable',['../structSceResidentLibraryEntryTable.html#a0ae498d548e52a06c0c2f7c81fc142fc',1,'SceResidentLibraryEntryTable::entryTable()'],['../structSceResidentLibrary.html#a9cb9013efa0303c853667ef05aef5494',1,'SceResidentLibrary::entryTable()']]],
+  ['entrytable_79',['entryTable',['../structSceResidentLibrary.html#a9cb9013efa0303c853667ef05aef5494',1,'SceResidentLibrary::entryTable()'],['../structSceResidentLibraryEntryTable.html#a0ae498d548e52a06c0c2f7c81fc142fc',1,'SceResidentLibraryEntryTable::entryTable()']]],
   ['entsize_80',['entSize',['../structSceModule.html#aad43e99af25efac4241b09cc3df61fa7',1,'SceModule']]],
   ['enttop_81',['entTop',['../structSceModuleInfo.html#a81484232e97526d78929d7f6ea2a7aff',1,'SceModuleInfo::entTop()'],['../structSceModule.html#a4c9c7c407b9f3c88b499172bb5969746',1,'SceModule::entTop()']]],
   ['execattribute_82',['execAttribute',['../structSceLoadCoreExecFileInfo.html#aad83f12baa027066377c7c033fac7555',1,'SceLoadCoreExecFileInfo']]],
