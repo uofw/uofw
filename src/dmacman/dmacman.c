@@ -163,7 +163,7 @@ void sceKernelDmaSoftRequest(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
     } else if (arg2) {
         HW(baseaddr + 32) = (arg2 << arg1);
     } else {
-        HW(baseaddr + 34) = (1 << arg1);
+        HW(baseaddr + 34) = (1 << arg1); // XXX
     }
 
     return SCE_ERROR_OK;
