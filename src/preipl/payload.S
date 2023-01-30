@@ -90,7 +90,7 @@ decrypt_loop:
     beqz       $a0, after_copy
     lw         $a2, 4($s0)
     # copy the block from 0xBFD00010 to the specified address
-    jal        memcpy
+    jal        _memcpy
     addiu      $a1, $s0, 16
     move       $s7, $v0
 

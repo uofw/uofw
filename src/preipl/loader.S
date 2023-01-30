@@ -112,9 +112,25 @@ preipl_payload:
 preipl_payload_end:
     # end of stage2
 
-# TODO nop's until 0xBFC00FB0
-.string "Copyright (C) 2004 Sony Computer Entertainment Inc. All rights reserved."
+# TODO nop's until this string
+#ifdef PREIPL_VER_1
+.string "Copyright (C) 2004 Sony Computer Entertainment Inc. All rights reserved." # at 0xBFC00FB0
+#else
+#ifdef PREIPL_VER_2
+.string "Copyright (C) 2004,2005 Sony Computer Entertainment Inc. All rights reserved." # at 0xBFC00F80
+#else
+.string "Copyright (C) 2004,2005,2007 Sony Computer Entertainment Inc. All rights reserved." # at 0xBFC00F80
+#endif
+#endif
 
 # TODO 0xBFC0FFC
+#ifdef PREIPL_VER_1
 .word 0x20040420
+#else
+#ifdef PREIPL_VER_2
+.word 0x20050104
+#else
+.word 0x20070910
+#endif
+#endif
 
