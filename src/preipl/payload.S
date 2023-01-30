@@ -615,7 +615,8 @@ _memcpy_inner:
 # address whose 4 MSB have been replaced by the command op (and will be
 # replaced by 0xB as the destination address), and a value
 # The op can be 0 (store value at destination), 1 (enable flags), 2 (disable
-# flags), 3 (wait while flag is set), 4 (wait while flag is not set), 5 (sleep)
+# flags), 3 (wait while flag is set), 4 (wait while flag is not set), 5 (sleep).
+# Newer preipl versions add command 6 (read a hardware register n times).
 # Any other operand interrupts script execution.
 script_exec:
     move       $t0, $a0
@@ -650,6 +651,11 @@ cmd_loop:
     addiu      $t2, $t1, -5
     # t1 == 5: sleep(a1)
     beqz       $t2, cmd_sleep
+#ifndef PREIPL_VER_1
+    # t1 == 6: while (--a1 > 0) { (void)*a0; }
+    addiu      $t2, $t1, -6
+    beqz       $t2, cmd_repeatread
+#endif
     nop
     # otherwise, exit
     jr         $t9
@@ -692,6 +698,16 @@ cmd_wait:
     nop        
     b          cmd_continue
     nop        
+
+#ifndef PREIPL_VER_1
+cmd_repeatread:
+    # while (--a1 > 0) { (void)*a0; }
+    lw         $t1, 0($a0)
+    addiu      $a1, $a1, -1
+    bnez       $a1, cmd_repeatread
+    nop
+    b          cmd_continue
+    nop
 
 # ======================================================
 # wait for about 100 * (first argument) CPU cycles (make 96 loops)
@@ -743,9 +759,19 @@ init_script: # at 0x80010A80
     # 0xBC100050 |= 0x0000608E Enable bus clock for AW (which is GE) (RegA, RegB, Edram), KIRK, NAND (EMCSM) and APB (for syscon?)
     .word 0x1C100050
     .word 0x0000608E
+#ifndef PREIPL_VER_1
+    # 0xBC100050 &= ~0x8E      Disable bus clock for AW (RegA, RegB, Edram) and KIRK
+    .word 0x2C100050
+    .word 0xFFFFFF71
+#endif
     # 0xBC10004C &= ~0x408     Clear reset for AW and KIRK
     .word 0x2C10004C
     .word 0xFFFFFBF7
+#ifndef PREIPL_VER_1
+    # 0xBC100050 |= 0x0000008E Re-enable bus clock for AW (RegA, RegB, Edram) and KIRK
+    .word 0x1C100050
+    .word 0x0000008E
+#endif
     # 0xBC100078 |= 2          IO enable NAND (EMCSM)
     .word 0x1C100078
     .word 0x00000002
@@ -755,6 +781,11 @@ init_script: # at 0x80010A80
     # 0xBE240040 |= 0x10       Enable GPIO pin 4 input
     .word 0x1E240040
     .word 0x00000010
+#ifndef PREIPL_VER_1
+    # for (i = 0; i < 0x800; i++) { (void)*0xBC100040; }  Read 0xBC100040 (TODO why?)
+    .word 0x6C100040
+    .word 0x00000800
+#endif
     # sleep(1)                 Wait
     .word 0x50000000
     .word 0x00000001
@@ -770,19 +801,40 @@ init_script: # at 0x80010A80
     # end
     .word 0xF0000000
 
-memorystick_init_script: # at 0x80010AD4
+memorystick_init_script: # at 0x80010AD4, or 0x80010AEC for ver2
     # 0xBC100054 |= 0x100  Enable clock for memorystick interface 1
     .word 0x1C100054
     .word 0x00000100
     # 0xBC100050 |= 0x400  Enable bus clock for memorystick interface 1
     .word 0x1C100050
     .word 0x00000400
+#ifdef PREIPL_VER_1
     # 0xBC100078 |= 0x10   Enable I/O for memorystick interface 1
     .word 0x1C100078
     .word 0x00000010
     # 0xBC10004C &= ~0x100 Reset memorystick interface 1
     .word 0x2C10004C
     .word 0xFFFFFEFF
+#else
+    # 0xBC100050 &= ~0x400 Disable bus clock for memorystick interface 1
+    .word 0x2C100050
+    .word 0xFFFFFBFF
+    # 0xBC100054 &= ~0x100 Disable clock for memorystick interface 1
+    .word 0x2C100054
+    .word 0xFFFFFEFF
+    # 0xBC10004C &= ~0x100 Reset memorystick interface 1
+    .word 0x2C10004C
+    .word 0xFFFFFEFF
+    # 0xBC100054 |= 0x100  Re-enable clock for memorystick interface 1
+    .word 0x1C100054
+    .word 0x00000100
+    # 0xBC100050 |= 0x400  Re-enable bus clock for memorystick interface 1
+    .word 0x1C100050
+    .word 0x00000400
+    # 0xBC100078 |= 0x10   Enable I/O for memorystick interface 1
+    .word 0x1C100078
+    .word 0x00000010
+#endif
     # end
     .word 0xF0000000
 
