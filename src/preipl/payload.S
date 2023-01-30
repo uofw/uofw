@@ -105,11 +105,11 @@ decrypt_loop:
 
 XXTODO:
     lui        $a0, 0xBFD0
-    lui        $a2, %hi(kirk_buf1)
-    addiu      $a2, $a2, %lo(kirk_buf1)
-    lui        $a3, %hi(kirk_data2)
-    addiu      $a3, $a3, %lo(kirk_data2)
-    jal        sub_800106F0
+    lui        $a2, %hi(ipl_block_sha1)
+    addiu      $a2, $a2, %lo(ipl_block_sha1)
+    lui        $a3, %hi(ipl_block_sign)
+    addiu      $a3, $a3, %lo(ipl_block_sign)
+    jal        kirk_decrypt_block
     move       $a1, $a0
     bnez       $v0, infinite_loop
     move       $s3, $v1
@@ -152,12 +152,12 @@ after_copy:
 #ifdef PREIPL_V3
     beqz       $s3, infinite_loop
     nop        
-    lui        $a1, %hi(kirk_sign_data)
-    addiu      $a1, $a1, %lo(kirk_sign_data)
-    lui        $a2, %hi(kirk_data2)
-    addiu      $a2, $a2, %lo(kirk_data2)
-    lui        $a3, %hi(kirk_buf1)
-    addiu      $a3, $a3, %lo(kirk_buf1)
+    lui        $a1, %hi(ipl_public_key)
+    addiu      $a1, $a1, %lo(ipl_public_key)
+    lui        $a2, %hi(ipl_block_sign)
+    addiu      $a2, $a2, %lo(ipl_block_sign)
+    lui        $a3, %hi(ipl_block_sha1)
+    addiu      $a3, $a3, %lo(ipl_block_sha1)
     jal        kirk_verify_signature
     lui        $a0, 0xBFD0
     bnez       $v0, loc_800101F0
@@ -628,11 +628,11 @@ memorystick_wait:
 
 #ifdef PREIPL_V3
 ; ======================================================
-; Subroutine sub_800106F0 - Address 0x800106F0 
+; Subroutine kirk_decrypt_block - Address 0x800106F0 
 # a0 & a1 = 4096-byte long block
-# a2 = 20 bytes input+output
-# a3 = 40 bytes output
-sub_800106F0:
+# a2 = 20 bytes input+output (IPL block hash) (TODO why input??)
+# a3 = 40 bytes output (IPL block signature)
+kirk_decrypt_block:
     move       $v0, $ra
     lui        $t9, %hi(HW_KIRK_COMMAND)
     lw         $t0, 96($a1) # in practice, this is always 0x00010001
@@ -657,15 +657,15 @@ loc_80010728:       ; Refs: 0x80010718
     sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
     jal        kirk_execute
     ins        $t8, $zr, 0, 2
-    li         $t0, 5
+    li         $t0, 5 # KIRK_MODE_DECRYPT_CBC
     sw         $t0, 4044($a1)
-    sw         $zr, 4048($a1)
-    sw         $zr, 4052($a1)
+    sw         $zr, 4048($a1) # unknown
+    sw         $zr, 4052($a1) # unknown
     li         $t0, 108
-    sw         $t0, 4056($a1)
+    sw         $t0, 4056($a1) # keyseed
     li         $t0, 20
-    sw         $t0, 4060($a1)
-    li         $t0, 7
+    sw         $t0, 4060($a1) # datasize
+    li         $t0, HW_KIRK_COMMAND_DEC_3_IV_ZERO
     sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
     addiu      $t0, $a1, 4044
     ext        $t0, $t0, 0, 29
@@ -681,7 +681,7 @@ loc_80010728:       ; Refs: 0x80010718
     move       $t2, $t1
     addiu      $t1, $t1, 16
     sw         $t1, 4($a0)
-    li         $t0, 11
+    li         $t0, HW_KIRK_COMMAND_SHA1
     sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
     addiu      $t0, $a0, 4
     ext        $t0, $t0, 0, 29
@@ -696,7 +696,7 @@ loc_80010728:       ; Refs: 0x80010718
     addiu      $t1, $a1, 4044
     li         $t2, 5
 
-loc_800107E0:       ; Refs: 0x80010804 
+loc_800107E0:
     lw         $t3, 0($t0)
     lw         $t4, 0($t1)
     addiu      $t0, $t0, 4
@@ -711,7 +711,7 @@ loc_800107E0:       ; Refs: 0x80010804
     addiu      $t0, $a1, 4000
     li         $t1, 10
 
-loc_80010814:       ; Refs: 0x80010824 
+loc_80010814:
     lw         $t2, 0($t0)
     addiu      $t0, $t0, 4
     addiu      $t1, $t1, -1
@@ -721,7 +721,7 @@ loc_80010814:       ; Refs: 0x80010824
     addu       $t0, $a0, $t8
     addiu      $t1, $a0, 4096
     li         $t2, 0x0D
-loc_80010838:       ; Refs: 0x80010840 
+loc_80010838:
     sw         $t2, 0($t0)
     addiu      $t0, $t0, 4
     bne        $t0, $t1, loc_80010838
@@ -732,10 +732,10 @@ loc_80010838:       ; Refs: 0x80010840
 
 # ======================================================
 # Subroutine kirk_verify_signature - Address 0x80010854 
-# a0 = 100-byte temp buffer
-# a1 = 40-byte input & output
-# a2 = 40-byte input
-# a3 = 20-byte input
+# a0 = 100-byte temp buffer for KIRK
+# a1 = ECDSA public key (40 bytes), wiped at the end
+# a2 = ECDSA signature (40 bytes)
+# a3 = hash of the block (20 bytes)
 kirk_verify_signature:
     # save $ra and $t9
     move       $v0, $ra
@@ -1027,7 +1027,7 @@ nand_spare_data: # at 0x80010810, or 0x80010A90 for v3
     .word 0
 
 #ifdef PREIPL_V3
-kirk_buf1: # at 0x80010A9C, for v3 only
+ipl_block_sha1: # at 0x80010A9C, for v3 only
     .skip 20
 #else
 nand_ipl_block_tbl: # at 0x8001081C for v1 & v2
@@ -1162,7 +1162,9 @@ xor_keys: # at 0x80010B6C (v3 only)
     .word 0x732B3475
     .word 0x1908D613
 
-kirk_sign_data: # at 0x80010C7C (v3 only)
+ipl_public_key: # at 0x80010C7C (v3 only)
+    # public key (0xbc660611a70bd7f2d140a48215c096d11d2d4112, 0xf0e9379ac4e0d387c542d091349dd15169dd5a87)
+    # on the ECDSA curve for KIRK cmd 12/13/16/17
     .word 0x110666BC
     .word 0xF2D70BA7
     .word 0x82A440D1
@@ -1218,6 +1220,6 @@ memorystick_init_script: # at 0x80010AD4, or 0x80010AEC for ver2, or 0x80010CA4 
 nand_ipl_block_tbl: # at 0x80010D00, for v3 only
     .skip 512 # not initialized, but 512 bytes large (so it doesn't need to fit in the binary)
 
-kirk_data2: # at 0x80010F00, for v3 only
+ipl_block_sign: # at 0x80010F00, for v3 only
     .skip 40 # not initialized, but 40 bytes large
 #endif
