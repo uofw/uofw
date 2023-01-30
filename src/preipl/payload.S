@@ -70,12 +70,57 @@ decrypt_loop:
     lui        $a1, 0xBFD0
     bltz       $v0, infinite_loop
     nop
+#ifdef PREIPL_V3
+    beqz       $s3, XXTODO
+    nop        
+    lui        $t4, %hi(xor_keys)
+    addiu      $t4, $t4, %lo(xor_keys)
+    ext        $t5, $s3, 5, 6
+    sll        $t5, $t5, 2
+    addu       $t4, $t4, $t5
+    lw         $t0, 0($t4)
+    lw         $t1, 4($t4)
+    lw         $t2, 8($t4)
+    lw         $t3, 12($t4)
+    andi       $t4, $s3, 0x1F
+    rotv       $t0, $t0, $t4
+    rotv       $t1, $t1, $t4
+    bitrev     $t1, $t1
+    rotv       $t2, $t2, $t4
+    xor        $t2, $t2, $t3
+    rotv       $t3, $t3, $t4
+    lui        $a0, 0xBFD0
+    lw         $t4, 0($a0)
+    lw         $t5, 4($a0)
+    lw         $t6, 8($a0)
+    lw         $t7, 12($a0)
+    xor        $t4, $t4, $t0
+    xor        $t5, $t5, $t1
+    xor        $t6, $t6, $t2
+    xor        $t7, $t7, $t3
+    sw         $t4, 0($a0)
+    sw         $t5, 4($a0)
+    sw         $t6, 8($a0)
+    sw         $t7, 12($a0)
+
+XXTODO:
+    lui        $a0, 0xBFD0
+    lui        $a2, %hi(kirk_buf1)
+    addiu      $a2, $a2, %lo(kirk_buf1)
+    lui        $a3, %hi(kirk_data2)
+    addiu      $a3, $a3, %lo(kirk_data2)
+    jal        sub_800106F0
+    move       $a1, $a0
+    bnez       $v0, infinite_loop
+    move       $s3, $v1
+#else
     # decrypt the page in-place at 0xBFD00000
     lui        $a0, 0xBFD0
     jal        kirk_priv_decrypt
     move       $a1, $a0
     bnez       $v0, infinite_loop
     nop
+#endif
     # each decrypted page starts with four words:
     # - one giving a destination address, which must be non-zero (otherwise no copy is performed)
     # - one giving the length of the decrypted data
@@ -88,6 +133,11 @@ decrypt_loop:
     lw         $a0, 0($s0)
     # then, check if the destination address is non-zero (otherwise just skip the block)
     beqz       $a0, after_copy
+#ifdef PREIPL_V3
+    ext        $t0, $a0, 16, 13
+    xori       $t0, $t0, 0x1
+    beqz       $t0, infinite_loop
+#endif
     lw         $a2, 4($s0)
     # copy the block from 0xBFD00010 to the specified address
     jal        _memcpy
@@ -99,6 +149,20 @@ after_copy:
     lw         $t9, 8($s0)
     beqz       $t9, decrypt_another
     nop
+#ifdef PREIPL_V3
+    beqz       $s3, infinite_loop
+    nop        
+    lui        $a1, %hi(kirk_sign_data)
+    addiu      $a1, $a1, %lo(kirk_sign_data)
+    lui        $a2, %hi(kirk_data2)
+    addiu      $a2, $a2, %lo(kirk_data2)
+    lui        $a3, %hi(kirk_buf1)
+    addiu      $a3, $a3, %lo(kirk_buf1)
+    jal        kirk_verify_signature
+    lui        $a0, 0xBFD0
+    bnez       $v0, loc_800101F0
+    nop        
+#endif
     # it was the last block, now flush everything and jump to the IPL
     jal        dcacheWritebackInvalidateAll
     nop        
@@ -138,7 +202,12 @@ nand_init_valid_page:
     bltz       $v0, nand_init_invalid_spare
     nop
     # check spare data; third word must be equal to 0x6DC64A38 (TODO find what this implies exactly)
+#ifdef PREIPL_V3
+    lw         $s3, 0($a2)
+    srl        $s3, $s3, 16
+#else
     lw         $t0, 0($a2)
+#endif
     lw         $t1, 4($a2)
     lw         $t2, 8($a2)
     lui        $t3, 0x6DC6
@@ -241,6 +310,9 @@ memorystick_read_block_loop:
     nop        
     lui        $ra, %hi(save_ra)
     lw         $ra, %lo(save_ra)($ra)
+#ifdef PREIPL_V3
+    move       $s3, $zr
+#endif
     jr         $ra
     move       $v0, $zr
 
@@ -554,6 +626,218 @@ memorystick_wait:
     jr         $ra
     nop        
 
+#ifdef PREIPL_V3
+; ======================================================
+; Subroutine sub_800106F0 - Address 0x800106F0 
+# a0 & a1 = 4096-byte long block
+# a2 = 20 bytes input+output
+# a3 = 40 bytes output
+sub_800106F0:
+    move       $v0, $ra
+    lui        $t9, %hi(HW_KIRK_COMMAND)
+    lw         $t0, 96($a1) # in practice, this is always 0x00010001
+    sh         $zr, 98($a1)
+    lw         $v1, 100($a1) # 0 except for the last block which gives 1
+    andi       $v1, $v1, 0x1
+    lw         $t8, 112($a1)
+    sltiu      $t1, $t8, 256
+    bnez       $t1, kirk_execute_error
+    srl        $t1, $t0, 16
+    beqz       $t1, loc_80010728
+    andi       $t1, $t1, 0x1
+    beqz       $t1, kirk_execute_error
+    nop        
+
+loc_80010728:       ; Refs: 0x80010718 
+    andi       $t0, $t0, 0x3
+    sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
+    ext        $t0, $a1, 0, 29
+    sw         $t0, %lo(HW_KIRK_SRC_BUF)($t9)
+    ext        $t0, $a0, 0, 29
+    sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
+    jal        kirk_execute
+    ins        $t8, $zr, 0, 2
+    li         $t0, 5
+    sw         $t0, 4044($a1)
+    sw         $zr, 4048($a1)
+    sw         $zr, 4052($a1)
+    li         $t0, 108
+    sw         $t0, 4056($a1)
+    li         $t0, 20
+    sw         $t0, 4060($a1)
+    li         $t0, 7
+    sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
+    addiu      $t0, $a1, 4044
+    ext        $t0, $t0, 0, 29
+    sw         $t0, %lo(HW_KIRK_SRC_BUF)($t9)
+    sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
+    jal        kirk_execute
+    nop        
+    lw         $t0, 0($a0)
+    lw         $t1, 4($a0)
+    addu       $t2, $a0, $t1
+    sw         $t0, 16($t2)
+    sw         $t1, 20($t2)
+    move       $t2, $t1
+    addiu      $t1, $t1, 16
+    sw         $t1, 4($a0)
+    li         $t0, 11
+    sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
+    addiu      $t0, $a0, 4
+    ext        $t0, $t0, 0, 29
+    sw         $t0, %lo(HW_KIRK_SRC_BUF)($t9)
+    addiu      $t0, $a0, 3968
+    ext        $t0, $t0, 0, 29
+    sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
+    jal        kirk_execute
+    nop        
+    sw         $t2, 4($a0)
+    addiu      $t0, $a0, 3968
+    addiu      $t1, $a1, 4044
+    li         $t2, 5
+
+loc_800107E0:       ; Refs: 0x80010804 
+    lw         $t3, 0($t0)
+    lw         $t4, 0($t1)
+    addiu      $t0, $t0, 4
+    addiu      $t1, $t1, 4
+    bne        $t3, $t4, kirk_execute_error
+    lw         $t4, 0($a2)
+    xor        $t4, $t4, $t3
+    sw         $t4, 0($a2)
+    addiu      $t2, $t2, -1
+    bnez       $t2, loc_800107E0
+    addiu      $a2, $a2, 4
+    addiu      $t0, $a1, 4000
+    li         $t1, 10
+
+loc_80010814:       ; Refs: 0x80010824 
+    lw         $t2, 0($t0)
+    addiu      $t0, $t0, 4
+    addiu      $t1, $t1, -1
+    sw         $t2, 0($a3)
+    bnez       $t1, loc_80010814
+    addiu      $a3, $a3, 4
+    addu       $t0, $a0, $t8
+    addiu      $t1, $a0, 4096
+    li         $t2, 0x0D
+loc_80010838:       ; Refs: 0x80010840 
+    sw         $t2, 0($t0)
+    addiu      $t0, $t0, 4
+    bne        $t0, $t1, loc_80010838
+    nop        
+    move       $ra, $v0
+    jr         $ra
+    move       $v0, $zr
+
+# ======================================================
+# Subroutine kirk_verify_signature - Address 0x80010854 
+# a0 = 100-byte temp buffer
+# a1 = 40-byte input & output
+# a2 = 40-byte input
+# a3 = 20-byte input
+kirk_verify_signature:
+    # save $ra and $t9
+    move       $v0, $ra
+    move       $v1, $t9
+    lui        $t9, %hi(HW_KIRK_COMMAND)
+
+    # this loop is used to mix bytes (some classic Sony mangling):
+    # - copy 40 bytes from a1 to a0, and empty a1
+    # - copy 20 bytes from a3 to a0+40
+    # - copy 40 bytes from a2 to a0+60
+    move       $t0, $a0
+    addiu      $t1, $a0, 40
+    li         $t2, 5
+
+kirk_verify_signature_mix_bytes:
+    # copy 8 bytes from a1 to t0
+    lw         $t3, 0($a1)
+    lw         $t4, 4($a1)
+    sw         $t3, 0($t0)
+    sw         $t4, 4($t0)
+    # store 8 zero bytes in a1
+    sw         $zr, 0($a1)
+    sw         $zr, 4($a1)
+    # copy 8 bytes from a2 to t0+60
+    lw         $t3, 0($a2)
+    lw         $t4, 4($a2)
+    sw         $t3, 60($t0)
+    sw         $t4, 64($t0)
+    # copy 4 bytes from a3 to t1
+    lw         $t3, 0($a3)
+    sw         $t3, 0($t1)
+    addiu      $a1, $a1, 8
+    addiu      $a2, $a2, 8
+    addiu      $a3, $a3, 4
+    addiu      $t0, $t0, 8
+    addiu      $t1, $t1, 4
+    addiu      $t2, $t2, -1
+    bnez       $t2, kirk_verify_signature_mix_bytes
+    nop
+
+    # run an ECDSA sign check on the a0 we just filled
+    li         $t0, HW_KIRK_COMMAND_ECDSA_SIGNCHECK
+    sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
+    ext        $t0, $a0, 0, 29
+    sw         $t0, %lo(HW_KIRK_SRC_BUF)($t9)
+    jal        kirk_execute
+    nop
+
+    # empty a0
+    li         $t0, 25
+kirk_verify_signature_clean:
+    sw         $zr, 0($a0)
+    addiu      $t0, $t0, -1
+    bnez       $t0, kirk_verify_signature_clean
+    addiu      $a0, $a0, 4
+    move       $ra, $v0
+    move       $t9, $v1
+    jr         $ra
+    move       $v0, $zr
+
+# ======================================================
+# Execute any KIRK command (appropriate registers must be filled beforehand)
+# Jump to $v0 in case of an error (contrary to older pre-ipl versions where
+# the function just returned an error code)
+kirk_execute:
+    sync
+    li         $t0, HW_KIRK_START_PHASE1
+    sw         $t0, %lo(HW_KIRK_START)($t9)
+
+    # wait for the operation to finish
+kirk_execute_wait:
+    lw         $t0, %lo(HW_KIRK_STATUS)($t9)
+    andi       $t0, $t0, 0x11
+    beqz       $t0, kirk_execute_wait
+    andi       $t1, $t0, 0x10
+
+    # if it needs phase2, go there
+    bnez       $t1, kirk_execute_phase2
+    sw         $t0, %lo(HW_KIRK_COMMAND_END)($t9)
+    lw         $t0, %lo(HW_KIRK_COMMAND_RESULT)($t9)
+    bnez       $t0, kirk_execute_error
+    nop        
+    jr         $ra
+    nop        
+
+kirk_execute_phase2:
+    li         $t0, HW_KIRK_START_PHASE2
+    sw         $t0, %lo(HW_KIRK_START)($t9)
+
+kirk_execute_phase2_wait:
+    lw         $t0, %lo(HW_KIRK_STATUS)($t9)
+    andi       $t0, $t0, HW_KIRK_STATUS_PHASE2_FINISH
+    beqz       $t0, kirk_execute_phase2_wait
+    nop        
+    sw         $t0, %lo(HW_KIRK_COMMAND_END)($t9)
+
+kirk_execute_error:
+    sync       
+    move       $ra, $v0
+    jr         $ra
+    li         $v0, -1
+#else
 # ======================================================
 # Execute KIRK command 0x01 on given source & destination buffers
 kirk_priv_decrypt:
@@ -592,6 +876,7 @@ kirk_priv_decrypt_phase2_wait:
     sw         $t0, %lo(HW_KIRK_COMMAND_END)($t9)
     jr         $ra
     sync       
+#endif
 
 # ======================================================
 # Memcpy returning a 'checksum' which is just the XOR of the copied words
@@ -723,36 +1008,41 @@ sleep_loop:
     jr         $ra
     nop        
 
-# note: nothing at 0x80010784
+# note: nothing at 0x80010784 (0x80010A78 for v3)
 
-save_ra: # at 0x80010800
+save_ra: # at 0x80010800, or 0x80010A80 for v3
     .word 0
-save_a0: # at 0x80010804
-    .word 0
-
-read_block: # at 0x80010808
+save_a0: # at 0x80010804, or 0x80010A84 for v3
     .word 0
 
-page_counter: # at 0x8001080C
+read_block: # at 0x80010808, or 0x80010A88 for v3
     .word 0
 
-nand_spare_data: # at 0x80010810
+page_counter: # at 0x8001080C, or 0x80010A8C for v3
+    .word 0
+
+nand_spare_data: # at 0x80010810, or 0x80010A90 for v3
     .word 0
     .word 0
     .word 0
 
-nand_ipl_block_tbl: # at 0x8001081C
+#ifdef PREIPL_V3
+kirk_buf1: # at 0x80010A9C, for v3 only
+    .skip 20
+#else
+nand_ipl_block_tbl: # at 0x8001081C for v1 & v2
     .skip 512
+#endif
 
-memorystick_reg_0: # at 0x80010A1C
+memorystick_reg_0: # at 0x80010A1C, or 0x80010AB0 for v3
     .word 0
 
-memorystick_reg_1: # at 0x80010A20
+memorystick_reg_1: # at 0x80010A20, or 0x80010AB4 for v3
     .word 0
 
 # note: nothing at 0x80010A24
 
-init_script: # at 0x80010A80
+init_script: # at 0x80010A80, or 0x80010B00 for v3
     # 0xBC100058 |= 0x00800000 Enable GPIO clock
     .word 0x1C100058
     .word 0x00800000
@@ -782,7 +1072,7 @@ init_script: # at 0x80010A80
     .word 0x1E240040
     .word 0x00000010
 #ifndef PREIPL_VER_1
-    # for (i = 0; i < 0x800; i++) { (void)*0xBC100040; }  Read 0xBC100040 (TODO why?)
+    # for (i = 0; i < 0x800; i++) { (void)*0xBC100040; }  Read 0xBC100040 2048 times (TODO why?)
     .word 0x6C100040
     .word 0x00000800
 #endif
@@ -801,7 +1091,91 @@ init_script: # at 0x80010A80
     # end
     .word 0xF0000000
 
-memorystick_init_script: # at 0x80010AD4, or 0x80010AEC for ver2
+#ifdef PREIPL_V3
+xor_keys: # at 0x80010B6C (v3 only)
+    .word 0x61A0C918
+    .word 0x45695E82
+    .word 0x9CAFD36E
+    .word 0xFA499B0F
+    .word 0x7E84B6E2
+    .word 0x91324D29
+    .word 0xB3522009
+    .word 0xA8BC0FAF
+    .word 0x48C3C1C5
+    .word 0xE4C2A9DC
+    .word 0x00012ED1
+    .word 0x57D9327C
+    .word 0xAFB8E4EF
+    .word 0x72489A15
+    .word 0xC6208D85
+    .word 0x06021249
+    .word 0x41BE16DB
+    .word 0x2BD98F2F
+    .word 0xD194BEEB
+    .word 0xD1A6E669
+    .word 0xC0AC336B
+    .word 0x88FF3544
+    .word 0x5E018640
+    .word 0x34318761
+    .word 0x5974E1D2
+    .word 0x1E55581B
+    .word 0x6F28379E
+    .word 0xA90E2587
+    .word 0x091CB883
+    .word 0xBDC2088A
+    .word 0x7E76219C
+    .word 0x9C4BEE1B
+    .word 0xDD322601
+    .word 0xBB477339
+    .word 0x6678CF47
+    .word 0xF3C1209B
+    .word 0x5A96E435
+    .word 0x908896FA
+    .word 0x5B2D962A
+    .word 0x7FEC378C
+    .word 0xE3A3B3AE
+    .word 0x8B902D93
+    .word 0xD0DF32EF
+    .word 0x6484D261
+    .word 0x0A84A153
+    .word 0x7EB16575
+    .word 0xB10E53DD
+    .word 0x1B222753
+    .word 0x58DD63D0
+    .word 0x8E8B8D48
+    .word 0x755B32C2
+    .word 0xA63DFFF7
+    .word 0x97CABF7C
+    .word 0x33BDC660
+    .word 0x64522286
+    .word 0x403F3698
+    .word 0x3406C651
+    .word 0x9F4B8FB9
+    .word 0xE284F475
+    .word 0xB9189A13
+    .word 0x12C6F917
+    .word 0x5DE6B7ED
+    .word 0xDB674F88
+    .word 0x06DDB96E
+    .word 0x2B2165A6
+    .word 0x0F920D3F
+    .word 0x732B3475
+    .word 0x1908D613
+
+kirk_sign_data: # at 0x80010C7C (v3 only)
+    .word 0x110666BC
+    .word 0xF2D70BA7
+    .word 0x82A440D1
+    .word 0xD196C015
+    .word 0x12412D1D
+    .word 0x9A37E9F0
+    .word 0x87D3E0C4
+    .word 0x91D042C5
+    .word 0x51D19D34
+    .word 0x875ADD69
+#endif
+
+memorystick_init_script: # at 0x80010AD4, or 0x80010AEC for ver2, or 0x80010CA4 for ver3
     # 0xBC100054 |= 0x100  Enable clock for memorystick interface 1
     .word 0x1C100054
     .word 0x00000100
@@ -838,3 +1212,12 @@ memorystick_init_script: # at 0x80010AD4, or 0x80010AEC for ver2
     # end
     .word 0xF0000000
 
+# note: nothing at 0x80010CE8 for v3
+
+#ifdef PREIPL_V3
+nand_ipl_block_tbl: # at 0x80010D00, for v3 only
+    .skip 512 # not initialized, but 512 bytes large (so it doesn't need to fit in the binary)
+
+kirk_data2: # at 0x80010F00, for v3 only
+    .skip 40 # not initialized, but 40 bytes large
+#endif
