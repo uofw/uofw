@@ -70,11 +70,15 @@ decrypt_loop:
     lui        $a1, 0xBFD0
     bltz       $v0, infinite_loop
     nop
-#ifdef PREIPL_V3
-    beqz       $s3, XXTODO
+#ifdef PREIPL_VER_3
+    # In the last PREIPL version, xor keys are applied to the first 16 bytes of each encrypted IPL block.
+    # The index & rotation of the keys is given by $s3, which comes from the spare data on the NAND, and
+    # $s3 = 0 (ie no xor keys are applied) for jigkick (memory stick) boot
+    beqz       $s3, skip_xor_keys
     nop        
     lui        $t4, %hi(xor_keys)
     addiu      $t4, $t4, %lo(xor_keys)
+    # the offset of the xor keys is given by (s3 >> 5) & 0x3F
     ext        $t5, $s3, 5, 6
     sll        $t5, $t5, 2
     addu       $t4, $t4, $t5
@@ -82,13 +86,16 @@ decrypt_loop:
     lw         $t1, 4($t4)
     lw         $t2, 8($t4)
     lw         $t3, 12($t4)
+    # the rotation of the XOR keys is given by s3 & 0x1F
     andi       $t4, $s3, 0x1F
+    # rotate all the 4 keys, and reverse the bits of the second one (because why not)
     rotv       $t0, $t0, $t4
     rotv       $t1, $t1, $t4
     bitrev     $t1, $t1
     rotv       $t2, $t2, $t4
     xor        $t2, $t2, $t3
     rotv       $t3, $t3, $t4
+    # XOR the keys with the beginning of the block
     lui        $a0, 0xBFD0
     lw         $t4, 0($a0)
     lw         $t5, 4($a0)
@@ -103,16 +110,18 @@ decrypt_loop:
     sw         $t6, 8($a0)
     sw         $t7, 12($a0)
 
-XXTODO:
+skip_xor_keys:
     lui        $a0, 0xBFD0
-    lui        $a2, %hi(ipl_block_sha1)
-    addiu      $a2, $a2, %lo(ipl_block_sha1)
+    # Decrypt the page in-place at 0xBFD00000, and retrieve the SHA1 & the signature (only for the last block)
+    # from the block (see kirk_decrypt_block for details)
+    lui        $a2, %hi(ipl_blocks_sha1_xor)
+    addiu      $a2, $a2, %lo(ipl_blocks_sha1_xor)
     lui        $a3, %hi(ipl_block_sign)
     addiu      $a3, $a3, %lo(ipl_block_sign)
     jal        kirk_decrypt_block
     move       $a1, $a0
     bnez       $v0, infinite_loop
-    move       $s3, $v1
+    move       $s3, $v1 # $v1=1 (present in the ciphertext "header") indicates this is the block where the ECDSA signature should be verified (ie the last block)
 #else
     # decrypt the page in-place at 0xBFD00000
     lui        $a0, 0xBFD0
@@ -133,7 +142,8 @@ XXTODO:
     lw         $a0, 0($s0)
     # then, check if the destination address is non-zero (otherwise just skip the block)
     beqz       $a0, after_copy
-#ifdef PREIPL_V3
+#ifdef PREIPL_VER_3
+    # check that ($a0 >> 16) & 0x1FFF is not equal to 1 (where $a0 is the destination), ie, forbid writting code to the scratchpad
     ext        $t0, $a0, 16, 13
     xori       $t0, $t0, 0x1
     beqz       $t0, infinite_loop
@@ -149,18 +159,20 @@ after_copy:
     lw         $t9, 8($s0)
     beqz       $t9, decrypt_another
     nop
-#ifdef PREIPL_V3
+#ifdef PREIPL_VER_3
+    # in case the decrypted block indicates this is the last block but the encrypted one doesn't indicate it should be ECDSA verified, crash
     beqz       $s3, infinite_loop
     nop        
+    # verify the signature of the XOR of sha1's is correct
     lui        $a1, %hi(ipl_public_key)
     addiu      $a1, $a1, %lo(ipl_public_key)
     lui        $a2, %hi(ipl_block_sign)
     addiu      $a2, $a2, %lo(ipl_block_sign)
-    lui        $a3, %hi(ipl_block_sha1)
-    addiu      $a3, $a3, %lo(ipl_block_sha1)
+    lui        $a3, %hi(ipl_blocks_sha1_xor)
+    addiu      $a3, $a3, %lo(ipl_blocks_sha1_xor)
     jal        kirk_verify_signature
     lui        $a0, 0xBFD0
-    bnez       $v0, loc_800101F0
+    bnez       $v0, infinite_loop
     nop        
 #endif
     # it was the last block, now flush everything and jump to the IPL
@@ -201,8 +213,9 @@ nand_init_valid_page:
     nop        
     bltz       $v0, nand_init_invalid_spare
     nop
-    # check spare data; third word must be equal to 0x6DC64A38 (TODO find what this implies exactly)
-#ifdef PREIPL_V3
+    # read spare data
+#ifdef PREIPL_VER_3
+    # save the 16 MSB of the first spare data word, in order to use it to decide on the XOR key & rotation to use
     lw         $s3, 0($a2)
     srl        $s3, $s3, 16
 #else
@@ -210,6 +223,7 @@ nand_init_valid_page:
 #endif
     lw         $t1, 4($a2)
     lw         $t2, 8($a2)
+    # third word of the spare data must be equal to 0x6DC64A38 (that is how the NAND is flashed)
     lui        $t3, 0x6DC6
     ori        $t3, $t3, 0x4A38
     xor        $t0, $t1, $t3
@@ -310,7 +324,8 @@ memorystick_read_block_loop:
     nop        
     lui        $ra, %hi(save_ra)
     lw         $ra, %lo(save_ra)($ra)
-#ifdef PREIPL_V3
+#ifdef PREIPL_VER_3
+    # for memorystick boot, disable XOR keys
     move       $s3, $zr
 #endif
     jr         $ra
@@ -626,29 +641,40 @@ memorystick_wait:
     jr         $ra
     nop        
 
-#ifdef PREIPL_V3
-; ======================================================
-; Subroutine kirk_decrypt_block - Address 0x800106F0 
-# a0 & a1 = 4096-byte long block
-# a2 = 20 bytes input+output (IPL block hash) (TODO why input??)
-# a3 = 40 bytes output (IPL block signature)
+#ifdef PREIPL_VER_3
+# ======================================================
+# Decrypt a KIRK block with additional checks
+# - First argument is the output of the decrypted block. It will contain the 16-byte header described
+#   in the main loop, specifying the destination & size of the data, followed by the IPL code.
+# - Second argument is the input block. It starts with a KIRK CMD1/2/3 header, followed by unused data,
+#   encrypted data typically starting at 0x290 and ending at 0xFE0 except for the last block. At 0xFE0
+#   is the encrypted hash of the (rotated) block, and at 0xFA0 is the (unencrypted) ECDSA signature of
+#   the cumulative XOR of SHA1's of the rotated blocks
+#   Note that here, the first argument is equal to the second one (0xBFD00000)
+# - Third argument is the XOR of the SHA1's of the blocks, it will be XOR'ed with the current block's SHA1
+# - Fourth argument is the signature of the XOR of SHA1's (only for the last block)
 kirk_decrypt_block:
     move       $v0, $ra
     lui        $t9, %hi(HW_KIRK_COMMAND)
-    lw         $t0, 96($a1) # in practice, this is always 0x00010001
+    # mode specified in the KIRK header (in practice, this is always 0x00010001)
+    lw         $t0, 96($a1)
+    # erase the mode's 16 MSB
     sh         $zr, 98($a1)
-    lw         $v1, 100($a1) # 0 except for the last block which gives 1
+    # verify the ECDSA signature: in practice (probably for speed reasons), it is 0 except for the last block which gives 1
+    lw         $v1, 100($a1)
     andi       $v1, $v1, 0x1
-    lw         $t8, 112($a1)
+    # encrypted data size must be 256 or more
+    lw         $t8, 112($a1) # data size
     sltiu      $t1, $t8, 256
     bnez       $t1, kirk_execute_error
+    # mode's 16 MSB must be zero, or have their LSB set (TODO why?) (the mode's 16 MSB being equal to 1 seem to specify the XOR keys must be applied)
     srl        $t1, $t0, 16
-    beqz       $t1, loc_80010728
+    beqz       $t1, kirk_decrypt_block_decrypt
     andi       $t1, $t1, 0x1
     beqz       $t1, kirk_execute_error
-    nop        
-
-loc_80010728:       ; Refs: 0x80010718 
+    nop
+kirk_decrypt_block_decrypt:
+    # execute decryption with the command (0, 1, 2 or 3 - in practice it is only 1) indicated in the header
     andi       $t0, $t0, 0x3
     sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
     ext        $t0, $a1, 0, 29
@@ -657,46 +683,61 @@ loc_80010728:       ; Refs: 0x80010718
     sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
     jal        kirk_execute
     ins        $t8, $zr, 0, 2
+
+    # Decrypt the data at offset 0xFE0 in the block with key 0x6C, which specifies the SHA1 the block should have
+    # For this, first prefix the encrypted data with a header for KIRK command 4
+    # (Note that because the KIRK command header is 0x90 big, the space after 0xF70 is not modified by decryption)
     li         $t0, 5 # KIRK_MODE_DECRYPT_CBC
-    sw         $t0, 4044($a1)
-    sw         $zr, 4048($a1) # unknown
-    sw         $zr, 4052($a1) # unknown
-    li         $t0, 108
-    sw         $t0, 4056($a1) # keyseed
-    li         $t0, 20
-    sw         $t0, 4060($a1) # datasize
+    sw         $t0, 0xFCC($a1)
+    sw         $zr, 0xFD0($a1) # unknown
+    sw         $zr, 0xFD4($a1) # unknown
+    li         $t0, 0x6C
+    sw         $t0, 0xFD8($a1) # keyseed = 0x6C
+    li         $t0, 0x10
+    sw         $t0, 0xFDC($a1) # datasize = 0x10
     li         $t0, HW_KIRK_COMMAND_DEC_3_IV_ZERO
     sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
-    addiu      $t0, $a1, 4044
+    addiu      $t0, $a1, 0xFCC
     ext        $t0, $t0, 0, 29
     sw         $t0, %lo(HW_KIRK_SRC_BUF)($t9)
     sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
     jal        kirk_execute
     nop        
+
+    # Copy the first two words of the block header (specifying tho destination address & the length of the decrypted data) at the end of the block
     lw         $t0, 0($a0)
     lw         $t1, 4($a0)
-    addu       $t2, $a0, $t1
+    addu       $t2, $a0, $t1 # end of the decrypted data
     sw         $t0, 16($t2)
     sw         $t1, 20($t2)
     move       $t2, $t1
     addiu      $t1, $t1, 16
-    sw         $t1, 4($a0)
+    # Fill the 1-word header of the SHA1 command header with the appropriate size, so we compute the SHA1 of the concatenation of:
+    # - the two last words of the block header
+    # - the code part of the block
+    # - the two first words of the block header, which have been copied at the end
+    # And place the result at 0xF80
+    sw         $t1, 4($a0) # update the size of the decrypted data
     li         $t0, HW_KIRK_COMMAND_SHA1
     sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
     addiu      $t0, $a0, 4
     ext        $t0, $t0, 0, 29
     sw         $t0, %lo(HW_KIRK_SRC_BUF)($t9)
-    addiu      $t0, $a0, 3968
+    addiu      $t0, $a0, 0xF80
     ext        $t0, $t0, 0, 29
     sw         $t0, %lo(HW_KIRK_DST_BUF)($t9)
     jal        kirk_execute
     nop        
+    # Restore the altered value of the block header
     sw         $t2, 4($a0)
-    addiu      $t0, $a0, 3968
-    addiu      $t1, $a1, 4044
+
+    # Check that the computed SHA1 is equal to the one at 0xFCC (which comes from the decrypted data at 0xFE0)
+    # And, in the same loop, XOR the SHA1 buffer with the SHA1 of the current block
+    addiu      $t0, $a0, 0xF80
+    addiu      $t1, $a1, 0xFCC
     li         $t2, 5
 
-loc_800107E0:
+kirk_decrypt_block_check_hash:
     lw         $t3, 0($t0)
     lw         $t4, 0($t1)
     addiu      $t0, $t0, 4
@@ -706,22 +747,26 @@ loc_800107E0:
     xor        $t4, $t4, $t3
     sw         $t4, 0($a2)
     addiu      $t2, $t2, -1
-    bnez       $t2, loc_800107E0
+    bnez       $t2, kirk_decrypt_block_check_hash
     addiu      $a2, $a2, 4
-    addiu      $t0, $a1, 4000
-    li         $t1, 10
 
-loc_80010814:
+    # Copy the signature of the XOR of SHA1's, located at 0xFA0, to the buffer given in argument
+    # (Note this value is unused for all the blocks except the last)
+    addiu      $t0, $a1, 0xFA0
+    li         $t1, 10
+kirk_decrypt_block_copy_signature:
     lw         $t2, 0($t0)
     addiu      $t0, $t0, 4
     addiu      $t1, $t1, -1
     sw         $t2, 0($a3)
-    bnez       $t1, loc_80010814
+    bnez       $t1, kirk_decrypt_block_copy_signature
     addiu      $a3, $a3, 4
-    addu       $t0, $a0, $t8
+
+    # Empty all the temporary data which is not the actual IPL block data, or its header
+    addu       $t0, $a0, $t8 # $t8 is the size of the encrypted data
     addiu      $t1, $a0, 4096
-    li         $t2, 0x0D
-loc_80010838:
+    li         $t2, 0x0D # fill the memory with 0x0D (ie, break 0x0, probably to avoid runnable code like nop's)
+kirk_decrypt_block_clear_mem:
     sw         $t2, 0($t0)
     addiu      $t0, $t0, 4
     bne        $t0, $t1, loc_80010838
@@ -731,26 +776,26 @@ loc_80010838:
     move       $v0, $zr
 
 # ======================================================
-# Subroutine kirk_verify_signature - Address 0x80010854 
-# a0 = 100-byte temp buffer for KIRK
-# a1 = ECDSA public key (40 bytes), wiped at the end
-# a2 = ECDSA signature (40 bytes)
-# a3 = hash of the block (20 bytes)
+# Verify the signature on the XOR of SHA1's of blocks
+# First argument is a temporary 100-byte buffer to store the KIRK command header, and is wiped at the end.
+# Second argument is the ECDSA public key used to sign the block, and is wiped when creating the command buffer.
+# Third argument is the ECDSA signature for the data.
+# Fourth argument is the signed data (ie, the XOR of the SHA1's of the blocks)
 kirk_verify_signature:
     # save $ra and $t9
     move       $v0, $ra
     move       $v1, $t9
     lui        $t9, %hi(HW_KIRK_COMMAND)
 
-    # this loop is used to mix bytes (some classic Sony mangling):
-    # - copy 40 bytes from a1 to a0, and empty a1
-    # - copy 20 bytes from a3 to a0+40
-    # - copy 40 bytes from a2 to a0+60
+    # Prepare the buffer for the KIRK "ECDSA signature verify" (aka CMD17)
+    # - First, the ECDSA public key
+    # - Then, the signed data
+    # - Finally, the signature
+    # This loop copies 1/5th of the data each time, and erases the corresponding part of the ECDSA public key.
     move       $t0, $a0
     addiu      $t1, $a0, 40
     li         $t2, 5
-
-kirk_verify_signature_mix_bytes:
+kirk_verify_signature_copy_header:
     # copy 8 bytes from a1 to t0
     lw         $t3, 0($a1)
     lw         $t4, 4($a1)
@@ -773,10 +818,10 @@ kirk_verify_signature_mix_bytes:
     addiu      $t0, $t0, 8
     addiu      $t1, $t1, 4
     addiu      $t2, $t2, -1
-    bnez       $t2, kirk_verify_signature_mix_bytes
+    bnez       $t2, kirk_verify_signature_copy_header
     nop
 
-    # run an ECDSA sign check on the a0 we just filled
+    # Run the KIRK command to verify the signature
     li         $t0, HW_KIRK_COMMAND_ECDSA_SIGNCHECK
     sw         $t0, %lo(HW_KIRK_COMMAND)($t9)
     ext        $t0, $a0, 0, 29
@@ -784,13 +829,15 @@ kirk_verify_signature_mix_bytes:
     jal        kirk_execute
     nop
 
-    # empty a0
+    # Empty the command buffer
     li         $t0, 25
 kirk_verify_signature_clean:
     sw         $zr, 0($a0)
     addiu      $t0, $t0, -1
     bnez       $t0, kirk_verify_signature_clean
     addiu      $a0, $a0, 4
+
+    # Restore $ra and $t9 & return
     move       $ra, $v0
     move       $t9, $v1
     jr         $ra
@@ -993,6 +1040,7 @@ cmd_repeatread:
     nop
     b          cmd_continue
     nop
+#endif
 
 # ======================================================
 # wait for about 100 * (first argument) CPU cycles (make 96 loops)
@@ -1026,8 +1074,8 @@ nand_spare_data: # at 0x80010810, or 0x80010A90 for v3
     .word 0
     .word 0
 
-#ifdef PREIPL_V3
-ipl_block_sha1: # at 0x80010A9C, for v3 only
+#ifdef PREIPL_VER_3
+ipl_blocks_sha1_xor: # at 0x80010A9C, for v3 only
     .skip 20
 #else
 nand_ipl_block_tbl: # at 0x8001081C for v1 & v2
@@ -1040,7 +1088,7 @@ memorystick_reg_0: # at 0x80010A1C, or 0x80010AB0 for v3
 memorystick_reg_1: # at 0x80010A20, or 0x80010AB4 for v3
     .word 0
 
-# note: nothing at 0x80010A24
+# note: nothing at 0x80010A24, or 0x80010AB8 for v3
 
 init_script: # at 0x80010A80, or 0x80010B00 for v3
     # 0xBC100058 |= 0x00800000 Enable GPIO clock
@@ -1091,7 +1139,7 @@ init_script: # at 0x80010A80, or 0x80010B00 for v3
     # end
     .word 0xF0000000
 
-#ifdef PREIPL_V3
+#ifdef PREIPL_VER_3
 xor_keys: # at 0x80010B6C (v3 only)
     .word 0x61A0C918
     .word 0x45695E82
@@ -1216,7 +1264,7 @@ memorystick_init_script: # at 0x80010AD4, or 0x80010AEC for ver2, or 0x80010CA4 
 
 # note: nothing at 0x80010CE8 for v3
 
-#ifdef PREIPL_V3
+#ifdef PREIPL_VER_3
 nand_ipl_block_tbl: # at 0x80010D00, for v3 only
     .skip 512 # not initialized, but 512 bytes large (so it doesn't need to fit in the binary)
 
