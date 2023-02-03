@@ -51,7 +51,7 @@ handle_nmi:
 handle_exception:
     # restore $v0
     cfc0       $v0, COP0_CTRL_V0
-    # set BEV = 0 (ie exception vectors switches from 0xBFC00200 to 0x
+    # set BEV = 0 (according to R4400 docs, it means exception vectors at 0xBFC00200 switch to 0x80000000 or 0xA0000000; behavior may be different here)
     mfc0       $k1, COP0_STATE_STATUS
     lui        $k0, 0xFFBF
     ori        $k0, $k0, 0xFFFF
