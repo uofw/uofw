@@ -55,7 +55,7 @@ check_jigkick:
 start_decrypt:
     lui        $at, %hi(read_block)
     sw         $t1, %lo(read_block)($at)
-    sw         $zr, %lo(page_counter)($at)
+    sw         $zr, %lo(ipl_block_idx)($at)
     jalr       $t2
     nop        
     move       $s7, $zr
@@ -64,8 +64,8 @@ decrypt_loop:
     # read one page from NAND or MS to 0xBFD00000
     lui        $t9, %hi(read_block)
     lw         $t9, %lo(read_block)($t9)
-    lui        $a0, %hi(page_counter)
-    lw         $a0, %lo(page_counter)($a0)
+    lui        $a0, %hi(ipl_block_idx)
+    lw         $a0, %lo(ipl_block_idx)($a0)
     jalr       $t9
     lui        $a1, 0xBFD0
     bltz       $v0, infinite_loop
@@ -133,7 +133,7 @@ skip_xor_keys:
     # each decrypted page starts with four words:
     # - one giving a destination address, which must be non-zero (otherwise no copy is performed)
     # - one giving the length of the decrypted data
-    # - one which is non-zero if it is the last block
+    # - one which is non-zero if it is the last block and specifies the entrypoint address of the IPL
     # - one which must be equal to the 'checksum' of the previous block, returned by memcpy, which is just the sum of the copied words (or 0 for the first loop)
     # first check the checksum
     lui        $s0, 0xBFD0
@@ -184,11 +184,11 @@ after_copy:
     nop        
 
 decrypt_another:
-    lui        $at, %hi(page_counter)
-    lw         $t0, %lo(page_counter)($at)
+    lui        $at, %hi(ipl_block_idx)
+    lw         $t0, %lo(ipl_block_idx)($at)
     addiu      $t0, $t0, 1
     b          decrypt_loop
-    sw         $t0, %lo(page_counter)($at)
+    sw         $t0, %lo(ipl_block_idx)($at)
 
 infinite_loop:
     b          infinite_loop
@@ -1066,7 +1066,7 @@ save_a0: # at 0x80010804, or 0x80010A84 for v3
 read_block: # at 0x80010808, or 0x80010A88 for v3
     .word 0
 
-page_counter: # at 0x8001080C, or 0x80010A8C for v3
+ipl_block_idx: # at 0x8001080C, or 0x80010A8C for v3
     .word 0
 
 nand_spare_data: # at 0x80010810, or 0x80010A90 for v3

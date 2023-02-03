@@ -15,8 +15,8 @@ u8 g_19C0[64] = {
 // 2.60 ipl
 _start(...) // at 0x040F0000 
 {
-    *(s32*)0xBC100050 |= 0x7000;
-    *(s32*)0xBC100078 |= 2;
+    *(s32*)0xBC100050 |= 0x7000; // bus clock enable for NAND (EMCDDR), NAND (EMCSM), APB
+    *(s32*)0xBC100078 |= 2; // IO enable EMCSM
     sp = 0x40FFF00;
     sub_040F0D70(0xBFC00040, 640, g_1980, g_19C0, 0x40F1AC0, 0x5040); // decrypt function
     t0 = 0x40F1AC0;
@@ -34,7 +34,7 @@ _start(...) // at 0x040F0000
         *(s32*)0xBFD00008 = 0x01000008; // jr $t0
         *(s32*)0xBFD0000C = 0; // nop
         pspSync();
-        *(s32*)0xBC10004C |= 2;
+        *(s32*)0xBC10004C |= 2; // reset SC
         // 00F0
         while (true) {
             pspSync();
@@ -46,7 +46,7 @@ _start(...) // at 0x040F0000
 cont:
     pspCop0StateSet(COP0_STATE_STATUS, 0x60000000);
     pspCop0StateSet(COP0_STATE_CAUSE, 0);
-    *(s32*)0xBC100004 = 0xFFFFFFFF;
+    *(s32*)0xBC100004 = 0xFFFFFFFF; // set all NMI flags
     cacheStuff3();
     sp = 0x40FFF00;
     sub_040F07C0(0x4000000, 0xE0000, 0x40F1AC0, 0); // gunzip
