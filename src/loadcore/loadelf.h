@@ -60,8 +60,8 @@ enum SceExecFileDecryptMode {
     DECRYPT_MODE_UNKNOWN_21                 = 21, // 0x15
     /** SCE_MODULE_APP module. APP demo exec? */
     DECRYPT_MODE_UNKNOWN_22                 = 22, // 0x16
-    /** SCE_MODULE_USER module with secure install ID. */
-    DECRYPT_MODE_UNKNOWN_23                 = 23, // 0x17
+    /** NPDRM user module with secure install ID. */
+    DECRYPT_MODE_USER_NPDRM                 = 23, // 0x17
     /**
      * Game patch (PBOOT.PBP) for retail console (eg. SOCOM FTB 3). 
      * This module can be decrypted with any PSP device.

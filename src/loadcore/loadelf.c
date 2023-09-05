@@ -1008,13 +1008,18 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
     PspHeader *header = (PspHeader *)modBuf;
     s8 *buf = NULL;
     u8 checkCompAttr;
+    u8 decryptMode;
     s32 status;
+    SceSize decSize;
     u32 subType;
     u8 *tag;
     u32 i;
     
     checkCompAttr = SCE_FALSE;
-    
+    /* We have to save this because the ~PSP header will be overwritten by 
+       the plain ELF data when the module is successfully decrypted. */
+    decryptMode = header->decryptMode;
+
     /* Permit decryption modes dependent on the module/API type. */
     switch (execInfo->apiType) {
     case 0: case 2: case 32: case 33: case 81:
@@ -1329,10 +1334,10 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
 
         execInfo->isDecrypted = SCE_TRUE;
         break; //0x000057DC
-    case DECRYPT_MODE_UNKNOWN_23:
+    case DECRYPT_MODE_USER_NPDRM:
         if ((header->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != SCE_MODULE_USER) //0x00005CB8
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-                
+
         if (sceUtilsGetLoadModuleWLength(modBuf, execInfo->execSize, newSize, execInfo->secureInstallId) != SCE_ERROR_OK) //0x00005958
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
@@ -1352,45 +1357,48 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
     }
 
     if ((execInfo->execAttribute & SCE_EXEC_FILE_COMPRESSED) == 0) { //0x000057E4
-        if (header->decryptMode != DECRYPT_MODE_NO_EXEC) //0x000058AC
+        if (decryptMode != DECRYPT_MODE_NO_EXEC) //0x000058AC
             return SCE_ERROR_OK; //0x5884
         else
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; //0x000058B4
-    } else if (execInfo->topAddr == NULL) { //0x000057F0
+    }
+    if (execInfo->topAddr == NULL) { //0x000057F0
         return SCE_ERROR_OK; 
-    } else if (execInfo->topAddr == (void *)SCE_KERNEL_VALUE_UNITIALIZED) {//0x00005800
+    }
+    if (execInfo->topAddr == (void *)SCE_KERNEL_VALUE_UNITIALIZED) {//0x00005800
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
     
+    if (decryptMode == DECRYPT_MODE_NO_EXEC) { // 0x00005810
+        modBuf += 0x80;
+    }
     /* Check decompression method of the executable. */
-    else if ((execInfo->execAttribute & 0xF00) == 0) { //0x0000580C
+    if ((execInfo->execAttribute & 0xF00) == 0) { //0x0000580C
         /* GZIP compressed. */
-        status = sceKernelGzipDecompress(execInfo->topAddr, execInfo->decSize, 
-                                        (header->decryptMode == 0) ? NULL : (u8 *)&header->aesKey, 0); //0x00005894
+        decSize = sceKernelGzipDecompress(execInfo->topAddr, execInfo->decSize, modBuf, NULL); //0x00005894
     } 
     else {
         /* KL4E compressed. */
-        buf = (s8 *)((header->decryptMode == 0) ? header->aesKey : (u8 *)header);
         if ((execInfo->execAttribute & 0xF00) != SCE_EXEC_FILE_KL4E_COMPRESSED) //0x00005820
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         
         /* Verify the signature of the header, must be "KL4E". */
         const char *ident = KL4E_COMPRESSION_SIGNATURE; //0x0000581C
-        for (i = 0; i < sizeof ident; i++) //0x0000582C - 0x00005850
-            if (buf[i] != ident[i])
+        for (i = 0; i < 4; i++) //0x0000582C - 0x00005850
+            if (modBuf[i] != ident[i])
                 return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
 
-        status = UtilsForKernel_6C6887EE(execInfo->topAddr, execInfo->decSize, buf + 4, NULL); //0x00005860
-
+        decSize = UtilsForKernel_6C6887EE(execInfo->topAddr, execInfo->decSize, modBuf + 4, NULL); //0x00005860
     }
-    if (status < SCE_ERROR_OK) { //0x00005868
-        return status; //0x00005884
-    } else if ((u32)status == execInfo->decSize) { //0x0005874
-        execInfo->isDecompressed = SCE_TRUE; //0x00005890
-        return status; //0x00005884
-    } 
-    else //0x5884
-        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+
+    if ((int)decSize < SCE_ERROR_OK) { //0x00005868
+        return decSize; //0x00005884
+    } else if (decSize != execInfo->decSize) { //0x0005874
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; //0x587c
+    }
+
+    execInfo->isDecompressed = SCE_TRUE; //0x00005890
+    return 0; //0x00005884
 }
 
 //sub_00006324
