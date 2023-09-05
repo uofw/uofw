@@ -1006,7 +1006,6 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
                          u32 *newSize) 
 {   
     PspHeader *header = (PspHeader *)modBuf;
-    s8 *buf = NULL;
     u8 checkCompAttr;
     u8 decryptMode;
     s32 status;
