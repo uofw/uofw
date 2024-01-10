@@ -2,6 +2,7 @@
 // It also stores secret parameters used by the PSP.
 // The KIRK ROM has been dumped and uses a custom ISA using words of 4 bytes and word-addressing (contrary to most architectures, if x points to a 4-byte word,
 // x+1 points to the next 4-byte word). It has no registers and access to a memory space of 0x1000 words, most of the space being used to contact the other devices.
+// It works in big endian mode.
 // It has two instructions, marked as functions here, that seem to have a special role: __builtin_setmode() to contact devices and __builtin_dma() to transmit data.
 
 // KIRK has access to 8 different interfaces. All interfaces have associated 'enable' and 'status' register, plus other ones depending on the device.
@@ -156,16 +157,17 @@
 //                    -> it looks like it should be reset to 0 when CMD15 finishes?
 
 #define KIRK_OPERATION_SUCCESS 0
+// TODO seems incorrect
 #define KIRK_NOT_ENABLED 1
 #define KIRK_INVALID_MODE 2
 #define KIRK_HEADER_HASH_INVALID 3
 #define KIRK_DATA_HASH_INVALID 4
 #define KIRK_SIG_CHECK_INVALID 5
-#define KIRK_NOT_INITIALIZED 0xC
-#define KIRK_INVALID_OPERATION 0xD
-#define KIRK_INVALID_SEED_CODE 0xE
-#define KIRK_INVALID_SIZE 0xF
-#define KIRK_DATA_SIZE_ZERO 0x10
+#define KIRK_NOT_INITIALIZED 12
+#define KIRK_INVALID_OPERATION 13
+#define KIRK_INVALID_SEED_CODE 14
+#define KIRK_INVALID_SIZE 15
+#define KIRK_DATA_SIZE_ZERO 16
 
 void _reset(void) // 0x000
 {
@@ -255,32 +257,36 @@ void aes_encrypt_ecb(void)
     aes_encrypt_cbc();
 }
 
+/*
+ * Encrypt INPUT to OUTPUT in AES CBC using CUR_ENC_KEY.
+ */
 void aes_encrypt_cbc(void)
 {
-    if (SIZE != 0) {
-        kirk_reseed_prng_2();
-        AES_KEY = CUR_ENC_KEY;
-        AES_CMD = 0x12;
-        hw_aes_setkey();
-        DMA_BUF_SIZE = 0x10;
-        while (0 < SIZE + -0x10) {
-            SIZE = SIZE + -0x10;
-            hw_aes_dma_copy_and_do();
-            AES_IV = AES_RESULT;
-            hw_dma_write_aes_result();
-            INPUT = INPUT + 0x10;
-            OUTPUT = OUTPUT + 0x10;
-            AES_CMD &= 0xfffffffd;
-        }
-        DMA_BUF_SIZE = SIZE;
-        hw_dma_read_input();
-        AES_CMD |= 2;
-        aes_padding();
-        hw_aes_do();
-        DMA_BUF_SIZE = 0x10;
-        hw_dma_write_aes_result();
+    if (SIZE == 0) {
+        return;
     }
-    return;
+
+    kirk_reseed_prng_2();
+    AES_KEY = CUR_ENC_KEY;
+    AES_CMD = 0x12;
+    hw_aes_setkey();
+    DMA_BUF_SIZE = 0x10;
+    while (SIZE > 0x10) {
+        SIZE -= 0x10;
+        hw_aes_dma_copy_and_do();
+        AES_IV = AES_RESULT;
+        hw_dma_write_aes_result();
+        INPUT += 0x10;
+        OUTPUT += 0x10;
+        AES_CMD &= 0xfffffffd;
+    }
+    DMA_BUF_SIZE = SIZE;
+    hw_dma_read_input();
+    AES_CMD |= 2;
+    aes_padding();
+    hw_aes_do();
+    DMA_BUF_SIZE = 0x10;
+    hw_dma_write_aes_result();
 }
 
 void aes_cmac(void)
@@ -294,23 +300,16 @@ void aes_cmac(void)
 }
 
 void aes_decrypt_ecb(void)
-
 {
-    uint uVar1;
-    
-    while (0 < SIZE + -0x10) {
-        SIZE = SIZE + -0x10;
+    while (SIZE > 0x10) {
+        SIZE -= 0x10;
         hw_aes_dma_copy_and_do();
-        INPUT = INPUT + 0x10;
-        uVar1 = AES_CMD;
-        AES_CMD = uVar1 & 0xfffffffd;
+        INPUT += 0x10;
+        AES_CMD &= 0xfffffffd;
     }
     DMA_BUF_SIZE = SIZE;
     hw_aes_dma_copy_and_do();
-    return;
 }
-
-
 
 void aes_decrypt_cbc(void)
 
@@ -391,7 +390,7 @@ void hw_aes_dma_copy_and_do(void)
 
 void hw_aes_copy_and_do(void)
 {
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
+    AES_SRC_BUF = DMA_BUF._0_16_;
     hw_aes_do();
 }
 
@@ -443,20 +442,13 @@ void block_shift_2(void)
     return;
 }
 
-
-
-// WARNING: Unknown calling convention -- yet parameter storage is locked
-
 void aes_padding(void)
-
 {
     uint uVar1;
     
     if (SIZE != 0) {
-                    // address to PRNG_RESULT[0]
-        R3 = 0x42d;
-                    // address to DMA_BUF
-        R4 = 0xe10;
+        R3 = &PRNG_RESULT[0];
+        R4 = &DMA_BUF
         R5 = 0;
         while (uVar1 = SIZE - 4, uVar1 != 0) {
             if (0x7fffffff < uVar1) {
@@ -507,176 +499,152 @@ void kirk_cmd0_decrypt_bootrom(void)
     
     if (PSP_KIRK_STATUS == 1) {
         PSP_KIRK_PHASE = 1;
-        PSP_KIRK_RESULT = 0xd;
+        PSP_KIRK_RESULT = KIRK_INVALID_OPERATION;
+        return;
+    }
+    DMA_ADDR = PSP_KIRK_SRC + 0x10;
+    DMA_BUF_SIZE = 2;
+    DMA_BUF[0] = DMA_ADDR;
+    hw_dma_read();
+    KIRK_BODY_SIZE = __builtin_byteswap(DMA_BUF[0]);
+    KIRK_BODY_SIZE = KIRK_BODY_SIZE & 0xffff;
+    if (KIRK_BODY_SIZE == 0) {
+        goto error_size_zero;
+    }
+    HW_AES_PARAM_ID = 1;
+    auVar2 = HW_AES_PARAM;
+    AES_KEY = auVar2;
+    INPUT = PSP_KIRK_SRC + 0x10;
+    SIZE = KIRK_BODY_SIZE;
+    align_size_16();
+    SIZE = SIZE + 2;
+    aes_set_null_iv();
+    AES_CMD = 0x32;
+    hw_aes_setkey();
+    AES_END = SIZE;
+    DMA_BUF_SIZE = 0x10;
+    if (SIZE + -0x10 < 1) {
+        DMA_BUF_SIZE = SIZE;
+        DMA_BUF[0] = 0;
+        DMA_BUF[1] = 0;
+        DMA_BUF[2] = 0;
+        DMA_BUF[3] = 0;
+        hw_aes_dma_copy_and_do();
+        if (!kirk0_check_data_size()) {
+            goto error_size_zero;
+        }
     }
     else {
-        DMA_ADDR = PSP_KIRK_SRC + 0x10;
-        DMA_BUF_SIZE = 2;
-        DMA_BUF[0] = DMA_ADDR;
-        hw_dma_read();
-        KIRK_BODY_SIZE = __builtin_byteswap(DMA_BUF[0]);
-        KIRK_BODY_SIZE = KIRK_BODY_SIZE & 0xffff;
-        if (KIRK_BODY_SIZE == 0) {
-LAB_rom_0000019b:
-            PSP_KIRK_RESULT = 0x10;
-            crash();
-            return;
+        SIZE = SIZE + -0x10;
+        hw_aes_dma_copy_and_do();
+        INPUT = INPUT + 0x10;
+        uVar1 = AES_CMD;
+        AES_CMD = uVar1 & 0xfffffffd;
+        if (!kirk0_check_data_size()) {
+            goto error_size_zero;
         }
-        HW_AES_PARAM_ID = 1;
-        auVar2 = HW_AES_PARAM;
-        AES_KEY = auVar2;
-        INPUT = PSP_KIRK_SRC + 0x10;
-        SIZE = KIRK_BODY_SIZE;
-        align16();
-        SIZE = SIZE + 2;
-        aes_set_null_iv();
-        AES_CMD = 0x32;
-        hw_aes_setkey();
-        AES_END = SIZE;
-        DMA_BUF_SIZE = 0x10;
-        if (SIZE + -0x10 < 1) {
-            DMA_BUF_SIZE = SIZE;
-            DMA_BUF[0] = 0;
-            DMA_BUF[1] = 0;
-            DMA_BUF[2] = 0;
-            DMA_BUF[3] = 0;
-            hw_aes_dma_copy_and_do();
-            bVar3 = (bool)kirk0_check_data_size();
-            if (!bVar3) goto LAB_rom_0000019b;
-        }
-        else {
-            SIZE = SIZE + -0x10;
-            hw_aes_dma_copy_and_do();
-            INPUT = INPUT + 0x10;
-            uVar1 = AES_CMD;
-            AES_CMD = uVar1 & 0xfffffffd;
-            bVar3 = (bool)kirk0_check_data_size();
-            if (!bVar3) goto LAB_rom_0000019b;
-            aes_decrypt_ecb();
-        }
-        DMA_ADDR = PSP_KIRK_SRC;
-        DMA_BUF_SIZE = 0x10;
-        hw_dma_read();
-        bVar3 = memcmp_cmac();
-        if (!bVar3) {
-            PSP_KIRK_RESULT = 1;
-            crash();
-            return;
-        }
-        SIZE = KIRK_BODY_SIZE;
-        INPUT = PSP_KIRK_SRC + 0x10;
-        OUTPUT = PSP_KIRK_DST;
-        HW_AES_PARAM_ID = 0;
-        auVar2 = HW_AES_PARAM;
-        AES_KEY = auVar2;
-        decrypt_kbooti_body();
-        PSP_KIRK_RESULT = 0;
-        PSP_KIRK_PHASE = 2;
+        aes_decrypt_ecb();
     }
+    DMA_ADDR = PSP_KIRK_SRC;
+    DMA_BUF_SIZE = 0x10;
+    hw_dma_read();
+    if (!memcmp_cmac) {
+        PSP_KIRK_RESULT = KIRK_NOT_ENABLED;
+        crash();
+        return;
+    }
+    SIZE = KIRK_BODY_SIZE;
+    INPUT = PSP_KIRK_SRC + 0x10;
+    OUTPUT = PSP_KIRK_DST;
+    HW_AES_PARAM_ID = 0;
+    auVar2 = HW_AES_PARAM;
+    AES_KEY = auVar2;
+    decrypt_kbooti_body();
+    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
+    PSP_KIRK_PHASE = 2;
+    return;
+
+error_size_zero:
+    PSP_KIRK_RESULT = KIRK_DATA_SIZE_ZERO;
+    crash();
     return;
 }
 
-
-
-undefined __unused_kirk_aes_header_get_size(void)
-
+void __unused_kirk_aes_header_get_size(void)
 {
-    undefined uVar1;
-    
     DMA_ADDR = PSP_KIRK_SRC + 0x10;
-    uVar1 = DMA_ADDR == 0;
+    bool nullAddr = DMA_ADDR == 0;
     DMA_BUF_SIZE = 2;
     DMA_BUF[0] = DMA_ADDR;
     hw_dma_read();
     DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
     DMA_BUF[0] = DMA_BUF[0] & 0xffff;
-    return uVar1;
+    return nullAddr;
 }
 
-
-
 bool kirk0_check_data_size(void)
-
 {
     DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
     DMA_BUF[0] = DMA_BUF[0] & 0xffff;
     return KIRK_BODY_SIZE == DMA_BUF[0];
 }
 
-
-
 void kirk_cmd1_decrypt_private(void)
 
 {
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (!bVar1) {
+    if (!hw_kirk_check_enabled()) {
         return;
     }
     kirk_header_read_cmd_mode();
-    if (DMA_BUF[0] == 0x1000000) {
-        read_kirk_header();
-        bVar1 = (bool)kirk_check_body_size_nonzero();
-        if (bVar1) {
-            HW_AES_PARAM_ID = 2;
-            CUR_ENC_KEY = HW_AES_PARAM;
-            kirk_header_read_ecdsa_flag();
-            if (DMA_BUF[0] == 0x18) {
-                set_kirk1_curve();
-                kirk1_get_public_key();
-                bVar1 = (bool)kirk_ecdsa_check_header();
-                if (!bVar1) {
-                    PSP_KIRK_PHASE = 1;
-                    PSP_KIRK_RESULT = 3;
-                    return;
-                }
-                bVar1 = (bool)kirk_ecdsa_check_body();
-                if (!bVar1) {
-                    PSP_KIRK_PHASE = 1;
-                    PSP_KIRK_RESULT = 4;
-                    return;
-                }
-            }
-            else {
-                bVar1 = (bool)kirk_check_cmac();
-                if (!bVar1) {
-                    PSP_KIRK_PHASE = 1;
-                    return;
-                }
-            }
-            kirk_aes_decrypt_body();
+    if (DMA_BUF[0] != 0x1000000) {
+        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+        PSP_KIRK_PHASE = 1;
+        return;
+    }
+
+    read_kirk_header();
+    if (!kirk_check_body_size_nonzero()) {
+        PSP_KIRK_PHASE = 1;
+        return;
+    }
+
+    HW_AES_PARAM_ID = 2;
+    CUR_ENC_KEY = HW_AES_PARAM;
+    kirk_header_read_ecdsa_flag();
+    if (DMA_BUF[0] == 0x18) {
+        set_kirk1_curve();
+        kirk1_get_public_key();
+        if (!kirk_ecdsa_check_header()) {
+            PSP_KIRK_PHASE = 1;
+            PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+            return;
+        }
+        if (!kirk_ecdsa_check_body()) {
+            PSP_KIRK_PHASE = 1;
+            PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+            return;
         }
     }
     else {
-        PSP_KIRK_RESULT = 2;
+        if (!kirk_check_cmac()) {
+            PSP_KIRK_PHASE = 1;
+            return;
+        }
     }
-    PSP_KIRK_PHASE = 1;
+    kirk_aes_decrypt_body();
     return;
 }
-
-
 
 void kirk1_get_public_key(void)
-
 {
-    uint auVar1 [4];
-    uint uVar2;
-    
     HW_CURVE_PARAM_ID = 0;
-    auVar1 = HW_CURVE_PARAM;
-    ECC_Px._0_16_ = (undefined  [16])auVar1;
-    uVar2 = DAT_ram_000004b5;
-    ECC_Px[4] = uVar2;
+    ECC_Px._0_16_ = HW_CURVE_PARAM._0_16_;
+    ECC_Px[4] = HW_CURVE_PARAM[4];
     HW_CURVE_PARAM_ID = 1;
-    auVar1 = HW_CURVE_PARAM;
-    ECC_Py._0_16_ = (undefined  [16])auVar1;
-    uVar2 = DAT_ram_000004b5;
-    ECC_Py[4] = uVar2;
+    ECC_Py._0_16_ = HW_CURVE_PARAM._0_16_;
+    ECC_Py[4] = HW_CURVE_PARAM[4];
     return;
 }
-
-
 
 void kirk_cmd2_dnas_encrypt(void)
 
@@ -685,154 +653,156 @@ void kirk_cmd2_dnas_encrypt(void)
     bool bVar2;
     
     bVar2 = (bool)hw_kirk_check_enabled();
-    if (bVar2) {
-        kirk_header_read_cmd_mode();
-        if (DMA_BUF[0] != 0x2000000) {
-            PSP_KIRK_RESULT = 2;
+    if (!hw_kirk_check_enabled()) {
+        return;
+    }
+
+    kirk_header_read_cmd_mode();
+    if (DMA_BUF[0] != 0x2000000) {
+        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+        kirk_set_phase1();
+        return;
+    }
+    if (!CheckKirkInitialized()) {
+        PSP_KIRK_PHASE = 1;
+        return;
+    }
+    read_kirk_header();
+    if (!kirk_check_body_size_nonzero()) {
+        PSP_KIRK_PHASE = 1;
+        return;
+    }
+
+    HW_AES_PARAM_ID = 3;
+    CUR_ENC_KEY = HW_AES_PARAM;
+    kirk_header_read_ecdsa_flag();
+    ECDSA_MODE = DMA_BUF[0];
+    if (DMA_BUF[0] == 0x18) {
+        set_kirk1_curve();
+        kirk2_get_public_key();
+        bVar2 = (bool)kirk_ecdsa_check_header();
+        if (!bVar2) {
+            PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
             kirk_set_phase1();
             return;
         }
-        bVar2 = (bool)CheckKirkInitialized();
-        if (bVar2) {
-            read_kirk_header();
-            bVar2 = (bool)kirk_check_body_size_nonzero();
-            if (bVar2) {
-                HW_AES_PARAM_ID = 3;
-                CUR_ENC_KEY = HW_AES_PARAM;
-                kirk_header_read_ecdsa_flag();
-                ECDSA_MODE = DMA_BUF[0];
-                if (DMA_BUF[0] == 0x18) {
-                    set_kirk1_curve();
-                    kirk2_get_public_key();
-                    bVar2 = (bool)kirk_ecdsa_check_header();
-                    if (!bVar2) {
-                        PSP_KIRK_RESULT = 3;
-                        kirk_set_phase1();
-                        return;
-                    }
-                    bVar2 = (bool)kirk_ecdsa_check_body();
-                    if (!bVar2) {
-                        PSP_KIRK_RESULT = 4;
-                        kirk_set_phase1();
-                        return;
-                    }
-LAB_rom_000001fb:
-                    AES_KEY = CUR_ENC_KEY;
-                    kirk_aes_decrypt_key();
-                    SIZE = KIRK_DATA_OFFSET + 0x90;
-                    INPUT = PSP_KIRK_SRC;
-                    OUTPUT = PSP_KIRK_DST;
-                    dma_memcpy();
-                    DMA_ADDR = PSP_KIRK_DST + 0x60;
-                    DMA_BUF[1] = DMA_ADDR;
-                    DMA_BUF[0] = 0x3000000;
-                    DMA_BUF_SIZE = 4;
-                    hw_dma_write();
-                    DMA_ADDR = PSP_KIRK_DST + 100;
-                    DMA_BUF[1] = DMA_ADDR;
-                    DMA_BUF_SIZE = 4;
-                    hw_dma_read();
-                    if (ECDSA_MODE == 0x19) {
-                        DMA_BUF[0] = DMA_BUF[0] | 0x1000000;
-                    }
-                    else {
-                        DMA_BUF[0] = DMA_BUF[0] & 0xfeffffff;
-                    }
-                    hw_dma_write();
-                    INPUT = PSP_KIRK_SRC;
-                    OUTPUT = PSP_KIRK_DST;
-                    kirk2_set_args();
-                    aes_decrypt_cbc();
-                    kirk_reseed_prng_2();
-                    DMA_BUF._0_16_ = (undefined  [16])PRNG_RESULT._4_16_;
-                    aes_set_perconsole_key_0();
-                    AES_CMD = 0;
-                    hw_aes_setkey();
-                    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-                    hw_aes_do();
-                    DMA_BUF[0] = PSP_KIRK_DST;
-                    hw_aes_output();
-                    if (ECDSA_MODE != 0x19) {
-                        auVar1 = AES_RESULT;
-                        AES_IV = auVar1;
-                        kirk_reseed_prng_2();
-                        DMA_BUF._0_16_ = (undefined  [16])PRNG_RESULT._4_16_;
-                        aes_set_perconsole_key_0();
-                        AES_CMD = 0x12;
-                        hw_aes_setkey();
-                        AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-                        hw_aes_do();
-                        DMA_BUF[0] = PSP_KIRK_DST + 0x10;
-                        hw_aes_output();
-                    }
-                    aes_set_perconsole_key_0();
-                    CUR_ENC_KEY = AES_RESULT;
-                    INPUT = PSP_KIRK_DST;
-                    OUTPUT = PSP_KIRK_DST;
-                    AES_KEY = CUR_ENC_KEY;
-                    kirk_cmd2_decrypt_key();
-                    CUR_ENC_KEY = AES_RESULT;
-                    kirk2_set_args();
-                    aes_encrypt_ecb();
-                    if (ECDSA_MODE != 0x19) {
-                        aes_set_perconsole_key_0();
-                        DMA_ADDR = PSP_KIRK_DST;
-                        DMA_BUF_SIZE = 0x20;
-                        hw_dma_read();
-                        AES_IV = (uint  [4])DMA_BUF._0_16_;
-                        AES_CMD = 0x13;
-                        hw_aes_setkey();
-                        AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
-                        hw_aes_do();
-                        auVar1 = AES_RESULT;
-                        AES_KEY = auVar1;
-                        INPUT = PSP_KIRK_DST + 0x60;
-                        SIZE = 0x30;
-                        aes_cmac();
-                        DMA_BUF[0] = PSP_KIRK_DST + 0x20;
-                        hw_aes_output();
-                        SIZE = KIRK_DATA_OFFSET + 0x30;
-                        SIZE = KIRK_BODY_SIZE + SIZE;
-                        align16();
-                        INPUT = PSP_KIRK_DST + 0x60;
-                        aes_cmac();
-                        DMA_BUF[0] = PSP_KIRK_DST + 0x30;
-                        hw_aes_output();
-                        kirk_result_0();
-                        return;
-                    }
-                    set_kirk1_curve();
-                    kirk2_get_private_key();
-                    INPUT = PSP_KIRK_DST + 0x60;
-                    SIZE = 0x30;
-                    ec_sign_gen_m_r();
-                    OUTPUT = PSP_KIRK_DST + 0x10;
-                    dma_ec_output_point();
-                    SIZE = KIRK_DATA_OFFSET + 0x30;
-                    SIZE = KIRK_BODY_SIZE + SIZE;
-                    align16();
-                    INPUT = PSP_KIRK_DST + 0x60;
-                    ec_sign_gen_m_r();
-                    OUTPUT = PSP_KIRK_DST + 0x38;
-                    dma_ec_output_point();
-                    kirk_result_0();
-                    return;
-                }
-                bVar2 = (bool)kirk_check_cmac();
-                if (bVar2) goto LAB_rom_000001fb;
-            }
+        bVar2 = (bool)kirk_ecdsa_check_body();
+        if (!bVar2) {
+            PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+            kirk_set_phase1();
+            return;
         }
-        PSP_KIRK_PHASE = 1;
+    } else {
+        bVar2 = (bool)kirk_check_cmac();
+        if (!bVar2) {
+            PSP_KIRK_PHASE = 1;
+            return;
+        }
     }
-    return;
+    AES_KEY = CUR_ENC_KEY;
+    kirk_aes_decrypt_key();
+    SIZE = KIRK_DATA_OFFSET + 0x90;
+    INPUT = PSP_KIRK_SRC;
+    OUTPUT = PSP_KIRK_DST;
+    dma_memcpy();
+    DMA_ADDR = PSP_KIRK_DST + 0x60;
+    DMA_BUF[1] = DMA_ADDR;
+    DMA_BUF[0] = 0x3000000;
+    DMA_BUF_SIZE = 4;
+    hw_dma_write();
+    DMA_ADDR = PSP_KIRK_DST + 100;
+    DMA_BUF[1] = DMA_ADDR;
+    DMA_BUF_SIZE = 4;
+    hw_dma_read();
+    if (ECDSA_MODE == 0x19) {
+        DMA_BUF[0] = DMA_BUF[0] | 0x1000000;
+    }
+    else {
+        DMA_BUF[0] = DMA_BUF[0] & 0xfeffffff;
+    }
+    hw_dma_write();
+    INPUT = PSP_KIRK_SRC;
+    OUTPUT = PSP_KIRK_DST;
+    kirk2_set_args();
+    aes_decrypt_cbc();
+    kirk_reseed_prng_2();
+    DMA_BUF._0_16_ = (undefined  [16])PRNG_RESULT._4_16_;
+    aes_set_perconsole_key_0();
+    AES_CMD = 0;
+    hw_aes_setkey();
+    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
+    hw_aes_do();
+    DMA_BUF[0] = PSP_KIRK_DST;
+    hw_aes_output();
+    if (ECDSA_MODE != 0x19) {
+        auVar1 = AES_RESULT;
+        AES_IV = auVar1;
+        kirk_reseed_prng_2();
+        DMA_BUF._0_16_ = (undefined  [16])PRNG_RESULT._4_16_;
+        aes_set_perconsole_key_0();
+        AES_CMD = 0x12;
+        hw_aes_setkey();
+        AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
+        hw_aes_do();
+        DMA_BUF[0] = PSP_KIRK_DST + 0x10;
+        hw_aes_output();
+    }
+    aes_set_perconsole_key_0();
+    CUR_ENC_KEY = AES_RESULT;
+    INPUT = PSP_KIRK_DST;
+    OUTPUT = PSP_KIRK_DST;
+    AES_KEY = CUR_ENC_KEY;
+    kirk_cmd2_decrypt_key();
+    CUR_ENC_KEY = AES_RESULT;
+    kirk2_set_args();
+    aes_encrypt_ecb();
+    if (ECDSA_MODE != 0x19) {
+        aes_set_perconsole_key_0();
+        DMA_ADDR = PSP_KIRK_DST;
+        DMA_BUF_SIZE = 0x20;
+        hw_dma_read();
+        AES_IV = (uint  [4])DMA_BUF._0_16_;
+        AES_CMD = 0x13;
+        hw_aes_setkey();
+        AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
+        hw_aes_do();
+        auVar1 = AES_RESULT;
+        AES_KEY = auVar1;
+        INPUT = PSP_KIRK_DST + 0x60;
+        SIZE = 0x30;
+        aes_cmac();
+        DMA_BUF[0] = PSP_KIRK_DST + 0x20;
+        hw_aes_output();
+        SIZE = KIRK_DATA_OFFSET + 0x30;
+        SIZE = KIRK_BODY_SIZE + SIZE;
+        align_size_16();
+        INPUT = PSP_KIRK_DST + 0x60;
+        aes_cmac();
+        DMA_BUF[0] = PSP_KIRK_DST + 0x30;
+        hw_aes_output();
+    } else {
+        set_kirk1_curve();
+        kirk2_get_private_key();
+        INPUT = PSP_KIRK_DST + 0x60;
+        SIZE = 0x30;
+        ec_sign_gen_m_r();
+        OUTPUT = PSP_KIRK_DST + 0x10;
+        dma_ec_output_point();
+        SIZE = KIRK_DATA_OFFSET + 0x30;
+        SIZE = KIRK_BODY_SIZE + SIZE;
+        align_size_16();
+        INPUT = PSP_KIRK_DST + 0x60;
+        ec_sign_gen_m_r();
+        OUTPUT = PSP_KIRK_DST + 0x38;
+        dma_ec_output_point();
+    }
+    kirk_result_0();
 }
-
-
 
 void __unused_kirk_result_2(void)
 
 {
-    PSP_KIRK_RESULT = 2;
+    PSP_KIRK_RESULT = KIRK_INVALID_MODE;
     kirk_set_phase1();
     return;
 }
@@ -842,7 +812,7 @@ void __unused_kirk_result_2(void)
 void kirk_result_0(void)
 
 {
-    PSP_KIRK_RESULT = 0;
+    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
     kirk_set_phase1();
     return;
 }
@@ -864,7 +834,7 @@ bool kirk2_set_args(void)
     int iVar1;
     
     SIZE = KIRK_BODY_SIZE;
-    align16();
+    align_size_16();
     INPUT = KIRK_DATA_OFFSET + INPUT + 0x90;
     iVar1 = OUTPUT + 0x90;
     OUTPUT = KIRK_DATA_OFFSET + iVar1;
@@ -945,13 +915,13 @@ void kirk_cmd3_dnas_decrypt(void)
                 bVar1 = (bool)kirk_ecdsa_check_header();
                 if (!bVar1) {
                     PSP_KIRK_PHASE = 1;
-                    PSP_KIRK_RESULT = 3;
+                    PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
                     return;
                 }
                 bVar1 = (bool)kirk_ecdsa_check_body();
                 if (!bVar1) {
                     PSP_KIRK_PHASE = 1;
-                    PSP_KIRK_RESULT = 4;
+                    PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
                     return;
                 }
             }
@@ -966,7 +936,7 @@ void kirk_cmd3_dnas_decrypt(void)
         }
     }
     else {
-        PSP_KIRK_RESULT = 2;
+        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
     }
     PSP_KIRK_PHASE = 1;
     return;
@@ -1031,13 +1001,13 @@ void kirk_cmd4_encrypt_static(void)
                         kirk4_process();
                     }
                     else {
-                        PSP_KIRK_RESULT = 0xe;
+                        PSP_KIRK_RESULT = KIRK_INVALID_SEED_CODE;
                     }
                 }
             }
         }
         else {
-            PSP_KIRK_RESULT = 2;
+            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -1062,7 +1032,7 @@ void kirk4_process(void)
     OUTPUT = PSP_KIRK_DST + 0x14;
     SIZE = KIRK_BODY_SIZE;
     aes_encrypt_cbc();
-    PSP_KIRK_RESULT = 0;
+    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
     return;
 }
 
@@ -1090,7 +1060,7 @@ void kirk_cmd5_encrypt_perconsole(void)
             }
         }
         else {
-            PSP_KIRK_RESULT = 2;
+            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -1166,12 +1136,12 @@ void kirk_cmd6_encrypt_user(void)
                     INPUT = PSP_KIRK_SRC + 0x24;
                     OUTPUT = PSP_KIRK_DST + 0x34;
                     kirk6_process();
-                    PSP_KIRK_RESULT = 0;
+                    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
                 }
             }
         }
         else {
-            PSP_KIRK_RESULT = 2;
+            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -1266,12 +1236,12 @@ void kirk_cmd7_decrypt_static(void)
                     kirk_aes_decrypt();
                 }
                 else {
-                    PSP_KIRK_RESULT = 0xe;
+                    PSP_KIRK_RESULT = KIRK_INVALID_SEED_CODE;
                 }
             }
         }
         else {
-            PSP_KIRK_RESULT = 2;
+            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -1299,7 +1269,7 @@ void kirk_cmd8_decrypt_perconsole(void)
             }
         }
         else {
-            PSP_KIRK_RESULT = 2;
+            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -1314,45 +1284,42 @@ void kirk_cmd9_decrypt_user(void)
     uint auVar1 [4];
     bool bVar2;
     
-    bVar2 = (bool)hw_kirk_check_enabled();
-    if (bVar2) {
-        kirk_aes_read_header();
-        if ((DMA_BUF[0] == 0x5000000) && (DMA_BUF[3] == 0x20000)) {
-            kirk_header_read_body_size();
-            bVar2 = (bool)kirk_check_body_size_nonzero();
-            if (bVar2) {
-                AES_KEYSEED = 2;
-                aes_set_perconsole_key();
-                DMA_ADDR = PSP_KIRK_SRC + 0x14;
-                DMA_BUF_SIZE = 0x20;
-                DMA_BUF[0] = DMA_ADDR;
-                hw_dma_read();
-                AES_CMD = 1;
-                AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
-                hw_aes_setkey();
-                hw_aes_do();
-                AES_CMD = 0;
-                auVar1[0] = DMA_BUF[0];
-                auVar1[1] = DMA_BUF[1];
-                auVar1[2] = DMA_BUF[2];
-                auVar1[3] = DMA_BUF[3];
-                AES_KEY = auVar1;
-                auVar1 = AES_RESULT;
-                AES_SRC_BUF = auVar1;
-                hw_aes_setkey();
-                hw_aes_do();
-                auVar1 = AES_RESULT;
-                AES_KEY = auVar1;
-                INPUT = 0x34;
-                kirk_aes_decrypt();
-            }
-        }
-        else {
-            PSP_KIRK_RESULT = 2;
-        }
-        PSP_KIRK_PHASE = 1;
+    if (!hw_kirk_check_enabled()) {
+        return;
     }
-    return;
+
+    kirk_aes_read_header();
+    if ((DMA_BUF[0] == 0x5000000) && (DMA_BUF[3] == 0x20000)) {
+        kirk_header_read_body_size();
+        bVar2 = (bool)kirk_check_body_size_nonzero();
+        if (bVar2) {
+            AES_KEYSEED = 2;
+            aes_set_perconsole_key();
+            DMA_ADDR = PSP_KIRK_SRC + 0x14;
+            DMA_BUF_SIZE = 0x20;
+            DMA_BUF[0] = DMA_ADDR;
+            hw_dma_read();
+            AES_CMD = 1;
+            AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
+            hw_aes_setkey();
+            hw_aes_do();
+            AES_CMD = 0;
+            AES_KEY[0] = DMA_BUF[0];
+            AES_KEY[1] = DMA_BUF[0];
+            AES_KEY[2] = DMA_BUF[0];
+            AES_KEY[3] = DMA_BUF[0];
+            AES_SRC_BUF = AES_RESULT;
+            hw_aes_setkey();
+            hw_aes_do();
+            AES_KEY = AES_RESULT;
+            INPUT = 0x34;
+            kirk_aes_decrypt();
+        }
+    }
+    else {
+        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+    }
+    PSP_KIRK_PHASE = 1;
 }
 
 void ec_sign_gen_m_r(void)
@@ -1364,34 +1331,21 @@ void ec_sign_gen_m_r(void)
 }
 
 void ec_sign_gen_r(void)
-
 {
-    uint uVar1;
-    undefined auVar2 [16];
-    
     do {
         prng_generate();
-        auVar2 = (undefined  [16])MATH_RESULT._12_16_;
-        ECC_R._0_16_ = (undefined  [16])auVar2;
-        uVar1 = MATH_RESULT[7];
-        ECC_R[4] = uVar1;
+        ECC_R._0_16_ = MATH_RESULT._12_16_;
+        ECC_R[4] = MATH_RESULT[7];
         ECC_OP = 0;
         hw_ec_do();
-        uVar1 = ECC_RESULT;
-    } while (uVar1 != 0);
+    } while (ECC_RESULT != 0);
     UNK_FLAGS = UNK_FLAGS & 0xfffffffd;
     return;
 }
 
-
-
 void prng_generate(void)
 
 {
-    undefined auVar1 [16];
-    uint uVar2;
-    bool bVar3;
-    
     do {
         if (UNK_FLAGS == 1) {
             set_other_prime();
@@ -1406,33 +1360,23 @@ void prng_generate(void)
         MATH_IN[4] = 0;
         MATH_IN[5] = 0;
         kirk_reseed_prng_2();
-        auVar1 = (undefined  [16])PRNG_RESULT._0_16_;
-        MATH_IN._24_16_ = (undefined  [16])auVar1;
-        uVar2 = PRNG_RESULT[4];
-        MATH_IN[10] = uVar2;
+        MATH_IN._24_16_ = PRNG_RESULT._0_16_;
+        MATH_IN[10] = PRNG_RESULT[4];
         kirk_reseed_prng_2();
-        auVar1 = (undefined  [16])PRNG_RESULT._0_16_;
-        MATH_IN._44_16_ = (undefined  [16])auVar1;
-        uVar2 = PRNG_RESULT[4];
-        MATH_IN[15] = uVar2;
-        uVar2 = MATH_REG;
-        __builtin_setmode(uVar2,1);
-        __builtin_dma(0x400,0);
+        MATH_IN._44_16_ = PRNG_RESULT._0_16_;
+        MATH_IN[15] = PRNG_RESULT[4];
+        __builtin_setmode(MATH_REG, 1);
+        __builtin_dma(0x400, 0);
         R13 = 5;
-        R11 = 0x47d;
-        bVar3 = (bool)buffer_is_nonzero();
-    } while (!bVar3);
+        R11 = &MATH_RESULT[3]
+    } while (!buffer_is_nonzero());
     return;
 }
 
 
 
 bool ec_sign_hash_and_check(void)
-
 {
-    uint uVar1;
-    undefined auVar2 [16];
-    
     if (SIZE != 0) {
         hw_sha1_do();
         if (!ec_sign_check()) {
@@ -1442,25 +1386,14 @@ bool ec_sign_hash_and_check(void)
     return false;
 }
 
-
-
 bool ec_sign_check(void)
-
 {
-    uint uVar1;
-    undefined auVar2 [16];
-    
-    auVar2 = (undefined  [16])SHA1_RESULT._0_16_;
-    ECC_M._0_16_ = (undefined  [16])auVar2;
-    uVar1 = SHA1_RESULT[4];
-    ECC_M[4] = uVar1;
+    ECC_M._0_16_ = SHA1_RESULT._0_16_;
+    ECC_M[4] = SHA1_RESULT[4];
     ECC_OP = 1;
     hw_ec_do();
-    uVar1 = ECC_RESULT;
-    return uVar1 == 0;
+    return (ECC_RESULT == 0);
 }
-
-
 
 void ec_dma_read_scalars(void)
 
@@ -1499,20 +1432,21 @@ void dma_ec_output_point(void)
 void hw_sha1_do(void)
 
 {
-    if (SIZE != 0) {
-        SHA1_IN_SIZE = SIZE;
-        DMA_BUF_SIZE = 4;
-        SIZE = SIZE + 3U >> 2 | (SIZE + 3U) * 0x40000000;
-        do {
-            hw_dma_read_input();
-            SHA1_IN_DATA = DMA_BUF[0];
-            INPUT = INPUT + 4;
-            SIZE = SIZE + -1;
-        } while (SIZE != 0);
-        __builtin_dma(4,0);
-        SIZE = 0;
+    if (SIZE == 0) {
+        return;
     }
-    return;
+
+    SHA1_IN_SIZE = SIZE;
+    DMA_BUF_SIZE = 4;
+    SIZE = (SIZE + 3) / 4;
+    do {
+        hw_dma_read_input();
+        SHA1_IN_DATA = DMA_BUF[0];
+        INPUT = INPUT + 4;
+        SIZE = SIZE + -1;
+    } while (SIZE != 0);
+    __builtin_dma(4,0);
+    SIZE = 0;
 }
 
 
@@ -1755,7 +1689,7 @@ void kirk_cmac_check_header(void)
             return;
         }
     }
-    PSP_KIRK_RESULT = 3;
+    PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
     return;
 }
 
@@ -1774,18 +1708,13 @@ void kirk_cmac_check_body(void)
     hw_dma_read_input();
     bVar1 = memcmp_cmac();
     if (!bVar1) {
-        PSP_KIRK_RESULT = 4;
+        PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
     }
     return;
 }
 
-
-
 void kirk_ecdsa_check_header(void)
-
 {
-    bool bVar1;
-    
     INPUT = PSP_KIRK_SRC + 0x10;
     ec_dma_read_scalars();
     INPUT = PSP_KIRK_SRC + 0x60;
@@ -1802,8 +1731,8 @@ void kirk_ecdsa_check_header(void)
     SHA1_IN_DATA = DMA_BUF[6];
     SHA1_IN_DATA = DMA_BUF[7];
     DMA_BUF[4] = __builtin_byteswap(DMA_BUF[4]);
-    if ((DMA_BUF[4] == KIRK_BODY_SIZE) &&
-       (DMA_BUF[5] = __builtin_byteswap(DMA_BUF[5]), DMA_BUF[5] == KIRK_DATA_OFFSET)) {
+    DMA_BUF[5] = __builtin_byteswap(DMA_BUF[5]);
+    if (DMA_BUF[4] == KIRK_BODY_SIZE && DMA_BUF[5] == KIRK_DATA_OFFSET) {
         INPUT = INPUT + 0x20;
         DMA_BUF_SIZE = 0x10;
         hw_dma_read_input();
@@ -1812,13 +1741,12 @@ void kirk_ecdsa_check_header(void)
         SHA1_IN_DATA = DMA_BUF[2];
         SHA1_IN_DATA = DMA_BUF[3];
         __builtin_dma(4,0);
-        bVar1 = (bool)ec_sign_check();
-        if (bVar1) {
-            return;
+        if (ec_sign_check()) {
+            return true;
         }
     }
-    PSP_KIRK_RESULT = 3;
-    return;
+    PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+    return false;
 }
 
 
@@ -1835,7 +1763,7 @@ void kirk_ecdsa_check_body(void)
     bVar1 = (bool)ec_sign_hash_and_check();
     if (!bVar1) {
         FUN_00001670();
-        PSP_KIRK_RESULT = 4;
+        PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
     }
     return;
 }
@@ -1849,7 +1777,7 @@ void kirk_aes_decrypt(void)
     OUTPUT = PSP_KIRK_DST;
     SIZE = KIRK_BODY_SIZE;
     aes_decrypt_cbc();
-    PSP_KIRK_RESULT = 0;
+    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
     return;
 }
 
@@ -1865,7 +1793,7 @@ void kirk_aes_decrypt_body(void)
     OUTPUT = PSP_KIRK_DST;
     SIZE = KIRK_BODY_SIZE;
     aes_decrypt_cbc();
-    PSP_KIRK_RESULT = 0;
+    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
     return;
 }
 
@@ -1876,22 +1804,19 @@ void kirk_set_size_offset_body(void)
 {
     SIZE = KIRK_BODY_SIZE + 0x90;
     SIZE = KIRK_DATA_OFFSET + SIZE;
-    align16();
+    align_size_16();
     return;
 }
 
 
 
 void kirk_set_size_offset_header2(void)
-
 {
     SIZE = KIRK_BODY_SIZE + 0x30;
-    SIZE = KIRK_DATA_OFFSET + SIZE;
-    align16();
+    SIZE = KIRK_DATA_OFFSET + KIRK_BODY_SIZE + 0x30;
+    align_size_16();
     return;
 }
-
-
 
 void kirk_header_read_ecdsa_flag(void)
 
@@ -2047,61 +1972,42 @@ void dma_memcpy(void)
 }
 
 bool memcmp_cmac(void)
-
 {
-    R11 = 0x399;
-    R12 = 0xe10;
+    R11 = &AES_RESULT;
+    R12 = &DMA_BUF;
     R13 = 4;
     do {
         if (*(int *)R11 != *(int *)R12) {
-            return *(int *)R11 == *(int *)R12;
+            return false;
         }
         R11 = R11 + 1;
         R12 = R12 + 1;
         R13 = R13 - 1;
     } while (R13 != 0);
-    return R13 == 0;
+    return true;
 }
-
-
 
 bool hw_kirk_check_enabled(void)
-
 {
-    bool bVar1;
-    
-    bVar1 = PSP_KIRK_STATUS != 1;
-    if (bVar1) {
-        PSP_KIRK_RESULT = 1;
+    if (PSP_KIRK_STATUS != 1) {
+        PSP_KIRK_RESULT = KIRK_NOT_ENABLED;
         crash();
     }
-    return !bVar1;
+    return true;
 }
 
-
-
-void CheckKirkInitialized(void)
-
+bool CheckKirkInitialized(void)
 {
     if (UNK_FLAGS != 0) {
-        PSP_KIRK_RESULT = 0xc;
+        PSP_KIRK_RESULT = KIRK_NOT_INITIALIZED;
     }
-    return;
+    return true;
 }
 
-
-
-bool align16(void)
-
+void align_size_16(void)
 {
-    uint uVar1;
-    
-    uVar1 = SIZE + 0xf;
-    SIZE = uVar1 & 0xfffffff0;
-    return uVar1 == 0;
+    SIZE = (SIZE + 0xf) & 0xfffffff0;
 }
-
-
 
 void hw_dma_write_aes_result(void)
 
@@ -2161,7 +2067,7 @@ bool kirk_check_body_size_nonzero(void)
 
 {
     if (KIRK_BODY_SIZE == 0) {
-        PSP_KIRK_RESULT = 0x10;
+        PSP_KIRK_RESULT = KIRK_DATA_SIZE_ZERO;
     }
     return KIRK_BODY_SIZE != 0;
 }
@@ -2216,7 +2122,7 @@ void kirk_cmd10_priv_sigvry(void)
     else {
         if (DMA_BUF[0] != 0x3000000) {
             PSP_KIRK_PHASE = 1;
-            PSP_KIRK_RESULT = 2;
+            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
             return;
         }
         AES_KEYSEED = 0;
@@ -2233,7 +2139,7 @@ void kirk_cmd10_priv_sigvry(void)
             bVar1 = (bool)kirk_ecdsa_check_header();
             if (!bVar1) {
                 PSP_KIRK_PHASE = 1;
-                PSP_KIRK_RESULT = 3;
+                PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
                 return;
             }
         }
@@ -2245,7 +2151,7 @@ void kirk_cmd10_priv_sigvry(void)
                 return;
             }
         }
-        PSP_KIRK_RESULT = 0;
+        PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
     }
     PSP_KIRK_PHASE = 1;
     return;
@@ -2329,15 +2235,10 @@ void init_TRNG(void)
 
 
 void init_MATH(void)
-
 {
-    uint uVar1;
-    
-    uVar1 = MATH_REG;
-    __builtin_setmode(uVar1,0);
+    __builtin_setmode(MATH_REG,0);
     do {
-        uVar1 = MATH_STATUS;
-    } while (uVar1 != 0);
+    } while (MATH_STATUS != 0);
     return;
 }
 
@@ -2392,7 +2293,7 @@ void kirk_cmd11_hash(void)
         hw_dma_read();
         SIZE = __builtin_byteswap(DMA_BUF[0]);
         if (SIZE == 0) {
-            PSP_KIRK_RESULT = 0x10;
+            PSP_KIRK_RESULT = KIRK_DATA_SIZE_ZERO;
         }
         else {
             INPUT = PSP_KIRK_SRC + 4;
@@ -2402,7 +2303,7 @@ void kirk_cmd11_hash(void)
             DMA_ADDR = PSP_KIRK_DST;
             DMA_BUF_SIZE = 0x14;
             hw_dma_write();
-            PSP_KIRK_RESULT = 0;
+            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -2439,7 +2340,7 @@ void kirk_cmd12_ecdsa_genkey(void)
             hw_ec_do();
             OUTPUT = PSP_KIRK_DST + 0x14;
             dma_ec_output_point();
-            PSP_KIRK_RESULT = 0;
+            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -2485,10 +2386,10 @@ void kirk_cmd13_ecdsa_mul(void)
             hw_ec_do();
             OUTPUT = PSP_KIRK_DST;
             dma_ec_output_point();
-            PSP_KIRK_RESULT = 0;
+            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
         }
         else {
-            PSP_KIRK_RESULT = 5;
+            PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -2514,7 +2415,7 @@ void kirk_cmd14_prngen(void)
             DMA_ADDR = PSP_KIRK_DST;
             DMA_BUF_SIZE = 0x14;
             hw_dma_write();
-            PSP_KIRK_RESULT = 0;
+            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -2565,10 +2466,10 @@ void kirk_cmd16_siggen(void)
                 UNK_FLAGS = UNK_FLAGS & 0xfffffffd;
                 OUTPUT = PSP_KIRK_DST;
                 dma_ec_output_point();
-                PSP_KIRK_RESULT = 0;
+                PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
             }
             else {
-                PSP_KIRK_RESULT = 5;
+                PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
             }
         }
         PSP_KIRK_PHASE = 1;
@@ -2606,10 +2507,10 @@ void kirk_cmd17_sigvry(void)
         hw_ec_do();
         uVar1 = ECC_RESULT;
         if (uVar1 == 0) {
-            PSP_KIRK_RESULT = 0;
+            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
         }
         else {
-            PSP_KIRK_RESULT = 5;
+            PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
         }
         PSP_KIRK_PHASE = 1;
     }
@@ -2636,111 +2537,76 @@ void kirk_cmd18_certvry(void)
         hw_dma_read();
         bVar1 = memcmp_cmac();
         if (bVar1) {
-            PSP_KIRK_RESULT = 0;
+            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
         }
         else {
-            PSP_KIRK_RESULT = 5;
+            PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
         }
         PSP_KIRK_PHASE = 1;
     }
     return;
 }
 
-
-
-undefined ec_check_scalar(void)
-
+bool ec_check_scalar(void)
 {
-    bool bVar1;
-    undefined uVar2;
-    
-    R11 = 0xfc3;
+    R11 = &R3;
     R13 = 5;
-    bVar1 = (bool)buffer_is_nonzero();
-    if ((bVar1) &&
-       (((((int)R3 < -1 || ((int)R4 < -2)) || ((int)R5 < -0x4a52)) ||
-        (((int)R6 < 0x3c523e63 || ((int)R7 < -0x6bb0ded9)))))) {
-        uVar2 = 1;
+    if (buffer_is_nonzero() &&
+        (R3 < 0xffffffff
+      || R4 < 0xfffffffe
+      || R5 < 0xffffb5ae
+      || R6 < 0x3c523e63
+      || R7 < 0x944f2127)) {
+        return true;
     }
-    else {
-        uVar2 = 0;
-    }
-    return uVar2;
+    return false;
 }
-
-
 
 void kirk_cmd15_init(void)
-
 {
-    uint uVar1;
-    uint uVar2;
-    bool bVar3;
-    
-    bVar3 = (bool)hw_kirk_check_enabled();
-    if (bVar3) {
-        UNK_FLAGS = UNK_FLAGS | 1;
-        DMA_ADDR = PSP_KIRK_SRC;
-        DMA_BUF_SIZE = 0x1c;
-        hw_dma_read();
-        DMA_BUF[1] = DMA_BUF[1] + 1;
-        __unkown_op(0x21,DMA_BUF[0]);
-        KIRK15_KEYSEED[0] = 0;
-        KIRK15_KEYSEED[1] = 0;
-        KIRK15_KEYSEED[2] = DMA_BUF[0];
-        PRNG_SEED[0] = DMA_BUF[2];
-        PRNG_SEED._4_16_ = (undefined  [16])DMA_BUF._12_16_;
-        TRNG_OUT_SIZE = 0x100;
-        uVar1 = TRNG_REG;
-        __builtin_setmode(uVar1,1);
-        __builtin_dma(0x100,0);
-        SHA1_IN_SIZE = 0x20;
-        uVar1 = TRNG_OUTBLOCK[0];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[1];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[2];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[3];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[4];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[5];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[6];
-        SHA1_IN_DATA = uVar1;
-        uVar1 = TRNG_OUTBLOCK[7];
-        SHA1_IN_DATA = uVar1;
-        __builtin_dma(4,0);
-        uVar1 = SHA1_RESULT[0];
-        uVar2 = PRNG_SEED[0];
-        PRNG_SEED[0] = uVar1 ^ uVar2;
-        uVar1 = SHA1_RESULT[1];
-        uVar2 = PRNG_SEED[1];
-        PRNG_SEED[1] = uVar1 ^ uVar2;
-        uVar1 = SHA1_RESULT[2];
-        uVar2 = PRNG_SEED[2];
-        PRNG_SEED[2] = uVar1 ^ uVar2;
-        uVar1 = SHA1_RESULT[3];
-        uVar2 = PRNG_SEED[3];
-        PRNG_SEED[3] = uVar1 ^ uVar2;
-        uVar1 = SHA1_RESULT[4];
-        uVar2 = PRNG_SEED[4];
-        PRNG_SEED[4] = uVar1 ^ uVar2;
-        PRNG_MODE = 3;
-        KIRK15_KEYSEED[3] = DMA_BUF[1];
-        kirk_reseed();
-        DMA_BUF[2] = PRNG_SEED[0];
-        DMA_BUF._12_16_ = (undefined  [16])PRNG_SEED._4_16_;
-        DMA_ADDR = PSP_KIRK_DST;
-        hw_dma_write();
-        PSP_KIRK_RESULT = 0;
-        PSP_KIRK_PHASE = 1;
+    if (!hw_kirk_check_enabled()) {
+        return;
     }
-    return;
+
+    UNK_FLAGS = UNK_FLAGS | 1;
+    DMA_ADDR = PSP_KIRK_SRC;
+    DMA_BUF_SIZE = 0x1c;
+    hw_dma_read();
+    DMA_BUF[1] = DMA_BUF[1] + 1;
+    __unkown_op(0x21,DMA_BUF[0]);
+    KIRK15_KEYSEED[0] = 0;
+    KIRK15_KEYSEED[1] = 0;
+    KIRK15_KEYSEED[2] = DMA_BUF[0];
+    PRNG_SEED[0] = DMA_BUF[2];
+    PRNG_SEED._4_16_ = (undefined  [16])DMA_BUF._12_16_;
+    TRNG_OUT_SIZE = 0x100;
+    __builtin_setmode(TRNG_REG, 1);
+    __builtin_dma(0x100, 0);
+    SHA1_IN_SIZE = 0x20;
+    SHA1_IN_DATA = TRNG_OUTBLOCK[0];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[1];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[2];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[3];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[4];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[5];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[6];
+    SHA1_IN_DATA = TRNG_OUTBLOCK[7];
+    __builtin_dma(4,0);
+    PRNG_SEED[0] = SHA1_RESULT[0] ^ PRNG_SEED[0];
+    PRNG_SEED[1] = SHA1_RESULT[1] ^ PRNG_SEED[1];
+    PRNG_SEED[2] = SHA1_RESULT[2] ^ PRNG_SEED[2];
+    PRNG_SEED[3] = SHA1_RESULT[3] ^ PRNG_SEED[3];
+    PRNG_SEED[4] = SHA1_RESULT[4] ^ PRNG_SEED[4];
+    PRNG_MODE = 3;
+    KIRK15_KEYSEED[3] = DMA_BUF[1];
+    kirk_reseed();
+    DMA_BUF[2] = PRNG_SEED[0];
+    DMA_BUF._12_16_ = (undefined  [16])PRNG_SEED._4_16_;
+    DMA_ADDR = PSP_KIRK_DST;
+    hw_dma_write();
+    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
+    PSP_KIRK_PHASE = 1;
 }
-
-
 
 void kirk_reseed_prng_2(void)
 
@@ -2770,63 +2636,45 @@ void aes_set_perconsole_key_0(void)
     aes_set_perconsole_key();
 }
 
-
-
 void aes_set_perconsole_key(void)
-
 {
-    uint auVar1 [4];
-    
     AES_CMD = 0;
-    auVar1 = KEY_SEED2;
-    AES_KEY = auVar1;
+    AES_KEY = KEY_SEED2;
     hw_aes_setkey();
     if (AES_KEYSEED == 0) {
-        auVar1 = KEY_SEED1;
-        AES_SRC_BUF = auVar1;
+        AES_SRC_BUF = KEY_SEED1;
+    } else {
+        AES_SRC_BUF = KEY_SEED0;
     }
-    else {
-        auVar1 = KEY_SEED0;
-        AES_SRC_BUF = auVar1;
-    }
-    AES_KEYSEED = AES_KEYSEED >> 1 | AES_KEYSEED << 0x1f;
+    AES_KEYSEED = (AES_KEYSEED >> 1) | (AES_KEYSEED << 0x1f);
     AES_KEYSEED = AES_KEYSEED + 1;
     do {
         hw_aes_do();
-        auVar1 = AES_RESULT;
-        AES_SRC_BUF = auVar1;
+        AES_SRC_BUF = AES_RESULT;
         AES_KEYSEED = AES_KEYSEED - 1;
     } while (AES_KEYSEED != 0);
-    auVar1 = AES_RESULT;
-    AES_KEY = auVar1;
-    return;
+
+    AES_KEY = AES_RESULT;
 }
-
-
 
 void hw_prng_do(void)
-
 {
-    uint uVar1;
-    
-    uVar1 = PRNG_REG;
-    __builtin_setmode(uVar1,1);
-    __builtin_dma(0x80,0);
-    return;
+    __builtin_setmode(PRNG_REG, 1);
+    __builtin_dma(0x80, 0);
 }
 
-
-
 void kirk_self_test(void)
-
 {
     bool bVar1;
     
     kirk_modules_init();
     bVar1 = (bool)test_ECC_scalar_mult();
-    if ((((bVar1) && (bVar1 = (bool)test_SHA1(), bVar1)) && (bVar1 = (bool)test_AES(), bVar1)) &&
-       (((bVar1 = (bool)test_PRNG(), bVar1 && (bVar1 = (bool)test_TRNG(), bVar1)) &&
-        (bVar1 = (bool)test_MATH(), bVar1)))) {
+    if (test_ECC_scalar_mult()
+        && test_SHA1()
+        && test_AES()
+        && test_PRNG()
+        && test_TRNG()
+        && test_MATH()) {
         HW_TEST_RESULT = 3;
     }
     else {
@@ -2839,17 +2687,17 @@ void kirk_self_test(void)
     AES_KEY[0] = 0x2b7e1516;
     AES_KEY[1] = 0x28aed2a6;
     AES_KEY[2] = 0xabf71588;
-    AES_KEY[3] = 0x9cf4f3c;
+    AES_KEY[3] = 0x09cf4f3c;
     hw_aes_setkey();
     DMA_BUF_SIZE = 0x20;
     DMA_ADDR = PSP_KIRK_SRC;
     hw_dma_read();
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
+    AES_SRC_BUF = DMA_BUF._0_16_;
     hw_aes_do();
-    DMA_BUF._0_16_ = (undefined  [16])AES_RESULT;
-    AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
+    DMA_BUF._0_16_ = AES_RESULT;
+    AES_SRC_BUF = DMA_BUF._16_16_;
     hw_aes_do();
-    DMA_BUF._16_16_ = (undefined  [16])AES_RESULT;
+    DMA_BUF._16_16_ = AES_RESULT;
     DMA_ADDR = PSP_KIRK_DST;
     hw_dma_write();
     PSP_KIRK_PHASE = 1;
@@ -2858,14 +2706,8 @@ void kirk_self_test(void)
     return;
 }
 
-
-
-undefined test_ECC_scalar_mult(void)
-
+bool test_ECC_scalar_mult(void)
 {
-    uint uVar1;
-    undefined uVar2;
-    
     ECC_P[0] = 0xacb0f43a;
     ECC_P[1] = 0x68487d86;
     ECC_P[2] = 0x975b98aa;
@@ -2913,87 +2755,64 @@ undefined test_ECC_scalar_mult(void)
     ECC_R[4] = 3;
     ECC_OP = 2;
     hw_ec_do();
-    uVar1 = ECC_RESULT_X[0];
-    if ((((((uVar1 == 0x6df3fa63) && (uVar1 = ECC_RESULT_X[1], uVar1 == 0xc3deede1)) &&
-          (uVar1 = ECC_RESULT_X[2], uVar1 == 0x3d46d1fa)) &&
-         ((uVar1 = ECC_RESULT_X[3], uVar1 == 0xf6cbc2b6 &&
-          (uVar1 = ECC_RESULT_X[4], uVar1 == 0x4319589a)))) &&
-        ((uVar1 = ECC_RESULT_Y[0], uVar1 == 0x78ef881d &&
-         ((uVar1 = ECC_RESULT_Y[1], uVar1 == 0x7450e850 &&
-          (uVar1 = ECC_RESULT_Y[2], uVar1 == 0x22c8e6f0)))))) &&
-       ((uVar1 = ECC_RESULT_Y[3], uVar1 == 0x7d9076e9 &&
-        (uVar1 = ECC_RESULT_Y[4], uVar1 == 0x2f4e082e)))) {
-        uVar2 = 1;
+    if (ECC_RESULT_X[0] == 0x6df3fa63
+     && ECC_RESULT_X[1] == 0xc3deede1
+     && ECC_RESULT_X[2] == 0x3d46d1fa
+     && ECC_RESULT_X[3] == 0xf6cbc2b6
+     && ECC_RESULT_X[4] == 0x4319589a
+     && ECC_RESULT_Y[0] == 0x78ef881d
+     && ECC_RESULT_Y[1] == 0x7450e850
+     && ECC_RESULT_Y[2] == 0x22c8e6f0
+     && ECC_RESULT_Y[3] == 0x7d9076e9
+     && ECC_RESULT_Y[4] == 0x2f4e082e) {
+        return 1;
     }
-    else {
-        uVar2 = 0;
-    }
-    return uVar2;
+    return 0;
 }
 
-
-
-undefined test_SHA1(void)
-
+bool test_SHA1(void)
 {
-    uint uVar1;
-    undefined success;
-    
     SHA1_IN_SIZE = 3;
-    SHA1_IN_DATA = 0x61626300;
+    SHA1_IN_DATA = 0x61626300; // "abc"
     __builtin_dma(4,0);
-    uVar1 = SHA1_RESULT[0];
-    if ((((uVar1 == 0xa9993e36) && (uVar1 = SHA1_RESULT[1], uVar1 == 0x4706816a)) &&
-        (uVar1 = SHA1_RESULT[2], uVar1 == 0xba3e2571)) &&
-       ((uVar1 = SHA1_RESULT[3], uVar1 == 0x7850c26c &&
-        (uVar1 = SHA1_RESULT[4], uVar1 == 0x9cd0d89d)))) {
-        success = 1;
+    if (SHA1_RESULT[0] == 0xa9993e36
+     && SHA1_RESULT[1] == 0x4706816a
+     && SHA1_RESULT[2] == 0xba3e2571
+     && SHA1_RESULT[3] == 0x7850c26c
+     && SHA1_RESULT[4] == 0x9cd0d89d) {
+        return 1;
     }
-    else {
-        success = 0;
-    }
-    return success;
+    return 0;
 }
 
+// >>> cipher = AES.new(bytes.fromhex('2b7e151628aed2a6abf7158809cf4f3c'), AES.MODE_ECB)
+// >>> cipher.encrypt(bytes.fromhex('3243f6a8885a308d313198a2e0370734')).hex()
+// '3925841d02dc09fbdc118597196a0b32'
 
-
-undefined test_AES(void)
-
+bool test_AES(void)
 {
-    uint uVar1;
-    undefined uVar2;
-    
     AES_CMD = 0;
     AES_KEY[0] = 0x2b7e1516;
     AES_KEY[1] = 0x28aed2a6;
     AES_KEY[2] = 0xabf71588;
-    AES_KEY[3] = 0x9cf4f3c;
+    AES_KEY[3] = 0x09cf4f3c;
     hw_aes_setkey();
     AES_SRC_BUF[0] = 0x3243f6a8;
     AES_SRC_BUF[1] = 0x885a308d;
     AES_SRC_BUF[2] = 0x313198a2;
     AES_SRC_BUF[3] = 0xe0370734;
     hw_aes_do();
-    uVar1 = AES_RESULT[0];
-    if ((((uVar1 == 0x3925841d) && (uVar1 = AES_RESULT[1], uVar1 == 0x2dc09fb)) &&
-        (uVar1 = AES_RESULT[2], uVar1 == 0xdc118597)) &&
-       (uVar1 = AES_RESULT[3], uVar1 == 0x196a0b32)) {
-        uVar2 = 1;
+    if (AES_RESULT[0] == 0x3925841d
+     && AES_RESULT[1] == 0x02dc09fb
+     && AES_RESULT[2] == 0xdc118597
+     && AES_RESULT[3] == 0x196a0b32) {
+        return true;
     }
-    else {
-        uVar2 = 0;
-    }
-    return uVar2;
+    return false;
 }
 
-
-
-undefined test_PRNG(void)
-
+bool test_PRNG(void)
 {
-    uint uVar1;
-    undefined uVar2;
-    
     PRNG_MODE = 3;
     PRNG_SEED[0] = 0xf067cf18;
     PRNG_SEED[1] = 0x1f101685;
@@ -3006,48 +2825,32 @@ undefined test_PRNG(void)
     PRNG_SEED[8] = 0xb1f05663;
     PRNG_SEED[9] = 0x6b97b0d;
     hw_prng_do();
-    uVar1 = PRNG_RESULT[0];
-    if ((((((uVar1 == 0x1df50b98) && (uVar1 = PRNG_RESULT[1], uVar1 == 0x7d6c2369)) &&
-          (uVar1 = PRNG_RESULT[2], uVar1 == 0x1794af3b)) &&
-         ((uVar1 = PRNG_RESULT[3], uVar1 == 0xab98a128 &&
-          (uVar1 = PRNG_RESULT[4], uVar1 == 0x4cd53d2d)))) &&
-        ((uVar1 = PRNG_SEED[0], uVar1 == 0xe5cdab0 &&
-         ((uVar1 = PRNG_SEED[1], uVar1 == 0x9c7c39ee && (uVar1 = PRNG_SEED[2], uVar1 == 0x296cf778))
-         )))) && ((uVar1 = PRNG_SEED[3], uVar1 == 0x9f7df4b7 &&
-                  (uVar1 = PRNG_SEED[4], uVar1 == 0x8e2654f9)))) {
-        uVar2 = 1;
+    if (PRNG_RESULT[0] == 0x1df50b98
+     && PRNG_RESULT[1] == 0x7d6c2369
+     && PRNG_RESULT[2] == 0x1794af3b
+     && PRNG_RESULT[3] == 0xab98a128
+     && PRNG_RESULT[4] == 0x4cd53d2d
+     && PRNG_SEED[0] == 0x0e5cdab0
+     && PRNG_SEED[1] == 0x9c7c39ee
+     && PRNG_SEED[2] == 0x296cf778
+     && PRNG_SEED[3] == 0x9f7df4b7
+     && PRNG_SEED[4] == 0x8e2654f9) {
+        return 1;
     }
-    else {
-        uVar2 = 0;
-    }
-    return uVar2;
+    return 0;
 }
-
-
-
-// WARNING: Globals starting with '_' overlap smaller symbols at the same address
 
 void test_TRNG(void)
-
 {
-    uint uVar1;
-    
     TRNG_OUT_SIZE = 0x100;
-    uVar1 = TRNG_REG;
-    __builtin_setmode(uVar1,1);
-    __builtin_dma(0x100,0);
-    _SIZE = (undefined  [16])TRNG_OUTBLOCK._0_16_;
-    _R4 = (undefined  [16])TRNG_OUTBLOCK._16_16_;
-    return;
+    __builtin_setmode(TRNG_REG, 1);
+    __builtin_dma(0x100, 0);
+    SIZE = TRNG_OUTBLOCK._0_16_; // arbitrary register
+    R4 = TRNG_OUTBLOCK._16_16_;  // arbitrary register
 }
 
-
-
-undefined test_MATH(void)
-
+bool test_MATH(void)
 {
-    uint uVar1;
-    
     MATH_IN[0] = 0;
     MATH_IN[1] = 0;
     MATH_IN[2] = 0;
@@ -3072,17 +2875,16 @@ undefined test_MATH(void)
     MATH_IN_X[5] = 0x38d81bd7;
     MATH_IN_X[6] = 0x7229b1b8;
     MATH_IN_X[7] = 0x8a143d;
-    uVar1 = MATH_REG;
-    __builtin_setmode(uVar1,1);
-    __builtin_dma(0x400,0);
-    uVar1 = MATH_RESULT[0];
-    if ((((uVar1 == 0) && (uVar1 = MATH_RESULT[1], uVar1 == 0)) &&
-        (uVar1 = MATH_RESULT[2], uVar1 == 0)) &&
-       (((uVar1 = MATH_RESULT[3], uVar1 == 0x5ba7b73f &&
-         (uVar1 = MATH_RESULT[4], uVar1 == 0x60c6fa94)) &&
-        ((uVar1 = MATH_RESULT[5], uVar1 == 0x87a61858 &&
-         ((uVar1 = MATH_RESULT[6], uVar1 == 0x6350a902 &&
-          (uVar1 = MATH_RESULT[7], uVar1 == 0x5c1713ae)))))))) {
+    __builtin_setmode(MATH_REG, 1);
+    __builtin_dma(0x400, 0);
+    if (MATH_RESULT[0] == 0
+     && MATH_RESULT[1] == 0
+     && MATH_RESULT[2] == 0
+     && MATH_RESULT[3] == 0x5ba7b73f
+     && MATH_RESULT[4] == 0x60c6fa94
+     && MATH_RESULT[5] == 0x87a61858
+     && MATH_RESULT[6] == 0x6350a902
+     && MATH_RESULT[7] == 0x5c1713ae) {
         MATH_IN[0] = 0;
         MATH_IN[1] = 0;
         MATH_IN[2] = 0;
@@ -3107,19 +2909,19 @@ undefined test_MATH(void)
         MATH_IN_X[5] = 0;
         MATH_IN_X[6] = 0;
         MATH_IN_X[7] = 3;
-        uVar1 = MATH_REG;
-        __builtin_setmode(uVar1,1);
-        __builtin_dma(0x400,0);
-        uVar1 = MATH_RESULT[0];
-        if ((uVar1 == 0) &&
-           (((((uVar1 = MATH_RESULT[1], uVar1 == 0 && (uVar1 = MATH_RESULT[2], uVar1 == 0)) &&
-              (uVar1 = MATH_RESULT[3], uVar1 == 0)) &&
-             ((uVar1 = MATH_RESULT[4], uVar1 == 0 && (uVar1 = MATH_RESULT[5], uVar1 == 0)))) &&
-            ((uVar1 = MATH_RESULT[6], uVar1 == 0 && (uVar1 = MATH_RESULT[7], uVar1 == 2)))))) {
+        __builtin_setmode(MATH_REG, 1);
+        __builtin_dma(0x400, 0);
+        if (MATH_RESULT[0] == 0
+         && MATH_RESULT[1] == 0
+         && MATH_RESULT[2] == 0
+         && MATH_RESULT[3] == 0
+         && MATH_RESULT[4] == 0
+         && MATH_RESULT[5] == 0
+         && MATH_RESULT[6] == 0
+         && MATH_RESULT[7] == 2) {
             return 1;
         }
     }
     return 0;
 }
-
 
