@@ -181,15 +181,18 @@ void _reset(void) // 0x000
  */
 void _start(void) // 0x001
 {
+    // Run self-tests if enabled
     if (HW_TEST_DISABLED != 0) {
         kirk_self_test();
         inf_loop();
         return;
     }
+    // Initialize interfaces
     kirk_modules_init();
     UNK_FLAGS = 0;
     PSP_KIRK_PHASE = 0;
     while (true) {
+        // Read the next command and call the function accordingly
         __builtin_setmode(PSP_KIRK_REG,1);
         __builtin_dma(0,2);
         if (PSP_KIRK_CMD == 0) {
@@ -231,6 +234,7 @@ void _start(void) // 0x001
         } else if (PSP_KIRK_CMD == 18) {
             kirk_cmd18_certvry();
         } else {
+            // Unknown command
             PSP_KIRK_RESULT = KIRK_INVALID_OPERATION;
             if (PSP_KIRK_STATUS != 1) {
                 crash();
@@ -312,73 +316,60 @@ void aes_decrypt_ecb(void)
 }
 
 void aes_decrypt_cbc(void)
-
 {
-    uint uVar1;
-    uint auVar2 [4];
-    
     aes_set_null_iv();
-    if (SIZE != 0) {
-        AES_CMD = 0x13;
-        hw_aes_setkey();
-        DMA_BUF_SIZE = 0x10;
-        while (0 < SIZE + -0x10) {
-            SIZE = SIZE + -0x10;
-            hw_aes_dma_copy_and_do();
-            auVar2 = AES_RESULT;
-            AES_IV = auVar2;
-            hw_dma_write_aes_result();
-            INPUT = INPUT + 0x10;
-            OUTPUT = OUTPUT + 0x10;
-            uVar1 = AES_CMD;
-            AES_CMD = uVar1 & 0xfffffffd;
-        }
-        hw_aes_dma_copy_and_do();
-        DMA_BUF_SIZE = SIZE;
-        hw_dma_write_aes_result();
+    if (SIZE == 0) {
+        return;
     }
-    return;
+
+    AES_CMD = 0x13;
+    hw_aes_setkey();
+    DMA_BUF_SIZE = 0x10;
+    while (0 < SIZE + -0x10) {
+        SIZE = SIZE + -0x10;
+        hw_aes_dma_copy_and_do();
+        AES_IV = AES_RESULT;
+        hw_dma_write_aes_result();
+        INPUT = INPUT + 0x10;
+        OUTPUT = OUTPUT + 0x10;
+        AES_CMD &= 0xfffffffd;
+    }
+    hw_aes_dma_copy_and_do();
+    DMA_BUF_SIZE = SIZE;
+    hw_dma_write_aes_result();
 }
-
-
 
 void decrypt_kbooti_body(void)
 
 {
-    uint uVar1;
-    
-    if (SIZE != 0) {
-        aes_set_null_iv();
-        AES_CMD = 0x13;
-        hw_aes_setkey();
-        while (0 < SIZE + -0x10) {
-            SIZE = SIZE + -0x10;
-            decrypt_kbooti_block();
-            DMA_BUF_SIZE = 0x10;
-            hw_dma_write_aes_result();
-            INPUT = INPUT + 0x10;
-            OUTPUT = OUTPUT + 0x10;
-            uVar1 = AES_CMD;
-            AES_CMD = uVar1 & 0xfffffffd;
-        }
-        decrypt_kbooti_block();
-        DMA_BUF_SIZE = SIZE;
-        hw_dma_write_aes_result();
+    if (SIZE == 0) {
+        return;
     }
-    return;
+
+    aes_set_null_iv();
+    AES_CMD = 0x13;
+    hw_aes_setkey();
+    while (SIZE > 0x10) {
+        SIZE -= 0x10;
+        decrypt_kbooti_block();
+        DMA_BUF_SIZE = 0x10;
+        hw_dma_write_aes_result();
+        INPUT = INPUT + 0x10;
+        OUTPUT = OUTPUT + 0x10;
+        AES_CMD &= 0xfffffffd;
+    }
+    decrypt_kbooti_block();
+    DMA_BUF_SIZE = SIZE;
+    hw_dma_write_aes_result();
 }
 
-
-
 void decrypt_kbooti_block(void)
-
 {
     DMA_BUF_SIZE = 0x14;
     DMA_ADDR = INPUT;
     hw_dma_read();
-    block_shift_2();
+    kbooti_block_shift();
     hw_aes_copy_and_do();
-    return;
 }
 
 void hw_aes_dma_copy_and_do(void)
@@ -416,82 +407,64 @@ void aes_set_null_iv(void)
     return;
 }
 
-
-
-void block_shift_2(void)
-
+void kbooti_block_shift(void)
 {
-    uint uVar1;
-    uint uVar2;
-    
-    uVar1 = DMA_BUF[0] >> 0x10;
-    DMA_BUF[5]._0_2_ = (undefined2)DMA_BUF[1];
-    DMA_BUF[0] = CONCAT22(DMA_BUF[5]._0_2_,(short)uVar1);
-    uVar1 = DMA_BUF[1] >> 0x10;
-    DMA_BUF[5]._0_2_ = (undefined2)DMA_BUF[2];
-    DMA_BUF[1] = CONCAT22(DMA_BUF[5]._0_2_,(short)uVar1);
-    uVar1 = DMA_BUF[2] >> 0x10;
-    DMA_BUF[5]._0_2_ = (undefined2)DMA_BUF[3];
-    DMA_BUF[2] = CONCAT22(DMA_BUF[5]._0_2_,(short)uVar1);
-    DMA_BUF[5] = DMA_BUF[4] >> 0x10 | DMA_BUF[4] << 0x10;
-    uVar2 = DMA_BUF[5];
-    uVar1 = DMA_BUF[3] >> 0x10;
-    DMA_BUF[5]._0_2_ = (undefined2)DMA_BUF[4];
-    DMA_BUF[3] = CONCAT22(DMA_BUF[5]._0_2_,(short)uVar1);
-    DMA_BUF[5] = uVar2;
-    return;
+    DMA_BUF[0] = (DMA_BUF[0] << 16) | (DMA_BUF[1] >> 16);
+    DMA_BUF[1] = (DMA_BUF[1] << 16) | (DMA_BUF[2] >> 16);
+    DMA_BUF[2] = (DMA_BUF[2] << 16) | (DMA_BUF[3] >> 16);
+    DMA_BUF[3] = (DMA_BUF[3] << 16) | (DMA_BUF[4] >> 16);
 }
 
+/*
+ * Pad an AES block stored in DMA_BUF with random taken from the PRNG, before writing it to AES_SRC_BUF.
+ */
 void aes_padding(void)
 {
-    uint uVar1;
-    
     if (SIZE != 0) {
         R3 = &PRNG_RESULT[0];
-        R4 = &DMA_BUF
+        R4 = &DMA_BUF;
         R5 = 0;
-        while (uVar1 = SIZE - 4, uVar1 != 0) {
-            if (0x7fffffff < uVar1) {
-                uVar1 = PRNG_RESULT[0];
+        uint nextSize;
+        // Find the first incomplete word
+        while ((nextSize = SIZE - 4) != 0) {
+            if (nextSize < 0) {
+                // Complete this word's bytes with random data
                 if (SIZE == 2) {
-                    R6 = uVar1 & 0xffff;
-                    *(uint *)R4 = *(uint *)R4 & 0xffff0000;
+                    R6 = PRNG_RESULT[0] & 0xffff;
+                    *R4 &= 0xffff0000;
                 }
-                else if (SIZE < 2) {
-                    R6 = uVar1 & 0xffffff;
-                    *(uint *)R4 = *(uint *)R4 & 0xff000000;
+                else if (SIZE < 2) { // SIZE = 1
+                    R6 = PRNG_RESULT[0] & 0xffffff;
+                    *R4 &= 0xff000000;
                 }
-                else {
-                    R6 = uVar1 & 0xff;
-                    *(uint *)R4 = *(uint *)R4 & 0xffffff00;
+                else { // SIZE = 3
+                    R6 = PRNG_RESULT[0] & 0xff;
+                    *R4 &= 0xffffff00;
                 }
-                *(uint *)R4 = R6 | *(uint *)R4;
+                *R4 |= R6;
                 R3 = R3 + 1;
-                uVar1 = SIZE;
+                nextSize = SIZE;
                 break;
             }
             R5 = R5 + 1;
             R4 = R4 + 1;
-            SIZE = uVar1;
+            SIZE = nextSize;
         }
-        while( true ) {
-            SIZE = uVar1;
+        // Fill the remaining words with random data
+        while (true) {
             R5 = R5 + 1;
             R4 = R4 + 1;
-            if (4 < (int)R5) break;
-            *(undefined4 *)R4 = *(undefined4 *)R3;
+            if ((int)R5 > 4) {
+                break;
+            }
+            *R4 = *R3;
             R3 = R3 + 1;
-            uVar1 = SIZE;
         }
     }
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-    return;
+    AES_SRC_BUF = DMA_BUF;
 }
 
-
-
 void kirk_cmd0_decrypt_bootrom(void)
-
 {
     uint uVar1;
     uint auVar2 [4];
@@ -663,7 +636,7 @@ void kirk_cmd2_dnas_encrypt(void)
         kirk_set_phase1();
         return;
     }
-    if (!CheckKirkInitialized()) {
+    if (!kirk_not_busy()) {
         PSP_KIRK_PHASE = 1;
         return;
     }
@@ -976,7 +949,7 @@ void kirk_cmd4_encrypt_static(void)
     if (bVar3) {
         kirk_aes_read_header();
         if ((DMA_BUF[0] == 0x4000000) && (DMA_BUF[3] == 0)) {
-            bVar3 = (bool)CheckKirkInitialized();
+            bVar3 = (bool)kirk_not_busy();
             if (bVar3) {
                 kirk_header_read_body_size();
                 bVar3 = (bool)kirk_check_body_size_nonzero();
@@ -1047,7 +1020,7 @@ void kirk_cmd5_encrypt_perconsole(void)
     if (bVar1) {
         kirk_aes_read_header();
         if ((DMA_BUF[0] == 0x4000000) && (DMA_BUF[3] == 0x10000)) {
-            bVar1 = (bool)CheckKirkInitialized();
+            bVar1 = (bool)kirk_not_busy();
             if (bVar1) {
                 kirk_header_read_body_size();
                 bVar1 = (bool)kirk_check_body_size_nonzero();
@@ -1081,7 +1054,7 @@ void kirk_cmd6_encrypt_user(void)
     if (bVar2) {
         kirk_aes_read_header();
         if ((DMA_BUF[0] == 0x4000000) && (DMA_BUF[3] == 0x20000)) {
-            bVar2 = (bool)CheckKirkInitialized();
+            bVar2 = (bool)kirk_not_busy();
             if (bVar2) {
                 kirk_header_read_body_size();
                 bVar2 = (bool)kirk_check_body_size_nonzero();
@@ -1996,10 +1969,11 @@ bool hw_kirk_check_enabled(void)
     return true;
 }
 
-bool CheckKirkInitialized(void)
+bool kirk_not_busy(void)
 {
     if (UNK_FLAGS != 0) {
         PSP_KIRK_RESULT = KIRK_NOT_INITIALIZED;
+        return false;
     }
     return true;
 }
@@ -2321,7 +2295,7 @@ void kirk_cmd12_ecdsa_genkey(void)
     
     bVar3 = (bool)hw_kirk_check_enabled();
     if (bVar3) {
-        bVar3 = (bool)CheckKirkInitialized();
+        bVar3 = (bool)kirk_not_busy();
         if (bVar3) {
             UNK_FLAGS = UNK_FLAGS | 2;
             prng_generate();
@@ -2405,7 +2379,7 @@ void kirk_cmd14_prngen(void)
     
     bVar1 = (bool)hw_kirk_check_enabled();
     if (bVar1) {
-        bVar1 = (bool)CheckKirkInitialized();
+        bVar1 = (bool)kirk_not_busy();
         if (bVar1) {
             UNK_FLAGS = UNK_FLAGS | 2;
             prng_generate();
@@ -2422,19 +2396,14 @@ void kirk_cmd14_prngen(void)
     return;
 }
 
-
-
-// WARNING: Globals starting with '_' overlap smaller symbols at the same address
-
 void kirk_cmd16_siggen(void)
-
 {
     uint uVar1;
     bool bVar2;
     
     bVar2 = (bool)hw_kirk_check_enabled();
     if (bVar2) {
-        bVar2 = (bool)CheckKirkInitialized();
+        bVar2 = (bool)kirk_not_busy();
         if (bVar2) {
             AES_KEYSEED = 3;
             aes_set_perconsole_key();
@@ -2646,8 +2615,7 @@ void aes_set_perconsole_key(void)
     } else {
         AES_SRC_BUF = KEY_SEED0;
     }
-    AES_KEYSEED = (AES_KEYSEED >> 1) | (AES_KEYSEED << 0x1f);
-    AES_KEYSEED = AES_KEYSEED + 1;
+    AES_KEYSEED = (AES_KEYSEED >> 1) + 1;
     do {
         hw_aes_do();
         AES_SRC_BUF = AES_RESULT;
@@ -2665,11 +2633,8 @@ void hw_prng_do(void)
 
 void kirk_self_test(void)
 {
-    bool bVar1;
-    
     kirk_modules_init();
-    bVar1 = (bool)test_ECC_scalar_mult();
-    if (test_ECC_scalar_mult()
+    if (test_ECC()
         && test_SHA1()
         && test_AES()
         && test_PRNG()
@@ -2706,7 +2671,25 @@ void kirk_self_test(void)
     return;
 }
 
-bool test_ECC_scalar_mult(void)
+// Test ECC scalar multiplication:
+//
+// psp_curve_test = {
+//     'name': 'psp_kirk_test',
+//     'type': 'weierstrass',
+//     'size': 160,
+//     'order':     0xe5d8c140e15a3be238d81bd77229b1b8008a143d,
+//     'field':     0xacb0f43a68487d86975b98aae0a0f6a581da1e8d,
+//     'generator': (0xa60cd01542a205545b6696f3421e00cde8bbc06c,
+// 0x76bd9970281e307cd30ea2eba0f88400334bcba8),
+//     'a': 0xacb0f43a68487d86975b98aae0a0f6a581da1e8a,
+//     'b': 0x4fb97afa73a001a1a6386705de41e517543933a7,
+//     'cofactor': 1
+// }
+// crvkirk = ecpy.curves.WeierstrassCurve(psp_curve_test)
+// print(crvkirk.mul_point(crvkirk.generator, 3))
+// --> (0x6df3fa63c3deede13d46d1faf6cbc2b64319589a , 0x78ef881d7450e85022c8e6f07d9076e92f4e082e)
+
+bool test_ECC(void)
 {
     ECC_P[0] = 0xacb0f43a;
     ECC_P[1] = 0x68487d86;
