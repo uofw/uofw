@@ -11,123 +11,124 @@
 // Once reset, to use a device, use __builtin_setmode(XXX_REG,val) (val can be 1 or 2 depending on the devices and actions), then __builtin_dma(data_size, 0)
 // Exceptions:
 // - for SHA1, there is no call to __builtin_setmode()
-// - for DMA communication (copies from/to main RAM), arguments to the second function are __builtin_dma(0,1)
-// - for CPU hardware registers communication, arguments to the second function are __builtin_dma(0,2)
+// - for DMA communication (copies from/to main RAM), arguments to the second function are __builtin_dma(0, 1)
+// - for CPU hardware registers communication, arguments to the second function are __builtin_dma(0, 2)
+// - for ECC computation, arguments to the second function are __builtin_dma(0, 0x100)
 // 
 // Module 1 - ECC - can make and verify signatures, and multiply points by scalars
 //
-// 0x000 - ECC_REG - only 0 or 1
-// 0x001 - ECC_STATUS
-// 0x002 - ECC_OP - 0 = make signature (s) from r, 1 = verify signature, 2 = multiply point by scalar
-// 0x003 - ECC_RESULT - only seen for commands 0 and 1, value 0 = OK
-// 0x00B - ECC_P - field size for the curve
-// 0x013 - ECC_A - parameter a for the curve
-// 0x01B - ECC_B - parameter b for the curve
-// 0x023 - ECC_N - modulus of the curve
-// 0x02B - ECC_UNK1 - unknown, seems to be a parameter of the curve
-// 0x033 - ECC_UNK2 - unknown, seems to be a parameter of the curve
-// 0x03B - ECC_Gx - first coordinate of the generator (or input point)
-// 0x043 - ECC_Gy - second coordinate of the generator (or input point)
-// 0x04B - ECC_R - first scalar (k for multiplication, r for signature)
-// 0x053 - ECC_S - second scalar (s for signature)
-// 0x05B - ECC_M - message (hash) to sign (or to verify signature)
-// 0x063 - ECC_Px - first coordinate of the public key (for signature check)
-// 0x06B - ECC_Py - second coordinate of the public key (for signature check)
-// 0x08B - ECC_RESULT_x - first coordinate of the result (for multiplication)
-// 0x093 - ECC_RESULT_y - second coordinate of the result (for multiplication)
+// 0x000 - HW_ECC_REG - only 0 or 1
+// 0x001 - HW_ECC_STATUS
+// 0x002 - HW_ECC_OP - 0 = make signature (s) from r, 1 = verify signature, 2 = multiply point by scalar
+#define ECC_OP_SIGN 0
+#define ECC_OP_CHECK_SIGN 1
+#define ECC_OP_MUL 2
+
+// 0x003 - HW_ECC_RESULT - only seen for commands 0 and 1, value 0 = OK
+// 0x00B - HW_ECC_P - field size for the curve
+// 0x013 - HW_ECC_A - parameter a for the curve
+// 0x01B - HW_ECC_B - parameter b for the curve
+// 0x023 - HW_ECC_N - modulus of the curve
+// 0x02B - HW_ECC_UNK1 - unknown, seems to be a parameter of the curve
+// 0x033 - HW_ECC_UNK2 - unknown, seems to be a parameter of the curve
+// 0x03B - HW_ECC_Gx - first coordinate of the generator (or input point)
+// 0x043 - HW_ECC_Gy - second coordinate of the generator (or input point)
+// 0x04B - HW_ECC_R - first scalar (k for multiplication, r for signature)
+// 0x053 - HW_ECC_S - second scalar (s for signature)
+// 0x05B - HW_ECC_M - message (hash) to sign (or to verify signature)
+// 0x063 - HW_ECC_Px - first coordinate of the public key (for signature check)
+// 0x06B - HW_ECC_Py - second coordinate of the public key (for signature check)
+// 0x08B - HW_ECC_RESULT_x - first coordinate of the result (for multiplication)
+// 0x093 - HW_ECC_RESULT_y - second coordinate of the result (for multiplication)
 //
 // Module 2 - SHA1
 //
-// 0x330 - SHA1_REG - only 0 (__builtin_setmode isn't used when doing SHA1's)
-// 0x331 - SHA1_STATUS
+// 0x330 - HW_SHA1_REG - only 0 (__builtin_setmode isn't used when doing SHA1's)
+// 0x331 - HW_SHA1_STATUS
 // 0x332 -
-// 0x333 - SHA1_IN_SIZE - size of the input data
-// 0x334 - SHA1_IN_DATA - buffer for the current 4 bytes of input data
-// 0x335 - SHA1_RESULT - result of the SHA1
+// 0x333 - HW_SHA1_IN_SIZE - size of the input data
+// 0x334 - HW_SHA1_IN_DATA - buffer for the current 4 bytes of input data
+// 0x335 - HW_SHA1_RESULT - result of the SHA1
 //
 // Module 3 - AES
 //
-// 0x380 - AES_REG - 0 for reset, 1 for sending data to encrypt/decrypt, 2 to set key
-// 0x381 - AES_STATUS
-// 0x382 - AES_CMD
+// 0x380 - HW_AES_REG - 0 for reset, 1 for sending data to encrypt/decrypt, 2 to set key
+// 0x381 - HW_AES_STATUS
+// 0x382 - HW_AES_CMD
 //          bit 0 (0x01): 0 = encrypt, 1 = decrypt
 //          bit 1 (0x02): 0 = not first block, 1 = first block (for CBC)
-//          bit 2 (0x04): ?
-//          bit 3 (0x08): ?
-//          bit 4 (0x10): 0 = ECB, 1 = CBC
+//          bit 4 (0x10): 0 = single block, 1 = multiple blocks
 //          bit 5 (0x20): 0 = normal, 1 = CMAC
 
-#define AES_CMD_ENCRYPT     0x00
-#define AES_CMD_DECRYPT     0x01
-#define AES_CMD_FIRST_BLOCK 0x02
-#define AES_CMD_ECB         0x00
-#define AES_CMD_CBC         0x10 // TODO seems incorrect
-#define AES_CMD_CMAC        0x20
+#define AES_CMD_ENCRYPT         0x00
+#define AES_CMD_DECRYPT         0x01
+#define AES_CMD_FIRST_BLOCK     0x02
+#define AES_CMD_MULTIPLE_BLOCKS 0x10
+#define AES_CMD_CMAC            0x20
 
-// 0x383 - AES_END - ???
-// 0x384 - AES_SRC_BUF - current block to encrypt/decrypt
-// 0x388 - AES_KEY - AES key
-// 0x390 - AES_IV - AES IV for CBC
-// 0x399 - AES_RESULT - result of the encryption/decryption
+// 0x383 - HW_AES_CMAC_SIZE - size of the data for the CMAC
+// 0x384 - HW_AES_SRC_BUF - current block to encrypt/decrypt
+// 0x388 - HW_AES_KEY - AES key
+// 0x390 - HW_AES_IV - AES IV for CBC
+// 0x399 - HW_AES_RESULT - result of the encryption/decryption
 //
-// Module 4 - some kind of PRNG?
+// Module 4 - an unknown deterministic PRNG (pseudo-random number generator)
 //
-// 0x420 - PRNG_REG - only 0 or 1
-// 0x421 - PRNG_STATUS
-// 0x422 - PRNG_MODE - 2 or 3?
-// 0x423 - PRNG_SEED - a 40-byte-long buffer
-// 0x42D - PRNG_RESULT - a 20-byte-long buffer
+// 0x420 - HW_PRNG_REG - only 0 or 1
+// 0x421 - HW_PRNG_STATUS
+// 0x422 - HW_PRNG_MODE - 2 or 3? (3 is used for initialization & for the self-test, 2 is used the rest of the time)
+// 0x423 - HW_PRNG_SEED - a 40-byte-long buffer
+// 0x42D - HW_PRNG_RESULT - a 20-byte-long buffer
 //
-// Module 5 - maybe some TRNG?
+// Module 5 - might be some kind of TRNG (true random number generator)
 //
-// 0x440 - TRNG_REG - only 0 or 1
-// 0x441 - TRNG_STATUS
-// 0x442 - TRNG_OUT_SIZE - maybe the output size of the true rng
-// 0x443 - TRNG_OUTPUT - output of the TRNG, at least 32-byte long, maybe 256-byte long
+// 0x440 - HW_TRNG_REG - only 0 or 1
+// 0x441 - HW_TRNG_STATUS
+// 0x442 - HW_TRNG_OUT_SIZE - maybe the output size of the true rng
+// 0x443 - HW_TRNG_OUTPUT - output of the TRNG, at least 32-byte long, maybe 256-byte long
 //
-// Module 6 - "math" module, some kind of deterministic generator related to elliptic curve prime numbers, maybe something like Dual EC DRBG?
+// Module 6 - math module, used to compute modulo's of large numbers
 //
 // 0x460 - MATH_REG - only 0 or 1
 // 0x461 - MATH_STATUS
-// 0x462 - MATH_IN - unknown 64-byte input buffer
-// 0x472 - MATH_IN_X - unknown 32-byte input buffer, contains a prime number
-// 0x47A - MATH_RESULT - output of the generator
+// 0x462 - MATH_IN - 64-byte input buffer
+// 0x472 - MATH_MODULUS - 32-byte input buffer, containing the modulus, which is always a prime number here
+// 0x47A - MATH_RESULT - result of the modulo
 //
 // Key parameters:
 //
-// 0x490 - KEY_SEED0 - read-only key seed
-// 0x494 - KEY_SEED1 - read-only key seed
-// 0x498 - KEY_SEED2 - read-only key seed
-// 0x49C - HW_AES_PARAM_ID - write-only, write ID to receive key in HW_AES_PARAM. 0x00/0x01 = kbooti (devkit), 0x02 = kirk 1 (IPL), 0x03 = kirk 2, 0x04~0x83 = kirk 4/7, 
-// 0x4A0 - HW_AES_PARAM - read-only
-//
-// 0x4B0 - HW_CURVE_PARAM_ID - same as above, but with ECC parameters. 0/1 = kirk 1 public key, 2/3 = kirk 2 public key, 4 = kirk 2 private key, 5/6 = kirk 3 public key
-// 0x4B1 - HW_CURVE_PARAM - the obtained parameter (scalar or coordinate)
+// 0x490 - HW_KEY_MESH_0 - read-only key seed
+// 0x494 - HW_KEY_MESH_1 - read-only key seed
+// 0x498 - HW_KEY_MESH_2 - read-only key seed
+// 0x49C - HW_AES_KEYSLOT_ID - write-only, write ID to receive key in HW_HW_AES_PARAM. 0x00/0x01 = kbooti (devkit), 0x02 = kirk 1 (IPL), 0x03 = kirk 2, 0x04~0x83 = kirk 4/7, 
+// 0x4A0 - HW_AES_KEYSLOT - read-only
+// 0x4B0 - HW_ECDSA_KEYSLOT_ID - same as above, but with ECC parameters. 0/1 = kirk 1 public key, 2/3 = kirk 2 public key, 4 = kirk 2 private key, 5/6 = kirk 3 public key
+// 0x4B1 - HW_ECDSA_KEYSLOT - the obtained parameter (scalar or coordinate)
 //
 // Module 7 - DMA module, to send/receive data from the main CPU
 //
-// 0xE00 - DMA_REG - 0 to init, 1 to write data, 2 to read data
-// 0xE01 - DMA_STATUS - unused (initialization is present in the ROM but never called)
-// 0xE02 - DMA_ADDR - address from which to read/write
-// 0xE03 - DMA_BUF_SIZE - size of the data to send/receive
-// 0xE10 - DMA_BUF - buffer of the data to send/receive
+// 0xE00 - HW_DMA_REG - 0 to init, 1 to write data, 2 to read data
+// 0xE01 - HW_DMA_STATUS - unused (initialization is present in the ROM but never called)
+// 0xE02 - HW_DMA_ADDR - address from which to read/write
+// 0xE03 - HW_DMA_BUF_SIZE - size of the data to send/receive
+// 0xE10 - HW_DMA_BUF - buffer of the data to send/receive
 //
 // Module 8 - PSP KIRK interface, interface with the registers at 0xBDE00000 on the CPU
 //
-// 0xE20 - PSP_KIRK_REG - only 0 or 1
-// 0xE21 - PSP_KIRK_STATUS - equal to 1 when KIRK is initialized
-// 0xE22 - PSP_KIRK_PHASE - possibly the same phase as 0xBDE0001C
-// 0xE30 - PSP_KIRK_CMD - KIRK command, same as 0xBDE00010
-// 0xE31 - PSP_KIRK_SRC - source address, same as 0xBDE0002C
-// 0xE32 - PSP_KIRK_DST - destination address, same as 0xBDE00030
-// 0xE33 - PSP_KIRK_ERROR - return value, same as 0xBDE00014
+// 0xE20 - HW_CPU_REG - only 0 or 1
+// 0xE21 - HW_CPU_STATUS - equal to 1 when KIRK is initialized
+// 0xE22 - HW_CPU_PHASE - possibly the same phase as 0xBDE0001C
+// 0xE30 - HW_CPU_CMD - KIRK command, same as 0xBDE00010
+// 0xE31 - HW_CPU_SRC - source address, same as 0xBDE0002C
+// 0xE32 - HW_CPU_DST - destination address, same as 0xBDE00030
+// 0xE33 - HW_CPU_ERROR - return value, same as 0xBDE00014
 //
 // Tests:
 //
 // 0xFB0 - HW_TEST_MODE - read-only, LSB is 1 to run self-tests, 0 otherwise
 // 0xFB8 - HW_TEST_RESULT - write-only, 3 if self-tests succeeded, 2 if they failed
 //
-// Free to use (non-initialized) memory space: 0xFC0 - 0x4000
+// Free to use (non-initialized) memory space: 0xFC0 - 0xFFF
 //
 // 0xFC0 - SIZE - used as a size
 // 0xFC1 - INPUT - used as an input address
@@ -137,7 +138,7 @@
 // 0xFC5 - R5 - different uses
 // 0xFC6 - R6 - different uses
 // 0xFC7 - R7 - different uses
-// 0xFC8 - AES_KEYSEED - used by aes_set_perconsole_key to define the per-console AES key to use. 1 for kirk 5/8, 2 for kirk 6/9, 3 for kirk 0x10, 4 for kirk 0x12, 6 for kirk 15 keyseed
+// 0xFC8 - PERCONSOLE_KEYSEED - used by aes_set_perconsole_key to define the per-console AES key to use. 1 for kirk 5/8, 2 for kirk 6/9, 3 for kirk 0x10, 4 for kirk 0x12, 6 for kirk 15 keyseed
 // 0xFCB - R11 - different uses
 // 0xFCC - R12 - different uses
 // 0xFCD - R13 - different uses
@@ -148,25 +149,22 @@
 // 0xFD2 - KIRK_DATA_OFFSET - used to store the data offset after the header for KIRK input data
 // ...
 // 0xFF4 - CUR_ENC_KEY - temporary variable to keep the AES decryption key to use for the current KIRK command
-// 0xFF8 - KIRK15_KEYSEED - temporary space used by KIRK15 for a keyseed
-// 0xFFF - UNK_FLAGS - unknown flags, set to 0 at the beginning
-//                      bit 0 is set when command 15 is run
-//                      bit 1 is set then reset when generating random values for cmd 12, 14, 16 ("public" stuff) ; it is reset when generating signatures
-//                      if its value is 1, random number generator uses the kirk1 prime, otherwise it uses the other prime
-//                      if its value is non-zero, most commands will set PSP_KIRK_PHASE to 1 and exit immediately returning KIRK_NOT_INITIALIZED
-//                    -> it looks like it should be reset to 0 when CMD15 finishes?
+// 0xFF8 - RNG_BUFFER - temporary space used by KIRK15 for a keyseed
+// 0xFFF - RNG_FLAGS - bit 0 is set when command 15 is run (ie PRNG is seeded)
+//                     bit 1 is set when using the "public" curve
+#define RNG_FLAGS_SEEDED 1
+#define RNG_FLAGS_PUB_CURVE 2
 
 #define KIRK_OPERATION_SUCCESS 0
-// TODO seems incorrect
 #define KIRK_NOT_ENABLED 1
 #define KIRK_INVALID_MODE 2
-#define KIRK_HEADER_HASH_INVALID 3
-#define KIRK_DATA_HASH_INVALID 4
-#define KIRK_SIG_CHECK_INVALID 5
+#define KIRK_HEADER_SIG_INVALID 3
+#define KIRK_DATA_SIG_INVALID 4
+#define KIRK_ECDSA_DATA_INVALID 5
 #define KIRK_NOT_INITIALIZED 12
 #define KIRK_INVALID_OPERATION 13
-#define KIRK_INVALID_SEED_CODE 14
-#define KIRK_INVALID_SIZE 15
+#define KIRK_INVALID_ENC_SEED 14
+#define KIRK_INVALID_DEC_SEED 15
 #define KIRK_DATA_SIZE_ZERO 16
 
 #define KIRK_KBOOTI_HEADER_SIZE_OFF 0x10
@@ -178,7 +176,7 @@
 void _reset(void) // 0x000
 {
     do {
-                    // WARNING: Do nothing block with infinite loop
+        // Wait
     } while( true );
 }
 
@@ -195,58 +193,58 @@ void _start(void) // 0x001
     }
     // Initialize interfaces
     kirk_modules_init();
-    UNK_FLAGS = 0;
-    PSP_KIRK_PHASE = 0;
+    RNG_FLAGS = 0;
+    HW_CPU_PHASE = 0;
     while (true) {
         // Read the next command and call the function accordingly
-        __builtin_setmode(PSP_KIRK_REG,1);
+        __builtin_setmode(HW_CPU_REG,1);
         __builtin_dma(0,2);
-        if (PSP_KIRK_CMD == 0) {
+        if (HW_CPU_CMD == 0) {
             kirk_cmd0_decrypt_bootrom();
-        } else if (PSP_KIRK_CMD == 1) {
+        } else if (HW_CPU_CMD == 1) {
             kirk_cmd1_decrypt_private();
-        } else if (PSP_KIRK_CMD == 2) {
+        } else if (HW_CPU_CMD == 2) {
             kirk_cmd2_dnas_encrypt();
-        } else if (PSP_KIRK_CMD == 3) {
+        } else if (HW_CPU_CMD == 3) {
             kirk_cmd3_dnas_decrypt();
-        } else if (PSP_KIRK_CMD == 4) {
+        } else if (HW_CPU_CMD == 4) {
             kirk_cmd4_encrypt_static();
-        } else if (PSP_KIRK_CMD == 5) {
+        } else if (HW_CPU_CMD == 5) {
             kirk_cmd5_encrypt_perconsole();
-        } else if (PSP_KIRK_CMD == 6) {
+        } else if (HW_CPU_CMD == 6) {
             kirk_cmd6_encrypt_user();
-        } else if (PSP_KIRK_CMD == 7) {
+        } else if (HW_CPU_CMD == 7) {
             kirk_cmd7_decrypt_static();
-        } else if (PSP_KIRK_CMD == 8) {
+        } else if (HW_CPU_CMD == 8) {
             kirk_cmd8_decrypt_perconsole();
-        } else if (PSP_KIRK_CMD == 9) {
+        } else if (HW_CPU_CMD == 9) {
             kirk_cmd9_decrypt_user();
-        } else if (PSP_KIRK_CMD == 10) {
+        } else if (HW_CPU_CMD == 10) {
             kirk_cmd10_priv_sigvry();
-        } else if (PSP_KIRK_CMD == 11) {
+        } else if (HW_CPU_CMD == 11) {
             kirk_cmd11_hash();
-        } else if (PSP_KIRK_CMD == 12) {
+        } else if (HW_CPU_CMD == 12) {
             kirk_cmd12_ecdsa_genkey();
-        } else if (PSP_KIRK_CMD == 13) {
+        } else if (HW_CPU_CMD == 13) {
             kirk_cmd13_ecdsa_mul();
-        } else if (PSP_KIRK_CMD == 14) {
+        } else if (HW_CPU_CMD == 14) {
             kirk_cmd14_prngen();
-        } else if (PSP_KIRK_CMD == 15) {
+        } else if (HW_CPU_CMD == 15) {
             kirk_cmd15_init();
-        } else if (PSP_KIRK_CMD == 16) {
+        } else if (HW_CPU_CMD == 16) {
             kirk_cmd16_siggen();
-        } else if (PSP_KIRK_CMD == 17) {
+        } else if (HW_CPU_CMD == 17) {
             kirk_cmd17_sigvry();
-        } else if (PSP_KIRK_CMD == 18) {
+        } else if (HW_CPU_CMD == 18) {
             kirk_cmd18_certvry();
         } else {
             // Unknown command
-            PSP_KIRK_RESULT = KIRK_INVALID_OPERATION;
-            if (!(PSP_KIRK_STATUS & 2)) {
+            HW_CPU_RESULT = KIRK_INVALID_OPERATION;
+            if (!(HW_CPU_STATUS & 2)) {
                 crash();
                 return;
             }
-            PSP_KIRK_PHASE = 1;
+            HW_CPU_PHASE = 1;
         }
     }
 }
@@ -257,14 +255,14 @@ void _start(void) // 0x001
 void inf_loop(void) // 0x074
 {
     do {
-                    // WARNING: Do nothing block with infinite loop
+        // Wait
     } while( true );
 }
 
 /*
  * Encrypt INPUT to OUTPUT in AES ECB using CUR_ENC_KEY.
  */
-void aes_encrypt_ecb(void)
+void aes_encrypt_ecb(void) // 0x075
 {
     aes_set_null_iv();
     aes_encrypt_cbc();
@@ -273,199 +271,199 @@ void aes_encrypt_ecb(void)
 /*
  * Encrypt INPUT to OUTPUT in AES CBC using CUR_ENC_KEY and after padding it with random.
  */
-void aes_encrypt_cbc(void)
+void aes_encrypt_cbc(void) // 0x076
 {
     if (SIZE == 0) {
         return;
     }
 
     kirk_reseed_prng_2();
-    AES_KEY = CUR_ENC_KEY;
-    AES_CMD = 0x12;
-    hw_aes_setkey();
-    DMA_BUF_SIZE = 0x10;
+    HW_AES_KEY = CUR_ENC_KEY;
+    HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_ENCRYPT;
+    aes_setkey();
+    HW_DMA_BUF_SIZE = 0x10;
     while (SIZE > 0x10) {
         SIZE -= 0x10;
-        hw_aes_dma_copy_and_do();
-        AES_IV = AES_RESULT;
-        hw_dma_write_aes_result();
+        aes_dma_copy_and_do();
+        HW_AES_IV = HW_AES_RESULT;
+        dma_write_aes_result();
         INPUT += 0x10;
         OUTPUT += 0x10;
-        AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     }
-    DMA_BUF_SIZE = SIZE;
-    hw_dma_read_input();
-    AES_CMD |= 2;
+    HW_DMA_BUF_SIZE = SIZE;
+    dma_read_input();
+    HW_AES_CMD |= 2;
     aes_padding();
-    hw_aes_do();
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_write_aes_result();
+    aes_do();
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_write_aes_result();
 }
 
 /*
- * Compute the AES CMAC of INPUT with a given SIZE and put the result in AES_RESULT.
+ * Compute the AES CMAC of INPUT with a given SIZE and put the result in HW_AES_RESULT.
  */
-void aes_cmac(void)
+void aes_cmac(void) // 0x098
 {
     aes_set_null_iv();
-    AES_CMD = 0x32;
-    hw_aes_setkey();
-    AES_END = SIZE;
-    DMA_BUF_SIZE = 0x10;
+    HW_AES_CMD = AES_CMD_CMAC | AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK;
+    aes_setkey();
+    HW_AES_CMAC_SIZE = SIZE;
+    HW_DMA_BUF_SIZE = 0x10;
     aes_decrypt_ecb();
 }
 
 /*
- * Decrypt INPUT, of given SIZE and DMA_BUF_SIZE (which should be the block size ie 0x10), with AES ECB, and put the result in AES_RESULT. Key is supposed to already be set.
+ * Decrypt INPUT, of given SIZE and HW_DMA_BUF_SIZE (which should be the block size ie 0x10), with AES ECB, and put the result in HW_AES_RESULT. Key is supposed to already be set.
  */
-void aes_decrypt_ecb(void)
+void aes_decrypt_ecb(void) // 0x09F
 {
     // Decrypt complete blocks
     while (SIZE > 0x10) {
         SIZE -= 0x10;
-        hw_aes_dma_copy_and_do();
+        aes_dma_copy_and_do();
         INPUT += 0x10;
-        AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= 0xfffffffd;
     }
     // Decrypt the remaining of the data.
-    DMA_BUF_SIZE = SIZE;
-    hw_aes_dma_copy_and_do();
+    HW_DMA_BUF_SIZE = SIZE;
+    aes_dma_copy_and_do();
 }
 
 /*
  * Decrypt INPUT, of given SIZE, with AES CBC, and copy the result to OUTPUT.
  */
-void aes_decrypt_cbc(void)
+void aes_decrypt_cbc(void) // 0x0AD
 {
     aes_set_null_iv();
     if (SIZE == 0) {
         return;
     }
 
-    AES_CMD = 0x13;
-    hw_aes_setkey();
-    DMA_BUF_SIZE = 0x10;
+    HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_DECRYPT;
+    aes_setkey();
+    HW_DMA_BUF_SIZE = 0x10;
     // Handle complete blocks
     while (SIZE > 0x10) {
         SIZE -= 0x10;
-        hw_aes_dma_copy_and_do();
-        AES_IV = AES_RESULT;
-        hw_dma_write_aes_result();
+        aes_dma_copy_and_do();
+        HW_AES_IV = HW_AES_RESULT;
+        dma_write_aes_result();
         INPUT += 0x10;
         OUTPUT += 0x10;
-        AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= 0xfffffffd;
     }
-    hw_aes_dma_copy_and_do();
-    DMA_BUF_SIZE = SIZE;
-    hw_dma_write_aes_result();
+    aes_dma_copy_and_do();
+    HW_DMA_BUF_SIZE = SIZE;
+    dma_write_aes_result();
 }
 
 /*
  * Decrypt the body of Kirk command 0 body. Same as aes_decrypt_cbc() but reading shifted data.
  */
-void kirk_cmd0_decrypt_body(void)
+void kirk_cmd0_decrypt_body(void) // 0x0C9
 {
     if (SIZE == 0) {
         return;
     }
 
     aes_set_null_iv();
-    AES_CMD = 0x13;
-    hw_aes_setkey();
+    HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_DECRYPT;
+    aes_setkey();
     while (SIZE > 0x10) {
         SIZE -= 0x10;
         kirk_cmd0_decrypt_block();
-        DMA_BUF_SIZE = 0x10;
-        hw_dma_write_aes_result();
+        HW_DMA_BUF_SIZE = 0x10;
+        dma_write_aes_result();
         INPUT += 0x10;
         OUTPUT += 0x10;
-        AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= 0xfffffffd;
     }
     kirk_cmd0_decrypt_block();
-    DMA_BUF_SIZE = SIZE;
-    hw_dma_write_aes_result();
+    HW_DMA_BUF_SIZE = SIZE;
+    dma_write_aes_result();
 }
 
 /*
  * Decrypt one block of Kirk command 0 data. The only difference with AES CBC is that since it needs to skip two bytes at the beginning, it will read 20 bytes
  * instead of 16, and shift the data.
  */
-void kirk_cmd0_decrypt_block(void)
+void kirk_cmd0_decrypt_block(void) // 0x0E4
 {
-    DMA_BUF_SIZE = 0x14;
-    DMA_ADDR = INPUT;
-    hw_dma_read();
+    HW_DMA_BUF_SIZE = 0x14;
+    HW_DMA_ADDR = INPUT;
+    dma_read();
     kbooti_block_shift();
-    hw_aes_copy_and_do();
+    aes_copy_and_do();
 }
 
 /*
- * Copy block from given INPUT and SIZE, encrypt/decrypt/... its content and store the result in AES_RESULT.
+ * Copy block from given INPUT and SIZE, encrypt/decrypt/... its content and store the result in HW_AES_RESULT.
  */
-void hw_aes_dma_copy_and_do(void)
+void aes_dma_copy_and_do(void) // 0x0EB
 {
-    DMA_ADDR = INPUT;
-    hw_dma_read();
-    hw_aes_copy_and_do();
+    HW_DMA_ADDR = INPUT;
+    dma_read();
+    aes_copy_and_do();
 }
 
 /*
- * Encrypt/decrypt/CMAC AES data stored in the DMA buffer and store the result in AES_RESULT.
+ * Encrypt/decrypt/CMAC AES data stored in the DMA buffer and store the result in HW_AES_RESULT.
  */
-void hw_aes_copy_and_do(void)
+void aes_copy_and_do(void) // 0x0ED
 {
-    AES_SRC_BUF = DMA_BUF._0_16_;
-    hw_aes_do();
+    HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+    aes_do();
 }
 
 /*
  * Encrypt/decrypt/CMAC AES data stored in the AES hardware registers.
  */
-void hw_aes_do(void)
+void aes_do(void) // 0x0EE
 {
-    __builtin_setmode(AES_REG, 1);
+    __builtin_setmode(HW_AES_REG, 1);
     __builtin_dma(0x10, 0);
 }
 
 /*
- * Set the AES key used by hw_aes_do() actions.
+ * Set the AES key used by aes_do() actions.
  */
-void hw_aes_setkey(void)
+void aes_setkey(void) // 0x0F1
 {
-    __builtin_setmode(AES_REG, 2);
+    __builtin_setmode(HW_AES_REG, 2);
     __builtin_dma(0x10, 0);
 }
 
 /*
  * Set the AES IV to 0 (can be used to do AES ECB).
  */
-void aes_set_null_iv(void)
+void aes_set_null_iv(void) // 0x0F4
 {
-    AES_IV[0] = 0;
-    AES_IV[1] = 0;
-    AES_IV[2] = 0;
-    AES_IV[3] = 0;
+    HW_AES_IV[0] = 0;
+    HW_AES_IV[1] = 0;
+    HW_AES_IV[2] = 0;
+    HW_AES_IV[3] = 0;
 }
 
 /*
- * Shift data in DMA_BUF by two bytes on the left.
+ * Shift data in HW_DMA_BUF by two bytes on the left.
  */
-void kirk_cmd0_shift_left(void)
+void kirk_cmd0_shift_left(void) // 0x0FD
 {
-    DMA_BUF[0] = (DMA_BUF[0] << 16) | (DMA_BUF[1] >> 16);
-    DMA_BUF[1] = (DMA_BUF[1] << 16) | (DMA_BUF[2] >> 16);
-    DMA_BUF[2] = (DMA_BUF[2] << 16) | (DMA_BUF[3] >> 16);
-    DMA_BUF[3] = (DMA_BUF[3] << 16) | (DMA_BUF[4] >> 16);
+    HW_DMA_BUF[0] = (HW_DMA_BUF[0] << 16) | (HW_DMA_BUF[1] >> 16);
+    HW_DMA_BUF[1] = (HW_DMA_BUF[1] << 16) | (HW_DMA_BUF[2] >> 16);
+    HW_DMA_BUF[2] = (HW_DMA_BUF[2] << 16) | (HW_DMA_BUF[3] >> 16);
+    HW_DMA_BUF[3] = (HW_DMA_BUF[3] << 16) | (HW_DMA_BUF[4] >> 16);
 }
 
 /*
- * Pad an AES block stored in DMA_BUF, of size SIZE, with random taken from PRNG output PRNG_RESULT, before writing it to AES_SRC_BUF.
+ * Pad an AES block stored in HW_DMA_BUF, of size SIZE, with random taken from PRNG output HW_PRNG_RESULT, before writing it to HW_AES_SRC_BUF.
  */
-void aes_padding(void)
+void aes_padding(void) // 0x10E
 {
     if (SIZE != 0) {
-        R3 = &PRNG_RESULT[0];
-        R4 = &DMA_BUF;
+        R3 = &HW_PRNG_RESULT[0];
+        R4 = &HW_DMA_BUF;
         R5 = 0;
         uint nextSize;
         // Find the first incomplete word
@@ -473,15 +471,15 @@ void aes_padding(void)
             if (nextSize < 0) { // Found the first incomplete word
                 // Complete this word's bytes with random data
                 if (SIZE == 2) {
-                    R6 = PRNG_RESULT[0] & 0xffff;
+                    R6 = HW_PRNG_RESULT[0] & 0xffff;
                     *R4 &= 0xffff0000;
                 }
                 else if (SIZE < 2) { // SIZE = 1
-                    R6 = PRNG_RESULT[0] & 0xffffff;
+                    R6 = HW_PRNG_RESULT[0] & 0xffffff;
                     *R4 &= 0xff000000;
                 }
                 else { // SIZE = 3
-                    R6 = PRNG_RESULT[0] & 0xff;
+                    R6 = HW_PRNG_RESULT[0] & 0xff;
                     *R4 &= 0xffffff00;
                 }
                 *R4 |= R6;
@@ -505,88 +503,88 @@ void aes_padding(void)
             R3 = R3 + 1;
         }
     }
-    AES_SRC_BUF = DMA_BUF;
+    HW_AES_SRC_BUF = HW_DMA_BUF;
 }
 
 /*
  * Kirk command 0 : decrypt the kbooti bootrom.
  */
-void kirk_cmd0_decrypt_bootrom()
+void kirk_cmd0_decrypt_bootrom() // 0x143
 {
-    // TODO this might be to check this is the first command run on Kirk, but it's not clear when PSP_KIRK_STATUS switches values.
-    if (PSP_KIRK_STATUS & 2) {
-        PSP_KIRK_PHASE = 1;
-        PSP_KIRK_RESULT = KIRK_INVALID_OPERATION;
+    // TODO this might be to check this is the first command run on Kirk, but it's not clear when HW_CPU_STATUS switches values.
+    if (HW_CPU_STATUS & 2) {
+        HW_CPU_PHASE = 1;
+        HW_CPU_RESULT = KIRK_INVALID_OPERATION;
         return;
     }
     // Read the body size at 0x10 (two bytes)
-    DMA_ADDR = PSP_KIRK_SRC + 0x10;
-    DMA_BUF_SIZE = 2;
-    DMA_BUF[0] = DMA_ADDR;
-    hw_dma_read();
-    KIRK_BODY_SIZE = __builtin_byteswap(DMA_BUF[0]);
+    HW_DMA_ADDR = HW_CPU_SRC + 0x10;
+    HW_DMA_BUF_SIZE = 2;
+    HW_DMA_BUF[0] = HW_DMA_ADDR;
+    dma_read();
+    KIRK_BODY_SIZE = __builtin_byteswap(HW_DMA_BUF[0]);
     KIRK_BODY_SIZE = KIRK_BODY_SIZE & 0xffff;
     if (KIRK_BODY_SIZE == 0) {
         goto error_size_zero;
     }
     // Retrieve the decryption AES key from key slot 1
-    HW_AES_PARAM_ID = 1;
-    AES_KEY = HW_AES_PARAM;
+    HW_AES_KEYSLOT_ID = 1;
+    HW_AES_KEY = HW_AES_KEYSLOT;
     // Compute the CMAC of the beginning of the data
-    INPUT = PSP_KIRK_SRC + 0x10;
+    INPUT = HW_CPU_SRC + 0x10;
     SIZE = KIRK_BODY_SIZE;
     align_size_16();
     SIZE = SIZE + 2;
     aes_set_null_iv();
-    AES_CMD = 0x32;
-    hw_aes_setkey();
-    AES_END = SIZE;
-    DMA_BUF_SIZE = 0x10;
+    HW_AES_CMD = AES_CMD_CMAC | AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK;
+    aes_setkey();
+    HW_AES_CMAC_SIZE = SIZE;
+    HW_DMA_BUF_SIZE = 0x10;
     // TODO that stuff looks suspicious, it should be double-checked
     if (SIZE - 0x10 < 1) {
         // If SIZE < 0x11 (ie there's only one block of data!?)
-        DMA_BUF_SIZE = SIZE;
-        DMA_BUF[0] = 0;
-        DMA_BUF[1] = 0;
-        DMA_BUF[2] = 0;
-        DMA_BUF[3] = 0;
-        hw_aes_dma_copy_and_do();
+        HW_DMA_BUF_SIZE = SIZE;
+        HW_DMA_BUF[0] = 0;
+        HW_DMA_BUF[1] = 0;
+        HW_DMA_BUF[2] = 0;
+        HW_DMA_BUF[3] = 0;
+        aes_dma_copy_and_do();
         if (!kirk_cmd0_check_data_size()) {
             goto error_size_zero;
         }
     }
     else {
         SIZE -= 0x10;
-        hw_aes_dma_copy_and_do();
+        aes_dma_copy_and_do();
         INPUT += 0x10;
-        AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= 0xfffffffd;
         if (!kirk_cmd0_check_data_size()) { // TODO doesn't this just read twice at the same offset to check if the value is the same? Why?
             goto error_size_zero;
         }
         aes_decrypt_ecb();
     }
     // Check if the CMAC is the same as the value stored at offset 0x0.
-    DMA_ADDR = PSP_KIRK_SRC;
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_read();
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_read();
     if (!memcmp_cmac()) {
-        PSP_KIRK_RESULT = KIRK_NOT_ENABLED;
+        HW_CPU_RESULT = KIRK_NOT_ENABLED;
         crash();
         return;
     }
     // Read key slot 0 and decrypt the body with it.
     SIZE = KIRK_BODY_SIZE;
-    INPUT = PSP_KIRK_SRC + 0x10;
-    OUTPUT = PSP_KIRK_DST;
-    HW_AES_PARAM_ID = 0;
-    AES_KEY = HW_AES_PARAM;
+    INPUT = HW_CPU_SRC + 0x10;
+    OUTPUT = HW_CPU_DST;
+    HW_AES_KEYSLOT_ID = 0;
+    HW_AES_KEY = HW_AES_KEYSLOT;
     kirk_cmd0_decrypt_body();
-    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-    PSP_KIRK_PHASE = 2;
+    HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+    HW_CPU_PHASE = 2;
     return;
 
 error_size_zero:
-    PSP_KIRK_RESULT = KIRK_DATA_SIZE_ZERO;
+    HW_CPU_RESULT = KIRK_DATA_SIZE_ZERO;
     crash();
     return;
 }
@@ -594,798 +592,770 @@ error_size_zero:
 /*
  * Unused function: read the size of the command 0 header.
  */
-void __unused_kirk_cmd0_header_get_size(void)
+void __unused_kirk_cmd0_header_get_size(void) // 0x19F
 {
-    DMA_ADDR = PSP_KIRK_SRC + 0x10;
-    bool nullAddr = DMA_ADDR == 0;
-    DMA_BUF_SIZE = 2;
-    DMA_BUF[0] = DMA_ADDR;
-    hw_dma_read();
-    DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
-    DMA_BUF[0] = DMA_BUF[0] & 0xffff;
+    HW_DMA_ADDR = HW_CPU_SRC + 0x10;
+    bool nullAddr = HW_DMA_ADDR == 0;
+    HW_DMA_BUF_SIZE = 2;
+    HW_DMA_BUF[0] = HW_DMA_ADDR;
+    dma_read();
+    HW_DMA_BUF[0] = __builtin_byteswap(HW_DMA_BUF[0]);
+    HW_DMA_BUF[0] = HW_DMA_BUF[0] & 0xffff;
     return nullAddr;
 }
 
 /*
- * Check if the Kirk body size is the same as the value in DMA_BUF[0].
+ * Check if the Kirk body size is the same as the value in HW_DMA_BUF[0].
  */
-bool kirk_cmd0_check_data_size(void)
+bool kirk_cmd0_check_data_size(void) // 0x1AA
 {
-    DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
-    DMA_BUF[0] = DMA_BUF[0] & 0xffff;
-    return KIRK_BODY_SIZE == DMA_BUF[0];
+    HW_DMA_BUF[0] = __builtin_byteswap(HW_DMA_BUF[0]);
+    HW_DMA_BUF[0] = HW_DMA_BUF[0] & 0xffff;
+    return KIRK_BODY_SIZE == HW_DMA_BUF[0];
 }
 
 /*
  * Kirk command 1: decrypt IPL blocks.
  */
-void kirk_cmd1_decrypt_private(void)
+void kirk_cmd1_decrypt_private(void) // 0x1AF
 {
-    if (!hw_kirk_check_enabled()) {
+    if (!kirk_check_enabled()) {
         return;
     }
     // Read the command mode at 0x60
     kirk_signed_header_read_cmd_mode();
     // Check if the command indicated in the block is valid
-    if (DMA_BUF[0] != 0x1000000) {
-        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
-        PSP_KIRK_PHASE = 1;
+    if (HW_DMA_BUF[0] != 0x1000000) {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
+        HW_CPU_PHASE = 1;
         return;
     }
 
     // Read body size and data offset from the header
     kirk_signed_header_read_body_info();
     if (!kirk_check_body_size_nonzero()) {
-        PSP_KIRK_PHASE = 1;
+        HW_CPU_PHASE = 1;
         return;
     }
 
     // Get the AES key from key slot 2
-    HW_AES_PARAM_ID = 2;
-    CUR_ENC_KEY = HW_AES_PARAM;
+    HW_AES_KEYSLOT_ID = 2;
+    CUR_ENC_KEY = HW_AES_KEYSLOT;
     kirk_signed_header_read_sign_mode();
-    if (DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
+    if (HW_DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
         // Set the curve parameters
         ecc_set_priv_curve();
         // Get the public key associated to the signatures
         kirk_cmd1_get_public_key();
         // Check the signature of the header
         if (!kirk_ecdsa_check_header()) {
-            PSP_KIRK_PHASE = 1;
-            PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+            HW_CPU_PHASE = 1;
+            HW_CPU_RESULT = KIRK_HEADER_SIG_INVALID;
             return;
         }
         // Check the signature of the body
         if (!kirk_ecdsa_check_body()) {
-            PSP_KIRK_PHASE = 1;
-            PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+            HW_CPU_PHASE = 1;
+            HW_CPU_RESULT = KIRK_DATA_SIG_INVALID;
             return;
         }
     }
     else {
         // Check the CMAC of the header
         if (!kirk_check_cmac()) {
-            PSP_KIRK_PHASE = 1;
+            HW_CPU_PHASE = 1;
             return;
         }
     }
     // Decrypt the body 
     kirk_signed_header_decrypt_body();
-    return;
 }
 
 /*
- * Get the parameters x and y of the public key used for Kirk command 1.
+ * Get the parameters x and y of the public key used for Kirk command 1 from the key slots 0 and 1.
  */
-void kirk_cmd1_get_public_key(void)
+void kirk_cmd1_get_public_key(void) // 0x1D6
 {
-    HW_CURVE_PARAM_ID = 0;
-    ECC_Px._0_16_ = HW_CURVE_PARAM._0_16_;
-    ECC_Px[4] = HW_CURVE_PARAM[4];
-    HW_CURVE_PARAM_ID = 1;
-    ECC_Py._0_16_ = HW_CURVE_PARAM._0_16_;
-    ECC_Py[4] = HW_CURVE_PARAM[4];
+    HW_ECDSA_KEYSLOT_ID = 0;
+    HW_ECC_Px._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_Px[4] = HW_ECDSA_KEYSLOT[4];
+    HW_ECDSA_KEYSLOT_ID = 1;
+    HW_ECC_Py._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_Py[4] = HW_ECDSA_KEYSLOT[4];
 }
 
 /*
  * Kirk command 2: decrypt DRM-encrypted data and reencrypt it using a per-console key.
  */
-void kirk_cmd2_dnas_encrypt(void)
+void kirk_cmd2_dnas_encrypt(void) // 0x1DF
 {
-    if (!hw_kirk_check_enabled()) {
+    if (!kirk_check_enabled()) {
         return;
     }
 
     // Check the command indicated in the header
     kirk_signed_header_read_cmd_mode();
-    if (DMA_BUF[0] != 0x2000000) {
-        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+    if (HW_DMA_BUF[0] != 0x2000000) {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
         kirk_set_phase1();
         return;
     }
-    if (!kirk_not_busy()) {
-        PSP_KIRK_PHASE = 1;
+    if (!kirk_is_seeded()) {
+        HW_CPU_PHASE = 1;
         return;
     }
 
     // Read body info (size and offset)
     kirk_signed_header_read_body_info();
     if (!kirk_check_body_size_nonzero()) {
-        PSP_KIRK_PHASE = 1;
+        HW_CPU_PHASE = 1;
         return;
     }
 
     // Read AES slotted key 3
-    HW_AES_PARAM_ID = 3;
-    CUR_ENC_KEY = HW_AES_PARAM;
+    HW_AES_KEYSLOT_ID = 3;
+    CUR_ENC_KEY = HW_AES_KEYSLOT;
     kirk_signed_header_read_sign_mode();
-    ECDSA_MODE = DMA_BUF[0];
-    if (DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
+    ECDSA_MODE = HW_DMA_BUF[0];
+    if (HW_DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
         // Set the curve parameters and public key associated to this command
         ecc_set_priv_curve();
         kirk_cmd2_get_public_key();
         // Check signature of the header and body
         if (!kirk_ecdsa_check_header()) {
-            PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+            HW_CPU_RESULT = KIRK_HEADER_SIG_INVALID;
             kirk_set_phase1();
             return;
         }
         if (!kirk_ecdsa_check_body()) {
-            PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+            HW_CPU_RESULT = KIRK_DATA_SIG_INVALID;
             kirk_set_phase1();
             return;
         }
     } else {
         // Check the CMAC of the data
         if (!kirk_check_cmac()) {
-            PSP_KIRK_PHASE = 1;
+            HW_CPU_PHASE = 1;
             return;
         }
     }
     // Decrypt the key stored in the header with the slotted key
-    AES_KEY = CUR_ENC_KEY;
-    kirk_aes_decrypt_key();
+    HW_AES_KEY = CUR_ENC_KEY;
+    kirk_signed_decrypt_key();
     // Copy input header to output (which will be a Kirk command 3 header)
     SIZE = KIRK_DATA_OFFSET + 0x90;
-    INPUT = PSP_KIRK_SRC;
-    OUTPUT = PSP_KIRK_DST;
+    INPUT = HW_CPU_SRC;
+    OUTPUT = HW_CPU_DST;
     dma_memcpy();
-    // Fix command in output header
-    DMA_ADDR = PSP_KIRK_DST + 0x60;
-    DMA_BUF[1] = DMA_ADDR; // TODO: useless?
-    DMA_BUF[0] = 0x3000000;
-    DMA_BUF_SIZE = 4;
-    hw_dma_write();
-    // Read the signature mode
-    DMA_ADDR = PSP_KIRK_DST + 0x64;
-    DMA_BUF[1] = DMA_ADDR; // TODO: useless?
-    DMA_BUF_SIZE = 4;
-    hw_dma_read();
+    // Set command in output header
+    HW_DMA_ADDR = HW_CPU_DST + 0x60;
+    HW_DMA_BUF[1] = HW_DMA_ADDR; // TODO: useless?
+    HW_DMA_BUF[0] = 0x3000000;
+    HW_DMA_BUF_SIZE = 4;
+    dma_write();
+    // Read the signature mode to know if the output should be ECDSA or CMAC-signed, and set the mode of the output block accordingly
+    HW_DMA_ADDR = HW_CPU_DST + 0x64;
+    HW_DMA_BUF[1] = HW_DMA_ADDR; // TODO: useless?
+    HW_DMA_BUF_SIZE = 4;
+    dma_read();
     if (ECDSA_MODE & KIRK_SIGNED_HEADER_SIGN_MODE_OUTPUT_ECDSA) {
-        DMA_BUF[0] |= KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA;
+        HW_DMA_BUF[0] |= KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA;
     } else {
-        DMA_BUF[0] &= ~KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA;
+        HW_DMA_BUF[0] &= ~KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA;
     }
-    hw_dma_write();
-    INPUT = PSP_KIRK_SRC;
-    OUTPUT = PSP_KIRK_DST;
-    kirk2_set_args();
+    dma_write();
+    // Decrypt the body of the data using the decrypted key
+    INPUT = HW_CPU_SRC;
+    OUTPUT = HW_CPU_DST;
+    kirk_cmd2_set_body_params();
     aes_decrypt_cbc();
+    // Generate a new key to encrypt the output, and encrypt it using a per-console key (seed = 0)
     kirk_reseed_prng_2();
-    DMA_BUF._0_16_ = (undefined  [16])PRNG_RESULT._4_16_;
+    HW_DMA_BUF._0_16_ = HW_PRNG_RESULT._4_16_;
     aes_set_perconsole_key_0();
-    AES_CMD = 0;
-    hw_aes_setkey();
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-    hw_aes_do();
-    DMA_BUF[0] = PSP_KIRK_DST;
-    hw_aes_output();
+    HW_AES_CMD = AES_CMD_ENCRYPT;
+    aes_setkey();
+    HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+    aes_do();
+    HW_DMA_BUF[0] = HW_CPU_DST;
+    aes_output();
+    // If the output is using CMAC signing, build a CMAC key
     if (!(ECDSA_MODE & KIRK_SIGNED_HEADER_SIGN_MODE_OUTPUT_ECDSA)) {
-        auVar1 = AES_RESULT;
-        AES_IV = auVar1;
+        // Use the previous block (encrypted encryption key) as the IV
+        HW_AES_IV = HW_AES_RESULT;
+        // Compute a random CMAC key
         kirk_reseed_prng_2();
-        DMA_BUF._0_16_ = (undefined  [16])PRNG_RESULT._4_16_;
+        HW_DMA_BUF._0_16_ = HW_PRNG_RESULT._4_16_;
+        // Encrypt this CMAC key with the per-console key (seed = 0)
         aes_set_perconsole_key_0();
-        AES_CMD = 0x12;
-        hw_aes_setkey();
-        AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-        hw_aes_do();
-        DMA_BUF[0] = PSP_KIRK_DST + 0x10;
-        hw_aes_output();
+        HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_ENCRYPT;
+        aes_setkey();
+        HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+        aes_do();
+        // Store the result at offset 0x10
+        HW_DMA_BUF[0] = HW_CPU_DST + 0x10;
+        aes_output();
     }
+    // Get the data encryption key by re-decrypting the first block
     aes_set_perconsole_key_0();
-    CUR_ENC_KEY = AES_RESULT;
-    INPUT = PSP_KIRK_DST;
-    OUTPUT = PSP_KIRK_DST;
-    AES_KEY = CUR_ENC_KEY;
+    CUR_ENC_KEY = HW_AES_RESULT;
+    INPUT = HW_CPU_DST;
+    OUTPUT = HW_CPU_DST;
+    HW_AES_KEY = CUR_ENC_KEY;
     kirk_cmd2_decrypt_key();
-    CUR_ENC_KEY = AES_RESULT;
-    kirk2_set_args();
+    CUR_ENC_KEY = HW_AES_RESULT;
+    // Encrypt the body in ECB mode
+    kirk_cmd2_set_body_params();
     aes_encrypt_ecb();
+    // Compute header & body signature in CMAC or ECDSA mode
     if (!(ECDSA_MODE & KIRK_SIGNED_HEADER_SIGN_MODE_OUTPUT_ECDSA)) {
+        // Re-decrypt the CMAC key as stored in the header
         aes_set_perconsole_key_0();
-        DMA_ADDR = PSP_KIRK_DST;
-        DMA_BUF_SIZE = 0x20;
-        hw_dma_read();
-        AES_IV = (uint  [4])DMA_BUF._0_16_;
-        AES_CMD = 0x13;
-        hw_aes_setkey();
-        AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
-        hw_aes_do();
-        auVar1 = AES_RESULT;
-        AES_KEY = auVar1;
-        INPUT = PSP_KIRK_DST + 0x60;
+        HW_DMA_ADDR = HW_CPU_DST;
+        HW_DMA_BUF_SIZE = 0x20;
+        dma_read();
+        HW_AES_IV = HW_DMA_BUF._0_16_;
+        HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_DECRYPT;
+        aes_setkey();
+        HW_AES_SRC_BUF = HW_DMA_BUF._16_16_;
+        aes_do();
+        HW_AES_KEY = HW_AES_RESULT;
+        // Compute the CMAC of header 0x60..0x90
+        INPUT = HW_CPU_DST + 0x60;
         SIZE = 0x30;
         aes_cmac();
-        DMA_BUF[0] = PSP_KIRK_DST + 0x20;
-        hw_aes_output();
-        SIZE = KIRK_DATA_OFFSET + 0x30;
-        SIZE = KIRK_BODY_SIZE + SIZE;
+        // Store the result at 0x20
+        HW_DMA_BUF[0] = HW_CPU_DST + 0x20;
+        aes_output();
+        // Compute the CMAC of the header + the body
+        SIZE = KIRK_BODY_SIZE + KIRK_DATA_OFFSET + 0x30;
         align_size_16();
-        INPUT = PSP_KIRK_DST + 0x60;
+        INPUT = HW_CPU_DST + 0x60;
         aes_cmac();
-        DMA_BUF[0] = PSP_KIRK_DST + 0x30;
-        hw_aes_output();
+        // Store the result at 0x30
+        HW_DMA_BUF[0] = HW_CPU_DST + 0x30;
+        aes_output();
     } else {
+        // Set the curve and private key to sign the data
         ecc_set_priv_curve();
-        kirk2_get_private_key();
-        INPUT = PSP_KIRK_DST + 0x60;
+        kirk_cmd3_get_private_key();
+        // Sign the header 0x60..0x90
+        INPUT = HW_CPU_DST + 0x60;
         SIZE = 0x30;
-        ec_sign_gen_m_r();
-        OUTPUT = PSP_KIRK_DST + 0x10;
-        dma_ec_output_point();
-        SIZE = KIRK_DATA_OFFSET + 0x30;
-        SIZE = KIRK_BODY_SIZE + SIZE;
+        ecc_sign_gen_m_r();
+        // Store the resulting point at 0x10
+        OUTPUT = HW_CPU_DST + 0x10;
+        ecc_output_point();
+        // Sign the header + the data
+        SIZE = KIRK_BODY_SIZE + KIRK_DATA_OFFSET + 0x30;
         align_size_16();
-        INPUT = PSP_KIRK_DST + 0x60;
-        ec_sign_gen_m_r();
-        OUTPUT = PSP_KIRK_DST + 0x38;
-        dma_ec_output_point();
+        INPUT = HW_CPU_DST + 0x60;
+        ecc_sign_gen_m_r();
+        // Store the resulting point at 0x38
+        OUTPUT = HW_CPU_DST + 0x38;
+        ecc_output_point();
     }
-    kirk_result_0();
+    kirk_result_success();
 }
 
-void __unused_kirk_result_2(void)
-
+/*
+ * Unused function, returns from a command returning an "invalid mode" error.
+ */
+void __unused_kirk_result_invalid(void) // 0x289
 {
-    PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+    HW_CPU_RESULT = KIRK_INVALID_MODE;
     kirk_set_phase1();
-    return;
 }
 
-
-
-void kirk_result_0(void)
-
+/*
+ * Returns from a command returning a success.
+ */
+void kirk_result_success(void) // 0x28C
 {
-    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
+    HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
     kirk_set_phase1();
-    return;
 }
 
-
-
-void kirk_set_phase1(void)
-
+/*
+ * Set the return phase to 1 (all commands except command 0 do it except when doing a crash(), which is unrecoverable).
+ */
+void kirk_set_phase1(void) // 0x28F
 {
-    PSP_KIRK_PHASE = 1;
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-
-
-bool kirk2_set_args(void)
-
+/*
+ * Take as an input INPUT and OUTPUT pointing to kirk command 2 & 3 headers, and set INPUT, OUTPUT and SIZE to point to the body content
+ */
+void kirk_cmd2_set_body_params(void) // 0x292
 {
-    int iVar1;
-    
     SIZE = KIRK_BODY_SIZE;
     align_size_16();
     INPUT = KIRK_DATA_OFFSET + INPUT + 0x90;
-    iVar1 = OUTPUT + 0x90;
-    OUTPUT = KIRK_DATA_OFFSET + iVar1;
-    return iVar1 == 0;
+    OUTPUT = KIRK_DATA_OFFSET + OUTPUT + 0x90;
 }
 
-
-
-void hw_aes_output(void)
-
+/*
+ * Output HW_AES_RESULT to the address stored at HW_DMA_BUF[0]
+ */
+void aes_output(void) // 0x29B
 {
-    DMA_ADDR = DMA_BUF[0];
-    DMA_BUF._0_16_ = (undefined  [16])AES_RESULT;
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_write();
-    return;
+    HW_DMA_ADDR = HW_DMA_BUF[0];
+    HW_DMA_BUF._0_16_ = HW_AES_RESULT;
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_write();
 }
 
-void kirk_cmd2_get_public_key(void)
+/*
+ * Get the Kirk command 2 public key (used to verify signature in kirk 2 blocks) from the key slots 2 and 3.
+ */
+void kirk_cmd2_get_public_key(void) // 0x2A1
 {
-    HW_CURVE_PARAM_ID = 2;
-    ECC_Px._0_16_ = HW_CURVE_PARAM._0_16_;
-    ECC_Px[4] = HW_CURVE_PARAM[4];
-    HW_CURVE_PARAM_ID = 3;
-    ECC_Py._0_16_ = HW_CURVE_PARAM._0_16_;
-    ECC_Py[4] = HW_CURVE_PARAM[4];
+    HW_ECDSA_KEYSLOT_ID = 2;
+    HW_ECC_Px._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_Px[4] = HW_ECDSA_KEYSLOT[4];
+    HW_ECDSA_KEYSLOT_ID = 3;
+    HW_ECC_Py._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_Py[4] = HW_ECDSA_KEYSLOT[4];
 }
 
-void kirk2_get_private_key(void)
-
+/*
+ * Get the Kirk command 3 private key (used to sign blocks for command 3) from key slot 4.
+ */
+void kirk_cmd3_get_private_key(void) // 0x2AA
 {
-    uint auVar1 [4];
-    uint uVar2;
-    
-    HW_CURVE_PARAM_ID = 4;
-    auVar1 = HW_CURVE_PARAM;
-    ECC_S._0_16_ = (undefined  [16])auVar1;
-    uVar2 = DAT_ram_000004b5;
-    ECC_S[4] = uVar2;
-    return;
+    HW_ECDSA_KEYSLOT_ID = 4;
+    HW_ECC_S._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_S[4] = HW_ECDSA_KEYSLOT[4];
 }
 
-
-
-void kirk_cmd3_dnas_decrypt(void)
-
+/*
+ * Kirk command 3: decrypt data coming from Kirk command 2 and encrypted using a per-console key. Same as Kirk command 1, only the keys differ.
+ */
+void kirk_cmd3_dnas_decrypt(void) // 0x2AF
 {
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (!bVar1) {
+    if (!kirk_check_enabled()) {
         return;
     }
+    // Check that the command set in the header is command 3
     kirk_signed_header_read_cmd_mode();
-    if (DMA_BUF[0] == 0x3000000) {
+    if (HW_DMA_BUF[0] == 0x3000000) {
+        // Read body size & offset and check that the size is non-zero
         kirk_signed_header_read_body_info();
-        bVar1 = (bool)kirk_check_body_size_nonzero();
-        if (bVar1) {
+        if (kirk_check_body_size_nonzero()) {
+            // Set the current key to the per-console key
             aes_set_perconsole_key_0();
-            CUR_ENC_KEY = AES_RESULT;
+            CUR_ENC_KEY = HW_AES_RESULT;
+            // Verify the ECDSA or CMAC signatures
             kirk_signed_header_read_sign_mode();
-            if (DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
+            if (HW_DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
+                // Set the ECC curve and public key
                 ecc_set_priv_curve();
-                kirk3_get_public_key();
-                bVar1 = (bool)kirk_ecdsa_check_header();
-                if (!bVar1) {
-                    PSP_KIRK_PHASE = 1;
-                    PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+                kirk_cmd3_get_public_key();
+                if (!kirk_ecdsa_check_header()) {
+                    HW_CPU_PHASE = 1;
+                    HW_CPU_RESULT = KIRK_HEADER_SIG_INVALID;
                     return;
                 }
-                bVar1 = (bool)kirk_ecdsa_check_body();
-                if (!bVar1) {
-                    PSP_KIRK_PHASE = 1;
-                    PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+                if (!kirk_ecdsa_check_body()) {
+                    HW_CPU_PHASE = 1;
+                    HW_CPU_RESULT = KIRK_DATA_SIG_INVALID;
                     return;
                 }
             }
             else {
-                bVar1 = (bool)kirk_check_cmac();
-                if (!bVar1) {
-                    PSP_KIRK_PHASE = 1;
+                if (!kirk_check_cmac()) {
+                    HW_CPU_PHASE = 1;
                     return;
                 }
             }
+            // Decrypt the body of the data
             kirk_signed_header_decrypt_body();
         }
     }
     else {
-        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
     }
-    PSP_KIRK_PHASE = 1;
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-
-
-void kirk3_get_public_key(void)
-
+/*
+ * Get the Kirk command 3 public key, used to verify command 3 data generated by command 2, and stored in key slots 5 and 6.
+ */
+void kirk_cmd3_get_public_key(void) // 0x2D5
 {
-    uint auVar1 [4];
-    uint uVar2;
-    
-    HW_CURVE_PARAM_ID = 5;
-    auVar1 = HW_CURVE_PARAM;
-    ECC_Px._0_16_ = (undefined  [16])auVar1;
-    uVar2 = DAT_ram_000004b5;
-    ECC_Px[4] = uVar2;
-    HW_CURVE_PARAM_ID = 6;
-    auVar1 = HW_CURVE_PARAM;
-    ECC_Py._0_16_ = (undefined  [16])auVar1;
-    uVar2 = DAT_ram_000004b5;
-    ECC_Py[4] = uVar2;
-    return;
+    HW_ECDSA_KEYSLOT_ID = 5;
+    HW_ECC_Px._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_Px[4] = HW_ECDSA_KEYSLOT[4];
+    HW_ECDSA_KEYSLOT_ID = 6;
+    HW_ECC_Py._0_16_ = HW_ECDSA_KEYSLOT._0_16_;
+    HW_ECC_Py[4] = HW_ECDSA_KEYSLOT[4];
 }
 
-
-
-void kirk_cmd4_encrypt_static(void)
-
+/*
+ * Kirk command 4: encrypt data with a key given by an index called keyseed.
+ */
+void kirk_cmd4_encrypt_static(void) // 0x2DE
 {
-    uint uVar1;
-    uint auVar2 [4];
-    bool bVar3;
-    
-    bVar3 = (bool)hw_kirk_check_enabled();
-    if (bVar3) {
-        kirk_aes_read_header();
-        if ((DMA_BUF[0] == 0x4000000) && (DMA_BUF[3] == 0)) {
-            bVar3 = (bool)kirk_not_busy();
-            if (bVar3) {
-                kirk_header_read_body_size();
-                bVar3 = (bool)kirk_check_body_size_nonzero();
-                if (bVar3) {
-                    kirk_aes_read_header();
-                    if ((int)DMA_BUF[2] < 0x40) {
-                        HW_AES_PARAM_ID = DMA_BUF[2] + 4;
-                        auVar2 = HW_AES_PARAM;
-                        AES_KEY = auVar2;
-                        CUR_ENC_KEY = HW_AES_PARAM;
-                        uVar1 = KEY_SEED3;
-                        if (((uVar1 & 0x80000000) && (0x1f < (int)DMA_BUF[2])) &&
-                           ((int)DMA_BUF[2] < 0x30)) {
-                            CUR_ENC_KEY[3] = CUR_ENC_KEY[3] ^ 0xffffffff;
-                        }
-                        if ((0x27 < (int)DMA_BUF[2]) && ((int)DMA_BUF[2] < 0xb0)) {
-                            uVar1 = KEY_SEED3;
-                            CUR_ENC_KEY[0] = uVar1 ^ CUR_ENC_KEY[0];
-                        }
-                        AES_KEY = CUR_ENC_KEY;
-                        DMA_BUF[2] = DMA_BUF[2] + 4;
-                        kirk4_process();
-                    }
-                    else {
-                        PSP_KIRK_RESULT = KIRK_INVALID_SEED_CODE;
-                    }
-                }
-            }
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
-        }
-        PSP_KIRK_PHASE = 1;
-    }
-    return;
-}
-
-
-
-void kirk4_process(void)
-
-{
-    INPUT = PSP_KIRK_SRC;
-    OUTPUT = PSP_KIRK_DST;
-    SIZE = 0x14;
-    dma_memcpy();
-    DMA_BUF[0] = 0x5000000;
-    DMA_ADDR = PSP_KIRK_DST;
-    DMA_BUF_SIZE = 4;
-    hw_dma_write();
-    aes_set_null_iv();
-    INPUT = PSP_KIRK_SRC + 0x14;
-    OUTPUT = PSP_KIRK_DST + 0x14;
-    SIZE = KIRK_BODY_SIZE;
-    aes_encrypt_cbc();
-    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-    return;
-}
-
-
-
-void kirk_cmd5_encrypt_perconsole(void)
-
-{
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (bVar1) {
-        kirk_aes_read_header();
-        if ((DMA_BUF[0] == 0x4000000) && (DMA_BUF[3] == 0x10000)) {
-            bVar1 = (bool)kirk_not_busy();
-            if (bVar1) {
-                kirk_header_read_body_size();
-                bVar1 = (bool)kirk_check_body_size_nonzero();
-                if (bVar1) {
-                    AES_KEYSEED = 1;
-                    aes_set_perconsole_key();
-                    CUR_ENC_KEY = AES_RESULT;
-                    kirk4_process();
-                }
-            }
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
-        }
-        PSP_KIRK_PHASE = 1;
-    }
-    return;
-}
-
-
-
-// WARNING: Globals starting with '_' overlap smaller symbols at the same address
-
-void kirk_cmd6_encrypt_user(void)
-
-{
-    uint auVar1 [4];
-    bool bVar2;
-    
-    bVar2 = (bool)hw_kirk_check_enabled();
-    if (bVar2) {
-        kirk_aes_read_header();
-        if ((DMA_BUF[0] == 0x4000000) && (DMA_BUF[3] == 0x20000)) {
-            bVar2 = (bool)kirk_not_busy();
-            if (bVar2) {
-                kirk_header_read_body_size();
-                bVar2 = (bool)kirk_check_body_size_nonzero();
-                if (bVar2) {
-                    INPUT = PSP_KIRK_SRC;
-                    OUTPUT = PSP_KIRK_DST;
-                    SIZE = 0x24;
-                    dma_memcpy();
-                    DMA_BUF[0] = 0x5000000;
-                    DMA_ADDR = PSP_KIRK_DST;
-                    DMA_BUF_SIZE = 4;
-                    hw_dma_write();
-                    kirk_reseed_prng_2();
-                    AES_KEYSEED = 2;
-                    aes_set_perconsole_key();
-                    auVar1 = (uint  [4])PRNG_RESULT._4_16_;
-                    AES_SRC_BUF = auVar1;
-                    AES_CMD = 0;
-                    hw_aes_setkey();
-                    hw_aes_do();
-                    SIZE = KIRK_BODY_SIZE;
-                    DMA_ADDR = PSP_KIRK_SRC + 0x24;
-                    if ((int)KIRK_BODY_SIZE < 0x10) {
-                        DMA_BUF_SIZE = KIRK_BODY_SIZE;
-                    }
-                    else {
-                        DMA_BUF_SIZE = 0x10;
-                    }
-                    DMA_BUF[0] = DMA_ADDR;
-                    hw_dma_read();
-                    R11 = DMA_BUF[0];
-                    unique0x1000006c = DMA_BUF[1];
-                    unique0x10000070 = DMA_BUF[2];
-                    unique0x10000074 = DMA_BUF[3];
-                    DMA_BUF[0] = PSP_KIRK_DST + 0x24;
-                    hw_aes_output();
-                    DMA_ADDR = PSP_KIRK_DST + 0x14;
-                    DMA_BUF_SIZE = 0x10;
-                    DMA_BUF[0] = DMA_ADDR;
-                    hw_dma_read();
-                    auVar1[0] = DMA_BUF[0];
-                    auVar1[1] = DMA_BUF[1];
-                    auVar1[2] = DMA_BUF[2];
-                    auVar1[3] = DMA_BUF[3];
-                    AES_KEY = auVar1;
-                    auVar1 = (uint  [4])PRNG_RESULT._4_16_;
-                    AES_SRC_BUF = auVar1;
-                    AES_CMD = 0;
-                    hw_aes_setkey();
-                    hw_aes_do();
-                    CUR_ENC_KEY = AES_RESULT;
-                    INPUT = PSP_KIRK_SRC + 0x24;
-                    OUTPUT = PSP_KIRK_DST + 0x34;
-                    kirk6_process();
-                    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-                }
-            }
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
-        }
-        PSP_KIRK_PHASE = 1;
-    }
-    return;
-}
-
-
-
-// WARNING: Globals starting with '_' overlap smaller symbols at the same address
-
-void kirk6_process(void)
-
-{
-    uint uVar1;
-    uint auVar2 [4];
-    
-    aes_set_null_iv();
-    kirk_reseed_prng_2();
-    AES_KEY = CUR_ENC_KEY;
-    AES_CMD = 0x12;
-    hw_aes_setkey();
-    DMA_BUF_SIZE = 0x10;
-    while (0 < SIZE + -0x10) {
-        AES_SRC_BUF = _R11;
-        SIZE = SIZE + -0x10;
-        hw_aes_do();
-        auVar2 = AES_RESULT;
-        AES_IV = auVar2;
-        INPUT = INPUT + 0x10;
-        if (SIZE < 0x10) {
-            DMA_BUF_SIZE = SIZE;
-        }
-        hw_dma_read_input();
-        R11 = DMA_BUF[0];
-        R12 = DMA_BUF[1];
-        R13 = DMA_BUF[2];
-        R14 = DMA_BUF[3];
-        DMA_BUF_SIZE = 0x10;
-        hw_dma_write_aes_result();
-        OUTPUT = OUTPUT + 0x10;
-        uVar1 = AES_CMD;
-        AES_CMD = uVar1 & 0xfffffffd;
-    }
-    DMA_BUF[0] = R11;
-    DMA_BUF[1] = R12;
-    DMA_BUF[2] = R13;
-    DMA_BUF[3] = R14;
-    aes_padding();
-    uVar1 = AES_CMD;
-    AES_CMD = uVar1 | 2;
-    hw_aes_do();
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_write_aes_result();
-    return;
-}
-
-
-
-void kirk_cmd7_decrypt_static(void)
-
-{
-    uint uVar1;
-    uint auVar2 [4];
-    bool bVar3;
-    
-    bVar3 = (bool)hw_kirk_check_enabled();
-    if (bVar3) {
-        kirk_aes_read_header();
-        if ((DMA_BUF[0] == 0x5000000) && (DMA_BUF[3] == 0)) {
-            kirk_header_read_body_size();
-            bVar3 = (bool)kirk_check_body_size_nonzero();
-            if (bVar3) {
-                kirk_aes_read_header();
-                if ((int)DMA_BUF[2] < 0x80) {
-                    HW_AES_PARAM_ID = DMA_BUF[2] + 4;
-                    auVar2 = HW_AES_PARAM;
-                    AES_KEY = auVar2;
-                    CUR_ENC_KEY = HW_AES_PARAM;
-                    uVar1 = KEY_SEED3;
-                    if ((((uVar1 & 0x80000000) && (0x1f < (int)DMA_BUF[2])) && ((int)DMA_BUF[2] < 0x7c))
-                       && (((int)DMA_BUF[2] < 0x30 || (0x6b < (int)DMA_BUF[2])))) {
-                        CUR_ENC_KEY[3] = CUR_ENC_KEY[3] ^ 0xffffffff;
-                    }
-                    if (((0x27 < (int)DMA_BUF[2]) && ((int)DMA_BUF[2] < 0x7c)) &&
-                       (((int)DMA_BUF[2] < 0x30 || (0x73 < (int)DMA_BUF[2])))) {
-                        uVar1 = KEY_SEED3;
-                        CUR_ENC_KEY[0] = uVar1 ^ CUR_ENC_KEY[0];
-                    }
-                    AES_KEY = CUR_ENC_KEY;
-                    DMA_BUF[2] = DMA_BUF[2] + 4;
-                    INPUT = 0x14;
-                    kirk_aes_decrypt();
-                }
-                else {
-                    PSP_KIRK_RESULT = KIRK_INVALID_SEED_CODE;
-                }
-            }
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
-        }
-        PSP_KIRK_PHASE = 1;
-    }
-    return;
-}
-
-
-
-void kirk_cmd8_decrypt_perconsole(void)
-
-{
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (bVar1) {
-        kirk_aes_read_header();
-        if ((DMA_BUF[0] == 0x5000000) && (DMA_BUF[3] == 0x10000)) {
-            kirk_header_read_body_size();
-            bVar1 = (bool)kirk_check_body_size_nonzero();
-            if (bVar1) {
-                AES_KEYSEED = 1;
-                aes_set_perconsole_key();
-                INPUT = 0x14;
-                kirk_aes_decrypt();
-            }
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
-        }
-        PSP_KIRK_PHASE = 1;
-    }
-    return;
-}
-
-
-
-void kirk_cmd9_decrypt_user(void)
-
-{
-    uint auVar1 [4];
-    bool bVar2;
-    
-    if (!hw_kirk_check_enabled()) {
+    if (!kirk_check_enabled()) {
         return;
     }
 
-    kirk_aes_read_header();
-    if ((DMA_BUF[0] == 0x5000000) && (DMA_BUF[3] == 0x20000)) {
-        kirk_header_read_body_size();
-        bVar2 = (bool)kirk_check_body_size_nonzero();
-        if (bVar2) {
-            AES_KEYSEED = 2;
-            aes_set_perconsole_key();
-            DMA_ADDR = PSP_KIRK_SRC + 0x14;
-            DMA_BUF_SIZE = 0x20;
-            DMA_BUF[0] = DMA_ADDR;
-            hw_dma_read();
-            AES_CMD = 1;
-            AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
-            hw_aes_setkey();
-            hw_aes_do();
-            AES_CMD = 0;
-            AES_KEY[0] = DMA_BUF[0];
-            AES_KEY[1] = DMA_BUF[0];
-            AES_KEY[2] = DMA_BUF[0];
-            AES_KEY[3] = DMA_BUF[0];
-            AES_SRC_BUF = AES_RESULT;
-            hw_aes_setkey();
-            hw_aes_do();
-            AES_KEY = AES_RESULT;
-            INPUT = 0x34;
-            kirk_aes_decrypt();
+    // Read the header of the command (including keyseed but not body size)
+    kirk_unsigned_header_read();
+    // Check that command is 4 (common to commands 4/5/6) and flags are 0
+    if ((HW_DMA_BUF[0] == 0x4000000) && (HW_DMA_BUF[3] == 0)) {
+        if (kirk_is_seeded()) {
+            kirk_unsigned_header_read_body_size();
+            if (kirk_check_body_size_nonzero()) {
+                // Read keyseed from the header
+                kirk_unsigned_header_read();
+                if ((int)HW_DMA_BUF[2] < 0x40) { // Cannot do encryption for keyseed 0x40..0x7f (only decryption is allowed)
+                    // Retrieve the appropriate key from its keyslot (index is 4 + <keyseed>)
+                    HW_AES_KEYSLOT_ID = HW_DMA_BUF[2] + 4;
+                    HW_AES_KEY = HW_AES_KEYSLOT;
+                    CUR_ENC_KEY = HW_AES_KEYSLOT;
+                    // If keyseed is between 0x20 and 0x2f, reverse bits of the last word (!?)
+                    if ((HW_KEY_MESH_3 & 0x80000000) && (int)HW_DMA_BUF[2] > 0x1f && (int)HW_DMA_BUF[2] < 0x30) {
+                        CUR_ENC_KEY[3] = CUR_ENC_KEY[3] ^ 0xffffffff;
+                    }
+                    // If keyseed is between 0x28 and 0x2f, XOR bits of the first word
+                    if ((int)HW_DMA_BUF[2] > 0x27 && (int)HW_DMA_BUF[2] < 0x30) {
+                        CUR_ENC_KEY[0] ^= HW_KEY_MESH_3;
+                    }
+                    HW_AES_KEY = CUR_ENC_KEY;
+                    // Set the output to match the key slot
+                    HW_DMA_BUF[2] = HW_DMA_BUF[2] + 4;
+                    // Write the resulting header & body
+                    kirk_unsigned_encrypt();
+                }
+                else {
+                    HW_CPU_RESULT = KIRK_INVALID_ENC_SEED;
+                }
+            }
         }
     }
     else {
-        PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
     }
-    PSP_KIRK_PHASE = 1;
+    HW_CPU_PHASE = 1;
 }
 
-void ec_sign_gen_m_r(void)
+/*
+ * Generate a Kirk command 7/8 output from commands 4/5.
+ */
+void kirk_unsigned_encrypt(void) // 0x319
 {
-    hw_sha1_do();
-    ECC_M._0_16_ = SHA1_RESULT._0_16_;
-    ECC_M[4] = SHA1_RESULT[4];
-    ec_sign_gen_r();
+    // Write the header. Only the command changes (4 for encryption -> 5 for decryption).
+    INPUT = HW_CPU_SRC;
+    OUTPUT = HW_CPU_DST;
+    SIZE = 0x14;
+    dma_memcpy();
+    HW_DMA_BUF[0] = 0x5000000;
+    HW_DMA_ADDR = HW_CPU_DST;
+    HW_DMA_BUF_SIZE = 4;
+    dma_write();
+    // Encrypt the body using CBC mode with a null IV.
+    aes_set_null_iv();
+    INPUT = HW_CPU_SRC + 0x14;
+    OUTPUT = HW_CPU_DST + 0x14;
+    SIZE = KIRK_BODY_SIZE;
+    aes_encrypt_cbc();
+    HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
 }
 
-void ec_sign_gen_r(void)
+/*
+ * Kirk command 5: encrypt data with a per-console key.
+ */
+void kirk_cmd5_encrypt_perconsole(void) // 0x330
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    // Read & check the header (similar to command 4)
+    kirk_unsigned_header_read();
+    if ((HW_DMA_BUF[0] == 0x4000000) && (HW_DMA_BUF[3] == 0x10000)) {
+        if (kirk_is_seeded()) {
+            kirk_unsigned_header_read_body_size();
+            if (kirk_check_body_size_nonzero()) {
+                // Set the AES key to the per-console key with seed 1.
+                PERCONSOLE_KEYSEED = 1;
+                aes_set_perconsole_key();
+                CUR_ENC_KEY = HW_AES_RESULT;
+                // Encrypt similarly to command 4
+                kirk_unsigned_encrypt();
+            }
+        }
+    }
+    else {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Kirk command 6: encrypt data with a random key, and return the encrypted data along with 
+ */
+void kirk_cmd6_encrypt_user(void) // 0x34A
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    // Check the header similarly to commands 4 and 5.
+    kirk_unsigned_header_read();
+    if ((HW_DMA_BUF[0] == 0x4000000) && (HW_DMA_BUF[3] == 0x20000)) {
+        if (kirk_is_seeded()) {
+            kirk_unsigned_header_read_body_size();
+            if (kirk_check_body_size_nonzero()) {
+                // Copy the 0x24-sized header from the input to the output, just modifying the command (encrypt -> decrypt).
+                INPUT = HW_CPU_SRC;
+                OUTPUT = HW_CPU_DST;
+                SIZE = 0x24;
+                dma_memcpy();
+                HW_DMA_BUF[0] = 0x5000000;
+                HW_DMA_ADDR = HW_CPU_DST;
+                HW_DMA_BUF_SIZE = 4;
+                dma_write();
+
+                // Generate a random buffer and encrypt it using per-console key with seed 2
+                kirk_reseed_prng_2();
+                PERCONSOLE_KEYSEED = 2;
+                aes_set_perconsole_key();
+                HW_AES_SRC_BUF = HW_PRNG_RESULT._4_16_;
+                HW_AES_CMD = AES_CMD_ENCRYPT;
+                aes_setkey();
+                aes_do();
+                // Read the first block of the body in R11
+                SIZE = KIRK_BODY_SIZE;
+                HW_DMA_ADDR = HW_CPU_SRC + 0x24;
+                if ((int)KIRK_BODY_SIZE < 0x10) {
+                    HW_DMA_BUF_SIZE = KIRK_BODY_SIZE;
+                }
+                else {
+                    HW_DMA_BUF_SIZE = 0x10;
+                }
+                HW_DMA_BUF[0] = HW_DMA_ADDR; // TODO: useless?
+                dma_read();
+                R11._0_16_ = HW_DMA_BUF._0_16_;
+                // Store the encrypted random buffer at offset 0x24
+                HW_DMA_BUF[0] = HW_CPU_DST + 0x24;
+                aes_output();
+                // Encrypt the random buffer with the key located at 0x14, and use this as a key to encrypt the body
+                HW_DMA_ADDR = HW_CPU_DST + 0x14;
+                HW_DMA_BUF_SIZE = 0x10;
+                HW_DMA_BUF[0] = HW_DMA_ADDR; // TODO: useless?
+                dma_read();
+                HW_AES_KEY = HW_DMA_BUF._0_16_;
+                HW_AES_SRC_BUF = HW_PRNG_RESULT._4_16_;
+                HW_AES_CMD = AES_CMD_ENCRYPT;
+                aes_setkey();
+                aes_do();
+                CUR_ENC_KEY = HW_AES_RESULT;
+                // Encrypt the body of the data
+                INPUT = HW_CPU_SRC + 0x24;
+                OUTPUT = HW_CPU_DST + 0x34;
+                kirk_cmd6_encrypt_body();
+                HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+            }
+        }
+    }
+    else {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Encrypt INPUT to OUTPUT in AES CBC using CUR_ENC_KEY. Only used by command 6, written differently from aes_encrypt_cbc()
+ * to use a temporary buffer so that the data can be encrypted "in-place" but 16 bytes further (the output has a shorter header).
+ */
+void kirk_cmd6_encrypt_body(void) // 0x39D
+{
+    aes_set_null_iv();
+    kirk_reseed_prng_2();
+    HW_AES_KEY = CUR_ENC_KEY;
+    HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_ENCRYPT;
+    aes_setkey();
+    HW_DMA_BUF_SIZE = 0x10;
+    while (SIZE > 0x10) {
+        HW_AES_SRC_BUF = R11._0_16_;
+        SIZE -= 0x10;
+        aes_do();
+        HW_AES_IV = HW_AES_RESULT;
+        INPUT += 0x10;
+        if (SIZE < 0x10) {
+            HW_DMA_BUF_SIZE = SIZE;
+        }
+        dma_read_input();
+        R11._0_16_ = HW_DMA_BUF._0_16_;
+        HW_DMA_BUF_SIZE = 0x10;
+        dma_write_aes_result();
+        OUTPUT += 0x10;
+        HW_AES_CMD &= 0xfffffffd;
+    }
+    HW_DMA_BUF._0_16_ = R11._0_16_;
+    aes_padding();
+    HW_AES_CMD |= 2;
+    aes_do();
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_write_aes_result();
+}
+
+/*
+ * Kirk command 7: decryption counterpart of command 4. The only difference is that more keyseeds are allowed.
+ */
+void kirk_cmd7_decrypt_static(void) // 0x3C6
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    kirk_unsigned_header_read();
+    if ((HW_DMA_BUF[0] == 0x5000000) && (HW_DMA_BUF[3] == 0)) {
+        kirk_unsigned_header_read_body_size();
+        if (kirk_check_body_size_nonzero()) {
+            kirk_unsigned_header_read();
+            if ((int)HW_DMA_BUF[2] < 0x80) {
+                HW_AES_KEYSLOT_ID = HW_DMA_BUF[2] + 4;
+                HW_AES_KEY = HW_AES_KEYSLOT;
+                CUR_ENC_KEY = HW_AES_KEYSLOT;
+                // If the MSB of HW_KEY_MESH_3 is 1 and the keyseed is in the 0x20..0x2f or 0x6c..0x7b range, invert bits of the last word of the key
+                if ((HW_KEY_MESH_3 & 0x80000000) && (int)HW_DMA_BUF[2] > 0x1f && (int)HW_DMA_BUF[2] < 0x7c
+                   && ((int)HW_DMA_BUF[2] < 0x30 || (int)HW_DMA_BUF[2] > 0x6b)) {
+                    CUR_ENC_KEY[3] ^= 0xffffffff;
+                }
+                // If the keyseed is in the 0x27..0x2f or 0x73..0x7b range, XOR first word of the key with HW_KEY_MESH_3
+                if ((int)HW_DMA_BUF[2] > 0x27 && (int)HW_DMA_BUF[2] < 0x7c &&
+                   ((int)HW_DMA_BUF[2] < 0x30 || 0x73 < (int)HW_DMA_BUF[2])) {
+                    CUR_ENC_KEY[0] ^= HW_KEY_MESH_3;
+                }
+                HW_AES_KEY = CUR_ENC_KEY;
+                HW_DMA_BUF[2] = HW_DMA_BUF[2] + 4;
+                INPUT = 0x14;
+                kirk_unsigned_decrypt();
+            }
+            else {
+                HW_CPU_RESULT = KIRK_INVALID_DEC_SEED;
+            }
+        }
+    }
+    else {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Kirk command 8: decryption counterpart of command 5.
+ */
+void kirk_cmd8_decrypt_perconsole(void) // 0x40D
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    kirk_unsigned_header_read();
+    if ((HW_DMA_BUF[0] == 0x5000000) && (HW_DMA_BUF[3] == 0x10000)) {
+        kirk_unsigned_header_read_body_size();
+        if (kirk_check_body_size_nonzero()) {
+            PERCONSOLE_KEYSEED = 1;
+            aes_set_perconsole_key();
+            INPUT = 0x14;
+            kirk_unsigned_decrypt();
+        }
+    }
+    else {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Kirk command 9: decryption counterpart of command 6.
+ */
+void kirk_cmd9_decrypt_user(void) // 0x426
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    kirk_unsigned_header_read();
+    if ((HW_DMA_BUF[0] == 0x5000000) && (HW_DMA_BUF[3] == 0x20000)) {
+        kirk_unsigned_header_read_body_size();
+        if (kirk_check_body_size_nonzero()) {
+            // Compute the per-console key with seed 2
+            PERCONSOLE_KEYSEED = 2;
+            aes_set_perconsole_key();
+            // Read the keyseed and encrypted key
+            HW_DMA_ADDR = HW_CPU_SRC + 0x14;
+            HW_DMA_BUF_SIZE = 0x20;
+            HW_DMA_BUF[0] = HW_DMA_ADDR;
+            dma_read();
+            // Compute the real key by decrypting 0x24 with the per-console key and re-encrypting it with the key at 0x14
+            HW_AES_CMD = AES_CMD_DECRYPT;
+            HW_AES_SRC_BUF = HW_DMA_BUF._16_16_;
+            aes_setkey();
+            aes_do();
+            HW_AES_CMD = AES_CMD_ENCRYPT;
+            HW_AES_KEY = HW_DMA_BUF._0_16_;
+            HW_AES_SRC_BUF = HW_AES_RESULT;
+            aes_setkey();
+            aes_do();
+            HW_AES_KEY = HW_AES_RESULT;
+            INPUT = 0x34;
+            // Decrypt the data body
+            kirk_unsigned_decrypt();
+        }
+    } else {
+        HW_CPU_RESULT = KIRK_INVALID_MODE;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Compute the hash of the message given its INPUT address and SIZE, and sign it using the private key in 's'
+ */
+void ecc_sign_gen_m_r(void) // 0x452
+{
+    sha1_do();
+    HW_ECC_M._0_16_ = HW_SHA1_RESULT._0_16_;
+    HW_ECC_M[4] = HW_SHA1_RESULT[4];
+    ecc_sign_gen_r();
+}
+
+/*
+ * Compute a signature for a given message using the private key in 's'
+ */
+void ecc_sign_gen_r(void) // 0x455
+{
+    // This probably loops until we find a valid r
+    do {
+        // Compute a random scalar r
+        math_generate_random();
+        HW_ECC_R._0_16_ = MATH_RESULT._12_16_;
+        HW_ECC_R[4] = MATH_RESULT[7];
+        // Compute the resulting s
+        HW_ECC_OP = ECC_OP_SIGN;
+        ecc_do();
+    } while (!(HW_ECC_RESULT & 1));
+    RNG_FLAGS &= ~RNG_FLAGS_PUB_CURVE;
+}
+
+/*
+ * Compute random data in a given range using an unknown PRNG.
+ */
+void math_generate_random(void) // 0x45F
 {
     do {
-        prng_generate();
-        ECC_R._0_16_ = MATH_RESULT._12_16_;
-        ECC_R[4] = MATH_RESULT[7];
-        ECC_OP = 0;
-        hw_ec_do();
-    } while (!(ECC_RESULT & 1));
-    UNK_FLAGS = UNK_FLAGS & 0xfffffffd;
-    return;
-}
-
-void prng_generate(void)
-
-{
-    do {
-        if (UNK_FLAGS & 2) {
-            set_other_prime();
+        // Define the range depending on the bit 1 of RNG_FLAGS
+        if (RNG_FLAGS & RNG_FLAGS_PUB_CURVE) {
+            math_set_public_modulus();
+        } else {
+            math_set_private_modulus();
         }
-        else {
-            set_kirk1_prime();
-        }
+        // Fill MATH_IN 0 to 5 with 0's and 6 to 15 with random
         MATH_IN[0] = 0;
         MATH_IN[1] = 0;
         MATH_IN[2] = 0;
@@ -1393,887 +1363,890 @@ void prng_generate(void)
         MATH_IN[4] = 0;
         MATH_IN[5] = 0;
         kirk_reseed_prng_2();
-        MATH_IN._24_16_ = PRNG_RESULT._0_16_;
-        MATH_IN[10] = PRNG_RESULT[4];
+        MATH_IN._24_16_ = HW_PRNG_RESULT._0_16_;
+        MATH_IN[10] = HW_PRNG_RESULT[4];
         kirk_reseed_prng_2();
-        MATH_IN._44_16_ = PRNG_RESULT._0_16_;
-        MATH_IN[15] = PRNG_RESULT[4];
+        MATH_IN._44_16_ = HW_PRNG_RESULT._0_16_;
+        MATH_IN[15] = HW_PRNG_RESULT[4];
+        // Compute the result in the given range
         __builtin_setmode(MATH_REG, 1);
         __builtin_dma(0x400, 0);
+        // If the buffer is only zero's, retry
         R13 = 5;
         R11 = &MATH_RESULT[3]
     } while (!buffer_is_nonzero());
-    return;
 }
 
-
-
-bool ec_sign_hash_and_check(void)
+/*
+ * Hash a message and verify its ECDSA signature.
+ */
+bool ecc_sign_hash_and_check(void) // 0x47F
 {
     if (SIZE != 0) {
-        hw_sha1_do();
-        if (!ec_sign_check()) {
+        sha1_do();
+        if (!ecc_sign_check()) {
             return true;
         }
     }
     return false;
 }
 
-bool ec_sign_check(void)
+/*
+ * Verify an ECDSA signature of the data stored in HW_SHA1_RESULT.
+ */
+bool ecc_sign_check(void) // 0x483
 {
-    ECC_M._0_16_ = SHA1_RESULT._0_16_;
-    ECC_M[4] = SHA1_RESULT[4];
-    ECC_OP = 1;
-    hw_ec_do();
-    return (ECC_RESULT & 1);
+    HW_ECC_M._0_16_ = HW_SHA1_RESULT._0_16_;
+    HW_ECC_M[4] = HW_SHA1_RESULT[4];
+    HW_ECC_OP = ECC_OP_CHECK_SIGN;
+    ecc_do();
+    return (HW_ECC_RESULT & 1);
 }
 
-void ec_dma_read_scalars(void)
-
+/*
+ * Read r and s parameters of a signature from INPUT.
+ */
+void ecc_read_signature(void) // 0x48C
 {
-    DMA_BUF_SIZE = 0x14;
-    hw_dma_read_input();
-    ECC_R._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-    ECC_R[4] = DMA_BUF[4];
+    HW_DMA_BUF_SIZE = 0x14;
+    dma_read_input();
+    HW_ECC_R._0_16_ = HW_DMA_BUF._0_16_;
+    HW_ECC_R[4] = HW_DMA_BUF[4];
     INPUT = INPUT + 0x14;
-    hw_dma_read_input();
-    ECC_S._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-    ECC_S[4] = DMA_BUF[4];
-    return;
+    dma_read_input();
+    HW_ECC_S._0_16_ = HW_DMA_BUF._0_16_;
+    HW_ECC_S[4] = HW_DMA_BUF[4];
 }
 
-
-
-void dma_ec_output_point(void)
-
+/*
+ * Output the resulting point to OUTPUT.
+ */
+void ecc_output_point(void) // 0x497
 {
-    DMA_BUF._0_16_ = (undefined  [16])ECC_RESULT_X._0_16_;
-    DMA_BUF[4] = ECC_RESULT_X[4];
-    DMA_BUF_SIZE = 0x14;
-    DMA_ADDR = OUTPUT;
-    hw_dma_write();
-    DMA_BUF._0_16_ = (undefined  [16])ECC_RESULT_Y._0_16_;
-    DMA_BUF[4] = ECC_RESULT_Y[4];
-    DMA_ADDR = OUTPUT + 0x14;
-    OUTPUT = DMA_ADDR;
-    hw_dma_write();
-    return;
+    HW_DMA_BUF._0_16_ = HW_ECC_RESULT_X._0_16_;
+    HW_DMA_BUF[4] = HW_ECC_RESULT_X[4];
+    HW_DMA_BUF_SIZE = 0x14;
+    HW_DMA_ADDR = OUTPUT;
+    dma_write();
+    HW_DMA_BUF._0_16_ = HW_ECC_RESULT_Y._0_16_;
+    HW_DMA_BUF[4] = HW_ECC_RESULT_Y[4];
+    HW_DMA_ADDR = OUTPUT + 0x14;
+    OUTPUT = HW_DMA_ADDR;
+    dma_write();
 }
 
-
-
-void hw_sha1_do(void)
-
+/*
+ * Compute the SHA1 of the INPUT and put the result in HW_SHA1_RESULT.
+ */
+void sha1_do(void) // 0x4A4
 {
+    // If size is zero, do nothing.
     if (SIZE == 0) {
         return;
     }
 
-    SHA1_IN_SIZE = SIZE;
-    DMA_BUF_SIZE = 4;
+    // Set the real input size
+    HW_SHA1_IN_SIZE = SIZE;
+    HW_DMA_BUF_SIZE = 4;
+    // Send data by words
     SIZE = (SIZE + 3) / 4;
     do {
-        hw_dma_read_input();
-        SHA1_IN_DATA = DMA_BUF[0];
-        INPUT = INPUT + 4;
-        SIZE = SIZE + -1;
+        dma_read_input();
+        HW_SHA1_IN_DATA = HW_DMA_BUF[0];
+        INPUT += 4;
+        SIZE -= 1;
     } while (SIZE != 0);
-    __builtin_dma(4,0);
+    // Retrieve result
+    __builtin_dma(4, 0);
     SIZE = 0;
 }
 
-
-
-void hw_ec_do(void)
-
+/*
+ * Do an ECC operation depending on the value of HW_ECC_CMD.
+ */
+void ecc_do(void) // 0x4B5
 {
-    uint uVar1;
-    
-    uVar1 = ECC_REG;
-    __builtin_setmode(uVar1,1);
-    __builtin_dma(0,0x100);
-    return;
+    __builtin_setmode(HW_ECC_REG, 1);
+    __builtin_dma(0, 0x100);
 }
 
-void ecc_set_priv_curve(void)
+/*
+ * Set the ECC parameters to the "private" curve used by Kirk commands 1/2/3. Parameters are:
+ *
+ * p = 0xFFFFFFFFFFFFFFFF0001B5C617F290EAE1DBAD8F
+ * G = (0x2259ACEE15489CB096A882F0AE1CF9FD8EE5F8FA, 0x604358456D0A1CB2908DE90F27D75C82BEC108C0)
+ * n = 0xFFFFFFFFFFFFFFFF00000001FFFFFFFFFFFFFFFF
+ * a = -3
+ * b = 0x65D1488C0359E234ADC95BD3908014BD91A525F9
+ */
+void ecc_set_priv_curve(void) // 0x4B8
 {
-    ECC_A[0] = 0xffffffff;
-    ECC_A[1] = 0xffffffff;
-    ECC_A[2] = 1;
-    ECC_A[3] = 0xffffffff;
-    ECC_A[4] = 0xfffffffc;
-    ECC_B[0] = 0x65d1488c;
-    ECC_B[1] = 0x359e234;
-    ECC_B[2] = 0xadc95bd3;
-    ECC_B[3] = 0x908014bd;
-    ECC_B[4] = 0x91a525f9;
-    ECC_P[0] = 0xffffffff;
-    ECC_P[1] = 0xffffffff;
-    ECC_P[2] = 1;
-    ECC_P[3] = 0xffffffff;
-    ECC_P[4] = 0xffffffff;
-    ECC_N[0] = 0xffffffff;
-    ECC_N[1] = 0xffffffff;
-    ECC_N[2] = 0x1b5c6;
-    ECC_N[3] = 0x17f290ea;
-    ECC_N[4] = 0xe1dbad8f;
-    ECC_Gx[0] = 0x2259acee;
-    ECC_Gx[1] = 0x15489cb0;
-    ECC_Gx[2] = 0x96a882f0;
-    ECC_Gx[3] = 0xae1cf9fd;
-    ECC_Gx[4] = 0x8ee5f8fa;
-    ECC_Gy[0] = 0x60435845;
-    ECC_Gy[1] = 0x6d0a1cb2;
-    ECC_Gy[2] = 0x908de90f;
-    ECC_Gy[3] = 0x27d75c82;
-    ECC_Gy[4] = 0xbec108c0;
-    ECC_UNK1[0] = 4;
-    ECC_UNK1[1] = 0xfffffffc;
-    ECC_UNK1[2] = 4;
-    ECC_UNK1[3] = 0;
-    ECC_UNK1[4] = 0xfffffffd;
-    ECC_UNK2[0] = 0xbcb8c536;
-    ECC_UNK2[1] = 0x6c7b11e5;
-    ECC_UNK2[2] = 0xa251c108;
-    ECC_UNK2[3] = 0xc0b3500c;
-    ECC_UNK2[4] = 0x60f7e9f7;
-    return;
+    HW_ECC_A[0] = 0xffffffff;
+    HW_ECC_A[1] = 0xffffffff;
+    HW_ECC_A[2] = 1;
+    HW_ECC_A[3] = 0xffffffff;
+    HW_ECC_A[4] = 0xfffffffc;
+    HW_ECC_B[0] = 0x65d1488c;
+    HW_ECC_B[1] = 0x359e234;
+    HW_ECC_B[2] = 0xadc95bd3;
+    HW_ECC_B[3] = 0x908014bd;
+    HW_ECC_B[4] = 0x91a525f9;
+    HW_ECC_P[0] = 0xffffffff;
+    HW_ECC_P[1] = 0xffffffff;
+    HW_ECC_P[2] = 1;
+    HW_ECC_P[3] = 0xffffffff;
+    HW_ECC_P[4] = 0xffffffff;
+    HW_ECC_N[0] = 0xffffffff;
+    HW_ECC_N[1] = 0xffffffff;
+    HW_ECC_N[2] = 0x1b5c6;
+    HW_ECC_N[3] = 0x17f290ea;
+    HW_ECC_N[4] = 0xe1dbad8f;
+    HW_ECC_Gx[0] = 0x2259acee;
+    HW_ECC_Gx[1] = 0x15489cb0;
+    HW_ECC_Gx[2] = 0x96a882f0;
+    HW_ECC_Gx[3] = 0xae1cf9fd;
+    HW_ECC_Gx[4] = 0x8ee5f8fa;
+    HW_ECC_Gy[0] = 0x60435845;
+    HW_ECC_Gy[1] = 0x6d0a1cb2;
+    HW_ECC_Gy[2] = 0x908de90f;
+    HW_ECC_Gy[3] = 0x27d75c82;
+    HW_ECC_Gy[4] = 0xbec108c0;
+    // TODO: unknown parameters
+    HW_ECC_UNK1[0] = 4;
+    HW_ECC_UNK1[1] = 0xfffffffc;
+    HW_ECC_UNK1[2] = 4;
+    HW_ECC_UNK1[3] = 0;
+    HW_ECC_UNK1[4] = 0xfffffffd;
+    HW_ECC_UNK2[0] = 0xbcb8c536;
+    HW_ECC_UNK2[1] = 0x6c7b11e5;
+    HW_ECC_UNK2[2] = 0xa251c108;
+    HW_ECC_UNK2[3] = 0xc0b3500c;
+    HW_ECC_UNK2[4] = 0x60f7e9f7;
 }
 
-
-
-void set_other_curve(void)
-
+/*
+ * Set the ECC parameters to the "public" curve used by Kirk commands 12/13/14/16/17. Parameters are:
+ *
+ * p = 0xFFFFFFFFFFFFFFFEFFFFB5AE3C523E63944F2127
+ * G = (0x128EC4256487FD8FDF64E2437BC0A1F6D5AFDE2C, 0x5958557EB1DB001260425524DBC379D5AC5F4ADF)
+ * n = 0xFFFFFFFFFFFFFFFF00000001FFFFFFFFFFFFFFFF
+ * a = -3
+ * b = 0xA68BEDC33418029C1D3CE33B9A321FCCBB9E0F0B
+ */
+void ecc_set_public_curve(void) // 0x509
 {
-    ECC_A[0] = 0xffffffff;
-    ECC_A[1] = 0xffffffff;
-    ECC_A[2] = 1;
-    ECC_A[3] = 0xffffffff;
-    ECC_A[4] = 0xfffffffc;
-    ECC_B[0] = 0xa68bedc3;
-    ECC_B[1] = 0x3418029c;
-    ECC_B[2] = 0x1d3ce33b;
-    ECC_B[3] = 0x9a321fcc;
-    ECC_B[4] = 0xbb9e0f0b;
-    ECC_P[0] = 0xffffffff;
-    ECC_P[1] = 0xffffffff;
-    ECC_P[2] = 1;
-    ECC_P[3] = 0xffffffff;
-    ECC_P[4] = 0xffffffff;
-    ECC_N[0] = 0xffffffff;
-    ECC_N[1] = 0xfffffffe;
-    ECC_N[2] = 0xffffb5ae;
-    ECC_N[3] = 0x3c523e63;
-    ECC_N[4] = 0x944f2127;
-    ECC_Gx[0] = 0x128ec425;
-    ECC_Gx[1] = 0x6487fd8f;
-    ECC_Gx[2] = 0xdf64e243;
-    ECC_Gx[3] = 0x7bc0a1f6;
-    ECC_Gx[4] = 0xd5afde2c;
-    ECC_Gy[0] = 0x5958557e;
-    ECC_Gy[1] = 0xb1db0012;
-    ECC_Gy[2] = 0x60425524;
-    ECC_Gy[3] = 0xdbc379d5;
-    ECC_Gy[4] = 0xac5f4adf;
-    ECC_UNK1[0] = 4;
-    ECC_UNK1[1] = 0xfffffffc;
-    ECC_UNK1[2] = 4;
-    ECC_UNK1[3] = 0;
-    ECC_UNK1[4] = 0xfffffffd;
-    ECC_UNK2[0] = 0x9ceee277;
-    ECC_UNK2[1] = 0xb4d7bac8;
-    ECC_UNK2[2] = 0xe17d0c9e;
-    ECC_UNK2[3] = 0x5b6bb2a8;
-    ECC_UNK2[4] = 0x64d06c1c;
-    return;
+    HW_ECC_A[0] = 0xffffffff;
+    HW_ECC_A[1] = 0xffffffff;
+    HW_ECC_A[2] = 1;
+    HW_ECC_A[3] = 0xffffffff;
+    HW_ECC_A[4] = 0xfffffffc;
+    HW_ECC_B[0] = 0xa68bedc3;
+    HW_ECC_B[1] = 0x3418029c;
+    HW_ECC_B[2] = 0x1d3ce33b;
+    HW_ECC_B[3] = 0x9a321fcc;
+    HW_ECC_B[4] = 0xbb9e0f0b;
+    HW_ECC_P[0] = 0xffffffff;
+    HW_ECC_P[1] = 0xffffffff;
+    HW_ECC_P[2] = 1;
+    HW_ECC_P[3] = 0xffffffff;
+    HW_ECC_P[4] = 0xffffffff;
+    HW_ECC_N[0] = 0xffffffff;
+    HW_ECC_N[1] = 0xfffffffe;
+    HW_ECC_N[2] = 0xffffb5ae;
+    HW_ECC_N[3] = 0x3c523e63;
+    HW_ECC_N[4] = 0x944f2127;
+    HW_ECC_Gx[0] = 0x128ec425;
+    HW_ECC_Gx[1] = 0x6487fd8f;
+    HW_ECC_Gx[2] = 0xdf64e243;
+    HW_ECC_Gx[3] = 0x7bc0a1f6;
+    HW_ECC_Gx[4] = 0xd5afde2c;
+    HW_ECC_Gy[0] = 0x5958557e;
+    HW_ECC_Gy[1] = 0xb1db0012;
+    HW_ECC_Gy[2] = 0x60425524;
+    HW_ECC_Gy[3] = 0xdbc379d5;
+    HW_ECC_Gy[4] = 0xac5f4adf;
+    // TODO: unknown parameters
+    HW_ECC_UNK1[0] = 4;
+    HW_ECC_UNK1[1] = 0xfffffffc;
+    HW_ECC_UNK1[2] = 4;
+    HW_ECC_UNK1[3] = 0;
+    HW_ECC_UNK1[4] = 0xfffffffd;
+    HW_ECC_UNK2[0] = 0x9ceee277;
+    HW_ECC_UNK2[1] = 0xb4d7bac8;
+    HW_ECC_UNK2[2] = 0xe17d0c9e;
+    HW_ECC_UNK2[3] = 0x5b6bb2a8;
+    HW_ECC_UNK2[4] = 0x64d06c1c;
 }
 
-
-
-void set_kirk1_prime(void)
-
+/*
+ * Set the math module modulus to the order of the "private" curve
+ */
+void math_set_private_modulus(void) // 0x55A
 {
-    MATH_IN_X[0] = 0;
-    MATH_IN_X[1] = 0;
-    MATH_IN_X[2] = 0;
-    MATH_IN_X[3] = 0xffffffff;
-    MATH_IN_X[4] = 0xffffffff;
-    MATH_IN_X[5] = 0x1b5c6;
-    MATH_IN_X[6] = 0x17f290ea;
-    MATH_IN_X[7] = 0xe1dbad8f;
-    return;
+    MATH_MODULUS[0] = 0;
+    MATH_MODULUS[1] = 0;
+    MATH_MODULUS[2] = 0;
+    MATH_MODULUS[3] = 0xffffffff;
+    MATH_MODULUS[4] = 0xffffffff;
+    MATH_MODULUS[5] = 0x0001b5c6;
+    MATH_MODULUS[6] = 0x17f290ea;
+    MATH_MODULUS[7] = 0xe1dbad8f;
 }
 
-
-
-void set_other_prime(void)
-
+/*
+ * Set the math module modulus to the order of the "public" curve
+ */
+void math_set_public_modulus(void) // 0x56B
 {
-    MATH_IN_X[0] = 0;
-    MATH_IN_X[1] = 0;
-    MATH_IN_X[2] = 0;
-    MATH_IN_X[3] = 0xffffffff;
-    MATH_IN_X[4] = 0xfffffffe;
-    MATH_IN_X[5] = 0xffffb5ae;
-    MATH_IN_X[6] = 0x3c523e63;
-    MATH_IN_X[7] = 0x944f2127;
-    return;
+    MATH_MODULUS[0] = 0;
+    MATH_MODULUS[1] = 0;
+    MATH_MODULUS[2] = 0;
+    MATH_MODULUS[3] = 0xffffffff;
+    MATH_MODULUS[4] = 0xfffffffe;
+    MATH_MODULUS[5] = 0xffffb5ae;
+    MATH_MODULUS[6] = 0x3c523e63;
+    MATH_MODULUS[7] = 0x944f2127;
 }
 
-
-
-void kirk_signed_header_read_body_info(void)
-
+/*
+ * Read body size and data offset from a Kirk signed header (commands 1/2/3/10)
+ */
+void kirk_signed_header_read_body_info(void) // 0x57C
 {
-    DMA_ADDR = PSP_KIRK_SRC + 0x70;
-    DMA_BUF_SIZE = 8;
-    DMA_BUF[0] = DMA_ADDR;
-    hw_dma_read();
-    DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
-    KIRK_BODY_SIZE = DMA_BUF[0];
-    DMA_BUF[1] = __builtin_byteswap(DMA_BUF[1]);
-    KIRK_DATA_OFFSET = DMA_BUF[1];
-    return;
+    // Body size is at 0x70, and data offset is at 0x74
+    HW_DMA_ADDR = HW_CPU_SRC + 0x70;
+    HW_DMA_BUF_SIZE = 8;
+    HW_DMA_BUF[0] = HW_DMA_ADDR;
+    dma_read();
+    // Fix endianness
+    HW_DMA_BUF[0] = __builtin_byteswap(HW_DMA_BUF[0]);
+    KIRK_BODY_SIZE = HW_DMA_BUF[0];
+    HW_DMA_BUF[1] = __builtin_byteswap(HW_DMA_BUF[1]);
+    KIRK_DATA_OFFSET = HW_DMA_BUF[1];
 }
 
-
-
-void kirk_header_read_body_size(void)
-
+/*
+ * Read body size from a Kirk unsigned header (commands 4/5/6/7/8/9)
+ */
+void kirk_unsigned_header_read_body_size(void) // 0x588
 {
-    DMA_ADDR = PSP_KIRK_SRC + 0x10;
-    DMA_BUF_SIZE = 4;
-    DMA_BUF[0] = DMA_ADDR;
-    hw_dma_read();
-    DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
-    KIRK_BODY_SIZE = DMA_BUF[0];
-    return;
+    HW_DMA_ADDR = HW_CPU_SRC + 0x10;
+    HW_DMA_BUF_SIZE = 4;
+    HW_DMA_BUF[0] = HW_DMA_ADDR;
+    dma_read();
+    HW_DMA_BUF[0] = __builtin_byteswap(HW_DMA_BUF[0]);
+    KIRK_BODY_SIZE = HW_DMA_BUF[0];
 }
 
-
-
-undefined kirk_check_cmac(void)
-
+/*
+ * Check the CMAC of the header and body for commands 1/2/3
+ */
+bool kirk_check_cmac(void) // 0x592
 {
-    bool bVar1;
-    
-    AES_KEY = CUR_ENC_KEY;
-    bVar1 = (bool)kirk_cmac_check_header();
-    if (bVar1) {
-        bVar1 = (bool)kirk_cmac_check_body();
-        if (bVar1) {
+    HW_AES_KEY = CUR_ENC_KEY;
+    if (kirk_cmac_check_header()) {
+        if (kirk_cmac_check_body()) {
             return 1;
         }
-        FUN_00001670();
+        kirk_signed_wipe_data();
     }
     return 0;
 }
 
-
-
-void FUN_00001670(void)
-
+/*
+ * Wipe data if the signature of the body is invalid and 0x68 is set to 1
+ */
+void kirk_signed_wipe_data(void) // 0x59C
 {
-    DMA_ADDR = PSP_KIRK_SRC + 0x68;
-    DMA_BUF_SIZE = 4;
-    DMA_BUF[0] = DMA_ADDR;
-    hw_dma_read();
-    if (DMA_BUF[0] & (1 << 24)) {
-        kirk_set_size_offset_body();
-        OUTPUT = PSP_KIRK_SRC;
+    // Read the LSB bit at 0x68 (when in little endian)
+    HW_DMA_ADDR = HW_CPU_SRC + 0x68;
+    HW_DMA_BUF_SIZE = 4;
+    HW_DMA_BUF[0] = HW_DMA_ADDR;
+    dma_read();
+    if (HW_DMA_BUF[0] & 0x01000000) {
+        // Overwrite the full header + body with zero's
+        kirk_signed_get_full_size();
+        OUTPUT = HW_CPU_SRC;
         dma_bzero();
     }
-    return;
 }
 
-
-
-void kirk_cmac_check_header(void)
-
+/*
+ * Check the CMAC signature of a signed header.
+ */
+void kirk_cmac_check_header(void) // 0x5A9
 {
-    uint uVar1;
-    bool bVar2;
-    
-    do_aeshwdecrypt_and_encrypt_plain();
-    INPUT = PSP_KIRK_SRC + 0x60;
+    kirk_signed_header_decrypt_cmac_key();
+    // Compute the CMAC of 0x60..0x90
+    INPUT = HW_CPU_SRC + 0x60;
     aes_set_null_iv();
-    AES_CMD = 0x32;
-    hw_aes_setkey();
-    AES_END = 0x30;
-    DMA_BUF_SIZE = 0x10;
-    hw_aes_dma_copy_and_do();
-    INPUT = INPUT + 0x10;
-    uVar1 = AES_CMD;
-    AES_CMD = uVar1 & 0xfffffffd;
-    hw_aes_dma_copy_and_do();
-    INPUT = INPUT + 0x10;
-    DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
-    if ((DMA_BUF[0] == KIRK_BODY_SIZE) &&
-       (DMA_BUF[1] = __builtin_byteswap(DMA_BUF[1]), DMA_BUF[1] == KIRK_DATA_OFFSET)) {
-        hw_aes_dma_copy_and_do();
-        INPUT = PSP_KIRK_SRC + 0x20;
-        DMA_BUF_SIZE = 0x10;
-        hw_dma_read_input();
-        bVar2 = memcmp_cmac();
-        if (bVar2) {
-            return;
+    HW_AES_CMD = AES_CMD_CMAC | AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK;
+    aes_setkey();
+    HW_AES_CMAC_SIZE = 0x30;
+    HW_DMA_BUF_SIZE = 0x10;
+    aes_dma_copy_and_do();
+    INPUT += 0x10;
+    HW_AES_CMD &= 0xfffffffd;
+    aes_dma_copy_and_do();
+    INPUT += 0x10;
+    // Verify the data is what we read earlier (maybe to avoid attacks based on overwriting?)
+    HW_DMA_BUF[0] = __builtin_byteswap(HW_DMA_BUF[0]);
+    if (HW_DMA_BUF[0] == KIRK_BODY_SIZE) {
+        HW_DMA_BUF[1] = __builtin_byteswap(HW_DMA_BUF[1]);
+        if (HW_DMA_BUF[1] == KIRK_DATA_OFFSET) {
+            aes_dma_copy_and_do();
+            // Check if the CMAC is the same as offset 0x20
+            INPUT = HW_CPU_SRC + 0x20;
+            HW_DMA_BUF_SIZE = 0x10;
+            dma_read_input();
+            if (memcmp_cmac()) {
+                return;
+            }
         }
     }
-    PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
-    return;
+    HW_CPU_RESULT = KIRK_HEADER_SIG_INVALID;
 }
 
-
-
-void kirk_cmac_check_body(void)
-
+/*
+ * Check the CMAC signature of the header + body of the command.
+ */
+void kirk_cmac_check_body(void) // 0x5CF
 {
-    bool bVar1;
-    
-    INPUT = PSP_KIRK_SRC + 0x60;
-    kirk_set_size_offset_header2();
+    // Compute the CMAC of 0x60..(end of body)
+    INPUT = HW_CPU_SRC + 0x60;
+    kirk_signed_header_get_size_header2_body();
     aes_cmac();
-    INPUT = PSP_KIRK_SRC + 0x30;
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_read_input();
-    bVar1 = memcmp_cmac();
-    if (!bVar1) {
-        PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+    // Compare this value with the value at 0x30
+    INPUT = HW_CPU_SRC + 0x30;
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_read_input();
+    if (!memcmp_cmac()) {
+        HW_CPU_RESULT = KIRK_DATA_SIG_INVALID;
     }
-    return;
 }
 
-void kirk_ecdsa_check_header(void)
+/*
+ * Check the ECDSA signature of a signed header.
+ */
+void kirk_ecdsa_check_header(void) // 0x5DF
 {
-    INPUT = PSP_KIRK_SRC + 0x10;
-    ec_dma_read_scalars();
-    INPUT = PSP_KIRK_SRC + 0x60;
+    // Read the signature at offset 0x10
+    INPUT = HW_CPU_SRC + 0x10;
+    ecc_read_signature();
+    // Hash the data 0x60..0x80
+    INPUT = HW_CPU_SRC + 0x60;
     SIZE = 0x30;
-    SHA1_IN_SIZE = 0x30;
-    DMA_BUF_SIZE = 0x20;
-    hw_dma_read_input();
-    SHA1_IN_DATA = DMA_BUF[0];
-    SHA1_IN_DATA = DMA_BUF[1];
-    SHA1_IN_DATA = DMA_BUF[2];
-    SHA1_IN_DATA = DMA_BUF[3];
-    SHA1_IN_DATA = DMA_BUF[4];
-    SHA1_IN_DATA = DMA_BUF[5];
-    SHA1_IN_DATA = DMA_BUF[6];
-    SHA1_IN_DATA = DMA_BUF[7];
-    DMA_BUF[4] = __builtin_byteswap(DMA_BUF[4]);
-    DMA_BUF[5] = __builtin_byteswap(DMA_BUF[5]);
-    if (DMA_BUF[4] == KIRK_BODY_SIZE && DMA_BUF[5] == KIRK_DATA_OFFSET) {
-        INPUT = INPUT + 0x20;
-        DMA_BUF_SIZE = 0x10;
-        hw_dma_read_input();
-        SHA1_IN_DATA = DMA_BUF[0];
-        SHA1_IN_DATA = DMA_BUF[1];
-        SHA1_IN_DATA = DMA_BUF[2];
-        SHA1_IN_DATA = DMA_BUF[3];
+    HW_SHA1_IN_SIZE = 0x30;
+    HW_DMA_BUF_SIZE = 0x20;
+    dma_read_input();
+    HW_SHA1_IN_DATA = HW_DMA_BUF[0];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[1];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[2];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[3];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[4];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[5];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[6];
+    HW_SHA1_IN_DATA = HW_DMA_BUF[7];
+    // Check that the size/offset are still what we read earlier
+    HW_DMA_BUF[4] = __builtin_byteswap(HW_DMA_BUF[4]);
+    HW_DMA_BUF[5] = __builtin_byteswap(HW_DMA_BUF[5]);
+    if (HW_DMA_BUF[4] == KIRK_BODY_SIZE && HW_DMA_BUF[5] == KIRK_DATA_OFFSET) {
+        // Hash 0x80..0x90
+        INPUT += 0x20;
+        HW_DMA_BUF_SIZE = 0x10;
+        dma_read_input();
+        HW_SHA1_IN_DATA = HW_DMA_BUF[0];
+        HW_SHA1_IN_DATA = HW_DMA_BUF[1];
+        HW_SHA1_IN_DATA = HW_DMA_BUF[2];
+        HW_SHA1_IN_DATA = HW_DMA_BUF[3];
         __builtin_dma(4,0);
-        if (ec_sign_check()) {
+        // Verify the signature
+        if (ecc_sign_check()) {
             return true;
         }
     }
-    PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+    HW_CPU_RESULT = KIRK_HEADER_SIG_INVALID;
     return false;
 }
 
-
-
-void kirk_ecdsa_check_body(void)
-
+/*
+ * Check the ECDSA signature of the second header + the body of a signed command.
+ */
+void kirk_ecdsa_check_body(void) // 0x60A
 {
-    bool bVar1;
-    
-    INPUT = PSP_KIRK_SRC + 0x38;
-    ec_dma_read_scalars();
-    INPUT = PSP_KIRK_SRC + 0x60;
-    kirk_set_size_offset_header2();
-    bVar1 = (bool)ec_sign_hash_and_check();
-    if (!bVar1) {
-        FUN_00001670();
-        PSP_KIRK_RESULT = KIRK_DATA_HASH_INVALID;
+    // Read the signature at 0x38
+    INPUT = HW_CPU_SRC + 0x38;
+    ecc_read_signature();
+    // Hash the data at 0x60..(end of body) and verify the signature
+    INPUT = HW_CPU_SRC + 0x60;
+    kirk_signed_header_get_size_header2_body();
+    if (!ecc_sign_hash_and_check()) {
+        kirk_signed_wipe_data();
+        HW_CPU_RESULT = KIRK_DATA_SIG_INVALID;
     }
-    return;
 }
 
-
-
-void kirk_aes_decrypt(void)
-
+/*
+ * Decrypt the body of an unsigned command (commands 7/8/9) from the offset given in INPUT.
+ */
+void kirk_unsigned_decrypt(void) // 0x618
 {
-    INPUT = PSP_KIRK_SRC;
-    OUTPUT = PSP_KIRK_DST;
+    INPUT += HW_CPU_SRC;
+    OUTPUT = HW_CPU_DST;
     SIZE = KIRK_BODY_SIZE;
     aes_decrypt_cbc();
-    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-    return;
+    HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
 }
 
-void kirk_signed_header_decrypt_body(void)
+/*
+ * Decrypt the body of a signed command (commands 1/3).
+ */
+void kirk_signed_header_decrypt_body(void) // 0x61F
 {
-    AES_KEY = CUR_ENC_KEY;
-    kirk_aes_decrypt_key();
-    INPUT = KIRK_DATA_OFFSET + PSP_KIRK_SRC;
-    INPUT = INPUT + 0x90;
-    OUTPUT = PSP_KIRK_DST;
+    HW_AES_KEY = CUR_ENC_KEY;
+    kirk_signed_decrypt_key();
+    INPUT = KIRK_DATA_OFFSET + HW_CPU_SRC + 0x90;
+    OUTPUT = HW_CPU_DST;
     SIZE = KIRK_BODY_SIZE;
     aes_decrypt_cbc();
-    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-    return;
+    HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
 }
 
-
-
-void kirk_set_size_offset_body(void)
-
+/*
+ * Get the size of the full header + body of signed data.
+ */
+void kirk_signed_get_full_size(void) // 0x62B
 {
-    SIZE = KIRK_BODY_SIZE + 0x90;
-    SIZE = KIRK_DATA_OFFSET + SIZE;
+    SIZE = KIRK_DATA_OFFSET + KIRK_BODY_SIZE + 0x90;
     align_size_16();
-    return;
 }
 
-
-
-void kirk_set_size_offset_header2(void)
+/*
+ * Get the size of the second header + body of signed data.
+ */
+void kirk_signed_header_get_size_header2_body(void) // 0x62E
 {
-    SIZE = KIRK_BODY_SIZE + 0x30;
     SIZE = KIRK_DATA_OFFSET + KIRK_BODY_SIZE + 0x30;
     align_size_16();
-    return;
 }
 
-void kirk_signed_header_read_sign_mode(void)
+/*
+ * Read the sign mode from the header of a signed command. Bit 0 is 1 if ECDSA, CMAC otherwise; bit 1 indicates to command
+ * 2 if it should use ECDSA (value 1) or CMAC (value 2) for the resulting Kirk 3 block.
+ */
+void kirk_signed_header_read_sign_mode(void) // 0x634
 {
-    DMA_BUF[0] = PSP_KIRK_SRC + 0x64;
-    DMA_ADDR = DMA_BUF[0];
-    DMA_BUF_SIZE = 4;
-    hw_dma_read();
-    return;
+    HW_DMA_BUF[0] = HW_CPU_SRC + 0x64;
+    HW_DMA_ADDR = HW_DMA_BUF[0];
+    HW_DMA_BUF_SIZE = 4;
+    dma_read();
 }
 
-
-
-void kirk_signed_header_read_cmd_mode(void)
-
+/*
+ * Read the command mode from a signed header. This should be equal to the command ID.
+ */
+void kirk_signed_header_read_cmd_mode(void) // 0x637
 {
-    DMA_BUF[0] = PSP_KIRK_SRC + 0x60;
-    DMA_ADDR = DMA_BUF[0];
-    DMA_BUF_SIZE = 4;
-    hw_dma_read();
-    return;
+    HW_DMA_BUF[0] = HW_CPU_SRC + 0x60;
+    HW_DMA_ADDR = HW_DMA_BUF[0];
+    HW_DMA_BUF_SIZE = 4;
+    dma_read();
 }
 
-
-
-void do_aeshwdecrypt_and_encrypt_plain(void)
-
+/*
+ * Decrypt the CMAC key from the header (at offset 0x20) using the current HW_AES_KEY.
+ */
+void kirk_signed_header_decrypt_cmac_key(void) // 0x63F
 {
-    uint uVar1;
-    uint auVar2 [4];
-    
-    DMA_ADDR = PSP_KIRK_SRC;
-    DMA_BUF_SIZE = 0x20;
-    hw_dma_read();
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 0x20;
+    dma_read();
+    // Note: this looks like they could've just set HW_AES_IV to HW_DMA_BUF._0_16_ since the result of the first block is ignored
     aes_set_null_iv();
-    AES_CMD = 0x13;
-    hw_aes_setkey();
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-    hw_aes_do();
-    AES_SRC_BUF = (uint  [4])DMA_BUF._16_16_;
-    uVar1 = AES_CMD;
-    AES_CMD = uVar1 & 0xfffffffd;
-    hw_aes_do();
-    auVar2 = AES_RESULT;
-    AES_KEY = auVar2;
-    return;
+    HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_DECRYPT;
+    aes_setkey();
+    HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+    aes_do();
+    HW_AES_SRC_BUF = HW_DMA_BUF._16_16_;
+    HW_AES_CMD &= 0xfffffffd;
+    aes_do();
+    HW_AES_KEY = HW_AES_RESULT;
 }
 
-
-
-void kirk_cmd2_decrypt_key(void)
-
+/*
+ * Decrypt the data encryption key for Kirk command 2, stored in INPUT, using the current HW_AES_KEY, and store the result in HW_AES_KEY.
+ */
+void kirk_cmd2_decrypt_key(void) // 0x64E
 {
-    uint auVar1 [4];
-    
-    DMA_ADDR = INPUT;
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_read();
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-    AES_CMD = 1;
-    hw_aes_setkey();
-    hw_aes_do();
-    auVar1 = AES_RESULT;
-    AES_KEY = auVar1;
-    return;
+    HW_DMA_ADDR = INPUT;
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_read();
+    HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+    HW_AES_CMD = AES_CMD_DECRYPT;
+    aes_setkey();
+    aes_do();
+    HW_AES_KEY = HW_AES_RESULT;
 }
 
-
-
-void kirk_aes_decrypt_key(void)
-
+/*
+ * Same as kirk_cmd2_decrypt_key but taking as an input the beginning of the Kirk header.
+ */
+void kirk_signed_decrypt_key(void) // 0x650
 {
-    uint auVar1 [4];
-    
-    DMA_ADDR = PSP_KIRK_SRC;
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_read();
-    AES_SRC_BUF = (uint  [4])DMA_BUF._0_16_;
-    AES_CMD = 1;
-    hw_aes_setkey();
-    hw_aes_do();
-    auVar1 = AES_RESULT;
-    AES_KEY = auVar1;
-    return;
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_read();
+    HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+    HW_AES_CMD = AES_CMD_DECRYPT;
+    aes_setkey();
+    aes_do();
+    HW_AES_KEY = HW_AES_RESULT;
 }
 
-
-
-void __unused_kirk_header_get_decrypted_size(void)
-
+/*
+ * Unused function, reading the size of the decrypted data from the header.
+ */
+void __unused_kirk_signed_header_get_decrypted_size(void) // 0x65B
 {
-    DMA_BUF[0] = PSP_KIRK_SRC + 0x70;
-    DMA_ADDR = DMA_BUF[0];
-    DMA_BUF_SIZE = 4;
-    hw_dma_read();
-    DMA_BUF[0] = __builtin_byteswap(DMA_BUF[0]);
-    return;
+    HW_DMA_BUF[0] = HW_CPU_SRC + 0x70;
+    HW_DMA_ADDR = HW_DMA_BUF[0];
+    HW_DMA_BUF_SIZE = 4;
+    dma_read();
+    HW_DMA_BUF[0] = __builtin_byteswap(HW_DMA_BUF[0]);
 }
 
-
-
-void dma_bzero(void)
-
+/*
+ * Write SIZE 0's to the OUTPUT.
+ */
+void dma_bzero(void) // 0x667
 {
-    DMA_BUF[0] = 0;
-    DMA_BUF[1] = 0;
-    DMA_BUF[2] = 0;
-    DMA_BUF[3] = 0;
-    DMA_BUF._16_16_ = ZEXT816(0) << 0x40;
-    DMA_BUF_SIZE = 0x20;
-    while (0 < SIZE + -0x20) {
-        SIZE = SIZE + -0x20;
-        hw_dma_write_output();
-        OUTPUT = OUTPUT + 0x20;
+    HW_DMA_BUF[0] = 0;
+    HW_DMA_BUF[1] = 0;
+    HW_DMA_BUF[2] = 0;
+    HW_DMA_BUF[3] = 0;
+    HW_DMA_BUF._16_16_ = 0;
+    HW_DMA_BUF_SIZE = 0x20;
+    while (SIZE > 0x20) {
+        SIZE -= 0x20;
+        dma_write_output();
+        OUTPUT += 0x20;
     }
-    DMA_BUF_SIZE = SIZE;
-    hw_dma_write_output();
-    return;
+    HW_DMA_BUF_SIZE = SIZE;
+    dma_write_output();
 }
 
-
-
-undefined kirk_aes_read_header(void)
-
+/*
+ * Read the header of an unsigned command, excluding the body size.
+ */
+void kirk_unsigned_header_read(void) // 0x67C
 {
-    undefined in_tmpZR;
-    
-    DMA_ADDR = PSP_KIRK_SRC;
-    DMA_BUF_SIZE = 0x10;
-    hw_dma_read();
-    DMA_BUF[2] = DMA_BUF[3] >> 0x18 | DMA_BUF[3] << 8;
-    DMA_BUF[3] = DMA_BUF[3] & 0x30000;
-    return in_tmpZR;
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 0x10;
+    dma_read();
+    HW_DMA_BUF[2] = HW_DMA_BUF[3] >> 24; // Key seed
+    HW_DMA_BUF[3] = HW_DMA_BUF[3] & 0x30000; // 0 = Kirk 4/7, 1 = Kirk 5/8, 2 = Kirk 6/9
 }
 
-
-
-void dma_memcpy(void)
-
+/*
+ * Copy INPUT to OUTPUT with given SIZE.
+ */
+void dma_memcpy(void) // 0x685
 {
-    DMA_BUF_SIZE = 0x20;
-    while (0 < SIZE + -0x20) {
-        SIZE = SIZE + -0x20;
-        hw_dma_read_input();
-        hw_dma_write_output();
-        INPUT = INPUT + 0x20;
-        OUTPUT = OUTPUT + 0x20;
+    HW_DMA_BUF_SIZE = 0x20;
+    while (SIZE > 0x20) {
+        SIZE -= 0x20;
+        dma_read_input();
+        dma_write_output();
+        INPUT += 0x20;
+        OUTPUT += 0x20;
     }
-    DMA_BUF_SIZE = SIZE;
-    hw_dma_read_input();
-    hw_dma_write_output();
-    return;
+    HW_DMA_BUF_SIZE = SIZE;
+    dma_read_input();
+    dma_write_output();
 }
 
-bool memcmp_cmac(void)
+/*
+ * Compare HW_AES_RESULT to HW_DMA_BUF contents, to check the result of a CMAC.
+ */
+bool memcmp_cmac(void) // 0x698
 {
-    R11 = &AES_RESULT;
-    R12 = &DMA_BUF;
+    R11 = &HW_AES_RESULT;
+    R12 = &HW_DMA_BUF;
     R13 = 4;
     do {
         if (*(int *)R11 != *(int *)R12) {
             return false;
         }
-        R11 = R11 + 1;
-        R12 = R12 + 1;
-        R13 = R13 - 1;
+        R11++;
+        R12++;
+        R13--;
     } while (R13 != 0);
     return true;
 }
 
-bool hw_kirk_check_enabled(void)
+/*
+ * Check if the PSP interface is enabled.
+ */
+bool kirk_check_enabled(void) // 0x6A5
 {
-    if (!(PSP_KIRK_STATUS & 2)) {
-        PSP_KIRK_RESULT = KIRK_NOT_ENABLED;
+    if (!(HW_CPU_STATUS & 2)) {
+        HW_CPU_RESULT = KIRK_NOT_ENABLED;
         crash();
     }
     return true;
 }
 
-bool kirk_not_busy(void)
+/*
+ * Check if command 15 (init/reseed) was run.
+ */
+bool kirk_is_seeded(void) // 0x6AE
 {
-    if (!(UNK_FLAGS & 1)) {
-        PSP_KIRK_RESULT = KIRK_NOT_INITIALIZED;
+    if (!(RNG_FLAGS & RNG_FLAGS_SEEDED)) {
+        HW_CPU_RESULT = KIRK_NOT_INITIALIZED;
         return false;
     }
     return true;
 }
 
-void align_size_16(void)
+/*
+ * Align SIZE to the upper multiple of 16.
+ */
+void align_size_16(void) // 0x6B4
 {
     SIZE = (SIZE + 0xf) & 0xfffffff0;
 }
 
-void hw_dma_write_aes_result(void)
-
+/*
+ * Write HW_AES_RESULT to OUTPUT.
+ */
+void dma_write_aes_result(void) // 0x6B9
 {
-    uint auVar1 [4];
-    
-    auVar1 = AES_RESULT;
-    DMA_BUF[0] = auVar1[0];
-    DMA_BUF[1] = auVar1[1];
-    DMA_BUF[2] = auVar1[2];
-    DMA_BUF[3] = auVar1[3];
-    hw_dma_write_output();
-    return;
+    HW_DMA_BUF._0_16_ = HW_AES_RESULT._0_16_;
+    dma_write_output();
 }
 
-
-
-void hw_dma_write_output(void)
-
+/*
+ * Write HW_DMA_BUF to OUTPUT.
+ */
+void dma_write_output(void) // 0x6BA
 {
-    DMA_ADDR = OUTPUT;
-    hw_dma_write();
+    HW_DMA_ADDR = OUTPUT;
+    dma_write();
 }
 
-
-
-void hw_dma_write(void)
-
+/*
+ * Write HW_DMA_BUF to HW_DMA_ADDR.
+ */
+void dma_write(void) // 0x6BB
 {
-    __builtin_setmode(DMA_REG,1);
-    __builtin_dma(0,1);
-    return;
+    __builtin_setmode(HW_DMA_REG, 1);
+    __builtin_dma(0, 1);
 }
 
-
-
-void hw_dma_read_input(void)
-
+/*
+ * Read data from INPUT.
+ */
+void dma_read_input(void) // 0x6BE
 {
-    DMA_ADDR = INPUT;
-    hw_dma_read();
+    HW_DMA_ADDR = INPUT;
+    dma_read();
 }
 
-
-
-void hw_dma_read(void)
-
+/*
+ * Read data from HW_DMA_ADDR.
+ */
+void dma_read(void) // 0x6BF
 {
-    __builtin_setmode(DMA_REG,2);
-    __builtin_dma(0,1);
-    return;
+    __builtin_setmode(HW_DMA_REG, 2);
+    __builtin_dma(0, 1);
 }
 
-
-
-bool kirk_check_body_size_nonzero(void)
-
+/*
+ * Check if the read Kirk body size is non-zero.
+ */
+bool kirk_check_body_size_nonzero(void) // 0x6C2
 {
     if (KIRK_BODY_SIZE == 0) {
-        PSP_KIRK_RESULT = KIRK_DATA_SIZE_ZERO;
+        HW_CPU_RESULT = KIRK_DATA_SIZE_ZERO;
     }
     return KIRK_BODY_SIZE != 0;
 }
 
-
-
-undefined buffer_is_nonzero(void)
-
+/*
+ * Check if a buffer, given by its pointer (R11) and size (R13), is not entirely zero's.
+ */
+bool buffer_is_nonzero(void) // 0x6CB
 {
-    int iVar1;
-    
     do {
-        iVar1 = *(int *)R11;
-        R11 = R11 + 1;
-        if (iVar1 != 0) {
-            return 1;
+        int cur = *(int *)R11;
+        R11++;
+        if (cur != 0) {
+            return true;
         }
-        R13 = R13 - 1;
+        R13--;
     } while (R13 != 0);
-    return 0;
+    return false;
 }
 
-void crash(void)
+/*
+ * Triggered on fatal error. Enter an infinite loop.
+ */
+void crash(void) // 0x6D4
 {
-    PSP_KIRK_PHASE = 3;
-    __builtin_setmode(PSP_KIRK_REG,1);
-    __builtin_dma(0,2);
+    HW_CPU_PHASE = 3;
+    __builtin_setmode(HW_CPU_REG, 1);
+    __builtin_dma(0, 2);
     inf_loop();
-    return;
 }
 
-void kirk_cmd10_priv_sigvry(void)
-
+/*
+ * Kirk command 10: verify signatures of command 1/2/3 headers.
+ */
+void kirk_cmd10_priv_sigvry(void) // 0x6D9
 {
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (!bVar1) {
+    if (!kirk_check_enabled()) {
         return;
     }
+
+    // Set the appropriate CMAC & ECDSA keys depending on the command
     kirk_signed_header_read_cmd_mode();
-    if (DMA_BUF[0] == 0x1000000) {
-        HW_AES_PARAM_ID = 2;
-        CUR_ENC_KEY = HW_AES_PARAM;
+    if (HW_DMA_BUF[0] == 0x1000000) {
+        HW_AES_KEYSLOT_ID = 2;
+        CUR_ENC_KEY = HW_AES_KEYSLOT;
         kirk_cmd1_get_public_key();
     }
-    else if (DMA_BUF[0] == 0x2000000) {
-        HW_AES_PARAM_ID = 3;
-        CUR_ENC_KEY = HW_AES_PARAM;
+    else if (HW_DMA_BUF[0] == 0x2000000) {
+        HW_AES_KEYSLOT_ID = 3;
+        CUR_ENC_KEY = HW_AES_KEYSLOT;
         kirk_cmd2_get_public_key();
     }
     else {
-        if (DMA_BUF[0] != 0x3000000) {
-            PSP_KIRK_PHASE = 1;
-            PSP_KIRK_RESULT = KIRK_INVALID_MODE;
+        if (HW_DMA_BUF[0] != 0x3000000) {
+            HW_CPU_PHASE = 1;
+            HW_CPU_RESULT = KIRK_INVALID_MODE;
             return;
         }
-        AES_KEYSEED = 0;
+        PERCONSOLE_KEYSEED = 0;
         aes_set_perconsole_key();
-        CUR_ENC_KEY = AES_RESULT;
+        CUR_ENC_KEY = HW_AES_RESULT;
         kirk3_get_public_key();
     }
     kirk_signed_header_read_body_info();
-    bVar1 = (bool)kirk_check_body_size_nonzero();
-    if (bVar1) {
+    if (kirk_check_body_size_nonzero()) {
+        // Depending on the signature mode, verify CMAC or ECDSA signature
         kirk_signed_header_read_sign_mode();
-        if (DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
+        if (HW_DMA_BUF[0] & KIRK_SIGNED_HEADER_SIGN_MODE_ECDSA) {
             ecc_set_priv_curve();
-            bVar1 = (bool)kirk_ecdsa_check_header();
-            if (!bVar1) {
-                PSP_KIRK_PHASE = 1;
-                PSP_KIRK_RESULT = KIRK_HEADER_HASH_INVALID;
+            if (!kirk_ecdsa_check_header()) {
+                HW_CPU_PHASE = 1;
+                HW_CPU_RESULT = KIRK_HEADER_SIG_INVALID;
+                return;
+            }
+        } else {
+            HW_AES_KEY = CUR_ENC_KEY;
+            if (!kirk_cmac_check_header()) {
+                HW_CPU_PHASE = 1;
+                // Note: missing return value?
                 return;
             }
         }
-        else {
-            AES_KEY = CUR_ENC_KEY;
-            bVar1 = (bool)kirk_cmac_check_header();
-            if (!bVar1) {
-                PSP_KIRK_PHASE = 1;
-                return;
-            }
-        }
-        PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
     }
-    PSP_KIRK_PHASE = 1;
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-
-
-void init_ECC(void)
-
+/*
+ * Initialize the ECC module.
+ */
+void init_ECC(void) // 0x710
 {
-    uint uVar1;
-    
-    uVar1 = ECC_REG;
-    __builtin_setmode(uVar1,0);
-    do {
-        uVar1 = ECC_STATUS;
-    } while (uVar1 != 0);
-    return;
-}
-
-
-
-void init_SHA1(void)
-{
-    __builtin_setmode(SHA1_REG, 0);
-    while (!(SHA1_STATUS & 1)) {
+    __builtin_setmode(HW_ECC_REG, 0);
+    while (!(HW_ECC_STATUS & 1)) {
         // Wait
     }
 }
 
-
-
-void init_AES(void)
-
+/*
+ * Initialize the SHA1 module.
+ */
+void init_SHA1(void) // 0x714
 {
-    __builtin_setmode(AES_REG, 0);
-    while (!(AES_STATUS & 1)) {
+    __builtin_setmode(HW_SHA1_REG, 0);
+    while (!(HW_SHA1_STATUS & 1)) {
         // Wait
     }
 }
 
-
-
-void init_PRNG(void)
+/*
+ * Initialize the AES module.
+ */
+void init_AES(void) // 0x718
 {
-    __builtin_setmode(PRNG_REG, 0);
-    while (!(PRNG_STATUS & 1)) {
+    __builtin_setmode(HW_AES_REG, 0);
+    while (!(HW_AES_STATUS & 1)) {
         // Wait
     }
 }
 
-void init_TRNG(void)
-
+/*
+ * Initialize the PRNG module.
+ */
+void init_PRNG(void) // 0x71C
 {
-    __builtin_setmode(TRNG_REG, 0);
-    while (!(TRNG_STATUS & 1)) {
+    __builtin_setmode(HW_PRNG_REG, 0);
+    while (!(HW_PRNG_STATUS & 1)) {
         // Wait
     }
 }
 
-
-
-void init_MATH(void)
+/*
+ * Initialize the TRNG module.
+ */
+void init_TRNG(void) // 0x720
 {
-    __builtin_setmode(MATH_REG,0);
+    __builtin_setmode(HW_TRNG_REG, 0);
+    while (!(HW_TRNG_STATUS & 1)) {
+        // Wait
+    }
+}
+
+/*
+ * Initialize the MATH module.
+ */
+void init_MATH(void) // 0x724
+{
+    __builtin_setmode(MATH_REG, 0);
     while (!(MATH_STATUS & 1)) {
         // Wait
     }
 }
 
-
-
-void __unused_init_dma(void)
-
+/*
+ * Initialize the DMA module (unused).
+ */
+void __unused_init_dma(void) // 0x728
 {
-    __builtin_setmode(DMA_REG,0);
-    while (!(DMA_STATUS & 1)) {
+    __builtin_setmode(HW_DMA_REG, 0);
+    while (!(HW_DMA_STATUS & 1)) {
         // Wait
     }
 }
 
-
-
-void init_PSP(void)
+/*
+ * Initialize the PSP interface.
+ */
+void init_PSP(void) // 0x72C
 {
-    __builtin_setmode(PSP_KIRK_REG,0);
-    while (!(PSP_KIRK_STATUS & 1)) {
+    __builtin_setmode(HW_CPU_REG, 0);
+    while (!(HW_CPU_STATUS & 1)) {
         // Wait
     }
 }
 
-
-
-void kirk_modules_init(void)
-
+/*
+ * Initialize all Kirk submodules.
+ */
+void kirk_modules_init(void) // 0x730
 {
     init_ECC();
     init_SHA1();
@@ -2282,275 +2255,272 @@ void kirk_modules_init(void)
     init_TRNG();
     init_MATH();
     init_PSP();
-    return;
 }
 
-
-
-void kirk_cmd11_hash(void)
-
+/*
+ * Kirk command 11: compute the SHA1 of an input.
+ */
+void kirk_cmd11_hash(void) // 0x738
 {
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (bVar1) {
-        DMA_ADDR = PSP_KIRK_SRC;
-        DMA_BUF_SIZE = 4;
-        hw_dma_read();
-        SIZE = __builtin_byteswap(DMA_BUF[0]);
-        if (SIZE == 0) {
-            PSP_KIRK_RESULT = KIRK_DATA_SIZE_ZERO;
-        }
-        else {
-            INPUT = PSP_KIRK_SRC + 4;
-            hw_sha1_do();
-            DMA_BUF._0_16_ = (undefined  [16])SHA1_RESULT._0_16_;
-            DMA_BUF[4] = SHA1_RESULT[4];
-            DMA_ADDR = PSP_KIRK_DST;
-            DMA_BUF_SIZE = 0x14;
-            hw_dma_write();
-            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-        }
-        PSP_KIRK_PHASE = 1;
+    if (!kirk_check_enabled()) {
+        return;
     }
-    return;
-}
-
-
-
-void kirk_cmd12_ecdsa_genkey(void)
-
-{
-    undefined auVar1 [16];
-    uint uVar2;
-    bool bVar3;
-    
-    bVar3 = (bool)hw_kirk_check_enabled();
-    if (bVar3) {
-        bVar3 = (bool)kirk_not_busy();
-        if (bVar3) {
-            UNK_FLAGS = UNK_FLAGS | 2;
-            prng_generate();
-            UNK_FLAGS = UNK_FLAGS & 0xfffffffd;
-            DMA_BUF._0_16_ = (undefined  [16])MATH_RESULT._12_16_;
-            DMA_BUF[4] = MATH_RESULT[7];
-            DMA_ADDR = PSP_KIRK_DST;
-            DMA_BUF_SIZE = 0x14;
-            hw_dma_write();
-            set_other_curve();
-            auVar1 = (undefined  [16])MATH_RESULT._12_16_;
-            ECC_R._0_16_ = (undefined  [16])auVar1;
-            uVar2 = MATH_RESULT[7];
-            ECC_R[4] = uVar2;
-            ECC_OP = 2;
-            hw_ec_do();
-            OUTPUT = PSP_KIRK_DST + 0x14;
-            dma_ec_output_point();
-            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-        }
-        PSP_KIRK_PHASE = 1;
+    // Read the size of the data
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 4;
+    dma_read();
+    SIZE = __builtin_byteswap(HW_DMA_BUF[0]);
+    if (SIZE == 0) {
+        HW_CPU_RESULT = KIRK_DATA_SIZE_ZERO;
+    } else {
+        // Compute the SHA1
+        INPUT = HW_CPU_SRC + 4;
+        sha1_do();
+        // Write the output
+        HW_DMA_BUF._0_16_ = HW_SHA1_RESULT._0_16_;
+        HW_DMA_BUF[4] = HW_SHA1_RESULT[4];
+        HW_DMA_ADDR = HW_CPU_DST;
+        HW_DMA_BUF_SIZE = 0x14;
+        dma_write();
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
     }
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-
-
-// WARNING: Globals starting with '_' overlap smaller symbols at the same address
-
-void kirk_cmd13_ecdsa_mul(void)
-
+/*
+ * Kirk command 12: generate a private/public key pair for the "public" curve.
+ */
+void kirk_cmd12_ecdsa_genkey(void) // 0x755
 {
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (bVar1) {
-        set_other_curve();
-        DMA_ADDR = PSP_KIRK_SRC;
-        DMA_BUF_SIZE = 0x14;
-        hw_dma_read();
-        R3 = DMA_BUF[0];
-        R4 = DMA_BUF[1];
-        R5 = DMA_BUF[2];
-        R6 = DMA_BUF[3];
-        R7 = DMA_BUF[4];
-        bVar1 = (bool)ec_check_scalar();
-        if (bVar1) {
-            ECC_R._0_16_ = (undefined  [16])_R3;
-            ECC_R[4] = R7;
-            DMA_ADDR = PSP_KIRK_SRC + 0x14;
-            DMA_BUF_SIZE = 0x14;
-            INPUT = DMA_ADDR;
-            hw_dma_read();
-            ECC_Gx._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-            ECC_Gx[4] = DMA_BUF[4];
-            DMA_ADDR = INPUT + 0x14;
-            INPUT = DMA_ADDR;
-            hw_dma_read();
-            ECC_Gy._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-            ECC_Gy[4] = DMA_BUF[4];
-            ECC_OP = 2;
-            hw_ec_do();
-            OUTPUT = PSP_KIRK_DST;
-            dma_ec_output_point();
-            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
-        }
-        PSP_KIRK_PHASE = 1;
+    if (!kirk_check_enabled()) {
+        return;
     }
-    return;
-}
 
-
-
-void kirk_cmd14_prngen(void)
-
-{
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (bVar1) {
-        bVar1 = (bool)kirk_not_busy();
-        if (bVar1) {
-            UNK_FLAGS = UNK_FLAGS | 2;
-            prng_generate();
-            UNK_FLAGS = UNK_FLAGS & 0xfffffffd;
-            DMA_BUF._0_16_ = (undefined  [16])MATH_RESULT._12_16_;
-            DMA_BUF[4] = MATH_RESULT[7];
-            DMA_ADDR = PSP_KIRK_DST;
-            DMA_BUF_SIZE = 0x14;
-            hw_dma_write();
-            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-        }
-        PSP_KIRK_PHASE = 1;
+    if (kirk_is_seeded()) {
+        // Generate a random private key
+        RNG_FLAGS |= RNG_FLAGS_PUB_CURVE;
+        math_generate_random();
+        RNG_FLAGS &= ~RNG_FLAGS_PUB_CURVE;
+        // Write the private key
+        HW_DMA_BUF._0_16_ = MATH_RESULT._12_16_;
+        HW_DMA_BUF[4] = MATH_RESULT[7];
+        HW_DMA_ADDR = HW_CPU_DST;
+        HW_DMA_BUF_SIZE = 0x14;
+        dma_write();
+        // Compute the public key from the private key
+        ecc_set_public_curve();
+        HW_ECC_R._0_16_ = MATH_RESULT._12_16_;
+        HW_ECC_R[4] = MATH_RESULT[7];
+        HW_ECC_OP = ECC_OP_MUL;
+        ecc_do();
+        // Output the public key
+        OUTPUT = HW_CPU_DST + 0x14;
+        ecc_output_point();
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
     }
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-void kirk_cmd16_siggen(void)
+/*
+ * Kirk command 13 - multiply an ECDSA point by a scalar
+ */
+void kirk_cmd13_ecdsa_mul(void) // 0x771
 {
-    uint uVar1;
-    bool bVar2;
-    
-    bVar2 = (bool)hw_kirk_check_enabled();
-    if (bVar2) {
-        bVar2 = (bool)kirk_not_busy();
-        if (bVar2) {
-            AES_KEYSEED = 3;
-            aes_set_perconsole_key();
-            INPUT = PSP_KIRK_SRC;
-            DMA_BUF_SIZE = 0x10;
-            aes_set_null_iv();
-            AES_CMD = 0x13;
-            hw_aes_setkey();
-            hw_aes_dma_copy_and_do();
-            uVar1 = AES_CMD;
-            AES_CMD = uVar1 & 0xfffffffd;
-            _R3 = AES_RESULT;
-            INPUT = INPUT + 0x10;
-            hw_aes_dma_copy_and_do();
-            R7 = AES_RESULT[0];
-            bVar2 = (bool)ec_check_scalar();
-            if (bVar2) {
-                set_other_curve();
-                ECC_S._0_16_ = (undefined  [16])_R3;
-                ECC_S[4] = R7;
-                DMA_ADDR = PSP_KIRK_SRC + 0x20;
-                DMA_BUF_SIZE = 0x14;
-                INPUT = DMA_ADDR;
-                hw_dma_read();
-                ECC_M._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-                ECC_M[4] = DMA_BUF[4];
-                UNK_FLAGS = UNK_FLAGS | 2;
-                ec_sign_gen_r();
-                UNK_FLAGS = UNK_FLAGS & 0xfffffffd;
-                OUTPUT = PSP_KIRK_DST;
-                dma_ec_output_point();
-                PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-            }
-            else {
-                PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
-            }
-        }
-        PSP_KIRK_PHASE = 1;
+    if (!kirk_check_enabled()) {
+        return;
     }
-    return;
-}
-
-
-
-void kirk_cmd17_sigvry(void)
-
-{
-    uint uVar1;
-    bool bVar2;
-    
-    bVar2 = (bool)hw_kirk_check_enabled();
-    if (bVar2) {
-        set_other_curve();
-        DMA_BUF_SIZE = 0x14;
-        INPUT = PSP_KIRK_SRC;
-        hw_dma_read_input();
-        ECC_Px._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-        ECC_Px[4] = DMA_BUF[4];
-        INPUT = INPUT + 0x14;
-        hw_dma_read_input();
-        ECC_Py._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-        ECC_Py[4] = DMA_BUF[4];
-        INPUT = INPUT + 0x14;
-        hw_dma_read_input();
-        ECC_M._0_16_ = (undefined  [16])DMA_BUF._0_16_;
-        ECC_M[4] = DMA_BUF[4];
-        INPUT = INPUT + 0x14;
-        ec_dma_read_scalars();
-        ECC_OP = 1;
-        hw_ec_do();
-        if (ECC_RESULT & 1) {
-            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-        }
-        else {
-            PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
-        }
-        PSP_KIRK_PHASE = 1;
+    ecc_set_public_curve();
+    // Read the scalar
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 0x14;
+    dma_read();
+    R3._0_16_ = HW_DMA_BUF._0_16_;
+    R7 = HW_DMA_BUF[4];
+    if (ecc_check_scalar()) {
+        // Write scalar to 'r'
+        HW_ECC_R._0_16_ = R3._0_16_
+        HW_ECC_R[4] = R7;
+        // Read x coordinate
+        HW_DMA_ADDR = HW_CPU_SRC + 0x14;
+        HW_DMA_BUF_SIZE = 0x14;
+        INPUT = HW_DMA_ADDR;
+        dma_read();
+        HW_ECC_Gx._0_16_ = HW_DMA_BUF._0_16_;
+        HW_ECC_Gx[4] = HW_DMA_BUF[4];
+        // Read y coordinate
+        HW_DMA_ADDR = INPUT + 0x14;
+        INPUT = HW_DMA_ADDR;
+        dma_read();
+        HW_ECC_Gy._0_16_ = HW_DMA_BUF._0_16_;
+        HW_ECC_Gy[4] = HW_DMA_BUF[4];
+        // Compute the multiplication
+        HW_ECC_OP = ECC_OP_MUL;
+        ecc_do();
+        // Output the result
+        OUTPUT = HW_CPU_DST;
+        ecc_output_point();
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+    } else {
+        HW_CPU_RESULT = KIRK_ECDSA_DATA_INVALID;
     }
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-
-
-void kirk_cmd18_certvry(void)
-
+/*
+ * Kirk command 14 - generate an ECDSA private key.
+ */
+void kirk_cmd14_gen_privkey(void) // 0x79A
 {
-    bool bVar1;
-    
-    bVar1 = (bool)hw_kirk_check_enabled();
-    if (bVar1) {
-        AES_KEYSEED = 4;
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    if (kirk_is_seeded()) {
+        // Generate the private key
+        RNG_FLAGS |= RNG_FLAGS_PUB_CURVE;
+        math_generate_random();
+        RNG_FLAGS &= ~RNG_FLAGS_PUB_CURVE;
+        // Output the private key
+        HW_DMA_BUF._0_16_ = (undefined  [16])MATH_RESULT._12_16_;
+        HW_DMA_BUF[4] = MATH_RESULT[7];
+        HW_DMA_ADDR = HW_CPU_DST;
+        HW_DMA_BUF_SIZE = 0x14;
+        dma_write();
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Kirk command 16 - generate a signature from an encrypted private key.
+ */
+void kirk_cmd16_siggen(void) // 0x7AC
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    if (kirk_is_seeded()) {
+        // Decrypt the private key given in input using per-console key with seed 3
+        PERCONSOLE_KEYSEED = 3;
         aes_set_perconsole_key();
-        INPUT = PSP_KIRK_SRC;
-        SIZE = 0xa8;
-        aes_cmac();
-        DMA_ADDR = PSP_KIRK_SRC + 0xa8;
-        DMA_BUF_SIZE = 0x10;
-        DMA_BUF[0] = DMA_ADDR;
-        hw_dma_read();
-        bVar1 = memcmp_cmac();
-        if (bVar1) {
-            PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
+        INPUT = HW_CPU_SRC;
+        HW_DMA_BUF_SIZE = 0x10;
+        aes_set_null_iv();
+        HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_DECRYPT;
+        aes_setkey();
+        aes_dma_copy_and_do();
+        HW_AES_CMD &= 0xfffffffd;
+        R3._0_16_ = HW_AES_RESULT;
+        INPUT += 0x10;
+        aes_dma_copy_and_do();
+        R7 = HW_AES_RESULT[0];
+        // Check if the scalar is valid
+        if (ecc_check_scalar()) {
+            ecc_set_public_curve();
+            HW_ECC_S._0_16_ = R3._0_16_;
+            HW_ECC_S[4] = R7;
+            // Read the input data to sign
+            HW_DMA_ADDR = HW_CPU_SRC + 0x20;
+            HW_DMA_BUF_SIZE = 0x14;
+            INPUT = HW_DMA_ADDR;
+            dma_read();
+            // Sign the message
+            HW_ECC_M._0_16_ = HW_DMA_BUF._0_16_;
+            HW_ECC_M[4] = HW_DMA_BUF[4];
+            RNG_FLAGS |= RNG_FLAGS_PUB_CURVE;
+            ecc_sign_gen_r();
+            RNG_FLAGS &= ~RNG_FLAGS_PUB_CURVE;
+            // Output the signature
+            OUTPUT = HW_CPU_DST;
+            ecc_output_point();
+            HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
         }
         else {
-            PSP_KIRK_RESULT = KIRK_SIG_CHECK_INVALID;
+            HW_CPU_RESULT = KIRK_ECDSA_DATA_INVALID;
         }
-        PSP_KIRK_PHASE = 1;
     }
-    return;
+    HW_CPU_PHASE = 1;
 }
 
-bool ec_check_scalar(void)
+/*
+ * Kirk command 17 - verify the signature of a hash.
+ */
+void kirk_cmd17_sigvry(void) // 0x7DC
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    // Use the "public" curve
+    ecc_set_public_curve();
+    // Read coordinate x of the public key
+    HW_DMA_BUF_SIZE = 0x14;
+    INPUT = HW_CPU_SRC;
+    dma_read_input();
+    HW_ECC_Px._0_16_ = HW_DMA_BUF._0_16_;
+    HW_ECC_Px[4] = HW_DMA_BUF[4];
+    // Read the coordinate y of the public key
+    INPUT += 0x14;
+    dma_read_input();
+    HW_ECC_Py._0_16_ = (undefined  [16])HW_DMA_BUF._0_16_;
+    HW_ECC_Py[4] = HW_DMA_BUF[4];
+    // Read the message (hash) M
+    INPUT += 0x14;
+    dma_read_input();
+    HW_ECC_M._0_16_ = (undefined  [16])HW_DMA_BUF._0_16_;
+    HW_ECC_M[4] = HW_DMA_BUF[4];
+    // Read the signature (r, s)
+    INPUT = INPUT + 0x14;
+    ecc_read_signature();
+    // Verify the signature
+    HW_ECC_OP = ECC_OP_CHECK_SIGN;
+    ecc_do();
+    if (HW_ECC_RESULT & 1) {
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+    } else {
+        HW_CPU_RESULT = KIRK_ECDSA_DATA_INVALID;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Kirk command 18: verify the IDStorage CMAC using a per-console key.
+ */
+void kirk_cmd18_certvry(void) // 0x7FF
+{
+    if (!kirk_check_enabled()) {
+        return;
+    }
+
+    // Compute per-console AES key with seed 4
+    PERCONSOLE_KEYSEED = 4;
+    aes_set_perconsole_key();
+    // Compute the CMAC of 0xa8 bytes of data
+    INPUT = HW_CPU_SRC;
+    SIZE = 0xa8;
+    aes_cmac();
+    // Compare the CMAC to the value stored at 0xa8
+    HW_DMA_ADDR = HW_CPU_SRC + 0xa8;
+    HW_DMA_BUF_SIZE = 0x10;
+    HW_DMA_BUF[0] = HW_DMA_ADDR; // TODO: useless?
+    dma_read();
+    if (memcmp_cmac()) {
+        HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+    } else {
+        HW_CPU_RESULT = KIRK_ECDSA_DATA_INVALID;
+    }
+    HW_CPU_PHASE = 1;
+}
+
+/*
+ * Check if an ECDSA scalar (private key) is valid
+ */
+bool ecc_check_scalar(void) // 0x819
 {
     R11 = &R3;
     R13 = 5;
+    // Check if the scalar is non-zero and lesser than the order of the curve
     if (buffer_is_nonzero() &&
         (R3 < 0xffffffff
       || R4 < 0xfffffffe
@@ -2562,109 +2532,144 @@ bool ec_check_scalar(void)
     return false;
 }
 
-void kirk_cmd15_init(void)
+/*
+ * Kirk command 15: seed the RNG buffer
+ */
+void kirk_cmd15_init(void) // 0x833
 {
-    if (!hw_kirk_check_enabled()) {
+    if (!kirk_check_enabled()) {
         return;
     }
 
-    UNK_FLAGS = UNK_FLAGS | 1;
-    DMA_ADDR = PSP_KIRK_SRC;
-    DMA_BUF_SIZE = 0x1c;
-    hw_dma_read();
-    DMA_BUF[1] = DMA_BUF[1] + 1;
-    __unkown_op(0x21,DMA_BUF[0]);
-    KIRK15_KEYSEED[0] = 0;
-    KIRK15_KEYSEED[1] = 0;
-    KIRK15_KEYSEED[2] = DMA_BUF[0];
-    PRNG_SEED[0] = DMA_BUF[2];
-    PRNG_SEED._4_16_ = (undefined  [16])DMA_BUF._12_16_;
-    TRNG_OUT_SIZE = 0x100;
-    __builtin_setmode(TRNG_REG, 1);
+    RNG_FLAGS |= RNG_FLAGS_SEEDED;
+
+    // Read 28 bytes of data from the input
+    HW_DMA_ADDR = HW_CPU_SRC;
+    HW_DMA_BUF_SIZE = 0x1c;
+    dma_read();
+
+    HW_DMA_BUF[1] = HW_DMA_BUF[1] + 1;
+    __unknown_op(0x21, HW_DMA_BUF[0]); // TODO: unknown operation
+    // Fill the RNG buffer with a seed (?)
+    RNG_BUFFER[0] = 0;
+    RNG_BUFFER[1] = 0;
+    RNG_BUFFER[2] = HW_DMA_BUF[0];
+    // Use the rest of the input as a seed for the PRNG
+    HW_PRNG_SEED[0] = HW_DMA_BUF[2];
+    HW_PRNG_SEED._4_16_ = HW_DMA_BUF._12_16_;
+    // Get data from the TRNG
+    HW_TRNG_OUT_SIZE = 0x100;
+    __builtin_setmode(HW_TRNG_REG, 1);
     __builtin_dma(0x100, 0);
-    SHA1_IN_SIZE = 0x20;
-    SHA1_IN_DATA = TRNG_OUTBLOCK[0];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[1];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[2];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[3];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[4];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[5];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[6];
-    SHA1_IN_DATA = TRNG_OUTBLOCK[7];
-    __builtin_dma(4,0);
-    PRNG_SEED[0] = SHA1_RESULT[0] ^ PRNG_SEED[0];
-    PRNG_SEED[1] = SHA1_RESULT[1] ^ PRNG_SEED[1];
-    PRNG_SEED[2] = SHA1_RESULT[2] ^ PRNG_SEED[2];
-    PRNG_SEED[3] = SHA1_RESULT[3] ^ PRNG_SEED[3];
-    PRNG_SEED[4] = SHA1_RESULT[4] ^ PRNG_SEED[4];
-    PRNG_MODE = 3;
-    KIRK15_KEYSEED[3] = DMA_BUF[1];
+    // Hash the data coming from the TRNG
+    HW_SHA1_IN_SIZE = 0x20;
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[0];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[1];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[2];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[3];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[4];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[5];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[6];
+    HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[7];
+    __builtin_dma(4, 0);
+    // XOR the PRNG seed with the previous hash
+    HW_PRNG_SEED[0] ^= HW_SHA1_RESULT[0];
+    HW_PRNG_SEED[1] ^= HW_SHA1_RESULT[1];
+    HW_PRNG_SEED[2] ^= HW_SHA1_RESULT[2];
+    HW_PRNG_SEED[3] ^= HW_SHA1_RESULT[3];
+    HW_PRNG_SEED[4] ^= HW_SHA1_RESULT[4];
+    // Reseed the RNG buffer
+    HW_PRNG_MODE = 3;
+    RNG_BUFFER[3] = HW_DMA_BUF[1];
     kirk_reseed();
-    DMA_BUF[2] = PRNG_SEED[0];
-    DMA_BUF._12_16_ = (undefined  [16])PRNG_SEED._4_16_;
-    DMA_ADDR = PSP_KIRK_DST;
-    hw_dma_write();
-    PSP_KIRK_RESULT = KIRK_OPERATION_SUCCESS;
-    PSP_KIRK_PHASE = 1;
+    // Write the resulting data as the output
+    HW_DMA_BUF[2] = HW_PRNG_SEED[0];
+    HW_DMA_BUF._12_16_ = HW_PRNG_SEED._4_16_;
+    HW_DMA_ADDR = HW_CPU_DST;
+    dma_write();
+    HW_CPU_RESULT = KIRK_OPERATION_SUCCESS;
+    HW_CPU_PHASE = 1;
 }
 
-void kirk_reseed_prng_2(void)
-
+/*
+ * Reseed the PRNG in mode 2 (ie everything except for the initial reseeding).
+ */
+void kirk_reseed_prng_2(void) // 0x866
 {
-    PRNG_MODE = 2;
+    HW_PRNG_MODE = 2;
     kirk_reseed();
 }
 
-void kirk_reseed(void)
-
+/*
+ * Reseed the PRNG.
+ */
+void kirk_reseed(void) // 0x868
 {
-    AES_KEYSEED = 6;
+    // Encrypt the RNG buffer using per-console key 6
+    PERCONSOLE_KEYSEED = 6;
     aes_set_perconsole_key();
-    hw_aes_setkey();
-    AES_SRC_BUF = KIRK15_KEYSEED;
-    hw_aes_do();
-    KIRK15_KEYSEED = AES_RESULT;
-    PRNG_SEED[5] = 0;
-    PRNG_SEED._24_16_ = (undefined  [16])KIRK15_KEYSEED;
-    hw_prng_do();
-    return;
+    aes_setkey();
+    HW_AES_SRC_BUF = RNG_BUFFER;
+    aes_do();
+    RNG_BUFFER = HW_AES_RESULT;
+    // Reseed the PRNG with the RNG buffer
+    HW_PRNG_SEED[5] = 0;
+    HW_PRNG_SEED._24_16_ = RNG_BUFFER;
+    prng_do();
 }
 
-void aes_set_perconsole_key_0(void)
+/*
+ * Set HW_AES_KEY to the per-console key with seed 0.
+ */
+void aes_set_perconsole_key_0(void) // 0x874
 {
-    AES_KEYSEED = 0;
+    PERCONSOLE_KEYSEED = 0;
     aes_set_perconsole_key();
 }
 
-void aes_set_perconsole_key(void)
+/*
+ * Set HW_AES_KEY to the per-console key with given seed.
+ */
+void aes_set_perconsole_key(void) // 0x876
 {
-    AES_CMD = 0;
-    AES_KEY = KEY_SEED2;
-    hw_aes_setkey();
-    if (AES_KEYSEED & 1) {
-        AES_SRC_BUF = KEY_SEED1;
+    // Set the initial key depending on the seed LSB
+    HW_AES_CMD = AES_CMD_ENCRYPT;
+    HW_AES_KEY = HW_KEY_MESH_2;
+    aes_setkey();
+    if (PERCONSOLE_KEYSEED & 1) {
+        HW_AES_SRC_BUF = HW_KEY_MESH_1;
     } else {
-        AES_SRC_BUF = KEY_SEED0;
+        HW_AES_SRC_BUF = HW_KEY_MESH_0;
     }
-    AES_KEYSEED = (AES_KEYSEED >> 1) + 1;
+    // Encrypt the result several times depending on the seed
+    PERCONSOLE_KEYSEED = (PERCONSOLE_KEYSEED >> 1) + 1;
     do {
-        hw_aes_do();
-        AES_SRC_BUF = AES_RESULT;
-        AES_KEYSEED = AES_KEYSEED - 1;
-    } while (AES_KEYSEED != 0);
+        aes_do();
+        HW_AES_SRC_BUF = HW_AES_RESULT;
+        PERCONSOLE_KEYSEED = PERCONSOLE_KEYSEED - 1;
+    } while (PERCONSOLE_KEYSEED != 0);
 
-    AES_KEY = AES_RESULT;
+    // Put the result in HW_AES_KEY
+    HW_AES_KEY = HW_AES_RESULT;
 }
 
-void hw_prng_do(void)
+/*
+ * Compute random data with the PRNG.
+ */
+void prng_do(void) // 0x887
 {
-    __builtin_setmode(PRNG_REG, 1);
+    __builtin_setmode(HW_PRNG_REG, 1);
     __builtin_dma(0x80, 0);
 }
 
-void kirk_self_test(void)
+/*
+ * Run Kirk self-tests.
+ */
+void kirk_self_test(void) // 0x88A
 {
+    // Initialize all modules
     kirk_modules_init();
+    // Test all modules
     if (test_ECC()
         && test_SHA1()
         && test_AES()
@@ -2676,195 +2681,218 @@ void kirk_self_test(void)
     else {
         HW_TEST_RESULT = 2;
     }
-    PSP_KIRK_PHASE = 0;
-    __builtin_setmode(PSP_KIRK_REG,1);
-    __builtin_dma(0,2);
-    AES_CMD = 0;
-    AES_KEY[0] = 0x2b7e1516;
-    AES_KEY[1] = 0x28aed2a6;
-    AES_KEY[2] = 0xabf71588;
-    AES_KEY[3] = 0x09cf4f3c;
-    hw_aes_setkey();
-    DMA_BUF_SIZE = 0x20;
-    DMA_ADDR = PSP_KIRK_SRC;
-    hw_dma_read();
-    AES_SRC_BUF = DMA_BUF._0_16_;
-    hw_aes_do();
-    DMA_BUF._0_16_ = AES_RESULT;
-    AES_SRC_BUF = DMA_BUF._16_16_;
-    hw_aes_do();
-    DMA_BUF._16_16_ = AES_RESULT;
-    DMA_ADDR = PSP_KIRK_DST;
-    hw_dma_write();
-    PSP_KIRK_PHASE = 1;
-    __builtin_setmode(PSP_KIRK_REG,1);
-    __builtin_dma(0,2);
-    return;
+    // Initialize communication with the CPU
+    HW_CPU_PHASE = 0;
+    __builtin_setmode(HW_CPU_REG, 1);
+    __builtin_dma(0, 2);
+
+    // Encrypt two-block input in AES ECB with the given key
+    HW_AES_CMD = AES_CMD_ENCRYPT;
+    HW_AES_KEY[0] = 0x2b7e1516;
+    HW_AES_KEY[1] = 0x28aed2a6;
+    HW_AES_KEY[2] = 0xabf71588;
+    HW_AES_KEY[3] = 0x09cf4f3c;
+    aes_setkey();
+    HW_DMA_BUF_SIZE = 0x20;
+    HW_DMA_ADDR = HW_CPU_SRC;
+    dma_read();
+    HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
+    aes_do();
+    HW_DMA_BUF._0_16_ = HW_AES_RESULT;
+    HW_AES_SRC_BUF = HW_DMA_BUF._16_16_;
+    aes_do();
+    HW_DMA_BUF._16_16_ = HW_AES_RESULT;
+    // Write the result to the output
+    HW_DMA_ADDR = HW_CPU_DST;
+    dma_write();
+    // Update CPU communication
+    HW_CPU_PHASE = 1;
+    __builtin_setmode(HW_CPU_REG, 1);
+    __builtin_dma(0, 2);
 }
 
-// Test ECC scalar multiplication:
-//
-// psp_curve_test = {
-//     'name': 'psp_kirk_test',
-//     'type': 'weierstrass',
-//     'size': 160,
-//     'order':     0xe5d8c140e15a3be238d81bd77229b1b8008a143d,
-//     'field':     0xacb0f43a68487d86975b98aae0a0f6a581da1e8d,
-//     'generator': (0xa60cd01542a205545b6696f3421e00cde8bbc06c,
-// 0x76bd9970281e307cd30ea2eba0f88400334bcba8),
-//     'a': 0xacb0f43a68487d86975b98aae0a0f6a581da1e8a,
-//     'b': 0x4fb97afa73a001a1a6386705de41e517543933a7,
-//     'cofactor': 1
-// }
-// crvkirk = ecpy.curves.WeierstrassCurve(psp_curve_test)
-// print(crvkirk.mul_point(crvkirk.generator, 3))
-// --> (0x6df3fa63c3deede13d46d1faf6cbc2b64319589a , 0x78ef881d7450e85022c8e6f07d9076e92f4e082e)
-
-bool test_ECC(void)
+/*
+ * Test ECC scalar multiplication:
+ *
+ * >>> psp_curve_test = {
+ *     'name': 'psp_kirk_test',
+ *     'type': 'weierstrass',
+ *     'size': 160,
+ *     'order':     0xe5d8c140e15a3be238d81bd77229b1b8008a143d,
+ *     'field':     0xacb0f43a68487d86975b98aae0a0f6a581da1e8d,
+ *     'generator': (0xa60cd01542a205545b6696f3421e00cde8bbc06c,
+ * 0x76bd9970281e307cd30ea2eba0f88400334bcba8),
+ *     'a': 0xacb0f43a68487d86975b98aae0a0f6a581da1e8a,
+ *     'b': 0x4fb97afa73a001a1a6386705de41e517543933a7,
+ *     'cofactor': 1
+ * }
+ * >>> crvkirk = ecpy.curves.WeierstrassCurve(psp_curve_test)
+ * >>> print(crvkirk.mul_point(crvkirk.generator, 3))
+ * (0x6df3fa63c3deede13d46d1faf6cbc2b64319589a , 0x78ef881d7450e85022c8e6f07d9076e92f4e082e)
+ */
+bool test_ECC(void) // 0x8BD
 {
-    ECC_P[0] = 0xacb0f43a;
-    ECC_P[1] = 0x68487d86;
-    ECC_P[2] = 0x975b98aa;
-    ECC_P[3] = 0xe0a0f6a5;
-    ECC_P[4] = 0x81da1e8d;
-    ECC_A[0] = 0xacb0f43a;
-    ECC_A[1] = 0x68487d86;
-    ECC_A[2] = 0x975b98aa;
-    ECC_A[3] = 0xe0a0f6a5;
-    ECC_A[4] = 0x81da1e8a;
-    ECC_B[0] = 0x4fb97afa;
-    ECC_B[1] = 0x73a001a1;
-    ECC_B[2] = 0xa6386705;
-    ECC_B[3] = 0xde41e517;
-    ECC_B[4] = 0x543933a7;
-    ECC_N[0] = 0;
-    ECC_N[1] = 0;
-    ECC_N[2] = 0;
-    ECC_N[3] = 0;
-    ECC_N[4] = 3;
-    ECC_UNK1[0] = 0x44e8319d;
-    ECC_UNK1[1] = 0x2ea03d11;
-    ECC_UNK1[2] = 0x5c6e8341;
-    ECC_UNK1[3] = 0xfffe8429;
-    ECC_UNK1[4] = 0x94ffc5a9;
-    ECC_UNK2[0] = 0xa9c56aab;
-    ECC_UNK2[1] = 0x686453b1;
-    ECC_UNK2[2] = 0xf34f7d6f;
-    ECC_UNK2[3] = 0x61954b7d;
-    ECC_UNK2[4] = 0x834bf46;
-    ECC_Gx[0] = 0xa60cd015;
-    ECC_Gx[1] = 0x42a20554;
-    ECC_Gx[2] = 0x5b6696f3;
-    ECC_Gx[3] = 0x421e00cd;
-    ECC_Gx[4] = 0xe8bbc06c;
-    ECC_Gy[0] = 0x76bd9970;
-    ECC_Gy[1] = 0x281e307c;
-    ECC_Gy[2] = 0xd30ea2eb;
-    ECC_Gy[3] = 0xa0f88400;
-    ECC_Gy[4] = 0x334bcba8;
-    ECC_R[0] = 0;
-    ECC_R[1] = 0;
-    ECC_R[2] = 0;
-    ECC_R[3] = 0;
-    ECC_R[4] = 3;
-    ECC_OP = 2;
-    hw_ec_do();
-    if (ECC_RESULT_X[0] == 0x6df3fa63
-     && ECC_RESULT_X[1] == 0xc3deede1
-     && ECC_RESULT_X[2] == 0x3d46d1fa
-     && ECC_RESULT_X[3] == 0xf6cbc2b6
-     && ECC_RESULT_X[4] == 0x4319589a
-     && ECC_RESULT_Y[0] == 0x78ef881d
-     && ECC_RESULT_Y[1] == 0x7450e850
-     && ECC_RESULT_Y[2] == 0x22c8e6f0
-     && ECC_RESULT_Y[3] == 0x7d9076e9
-     && ECC_RESULT_Y[4] == 0x2f4e082e) {
+    HW_ECC_P[0] = 0xacb0f43a;
+    HW_ECC_P[1] = 0x68487d86;
+    HW_ECC_P[2] = 0x975b98aa;
+    HW_ECC_P[3] = 0xe0a0f6a5;
+    HW_ECC_P[4] = 0x81da1e8d;
+    HW_ECC_A[0] = 0xacb0f43a;
+    HW_ECC_A[1] = 0x68487d86;
+    HW_ECC_A[2] = 0x975b98aa;
+    HW_ECC_A[3] = 0xe0a0f6a5;
+    HW_ECC_A[4] = 0x81da1e8a;
+    HW_ECC_B[0] = 0x4fb97afa;
+    HW_ECC_B[1] = 0x73a001a1;
+    HW_ECC_B[2] = 0xa6386705;
+    HW_ECC_B[3] = 0xde41e517;
+    HW_ECC_B[4] = 0x543933a7;
+    HW_ECC_N[0] = 0;
+    HW_ECC_N[1] = 0;
+    HW_ECC_N[2] = 0;
+    HW_ECC_N[3] = 0;
+    HW_ECC_N[4] = 3;
+    // TODO: unknown parameters
+    HW_ECC_UNK1[0] = 0x44e8319d;
+    HW_ECC_UNK1[1] = 0x2ea03d11;
+    HW_ECC_UNK1[2] = 0xdc6e8341;
+    HW_ECC_UNK1[3] = 0xfffe8429;
+    HW_ECC_UNK1[4] = 0x94ffc5a9;
+    HW_ECC_UNK2[0] = 0xa9c56aab;
+    HW_ECC_UNK2[1] = 0x686453b1;
+    HW_ECC_UNK2[2] = 0xf34f7d6f;
+    HW_ECC_UNK2[3] = 0x61954b7d;
+    HW_ECC_UNK2[4] = 0x0834bf46;
+    HW_ECC_Gx[0] = 0xa60cd015;
+    HW_ECC_Gx[1] = 0x42a20554;
+    HW_ECC_Gx[2] = 0x5b6696f3;
+    HW_ECC_Gx[3] = 0x421e00cd;
+    HW_ECC_Gx[4] = 0xe8bbc06c;
+    HW_ECC_Gy[0] = 0x76bd9970;
+    HW_ECC_Gy[1] = 0x281e307c;
+    HW_ECC_Gy[2] = 0xd30ea2eb;
+    HW_ECC_Gy[3] = 0xa0f88400;
+    HW_ECC_Gy[4] = 0x334bcba8;
+    HW_ECC_R[0] = 0;
+    HW_ECC_R[1] = 0;
+    HW_ECC_R[2] = 0;
+    HW_ECC_R[3] = 0;
+    HW_ECC_R[4] = 3;
+    HW_ECC_OP = ECC_OP_MUL;
+    ecc_do();
+    if (HW_ECC_RESULT_X[0] == 0x6df3fa63
+     && HW_ECC_RESULT_X[1] == 0xc3deede1
+     && HW_ECC_RESULT_X[2] == 0x3d46d1fa
+     && HW_ECC_RESULT_X[3] == 0xf6cbc2b6
+     && HW_ECC_RESULT_X[4] == 0x4319589a
+     && HW_ECC_RESULT_Y[0] == 0x78ef881d
+     && HW_ECC_RESULT_Y[1] == 0x7450e850
+     && HW_ECC_RESULT_Y[2] == 0x22c8e6f0
+     && HW_ECC_RESULT_Y[3] == 0x7d9076e9
+     && HW_ECC_RESULT_Y[4] == 0x2f4e082e) {
         return 1;
     }
     return 0;
 }
 
-bool test_SHA1(void)
+/*
+ * Test SHA1: compute the SHA1 of "abc"
+ */
+bool test_SHA1(void) // 0x93C
 {
-    SHA1_IN_SIZE = 3;
-    SHA1_IN_DATA = 0x61626300; // "abc"
+    HW_SHA1_IN_SIZE = 3;
+    HW_SHA1_IN_DATA = 0x61626300; // "abc"
     __builtin_dma(4,0);
-    if (SHA1_RESULT[0] == 0xa9993e36
-     && SHA1_RESULT[1] == 0x4706816a
-     && SHA1_RESULT[2] == 0xba3e2571
-     && SHA1_RESULT[3] == 0x7850c26c
-     && SHA1_RESULT[4] == 0x9cd0d89d) {
+    if (HW_SHA1_RESULT[0] == 0xa9993e36
+     && HW_SHA1_RESULT[1] == 0x4706816a
+     && HW_SHA1_RESULT[2] == 0xba3e2571
+     && HW_SHA1_RESULT[3] == 0x7850c26c
+     && HW_SHA1_RESULT[4] == 0x9cd0d89d) {
         return 1;
     }
     return 0;
 }
 
-// >>> cipher = AES.new(bytes.fromhex('2b7e151628aed2a6abf7158809cf4f3c'), AES.MODE_ECB)
-// >>> cipher.encrypt(bytes.fromhex('3243f6a8885a308d313198a2e0370734')).hex()
-// '3925841d02dc09fbdc118597196a0b32'
-
-bool test_AES(void)
+/*
+ * Test AES: encrypt some data:
+ * >>> cipher = AES.new(bytes.fromhex('2b7e151628aed2a6abf7158809cf4f3c'), AES.MODE_ECB)
+ * >>> cipher.encrypt(bytes.fromhex('3243f6a8885a308d313198a2e0370734')).hex()
+ * '3925841d02dc09fbdc118597196a0b32'
+ */
+bool test_AES(void) // 0x954
 {
-    AES_CMD = 0;
-    AES_KEY[0] = 0x2b7e1516;
-    AES_KEY[1] = 0x28aed2a6;
-    AES_KEY[2] = 0xabf71588;
-    AES_KEY[3] = 0x09cf4f3c;
-    hw_aes_setkey();
-    AES_SRC_BUF[0] = 0x3243f6a8;
-    AES_SRC_BUF[1] = 0x885a308d;
-    AES_SRC_BUF[2] = 0x313198a2;
-    AES_SRC_BUF[3] = 0xe0370734;
-    hw_aes_do();
-    if (AES_RESULT[0] == 0x3925841d
-     && AES_RESULT[1] == 0x02dc09fb
-     && AES_RESULT[2] == 0xdc118597
-     && AES_RESULT[3] == 0x196a0b32) {
+    HW_AES_CMD = AES_CMD_ENCRYPT;
+    HW_AES_KEY[0] = 0x2b7e1516;
+    HW_AES_KEY[1] = 0x28aed2a6;
+    HW_AES_KEY[2] = 0xabf71588;
+    HW_AES_KEY[3] = 0x09cf4f3c;
+    aes_setkey();
+    HW_AES_SRC_BUF[0] = 0x3243f6a8;
+    HW_AES_SRC_BUF[1] = 0x885a308d;
+    HW_AES_SRC_BUF[2] = 0x313198a2;
+    HW_AES_SRC_BUF[3] = 0xe0370734;
+    aes_do();
+    if (HW_AES_RESULT[0] == 0x3925841d
+     && HW_AES_RESULT[1] == 0x02dc09fb
+     && HW_AES_RESULT[2] == 0xdc118597
+     && HW_AES_RESULT[3] == 0x196a0b32) {
         return true;
     }
     return false;
 }
 
-bool test_PRNG(void)
+/*
+ * Test the PRNG.
+ */
+bool test_PRNG(void) // 0x978
 {
-    PRNG_MODE = 3;
-    PRNG_SEED[0] = 0xf067cf18;
-    PRNG_SEED[1] = 0x1f101685;
-    PRNG_SEED[2] = 0x11d8483c;
-    PRNG_SEED[3] = 0xf3e5538f;
-    PRNG_SEED[4] = 0x415117cb;
-    PRNG_SEED[5] = 0x12153524;
-    PRNG_SEED[6] = 0xc0895e81;
-    PRNG_SEED[7] = 0x8484d609;
-    PRNG_SEED[8] = 0xb1f05663;
-    PRNG_SEED[9] = 0x6b97b0d;
-    hw_prng_do();
-    if (PRNG_RESULT[0] == 0x1df50b98
-     && PRNG_RESULT[1] == 0x7d6c2369
-     && PRNG_RESULT[2] == 0x1794af3b
-     && PRNG_RESULT[3] == 0xab98a128
-     && PRNG_RESULT[4] == 0x4cd53d2d
-     && PRNG_SEED[0] == 0x0e5cdab0
-     && PRNG_SEED[1] == 0x9c7c39ee
-     && PRNG_SEED[2] == 0x296cf778
-     && PRNG_SEED[3] == 0x9f7df4b7
-     && PRNG_SEED[4] == 0x8e2654f9) {
+    HW_PRNG_MODE = 3;
+    HW_PRNG_SEED[0] = 0xf067cf18;
+    HW_PRNG_SEED[1] = 0x1f101685;
+    HW_PRNG_SEED[2] = 0x11d8483c;
+    HW_PRNG_SEED[3] = 0xf3e5538f;
+    HW_PRNG_SEED[4] = 0x415117cb;
+    HW_PRNG_SEED[5] = 0x12153524;
+    HW_PRNG_SEED[6] = 0xc0895e81;
+    HW_PRNG_SEED[7] = 0x8484d609;
+    HW_PRNG_SEED[8] = 0xb1f05663;
+    HW_PRNG_SEED[9] = 0x06b97b0d;
+    prng_do();
+    if (HW_PRNG_RESULT[0] == 0x1df50b98
+     && HW_PRNG_RESULT[1] == 0x7d6c2369
+     && HW_PRNG_RESULT[2] == 0x1794af3b
+     && HW_PRNG_RESULT[3] == 0xab98a128
+     && HW_PRNG_RESULT[4] == 0x4cd53d2d
+     && HW_PRNG_SEED[0] == 0x0e5cdab0
+     && HW_PRNG_SEED[1] == 0x9c7c39ee
+     && HW_PRNG_SEED[2] == 0x296cf778
+     && HW_PRNG_SEED[3] == 0x9f7df4b7
+     && HW_PRNG_SEED[4] == 0x8e2654f9) {
         return 1;
     }
     return 0;
 }
 
-void test_TRNG(void)
+/*
+ * Test the TRNG module.
+ */
+void test_TRNG(void) // 0x9B1
 {
-    TRNG_OUT_SIZE = 0x100;
-    __builtin_setmode(TRNG_REG, 1);
+    HW_TRNG_OUT_SIZE = 0x100;
+    __builtin_setmode(HW_TRNG_REG, 1);
     __builtin_dma(0x100, 0);
-    SIZE = TRNG_OUTBLOCK._0_16_; // arbitrary register
-    R4 = TRNG_OUTBLOCK._16_16_;  // arbitrary register
+    SIZE = HW_TRNG_OUTPUT._0_16_; // arbitrary register
+    R4 = HW_TRNG_OUTPUT._16_16_;  // arbitrary register
 }
 
-bool test_MATH(void)
+/*
+ * Test the math (modulus) module.
+ */
+bool test_MATH(void) // 0x9B8
 {
+    // 0x2c6c3246fcedb0546f969b8619d03bf8e16b88ca7b31acf2c800afa8c1945fa12719c7f1c7c99bb7
+    // % 0xe5d8c140e15a3be238d81bd77229b1b8008a143d
+    // == 0x5ba7b73f60c6fa9487a618586350a9025c1713ae
     MATH_IN[0] = 0;
     MATH_IN[1] = 0;
     MATH_IN[2] = 0;
@@ -2881,14 +2909,14 @@ bool test_MATH(void)
     MATH_IN[13] = 0xc1945fa1;
     MATH_IN[14] = 0x2719c7f1;
     MATH_IN[15] = 0xc7c99bb7;
-    MATH_IN_X[0] = 0;
-    MATH_IN_X[1] = 0;
-    MATH_IN_X[2] = 0;
-    MATH_IN_X[3] = 0xe5d8c140;
-    MATH_IN_X[4] = 0xe15a3be2;
-    MATH_IN_X[5] = 0x38d81bd7;
-    MATH_IN_X[6] = 0x7229b1b8;
-    MATH_IN_X[7] = 0x8a143d;
+    MATH_MODULUS[0] = 0;
+    MATH_MODULUS[1] = 0;
+    MATH_MODULUS[2] = 0;
+    MATH_MODULUS[3] = 0xe5d8c140;
+    MATH_MODULUS[4] = 0xe15a3be2;
+    MATH_MODULUS[5] = 0x38d81bd7;
+    MATH_MODULUS[6] = 0x7229b1b8;
+    MATH_MODULUS[7] = 0x008a143d;
     __builtin_setmode(MATH_REG, 1);
     __builtin_dma(0x400, 0);
     if (MATH_RESULT[0] == 0
@@ -2899,6 +2927,7 @@ bool test_MATH(void)
      && MATH_RESULT[5] == 0x87a61858
      && MATH_RESULT[6] == 0x6350a902
      && MATH_RESULT[7] == 0x5c1713ae) {
+        // 0xfea54c798eac6e6a78f14231687faea7865fac876e8a7f6a76e5afa9c87fe87a56b9a87e18756ffe % 3 == 2
         MATH_IN[0] = 0;
         MATH_IN[1] = 0;
         MATH_IN[2] = 0;
@@ -2915,14 +2944,14 @@ bool test_MATH(void)
         MATH_IN[13] = 0xc87fe87a;
         MATH_IN[14] = 0x56b9a87e;
         MATH_IN[15] = 0x18756ffe;
-        MATH_IN_X[0] = 0;
-        MATH_IN_X[1] = 0;
-        MATH_IN_X[2] = 0;
-        MATH_IN_X[3] = 0;
-        MATH_IN_X[4] = 0;
-        MATH_IN_X[5] = 0;
-        MATH_IN_X[6] = 0;
-        MATH_IN_X[7] = 3;
+        MATH_MODULUS[0] = 0;
+        MATH_MODULUS[1] = 0;
+        MATH_MODULUS[2] = 0;
+        MATH_MODULUS[3] = 0;
+        MATH_MODULUS[4] = 0;
+        MATH_MODULUS[5] = 0;
+        MATH_MODULUS[6] = 0;
+        MATH_MODULUS[7] = 3;
         __builtin_setmode(MATH_REG, 1);
         __builtin_dma(0x400, 0);
         if (MATH_RESULT[0] == 0
