@@ -262,7 +262,7 @@ void inf_loop(void) // 0x074
 /*
  * Encrypt INPUT to OUTPUT in AES ECB using CUR_ENC_KEY.
  */
-void aes_encrypt_ecb(void) // 0x075
+void aes_encrypt_cbc_null_iv(void) // 0x075
 {
     aes_set_null_iv();
     aes_encrypt_cbc();
@@ -323,7 +323,7 @@ void aes_decrypt_ecb(void) // 0x09F
         SIZE -= 0x10;
         aes_dma_copy_and_do();
         INPUT += 0x10;
-        HW_AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     }
     // Decrypt the remaining of the data.
     HW_DMA_BUF_SIZE = SIZE;
@@ -351,7 +351,7 @@ void aes_decrypt_cbc(void) // 0x0AD
         dma_write_aes_result();
         INPUT += 0x10;
         OUTPUT += 0x10;
-        HW_AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     }
     aes_dma_copy_and_do();
     HW_DMA_BUF_SIZE = SIZE;
@@ -377,7 +377,7 @@ void kirk_cmd0_decrypt_body(void) // 0x0C9
         dma_write_aes_result();
         INPUT += 0x10;
         OUTPUT += 0x10;
-        HW_AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     }
     kirk_cmd0_decrypt_block();
     HW_DMA_BUF_SIZE = SIZE;
@@ -530,7 +530,7 @@ void kirk_cmd0_decrypt_bootrom() // 0x143
     // Retrieve the decryption AES key from key slot 1
     HW_AES_KEYSLOT_ID = 1;
     HW_AES_KEY = HW_AES_KEYSLOT;
-    // Compute the CMAC of the beginning of the data
+    // Compute the CMAC of the body of the data
     INPUT = HW_CPU_SRC + 0x10;
     SIZE = KIRK_BODY_SIZE;
     align_size_16();
@@ -540,27 +540,29 @@ void kirk_cmd0_decrypt_bootrom() // 0x143
     aes_setkey();
     HW_AES_CMAC_SIZE = SIZE;
     HW_DMA_BUF_SIZE = 0x10;
-    // TODO that stuff looks suspicious, it should be double-checked
+    // If there's only one block of data
     if (SIZE - 0x10 < 1) {
-        // If SIZE < 0x11 (ie there's only one block of data!?)
         HW_DMA_BUF_SIZE = SIZE;
         HW_DMA_BUF[0] = 0;
         HW_DMA_BUF[1] = 0;
         HW_DMA_BUF[2] = 0;
         HW_DMA_BUF[3] = 0;
         aes_dma_copy_and_do();
+        // Re-check that body size didn't change
         if (!kirk_cmd0_check_data_size()) {
             goto error_size_zero;
         }
-    }
-    else {
+    } else {
+        // Compute first block for the CMAC
         SIZE -= 0x10;
         aes_dma_copy_and_do();
         INPUT += 0x10;
-        HW_AES_CMD &= 0xfffffffd;
-        if (!kirk_cmd0_check_data_size()) { // TODO doesn't this just read twice at the same offset to check if the value is the same? Why?
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
+        // Re-check that body size didn't change
+        if (!kirk_cmd0_check_data_size()) {
             goto error_size_zero;
         }
+        // Compute the rest of the CMAC
         aes_decrypt_ecb();
     }
     // Check if the CMAC is the same as the value stored at offset 0x0.
@@ -804,9 +806,9 @@ void kirk_cmd2_dnas_encrypt(void) // 0x1DF
     HW_AES_KEY = CUR_ENC_KEY;
     kirk_cmd2_decrypt_key();
     CUR_ENC_KEY = HW_AES_RESULT;
-    // Encrypt the body in ECB mode
+    // Encrypt the body in CBC mode
     kirk_cmd2_set_body_params();
-    aes_encrypt_ecb();
+    aes_encrypt_cbc_null_iv();
     // Compute header & body signature in CMAC or ECDSA mode
     if (!(ECDSA_MODE & KIRK_SIGNED_HEADER_SIGN_MODE_OUTPUT_ECDSA)) {
         // Re-decrypt the CMAC key as stored in the header
@@ -1024,8 +1026,7 @@ void kirk_cmd4_encrypt_static(void) // 0x2DE
                         CUR_ENC_KEY[0] ^= HW_KEY_MESH_3;
                     }
                     HW_AES_KEY = CUR_ENC_KEY;
-                    // Set the output to match the key slot
-                    HW_DMA_BUF[2] = HW_DMA_BUF[2] + 4;
+                    HW_DMA_BUF[2] = HW_DMA_BUF[2] + 4; // Unused
                     // Write the resulting header & body
                     kirk_unsigned_encrypt();
                 }
@@ -1169,7 +1170,7 @@ void kirk_cmd6_encrypt_user(void) // 0x34A
 
 /*
  * Encrypt INPUT to OUTPUT in AES CBC using CUR_ENC_KEY. Only used by command 6, written differently from aes_encrypt_cbc()
- * to use a temporary buffer so that the data can be encrypted "in-place" but 16 bytes further (the output has a shorter header).
+ * to use a temporary buffer so that the data can be encrypted "in-place" but 16 bytes further (the output has a longer header).
  */
 void kirk_cmd6_encrypt_body(void) // 0x39D
 {
@@ -1193,7 +1194,7 @@ void kirk_cmd6_encrypt_body(void) // 0x39D
         HW_DMA_BUF_SIZE = 0x10;
         dma_write_aes_result();
         OUTPUT += 0x10;
-        HW_AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     }
     HW_DMA_BUF._0_16_ = R11._0_16_;
     aes_padding();
@@ -1512,10 +1513,10 @@ void ecc_set_priv_curve(void) // 0x4B8
     HW_ECC_Gy[3] = 0x27d75c82;
     HW_ECC_Gy[4] = 0xbec108c0;
     // TODO: unknown parameters
-    HW_ECC_UNK1[0] = 4;
+    HW_ECC_UNK1[0] = 0x00000004;
     HW_ECC_UNK1[1] = 0xfffffffc;
-    HW_ECC_UNK1[2] = 4;
-    HW_ECC_UNK1[3] = 0;
+    HW_ECC_UNK1[2] = 0x00000004;
+    HW_ECC_UNK1[3] = 0x00000000;
     HW_ECC_UNK1[4] = 0xfffffffd;
     HW_ECC_UNK2[0] = 0xbcb8c536;
     HW_ECC_UNK2[1] = 0x6c7b11e5;
@@ -1686,7 +1687,7 @@ void kirk_cmac_check_header(void) // 0x5A9
     HW_DMA_BUF_SIZE = 0x10;
     aes_dma_copy_and_do();
     INPUT += 0x10;
-    HW_AES_CMD &= 0xfffffffd;
+    HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     aes_dma_copy_and_do();
     INPUT += 0x10;
     // Verify the data is what we read earlier (maybe to avoid attacks based on overwriting?)
@@ -1868,7 +1869,7 @@ void kirk_signed_header_decrypt_cmac_key(void) // 0x63F
     HW_AES_SRC_BUF = HW_DMA_BUF._0_16_;
     aes_do();
     HW_AES_SRC_BUF = HW_DMA_BUF._16_16_;
-    HW_AES_CMD &= 0xfffffffd;
+    HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
     aes_do();
     HW_AES_KEY = HW_AES_RESULT;
 }
@@ -2129,7 +2130,7 @@ void kirk_cmd10_priv_sigvry(void) // 0x6D9
         PERCONSOLE_KEYSEED = 0;
         aes_set_perconsole_key();
         CUR_ENC_KEY = HW_AES_RESULT;
-        kirk3_get_public_key();
+        kirk_cmd3_get_public_key();
     }
     kirk_signed_header_read_body_info();
     if (kirk_check_body_size_nonzero()) {
@@ -2146,7 +2147,6 @@ void kirk_cmd10_priv_sigvry(void) // 0x6D9
             HW_AES_KEY = CUR_ENC_KEY;
             if (!kirk_cmac_check_header()) {
                 HW_CPU_PHASE = 1;
-                // Note: missing return value?
                 return;
             }
         }
@@ -2410,7 +2410,7 @@ void kirk_cmd16_siggen(void) // 0x7AC
         HW_AES_CMD = AES_CMD_MULTIPLE_BLOCKS | AES_CMD_FIRST_BLOCK | AES_CMD_DECRYPT;
         aes_setkey();
         aes_dma_copy_and_do();
-        HW_AES_CMD &= 0xfffffffd;
+        HW_AES_CMD &= ~AES_CMD_FIRST_BLOCK;
         R3._0_16_ = HW_AES_RESULT;
         INPUT += 0x10;
         aes_dma_copy_and_do();
