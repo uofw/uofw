@@ -3,21 +3,29 @@
 // The KIRK ROM has been dumped and uses a custom ISA using words of 4 bytes and word-addressing (contrary to most architectures, if x points to a 4-byte word,
 // x+1 points to the next 4-byte word). It has no registers and access to a memory space of 0x1000 words, most of the space being used to contact the other devices.
 // It works in big endian mode.
-// It has two instructions, marked as functions here, that seem to have a special role: __builtin_setmode() to contact devices and __builtin_dma() to transmit data.
+// It has two instructions, marked as functions here, that have a special role: __builtin_setmode() to define an action for the device and __builtin_intr() to trigger the action.
 
 // KIRK has access to 8 different interfaces. All interfaces have associated 'enable' and 'status' register, plus other ones depending on the device.
 // The status register is only used for initialization.
-// To reset a device, use __builtin_setmode(XXX_REG, 0) then wait for the status to be non-zero.
-// Once reset, to use a device, use __builtin_setmode(XXX_REG,val) (val can be 1 or 2 depending on the devices and actions), then __builtin_dma(data_size, 0)
-// Exceptions:
-// - for SHA1, there is no call to __builtin_setmode()
-// - for DMA communication (copies from/to main RAM), arguments to the second function are __builtin_dma(0, 1)
-// - for CPU hardware registers communication, arguments to the second function are __builtin_dma(0, 2)
-// - for ECC computation, arguments to the second function are __builtin_dma(0, 0x100)
-// 
+// To reset a device, use __builtin_setmode(XXX_REG, XXX_REG_RESET (= 0)) then wait for the status to be non-zero.
+// Once reset, to use a device, use __builtin_setmode(XXX_REG, XXX_REG_<ACTION>) (XXX_REG_<ACTION> can be 1 or 2 depending on the devices and actions), then __builtin_intr(INTR_XXX)
+// Exception: for SHA1, there is no call to __builtin_setmode() when doing an action (only on reset)
+#define INTR_DMA  0x000001
+#define INTR_CPU  0x000002
+#define INTR_ECC  0x000100
+#define INTR_SHA1 0x004000
+#define INTR_AES  0x010000
+#define INTR_PRNG 0x080000
+#define INTR_TRNG 0x100000
+#define INTR_MATH 0x400000
+
+// Modules, by memory space:
+
 // Module 1 - ECC - can make and verify signatures, and multiply points by scalars
 //
 // 0x000 - HW_ECC_REG - only 0 or 1
+#define ECC_REG_RESET 0
+#define ECC_REG_DO    1
 // 0x001 - HW_ECC_STATUS
 // 0x002 - HW_ECC_OP - 0 = make signature (s) from r, 1 = verify signature, 2 = multiply point by scalar
 #define ECC_OP_SIGN 0
@@ -44,6 +52,7 @@
 // Module 2 - SHA1
 //
 // 0x330 - HW_SHA1_REG - only 0 (__builtin_setmode isn't used when doing SHA1's)
+#define SHA1_REG_RESET 0
 // 0x331 - HW_SHA1_STATUS
 // 0x332 -
 // 0x333 - HW_SHA1_IN_SIZE - size of the input data
@@ -53,10 +62,13 @@
 // Module 3 - AES
 //
 // 0x380 - HW_AES_REG - 0 for reset, 1 for sending data to encrypt/decrypt, 2 to set key
+#define AES_REG_RESET  0
+#define AES_REG_ENCDEC 1
+#define AES_REG_SETKEY 2
 // 0x381 - HW_AES_STATUS
 // 0x382 - HW_AES_CMD
 //          bit 0 (0x01): 0 = encrypt, 1 = decrypt
-//          bit 1 (0x02): 0 = not first block, 1 = first block (for CBC)
+//          bit 1 (0x02): 0 = not first block, 1 = first block
 //          bit 4 (0x10): 0 = single block, 1 = multiple blocks
 //          bit 5 (0x20): 0 = normal, 1 = CMAC
 
@@ -75,6 +87,8 @@
 // Module 4 - an unknown deterministic PRNG (pseudo-random number generator)
 //
 // 0x420 - HW_PRNG_REG - only 0 or 1
+#define PRNG_REG_RESET 0
+#define PRNG_REG_DO    1
 // 0x421 - HW_PRNG_STATUS
 // 0x422 - HW_PRNG_MODE - 2 or 3? (3 is used for initialization & for the self-test, 2 is used the rest of the time)
 // 0x423 - HW_PRNG_SEED - a 40-byte-long buffer
@@ -83,17 +97,21 @@
 // Module 5 - might be some kind of TRNG (true random number generator)
 //
 // 0x440 - HW_TRNG_REG - only 0 or 1
+#define TRNG_REG_RESET 0
+#define TRNG_REG_DO    1
 // 0x441 - HW_TRNG_STATUS
-// 0x442 - HW_TRNG_OUT_SIZE - maybe the output size of the true rng
-// 0x443 - HW_TRNG_OUTPUT - output of the TRNG, at least 32-byte long, maybe 256-byte long
+// 0x442 - HW_TRNG_OUT_SIZE - the output size of the true rng, in bits (probably)
+// 0x443 - HW_TRNG_OUTPUT - output of the TRNG, size unknown
 //
 // Module 6 - math module, used to compute modulo's of large numbers
 //
-// 0x460 - MATH_REG - only 0 or 1
-// 0x461 - MATH_STATUS
-// 0x462 - MATH_IN - 64-byte input buffer
-// 0x472 - MATH_MODULUS - 32-byte input buffer, containing the modulus, which is always a prime number here
-// 0x47A - MATH_RESULT - result of the modulo
+// 0x460 - HW_MATH_REG - only 0 or 1
+#define MATH_REG_RESET 0
+#define MATH_REG_DO    1
+// 0x461 - HW_MATH_STATUS
+// 0x462 - HW_MATH_IN - 64-byte input buffer
+// 0x472 - HW_MATH_MODULUS - 32-byte input buffer, containing the modulus, which is always a prime number here
+// 0x47A - HW_MATH_RESULT - result of the modulo
 //
 // Key parameters:
 //
@@ -108,6 +126,9 @@
 // Module 7 - DMA module, to send/receive data from the main CPU
 //
 // 0xE00 - HW_DMA_REG - 0 to init, 1 to write data, 2 to read data
+#define DMA_REG_RESET 0
+#define DMA_REG_WRITE 1
+#define DMA_REG_READ  2
 // 0xE01 - HW_DMA_STATUS - unused (initialization is present in the ROM but never called)
 // 0xE02 - HW_DMA_ADDR - address from which to read/write
 // 0xE03 - HW_DMA_BUF_SIZE - size of the data to send/receive
@@ -116,6 +137,8 @@
 // Module 8 - PSP KIRK interface, interface with the registers at 0xBDE00000 on the CPU
 //
 // 0xE20 - HW_CPU_REG - only 0 or 1
+#define CPU_REG_RESET 0
+#define CPU_REG_DO    1
 // 0xE21 - HW_CPU_STATUS - equal to 1 when KIRK is initialized
 // 0xE22 - HW_CPU_PHASE - possibly the same phase as 0xBDE0001C
 // 0xE30 - HW_CPU_CMD - KIRK command, same as 0xBDE00010
@@ -197,8 +220,8 @@ void _start(void) // 0x001
     HW_CPU_PHASE = 0;
     while (true) {
         // Read the next command and call the function accordingly
-        __builtin_setmode(HW_CPU_REG,1);
-        __builtin_dma(0,2);
+        __builtin_setmode(HW_CPU_REG, CPU_REG_DO);
+        __builtin_intr(INTR_CPU);
         if (HW_CPU_CMD == 0) {
             kirk_cmd0_decrypt_bootrom();
         } else if (HW_CPU_CMD == 1) {
@@ -421,8 +444,8 @@ void aes_copy_and_do(void) // 0x0ED
  */
 void aes_do(void) // 0x0EE
 {
-    __builtin_setmode(HW_AES_REG, 1);
-    __builtin_dma(0x10, 0);
+    __builtin_setmode(HW_AES_REG, AES_REG_ENCDEC);
+    __builtin_intr(INTR_AES);
 }
 
 /*
@@ -430,8 +453,8 @@ void aes_do(void) // 0x0EE
  */
 void aes_setkey(void) // 0x0F1
 {
-    __builtin_setmode(HW_AES_REG, 2);
-    __builtin_dma(0x10, 0);
+    __builtin_setmode(HW_AES_REG, AES_REG_SETKEY);
+    __builtin_intr(INTR_AES);
 }
 
 /*
@@ -1334,8 +1357,8 @@ void ecc_sign_gen_r(void) // 0x455
     do {
         // Compute a random scalar r
         math_generate_random();
-        HW_ECC_R._0_16_ = MATH_RESULT._12_16_;
-        HW_ECC_R[4] = MATH_RESULT[7];
+        HW_ECC_R._0_16_ = HW_MATH_RESULT._12_16_;
+        HW_ECC_R[4] = HW_MATH_RESULT[7];
         // Compute the resulting s
         HW_ECC_OP = ECC_OP_SIGN;
         ecc_do();
@@ -1355,25 +1378,25 @@ void math_generate_random(void) // 0x45F
         } else {
             math_set_private_modulus();
         }
-        // Fill MATH_IN 0 to 5 with 0's and 6 to 15 with random
-        MATH_IN[0] = 0;
-        MATH_IN[1] = 0;
-        MATH_IN[2] = 0;
-        MATH_IN[3] = 0;
-        MATH_IN[4] = 0;
-        MATH_IN[5] = 0;
+        // Fill HW_MATH_IN 0 to 5 with 0's and 6 to 15 with random
+        HW_MATH_IN[0] = 0;
+        HW_MATH_IN[1] = 0;
+        HW_MATH_IN[2] = 0;
+        HW_MATH_IN[3] = 0;
+        HW_MATH_IN[4] = 0;
+        HW_MATH_IN[5] = 0;
         kirk_reseed_prng_2();
-        MATH_IN._24_16_ = HW_PRNG_RESULT._0_16_;
-        MATH_IN[10] = HW_PRNG_RESULT[4];
+        HW_MATH_IN._24_16_ = HW_PRNG_RESULT._0_16_;
+        HW_MATH_IN[10] = HW_PRNG_RESULT[4];
         kirk_reseed_prng_2();
-        MATH_IN._44_16_ = HW_PRNG_RESULT._0_16_;
-        MATH_IN[15] = HW_PRNG_RESULT[4];
+        HW_MATH_IN._44_16_ = HW_PRNG_RESULT._0_16_;
+        HW_MATH_IN[15] = HW_PRNG_RESULT[4];
         // Compute the result in the given range
-        __builtin_setmode(MATH_REG, 1);
-        __builtin_dma(0x400, 0);
+        __builtin_setmode(HW_MATH_REG, MATH_REG_DO);
+        __builtin_intr(INTR_MATH);
         // If the buffer is only zero's, retry
         R13 = 5;
-        R11 = &MATH_RESULT[3]
+        R11 = &HW_MATH_RESULT[3]
     } while (!buffer_is_nonzero());
 }
 
@@ -1457,7 +1480,7 @@ void sha1_do(void) // 0x4A4
         SIZE -= 1;
     } while (SIZE != 0);
     // Retrieve result
-    __builtin_dma(4, 0);
+    __builtin_intr(INTR_SHA1);
     SIZE = 0;
 }
 
@@ -1466,8 +1489,8 @@ void sha1_do(void) // 0x4A4
  */
 void ecc_do(void) // 0x4B5
 {
-    __builtin_setmode(HW_ECC_REG, 1);
-    __builtin_dma(0, 0x100);
+    __builtin_setmode(HW_ECC_REG, ECC_REG_DO);
+    __builtin_intr(INTR_ECC);
 }
 
 /*
@@ -1583,14 +1606,14 @@ void ecc_set_public_curve(void) // 0x509
  */
 void math_set_private_modulus(void) // 0x55A
 {
-    MATH_MODULUS[0] = 0;
-    MATH_MODULUS[1] = 0;
-    MATH_MODULUS[2] = 0;
-    MATH_MODULUS[3] = 0xffffffff;
-    MATH_MODULUS[4] = 0xffffffff;
-    MATH_MODULUS[5] = 0x0001b5c6;
-    MATH_MODULUS[6] = 0x17f290ea;
-    MATH_MODULUS[7] = 0xe1dbad8f;
+    HW_MATH_MODULUS[0] = 0;
+    HW_MATH_MODULUS[1] = 0;
+    HW_MATH_MODULUS[2] = 0;
+    HW_MATH_MODULUS[3] = 0xffffffff;
+    HW_MATH_MODULUS[4] = 0xffffffff;
+    HW_MATH_MODULUS[5] = 0x0001b5c6;
+    HW_MATH_MODULUS[6] = 0x17f290ea;
+    HW_MATH_MODULUS[7] = 0xe1dbad8f;
 }
 
 /*
@@ -1598,14 +1621,14 @@ void math_set_private_modulus(void) // 0x55A
  */
 void math_set_public_modulus(void) // 0x56B
 {
-    MATH_MODULUS[0] = 0;
-    MATH_MODULUS[1] = 0;
-    MATH_MODULUS[2] = 0;
-    MATH_MODULUS[3] = 0xffffffff;
-    MATH_MODULUS[4] = 0xfffffffe;
-    MATH_MODULUS[5] = 0xffffb5ae;
-    MATH_MODULUS[6] = 0x3c523e63;
-    MATH_MODULUS[7] = 0x944f2127;
+    HW_MATH_MODULUS[0] = 0;
+    HW_MATH_MODULUS[1] = 0;
+    HW_MATH_MODULUS[2] = 0;
+    HW_MATH_MODULUS[3] = 0xffffffff;
+    HW_MATH_MODULUS[4] = 0xfffffffe;
+    HW_MATH_MODULUS[5] = 0xffffb5ae;
+    HW_MATH_MODULUS[6] = 0x3c523e63;
+    HW_MATH_MODULUS[7] = 0x944f2127;
 }
 
 /*
@@ -1759,7 +1782,7 @@ void kirk_ecdsa_check_header(void) // 0x5DF
         HW_SHA1_IN_DATA = HW_DMA_BUF[1];
         HW_SHA1_IN_DATA = HW_DMA_BUF[2];
         HW_SHA1_IN_DATA = HW_DMA_BUF[3];
-        __builtin_dma(4,0);
+        __builtin_intr(INTR_SHA1);
         // Verify the signature
         if (ecc_sign_check()) {
             return true;
@@ -2039,8 +2062,8 @@ void dma_write_output(void) // 0x6BA
  */
 void dma_write(void) // 0x6BB
 {
-    __builtin_setmode(HW_DMA_REG, 1);
-    __builtin_dma(0, 1);
+    __builtin_setmode(HW_DMA_REG, DMA_REG_WRITE);
+    __builtin_intr(INTR_DMA);
 }
 
 /*
@@ -2057,8 +2080,8 @@ void dma_read_input(void) // 0x6BE
  */
 void dma_read(void) // 0x6BF
 {
-    __builtin_setmode(HW_DMA_REG, 2);
-    __builtin_dma(0, 1);
+    __builtin_setmode(HW_DMA_REG, DMA_REG_READ);
+    __builtin_intr(INTR_DMA);
 }
 
 /*
@@ -2094,8 +2117,8 @@ bool buffer_is_nonzero(void) // 0x6CB
 void crash(void) // 0x6D4
 {
     HW_CPU_PHASE = 3;
-    __builtin_setmode(HW_CPU_REG, 1);
-    __builtin_dma(0, 2);
+    __builtin_setmode(HW_CPU_REG, CPU_REG_DO);
+    __builtin_intr(INTR_CPU);
     inf_loop();
 }
 
@@ -2160,7 +2183,7 @@ void kirk_cmd10_priv_sigvry(void) // 0x6D9
  */
 void init_ECC(void) // 0x710
 {
-    __builtin_setmode(HW_ECC_REG, 0);
+    __builtin_setmode(HW_ECC_REG, ECC_REG_RESET);
     while (!(HW_ECC_STATUS & 1)) {
         // Wait
     }
@@ -2171,7 +2194,7 @@ void init_ECC(void) // 0x710
  */
 void init_SHA1(void) // 0x714
 {
-    __builtin_setmode(HW_SHA1_REG, 0);
+    __builtin_setmode(HW_SHA1_REG, SHA1_REG_RESET);
     while (!(HW_SHA1_STATUS & 1)) {
         // Wait
     }
@@ -2182,7 +2205,7 @@ void init_SHA1(void) // 0x714
  */
 void init_AES(void) // 0x718
 {
-    __builtin_setmode(HW_AES_REG, 0);
+    __builtin_setmode(HW_AES_REG, AES_REG_RESET);
     while (!(HW_AES_STATUS & 1)) {
         // Wait
     }
@@ -2193,7 +2216,7 @@ void init_AES(void) // 0x718
  */
 void init_PRNG(void) // 0x71C
 {
-    __builtin_setmode(HW_PRNG_REG, 0);
+    __builtin_setmode(HW_PRNG_REG, PRNG_REG_RESET);
     while (!(HW_PRNG_STATUS & 1)) {
         // Wait
     }
@@ -2204,7 +2227,7 @@ void init_PRNG(void) // 0x71C
  */
 void init_TRNG(void) // 0x720
 {
-    __builtin_setmode(HW_TRNG_REG, 0);
+    __builtin_setmode(HW_TRNG_REG, TRNG_REG_RESET);
     while (!(HW_TRNG_STATUS & 1)) {
         // Wait
     }
@@ -2215,8 +2238,8 @@ void init_TRNG(void) // 0x720
  */
 void init_MATH(void) // 0x724
 {
-    __builtin_setmode(MATH_REG, 0);
-    while (!(MATH_STATUS & 1)) {
+    __builtin_setmode(HW_MATH_REG, MATH_REG_RESET);
+    while (!(HW_MATH_STATUS & 1)) {
         // Wait
     }
 }
@@ -2226,7 +2249,7 @@ void init_MATH(void) // 0x724
  */
 void __unused_init_dma(void) // 0x728
 {
-    __builtin_setmode(HW_DMA_REG, 0);
+    __builtin_setmode(HW_DMA_REG, DMA_REG_RESET);
     while (!(HW_DMA_STATUS & 1)) {
         // Wait
     }
@@ -2237,7 +2260,7 @@ void __unused_init_dma(void) // 0x728
  */
 void init_PSP(void) // 0x72C
 {
-    __builtin_setmode(HW_CPU_REG, 0);
+    __builtin_setmode(HW_CPU_REG, CPU_REG_RESET);
     while (!(HW_CPU_STATUS & 1)) {
         // Wait
     }
@@ -2302,15 +2325,15 @@ void kirk_cmd12_ecdsa_genkey(void) // 0x755
         math_generate_random();
         RNG_FLAGS &= ~RNG_FLAGS_PUB_CURVE;
         // Write the private key
-        HW_DMA_BUF._0_16_ = MATH_RESULT._12_16_;
-        HW_DMA_BUF[4] = MATH_RESULT[7];
+        HW_DMA_BUF._0_16_ = HW_MATH_RESULT._12_16_;
+        HW_DMA_BUF[4] = HW_MATH_RESULT[7];
         HW_DMA_ADDR = HW_CPU_DST;
         HW_DMA_BUF_SIZE = 0x14;
         dma_write();
         // Compute the public key from the private key
         ecc_set_public_curve();
-        HW_ECC_R._0_16_ = MATH_RESULT._12_16_;
-        HW_ECC_R[4] = MATH_RESULT[7];
+        HW_ECC_R._0_16_ = HW_MATH_RESULT._12_16_;
+        HW_ECC_R[4] = HW_MATH_RESULT[7];
         HW_ECC_OP = ECC_OP_MUL;
         ecc_do();
         // Output the public key
@@ -2381,8 +2404,8 @@ void kirk_cmd14_gen_privkey(void) // 0x79A
         math_generate_random();
         RNG_FLAGS &= ~RNG_FLAGS_PUB_CURVE;
         // Output the private key
-        HW_DMA_BUF._0_16_ = (undefined  [16])MATH_RESULT._12_16_;
-        HW_DMA_BUF[4] = MATH_RESULT[7];
+        HW_DMA_BUF._0_16_ = (undefined  [16])HW_MATH_RESULT._12_16_;
+        HW_DMA_BUF[4] = HW_MATH_RESULT[7];
         HW_DMA_ADDR = HW_CPU_DST;
         HW_DMA_BUF_SIZE = 0x14;
         dma_write();
@@ -2559,8 +2582,8 @@ void kirk_cmd15_init(void) // 0x833
     HW_PRNG_SEED._4_16_ = HW_DMA_BUF._12_16_;
     // Get data from the TRNG
     HW_TRNG_OUT_SIZE = 0x100;
-    __builtin_setmode(HW_TRNG_REG, 1);
-    __builtin_dma(0x100, 0);
+    __builtin_setmode(HW_TRNG_REG, TRNG_REG_DO);
+    __builtin_intr(INTR_TRNG);
     // Hash the data coming from the TRNG
     HW_SHA1_IN_SIZE = 0x20;
     HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[0];
@@ -2571,7 +2594,7 @@ void kirk_cmd15_init(void) // 0x833
     HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[5];
     HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[6];
     HW_SHA1_IN_DATA = HW_TRNG_OUTPUT[7];
-    __builtin_dma(4, 0);
+    __builtin_intr(INTR_SHA1);
     // XOR the PRNG seed with the previous hash
     HW_PRNG_SEED[0] ^= HW_SHA1_RESULT[0];
     HW_PRNG_SEED[1] ^= HW_SHA1_RESULT[1];
@@ -2658,8 +2681,8 @@ void aes_set_perconsole_key(void) // 0x876
  */
 void prng_do(void) // 0x887
 {
-    __builtin_setmode(HW_PRNG_REG, 1);
-    __builtin_dma(0x80, 0);
+    __builtin_setmode(HW_PRNG_REG, PRNG_REG_DO);
+    __builtin_intr(INTR_PRNG);
 }
 
 /*
@@ -2683,8 +2706,8 @@ void kirk_self_test(void) // 0x88A
     }
     // Initialize communication with the CPU
     HW_CPU_PHASE = 0;
-    __builtin_setmode(HW_CPU_REG, 1);
-    __builtin_dma(0, 2);
+    __builtin_setmode(HW_CPU_REG, CPU_REG_DO);
+    __builtin_intr(INTR_CPU);
 
     // Encrypt two-block input in AES ECB with the given key
     HW_AES_CMD = AES_CMD_ENCRYPT;
@@ -2707,8 +2730,8 @@ void kirk_self_test(void) // 0x88A
     dma_write();
     // Update CPU communication
     HW_CPU_PHASE = 1;
-    __builtin_setmode(HW_CPU_REG, 1);
-    __builtin_dma(0, 2);
+    __builtin_setmode(HW_CPU_REG, CPU_REG_DO);
+    __builtin_intr(INTR_CPU);
 }
 
 /*
@@ -2802,7 +2825,7 @@ bool test_SHA1(void) // 0x93C
 {
     HW_SHA1_IN_SIZE = 3;
     HW_SHA1_IN_DATA = 0x61626300; // "abc"
-    __builtin_dma(4,0);
+    __builtin_intr(INTR_SHA1);
     if (HW_SHA1_RESULT[0] == 0xa9993e36
      && HW_SHA1_RESULT[1] == 0x4706816a
      && HW_SHA1_RESULT[2] == 0xba3e2571
@@ -2879,8 +2902,8 @@ bool test_PRNG(void) // 0x978
 void test_TRNG(void) // 0x9B1
 {
     HW_TRNG_OUT_SIZE = 0x100;
-    __builtin_setmode(HW_TRNG_REG, 1);
-    __builtin_dma(0x100, 0);
+    __builtin_setmode(HW_TRNG_REG, TRNG_REG_DO);
+    __builtin_intr(INTR_TRNG);
     SIZE = HW_TRNG_OUTPUT._0_16_; // arbitrary register
     R4 = HW_TRNG_OUTPUT._16_16_;  // arbitrary register
 }
@@ -2893,75 +2916,75 @@ bool test_MATH(void) // 0x9B8
     // 0x2c6c3246fcedb0546f969b8619d03bf8e16b88ca7b31acf2c800afa8c1945fa12719c7f1c7c99bb7
     // % 0xe5d8c140e15a3be238d81bd77229b1b8008a143d
     // == 0x5ba7b73f60c6fa9487a618586350a9025c1713ae
-    MATH_IN[0] = 0;
-    MATH_IN[1] = 0;
-    MATH_IN[2] = 0;
-    MATH_IN[3] = 0;
-    MATH_IN[4] = 0;
-    MATH_IN[5] = 0;
-    MATH_IN[6] = 0x2c6c3246;
-    MATH_IN[7] = 0xfcedb054;
-    MATH_IN[8] = 0x6f969b86;
-    MATH_IN[9] = 0x19d03bf8;
-    MATH_IN[10] = 0xe16b88ca;
-    MATH_IN[11] = 0x7b31acf2;
-    MATH_IN[12] = 0xc800afa8;
-    MATH_IN[13] = 0xc1945fa1;
-    MATH_IN[14] = 0x2719c7f1;
-    MATH_IN[15] = 0xc7c99bb7;
-    MATH_MODULUS[0] = 0;
-    MATH_MODULUS[1] = 0;
-    MATH_MODULUS[2] = 0;
-    MATH_MODULUS[3] = 0xe5d8c140;
-    MATH_MODULUS[4] = 0xe15a3be2;
-    MATH_MODULUS[5] = 0x38d81bd7;
-    MATH_MODULUS[6] = 0x7229b1b8;
-    MATH_MODULUS[7] = 0x008a143d;
-    __builtin_setmode(MATH_REG, 1);
-    __builtin_dma(0x400, 0);
-    if (MATH_RESULT[0] == 0
-     && MATH_RESULT[1] == 0
-     && MATH_RESULT[2] == 0
-     && MATH_RESULT[3] == 0x5ba7b73f
-     && MATH_RESULT[4] == 0x60c6fa94
-     && MATH_RESULT[5] == 0x87a61858
-     && MATH_RESULT[6] == 0x6350a902
-     && MATH_RESULT[7] == 0x5c1713ae) {
+    HW_MATH_IN[0] = 0;
+    HW_MATH_IN[1] = 0;
+    HW_MATH_IN[2] = 0;
+    HW_MATH_IN[3] = 0;
+    HW_MATH_IN[4] = 0;
+    HW_MATH_IN[5] = 0;
+    HW_MATH_IN[6] = 0x2c6c3246;
+    HW_MATH_IN[7] = 0xfcedb054;
+    HW_MATH_IN[8] = 0x6f969b86;
+    HW_MATH_IN[9] = 0x19d03bf8;
+    HW_MATH_IN[10] = 0xe16b88ca;
+    HW_MATH_IN[11] = 0x7b31acf2;
+    HW_MATH_IN[12] = 0xc800afa8;
+    HW_MATH_IN[13] = 0xc1945fa1;
+    HW_MATH_IN[14] = 0x2719c7f1;
+    HW_MATH_IN[15] = 0xc7c99bb7;
+    HW_MATH_MODULUS[0] = 0;
+    HW_MATH_MODULUS[1] = 0;
+    HW_MATH_MODULUS[2] = 0;
+    HW_MATH_MODULUS[3] = 0xe5d8c140;
+    HW_MATH_MODULUS[4] = 0xe15a3be2;
+    HW_MATH_MODULUS[5] = 0x38d81bd7;
+    HW_MATH_MODULUS[6] = 0x7229b1b8;
+    HW_MATH_MODULUS[7] = 0x008a143d;
+    __builtin_setmode(HW_MATH_REG, MATH_REG_DO);
+    __builtin_intr(INTR_MATH);
+    if (HW_MATH_RESULT[0] == 0
+     && HW_MATH_RESULT[1] == 0
+     && HW_MATH_RESULT[2] == 0
+     && HW_MATH_RESULT[3] == 0x5ba7b73f
+     && HW_MATH_RESULT[4] == 0x60c6fa94
+     && HW_MATH_RESULT[5] == 0x87a61858
+     && HW_MATH_RESULT[6] == 0x6350a902
+     && HW_MATH_RESULT[7] == 0x5c1713ae) {
         // 0xfea54c798eac6e6a78f14231687faea7865fac876e8a7f6a76e5afa9c87fe87a56b9a87e18756ffe % 3 == 2
-        MATH_IN[0] = 0;
-        MATH_IN[1] = 0;
-        MATH_IN[2] = 0;
-        MATH_IN[3] = 0;
-        MATH_IN[4] = 0;
-        MATH_IN[5] = 0;
-        MATH_IN[6] = 0xfea54c79;
-        MATH_IN[7] = 0x8eac6e6a;
-        MATH_IN[8] = 0x78f14231;
-        MATH_IN[9] = 0x687faea7;
-        MATH_IN[10] = 0x865fac87;
-        MATH_IN[11] = 0x6e8a7f6a;
-        MATH_IN[12] = 0x76e5afa9;
-        MATH_IN[13] = 0xc87fe87a;
-        MATH_IN[14] = 0x56b9a87e;
-        MATH_IN[15] = 0x18756ffe;
-        MATH_MODULUS[0] = 0;
-        MATH_MODULUS[1] = 0;
-        MATH_MODULUS[2] = 0;
-        MATH_MODULUS[3] = 0;
-        MATH_MODULUS[4] = 0;
-        MATH_MODULUS[5] = 0;
-        MATH_MODULUS[6] = 0;
-        MATH_MODULUS[7] = 3;
-        __builtin_setmode(MATH_REG, 1);
-        __builtin_dma(0x400, 0);
-        if (MATH_RESULT[0] == 0
-         && MATH_RESULT[1] == 0
-         && MATH_RESULT[2] == 0
-         && MATH_RESULT[3] == 0
-         && MATH_RESULT[4] == 0
-         && MATH_RESULT[5] == 0
-         && MATH_RESULT[6] == 0
-         && MATH_RESULT[7] == 2) {
+        HW_MATH_IN[0] = 0;
+        HW_MATH_IN[1] = 0;
+        HW_MATH_IN[2] = 0;
+        HW_MATH_IN[3] = 0;
+        HW_MATH_IN[4] = 0;
+        HW_MATH_IN[5] = 0;
+        HW_MATH_IN[6] = 0xfea54c79;
+        HW_MATH_IN[7] = 0x8eac6e6a;
+        HW_MATH_IN[8] = 0x78f14231;
+        HW_MATH_IN[9] = 0x687faea7;
+        HW_MATH_IN[10] = 0x865fac87;
+        HW_MATH_IN[11] = 0x6e8a7f6a;
+        HW_MATH_IN[12] = 0x76e5afa9;
+        HW_MATH_IN[13] = 0xc87fe87a;
+        HW_MATH_IN[14] = 0x56b9a87e;
+        HW_MATH_IN[15] = 0x18756ffe;
+        HW_MATH_MODULUS[0] = 0;
+        HW_MATH_MODULUS[1] = 0;
+        HW_MATH_MODULUS[2] = 0;
+        HW_MATH_MODULUS[3] = 0;
+        HW_MATH_MODULUS[4] = 0;
+        HW_MATH_MODULUS[5] = 0;
+        HW_MATH_MODULUS[6] = 0;
+        HW_MATH_MODULUS[7] = 3;
+        __builtin_setmode(HW_MATH_REG, MATH_REG_DO);
+        __builtin_intr(INTR_MATH);
+        if (HW_MATH_RESULT[0] == 0
+         && HW_MATH_RESULT[1] == 0
+         && HW_MATH_RESULT[2] == 0
+         && HW_MATH_RESULT[3] == 0
+         && HW_MATH_RESULT[4] == 0
+         && HW_MATH_RESULT[5] == 0
+         && HW_MATH_RESULT[6] == 0
+         && HW_MATH_RESULT[7] == 2) {
             return 1;
         }
     }
