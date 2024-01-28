@@ -9,4 +9,4 @@ LIBS = -lSysMemForKernel -lsceSuspendForKernel -lsceSysEventForKernel -lKDebugFo
        -lsceSyscon_driver -lsceSysreg_driver -lsceDdr_driver -lsceGpio_driver -lsceGe_driver -lsceIdStorage_driver \
        -lUtilsForKernel -lsceCtrl_driver -lLoadExecForKernel
 
-include ../../lib/build.mak
+include $(ROOT_DIR)/lib/build.mak
