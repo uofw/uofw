@@ -6,5 +6,5 @@ OBJS = power.o syscon.o
 
 LIBS = -lsceSysEventForKernel -lKDebugForKernel -lInterruptManagerForKernel -lThreadManForKernel -lSysclibForKernel -lUtilsForKernel -lsceSysreg_driver -lsceGpio_driver
 
-include ../../lib/build.mak
+include $(ROOT_DIR)/lib/build.mak
 
