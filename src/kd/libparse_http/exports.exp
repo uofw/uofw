@@ -1,0 +1,14 @@
+# Export file automatically generated with prxtool
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0x0000, 0x8000)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_VAR_HASH(module_sdk_version)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(sceParseHttp, 0x0011, 0x0001)
+PSP_EXPORT_FUNC_NID(sceParseHttpStatusLine, 0x8077A433)
+PSP_EXPORT_FUNC_NID(sceParseHttpResponseHeader, 0xAD7BFDEF)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS
