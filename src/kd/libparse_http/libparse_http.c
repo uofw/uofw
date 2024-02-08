@@ -1,13 +1,9 @@
 #include <common_imp.h>
+#include <libparse_http.h>
 #include <threadman_user.h>
 
 SCE_MODULE_INFO("SceParseHTTPheader_Library", SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 1);
 SCE_SDK_VERSION(SDK_VERSION);
-
-#define SCE_PARSE_HTTP_THREAD_ERROR         0x80410005
-#define SCE_PARSE_HTTP_HEADER_NOT_FOUND     0x80432025
-#define SCE_PARSE_HTTP_INVALID_RESPONSE     0x80432060
-#define SCE_PARSE_HTTP_NULL_ARG             0x804321FE
 
 // Address 0x00000840
 static const u8 ascii_map[128] = {
