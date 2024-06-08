@@ -76,12 +76,7 @@ typedef struct ScePspDateTime {
     u32 microsecond;
 } ScePspDateTime;
 
-struct SceIoDeviceArg;
-typedef struct SceIoDeviceArg SceIoDeviceArg;
-struct SceIoIob;
-typedef struct SceIoIob SceIoIob;
-
-typedef struct
+typedef struct SceIoStat
 {
     SceMode st_mode;
     u32 st_attr;
@@ -92,7 +87,7 @@ typedef struct
     u32 st_private[6];
 } SceIoStat;
 
-typedef struct
+typedef struct SceIoDirent
 {
     SceIoStat d_stat;
     char d_name[256];
@@ -100,46 +95,69 @@ typedef struct
     int dummy;
 } SceIoDirent;
 
-typedef struct
-{
-    int (*IoInit)(SceIoDeviceArg *dev);
-    int (*IoExit)(SceIoDeviceArg *dev);
-    int (*IoOpen)(SceIoIob *iob, char *file, int flags, SceMode mode);
-    int (*IoClose)(SceIoIob *iob);
-    int (*IoRead)(SceIoIob *iob, char *data, int len);
-    int (*IoWrite)(SceIoIob *iob, const char *data, int len);
-    SceOff (*IoLseek)(SceIoIob *iob, SceOff ofs, int whence);
-    int (*IoIoctl)(SceIoIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-    int (*IoRemove)(SceIoIob *iob, const char *name);
-    int (*IoMkdir)(SceIoIob *iob, const char *name, SceMode mode);
-    int (*IoRmdir)(SceIoIob *iob, const char *name);
-    int (*IoDopen)(SceIoIob *iob, const char *dirname);
-    int (*IoDclose)(SceIoIob *iob);
-    int (*IoDread)(SceIoIob *iob, SceIoDirent *dir);
-    int (*IoGetstat)(SceIoIob *iob, const char *file, SceIoStat *stat);
-    int (*IoChstat)(SceIoIob *iob, const char *file, SceIoStat *stat, int bits);
-    int (*IoRename)(SceIoIob *iob, const char *oldname, const char *newname);
-    int (*IoChdir)(SceIoIob *iob, const char *dir);
-    int (*IoMount)(SceIoIob *iob, const char *fs, const char *blockDev, int mode, void *unk1, int unk2);
-    int (*IoUmount)(SceIoIob *iob, const char *blockDev);
-    int (*IoDevctl)(SceIoIob *iob, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-    int (*IoCancel)(SceIoIob *iob);
-} SceIoDrvFuncs;
+typedef struct SceIoCwd            SceIoCwd,            *PSceIoCwd;
+typedef struct SceIoDeviceEntry    SceIoDeviceEntry,    *PSceIoDeviceEntry;
+typedef struct SceIoDeviceFunction SceIoDeviceFunction, *PSceIoDeviceFunction;
+typedef struct SceIoDeviceTable    SceIoDeviceTable,    *PSceIoDeviceTable;
+typedef struct SceIoIob            SceIoIob,            *PSceIoIob;
+typedef struct SceIoThreadCwd      SceIoThreadCwd,      *PSceIoThreadCwd;
 
-typedef struct
-{
-    const char *name;
-    u32 dev_type;
-    u32 unk2;
-    const char *name2;
-    SceIoDrvFuncs *funcs;
-} SceIoDrv;
+typedef int (* df_init_t)(struct SceIoDeviceEntry *);
+typedef int (* df_exit_t)(struct SceIoDeviceEntry *);
+typedef int (* df_close_t)(struct SceIoIob *);
+typedef int (* df_remove_t)(struct SceIoIob *, char *);
+typedef int (* df_rmdir_t)(struct SceIoIob *, char *);
+typedef int (* df_dopen_t)(struct SceIoIob *, char *);
+typedef int (* df_dclose_t)(struct SceIoIob *);
+typedef int (* df_chdir_t)(struct SceIoIob *, char *);
+typedef int (* df_umount_t)(struct SceIoIob *, char *);
+typedef int (* df_cancel_t)(struct SceIoIob *);
 
-struct SceIoDeviceArg
-{
-    SceIoDrv *drv;
-    void *argp;
-    int openedFiles;
+struct SceIoDeviceFunction {
+    df_init_t   df_init;
+    df_exit_t   df_exit;
+    int      (* df_open)(struct SceIoIob *, char *, int, SceMode);
+    df_close_t  df_close;
+    SceSSize (* df_read)(struct SceIoIob *, void *, SceSize);
+    SceSSize (* df_write)(struct SceIoIob *, const void *, SceSize);
+    SceOff   (* df_lseek)(struct SceIoIob *, SceOff, int);
+    int      (* df_ioctl)(struct SceIoIob *, int, void *, SceSize, void *, SceSize);
+    df_remove_t df_remove;
+    int      (* df_mkdir)(struct SceIoIob *, char *, SceMode);
+    df_rmdir_t  df_rmdir;
+    df_dopen_t  df_dopen;
+    df_dclose_t df_dclose;
+    int      (* df_dread)(struct SceIoIob *, struct SceIoDirent *);
+    int      (* df_getstat)(struct SceIoIob *, char *, struct SceIoStat *);
+    int      (* df_chstat)(struct SceIoIob *, char *, struct SceIoStat *, u32);
+    int      (* df_rename)(struct SceIoIob *, const char *, const char *);
+    df_chdir_t  df_chdir;
+    int      (* df_mount)(struct SceIoIob *, const char *, const char *, int, void *, int);
+    df_umount_t df_umount;
+    int      (* df_devctl)(struct SceIoIob *, char *, int, void *, SceSize, void *, SceSize);
+    df_cancel_t df_cancel;
+};
+
+struct SceIoCwd {
+    struct SceIoCwd * next;
+    char * pathname;
+    struct SceIoDeviceEntry * entry;
+    void * cwd_private;
+    int    refcount;
+};
+
+struct SceIoDeviceEntry {
+    struct SceIoDeviceTable * d_dp;
+    void * d_private;
+    int    d_userfd_count;
+};
+
+struct SceIoDeviceTable {
+    char * dt_string;
+    int    dt_type;
+    int    dt_size;
+    char * dt_desc;
+    struct SceIoDeviceFunction * dt_func;
 };
 
 struct SceIoHookType;
@@ -175,7 +193,7 @@ typedef struct
     int size; // 0
     char name[32]; // 4
     int attribute; // 36
-    int unk40; // 40
+    int flags; // 40
     const char *drvName; // 44
     int fsNum; // 48
     char *newPath; // 52
@@ -185,8 +203,8 @@ typedef struct
     int isAsync; // 68
     int asyncCmd; // 72
     SceIoIob *iob; // 76
-    int unk80; // 80
-    int unk84; // 84
+    int fpos; // 80
+    int thread; // 84
 } SceIoFdDebugInfo;
 
 typedef struct
@@ -199,20 +217,23 @@ struct SceIoHook
 {
     SceIoHookArg *arg;
     SceIoIob *iob;
-    SceIoDrvFuncs *funcs;
+    SceIoDeviceFunction *funcs;
 };
 
 struct SceIoIob
 {
-    int unk000; // some ID
-    int fsNum; // 4
-    SceIoDeviceArg *dev; // 8
-    int dev_type; // 12
-    int unk016; // 16
-    int unk020; // 20
-    int unk024; // 24
-    int unk028; // 28
-    int unk032; // 32
+    int i_flgs; // 0
+    int i_unit; // 4
+    struct SceIoDeviceEntry *i_de; // 8
+    int d_type; // 12
+    void *i_private; // 16
+    struct SceIoCwd *i_cwd; // 20
+    SceOff i_fpos; // 24
+    SceUID i_thread; // 28
+    int dummy; // 32
+    // note: structure stops here in dwarf data from the official SDK
+    // it might mean the next fields are only supposed to be accessed
+    // by iofilemgr and not fs implementations
     int unk036; // 36
     int unk040; // 40
     SceUID curThread; // 44
@@ -237,6 +258,13 @@ struct SceIoIob
     int retAddr; // 140
 };
 
+// TODO: unused here but present in official SDK dwarf symbols, maybe relevant in threadman
+struct SceIoThreadCwd {
+    struct SceIoThreadCwd * next;
+    void * tls;
+    struct SceIoCwd * cwd;
+};
+
 int sceIoChangeAsyncPriority(int fd, int prio);
 void sceIoCloseAll();
 int sceIoReopen(const char *file, int flags, SceMode mode, int fd);
@@ -259,7 +287,7 @@ int sceIoChangeThreadCwd(SceUID threadId, const char *path);
 int sceIoCancel(int fd);
 int sceIoGetFdList(SceUID *fds, int numFd, int *count);
 int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo);
-int sceIoAddDrv(SceIoDrv *drv);
+int sceIoAddDrv(SceIoDeviceTable *drv);
 int sceIoDelDrv(const char *drv);
 int sceIoGetUID(int fd);
 int sceIoPollAsync(SceUID fd, SceInt64 *res);
