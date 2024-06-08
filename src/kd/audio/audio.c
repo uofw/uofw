@@ -52,7 +52,7 @@ typedef struct
     u8 buf512[240]; // 512
     u8 buf752[272]; // 752
     u32 hwBuf[48]; // 1024
-    SceDmaOp *dmaPtr[3]; // 1216
+    sceKernelDmaOperation *dmaPtr[3]; // 1216
     /* The audio event flag ID. */
     SceUID evFlagId; // 1228
     /* The audio channels structures. */
@@ -201,7 +201,7 @@ s32 audioMixerThread()
     SceAudio *userAudio = UCACHED(&g_audio);
     memset(sp0, 0, sizeof(sp0));
     SceAudio *uncachedAudio = KUNCACHED(&g_audio);
-    SceDmaOp *unk = g_audio.dmaPtr[0];
+    sceKernelDmaOperation *unk = g_audio.dmaPtr[0];
     // 0328
     for (;;)
     {
@@ -254,7 +254,7 @@ s32 audioMixerThread()
         else
         {
             char shift = g_audio.volumeOffset;
-            char unk1 = unk->unk32 < (u32)&userAudio->buf240[16];
+            char unk1 = unk->uiSrcAddr < (u32)&userAudio->buf240[16];
             u32 *dstBuf = (u32*)(uncachedAudio->buf0 + unk1 * 256);
             // 0408
             s32 *u32buf = sp0;
@@ -924,7 +924,7 @@ int sceAudioInit()
     sceKernelRegisterIntrHandler(10, 2, audioIntrHandler, 0, 0);
     sceKernelEnableIntr(10);
     sceKernelDcacheWritebackInvalidateRange(&g_audio, sizeof(g_audio));
-    g_audio.dmaPtr[0]->unk32 = (int)UCACHED(&g_audio);
+    g_audio.dmaPtr[0]->uiSrcAddr = (int)UCACHED(&g_audio);
     g_audio.unkCodecArg = 1;
     g_audio.unkCodecArgSet = 0;
     g_audio.inputInited = 0;
@@ -1017,7 +1017,7 @@ int audioIntrHandler()
         {
             // 1A8C
             sceKernelDmaOpQuit(g_audio.dmaPtr[0]);
-            g_audio.dmaPtr[0]->unk32 = (u32)UCACHED(g_audio.buf240 + 16);
+            g_audio.dmaPtr[0]->uiSrcAddr = (u32)UCACHED(g_audio.buf240 + 16);
         }
         // 1A1C
         if ((hwAttr & 2) != 0)
@@ -1455,9 +1455,9 @@ s32 audioInputThread()
             sceKernelExitThread(0);
             return 0;
         }
-        SceDmaOp *ptr1 = g_audio.dmaPtr[2];
+        sceKernelDmaOperation *ptr1 = g_audio.dmaPtr[2];
         int curSampleCount = g_audio.inputCurSampleCnt;
-        int unk = (ptr1->unk36 < (0x80000000 + (u32)&g_audio.buf752[16])); // yes, it's correct, it reverses the kernel mode
+        int unk = (ptr1->uiDestAddr < (0x80000000 + (u32)&g_audio.buf752[16])); // yes, it's correct, it reverses the kernel mode
         short *uncached1 = KUNCACHED(&g_audio.buf512[unk << 8]);
         char unk2 = g_audio.inputHwFreq;
         u16 *ptr3 = g_audio.inputBuf;
