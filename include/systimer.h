@@ -29,7 +29,7 @@
  * 
  * Typically returns -1. 
  */
-typedef s32 (*SceSysTimerCb)(s32 timerId, s32 count, void *common, s32 unk);
+typedef s32 (*SceSTimerCb)(s32 timerId, u32 count, void *common, u32);
 
 /**
  * Obtain a hardware timer. Cannot be called from an interrupt handler. 
@@ -112,7 +112,7 @@ s32 sceSTimerSetPrscl(s32 timerId, s32 numerator, s32 denominator);
  * 
  * @return SCE_ERROR_OK on success. 
  */
-s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSysTimerCb timeUpHandler, void *common);
+s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSTimerCb timeUpHandler, void *common);
 
 /**
  * Unknown purpose.
