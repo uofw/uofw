@@ -66,7 +66,7 @@ SceJumpFixup jumpFixups[INIT_PATCH_GAMES_NUM] = {
 
 void patchGames(void)
 {   
-    SceKernelGameInfo *gameInfo;
+    SceGameInfo *gameInfo;
     s32 lastStrcpyOp, lastWcscpyOp;
     
     gameInfo = sceKernelGetGameInfo();
@@ -78,7 +78,7 @@ void patchGames(void)
     
     s32 j;
     for (j = 0; j < INIT_PATCH_GAMES_NUM; j++) {
-        if (strcmp(gameInfo->gameId, jumpFixups[j].gameId) == 0) {
+        if (strcmp((char*)gameInfo->param_product_string, jumpFixups[j].gameId) == 0) {
             s32 i;
             for (i = 0; i < jumpFixups[j].numStrcpy256; i++) {
                 s32 *ptr = jumpFixups[j].strcpy256[i];

@@ -8,7 +8,7 @@ extern u32 gSysmemModel;
 void sub_A1E8(void);
 
 void InitGameInfo(void);
-void CopyGameInfo(SceKernelGameInfo *info);
+void CopyGameInfo(SceGameInfo *info);
 
 #endif
 

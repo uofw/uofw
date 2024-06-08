@@ -130,7 +130,7 @@ void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHPara
         hwOpt->curArgs++;
     }
 
-    SceKernelGameInfo *info = sceKernelGetGameInfo();
+    SceGameInfo *info = sceKernelGetGameInfo();
     if (info->flags != 0) {
         hwOpt->args[hwOpt->curArgs].argp = info;
         hwOpt->args[hwOpt->curArgs].args = sizeof *info;

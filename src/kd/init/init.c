@@ -802,8 +802,8 @@ static void InitThreadEntry(SceSize args, void *argp)
                 for (j = 0; j < sizeof opnssmpFile; j++)
                     ((char *)opnssmpFile)[j] = ~((char *)opnssmpFile)[j];
                     
-                SceKernelGameInfo *gameInfo = sceKernelGetGameInfo();
-                void *argp = (void *)gameInfo->unk216;
+                SceGameInfo *gameInfo = sceKernelGetGameInfo();
+                void *argp = (void *)gameInfo->param_opnssmp_ver; // TODO: suspicious
                 SceIoStat stat;
                 if (argp != NULL && sceIoGetstat((char *)opnssmpFile, &stat) >= SCE_ERROR_OK) {
                     SceUID modId = sceKernelLoadModule((char *)opnssmpFile, 0, NULL);
