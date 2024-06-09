@@ -492,7 +492,7 @@ typedef struct {
 static s32 _sceCtrlSysEventHandler(s32 eventId, char *eventName, void *param, s32 *result);
 static SceUInt _sceCtrlDummyAlarm(void *common);
 static s32 _sceCtrlVblankIntr(s32 subIntNm, void *arg);
-static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4);
+static s32 _sceCtrlTimerIntr(s32 timerId, u32 count, void *common, u32 arg4);
 static s32 _sceCtrlSysconCmdIntr1(SceSysconPacket *sysPacket, void *argp);
 static s32 _sceCtrlSysconCmdIntr2(SceSysconPacket *packet, void *argp);
 static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY);
@@ -1354,7 +1354,7 @@ static s32 _sceCtrlVblankIntr(s32 subIntNm, void *arg)
  *
  * Returns -1.
  */
-static s32 _sceCtrlTimerIntr(s32 timerId, s32 count, void *common, s32 arg4) 
+static s32 _sceCtrlTimerIntr(s32 timerId, u32 count, void *common, u32 arg4) 
 {
     u8 sysconCtrlCmd;
     s32 intrState;
