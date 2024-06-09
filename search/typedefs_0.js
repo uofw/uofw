@@ -11,9 +11,9 @@ var searchData=
   ['scekernelrebootbeforeforkernel_1897',['SceKernelRebootBeforeForKernel',['../group__Loadcore.html#ga2b68f13bd4ce0515ad12e9f4070e9eee',1,'loadcore.h']]],
   ['scemodule_1898',['SceModule',['../group__Loadcore.html#ga806bc64aec4542b8124be1bdabeb3171',1,'loadcore.h']]],
   ['sceresidentlibrary_1899',['SceResidentLibrary',['../group__Loadcore.html#ga7fb57d9ee94fb89a38d4414a2e0f5be3',1,'loadcore.h']]],
-  ['scestublibrary_1900',['SceStubLibrary',['../group__Loadcore.html#ga8d84ed44924ae2920dcce64218d8f4d5',1,'loadcore.h']]],
-  ['scesyscalltable_1901',['SceSyscallTable',['../group__Loadcore.html#gadf6323976d45049ee925c9db6df1aa10',1,'loadcore.h']]],
-  ['scesysconfunc_1902',['SceSysconFunc',['../group__Syscon.html#ga59948b4b612025cdd341f06fd2cf0f20',1,'syscon.h']]],
-  ['scesysconpacket_1903',['SceSysconPacket',['../group__Syscon.html#ga36da9ee4f1f3b31758be9ec833c8a6b0',1,'syscon.h']]],
-  ['scesystimercb_1904',['SceSysTimerCb',['../group__SystemTimer.html#gaa0229af8e8e15537130b01752a51d147',1,'systimer.h']]]
+  ['scestimercb_1900',['SceSTimerCb',['../group__SystemTimer.html#ga7916e458fc3867e5d1bd16386621bd54',1,'systimer.h']]],
+  ['scestublibrary_1901',['SceStubLibrary',['../group__Loadcore.html#ga8d84ed44924ae2920dcce64218d8f4d5',1,'loadcore.h']]],
+  ['scesyscalltable_1902',['SceSyscallTable',['../group__Loadcore.html#gadf6323976d45049ee925c9db6df1aa10',1,'loadcore.h']]],
+  ['scesysconfunc_1903',['SceSysconFunc',['../group__Syscon.html#ga59948b4b612025cdd341f06fd2cf0f20',1,'syscon.h']]],
+  ['scesysconpacket_1904',['SceSysconPacket',['../group__Syscon.html#ga36da9ee4f1f3b31758be9ec833c8a6b0',1,'syscon.h']]]
 ];

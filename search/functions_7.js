@@ -233,7 +233,7 @@ var searchData=
   ['scestimerfree_1409',['sceSTimerFree',['../group__SystemTimer.html#gad21aa3eb40d988f11271189048c28658',1,'systimer.h']]],
   ['scestimergetcount_1410',['sceSTimerGetCount',['../group__SystemTimer.html#gacfeced72bc885c9f996af057cd445c5a',1,'systimer.h']]],
   ['scestimerresetcount_1411',['sceSTimerResetCount',['../group__SystemTimer.html#ga5f9a1d68ec79da1cc0d722f9bbe3b84e',1,'systimer.h']]],
-  ['scestimersethandler_1412',['sceSTimerSetHandler',['../group__SystemTimer.html#ga0915d3a75aea194789ad651f954a7114',1,'systimer.h']]],
+  ['scestimersethandler_1412',['sceSTimerSetHandler',['../group__SystemTimer.html#ga08140b80b13cd69628dc16fd08392020',1,'systimer.h']]],
   ['scestimersetprscl_1413',['sceSTimerSetPrscl',['../group__SystemTimer.html#ga4d845f8370853f09b616caca5689ca94',1,'systimer.h']]],
   ['scestimersettmcy_1414',['sceSTimerSetTMCY',['../group__SystemTimer.html#gafe4d49a86307eae9334c3e476bddae65',1,'systimer.h']]],
   ['scestimerstartcount_1415',['sceSTimerStartCount',['../group__SystemTimer.html#gaeb5efad503c2ee6857338a10f2abb089',1,'systimer.h']]],

@@ -79,7 +79,7 @@ $(function() {
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#ifndef SYSTIMER_H</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#define SYSTIMER_H</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#gaa0229af8e8e15537130b01752a51d147">   32</a></span>&#160;<span class="keyword">typedef</span> s32 (*<a class="code" href="group__SystemTimer.html#gaa0229af8e8e15537130b01752a51d147">SceSysTimerCb</a>)(s32 timerId, s32 count, <span class="keywordtype">void</span> *common, s32 unk);</div>
+<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#ga7916e458fc3867e5d1bd16386621bd54">   32</a></span>&#160;<span class="keyword">typedef</span> s32 (*<a class="code" href="group__SystemTimer.html#ga7916e458fc3867e5d1bd16386621bd54">SceSTimerCb</a>)(s32 timerId, u32 count, <span class="keywordtype">void</span> *common, u32);</div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
 <div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#gaf3cfe953fef7b49b17a07a4472bf7eb6">   39</a></span>&#160;s32 <a class="code" href="group__SystemTimer.html#gaf3cfe953fef7b49b17a07a4472bf7eb6">sceSTimerAlloc</a>(<span class="keywordtype">void</span>);</div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
@@ -95,16 +95,16 @@ $(function() {
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
 <div class="line"><a name="l00098"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#ga4d845f8370853f09b616caca5689ca94">   98</a></span>&#160;s32 <a class="code" href="group__SystemTimer.html#ga4d845f8370853f09b616caca5689ca94">sceSTimerSetPrscl</a>(s32 timerId, s32 numerator, s32 denominator);</div>
 <div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160; </div>
-<div class="line"><a name="l00115"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#ga0915d3a75aea194789ad651f954a7114">  115</a></span>&#160;s32 <a class="code" href="group__SystemTimer.html#ga0915d3a75aea194789ad651f954a7114">sceSTimerSetHandler</a>(s32 timerId, s32 compareValue, <a class="code" href="group__SystemTimer.html#gaa0229af8e8e15537130b01752a51d147">SceSysTimerCb</a> timeUpHandler, <span class="keywordtype">void</span> *common);</div>
+<div class="line"><a name="l00115"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#ga08140b80b13cd69628dc16fd08392020">  115</a></span>&#160;s32 <a class="code" href="group__SystemTimer.html#ga08140b80b13cd69628dc16fd08392020">sceSTimerSetHandler</a>(s32 timerId, s32 compareValue, <a class="code" href="group__SystemTimer.html#ga7916e458fc3867e5d1bd16386621bd54">SceSTimerCb</a> timeUpHandler, <span class="keywordtype">void</span> *common);</div>
 <div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160; </div>
 <div class="line"><a name="l00125"></a><span class="lineno"><a class="line" href="group__SystemTimer.html#gafe4d49a86307eae9334c3e476bddae65">  125</a></span>&#160;s32 <a class="code" href="group__SystemTimer.html#gafe4d49a86307eae9334c3e476bddae65">sceSTimerSetTMCY</a>(s32 timerId, s32 arg1);</div>
 <div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160; </div>
 <div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* SYSTIMER_H */</span><span class="preprocessor"></span></div>
 <div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160; </div>
-<div class="ttc" id="agroup__SystemTimer_html_ga0915d3a75aea194789ad651f954a7114"><div class="ttname"><a href="group__SystemTimer.html#ga0915d3a75aea194789ad651f954a7114">sceSTimerSetHandler</a></div><div class="ttdeci">s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSysTimerCb timeUpHandler, void *common)</div></div>
+<div class="ttc" id="agroup__SystemTimer_html_ga08140b80b13cd69628dc16fd08392020"><div class="ttname"><a href="group__SystemTimer.html#ga08140b80b13cd69628dc16fd08392020">sceSTimerSetHandler</a></div><div class="ttdeci">s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSTimerCb timeUpHandler, void *common)</div></div>
 <div class="ttc" id="agroup__SystemTimer_html_ga4d845f8370853f09b616caca5689ca94"><div class="ttname"><a href="group__SystemTimer.html#ga4d845f8370853f09b616caca5689ca94">sceSTimerSetPrscl</a></div><div class="ttdeci">s32 sceSTimerSetPrscl(s32 timerId, s32 numerator, s32 denominator)</div></div>
 <div class="ttc" id="agroup__SystemTimer_html_ga5f9a1d68ec79da1cc0d722f9bbe3b84e"><div class="ttname"><a href="group__SystemTimer.html#ga5f9a1d68ec79da1cc0d722f9bbe3b84e">sceSTimerResetCount</a></div><div class="ttdeci">s32 sceSTimerResetCount(s32 timerId)</div></div>
-<div class="ttc" id="agroup__SystemTimer_html_gaa0229af8e8e15537130b01752a51d147"><div class="ttname"><a href="group__SystemTimer.html#gaa0229af8e8e15537130b01752a51d147">SceSysTimerCb</a></div><div class="ttdeci">s32(* SceSysTimerCb)(s32 timerId, s32 count, void *common, s32 unk)</div><div class="ttdef"><b>Definition:</b> systimer.h:32</div></div>
+<div class="ttc" id="agroup__SystemTimer_html_ga7916e458fc3867e5d1bd16386621bd54"><div class="ttname"><a href="group__SystemTimer.html#ga7916e458fc3867e5d1bd16386621bd54">SceSTimerCb</a></div><div class="ttdeci">s32(* SceSTimerCb)(s32 timerId, u32 count, void *common, u32)</div><div class="ttdef"><b>Definition:</b> systimer.h:32</div></div>
 <div class="ttc" id="agroup__SystemTimer_html_gabb0746e92a8802b01dc7df46ed54242b"><div class="ttname"><a href="group__SystemTimer.html#gabb0746e92a8802b01dc7df46ed54242b">sceSTimerStopCount</a></div><div class="ttdeci">s32 sceSTimerStopCount(s32 timerId)</div></div>
 <div class="ttc" id="agroup__SystemTimer_html_gacfeced72bc885c9f996af057cd445c5a"><div class="ttname"><a href="group__SystemTimer.html#gacfeced72bc885c9f996af057cd445c5a">sceSTimerGetCount</a></div><div class="ttdeci">s32 sceSTimerGetCount(s32 timerId, s32 *count)</div></div>
 <div class="ttc" id="agroup__SystemTimer_html_gad21aa3eb40d988f11271189048c28658"><div class="ttname"><a href="group__SystemTimer.html#gad21aa3eb40d988f11271189048c28658">sceSTimerFree</a></div><div class="ttdeci">s32 sceSTimerFree(s32 timerId)</div></div>
@@ -114,7 +114,7 @@ $(function() {
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat May 25 2024 14:18:18 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Sun Jun 9 2024 20:28:03 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>
