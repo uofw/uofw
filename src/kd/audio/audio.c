@@ -1459,7 +1459,7 @@ s32 audioInputThread()
         int curSampleCount = g_audio.inputCurSampleCnt;
         int unk = (ptr1->uiDestAddr < (0x80000000 + (u32)&g_audio.buf752[16])); // yes, it's correct, it reverses the kernel mode
         short *uncached1 = KUNCACHED(&g_audio.buf512[unk << 8]);
-        char unk2 = g_audio.inputHwFreq;
+        u8 inputHwFreq = g_audio.inputHwFreq;
         u16 *ptr3 = g_audio.inputBuf;
         if (curSampleCount == 0)
         {
@@ -1482,26 +1482,26 @@ s32 audioInputThread()
         {
             if (ptr3 != NULL)
             {
-                uncached1 = (g_audio.unkCodecRet != 0) ? uncached1 : uncached1 + 1;
+                uncached1 = (g_audio.unkCodecRet != 0) ? uncached1 + 1 : uncached1;
                 // 24F4
                 int i;
-                for (i = 128; i > 0; i -= unk2)
+                for (i = 128; i > 0; i -= inputHwFreq)
                 {
                     int v = uncached1[0];
-                    if (unk2 >= 4)
+                    if (inputHwFreq >= 4)
                     {
                         v += uncached1[2];
-                        if (unk2 >= 8)
+                        if (inputHwFreq >= 8)
                             v += uncached1[4] + uncached1[6];
                     }
                     // 251C
-                    *(ptr3++) = v >> ((unk2 >> 2) & 0x1F);
-                    uncached1 += unk2;
+                    *(ptr3++) = v >> ((inputHwFreq >> 2) & 0x1F);
+                    uncached1 += inputHwFreq;
                 }
                 g_audio.inputBuf = ptr3;
             }
             // 2538
-            curSampleCount -= (0x40 >> ((unk2 >> 2) & 0x1F));
+            curSampleCount -= (0x40 >> ((inputHwFreq >> 2) & 0x1F));
             if (curSampleCount <= 0)
             {
                 // 2630
