@@ -1,31 +1,18 @@
 #include <common_imp.h>
+#include <sysmem_suspend_kernel.h>
 
 #include "intr.h"
 
 typedef struct
 {
-    int size; // 0
-    int (*tick)(int); // 4
-    int (*lock)(int); // 8
-    int (*unlock)(int); // 12
-    int (*lockForUser)(int); // 16
-    int (*unlockForUser)(int); // 20
-    int (*rebootStart)(int); // 24
-    int (*memLock)(int, void**, int*); // 28
-    int (*memTryLock)(int, void**, int*); // 32
-    int (*memUnlock)(int); // 36
-} ScePowerHandlers;
-
-typedef struct
-{
-    int (*handler)(int unk, void* param);
+    s32 (*handler)(s32 unk, void* param);
     int gp;
     void *param;
 } SceSuspendHandler;
 
 typedef struct
 {
-    int (*handler)(int unk, void* param);
+    s32 (*handler)(s32 unk, void* param);
     int gp;
     void *param;
 } SceResumeHandler;
@@ -51,13 +38,13 @@ int sceKernelSuspendInit(void)
     return 0;
 }
 
-int sceKernelRegisterPowerHandlers(ScePowerHandlers *handlers)
+int sceKernelRegisterPowerHandlers(const ScePowerHandlers *handlers)
 {
-    g_pPowerHandlers = handlers;
+    g_pPowerHandlers = (ScePowerHandlers *)handlers;
     return g_iTempPowerLock;
 }
 
-int sceKernelPowerLock(int unk)
+s32 sceKernelPowerLock(s32 unk)
 {
     if (g_pPowerHandlers == NULL)
     {
@@ -70,14 +57,14 @@ int sceKernelPowerLock(int unk)
     return g_pPowerHandlers->lock(unk);
 }
 
-int sceKernelPowerLockForUser(int unk)
+s32 sceKernelPowerLockForUser(s32 unk)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->lockForUser(unk);
     return 0;
 }
 
-int sceKernelPowerUnlock(int unk)
+s32 sceKernelPowerUnlock(s32 unk)
 {
     if (g_pPowerHandlers == NULL)
     {
@@ -90,7 +77,7 @@ int sceKernelPowerUnlock(int unk)
     return g_pPowerHandlers->unlock(unk);
 }
 
-int sceKernelPowerUnlockForUser(int unk)
+s32 sceKernelPowerUnlockForUser(s32 unk)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->unlockForUser(unk);
@@ -106,14 +93,14 @@ int sceKernelPowerTick(int unk)
     return 0;
 }
 
-int sceKernelVolatileMemLock(int unk, void **ptr, int *size)
+int sceKernelVolatileMemLock(int unk, void **ptr, SceSize *size)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->memLock(unk, ptr, size);
     return -1;
 }
 
-int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size)
+int sceKernelVolatileMemTryLock(int unk, void **ptr, SceSize *size)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->memTryLock(unk, ptr, size);
@@ -127,14 +114,14 @@ int sceKernelVolatileMemUnlock(int unk)
     return -1;
 }
 
-int sceKernelPowerRebootStart(int unk)
+s32 sceKernelPowerRebootStart(s32 unk)
 {
     if (g_pPowerHandlers != NULL)
         return g_pPowerHandlers->rebootStart(unk);
     return 0;
 }
 
-int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param)
+s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;
@@ -147,7 +134,7 @@ int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param
     return 0;
 }
 
-int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *param)
+s32 sceKernelRegisterResumeHandler(s32 reg, s32 (*handler)(s32, void*), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;

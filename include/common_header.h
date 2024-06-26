@@ -9,6 +9,7 @@
 
 #define COMMON_INCLUDED
 
+#include "common/constant.h"
 #include "common/errors.h"
 #include "common/types.h"
 
