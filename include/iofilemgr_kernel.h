@@ -229,8 +229,7 @@ struct SceIoIob
     void *i_private; // 16
     struct SceIoCwd *i_cwd; // 20
     SceOff i_fpos; // 24
-    SceUID i_thread; // 28
-    int dummy; // 32
+    SceUID i_thread; // 32
     // note: structure stops here in dwarf data from the official SDK
     // it might mean the next fields are only supposed to be accessed
     // by iofilemgr and not fs implementations
