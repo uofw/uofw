@@ -1520,7 +1520,7 @@ s32 audioInputThread()
                 int *uncached3 = (int*)KUNCACHED(&g_audio.hwBuf[38 + shift]);
                 *uncached3 = 0;
                 *uncached2 = (int)UCACHED(&g_audio.hwBuf[36 + shift]);
-                if (DmacManForKernel_E18A93A5(ptr1, UCACHED(&g_audio.hwBuf[32 + shift])) < 0)
+                if (sceKernelDmaOpConcatenate(ptr1, UCACHED(&g_audio.hwBuf[32 + shift])) < 0)
                 {
                     HW(0xBE000004) = (int)(char)(g_audio.flags & 0xFB);
                     g_audio.flags &= 0xFB;

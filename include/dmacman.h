@@ -83,5 +83,5 @@ int sceKernelDmaOpEnQueue(sceKernelDmaOperation*);
 int sceKernelDmaOpDeQueue(sceKernelDmaOperation*);
 sceKernelDmaOperation *sceKernelDmaOpAlloc(void);
 s32 sceKernelDmaOpFree(sceKernelDmaOperation*);
-int DmacManForKernel_E18A93A5(void*, void*);
+int sceKernelDmaOpConcatenate(sceKernelDmaOperation*, void*);
 
