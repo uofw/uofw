@@ -64,7 +64,7 @@ typedef struct
     /* The audio flags. */
     u8 flags; // 1364
     /* The volume offset. */
-    u8 volumeOffset; // 1365
+    s8 volumeOffset; // 1365
     u8 delayShift; // 1366
     u8 padding1; // 1367
     u16 srcChFreq; // 1368
@@ -503,7 +503,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
     dbg_printf("Running %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
-    if ((leftVol > 0xFFFF) || (rightVol > 0xFFFF))
+    if (((u32)leftVol > 0xFFFF) || ((u32)rightVol > 0xFFFF))
     {
         // 0E30
         sceKernelCpuResumeIntr(oldIntr);
@@ -695,14 +695,14 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     }
     // 1164
-    if (sceKernelGetCompiledSdkVersion() > 0x01FFFFFF) {
-        if (chan->curSampleCnt != 0 && chan->buf != NULL) {
+    if ((int)sceKernelGetCompiledSdkVersion() < 0x2000000) {
+        if (chan->curSampleCnt != 0) {
             // 116C
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
             return SCE_AUDIO_ERROR_OUTPUT_BUSY;
         }
-    } else if (chan->curSampleCnt != 0) {
+    } else if (chan->curSampleCnt != 0 && chan->buf != NULL) {
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
@@ -1320,7 +1320,7 @@ int sceAudioSRCChRelease(void)
 int sceAudioSRCOutputBlocking(int vol, void *buf)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
-    if (vol > 0xFFFFF)
+    if ((u32)vol > 0xFFFFF)
         return SCE_AUDIO_ERROR_INVALID_VOLUME;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, g_audio.srcChSampleCnt * g_audio.numChans))
@@ -1336,17 +1336,13 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
     {
         // 2190
         int ret2 = sceKernelWaitEventFlag(g_audio.evFlagId, 0x40000000, 32, 0, 0);
-        ret = (ret2 < 0) ? ret : ret2;
+        ret = (ret2 < 0) ? ret2 : ret;
     }
     // 21AC
     int ret2 = sceCodec_driver_FC355DE0();
-    if (ret2 == 0) {
+    if (ret2 == 0 || g_audio.freq == ret2) {
         pspSetK1(oldK1);
-        return 0;
-    }
-    if (g_audio.freq == ret2) {
-        pspSetK1(oldK1);
-        return ret2;
+        return ret;
     }
     sceAudioSetFrequency(ret2);
     oldIntr = sceKernelCpuSuspendIntr();
@@ -1390,8 +1386,8 @@ int audioSRCOutput(int vol, void *buf)
     // 2300
     int samplesHi = (numSamples > 16396) ? (numSamples - 16380) : 16;
     int diff = numSamples - samplesHi;
-    int k1 = pspGetK1();
-    void *newBuf = (void*)((((k1 >> 31) << 30) & 0xE0000000) | (u32)UCACHED(buf));
+    u32 k1 = pspGetK1();
+    void *newBuf = (void*)(((k1 >> 31) << 30) | (u32)UCACHED(buf));
     ptr[3] = (diff      >> 2) | 0x04489000;
     ptr[2] = ((int)(void*)ptr & 0x1FFFFFFF) + 16;
     ptr[4] = (u32)newBuf + diff;
@@ -1407,12 +1403,12 @@ int audioSRCOutput(int vol, void *buf)
     }
     else
     {
-        *(int*)(((int)(void*)ptr ^ 0x20) + 24) = (u32)ptr;
+        *(int*)(((int)(void*)ptr ^ 0x20) + 24) = (u32)UCACHED(ptr);
         wait = 0;
         sceDdrFlush(4);
     }
     // 2384
-    int volHi = vol >> 5;
+    int volHi = (u32)vol >> 5;
     if (g_audio.srcVol != volHi)
     {
         // 23C4
@@ -1764,7 +1760,7 @@ int audioInput(int sampleCount, int freq, void *buf)
     if (g_audio.unkCodecArgSet != 0)
     {
         // 2BB0
-        int ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
+        ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
         if (ret >= 0)
         {
             g_audio.unkCodecRet = ret & 1;
@@ -1808,7 +1804,7 @@ int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
     if (ret < 0)
         return ret;
     g_audio.unkCodecRet = ret & 1;
-    sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
+    ret = sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
     if (ret < 0)
         return ret;
     g_audio.inputInited = 1;
@@ -1832,4 +1828,3 @@ int audioInputDmaCb(int arg0, int arg1)
     sceKernelSetEventFlag(g_audio.evFlagId, 0x80000000);
     return 0;
 }
-

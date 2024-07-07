@@ -16,13 +16,13 @@ static inline int pspGetK0(void)
 static inline int pspGetK1(void)
 {
     int ret;
-    asm("move %0, $k1" : "=r" (ret));
+    asm __volatile__("move %0, $k1" : "=r" (ret));
     return ret;
 }
 
 static inline void pspSetK1(int k1)
 {
-    asm("move $k1, %0" : : "r" (k1));
+    asm __volatile__("move $k1, %0" : : "r" (k1));
 }
 
 static inline int pspShiftK1(void)
