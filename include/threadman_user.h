@@ -26,6 +26,7 @@ s32 _sceKernelLockLwMutex(SceLwMutex *mutex, s32 count);
 s32 _sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count);
 s32 sceKernelReferLwMutexStatusByID(s32 id, u32 *addr);
 s32 _sceKernelAllocateTlspl(s32, void*, s32);
+s32 sceKernelCheckThreadStack(void);
 
 #endif /* THREADMAN_USER_H */
 
