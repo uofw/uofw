@@ -5,24 +5,26 @@
 #ifndef __RTC_H__
 #define __RTC_H__
 
+#include "common_header.h"
+
 typedef struct {
-	u16 year;
-	u16 month;
-	u16 day;
-	u16 hour;
-	u16 minutes;
-	u16 seconds;
-	u32 microseconds;
+    u16 year;
+    u16 month;
+    u16 day;
+    u16 hour;
+    u16 minutes;
+    u16 seconds;
+    u32 microseconds;
 } pspTime;
 
 enum pspRtcCheckValidErrors {
-	PSP_TIME_INVALID_YEAR = -1,
-	PSP_TIME_INVALID_MONTH = -2,
-	PSP_TIME_INVALID_DAY = -3,
-	PSP_TIME_INVALID_HOUR = -4,
-	PSP_TIME_INVALID_MINUTES = -5,
-	PSP_TIME_INVALID_SECONDS = -6,
-	PSP_TIME_INVALID_MICROSECONDS = -7
+    PSP_TIME_INVALID_YEAR = -1,
+    PSP_TIME_INVALID_MONTH = -2,
+    PSP_TIME_INVALID_DAY = -3,
+    PSP_TIME_INVALID_HOUR = -4,
+    PSP_TIME_INVALID_MINUTES = -5,
+    PSP_TIME_INVALID_SECONDS = -6,
+    PSP_TIME_INVALID_MICROSECONDS = -7
 };
 
 /**
@@ -69,7 +71,7 @@ s32 sceRtcGetCurrentClockLocalTime(pspTime *time);
  * @param tickLocal - pointer to u64 to receive tick in local time
  * @return 0 on success, < 0 on error
  */
-void sceRtcConvertUtcToLocalTime(u64* tickUTC, const u64* tickLocal);
+void sceRtcConvertUtcToLocalTime(u64 *tickUTC, const u64 *tickLocal);
 
 /**
  * Convert a local time based tickcount into a UTC-based tick count
@@ -78,7 +80,7 @@ void sceRtcConvertUtcToLocalTime(u64* tickUTC, const u64* tickLocal);
  * @param tickUTC - pointer to u64 to receive tick in UTC based time
  * @return 0 on success, < 0 on error
  */
-void sceRtcConvertLocalTimeToUTC(const u64* tickLocal, u64* tickUTC);
+void sceRtcConvertLocalTimeToUTC(const u64 *tickLocal, u64 *tickUTC);
 
 /**
  * Check if a year is a leap year
@@ -113,7 +115,7 @@ s32 sceRtcGetDayOfWeek(int year, int month, int day);
  * @param date - pointer to pspDate struct to be checked
  * @return 0 on success, one of ::CheckValidErrors on error
  */
-s32 sceRtcCheckValid(const pspTime* date);
+s32 sceRtcCheckValid(const pspTime *date);
 
 /**
  * Set a pspTime struct based on ticks
@@ -122,7 +124,7 @@ s32 sceRtcCheckValid(const pspTime* date);
  * @param tick - pointer to ticks to convert
  * @return 0 on success, < 0 on error
  */
-s32 sceRtcSetTick(pspTime* date, const u64* tick);
+s32 sceRtcSetTick(pspTime *date, const u64 *tick);
 
 /**
  * Set ticks based on a pspTime struct
@@ -131,7 +133,7 @@ s32 sceRtcSetTick(pspTime* date, const u64* tick);
  * @param tick - pointer to tick to set
  * @return 0 on success, < 0 on error
  */
-s32 sceRtcGetTick(const pspTime* date, u64 *tick);
+s32 sceRtcGetTick(const pspTime *date, u64 *tick);
 
 /**
  * Compare two ticks
@@ -140,7 +142,7 @@ s32 sceRtcGetTick(const pspTime* date, u64 *tick);
  * @param tick2 - poiinter to second tick
  * @return 0 on equal, <0 when tick1 < tick2, >0 when tick1 > tick2
  */
-s32 sceRtcCompareTick(const u64* tick1, const u64* tick2);
+s32 sceRtcCompareTick(const u64 *tick1, const u64 *tick2);
 
 /**
  * Add two ticks
@@ -150,7 +152,7 @@ s32 sceRtcCompareTick(const u64* tick1, const u64* tick2);
  * @param numTicks - number of ticks to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddTicks(u64* destTick, const u64* srcTick, u64 numTicks);
+s32 sceRtcTickAddTicks(u64 *destTick, const u64 *srcTick, u64 numTicks);
 
 /**
  * Add an amount of ms to a tick
@@ -160,7 +162,7 @@ s32 sceRtcTickAddTicks(u64* destTick, const u64* srcTick, u64 numTicks);
  * @param numMS - number of ms to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddMicroseconds(u64* destTick, const u64* srcTick, u64 numMS);
+s32 sceRtcTickAddMicroseconds(u64 *destTick, const u64 *srcTick, u64 numMS);
 
 /**
  * Add an amount of seconds to a tick
@@ -170,7 +172,7 @@ s32 sceRtcTickAddMicroseconds(u64* destTick, const u64* srcTick, u64 numMS);
  * @param numSecs - number of seconds to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddSeconds(u64* destTick, const u64* srcTick, u64 numSecs);
+s32 sceRtcTickAddSeconds(u64 *destTick, const u64 *srcTick, u64 numSecs);
 
 /**
  * Add an amount of minutes to a tick
@@ -180,7 +182,7 @@ s32 sceRtcTickAddSeconds(u64* destTick, const u64* srcTick, u64 numSecs);
  * @param numMins - number of minutes to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddMinutes(u64* destTick, const u64* srcTick, u64 numMins);
+s32 sceRtcTickAddMinutes(u64 *destTick, const u64 *srcTick, u64 numMins);
 
 /**
  * Add an amount of hours to a tick
@@ -190,7 +192,7 @@ s32 sceRtcTickAddMinutes(u64* destTick, const u64* srcTick, u64 numMins);
  * @param numHours - number of hours to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddHours(u64* destTick, const u64* srcTick, int numHours);
+s32 sceRtcTickAddHours(u64 *destTick, const u64 *srcTick, int numHours);
 
 /**
  * Add an amount of days to a tick
@@ -200,7 +202,7 @@ s32 sceRtcTickAddHours(u64* destTick, const u64* srcTick, int numHours);
  * @param numDays - number of days to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddDays(u64* destTick, const u64* srcTick, int numDays);
+s32 sceRtcTickAddDays(u64 *destTick, const u64 *srcTick, int numDays);
 
 /**
  * Add an amount of weeks to a tick
@@ -210,7 +212,7 @@ s32 sceRtcTickAddDays(u64* destTick, const u64* srcTick, int numDays);
  * @param numWeeks - number of weeks to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddWeeks(u64* destTick, const u64* srcTick, int numWeeks);
+s32 sceRtcTickAddWeeks(u64 *destTick, const u64 *srcTick, int numWeeks);
 
 
 /**
@@ -221,7 +223,7 @@ s32 sceRtcTickAddWeeks(u64* destTick, const u64* srcTick, int numWeeks);
  * @param numMonths - number of months to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddMonths(u64* destTick, const u64* srcTick, int numMonths);
+s32 sceRtcTickAddMonths(u64 *destTick, const u64 *srcTick, int numMonths);
 
 /**
  * Add an amount of years to a tick
@@ -231,14 +233,14 @@ s32 sceRtcTickAddMonths(u64* destTick, const u64* srcTick, int numMonths);
  * @param numYears - number of years to add
  * @return 0 on success, <0 on error
  */
-s32 sceRtcTickAddYears(u64* destTick, const u64* srcTick, int numYears);
+s32 sceRtcTickAddYears(u64 *destTick, const u64 *srcTick, int numYears);
 
 //s32 sceRtcSetTime_t(pspTime* date, const time_t time);
 //s32 sceRtcGetTime_t(const pspTime* date, time_t *time);
-s32 sceRtcSetDosTime(pspTime* date, u32 dosTime);
-s32 sceRtcGetDosTime(pspTime* date, u32 dosTime);
-s32 sceRtcSetWin32FileTime(pspTime* date, u64* win32Time);
-s32 sceRtcGetWin32FileTime(pspTime* date, u64* win32Time);
+s32 sceRtcSetDosTime(pspTime *date, u32 dosTime);
+s32 sceRtcGetDosTime(pspTime *date, u32 dosTime);
+s32 sceRtcSetWin32FileTime(pspTime *date, u64 *win32Time);
+s32 sceRtcGetWin32FileTime(pspTime *date, u64 *win32Time);
 
 s32 sceRtcParseDateTime(u64 *destTick, const char *dateString);
 

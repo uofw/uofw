@@ -9,6 +9,10 @@ github-pages/
 exports.c
 /lib/libdebug.a
 /lib/build_mod.mak
+utils/basic-decompiler/basic-decompiler
+utils/build-exports/psp-build-exports
+utils/fixup-imports/psp-fixup-imports
+utils/kprxgen/psp-kprxgen
 
 ## Ignore Visual Studio project files, Visual Studio temporary files, build results.
 
@@ -42,3 +46,6 @@ ipch/
 
 # Visual Studio Code
 /.vscode
+
+# CLion
+.idea/
