@@ -12,7 +12,7 @@ var searchData=
   ['retcode_284',['retcode',['../structUsbdDeviceReq.html#a748ea1a6ef82bc9f3ae4305a89e11e19',1,'UsbdDeviceReq']]],
   ['returnaddr_285',['returnAddr',['../structSyscall.html#a4b333b694097a6c079e7124bb5801ece',1,'Syscall']]],
   ['rsrv_286',['rsrv',['../structSceCtrlData.html#a156d9837c9f6067d1fa7eb11b8668095',1,'SceCtrlData::rsrv()'],['../structSceCtrlData2.html#a157ff8483fb6e54be5a99b352beaab2d',1,'SceCtrlData2::rsrv()']]],
-  ['rx_287',['rx',['../structSceSysconPacket.html#ae9b6c4b655c3f322734fe446f0862feb',1,'SceSysconPacket']]],
-  ['rx_288',['rX',['../structSceCtrlData.html#a70254b02e1dcbfea859c4aec0ef86e94',1,'SceCtrlData::rX()'],['../structSceCtrlData2.html#a30091962412233b276906b57cca2dcd2',1,'SceCtrlData2::rX()']]],
+  ['rx_287',['rX',['../structSceCtrlData.html#a70254b02e1dcbfea859c4aec0ef86e94',1,'SceCtrlData::rX()'],['../structSceCtrlData2.html#a30091962412233b276906b57cca2dcd2',1,'SceCtrlData2::rX()']]],
+  ['rx_288',['rx',['../structSceSysconPacket.html#ae9b6c4b655c3f322734fe446f0862feb',1,'SceSysconPacket']]],
   ['ry_289',['rY',['../structSceCtrlData.html#a06179dda21edb5aa264e685bddaba50a',1,'SceCtrlData::rY()'],['../structSceCtrlData2.html#aa4b2a7045b7f89d79d2af7fa5d3576c4',1,'SceCtrlData2::rY()']]]
 ];
