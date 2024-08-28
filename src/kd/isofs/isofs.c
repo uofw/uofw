@@ -2598,8 +2598,7 @@ tryInitPaths:
             for (s32 iFile = 0; iFile < unit->fdw[iFdw].fd.filesCount; iFile++) {
                 IsofsFile *file = &unit->fdw[iFdw].fd.files[iFile];
                 if (file->flags != 0) {
-                    volatile s32 matches = memcmp(file->umdId, unit->umdId, UMD_ID_SIZE);
-                    if (matches == 0) {
+                    if (memcmp(file->umdId, unit->umdId, UMD_ID_SIZE) == 0) {
                         file->flags = file->flags & 0xf7;
                     } else {
                         file->flags = file->flags | 8;
