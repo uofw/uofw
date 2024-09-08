@@ -121,7 +121,7 @@ int resetPlayPos(SceAtracIdInfo *info, u32 sample, u32 writeByteFirstBuf, u32 wr
 int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer);
 int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info);
 int sub_3A18(u8 *buffer, u32 *curOff, u32 arg2);
-short sub_3AA0(u8 *buffer, u32 *curOff, u32 readByte);
+u16 sub_3AA0(u8 *buffer, u32 *curOff, u32 readByte);
 int sub_3B14(u8 *buffer, u32 *curOff, u32 readByte);
 int sub_3B54(u8 *buffer, u32 *curOff, u32 readByte);
 
