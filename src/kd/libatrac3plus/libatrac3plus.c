@@ -20,7 +20,7 @@ typedef struct
 } SceAtracUnk;
 
 // 3E74
-SceAtracUnk g_3E74[] __attribute__((section(".test.data"))) = {
+SceAtracUnk g_3E74[] = {
     { 0x00C0, 0x1, 0xE },
     { 0x0098, 0x1, 0xF },
     { 0x0180, 0x2, 0x4 },
@@ -29,7 +29,7 @@ SceAtracUnk g_3E74[] __attribute__((section(".test.data"))) = {
 };
 
 // 3E88
-SceAtracUnk g_3E88[] __attribute__((section(".test.data"))) = {
+SceAtracUnk g_3E88[] = {
     { 0x00C0, 0x1, 0x0 },
     { 0x1724, 0x0, 0x0 },
     { 0x0118, 0x1, 0x0 },
@@ -66,12 +66,12 @@ SceAtracUnk g_3E88[] __attribute__((section(".test.data"))) = {
     { 0xFF28, 0x0, 0x0 }
 };
 
-// 3Ef8
-u8 g_at3PlusGUID[] __attribute__((section(".test.data"))) = { 0xBF, 0xAA, 0x23, 0xE9, 0x58, 0xCB, 0x71, 0x44, 
-                   0xA1, 0x19, 0xFF, 0xFA, 0x01, 0xE4, 0xCE, 0x62 };
+// 3EF8
+u8 g_at3PlusGUID[] = { 0xBF, 0xAA, 0x23, 0xE9, 0x58, 0xCB, 0x71, 0x44, 
+                       0xA1, 0x19, 0xFF, 0xFA, 0x01, 0xE4, 0xCE, 0x62 };
 
 // 3F08
-SceAtracUnk g_3F08[] __attribute__((section(".test.data"))) = {
+SceAtracUnk g_3F08[] = {
     { 0x0180, 0x4, 0 },
     { 0x0130, 0x6, 0 },
     { 0x00C0, 0xB, 1 },
@@ -80,16 +80,16 @@ SceAtracUnk g_3F08[] __attribute__((section(".test.data"))) = {
 };
 
 // 3F80
-int g_edramAddr __attribute__((section(".test.bss"))) = -1;
+int g_edramAddr = -1;
 
 // 3FC0
-SceAtracId g_atracIds[6] __attribute__((section(".test.bss"))) __attribute__((aligned(64)));
+SceAtracId g_atracIds[6] __attribute__((aligned(64)));
 
 // 45C0
-int g_needMemAT3 __attribute__((section(".test.bss")));
+int g_needMemAT3;
 
 // 45C4
-int g_needMemAT3plus __attribute__((section(".test.bss")));
+int g_needMemAT3plus;
 
 int sceAtracReinit(int numAT3Id, int numAT3plusId)
 {
@@ -1162,18 +1162,17 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
 int readWaveData(u8 *in, u32 *curOff, int size)
 {
     u8 *curStr = in + *curOff + size;
-    u32 newOff = *curOff + size;
+    *curOff = *curOff + size;
     int result = 0;
     // 2324
     do
         result |= *(--curStr) << ((--size) * 8);
     while (size != 0);
-    *curOff = newOff;
     return result;
 }
 
 // 2348
-int __attribute__ ((noinline)) getOffFromSample(SceAtracIdInfo *info, volatile u32 sample) // TODO clean up vol.
+int getOffFromSample(SceAtracIdInfo *info, u32 sample)
 {
     u32 max = 368;
     if (info->codec == 0x1001)
@@ -1186,13 +1185,13 @@ int __attribute__ ((noinline)) getOffFromSample(SceAtracIdInfo *info, volatile u
 }
 
 // 23A4
-u32 __attribute__ ((noinline)) getSecondBufPos(SceAtracIdInfo *info, u32 arg1)
+u32 getSecondBufPos(SceAtracIdInfo *info, u32 arg1)
 {
     return ((arg1 >> (0x100B - info->codec)) + 1) * info->sampleSize + info->dataOff - 1;
 }
 
 // 23D4
-int __attribute__ ((noinline)) getFrameFromSample(SceAtracIdInfo *info, u32 sample)
+int getFrameFromSample(SceAtracIdInfo *info, u32 sample)
 {
     u32 max = 368;
     if (info->codec == 0x1001)
@@ -1435,7 +1434,7 @@ int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
     int i;
     for (i = 0; i < 14; i++)
     {
-        if (*(u16*)(curSp) == *(int*)(arg1 + 8))
+        if (*(u16*)(curSp + 0) == *(int*)(arg1 + 8))
         {
             // 28D0
             if (*(u16*)((int)curSp + 2) == *(int*)(arg1 + 0))
@@ -1699,7 +1698,7 @@ int sub_2FA8(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
     return 0;
 }
 
-u32 __attribute__ ((noinline))  sub_2FEC(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
+u32 sub_2FEC(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
 {
     u32 num = arg1 + arg2;
     if (num < arg0 && arg2 < arg3)
@@ -1791,7 +1790,7 @@ u32 sub_31B4(SceAtracIdInfo *info)
     return info->streamDataByte;
 }
 
-u32 __attribute__ ((noinline)) sub_3230(u32 arg0, u32 arg1, u32 arg2)
+u32 sub_3230(u32 arg0, u32 arg1, u32 arg2)
 {
     if (arg0 >= arg2)
         return arg2;
