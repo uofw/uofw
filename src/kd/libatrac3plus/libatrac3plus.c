@@ -12,16 +12,84 @@ SCE_SDK_VERSION(0x06060010);
 SCE_MODULE_START_THREAD_PARAMETER(3, 0x20, 0x0400, 0);
 SCE_MODULE_STOP_THREAD_PARAMETER(3, 0x20, 0x0400, 0);
 
+typedef struct
+{
+    u16 unk0;
+    char unk2;
+    char unk3;
+} SceAtracUnk;
+
+// 3E74
+SceAtracUnk g_3E74[] = {
+    { 0x00C0, 0x1, 0xE },
+    { 0x0098, 0x1, 0xF },
+    { 0x0180, 0x2, 0x4 },
+    { 0x0130, 0x2, 0x6 },
+    { 0x00C0, 0x2, 0xB }
+};
+
+// 3E88
+SceAtracUnk g_3E88[] = {
+    { 0x00C0, 0x1, 0x0 },
+    { 0x1724, 0x0, 0x0 },
+    { 0x0118, 0x1, 0x0 },
+    { 0x2224, 0x0, 0x0 },
+    { 0x0178, 0x1, 0x0 },
+    { 0x2E24, 0x0, 0x0 },
+
+    { 0x0230, 0x1, 0x0 },
+    { 0x4524, 0x0, 0x0 },
+    { 0x02E8, 0x1, 0x0 },
+    { 0x5C24, 0x0, 0x0 },
+
+    { 0x0118, 0x2, 0x0 },
+    { 0x2228, 0x0, 0x0 },
+    { 0x0178, 0x2, 0x0 },
+    { 0x2E28, 0x0, 0x0 },
+
+    { 0x0230, 0x2, 0x0 },
+    { 0x4528, 0x0, 0x0 },
+    { 0x02E8, 0x2, 0x0 },
+    { 0x5C28, 0x0, 0x0 },
+
+    { 0x03A8, 0x2, 0x0 },
+    { 0x7428, 0x0, 0x0 },
+    { 0x0460, 0x2, 0x0 },
+    { 0x8B28, 0x0, 0x0 },
+    
+    { 0x05D0, 0x2, 0x0 },
+    { 0xB928, 0x0, 0x0 },
+    { 0x0748, 0x2, 0x0 },
+    { 0xE828, 0x0, 0x0 },
+
+    { 0x0800, 0x2, 0x0 },
+    { 0xFF28, 0x0, 0x0 }
+};
+
+// 3EF8
+u8 g_at3PlusGUID[] = { 0xBF, 0xAA, 0x23, 0xE9, 0x58, 0xCB, 0x71, 0x44, 
+                       0xA1, 0x19, 0xFF, 0xFA, 0x01, 0xE4, 0xCE, 0x62 };
+
+// 3F08
+SceAtracUnk g_3F08[] = {
+    { 0x0180, 0x4, 0 },
+    { 0x0130, 0x6, 0 },
+    { 0x00C0, 0xB, 1 },
+    { 0x00C0, 0xE, 0 },
+    { 0x0098, 0xF, 0 }
+};
+
 // 3F80
 int g_edramAddr = -1;
+
+// 3FC0
+SceAtracId g_atracIds[6] __attribute__((aligned(64)));
 
 // 45C0
 int g_needMemAT3;
 
 // 45C4
 int g_needMemAT3plus;
-
-SceAtracId g_atracIds[6];
 
 int sceAtracReinit(int numAT3Id, int numAT3plusId)
 {
@@ -63,7 +131,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         int i;
         for (i = 0; i < numAT3Id + numAT3plusId; i++)
         {
-            curId->codec.edramAddr = (void *)g_edramAddr;
+            curId->codec.edramAddr = (void *)count;
             curId->codec.unk20 = 1;
             if (i >= numAT3plusId)
             {
@@ -79,7 +147,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
                 count += g_needMemAT3plus;
             }
             // 0130
-            if (g_edramAddr + 0x19000 < count)
+            if ((u32)(g_edramAddr + 0x19000) < (u32)count)
                 return SCE_ERROR_OUT_OF_MEMORY;
             curId->info.state = -1;
             curId++;
@@ -254,7 +322,7 @@ int sceAtracDecodeData(int atracID, short *outAddr, u32 *samples, u32 *finishFla
     // 07A4
     // 07BC
     int i;
-    for (i = 0; i < g_atracIds[atracID].info.numFrame; i++)
+    for (i = 0; i <= g_atracIds[atracID].info.numFrame; i++)
     {
         ret = decodeFrame(&g_atracIds[atracID], outAddr, samples, finishFlag);
         if (ret != 0) {
@@ -369,7 +437,8 @@ int sceAtracSetSecondBuffer(int atracID, u8 *secondBuffer, u32 secondBufferByte)
     int ret = isValidState(info->state);
     if (ret < 0)
         return ret;
-    if (secondBufferByte < info->sampleSize * 3 && secondBufferByte < info->dataEnd - getSecondBufPos(info, info->loopEnd) - 1)
+    u32 secondBufPos = getSecondBufPos(info, info->loopEnd);
+    if (secondBufferByte < info->sampleSize * 3 && secondBufferByte < info->dataEnd - secondBufPos - 1)
         return 0x80630011;
     if (info->state != 6)
         return 0x80630022;
@@ -609,8 +678,8 @@ int sceAtracReleaseAtracID(int atracID)
         return ret;
     // 14CC
     int oldIntr = sceKernelCpuSuspendIntr();
-    if (g_atracIds[0].info.state > 0 && g_atracIds[0].info.state != 16) {
-        g_atracIds[0].info.state = -1;
+    if (g_atracIds[atracID].info.state > 0 && g_atracIds[atracID].info.state != 16) {
+        g_atracIds[atracID].info.state = -1;
         ret = 0;
     }
     // 1510
@@ -655,7 +724,7 @@ int sceAtracGetChannel(int atracID, u32 *channel)
 
 int sceAtracGetOutputChannel(int atracID, u32 *outputChan)
 {
-    if (atracID < 0 || atracID >= 0 || g_atracIds[atracID].info.state <= 0)
+    if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
         return 0x80630005;
     if (g_atracIds[atracID].info.state == 1)
         return 0x80630010;
@@ -665,7 +734,7 @@ int sceAtracGetOutputChannel(int atracID, u32 *outputChan)
 
 int sceAtracGetMaxSample(int atracID, u32 *maxSample)
 {
-    if (atracID < 0 || atracID >= 0 || g_atracIds[atracID].info.state <= 0)
+    if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
         return 0x80630005;
     if (g_atracIds[atracID].info.state == 1)
         return 0x80630010;
@@ -675,7 +744,7 @@ int sceAtracGetMaxSample(int atracID, u32 *maxSample)
 
 int sceAtracGetBitrate(int atracID, u32 *outBitrate)
 {   
-    if (atracID < 0 || atracID >= 0 || g_atracIds[atracID].info.state <= 0)
+    if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
         return 0x80630005;
     if (g_atracIds[atracID].info.state == 1)
         return 0x80630010;
@@ -695,7 +764,7 @@ int sceAtracGetBitrate(int atracID, u32 *outBitrate)
 
 int sceAtracGetInternalErrorInfo(int atracID, int *result)
 {
-    if (atracID < 0 || atracID >= 0 || g_atracIds[atracID].info.state <= 0)
+    if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
         return 0x80630005;
     if (g_atracIds[atracID].info.state == 1)
         return 0x80630010;
@@ -716,7 +785,7 @@ SceAtracId *_sceAtracGetContextAddress(int atracID)
 int allocEdram(void)
 {
     g_atracIds[0].codec.unk40.v8.u40 = 40;
-    g_atracIds[1].codec.unk40.v8.u41 = 92;
+    g_atracIds[0].codec.unk40.v8.u41 = 92;
     int ret = sceAudiocodecCheckNeedMem(&g_atracIds[0].codec, 0x1000);
     if (ret < 0)
         return ret;
@@ -765,7 +834,7 @@ int getOutputChan(SceAtracIdInfo *info, SceAudiocodecCodec *codec)
         // 199C
         return codec->unk72;
     }
-    if (codec->unk40.v8.u40 >= 14 && codec->unk40.v8.u40 < 16)
+    if (codec->unk40.v32 - 0xeU < 2)
         return codec->unk52;
     return 2;
 }
@@ -789,12 +858,18 @@ int decodeFrame(SceAtracId *id, short *outAddr, u32 *samples, u32 *finishFlag)
             return 0x80630023;
         }
         // 1AA4
-        if ((id->info.state & 4) != 0) {
+        if ((id->info.state & 4) == 0) {
+            // 1AB4
+            id->codec.inBuf = id->info.buffer + unk2;
+        } else {
             // 1C1C
-            unk2 = (id->info.unk22 & 1) ? id->codec.unk52 : id->codec.unk48;
+            char unkFlag = id->info.unk22 & 1;
+            unk2 = (unkFlag) ? id->info.unk52 : id->info.unk48;
+            u8* infoBuf = (unkFlag) ? id->info.secondBuffer : id->info.buffer;
+            // 1AB4
+            id->codec.inBuf = infoBuf + unk2;
         }
-        // 1AB0
-        id->codec.inBuf = id->info.buffer + unk2;
+        // 1AB8
         id->codec.outBuf = outAddr;
         if (nextSample != unk)
             id->codec.outBuf = buf;
@@ -825,7 +900,7 @@ int decodeFrame(SceAtracId *id, short *outAddr, u32 *samples, u32 *finishFlag)
             // 1BC8
             if (id->info.loopEnd != 0 && (id->info.loopNum != 0 || id->info.loopEnd >= id->info.decodePos) && id->info.loopEnd < id->info.decodePos) // go back to start of loop
             {
-                id->info.curOff = getOffFromSample(&id->info, id->info.decodePos);
+                id->info.curOff = getOffFromSample(&id->info, id->info.loopStart);
                 id->info.numFrame = getFrameFromSample(&id->info, id->info.loopStart);
                 id->info.decodePos = id->info.loopStart;
                 if (id->info.loopNum > 0)
@@ -1047,9 +1122,7 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
                     if (cksize < 52)
                         return 0x80630006;
                     u8 *curIn = in + curOff + 10;
-                    u8 guid[] = { 0xBF, 0xAA, 0x23, 0xE9, 0x58, 0xCB, 0x71, 0x44, 
-                                  0xA1, 0x19, 0xFF, 0xFA, 0x01, 0xE4, 0xCE, 0x62 }; // 3EF8
-                    u8 *curGUID = guid;
+                    u8 *curGUID = g_at3PlusGUID;
                     // 2048
                     int i;
                     // check AT3+ GUID
@@ -1089,12 +1162,12 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
 int readWaveData(u8 *in, u32 *curOff, int size)
 {
     u8 *curStr = in + *curOff + size;
+    *curOff = *curOff + size;
     int result = 0;
     // 2324
     do
         result |= *(--curStr) << ((--size) * 8);
     while (size != 0);
-    *curOff += size;
     return result;
 }
 
@@ -1143,22 +1216,6 @@ int getNextSample(SceAtracIdInfo *info)
     return unk4 - unk3;
 }
 
-typedef struct
-{
-    u16 unk0;
-    char unk2;
-    char unk3;
-} SceAtracUnk;
-
-// 3F08
-SceAtracUnk g_3F08[] = {
-    { 0x0180, 0x4, 0 },
-    { 0x0130, 0x6, 0 },
-    { 0x00C0, 0xB, 1 },
-    { 0x00C0, 0xE, 0 },
-    { 0x0098, 0xF, 0 }
-};
-
 // 245C
 int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info)
 {
@@ -1192,7 +1249,7 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
                 {
                     // 25F0
                     if (cur->unk3 == info->unk4.v16) {
-                        id->codec.unk40.v8.u40 = cur->unk2;
+                        id->codec.unk40.v32 = cur->unk2;
                         return 0;
                     }
                 }
@@ -1228,7 +1285,7 @@ int initDecoder(SceAtracId *info, void *arg1)
     info->info.numChan = *(u8*)(arg1 + 0);
     info->info.secondBuffer = NULL;
     info->info.secondBufferByte = 0;
-    info->info.sampleSize = *(u8*)(arg1 + 8);
+    info->info.sampleSize = *(u16*)(arg1 + 8);
     info->info.decodePos = 0;
     info->info.endSample = 0;
     info->info.loopStart = 0;
@@ -1238,7 +1295,7 @@ int initDecoder(SceAtracId *info, void *arg1)
     info->info.unk22 = 0;
     info->info.dataOff = 0;
     info->info.curOff = 0;
-    info->info.bufferByte = 0;
+    info->info.dataEnd = 0;
     info->info.loopNum = 0;
     info->info.streamDataByte = 0;
     info->info.unk48 = 0;
@@ -1246,14 +1303,6 @@ int initDecoder(SceAtracId *info, void *arg1)
     info->info.bufferByte = 0;
     return ret;
 }
-
-SceAtracUnk g_3E74[] = {
-    { 0x00C0, 0x1, 0xE },
-    { 0x0098, 0x1, 0xF },
-    { 0x0180, 0x2, 0x4 },
-    { 0x0130, 0x2, 0x6 },
-    { 0x00C0, 0x2, 0xB }
-};
 
 // 26BC
 int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
@@ -1322,6 +1371,7 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
     for (i = 0; i < 5; i++)
     {
         if (unk->unk0 == *(int*)(arg1 + 8) && unk->unk2 == *(int*)(arg1 + 0)) { // 27A0
+            codec->unk40.v32 = 0;
             codec->unk40.v8.u40 = unk->unk3;
             return 0;
         }
@@ -1330,43 +1380,6 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
     }
     return 0x80630001;
 }
-
-SceAtracUnk g_3E88[] = {
-    { 0x00C0, 0x1, 0x0 },
-    { 0x1724, 0x0, 0x0 },
-    { 0x0180, 0x1, 0x0 },
-    { 0x2224, 0x0, 0x0 },
-    { 0x0178, 0x1, 0x0 },
-    { 0x2E24, 0x0, 0x0 },
-
-    { 0x0230, 0x1, 0x0 },
-    { 0x4524, 0x0, 0x0 },
-    { 0x02E8, 0x1, 0x0 },
-    { 0x5C24, 0x0, 0x0 },
-
-    { 0x0118, 0x2, 0x0 },
-    { 0x2228, 0x0, 0x0 },
-    { 0x0178, 0x2, 0x0 },
-    { 0x2E28, 0x0, 0x0 },
-
-    { 0x0230, 0x2, 0x0 },
-    { 0x4528, 0x0, 0x0 },
-    { 0x02E8, 0x2, 0x0 },
-    { 0x5C28, 0x0, 0x0 },
-
-    { 0x03A8, 0x2, 0x0 },
-    { 0x7428, 0x0, 0x0 },
-    { 0x0460, 0x2, 0x0 },
-    { 0x8B28, 0x0, 0x0 },
-    
-    { 0x05D0, 0x2, 0x0 },
-    { 0xB928, 0x0, 0x0 },
-    { 0x0748, 0x2, 0x0 },
-    { 0xE828, 0x0, 0x0 },
-
-    { 0x0800, 0x2, 0x0 },
-    { 0xFF28, 0x0, 0x0 }
-};
 
 // 2804
 int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
@@ -1424,10 +1437,10 @@ int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
         if (*(u16*)(curSp + 0) == *(int*)(arg1 + 8))
         {
             // 28D0
-            if (*(u16*)(curSp + 2) == *(int*)(arg1 + 0))
+            if (*(u16*)((int)curSp + 2) == *(int*)(arg1 + 0))
             {
-                codec->unk40.v8.u41 = *(u8*)(curSp + 5);
-                codec->unk40.v8.u40 = *(u8*)(curSp + 4);
+                codec->unk40.v8.u41 = *(u8*)((int)curSp + 5);
+                codec->unk40.v8.u40 = *(u8*)((int)curSp + 4);
                 codec->unk56 = 0;
                 codec->unk40.v8.u42 = 0;
                 codec->unk40.v8.u43 = 0;
@@ -1436,8 +1449,8 @@ int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
                 codec->unk44.v8.u46 = 0;
                 codec->unk44.v8.u47 = 0;
                 codec->unk48 = 0;
+                return 0;
             }
-            return 0;
         }
         // 28B4
         curSp -= 2;
@@ -1501,7 +1514,7 @@ int setBufferSize(SceAtracIdInfo *info, u32 readByte, u32 bufferByte)
             info->state = 5;
             return 0;
         }
-        u32 unk2 = getSecondBufPos(info, unk) - info->dataOff + 1;
+        u32 unk2 = getSecondBufPos(info, info->loopEnd) - info->dataOff + 1;
         info->state = 6;
         if (unk2 < info->streamDataByte)
             info->streamDataByte = unk2;
@@ -1695,12 +1708,12 @@ u32 sub_2FEC(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
 
 u32 sub_3004(u32 arg0, u32 arg1, u32 arg2, u32 arg3, u32 arg4)
 {
-    arg1 = arg0 + arg1;
     if (arg1 >= arg4)
         return 0;
-    if (arg1 < arg3 + 1)
-        return arg1;
-    return arg2 + (arg1 - arg3 - 1) / (arg3 - arg2 + 1);
+    u32 unk = arg0 + arg1;
+    if (unk < arg3 + 1)
+        return unk;
+    return arg2 + (unk - arg3 - 1) % (arg3 - arg2 + 1);
 }
 
 u32 sub_3048(SceAtracIdInfo *info)
@@ -1759,7 +1772,7 @@ u32 sub_316C(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
 
 u32 sub_31B4(SceAtracIdInfo *info)
 {
-    if (info->loopEnd < info->decodePos && info->state == 1)
+    if (info->loopEnd < info->decodePos && info->unk22 == 1)
     {
         u32 num1 = info->unk52;
         // 31E4
@@ -2017,7 +2030,7 @@ int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer)
     aa3->unk44 = sub_3AA0(buffer, &curOff, readByte);
     if (aa3->unk44 == -1)
         return 0x80631003;
-    if (sub_3AA0(buffer, &curOff, readByte) != -1)
+    if (sub_3AA0(buffer, &curOff, readByte) != 0xFFFF)
         return 0x80631003;
     curOff += 24;
     aa3->unk6 = *(u8*)(buffer + curOff);
@@ -2029,8 +2042,8 @@ int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer)
     else
         return 0x80631004;
     // 38D8
+    aa3->unk32 = sub_3A18(buffer, &curOff, readByte);
     int sum = aa3->dataOff + aa3->unk44;
-    aa3->unk32 = sub_3A18(buffer, &curOff, sum);
     aa3->dataSize = arg2 - sum;
     aa3->dataOff = sum;
     return codec;
@@ -2106,9 +2119,9 @@ int sub_3A18(u8 *buffer, u32 *curOff, u32 arg2)
     return result;
 }
 
-short sub_3AA0(u8 *buffer, u32 *curOff, u32 readByte)
+u16 sub_3AA0(u8 *buffer, u32 *curOff, u32 readByte)
 {
-    short result = 0;
+    u16 result = 0;
     if (readByte < *curOff + 2)
     {
         // 3AD8
@@ -2134,18 +2147,19 @@ int sub_3B14(u8 *buffer, u32 *curOff, u32 readByte)
 {
     if (readByte < *curOff + 3)
         return 0xFF000000;
+    int result = (buffer[*curOff] << 16) | (buffer[*curOff + 1] << 8) | buffer[*curOff + 2];
     *curOff += 3;
-    return (buffer[*curOff] << 16) | (buffer[*curOff + 1] << 8) | buffer[*curOff + 0];
+    return result;
 }
 
 int sub_3B54(u8 *buffer, u32 *curOff, u32 readByte)
 {
     if (readByte < *curOff + 4)
         return -1;
+    int result = ((buffer[*curOff + 0] & 0x7F) << 21)
+               | ((buffer[*curOff + 1] & 0x7F) << 14)
+               | ((buffer[*curOff + 2] & 0x7F) <<  7)
+               | ((buffer[*curOff + 3] & 0x7F) <<  0);
     *curOff += 4;
-    return ((buffer[*curOff + 0] & 0x7F) << 21)
-         | ((buffer[*curOff + 1] & 0x7F) << 14)
-         | ((buffer[*curOff + 2] & 0x7F) <<  7)
-         | ((buffer[*curOff + 3] & 0x7F) <<  0);
+    return result;
 }
-
