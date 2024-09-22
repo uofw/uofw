@@ -145,7 +145,7 @@ typedef struct {
 } SceSTimerCB;
 
 // 0b20
-SceSTimerCB g_timerCB __attribute__((section(".test.data"))) = {
+SceSTimerCB g_timerCB = {
     .SYSTMR = {
         [0] = {
             .regadr = (void *)HWPTR(HW_TIMER_0),
@@ -194,13 +194,13 @@ SceSTimerCB g_timerCB __attribute__((section(".test.data"))) = {
 
 // 0bb0
 /* Collects important data for each individual hardware timer. */
-SceSTimerReg STimerRegSave[TIMER_NUM_HW_TIMERS] __attribute__((section(".test.bss")));
+SceSTimerReg STimerRegSave[TIMER_NUM_HW_TIMERS];
 
- s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2);
- void _sceSTimerStopCount(SceSTimerInfo *timer);
- s32 _sceSTimerGetCount(SceSTimerInfo *timer);
- s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
- s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
+static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2);
+static void _sceSTimerStopCount(SceSTimerInfo *timer);
+static s32 _sceSTimerGetCount(SceSTimerInfo *timer);
+static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
+static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 
 // 02e8
 s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
@@ -244,7 +244,7 @@ s32 SysTimerEnd(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unus
 
 // 00e0
 /* Update a timer's counter register value and call the time-up handler. */
-s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2)
+static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2)
 {
     if (timer->cb == NULL)
         return -1;
@@ -267,7 +267,7 @@ s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 
 
 // 02b0
 /* Stop the hardware timer counting. */
-void _sceSTimerStopCount(SceSTimerInfo *timer)
+static void _sceSTimerStopCount(SceSTimerInfo *timer)
 {
     //timer->regadr->timerData = timer->regadr->data & ~(TIMER_MODE_IN_USE | 0x80000000);
     timer->regadr->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->regadr->nowData) & ~(TIMER_MODE_IN_USE | TIMER_MODE_UNKNOWN));
@@ -276,7 +276,7 @@ void _sceSTimerStopCount(SceSTimerInfo *timer)
 
 // 02b0
 /* Get the current value of the hardware timer counter register. */
-s32 _sceSTimerGetCount(SceSTimerInfo *timer)
+static s32 _sceSTimerGetCount(SceSTimerInfo *timer)
 {
     //TODO: timer->regadr->ulNowTime - timer->regadr->ulBaseTime ?
     return (TIMER_GET_COUNT(timer->regadr->nowData) - TIMER_GET_COUNT(timer->regadr->baseTime));
@@ -287,7 +287,7 @@ s32 _sceSTimerGetCount(SceSTimerInfo *timer)
  * Suspend all timers, save their states and counter value, and prohibit 
  * the timer interrupts.
  */
- s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
+static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
@@ -304,7 +304,7 @@ s32 _sceSTimerGetCount(SceSTimerInfo *timer)
  * Resume all timers, set their previous states and counter value and enable 
  * the timer interrupts.
  */
- s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
+static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
