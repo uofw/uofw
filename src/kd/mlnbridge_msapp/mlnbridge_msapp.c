@@ -249,25 +249,13 @@ s32 sceMlnBridge_msapp_0398DEFF() {
  Exported in sceMlnBridge_msapp
 */
 s32 sceMlnBridge_msapp_7AD66017() {
-	s32 res;
 	s32 oldK1 = pspShiftK1();
-	arg0 = v0;
-	arg2 = v0 | 0x7; //arg2 = arg0 | 0x7;
-	v0 = v0 -4;
-	arg2 = ((u32)v0 < (u32)1) | ((u32)arg2 < (u32)1); // a1 | a3; ((u32)v0 < (u32)1) is the same as a1 = (v0 == 4);
+	u32 model = sceKernelGetModel();
 	pspSetK1(oldK1);
+	s32 res = 0;
 	
-	a1 = 0;
-	if (arg2 != 0) {
-		a1 = 1;
-		v0 = a1;
-	}
-	
-	v1 = 9;
-	a1 = 1;
-	
-	if (arg0 = 9) {
-		v0 = a1;
+	if (model == PSP_GO || model == 5 || model == 7 || model == 9) {
+		res = 1;
 	}
 
 	return res;
