@@ -223,7 +223,7 @@ s32 sceMlnBridge_msapp_494B3B0B() {
     s32 model = sceKernelGetModel();
     s32 res = 0;
     
-    if (model != 0 && model != 0xA) { //checking if model is a PSP Phat?
+    if (model != PSP_1000 && model != PSP_11000) { //checking if model is a PSP Phat?
         res = sceDve_driver_253B69B6(-1, 0, 3); // This function does not exist for PSP 1000's also 4th argument is 0
         pspSetK1(oldK1);
         return model;
