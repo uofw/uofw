@@ -223,7 +223,7 @@ s32 sceMlnBridge_msapp_494B3B0B() {
     s32 model = sceKernelGetModel();
     s32 res = 0;
     
-    if (model != PSP_1000 && model != PSP_11000) { //checking if model is a PSP Phat?
+    if (model != PSP_1000 && model != PSP_11000) { // Checking if model is a PSP Phat or PSP Street
         res = sceDve_driver_253B69B6(-1, 0, 3); // This function does not exist for PSP 1000's also 4th argument is 0
         pspSetK1(oldK1);
         return model;
@@ -241,7 +241,7 @@ s32 sceMlnBridge_msapp_0398DEFF() {
     s32 oldK1 = pspShiftK1();
     s32 res = sceKernelGetModel();
     pspSetK1(oldK1);
-    return res; // return res = (u32)0 < (u32)res; => res = !res?
+    return res != PSP_1000; // Checking if model is not PSP_1000
 }
 
 /*
@@ -254,7 +254,7 @@ s32 sceMlnBridge_msapp_7AD66017() {
     pspSetK1(oldK1);
     s32 res = 0;
     
-    if (model == PSP_GO || model == 5 || model == 7 || model == 9) {
+    if (model == PSP_GO || model == 5 || model == 7 || model == 9) { // Checking if model is PSP GO
         res = 1;
     }
     
