@@ -10,8 +10,8 @@ SCE_MODULE_STOP("sceMlnBridge_msapp_driver_C41F1B67");
 SCE_SDK_VERSION(SDK_VERSION);
 
 // Headers
-extern int sceRtcGetCurrentSecureTick(void *);	//sceRtc_driver_CEEF238F
-extern int sceDve_driver_253B69B6(u32, u32, u32);
+extern s32 sceRtcGetCurrentSecureTick(u64 *tick);	//sceRtc_driver_CEEF238F
+extern s32 sceDve_driver_253B69B6(u32, u32, u32);
 
 typedef struct {
     const char *path;
@@ -154,13 +154,13 @@ s32 sceMlnBridge_msapp_driver_C41F1B67(SceSize args __attribute__((unused)), con
  Subroutine sceMlnBridge_msapp_3811BA77 - Address 0x00000100
  Exported in sceMlnBridge_msapp
  */
-s32 sceMlnBridge_msapp_3811BA77(int address) {
+s32 sceMlnBridge_msapp_3811BA77(u64 *tick) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 	s32 oldK1 = pspShiftK1();
 
 	//0x128
-	if ((((address + 8) | address) & (oldK1 << 11)) >= 0) {
-		res = sceRtcGetCurrentSecureTick((int *) address);	// (void *) -> ?
+	if (pspK1StaBufOk(tick, 8) >= 0) {
+		res = sceRtcGetCurrentSecureTick(tick);
 	}
 	
 	//0x138
