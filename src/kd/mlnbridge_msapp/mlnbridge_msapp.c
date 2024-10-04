@@ -85,49 +85,27 @@ u32 sub_000003E0(const char *dirName, const char *keyName, void *data, SceSize l
   Subroutine sceMlnBridge_msapp_D527DEB0 - Address 0x00000000 
   Exported in sceMlnBridge_msapp
  */
-s32 sceMlnBridge_msapp_D527DEB0(char *arg0, int arg1) {
-    char data[16];
+s32 sceMlnBridge_msapp_D527DEB0(const char *ptr, s32 size) {
+    char data[5];
     s32 res = SCE_ERROR_PRIV_REQUIRED;
-    
-    s32 oldK1 = pspShiftK1(); //s1
-    int arg3 = (int)arg0 + arg1; //Recheck
-    
-    //0x34
-    if (((oldK1) & ((arg3 | (int)arg0) | arg1)) >= 0) {
-        //0x40
-        if ((arg1 < 4) == 0) {
-            *((int *) data) = 0;
-            data[4] = 0;
+    s32 oldK1 = pspShiftK1();
+
+    if ((pspK1DynBufOk(ptr, size)) >= 0) {
+        if (size >= 4) {
+            // Read password data from registry
             res = sub_000003E0("/CONFIG/SYSTEM/LOCK", "password", data, 5);
-            //0x68 - literal
-            if (res != 0) {
+
+            // Compare the first four bytes and result value
+            if ((res == 0) && (ptr[0] == data[0]) && (ptr[1] == data[1]) && (ptr[2] == data[2]) && (ptr[3] == data[3])) {
                 pspSetK1(oldK1);
-                return -1;
+                return res;
             }
-            //0x78
-            if (arg0[0] != data[0]) {
-                pspSetK1(oldK1);
-                return -1;
-            }
-            //0xA0
-            //0xA4 - literal
-            if (arg0[1] != data[1]) {
-                pspSetK1(oldK1);
-                return -1;
-            }
-            //0xB4 - literal
-            if (arg0[2] != data[2]) {
-                pspSetK1(oldK1);
-                return -1;
-            }
-            //0xC8 - j
-            pspSetK1(oldK1);
-            return ((arg0[3] ^ data[3]) == 0) ? 0 : -1;
         }
-        //0xD0
-        res = 0x80000104;
+        else {
+            res = SCE_ERROR_INVALID_SIZE; // Handle size error
+        }
     }
-    //0xE0
+
     pspSetK1(oldK1);
     return res;
 }
