@@ -164,7 +164,7 @@ s32 sceMlnBridge_msapp_F02B9478(u32 arg0) {
     //0x1B4
     if (arg0 < 4) {
         oldK1 = pspShiftK1();
-        res = sub_00000318(&modules[0]);
+        res = sub_00000318(&modules[arg0]);
         pspSetK1(oldK1);
     }
     
