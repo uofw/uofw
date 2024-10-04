@@ -178,7 +178,7 @@ s32 sceMlnBridge_msapp_F02B9478(u32 arg0) {
  Exported in sceMlnBridge_msapp
  "flash0:/kd/np_commerce2_store.prx" ref
  */
-s32 sceMlnBridge_msapp_CC6037D7() {
+s32 sceMlnBridge_msapp_CC6037D7(void) {
     s32 res = 0;
     ModuleInfo module = {
         "flash0:/kd/np_commerce2_store.prx",
@@ -196,7 +196,7 @@ s32 sceMlnBridge_msapp_CC6037D7() {
  Subroutine sceMlnBridge_msapp_494B3B0B - Address 0x00000220 
  Exported in sceMlnBridge_msapp
  */
-s32 sceMlnBridge_msapp_494B3B0B() {
+s32 sceMlnBridge_msapp_494B3B0B(void) {
     s32 oldK1 = pspShiftK1();
     s32 model = sceKernelGetModel();
     s32 res = 0;
@@ -215,7 +215,7 @@ s32 sceMlnBridge_msapp_494B3B0B() {
  Subroutine sceMlnBridge_msapp_0398DEFF - Address 0x00000284  
  Exported in sceMlnBridge_msapp
 */
-s32 sceMlnBridge_msapp_0398DEFF() {
+s32 sceMlnBridge_msapp_0398DEFF(void) {
     s32 oldK1 = pspShiftK1();
     s32 res = sceKernelGetModel();
     pspSetK1(oldK1);
@@ -226,7 +226,7 @@ s32 sceMlnBridge_msapp_0398DEFF() {
  Subroutine sceMlnBridge_msapp_7AD66017 - Address 0x000002B4 
  Exported in sceMlnBridge_msapp
 */
-s32 sceMlnBridge_msapp_7AD66017() {
+s32 sceMlnBridge_msapp_7AD66017(void) {
     s32 oldK1 = pspShiftK1();
     u32 model = sceKernelGetModel();
     pspSetK1(oldK1);
