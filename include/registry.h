@@ -39,4 +39,4 @@ s32 sceRegCloseCategory(u32 catHandle);
 s32 sceRegFlushRegistry(u32 regHandle);
 s32 sceRegCloseRegistry(u32 regHandle);
 
-#endif /* UMDMAN_H */
+#endif /* REGISTRY_H */
