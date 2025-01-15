@@ -1,17 +1,13 @@
 var searchData=
 [
-  ['importsinfo_114',['importsInfo',['../structSceLoadCoreExecFileInfo.html#a3edde0bb960209edaf47d976489c9e2c',1,'SceLoadCoreExecFileInfo']]],
-  ['importssize_115',['importsSize',['../structSceLoadCoreExecFileInfo.html#abeb308218d0759bb6966364f686b7b7b',1,'SceLoadCoreExecFileInfo']]],
-  ['infp_116',['infp',['../structUsbInterfaces.html#adf34d6c2aafb0d4e502680539665a7c4',1,'UsbInterfaces']]],
-  ['init_20for_20kernel_117',['Init For Kernel',['../group__InitForKernel.html',1,'']]],
-  ['initforkernel_5f9d33a110_118',['InitForKernel_9D33A110',['../group__InitForKernel.html#gadb699ccecd559102887de72488e3251a',1,'modulemgr_init.h']]],
-  ['interfacedescriptor_119',['InterfaceDescriptor',['../structInterfaceDescriptor.html',1,'']]],
-  ['intp_120',['intp',['../structUsbDriver.html#ac7579c7a741e941270c2c037176db4ea',1,'UsbDriver']]],
-  ['isbusy_121',['isBusy',['../structSceGeDisplayList.html#a9d430f68f54105acdedc53909e1d8f70',1,'SceGeDisplayList']]],
-  ['iscompressed_122',['isCompressed',['../structSceLoadCoreExecFileInfo.html#af9f92604778901a824a24315321717eb',1,'SceLoadCoreExecFileInfo']]],
-  ['isdecompressed_123',['isDecompressed',['../structSceLoadCoreExecFileInfo.html#a710673135ebb987832a7dc14f3b543c1',1,'SceLoadCoreExecFileInfo']]],
-  ['isdecrypted_124',['isDecrypted',['../structSceLoadCoreExecFileInfo.html#aa688d1e435b6ec2ab4e12ec0f78a0372',1,'SceLoadCoreExecFileInfo']]],
-  ['iskernelmod_125',['isKernelMod',['../structSceLoadCoreExecFileInfo.html#ae1f24ecdcc946a4d385b0b3da519e226',1,'SceLoadCoreExecFileInfo']]],
-  ['issignchecked_126',['isSignChecked',['../structSceLoadCoreExecFileInfo.html#a491cc6144ac7ea3dd1de8f2296c35e84',1,'SceLoadCoreExecFileInfo']]],
-  ['isuserlib_127',['isUserLib',['../structSceStubLibrary.html#a24004210c1a0ac885f279e409977d2f2',1,'SceStubLibrary::isUserLib()'],['../structSceResidentLibrary.html#a090732606157fbac35b8b468744c7cbb',1,'SceResidentLibrary::isUserLib()']]]
+  ['gain_0',['gain',['../structSceAudioInputParams.html#a7ee7fe36b01dae2cd8d1b96db284f4e4',1,'SceAudioInputParams']]],
+  ['get_5fmcb_5fstatus_1',['GET_MCB_STATUS',['../group__Loadcore.html#gab75971c78987ec57dce6d6942a629c1a',1,'loadcore.h']]],
+  ['get_5fprotect_5finfo_5fstate_2',['GET_PROTECT_INFO_STATE',['../group__Loadcore.html#ga841d1f23ad9881cd37010137d4d9152a',1,'loadcore.h']]],
+  ['get_5fprotect_5finfo_5ftype_3',['GET_PROTECT_INFO_TYPE',['../group__Loadcore.html#ga1f48480d7acf0e5cae8bce256ccf7c4a',1,'loadcore.h']]],
+  ['getchar_4',['getchar',['../group__Stdio.html#ga3e29caa20f7cffe18f410f01278905a8',1,'iofilemgr_stdio.h']]],
+  ['gets_5',['gets',['../group__Stdio.html#gacd19d41a936ec6673ba3db4de6d8795d',1,'iofilemgr_stdio.h']]],
+  ['gp_6',['gp',['../structSceBootCallback.html#a97c071fd51d09bec758bd371346ca048',1,'SceBootCallback::gp'],['../structSceSysconPacket.html#a61d8580c4b7695d02956ce2875718781',1,'SceSysconPacket::gp']]],
+  ['gpadsensea_7',['GPadSenseA',['../structSceCtrlData2.html#af8a11657d620d8c9c378d1ad75ec1f1c',1,'SceCtrlData2']]],
+  ['gpadsenseb_8',['GPadSenseB',['../structSceCtrlData2.html#a1a37ed6eda498c3f1b7141d301ebcf62',1,'SceCtrlData2']]],
+  ['gpvalue_9',['gpvalue',['../structSceModuleInfo.html#a8b816358995dc777b3aa9af2f46750cf',1,'SceModuleInfo::gpValue'],['../structSceModule.html#a693cae58a76e2e79def11a76d609b3d5',1,'SceModule::gpValue'],['../structSceKernelModuleInfo.html#aded2c4cee78417fedd41404276b2d5b8',1,'SceKernelModuleInfo::gpValue'],['../structSceKernelModuleInfoV1.html#a325258e173c78f217de8fee71865dc4c',1,'SceKernelModuleInfoV1::gpValue']]]
 ];
