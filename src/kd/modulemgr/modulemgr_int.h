@@ -65,6 +65,7 @@ typedef struct {
     void *unk24;
     u32 unk28;
     s32(*npDrmGetModuleKeyFunction)(SceUID fd, void *, void *); // 32
+    /** Module whose text segment checksum can be checked with sceKernelCheckTextSegment (user). */
     SceModule *pModule;
 } SceModuleManagerCB;
 
