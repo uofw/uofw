@@ -23,7 +23,7 @@ extern "C" {
 #define NID_MODULE_STOP_THREAD_PARAM                        0xCF0CC697
 #define NID_MODULE_INFO                                     0xF01D73A7
 #define NID_MODULE_SDK_VERSION                              0x11B97506
-#define NID_1D4042A5                                        0x1D4042A5
+#define NID_MODULE_TEXT_CHECKSUM                            0x1D4042A5
 
 
 #ifdef  __cplusplus
