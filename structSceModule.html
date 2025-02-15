@@ -170,8 +170,8 @@ Data Fields</h2></td></tr>
 <tr class="separator:ad70db4830d0b1390268c55ffcd407d6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6806b3af2fc310d56e40694d7c9210cf" id="r_a6806b3af2fc310d56e40694d7c9210cf"><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceModule.html#a6806b3af2fc310d56e40694d7c9210cf">textSegmentChecksum</a></td></tr>
 <tr class="separator:a6806b3af2fc310d56e40694d7c9210cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e5dfd546e58c75d55fa065dc7001b0d" id="r_a0e5dfd546e58c75d55fa065dc7001b0d"><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceModule.html#a0e5dfd546e58c75d55fa065dc7001b0d">unk224</a></td></tr>
-<tr class="separator:a0e5dfd546e58c75d55fa065dc7001b0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a217fd6a531c0a9fa631a6fe9ae723cf5" id="r_a217fd6a531c0a9fa631a6fe9ae723cf5"><td class="memItemLeft" align="right" valign="top">u32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSceModule.html#a217fd6a531c0a9fa631a6fe9ae723cf5">computeTextSegmentChecksum</a></td></tr>
+<tr class="separator:a217fd6a531c0a9fa631a6fe9ae723cf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The <a class="el" href="structSceModule.html">SceModule</a> structure represents a loaded module in memory. </p>
@@ -851,18 +851,18 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a id="a0e5dfd546e58c75d55fa065dc7001b0d" name="a0e5dfd546e58c75d55fa065dc7001b0d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e5dfd546e58c75d55fa065dc7001b0d">&#9670;&#160;</a></span>unk224</h2>
+<a id="a217fd6a531c0a9fa631a6fe9ae723cf5" name="a217fd6a531c0a9fa631a6fe9ae723cf5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a217fd6a531c0a9fa631a6fe9ae723cf5">&#9670;&#160;</a></span>computeTextSegmentChecksum</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">u32 SceModule::unk224</td>
+          <td class="memname">u32 SceModule::computeTextSegmentChecksum</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Unknown. </p>
+<p>Whether to compute the text segment checksum before starting the module (see prologue). If non-zero, the text segment checksum will be computed after the module's resident libraries have been registered, and its stub libraries have been linked. </p>
 
 </div>
 </div>
@@ -872,7 +872,7 @@ Data Fields</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jan 15 2025 18:26:30 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Feb 15 2025 23:18:33 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>
