@@ -1169,7 +1169,7 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
     status = _PrologueModule(pModParams, pMod); // 0x00007048
     if (status < SCE_ERROR_OK) {
         SET_MCB_STATUS(pMod->status, MCB_STATUS_RELOCATED); //0x00007138
-        return SCE_ERROR_KERNEL_ERROR;
+        return status;
     }
 
     /*
