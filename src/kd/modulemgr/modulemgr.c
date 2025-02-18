@@ -152,7 +152,7 @@ static s32 _UnloadModule(SceModule *pMod)
 }
 
 #ifdef INSTALLER
-// UOFW: The purpose of those installer* function is to expose easily known offsets for uofwinst patches
+// UOFW: The purpose of those installer* functions is to expose easily known offsets for uofwinst patches
 s32 __attribute__ ((noinline)) installerStartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
 {
     return _StartModule(pModParams,  pMod,  argSize, argp, pStatus);
@@ -1190,7 +1190,7 @@ s32 __attribute__ ((noinline)) installerPrologueModule(SceModuleMgrParam *pModPa
 }
 #endif
 
-// // Subroutine sub_00006FF4 - Address 0x00006FF4 
+// Subroutine sub_00006FF4 - Address 0x00006FF4 
 INSTALLER_NO_STATIC s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
 {
     s32 status;
