@@ -57,8 +57,8 @@ SceModuleManagerCB g_ModuleManager; // 0x00009A20
 /* local functions */
 static s32 _ModuleReleaseLibraries(SceModule *pMod);
 
-static s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod);
-static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus);
+INSTALLER_NO_STATIC s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod);
+INSTALLER_NO_STATIC s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus);
 static s32 _StopModule(SceModuleMgrParam *pModParams, SceModule *pMod, s32 startOp, SceUID modId, SceSize argSize,
     void *argp, s32 *pStatus);
 static s32 _LoadModule(SceModuleMgrParam *pModParams);
@@ -69,7 +69,7 @@ static void _FreeMemoryResources(SceUID fd, SceUID partitionId, SceModuleMgrPara
     SceLoadCoreExecFileInfo *pExecInfo);
 static s32 _GivenBlockInfoFromBlock(SceUID blockId, SceModuleMgrParam *pModParams);
 static s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId);
-static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo);
+INSTALLER_NO_STATIC s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo);
 
 static void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo);
 static s32 allocate_module_block(SceModuleMgrParam *pModParams);
@@ -150,6 +150,14 @@ static s32 _UnloadModule(SceModule *pMod)
 
     return SCE_ERROR_OK;
 }
+
+#ifdef INSTALLER
+// UOFW: The purpose of those installer* function is to expose easily known offsets for uofwinst patches
+s32 __attribute__ ((noinline)) installerStartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
+{
+    return _StartModule(pModParams,  pMod,  argSize, argp, pStatus);
+}
+#endif
 
 // 0x00000178
 /* 
@@ -241,7 +249,11 @@ static s32 exe_thread(SceSize args, void *argp)
             *(pModParams->pResult) = SCE_ERROR_KERNEL_UNKNOWN_MODULE; //0x00000420
         else {
             /* Start the specified module. */
+#ifndef INSTALLER
             status = _StartModule(pModParams, pMod, pModParams->argSize, pModParams->argp, pModParams->pStatus); //0x00000290
+#else
+            status = installerStartModule(pModParams, pMod, pModParams->argSize, pModParams->argp, pModParams->pStatus); //0x00000290
+#endif
 
             if (status == SCE_KERNEL_RESIDENT)
                 /* Return the module ID if it is a resident one. */
@@ -320,6 +332,7 @@ s32 ModuleMgrRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribu
 {
     return sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
 }
+
 // 0x00005048
 /*
  * Create the work objects (threads,...) for the module manager.
@@ -398,6 +411,13 @@ s32 sceKernelModuleMgrMode(s32 mode)
 
     return SCE_ERROR_OK;
 }
+
+#ifdef INSTALLER
+s32 __attribute__ ((noinline)) installerPartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
+{
+    return _PartitionCheck(pModParams, pExecInfo);
+}
+#endif
 
 // sub_00005C4C
 static s32 _LoadModule(SceModuleMgrParam *pModParams)
@@ -559,7 +579,11 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
             }
         }
     } else {
+#ifndef INSTALLER
         status = _PartitionCheck(pModParams, pExecInfo); // 0x0000651C
+#else
+        status = installerPartitionCheck(pModParams, pExecInfo); // 0x0000651C
+#endif
         //pBlock = status; // 0x00006528 -- continue at loc_00005ECC
         if (status != SCE_ERROR_OK) { // 0x00006524
             _FreeMemoryResources(newFd, tmpModuleFileBlockId, pModParams, pExecInfo);
@@ -895,7 +919,11 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
             return status;
         }
 
+#ifndef INSTALLER
         status = _PartitionCheck(pModParams, pExecInfo); // 0x00006898
+#else
+        status = installerPartitionCheck(pModParams, pExecInfo); // 0x00006898
+#endif
         if (status < SCE_ERROR_OK) {
             _CleanupMemory(gzipBlockId, pExecInfo); // 0x000068A0
             return status;
@@ -1156,8 +1184,14 @@ static s32 _ModuleReleaseLibraries(SceModule *pMod)
     return SCE_ERROR_OK;
 }
 
-// Subroutine sub_00006FF4 - Address 0x00006FF4 
-static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
+#ifdef INSTALLER
+s32 __attribute__ ((noinline)) installerPrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod) {
+    return _PrologueModule(pModParams, pMod);
+}
+#endif
+
+// // Subroutine sub_00006FF4 - Address 0x00006FF4 
+INSTALLER_NO_STATIC s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
 {
     s32 status;
 
@@ -1166,7 +1200,12 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
 
     SET_MCB_STATUS(pMod->status, MCB_STATUS_STARTING); //0x0000704C
 
+#ifndef INSTALLER
     status = _PrologueModule(pModParams, pMod); // 0x00007048
+#else
+    status = installerPrologueModule(pModParams, pMod); // 0x00007048
+#endif
+    
     if (status < SCE_ERROR_OK) {
         SET_MCB_STATUS(pMod->status, MCB_STATUS_RELOCATED); //0x00007138
         return status;
@@ -1478,6 +1517,13 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
     return SCE_ERROR_OK;
 }
 
+#ifdef INSTALLER
+s32 __attribute__ ((noinline)) installerSceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
+{
+    return sceKernelProbeExecutableObject(buf, execInfo);
+}
+#endif
+
 // sub_00007C34
 static s32 allocate_module_block(SceModuleMgrParam *pModParams)
 {
@@ -1488,7 +1534,11 @@ static s32 allocate_module_block(SceModuleMgrParam *pModParams)
     pMod = pModParams->pMod; // 0x00007C54
     pExecInfo = pModParams->pExecInfo; // 0x00007C50
 
+#ifndef INSTALLER
     status = sceKernelProbeExecutableObject(pModParams->pExecInfo->fileBase, pModParams->pExecInfo); // 0x00007C5C
+#else
+    status = installerSceKernelProbeExecutableObject(pModParams->pExecInfo->fileBase, pModParams->pExecInfo); // 0x00007C5C
+#endif
 	if (status < SCE_ERROR_OK) // 0x00007C68
 		return status;
 
@@ -1619,7 +1669,7 @@ static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *p
  * specified by the user via SceKernelLMOption, match the priviledge level 
  * of the module.
  */
-static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
+INSTALLER_NO_STATIC s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
 {
     s32 status;
 
@@ -1657,8 +1707,20 @@ static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInf
     return SCE_ERROR_OK;
 }
 
+#ifdef INSTALLER
+s32 __attribute__ ((noinline)) installerSceKernelLinkLibraryEntriesWithModule(SceModule *mod, SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
+{
+    return sceKernelLinkLibraryEntriesWithModule(mod, stubLibEntryTable, size);
+}
+
+s32 __attribute__ ((noinline)) installerSceKernelLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size)
+{
+    return sceKernelLinkLibraryEntries(stubLibEntryTable, size);
+}
+#endif
+
 // sub_00008124
-static s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod)
+INSTALLER_NO_STATIC s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod)
 {
     s32 oldGp;
     s32 status;
@@ -1672,10 +1734,17 @@ static s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod)
 
     /* Link the module's stub libraries with their corresponding resident libraries. */
     if (pMod->stubTop != SCE_KERNEL_PTR_UNITIALIZED) { // 0x0000816C
+#ifndef INSTALLER
         if (pMod->status & SCE_MODULE_USER_MODULE) // 0x0000817C
             status = sceKernelLinkLibraryEntriesWithModule(pMod, pMod->stubTop, pMod->stubSize); // 0x00008188
         else
             status = sceKernelLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000843C
+#else
+        if (pMod->status & SCE_MODULE_USER_MODULE) // 0x0000817C
+            status = installerSceKernelLinkLibraryEntriesWithModule(pMod, pMod->stubTop, pMod->stubSize); // 0x00008188
+        else
+            status = installerSceKernelLinkLibraryEntries(pMod->stubTop, pMod->stubSize); // 0x0000843C
+#endif
 
         /* Release registered resident libraries in case of linking error. */
         if (status < SCE_ERROR_OK) { // 0x00008190
