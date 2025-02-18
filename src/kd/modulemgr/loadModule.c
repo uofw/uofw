@@ -150,8 +150,11 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
         pspSetK1(oldK1);
         return fd;
     }
-
+#ifndef INSTALLER
     status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000760
+#else
+    status = 0;
+#endif
     if (status < 0) { // 0x0000076C
         sceIoClose(fd); // 0x000007E0
         pspSetK1(oldK1);
@@ -166,8 +169,11 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
     modParams.fileBase = NULL; // 0x000007B4
     modParams.fd = fd; // 0x000007BC
     modParams.unk124 = 0; // 0x000007C4
-
+#ifndef INSTALLER
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
+#else
+    status = 0;
+#endif
     if (status >= 0) // 0x000007C8
         modParams.unk100 = 0x10; // 0x000007CC
 
@@ -1677,6 +1683,9 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
     }
 
     status = sceIoIoctl(fd, 0x208003, NULL, 0, NULL, 0); // 0x000030A4
+#ifdef INSTALLER
+    status = 0;
+#endif
     if (status < SCE_ERROR_OK) { // 0x000030B0
         sceIoClose(fd);
         pspSetK1(oldK1);
@@ -1693,10 +1702,16 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
     modParams.unk124 = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003104
+#ifdef INSTALLER
+    status = 0;
+#endif
     if (status >= SCE_ERROR_OK) // 0x0000310C
         modParams.unk100 = 0x10;
 
     status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x00003130
+#ifdef INSTALLER
+    status = -1;
+#endif
     if (status < SCE_ERROR_OK) // 0x00003138
         modParams.unk124 = 1; //0x00003164
 
@@ -1748,6 +1763,9 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
     }
 
     status = sceIoIoctl(inputId, 0x208003, NULL, 0, NULL, 0); // 0x000032DC
+#ifdef INSTALLER
+    status = 0;
+#endif
     if (status < SCE_ERROR_OK) { // 0x000032E8
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
@@ -1763,10 +1781,16 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
     modParams.unk124 = 0;
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); // 0x0000333C
+#ifdef INSTALLER
+    status = 0;
+#endif
     if (status >= SCE_ERROR_OK) // 0x00003344
         modParams.unk100 = 0x10;
 
     status = sceIoIoctl(inputId, 0x208082, NULL, 0, NULL, 0); // 0x00003368
+#ifdef INSTALLER
+    status = -1;
+#endif
     if (status < SCE_ERROR_OK) // 0x00003390
         modParams.unk124 = 1; //0x00003164
 
