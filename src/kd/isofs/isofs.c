@@ -2536,9 +2536,15 @@ int isofsDrvDevctl(SceIoIob *iob, char *dev, int cmd, void *indata, SceSize inle
 s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int unk) {
     s32 ret = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     if (id == 0x20 && (ret = SCE_ERROR_ERRNO_INVALID_ARGUMENT, unit != NULL) &&
+#ifndef INSTALLER
         (ret = sceKernelWaitSema(g_isofsMgr.semaId, 1, NULL), -1 < ret)) {
+#else
+        (ret = 0, -1 < ret)) {
+#endif
         if (unit->unitNum < 0) {
+#ifndef INSTALLER
             sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
             ret = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         } else if (g_isofsMounted == 0 || unk != 0) {
             isofsClearCurrentDirLbn();
@@ -2551,7 +2557,9 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int unk) {
                 u32 ret2 = ret + 0x7fdeef60;
                 if (ret + 0x7fdeffffU < 3 || ret == (s32) 0xc0210004 || ret == (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT ||
                     (ret = SCE_UMD_ERROR_NO_MEDIUM, ret2 < 2)) {
+#ifndef INSTALLER
                     sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
                     return ret;
                 }
             }
@@ -2559,9 +2567,13 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int unk) {
             if (ret >= 0) {
                 goto tryInitPaths;
             }
+#ifndef INSTALLER
             sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
         } else {
+#ifndef INSTALLER            
             sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
             ret = 0;
         }
     }
