@@ -2587,7 +2587,9 @@ tryInitPaths:
         if (ret + 0x7fdeffffU < 2 || ret == (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT ||
             (ret == (s32) SCE_ERROR_ERRNO_NO_MEMORY || ret == (s32) SCE_UMD_ERROR_NO_MEDIUM) ||
             (ret == (s32) 0xc0210004 || (ret = (s32) SCE_UMD_ERROR_NO_MEDIUM, ret2 < 2))) {
+#ifndef INSTALLER 
             sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif            
             return ret;
         }
         goto tryInitPaths;
@@ -2621,7 +2623,9 @@ tryInitPaths:
         sceKernelCpuResumeIntr(intr);
     }
     g_isofsMounted = 1;
+#ifndef INSTALLER 
     sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
     return ret;
 }
 
