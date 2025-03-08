@@ -5,6 +5,7 @@ TARGET = isofs
 OBJS = isofs.o
 
 DEBUG = 0
+INSTALLER = 1
 
 LIBS = -lInterruptManagerForKernel -lSysMemForKernel -lSysclibForKernel -lThreadManForKernel \
        -lIoFileMgrForKernel -lsceRtc_driver -lsceUmd -lsceUmdMan_driver
