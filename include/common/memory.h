@@ -49,6 +49,8 @@
 #define UPALIGN8(v)     (((v) + 0x7) & 0xFFFFFFF8)
 #define UPALIGN4(v)     (((v) + 0x3) & 0xFFFFFFFC)
 
+#define ISALIGN4(v)     (((u32)(v) & 0x03) == 0)
+
 /* Clear memory partitioned in 1-Byte blocks. */
 static inline void pspClearMemory8(void *ptr, int size) {
     int i;
@@ -97,5 +99,25 @@ static inline void memcpyInline(void *dest, const void *src, SceSize size)
     {
         *(u8 *)(dest + i) = *(u8 *)(src + i);
     }
+}
+
+/* If we believe in the sysmem NIDs, 04g+ seem to have a "L2" cache
+ * we can send commands to through this address */
+#define L2_CACHE_CMD (vu32*)0xA7F00000
+
+static inline void pspL2CacheWriteback0(void *ptr, u8 align) {
+    *L2_CACHE_CMD = 0xA0000000 | ((u32)ptr & 0x07FFFFC0) | align;
+    *L2_CACHE_CMD;
+}
+
+static inline void pspL2CacheWriteback1(void *ptr, u8 align) {
+    *L2_CACHE_CMD = 0xA0000000 | 0x08000000 | ((u32)ptr & 0x07FFFFC0) | align;
+    *L2_CACHE_CMD;
+}
+
+static inline void pspL2CacheWriteback10(void *ptr, u8 align) {
+    *L2_CACHE_CMD = 0xA0000000 | 0x08000000 | ((u32)ptr & 0x07FFFFC0) | align;
+    *L2_CACHE_CMD = 0xA0000000 | ((u32)ptr & 0x07FFFFC0) | align;
+    *L2_CACHE_CMD;
 }
 

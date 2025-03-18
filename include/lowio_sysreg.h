@@ -58,4 +58,4 @@ s32 sceSysregPllGetFrequency(void);
 s32 sceSysregSpiClkSelect(s32, s32);
 s32 sceSysregSpiClkEnable(s32);
 s32 sceSysregSpiIoEnable(s32);
-
+s32 sceSysregGetFuseId(void);

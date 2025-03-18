@@ -1597,7 +1597,7 @@ s32 sceSysconNop(void)
 
 s32 sceSysconGetBaryonVersion(s32 *baryonVersion)
 {
-    return _sceSysconCommonRead(baryonVersion, PSP_SYSCON_CMD_GET_BARYON);
+    return _sceSysconCommonRead(baryonVersion, PSP_SYSCON_CMD_GET_BARYON_VERSION);
 }
 
 s32 sceSysconGetGValue(void)

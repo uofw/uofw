@@ -11,6 +11,7 @@
 
 #include "common/common.S"
 #include "common/errors.h"
+#include "common/hardware.h"
 
 #endif
 

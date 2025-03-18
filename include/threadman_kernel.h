@@ -64,12 +64,14 @@ int sceKernelTerminateDeleteThread(SceUID thid);
 int sceKernelDelayThread(SceUInt delay);
 int sceKernelChangeThreadPriority(SceUID thid, int priority);
 int sceKernelGetThreadCurrentPriority(void);
-int sceKernelGetThreadId(void);
+s32 sceKernelGetThreadId(void);
 int sceKernelIsUserModeThread(void);
 int sceKernelWaitThreadEnd(SceUID thid, SceUInt *timeout);
 int sceKernelWaitThreadEndCB(SceUID thid, SceUInt *timeout);
 int sceKernelReleaseWaitThread(SceUID thid);
 int sceKernelSuspendAllUserThreads(void);
+
+int sceKernelExtendKernelStack(int type, s32 (*cb)(void*), void *arg);
 
 unsigned int sceKernelGetSystemTimeLow(void);
 

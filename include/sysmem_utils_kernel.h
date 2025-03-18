@@ -22,6 +22,7 @@ int sceKernelL1IcacheInvalidateRange(const void *p, u32 size);
 int sceKernelRtcGetTick(u64 *tick);
 
 int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest);
+int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest);
 
 int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *unk);
 

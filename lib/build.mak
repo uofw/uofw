@@ -1,10 +1,10 @@
 # Copyright (C) 2011, 2012 The uOFW team
 # See the file COPYING for copying permission.
 
-include ../../lib/common.mak
+include $(ROOT_DIR)/lib/common.mak
 
-INCLUDE = -I../../include
-WARNINGS = -Wall -Wextra -Werror -Wno-pragmas
+INCLUDE = -I$(ROOT_DIR)/include
+WARNINGS = -Wall -Wextra -Werror -Wno-error=address -Wno-error=dangling-pointer -Wno-pragmas
 
 # Only keep builtins for memcpy, memset for their inline function
 BUILTINS_DISABLE = -fno-builtin-bcmp \
@@ -27,6 +27,7 @@ BUILTINS_DISABLE = -fno-builtin-bcmp \
 				   -fno-builtin-strcmp \
 				   -fno-builtin-strcpy \
 				   -fno-builtin-strlen \
+				   -fno-builtin-strnlen \
 				   -fno-builtin-strncmp \
 				   -fno-builtin-strncpy \
 				   -fno-builtin-strpbrk \
@@ -38,11 +39,11 @@ BUILTINS_DISABLE = -fno-builtin-bcmp \
 
 CFLAGS := $(INCLUDE) -O1 -fno-toplevel-reorder -G0 $(WARNINGS) $(BUILTINS_DISABLE)
 CFLAGS_S := $(INCLUDE)
-LDFLAGS := -L../../lib -specs=../../lib/prxspecs -Wl,-q,-T../../lib/linkfile.prx
+LDFLAGS := -L$(ROOT_DIR)/lib -specs=$(ROOT_DIR)/lib/prxspecs -Wl,-q,-T$(ROOT_DIR)/lib/linkfile.prx
 
-FIXUP_IMPORTS = ../../utils/fixup-imports/psp-fixup-imports
-BUILD_EXPORTS = ../../utils/build-exports/psp-build-exports
-PRXGEN = ../../utils/kprxgen/psp-kprxgen
+FIXUP_IMPORTS = $(ROOT_DIR)/utils/fixup-imports/psp-fixup-imports
+BUILD_EXPORTS = $(ROOT_DIR)/utils/build-exports/psp-build-exports
+PRXGEN = $(ROOT_DIR)/utils/kprxgen/psp-kprxgen
 
 PRX_EXPORTS = exports.exp
 EXPORT_OBJ=$(patsubst %.exp,%.o,$(PRX_EXPORTS))
@@ -86,7 +87,7 @@ clean:
 rebuild: clean all
 
 Makefile.exp: $(PRX_EXPORTS)
-	cat ../../lib/build_stubs.mak > Makefile.exp
+	cat $(ROOT_DIR)/lib/build_stubs.mak > Makefile.exp
 	$(BUILD_EXPORTS) -k $< >> Makefile.exp
 
 exp: Makefile.exp

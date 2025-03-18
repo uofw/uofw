@@ -805,8 +805,12 @@ typedef struct SceModule {
     u32 segmentChecksum; //216
     /** TEXT segment checksum of the module. */
     u32 textSegmentChecksum; //220
-    /** Unknown. */
-    u32 unk224; //224
+    /** 
+     * Whether to compute the text segment checksum before starting the module (see prologue).
+     * If non-zero, the text segment checksum will be computed after the module's resident libraries 
+     * have been registered, and its stub libraries have been linked.
+     */
+    u32 computeTextSegmentChecksum; //224
 } SceModule; //size = 228
 
 /**
