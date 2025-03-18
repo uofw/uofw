@@ -6,4 +6,4 @@ OBJS = chkreg.o
 
 LIBS = -lsceIdStorage_driver -lThreadManForKernel -lpspsemaphore
 
-include ../../lib/build.mak
+include $(ROOT_DIR)/lib/build.mak
