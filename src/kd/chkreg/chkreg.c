@@ -3,7 +3,7 @@
 */
 
 /*
- * uofw/src/chkreg/chkreg.c
+ * uofw/src/kd/chkreg/chkreg.c
  *
  * Check Region
  * 
@@ -21,7 +21,6 @@
 #include <common_imp.h>
 
 #include <chkreg.h>
-#include <crypto/kirk.h>
 #include <idstorage.h>
 #include <memlmd.h>
 #include <threadman_kernel.h>
@@ -37,6 +36,13 @@ SCE_MODULE_STOP("_sceChkregEnd");
 
 SCE_SDK_VERSION(SDK_VERSION);
 
+#define SceChkregHashDataPayloadSize (0x34)
+
+typedef struct {
+	u32 hashSize; // 0;
+	u8 hashData[SceChkregHashDataPayloadSize];
+} SceChkregHashData; // Size = 38 bytes
+
 #define CHKREG_UNK9BC_SIZE    (0x14)
 const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
 {
@@ -47,6 +53,12 @@ const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
     0x2C, 0x2A, 0xDF, 0xA0,
 }; // 0x000009BC
 
+/*
+ * The number of SceIdStorageUMDRegionCodeInfo blocks existing in the IDStorage starting at leaf
+ * SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES.
+ * 
+ * Note: This might span continuous IDStorage leafs.
+ */
 u32 g_UMDRegionCodeInfoPostIndex; // 0x00000A40
 u32 g_isUMDRegionCodesObtained; // 0x00000A44
 u32 g_isConsoleIdCertificateObtained; // 0x00000A48
@@ -58,18 +70,19 @@ SceIdStorageConsoleIdCertificate g_ConsoleIdCertificate; // 0x00001480
 
 SceUID g_semaId; // 0x00001538
 
-u8 g_unk1540[0x38]; // 0x00001540
+SceChkregHashData g_unk1540; // 0x00001540
 
 u8 *g_pIdStorageUMDConfig = (u8 *)&g_idStorageUMDConfig; // 0x00000A00
-u8 *g_pWorkBuffer = (u8 *)&g_unk1540; // 0x00000A04
+SceChkregHashData *g_pWorkBuffer = &g_unk1540; // 0x00000A04
 
 // Subroutine sub_00000000 - Address 0x00000000
 s32 _sceChkregLookupUMDRegionCodeInfo(void)
 {
     // 0x00000024 - 0x00000060
     u32 i;
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < SCE_ID_STORAGE_LEAF_ID_UMD_COUNT; i++)
     {
+		/* Read UMD ID Storage leafs and store them for later use, such as region checking. */
         if (sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK
             && sceIdStorageReadLeaf(SCE_ID_STORAGE_LEAF_ID_BACKUP_CONSOLE_ID_OPEN_PSID_3_UMD_1 + i, &g_pIdStorageUMDConfig[i * SCE_ID_STORAGE_LEAF_SIZE]) < SCE_ERROR_OK) // 0x0000003C & 0x0000010C
         {
@@ -79,8 +92,10 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
 
     SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
+	u32 numRegionCodeInfoBlocks = (SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES_SIZE) / sizeof(SceIdStorageUMDRegionCodeInfo);
+
     // 0x00000064 - 0x00000094
-    for (i = 0; i < 256; i++)
+    for (i = 0; i < numRegionCodeInfoBlocks; i++)
     {
         if (pUMDRegionCodeInfo[i].regionCode == 1
             && (pUMDRegionCodeInfo[i].unk4 == 0 || pUMDRegionCodeInfo[i].unk4 == 0x70000000)) // 0x00000084
@@ -266,7 +281,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
 }
 
 // Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C
-s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
+s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
 {
     s32 status1;
     s32 status2;
@@ -277,29 +292,29 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
     status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x00000554
     if (status2 == SCE_ERROR_OK) // 0x0000055C
     {
-        u8 *pWorkBuffer = g_pWorkBuffer;
+		g_pWorkBuffer->hashSize = SceChkregHashDataPayloadSize; // 0x00000570 -- TODO: Length of specific data to hash?
 
-        ((u32 *)pWorkBuffer)[0] = 0x34; // 0x00000570 -- TODO: Length of specific data to hash?
+		u8 *pWorkBufferHashData = g_pWorkBuffer->hashData;
 
         /* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
 
         // 0x00000574 - 0x0000059C
-        memcpyInline(pWorkBuffer += 0x4, g_unk9BC, sizeof g_unk9BC);
+        memcpyInline(pWorkBufferHashData, g_unk9BC, sizeof g_unk9BC);
 
         /* Copy 0x20 bytes of input data to work buffer. */
 
         // 0x000005A0 - 0x000005C0
-        memcpyInline(pWorkBuffer += sizeof g_unk9BC, &arg0[0xD4], 0x10);
+        memcpyInline(pWorkBufferHashData += sizeof g_unk9BC, &arg0[0xD4], 0x10);
 
         // 0x000005C4 - 0x000005E4
-        memcpyInline(pWorkBuffer += 0x10, &arg0[0x140], 0x10);
+        memcpyInline(pWorkBufferHashData += 0x10, &arg0[0x140], 0x10);
 
         /* Compute SHA1 hash. */
-        status1 = sceUtilsBufferCopyWithRange(g_pWorkBuffer, 0x38, g_pWorkBuffer, 0x38, KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
+		status1 = sceUtilsBufferCopyWithRange((u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), (u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
         if (status1 == SCE_ERROR_OK) // 0x00000604
         {
             /* Copy first 16 byte of computed hash to target buffer. */
-            memcpyInline(arg1, g_pWorkBuffer, 0x10);
+            memcpyInline(pHash, g_pWorkBuffer, 0x10);
 
             status1 = SCE_ERROR_OK;
         }
@@ -318,7 +333,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *arg1)
         /* Clear work buffer. */
 
         // 0x0000062C - 0x00000644
-        memsetInline(g_pWorkBuffer, 0, 0x38);
+        memsetInline(g_pWorkBuffer, 0, sizeof(g_pWorkBuffer));
 
         /* Release acquired sema resource. */
         status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C

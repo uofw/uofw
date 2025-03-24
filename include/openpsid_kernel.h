@@ -34,6 +34,10 @@
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_095           0x08 /* PSP-30XX 07g & 09g */
 #define SCE_PSP_PRODUCT_SUB_CODE_TA_096_TA_097    0x09 /* PSP-E10XX 11g */
 
+/*
+ * Specifies if the PSP's factory code is set to diagnosis (i.e. Japan Diagnosis Center 1).
+ * In this case, the PsFlags ca be obtained by using the CHKREG module.
+ */
 #define SCE_PSP_FACTORY_CODE_DIAG    35
 
 /**
@@ -58,10 +62,11 @@ typedef struct {
 	u8 psFlagsMajor : 2; // 8
 	/* Factory code. */
 	u8 factoryCode : 6; // 8
-	u8 uniqueIdMajor : 2; // 9
+	u8 serialNoMajor : 2; // 9
 	/* Lower six bit of the PsFlags. Contain the QA flag, if set. */
 	u8 psFlagsMinor : 6; // 9
-	u8 uniqueIdMinor[6]; // 10
+	u16 searialNoMinor; // 10
+	u32 randomStamp; // 12
 } SceConsoleId; // size = 16
 
 #endif // OPENPSID_KERNEL_H
