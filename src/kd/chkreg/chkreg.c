@@ -333,7 +333,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
         /* Clear work buffer. */
 
         // 0x0000062C - 0x00000644
-        memsetInline(g_pWorkBuffer, 0, sizeof(g_pWorkBuffer));
+        memsetInline(g_pWorkBuffer, 0, sizeof(SceChkregHashData));
 
         /* Release acquired sema resource. */
         status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C

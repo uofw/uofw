@@ -14,10 +14,10 @@
 #define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                     0x02 /* TestKit / Testing Kit - Testing Tool DTP-H1500 */
 #define SCE_PSP_PRODUCT_CODE_CEX_JAPAN                        0x03 /* Retail Japan */
 #define SCE_PSP_PRODUCT_CODE_CEX_NORTH_AMERICA                0x04 /* Retail North America */
-#define SCE_PSP_PRODUCT_CODE_CEX_EUROPE_MIDDLE_EAST_AFRIKA    0x05 /* Retail Europe/Middle East/Afrika */
+#define SCE_PSP_PRODUCT_CODE_CEX_EUROPE_MIDDLE_EAST_AFRICA    0x05 /* Retail Europe/Middle East/Africa */
 #define SCE_PSP_PRODUCT_CODE_CEX_KOREA                        0x06 /* Retail South Korea */
 #define SCE_PSP_PRODUCT_CODE_CEX_UNITED_KINGDOM               0x07 /* Retail Great Britain/United Kingdom */
-#define SCE_PSP_PRODUCT_CODE_CEX_MEXIKO_LATIN_AMERICA         0x08 /* Retail Mexiko/Latin America */
+#define SCE_PSP_PRODUCT_CODE_CEX_MEXICO_LATIN_AMERICA         0x08 /* Retail Mexico/Latin America */
 #define SCE_PSP_PRODUCT_CODE_CEX_AUSTRALIA_NEW_ZEALAND        0x09 /* Retail Australia/New Zealand */
 #define SCE_PSP_PRODUCT_CODE_CEX_HONGKONG_SINGAPORE           0x0A /* Retail Hong Kong/Singapore */
 #define SCE_PSP_PRODUCT_CODE_CEX_TAIWAN                       0x0B /* Retail Taiwan */
