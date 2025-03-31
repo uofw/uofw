@@ -36,7 +36,7 @@
 
 /*
  * Specifies if the PSP's factory code is set to diagnosis (i.e. Japan Diagnosis Center 1).
- * In this case, the PsFlags ca be obtained by using the CHKREG module.
+ * In this case, the PsFlags can be obtained by using the CHKREG module.
  */
 #define SCE_PSP_FACTORY_CODE_DIAG    35
 

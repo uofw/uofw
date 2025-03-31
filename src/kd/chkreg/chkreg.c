@@ -36,11 +36,11 @@ SCE_MODULE_STOP("_sceChkregEnd");
 
 SCE_SDK_VERSION(SDK_VERSION);
 
-#define SceChkregHashDataPayloadSize (0x34)
+#define CHKREG_HASH_DATA_PAYLOAD_SIZE (0x34)
 
 typedef struct {
 	u32 hashSize; // 0;
-	u8 hashData[SceChkregHashDataPayloadSize];
+	u8 hashData[CHKREG_HASH_DATA_PAYLOAD_SIZE];
 } SceChkregHashData; // Size = 38 bytes
 
 #define CHKREG_UNK9BC_SIZE    (0x14)
@@ -223,177 +223,167 @@ s32 _sceChkregEnd(SceSize args, const void *argp)
 // Subroutine sceChkreg_driver_54495B19 - Address 0x00000390
 s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId)
 {
-    s32 status1;
-    s32 status2;
+	s32 status;
 
-    status1 = SCE_ERROR_SEMAPHORE; // 0x000003BC & 0x000003C8
+	/* Allow only one access at a time. */
+	if (sceKernelWaitSema(g_semaId, 1, NULL) != SCE_ERROR_OK) // 0x000003C4
+	{
+		return SCE_ERROR_SEMAPHORE; // 0x000003BC & 0x000003C8
+	}
 
-    /* Allow only one access at a time. */
-    status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x000003C4
-    if (status2 == SCE_ERROR_OK)
-    {
-        if (g_isUMDRegionCodesObtained || (status1 = _sceChkregLookupUMDRegionCodeInfo()) == SCE_ERROR_OK) // 0x000003D8 & 0x000003E8
-        {
-            status1 = _sceChkregCheckRegion(0x80000000, umdMediaType | regionId); // 0x000003F4
-        }
+	if (g_isUMDRegionCodesObtained || (status = _sceChkregLookupUMDRegionCodeInfo()) == SCE_ERROR_OK) // 0x000003D8 & 0x000003E8
+	{
+		status = _sceChkregCheckRegion(0x80000000, umdMediaType | regionId); // 0x000003F4
+	}
 
-        /* Release acquired sema resource. */
-        status2 = sceKernelSignalSema(g_semaId, 1); // 0x00000404
-        if (status2 != SCE_ERROR_OK)
-        {
-            status1 = SCE_ERROR_SEMAPHORE;
-        }
-    }
+	/* Release acquired semaphore resource. */
+	if (sceKernelSignalSema(g_semaId, 1) != SCE_ERROR_OK) // 0x00000404
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    return status1;
+	return status;
 }
 
 // Subroutine sceChkreg_driver_59F8491D - Address 0x00000438
 s32 sceChkregGetPsCode(ScePsCode *pPsCode)
 {
-    s32 status1;
-    s32 status2;
+	s32 status;
 
-    status1 = SCE_ERROR_SEMAPHORE;
+	/* Allow only one access at a time. */
+	if (sceKernelWaitSema(g_semaId, 1, NULL) != SCE_ERROR_OK)
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    /* Allow only one access at a time. */
-    status2 = sceKernelWaitSema(g_semaId, 1, NULL);
-    if (status2 == SCE_ERROR_OK)
-    {
-        if ((g_isConsoleIdCertificateObtained || (status1 = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
-            && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
-        {
-            pPsCode->companyCode = g_ConsoleIdCertificate.consoleId.companyCode;
-            pPsCode->productCode = g_ConsoleIdCertificate.consoleId.productCode;
-            pPsCode->productSubCode = g_ConsoleIdCertificate.consoleId.productSubCode;
-            pPsCode->factoryCode = g_ConsoleIdCertificate.consoleId.factoryCode;
-        }
+	/* Obtain the PS code if successfully verified. */
+	if ((g_isConsoleIdCertificateObtained || (status = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
+		&& (status = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
+	{
+		pPsCode->companyCode = g_ConsoleIdCertificate.consoleId.companyCode;
+		pPsCode->productCode = g_ConsoleIdCertificate.consoleId.productCode;
+		pPsCode->productSubCode = g_ConsoleIdCertificate.consoleId.productSubCode;
+		pPsCode->factoryCode = g_ConsoleIdCertificate.consoleId.factoryCode;
+	}
 
-        /* Release acquired sema resource. */
-        status2 = sceKernelSignalSema(g_semaId, 1);
-        if (status2 != SCE_ERROR_OK)
-        {
-            status1 = SCE_ERROR_SEMAPHORE;
-        }
-    }
+	/* Release acquired semaphore resource. */
+	if (sceKernelSignalSema(g_semaId, 1) != SCE_ERROR_OK)
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    return status1;
+	return status;
 }
 
 // Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C
 s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
 {
-    s32 status1;
-    s32 status2;
+	s32 status;
 
-    status1 = SCE_ERROR_SEMAPHORE;
+	/* Allow only one access at a time. */
+	if (sceKernelWaitSema(g_semaId, 1, NULL) != SCE_ERROR_OK) // 0x00000554 & 0x0000055C
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    /* Allow only one access at a time. */
-    status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x00000554
-    if (status2 == SCE_ERROR_OK) // 0x0000055C
-    {
-		g_pWorkBuffer->hashSize = SceChkregHashDataPayloadSize; // 0x00000570 -- TODO: Length of specific data to hash?
+	/* Generate SHA-1 hash prefix */
 
-		u8 *pWorkBufferHashData = g_pWorkBuffer->hashData;
+	g_pWorkBuffer->hashSize = CHKREG_HASH_DATA_PAYLOAD_SIZE; // 0x00000570
 
-        /* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
+	u8 *pWorkBufferHashData = g_pWorkBuffer->hashData;
 
-        // 0x00000574 - 0x0000059C
-        memcpyInline(pWorkBufferHashData, g_unk9BC, sizeof g_unk9BC);
+	/* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
 
-        /* Copy 0x20 bytes of input data to work buffer. */
+	// 0x00000574 - 0x0000059C
+	memcpyInline(pWorkBufferHashData, g_unk9BC, sizeof g_unk9BC);
 
-        // 0x000005A0 - 0x000005C0
-        memcpyInline(pWorkBufferHashData += sizeof g_unk9BC, &arg0[0xD4], 0x10);
+	/* Copy 0x20 bytes of input data to work buffer. */
 
-        // 0x000005C4 - 0x000005E4
-        memcpyInline(pWorkBufferHashData += 0x10, &arg0[0x140], 0x10);
+	// 0x000005A0 - 0x000005C0
+	memcpyInline(pWorkBufferHashData += sizeof g_unk9BC, &arg0[0xD4], 0x10);
 
-        /* Compute SHA1 hash. */
-		status1 = sceUtilsBufferCopyWithRange((u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), (u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
-        if (status1 == SCE_ERROR_OK) // 0x00000604
-        {
-            /* Copy first 16 byte of computed hash to target buffer. */
-            memcpyInline(pHash, g_pWorkBuffer, 0x10);
+	// 0x000005C4 - 0x000005E4
+	memcpyInline(pWorkBufferHashData += 0x10, &arg0[0x140], 0x10);
 
-            status1 = SCE_ERROR_OK;
-        }
-        else if (status1 < SCE_ERROR_OK) // 0x0000060C
-        {
-            status1 = SCE_ERROR_BUSY;
-        }
-        else
-        {
-            // 0x00000614 - 0x00000628
-            status1 = (status1 != KIRK_NOT_INITIALIZED)
-                ? SCE_ERROR_NOT_SUPPORTED
-                : SCE_ERROR_NOT_INITIALIZED;
-        }
+	/* Compute SHA1 hash. */
+	status = sceUtilsBufferCopyWithRange((u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), (u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
+	if (status == SCE_ERROR_OK) // 0x00000604
+	{
+		/* Copy first 16 byte of computed hash to target buffer. */
+		memcpyInline(pHash, g_pWorkBuffer, 0x10);
+	}
+	else if (status < SCE_ERROR_OK) // 0x0000060C
+	{
+		status = SCE_ERROR_BUSY;
+	}
+	else
+	{
+		// 0x00000614 - 0x00000628
+		status = (status != KIRK_NOT_INITIALIZED)
+			? SCE_ERROR_NOT_SUPPORTED
+			: SCE_ERROR_NOT_INITIALIZED;
+	}
 
-        /* Clear work buffer. */
+	/* Clear work buffer. */
 
-        // 0x0000062C - 0x00000644
-        memsetInline(g_pWorkBuffer, 0, sizeof(SceChkregHashData));
+	// 0x0000062C - 0x00000644
+	memsetInline(g_pWorkBuffer, 0, sizeof(SceChkregHashData));
 
-        /* Release acquired sema resource. */
-        status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000064C
-        if (status2 != SCE_ERROR_OK)
-        {
-            status1 = SCE_ERROR_SEMAPHORE;
-        }
-    }
+	/* Release acquired semaphore resource. */
+	if (sceKernelSignalSema(g_semaId, 1) != SCE_ERROR_OK) // 0x0000064C
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    return status1;
+	return status;
 }
 
 // Subroutine sceChkreg_driver_6894A027 - Address 0x000006B8
 s32 sceChkregGetPsFlags(u8 *pPsFlags, s32 index)
 {
-    s32 status1;
-    s32 status2;
+	s32 status;
 
-    if (index != SCE_CHKREG_PS_FLAGS_INDEX_DEFAULT) // 0x000006E4
-    {
-        return SCE_ERROR_INVALID_INDEX;
-    }
+	if (index != SCE_CHKREG_PS_FLAGS_INDEX_DEFAULT) // 0x000006E4
+	{
+		return SCE_ERROR_INVALID_INDEX;
+	}
 
-    status1 = SCE_ERROR_SEMAPHORE;
+	/* Allow only one access at a time. */
+	if (sceKernelWaitSema(g_semaId, 1, NULL) != SCE_ERROR_OK) // 0x000006FC
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    /* Allow only one access at a time. */
-    status2 = sceKernelWaitSema(g_semaId, 1, NULL); // 0x000006FC
-    if (status2 == SCE_ERROR_OK) // 0x000006FC
-    {
-        if ((g_isConsoleIdCertificateObtained || (status1 = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
-            && (status1 = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
-        {
-            /* 
-             * FactoryCode check:
-             * 
-             * The PsFlags (which can include the QA flag, for example) are only returned when the factory code has been
-             * set to "Diag". As such, the 8th byte in the SceConsoleId data needs to be:
-             * 
-             *     1000 11XX (values 0x8C - 0x8F, with the lower two bit being SceConsoleId.psFlagsMajor)
-             */
-            if (g_ConsoleIdCertificate.consoleId.factoryCode == SCE_PSP_FACTORY_CODE_DIAG) // 0x00000748
-            {
-                // uOFW note: Null check missing for pPsFlags
-                *pPsFlags = (g_ConsoleIdCertificate.consoleId.psFlagsMajor << 6) | (g_ConsoleIdCertificate.consoleId.psFlagsMinor);
-            }
-            else
-            {
-                status1 = SCE_ERROR_INVALID_VALUE;
-            }
-        }
+	/* Obtain the PS flags if successfully verified. */
+	if ((g_isConsoleIdCertificateObtained || (status = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
+		&& (status = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
+	{
+		/*
+		 * FactoryCode check:
+		 *
+		 * The PsFlags (which can include the QA flag, for example) are only returned when the factory code has been
+		 * set to "Diag". As such, the 8th byte in the SceConsoleId data needs to be:
+		 *
+		 *     1000 11XX (values 0x8C - 0x8F, with the lower two bit being SceConsoleId.psFlagsMajor)
+		 */
+		if (g_ConsoleIdCertificate.consoleId.factoryCode == SCE_PSP_FACTORY_CODE_DIAG) // 0x00000748
+		{
+			// uOFW note: Null check missing for pPsFlags
+			*pPsFlags = (g_ConsoleIdCertificate.consoleId.psFlagsMajor << 6) | (g_ConsoleIdCertificate.consoleId.psFlagsMinor);
+		}
+		else
+		{
+			status = SCE_ERROR_INVALID_VALUE;
+		}
+	}
 
-        /* Release acquired sema resource. */
-        status2 = sceKernelSignalSema(g_semaId, 1); // 0x0000075C
-        if (status2 != SCE_ERROR_OK) // 0x0000076C
-        {
-            status1 = SCE_ERROR_SEMAPHORE;
-        }
-    }
+	/* Release acquired semaphore resource. */
+	if (sceKernelSignalSema(g_semaId, 1) != SCE_ERROR_OK) // 0x0000075C & 0x0000076C
+	{
+		return SCE_ERROR_SEMAPHORE;
+	}
 
-    return status1;
+	return status;
 }
 
 // Subroutine sceChkreg_driver_7939C851 - Address 0x0000079C

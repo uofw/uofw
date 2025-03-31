@@ -51,13 +51,13 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode);
 #define SCE_PSP_REGION_TAIWAN                       0x8
 #define SCE_PSP_REGION_RUSSIA                       0x9
 #define SCE_PSP_REGION_CHINA                        0xA
-#define SCE_PSP_REGION_UNKNOWN_15                   0xF /* Perhaps all regions to test?*/
+#define SCE_PSP_REGION_UNKNOWN_15                   0xF /* Perhaps all regions to test? */
 
 /**
  * Checks if the UMD with the given media type can be started for the specified region on the PSP system.
  * 
  * @param umdMediaType The type of the UMD medium to check for. Typically GAME, VIDEO or AUDIO.
- * @param regionId The region to check for.
+ * @param regionId The region to check for. One of the SCE_PSP_REGION_* values.
  * 
  * @return SCE_TRUE if the UMD with the given media type and the specified region can be played on the PSP system,
  * SCE_FALSE otherwise.
