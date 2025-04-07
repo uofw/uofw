@@ -138,7 +138,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 }
 
 // Subroutine sub_00000190 - Address 0x00000190
-/* Obtains the console-ID certifcate from ID-Storage. */
+/* Obtains the console-ID certificate from ID-Storage. */
 s32 _sceChkregLookupConsoleIdCertificate(void)
 {
     /* Obtain a ConsoleId certificate. */
