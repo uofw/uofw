@@ -76,6 +76,7 @@ u8 *g_pIdStorageUMDConfig = (u8 *)&g_idStorageUMDConfig; // 0x00000A00
 SceChkregHashData *g_pWorkBuffer = &g_unk1540; // 0x00000A04
 
 // Subroutine sub_00000000 - Address 0x00000000
+/* Reads UMD-region code related info from ID-Storage. */
 s32 _sceChkregLookupUMDRegionCodeInfo(void)
 {
     // 0x00000024 - 0x00000060
@@ -90,6 +91,8 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
         }
     }
 
+	/* Scan the UMD-region-codes ID-storage leaf to obtain the number of UMD-region-code entries. */
+
     SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
 	u32 numRegionCodeInfoBlocks = (SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES_SIZE) / sizeof(SceIdStorageUMDRegionCodeInfo);
@@ -102,6 +105,8 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
         {
             // loc_000000B0
 
+			/* UMD-region-code entries available. */
+
             g_numUMDRegionCodeInfoEntries = i + 1; // 0x000000B4
             g_isUMDRegionCodesObtained = SCE_TRUE; // 0x000000C0
 
@@ -113,6 +118,7 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
 }
 
 // Subroutine sub_00000128 - Address 0x00000128
+/* Checks whether the specified UMD-media type and region ID is valid. */
 s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 {
     SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
@@ -132,6 +138,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 }
 
 // Subroutine sub_00000190 - Address 0x00000190
+/* Obtains the console-ID certifcate from ID-Storage. */
 s32 _sceChkregLookupConsoleIdCertificate(void)
 {
     /* Obtain a ConsoleId certificate. */
@@ -147,6 +154,7 @@ s32 _sceChkregLookupConsoleIdCertificate(void)
 }
 
 // Subroutine sub_0000020C - Address 0x0000020C
+/* Verifies the obtained console-ID certificate from ID-Storage for correctness. */
 s32 _sceChkregVerifyConsoleIdCertificate(void)
 {
     s32 status;
