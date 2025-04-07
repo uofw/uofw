@@ -73,6 +73,10 @@ s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId);
  *
  * @return SCE_ERROR_OK on success.
  * @return < on error.
+ * 
+ * @remark Outside of the corresponding VSH_bridge wrapper API (sceVshBridge_81706DA7) no call to this
+ * API has been found yet. And the wrapping API also does not appear to be called anywhere. The wrapping
+ * API has been added in FW 2.00.
  */
 s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash);
 
