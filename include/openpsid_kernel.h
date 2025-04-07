@@ -9,7 +9,7 @@
 
 /* Values (PSP product code/sub code, SceConsoleId, ScePsCode) taken from: https://github.com/CelesteBlue-dev/PS-ConsoleId-wiki/blob/master/PS-ConsoleId-wiki.txt */
 
-#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT         0x00 /* Prototype / Test unit */
+#define SCE_PSP_PRODUCT_CODE_TEST_PROTOTYPE_TEST_UNIT         0x00 /* Prototype / Test unit - also known as "Kicho & Dencho" */
 #define SCE_PSP_PRODUCT_CODE_TOOL_DEVKIT_TOOL_UNIT            0x01 /* Devkit / Development Tool - DEM-1000 & test unit DTP-T1000 */
 #define SCE_PSP_PRODUCT_CODE_DEX_TEST_KIT                     0x02 /* TestKit / Testing Kit - Testing Tool DTP-H1500 */
 #define SCE_PSP_PRODUCT_CODE_CEX_JAPAN                        0x03 /* Retail Japan */
@@ -54,9 +54,9 @@ typedef struct {
 	u16 unk0; // 0
 	/* Company code. Set to 1. */
 	u16 companyCode; // 2
-	/* Product code. */
+	/* Product code. One of SCE_PSP_PRODUCT_CODE_*. */
 	u16 productCode; // 4
-	/* Product sub code. */
+	/* Product sub code. One of SCE_PSP_PRODUCT_SUB_CODE_*. */
 	u16 productSubCode; // 6
 	/* Upper two bit of PsFlags. */
 	u8 psFlagsMajor : 2; // 8

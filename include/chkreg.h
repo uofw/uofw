@@ -28,9 +28,9 @@ typedef struct {
 } ScePsCode; // size = 8
 
 /**
- * Gets the PSP system's Ps code.
+ * Gets the PSP system's PS code.
  * 
- * @param pPsCode Pointer to a ScePsCode variable which is to receive the Ps code. 
+ * @param pPsCode Pointer to a ScePsCode variable which is to receive the PS code. 
  * 
  * @return 0 on success, otherwise < 0.
  */
@@ -76,10 +76,10 @@ s32 sceChkregCheckRegion(u32 umdMediaType, u32 regionId);
  */
 s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash);
 
-/* QA flag. */
+/* QA flag. If this bit is set in the PS flags then "Debug settings" are available in the XMB menu. */
 #define SCE_CHKREG_PS_FLAGS_QAF      0x00000001
-#define SCE_CHKREG_PS_FLAGS_UNK2F    0x00000002
 
+/* Default PS flags index. */
 #define SCE_CHKREG_PS_FLAGS_INDEX_DEFAULT    0
 
 /**
