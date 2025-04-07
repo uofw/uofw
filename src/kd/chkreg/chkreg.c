@@ -59,7 +59,7 @@ const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
  * 
  * Note: This might span continuous IDStorage leafs.
  */
-u32 g_UMDRegionCodeInfoPostIndex; // 0x00000A40
+u32 g_numUMDRegionCodeInfoEntries; // 0x00000A40
 u32 g_isUMDRegionCodesObtained; // 0x00000A44
 u32 g_isConsoleIdCertificateObtained; // 0x00000A48
 
@@ -102,8 +102,8 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
         {
             // loc_000000B0
 
-            g_UMDRegionCodeInfoPostIndex = i + 1; // 0x000000B4
-            g_isUMDRegionCodesObtained = 1; // 0x000000C0
+            g_numUMDRegionCodeInfoEntries = i + 1; // 0x000000B4
+            g_isUMDRegionCodesObtained = SCE_TRUE; // 0x000000C0
 
             return SCE_ERROR_OK;
         }
@@ -119,7 +119,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 
     // 0x00000138 - 0x00000164
     u32 i;
-    for (i = 0; i < g_UMDRegionCodeInfoPostIndex; i++)
+    for (i = 0; i < g_numUMDRegionCodeInfoEntries; i++)
     {
         if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == umdMediaTypeRegionId
             && pUMDRegionCodeInfo[i].unk4 == arg0) // 0x00000160
@@ -170,7 +170,7 @@ s32 _sceChkregInit(SceSize args, const void *argp)
     // 0x00000270 - 0x0000028C
     memsetInline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
 
-    g_UMDRegionCodeInfoPostIndex = 0; // 0x0x000002B0
+    g_numUMDRegionCodeInfoEntries = 0; // 0x0x000002B0
     g_isUMDRegionCodesObtained = SCE_FALSE;
     g_isConsoleIdCertificateObtained = SCE_FALSE;
 
@@ -200,7 +200,7 @@ s32 _sceChkregEnd(SceSize args, const void *argp)
     // 0x00000318 - 0x00000334
     memsetInline(&g_ConsoleIdCertificate, 0, sizeof g_ConsoleIdCertificate);
 
-    g_UMDRegionCodeInfoPostIndex = 0; // 0x00000348
+    g_numUMDRegionCodeInfoEntries = 0; // 0x00000348
     g_isUMDRegionCodesObtained = SCE_FALSE;
     g_isConsoleIdCertificateObtained = SCE_FALSE;
 
