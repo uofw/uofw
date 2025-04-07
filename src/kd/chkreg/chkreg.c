@@ -306,7 +306,7 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
 	memcpyInline(pWorkBufferHashData += 0x10, &arg0[0x140], 0x10);
 
 	/* Compute SHA1 hash. */
-	status = sceUtilsBufferCopyWithRange((u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), (u8 *)g_pWorkBuffer, sizeof(g_pWorkBuffer), KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
+	status = sceUtilsBufferCopyWithRange((u8 *)g_pWorkBuffer, sizeof(SceChkregHashData), (u8 *)g_pWorkBuffer, sizeof(SceChkregHashData), KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8
 	if (status == SCE_ERROR_OK) // 0x00000604
 	{
 		/* Copy first 16 byte of computed hash to target buffer. */
