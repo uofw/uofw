@@ -137,7 +137,7 @@ typedef struct {
 } SceIdStorageOpenPSIDCertificate; // size = 184
 
 typedef struct {
-	u32 regionCode; // 0
+	u32 umdMediaTypeRegionCode; // 0
 	u32 unk4; // 4
 } SceIdStorageUMDRegionCodeInfo;
 

@@ -97,7 +97,7 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
     // 0x00000064 - 0x00000094
     for (i = 0; i < numRegionCodeInfoBlocks; i++)
     {
-        if (pUMDRegionCodeInfo[i].regionCode == 1
+        if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == 1
             && (pUMDRegionCodeInfo[i].unk4 == 0 || pUMDRegionCodeInfo[i].unk4 == 0x70000000)) // 0x00000084
         {
             // loc_000000B0
@@ -121,7 +121,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
     u32 i;
     for (i = 0; i < g_UMDRegionCodeInfoPostIndex; i++)
     {
-        if (pUMDRegionCodeInfo[i].regionCode == umdMediaTypeRegionId
+        if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == umdMediaTypeRegionId
             && pUMDRegionCodeInfo[i].unk4 == arg0) // 0x00000160
         {
             return SCE_TRUE;
