@@ -3,6 +3,8 @@
 */
 
 #include "common_header.h"
+#include "power_kernel.h"
+#include "sysmem_kernel.h"
 
 enum SceSysEventTypes {
     SCE_SUSPEND_EVENTS = 0x0000FF00,
@@ -89,12 +91,58 @@ enum SceSysEventTypes {
 #define SCE_SYSTEM_RESUME_EVENT_PHASE1_2            0x00100002 /* Cancel request can be sent. */
 
 #define SCE_SYSTEM_RESUME_EVENT_COMPLETED           0x00400000  
+
+/* PSP clock frequency change events */
+
+#define SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_QUERY           0x01000000
+#define SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_CANCELLATION    0x01000001
+#define SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_START           0x01000002
+
+#define SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_PHASE_0         0x01000010
+#define SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_PHASE_1         0x01000011
+
+#define SCE_SYSTEM_PLL_CLOCK_FREQUENCY_CHANGE_EVENT_END             0x01000020
+
+typedef struct {
+    SceSize size; // 0
+    u32 sdkVersion; // 4
+    u32 unk8; // 8
+    u32 unk12; // 12
+    u32 unk16; // 16
+    u32 unk20; // 20
+    u32 unk24; // 24
+    u32 unk28; // 28
+    s64 systemTimePreSuspendOp; // 32
+    s32 pllOutSelect; // 40
+    s32 powerDownCounter; // 44
+    void (*pResumePoint)(ScePowerResumeInfo *); // 48
+    SceGameInfo *pSuspendedGameInfo; // 52
+    u32 unk56; // 56
+    u32 unk60; // 60
+    u32 unk64; // 64
+    void *pInitParamSfo; // 68
+    SceSize paramSfoSize; // 72
+    u32 unk76; // 76
+    u32 unk80; // 80
+    u32 unk84; // 84
+    u32 unk88; // 88
+    u32 unk92; // 92
+    u32 unk96; // 96
+    u32 unk100; // 100
+    u32 unk104; // 104
+    u32 unk108; // 108
+    u32 unk112; // 112
+    u32 unk116; // 116
+    u32 unk120; // 120
+    u32 unk124; // 124
+} SceSysEventSuspendPayloadResumeData; // size = 128
+
 typedef struct {
     SceSize size; // 0
     u32 isStandbyOrRebootRequested; // 4
     s64 systemTimePreSuspendOp; // 8
     u32 *pWakeupCondition; // 16
-    void *pResumeData; // 20
+    SceSysEventSuspendPayloadResumeData *pResumeData; // 20
     u32 unk24; // 24
     u32 unk28; // 28
     u32 unk32; // 32
@@ -106,6 +154,28 @@ typedef struct {
     u32 unk56; // 56
     u32 unk60; // 60
 } SceSysEventSuspendPayload; // size = 64
+
+typedef struct {
+    SceSize size; // 0;
+    ScePowerResumeInfo *pResumeInfo; // 4
+    s64 systemTimePreSuspendOp; // 8
+    s64 unk16; // 16
+    u32 unk24; // 24
+    u32 unk28; // 28
+    u32 unk32; // 32
+    u32 unk36; // 36
+    u32 unk40; // 40
+    u32 unk44; // 44
+    u32 unk48; // 48
+    u32 unk52; // 52
+} SceSysEventResumePayload; // size = 56
+
+typedef struct {
+    u32 unk0; // 0
+    u32 newPllClockFrequency; // 4
+    u32 unk8; // 8
+    u32 unk12; // 12
+} SceSysEventPllClockFrequencyChangePayload; // size = 16;
 
 typedef struct SceSysEventHandler {
     s32 size;

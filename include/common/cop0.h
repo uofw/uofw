@@ -21,6 +21,8 @@
 #define COP0_CTRL_NMI_TABLE     18
 #define COP0_CTRL_23            23
 #define COP0_CTRL_PROFILER_BASE 25
+#define COP0_CTRL_30            30
+#define COP0_CTRL_31            31
 
 #define COP0_STATE_COUNT    9
 #define COP0_STATE_COMPARE 11

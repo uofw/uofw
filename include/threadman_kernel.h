@@ -32,8 +32,8 @@ typedef struct {
 #define SCE_KERNEL_LOWEST_PRIORITY_KERNEL       (126)
 
 /* thread size */
-#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (4 * 1024) /* 4 KB */
-#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (256 * 1024) /* 256 KB */
+#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (SCE_KERNEL_4KiB) /* 4 KB */
+#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (SCE_KERNEL_256KiB) /* 256 KB */
 
 /* thread attributes */
 #define SCE_KERNEL_TH_VSH_MODE                  (0xC0000000) /* Thread runs in VSH mode. */
@@ -159,7 +159,7 @@ typedef struct {
 #define SCE_KERNEL_EW_CLEAR_PAT         (0x20)      /** Clear bits specified by bit pattern after wait condition is satisfied. */
 #define SCE_KERNEL_EW_CLEAR             SCE_KERNEL_EW_CLEAR_ALL
 
-SceUID sceKernelCreateEventFlag(const char *name, int attr, int bits, SceKernelEventFlagOptParam *opt);
+SceUID sceKernelCreateEventFlag(const char *name, int attr, int initBits, SceKernelEventFlagOptParam *optParam);
 int sceKernelSetEventFlag(SceUID evid, u32 bits);
 int sceKernelClearEventFlag(SceUID evid, u32 bits);
 int sceKernelPollEventFlag(int evid, u32 bits, u32 wait, u32 *outBits);
@@ -259,7 +259,12 @@ typedef struct {
     s32 notifyArg;
 } SceKernelCallbackInfo;
 
+SceUID sceKernelCreateCallback(const char* name, SceKernelCallbackFunction callback, void* common);
+int sceKernelDeleteCallback(SceUID cbid);
 int sceKernelNotifyCallback(SceUID cb, int arg2);
+int sceKernelCancelCallback(SceUID cbid);
+int sceKernelGetCallbackCount(SceUID cbid);
+int sceKernelCheckCallback(void);
 int sceKernelReferCallbackStatus(SceUID cb, SceKernelCallbackInfo *status);
 
 /* VPL Functions */
