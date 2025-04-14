@@ -97,22 +97,22 @@ typedef struct {
 /* This structure represents a timer connected to a hardware timer. */
 typedef struct {
     /* The assigned hardware timer. */
-    SceHwTimer *hw;
+    SceHwTimer *regadr;
     /* The interrupt number belonging to this timer. */
-    s32 intrNum;
+    s32 intrcode;
     /* The ID of the timer. */
-    s32 timerId;
+    s32 timid;
     /* Unknown. */
-    s32 unk12;
+    u32 prev_tmcy;
     /* Unknown. */
-    s32 unk16;
+    u32 prev_icnt;
     /* The time-up handler for the timer. */
-    SceSysTimerCb cb;
+    SceSTimerCb cb;
     /* The count value for the timer. */
-    s32 count; 
+    u32 totalcount;
     /* Pointer to memory common between time-up handler and general routines. */
     void *common;
-} SceSysTimer;
+} SceSTimerInfo;
 
 /* 
  * This structure saves important timer data when a timer is suspended, 
@@ -132,65 +132,71 @@ typedef struct {
      *    The saved system time when the timer was stopped.  It is set when the 
      *    corresponding timer is suspended.
      */
-    s32 sTimerData;
+    u32 Control;
     /* The numerator of the timer's prescale. */
-    s32 sPrsclNumerator; 
+    u32 N;
     /* The denominator of the timer's prescale. */
-    s32 sPrsclDenominator;
-} SceSysTimerSave;
+    s32 M;
+} SceSTimerReg;
 
-SceSysTimer timers[TIMER_NUM_HW_TIMERS] = {
-    [0] = {
-        .hw = (void *)HWPTR(HW_TIMER_0),
-        .intrNum = SCE_SYSTIMER0_INT,
-        .timerId = -1,
-        .unk12 = 0,
-        .unk16 = 0,
-        .cb = NULL,
-        .count = 0,
-        .common = NULL,
+typedef struct {
+    SceSTimerInfo SYSTMR[4];
+    u32 nextid;
+} SceSTimerCB;
+
+SceSTimerCB g_timerCB = {
+    .SYSTMR = {
+        [0] = {
+            .regadr = (void *)HWPTR(HW_TIMER_0),
+            .intrcode = SCE_SYSTIMER0_INT,
+            .timid = -1,
+            .prev_tmcy = 0,
+            .prev_icnt = 0,
+            .cb = NULL,
+            .totalcount = 0,
+            .common = NULL,
+        },
+        [1] = {
+            .regadr = (void *)HWPTR(HW_TIMER_1),
+            .intrcode = SCE_SYSTIMER1_INT,
+            .timid = -1,
+            .prev_tmcy = 0,
+            .prev_icnt = 0,
+            .cb = NULL,
+            .totalcount = 0,
+            .common = NULL,
+        },
+        [2] = {
+            .regadr = (void *)HWPTR(HW_TIMER_2),
+            .intrcode = SCE_SYSTIMER2_INT,
+            .timid = -1,
+            .prev_tmcy = 0,
+            .prev_icnt = 0,
+            .cb = NULL,
+            .totalcount = 0,
+            .common = NULL,
+        },
+        [3] = {
+            .regadr = (void *)HWPTR(HW_TIMER_3),
+            .intrcode = SCE_SYSTIMER3_INT,
+            .timid = -1,
+            .prev_tmcy = 0,
+            .prev_icnt = 0,
+            .cb = NULL,
+            .totalcount = 0,
+            .common = NULL,
+        },
     },
-    [1] = {
-        .hw = (void *)HWPTR(HW_TIMER_1),
-        .intrNum = SCE_SYSTIMER1_INT,
-        .timerId = -1,
-        .unk12 = 0,
-        .unk16 = 0,
-        .cb = NULL,
-        .count = 0,
-        .common = NULL,
-    },
-    [2] = {
-        .hw = (void *)HWPTR(HW_TIMER_2),
-        .intrNum = SCE_SYSTIMER2_INT,
-        .timerId = -1,
-        .unk12 = 0,
-        .unk16 = 0,
-        .cb = NULL,
-        .count = 0,
-        .common = NULL,
-    },
-    [3] = {
-        .hw = (void *)HWPTR(HW_TIMER_3),
-        .intrNum = SCE_SYSTIMER3_INT,
-        .timerId = -1,
-        .unk12 = 0,
-        .unk16 = 0,
-        .cb = NULL,
-        .count = 0,
-        .common = NULL,
-    },
+    /* The base value for a timer ID. */
+    .nextid = 0x00352341
 };
 
-/* The base value for a timer ID. */
-s32 baseTimerId = 0x00352341;
-
 /* Collects important data for each individual hardware timer. */
-SceSysTimerSave STimerRegSave[TIMER_NUM_HW_TIMERS];
+SceSTimerReg STimerRegSave[TIMER_NUM_HW_TIMERS];
 
-static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSysTimer *timer, s32 arg2);
-static void _sceSTimerStopCount(SceSysTimer *timer);
-static s32 _sceSTimerGetCount(SceSysTimer *timer);
+static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2);
+static void _sceSTimerStopCount(SceSTimerInfo *timer);
+static s32 _sceSTimerGetCount(SceSTimerInfo *timer);
 static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
 
@@ -200,17 +206,17 @@ s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock _
     
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
-        timers[i].hw->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
-        timers[i].hw->prsclNumerator = -1;
-        timers[i].hw->prsclDenominator = -1;
-        //(void)timers[i].hw->unk0;
-        timers[i].cb = NULL;
-        timers[i].unk12 = 0;
-        timers[i].unk16 = 0;
-        timers[i].count = 0;
-        timers[i].common = NULL;
-        timers[i].timerId = -1;
-        sceKernelRegisterIntrHandler(timers[i].intrNum, 2, systimerhandler, &timers[i], NULL);
+        g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
+        g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
+        g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
+        //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+        g_timerCB.SYSTMR[i].cb = NULL;
+        g_timerCB.SYSTMR[i].prev_tmcy = 0;
+        g_timerCB.SYSTMR[i].prev_icnt = 0;
+        g_timerCB.SYSTMR[i].totalcount = 0;
+        g_timerCB.SYSTMR[i].common = NULL;
+        g_timerCB.SYSTMR[i].timid = -1;
+        sceKernelRegisterIntrHandler(g_timerCB.SYSTMR[i].intrcode, 2, systimerhandler, &g_timerCB.SYSTMR[i], NULL);
     }
     sceKernelRegisterSuspendHandler(10, suspendSTimer, NULL);
     sceKernelRegisterResumeHandler(10, resumeSTimer, NULL);
@@ -225,29 +231,29 @@ s32 SysTimerEnd(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unus
     
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
-        _sceSTimerStopCount(&timers[i]);
-        sceKernelReleaseIntrHandler(timers[i].intrNum);
+        _sceSTimerStopCount(&g_timerCB.SYSTMR[i]);
+        sceKernelReleaseIntrHandler(g_timerCB.SYSTMR[i].intrcode);
     }
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
 }
 
 /* Update a timer's counter register value and call the time-up handler. */
-static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSysTimer *timer, s32 arg2)
+static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2)
 {
     if (timer->cb == NULL)
         return -1;
     
-    s32 v1 = TIMER_GET_MODE(timer->hw->timerData);
-    s32 v2 = TIMER_GET_COUNT(timer->hw->timerData);
-    if (timer->unk12 != 0) {
+    s32 v1 = TIMER_GET_MODE(timer->regadr->timerData);
+    s32 v2 = TIMER_GET_COUNT(timer->regadr->timerData);
+    if (timer->prev_tmcy != 0) {
         v1--;
-        timer->count += timer->unk12;
+        timer->totalcount += timer->prev_tmcy;
     }
-    timer->count += v2 * (v1 - timer->unk16);
-    timer->unk12 = 0;
-    timer->unk16 = 0;
-    if (timer->cb(timer->timerId, timer->count + _sceSTimerGetCount(timer), timer->common, arg2) != -1) {
+    timer->totalcount += v2 * (v1 - timer->prev_icnt);
+    timer->prev_tmcy = 0;
+    timer->prev_icnt = 0;
+    if (timer->cb(timer->timid, timer->totalcount + _sceSTimerGetCount(timer), timer->common, arg2) != -1) {
         _sceSTimerStopCount(timer);
         return -2;
     }
@@ -255,17 +261,17 @@ static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSysTimer *timer,
 }
 
 /* Stop the hardware timer counting. */
-static void _sceSTimerStopCount(SceSysTimer *timer)
+static void _sceSTimerStopCount(SceSTimerInfo *timer)
 {
-    //timer->hw->timerData = timer->hw->data & ~(TIMER_MODE_IN_USE | 0x80000000);
-    timer->hw->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->hw->nowData) & ~(TIMER_MODE_IN_USE | TIMER_MODE_UNKNOWN));
-    timer->hw->timerData |= TIMER_SET_COUNT(TIMER_GET_COUNT(timer->hw->nowData));
+    //timer->regadr->timerData = timer->regadr->data & ~(TIMER_MODE_IN_USE | 0x80000000);
+    timer->regadr->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->regadr->nowData) & ~(TIMER_MODE_IN_USE | TIMER_MODE_UNKNOWN));
+    timer->regadr->timerData |= TIMER_SET_COUNT(TIMER_GET_COUNT(timer->regadr->nowData));
 }
 /* Get the current value of the hardware timer counter register. */
-static s32 _sceSTimerGetCount(SceSysTimer *timer)
+static s32 _sceSTimerGetCount(SceSTimerInfo *timer)
 {
-    //TODO: timer->hw->ulNowTime - timer->hw->ulBaseTime ?
-    return (TIMER_GET_COUNT(timer->hw->nowData) - TIMER_GET_COUNT(timer->hw->baseTime));
+    //TODO: timer->regadr->ulNowTime - timer->regadr->ulBaseTime ?
+    return (TIMER_GET_COUNT(timer->regadr->nowData) - TIMER_GET_COUNT(timer->regadr->baseTime));
 }
 
 /* 
@@ -276,10 +282,10 @@ static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribut
 {
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
-        STimerRegSave[i].sTimerData = timers[i].hw->timerData;
-        STimerRegSave[i].sPrsclNumerator = timers[i].hw->prsclNumerator;
-        STimerRegSave[i].sPrsclDenominator = timers[i].hw->prsclDenominator;
-        sceKernelDisableIntr(timers[i].intrNum);
+        STimerRegSave[i].Control = g_timerCB.SYSTMR[i].regadr->timerData;
+        STimerRegSave[i].N = g_timerCB.SYSTMR[i].regadr->prsclNumerator;
+        STimerRegSave[i].M = g_timerCB.SYSTMR[i].regadr->prsclDenominator;
+        sceKernelDisableIntr(g_timerCB.SYSTMR[i].intrcode);
     }
     return SCE_ERROR_OK;
 }
@@ -292,11 +298,11 @@ static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute
 {
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
-        timers[i].hw->prsclDenominator = STimerRegSave[i].sPrsclDenominator;
-        timers[i].hw->prsclNumerator = STimerRegSave[i].sPrsclNumerator;
-        //(void)timers[i].hw->unk0;
-        timers[i].hw->timerData = STimerRegSave[i].sTimerData & ~0x80000000;
-        sceKernelEnableIntr(timers[i].intrNum);
+        g_timerCB.SYSTMR[i].regadr->prsclDenominator = STimerRegSave[i].M;
+        g_timerCB.SYSTMR[i].regadr->prsclNumerator = STimerRegSave[i].N;
+        //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+        g_timerCB.SYSTMR[i].regadr->timerData = STimerRegSave[i].Control & ~0x80000000;
+        sceKernelEnableIntr(g_timerCB.SYSTMR[i].intrcode);
     }
     return SCE_ERROR_OK;
 }
@@ -310,22 +316,22 @@ s32 sceSTimerAlloc(void)
     
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
-        if (timers[i].timerId == -1) {
-            timers[i].cb = NULL;
-            //timers[i].hw->timerData = 0x80000000;
-            timers[i].hw->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
-            timers[i].hw->prsclNumerator = -1;
-            timers[i].hw->prsclDenominator = -1;
-            //(void)timers[i].hw->unk0;
-            timers[i].unk12 = 0;
-            timers[i].unk16 = 0;
-            timers[i].count = 0;
-            timers[i].common = NULL;
-            timers[i].timerId = ((baseTimerId << 2) | i) & 0x7FFFFFFF;
-            baseTimerId += 7;
+        if (g_timerCB.SYSTMR[i].timid == -1) {
+            g_timerCB.SYSTMR[i].cb = NULL;
+            //g_timerCB.SYSTMR[i].regadr->timerData = 0x80000000;
+            g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
+            g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
+            g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
+            //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+            g_timerCB.SYSTMR[i].prev_tmcy = 0;
+            g_timerCB.SYSTMR[i].prev_icnt = 0;
+            g_timerCB.SYSTMR[i].totalcount = 0;
+            g_timerCB.SYSTMR[i].common = NULL;
+            g_timerCB.SYSTMR[i].timid = ((g_timerCB.nextid << 2) | i) & 0x7FFFFFFF;
+            g_timerCB.nextid += 7;
             
             sceKernelCpuResumeIntr(oldIntr);
-            return timers[i].timerId;
+            return g_timerCB.SYSTMR[i].timid;
         }
     }
     sceKernelCpuResumeIntr(oldIntr);
@@ -334,28 +340,28 @@ s32 sceSTimerAlloc(void)
 
 s32 sceSTimerFree(s32 timerId)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
     if (sceKernelIsIntrContext())
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     
-    if (timer->timerId != timerId)
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
     _sceSTimerStopCount(timer);
-    sceKernelDisableIntr(timer->intrNum);
-    //timer->hw->timerData = 0x80000000;
-    timer->hw->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
-    timer->hw->prsclNumerator = -1;
-    timer->hw->prsclDenominator = -1;
+    sceKernelDisableIntr(timer->intrcode);
+    //timer->regadr->timerData = 0x80000000;
+    timer->regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
+    timer->regadr->prsclNumerator = -1;
+    timer->regadr->prsclDenominator = -1;
     timer->cb = NULL;
-    //(void)timer->hw->unk0;
+    //(void)timer->regadr->unk0;
     timer->common = NULL;
-    timer->timerId = -1;
-    timer->unk12 = 0;
-    timer->unk16 = 0;
-    timer->count = 0;
+    timer->timid = -1;
+    timer->prev_tmcy = 0;
+    timer->prev_icnt = 0;
+    timer->totalcount = 0;
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
@@ -363,18 +369,18 @@ s32 sceSTimerFree(s32 timerId)
 
 s32 sceSTimerStartCount(s32 timerId)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    if (TIMER_GET_MODE(timer->hw->nowData) & TIMER_MODE_IN_USE) {
+    if (TIMER_GET_MODE(timer->regadr->nowData) & TIMER_MODE_IN_USE) {
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_TIMER_BUSY;
     }
-    timer->hw->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->hw->nowData) | TIMER_MODE_IN_USE);
-    timer->hw->timerData |= TIMER_SET_COUNT(0);
+    timer->regadr->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->regadr->nowData) | TIMER_MODE_IN_USE);
+    timer->regadr->timerData |= TIMER_SET_COUNT(0);
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
@@ -382,8 +388,8 @@ s32 sceSTimerStartCount(s32 timerId)
 
 s32 sceSTimerGetCount(s32 timerId, s32 *count)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
@@ -396,15 +402,15 @@ s32 sceSTimerGetCount(s32 timerId, s32 *count)
 
 s32 sceSTimerResetCount(s32 timerId)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    //timer->hw->timerData |= 0x80000000;
-    timer->hw->timerData |= TIMER_SET_MODE(TIMER_MODE_UNKNOWN);
-    timer->count = 0;
+    //timer->regadr->timerData |= 0x80000000;
+    timer->regadr->timerData |= TIMER_SET_MODE(TIMER_MODE_UNKNOWN);
+    timer->totalcount = 0;
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
@@ -412,8 +418,8 @@ s32 sceSTimerResetCount(s32 timerId)
 
 s32 sceSTimerStopCount(s32 timerId)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
@@ -426,8 +432,8 @@ s32 sceSTimerStopCount(s32 timerId)
 
 s32 sceSTimerSetPrscl(s32 timerId, s32 numerator, s32 denominator)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     if (numerator == 0 || denominator == 0)
@@ -438,21 +444,21 @@ s32 sceSTimerSetPrscl(s32 timerId, s32 numerator, s32 denominator)
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    if (TIMER_GET_MODE(timer->hw->nowData) & TIMER_MODE_IN_USE) {
+    if (TIMER_GET_MODE(timer->regadr->nowData) & TIMER_MODE_IN_USE) {
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_TIMER_BUSY;
     }
-    timer->hw->prsclNumerator = numerator;
-    timer->hw->prsclDenominator = denominator;
+    timer->regadr->prsclNumerator = numerator;
+    timer->regadr->prsclDenominator = denominator;
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
 }
 
-s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSysTimerCb timeUpHandler, void *common)
+s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSTimerCb timeUpHandler, void *common)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
@@ -462,18 +468,18 @@ s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSysTimerCb timeUpHandl
     
     if (timeUpHandler == NULL) {
         timer->cb = NULL;
-        timer->count = 0;
+        timer->totalcount = 0;
         timer->common = NULL;
         _sceSTimerStopCount(timer);
-        sceKernelDisableIntr(timer->intrNum);
+        sceKernelDisableIntr(timer->intrcode);
     } else {
         timer->cb = timeUpHandler;
         timer->common = common;
-        //timer->hw->nowData & ~TIMER_MAX_COUNTER_VALUE
-        timer->hw->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->hw->nowData)) | TIMER_SET_COUNT(0);
-        timer->hw->timerData |= compareValue;
-        timer->hw->timerData = timer->hw->nowData | TIMER_SET_MODE(TIMER_MODE_UNKNOWN | TIMER_MODE_HANDLER_REGISTERED);
-        sceKernelEnableIntr(timer->intrNum);
+        //timer->regadr->nowData & ~TIMER_MAX_COUNTER_VALUE
+        timer->regadr->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->regadr->nowData)) | TIMER_SET_COUNT(0);
+        timer->regadr->timerData |= compareValue;
+        timer->regadr->timerData = timer->regadr->nowData | TIMER_SET_MODE(TIMER_MODE_UNKNOWN | TIMER_MODE_HANDLER_REGISTERED);
+        sceKernelEnableIntr(timer->intrcode);
     }
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
@@ -481,23 +487,23 @@ s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSysTimerCb timeUpHandl
 
 s32 sceSTimerSetTMCY(s32 timerId, s32 arg1)
 {
-    SceSysTimer *timer = &timers[timerId & 3];
-    if (timer->timerId != timerId)
+    SceSTimerInfo *timer = &g_timerCB.SYSTMR[timerId & 3];
+    if (timer->timid != timerId)
         return SCE_ERROR_KERNEL_ILLEGAL_TIMER_ID;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    s32 val = TIMER_GET_COUNT(timer->hw->nowData);
-    s32 val2 = TIMER_GET_MODE(timer->hw->nowData);
-    timer->unk12 = val;
-    timer->unk16 = val2;
-    timer->count += val * (val2 - timer->unk16);
+    s32 val = TIMER_GET_COUNT(timer->regadr->nowData);
+    s32 val2 = TIMER_GET_MODE(timer->regadr->nowData);
+    timer->prev_tmcy = val;
+    timer->prev_icnt = val2;
+    timer->totalcount += val * (val2 - timer->prev_icnt);
     
-    u32 mode = TIMER_GET_MODE(timer->hw->nowData);
+    u32 mode = TIMER_GET_MODE(timer->regadr->nowData);
     if ((arg1 - 1) > TIMER_MAX_COUNTER_VALUE)
-        timer->hw->timerData = TIMER_SET_MODE(mode) | TIMER_SET_COUNT(TIMER_MAX_COUNTER_VALUE);
+        timer->regadr->timerData = TIMER_SET_MODE(mode) | TIMER_SET_COUNT(TIMER_MAX_COUNTER_VALUE);
     else
-        timer->hw->timerData = TIMER_SET_MODE(mode) | TIMER_SET_COUNT(arg1 - 1);
+        timer->regadr->timerData = TIMER_SET_MODE(mode) | TIMER_SET_COUNT(arg1 - 1);
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;

@@ -441,11 +441,11 @@ s32 _sceGeInitCallback3(void *arg0 __attribute__ ((unused)), s32 arg1 __attribut
 // Part of the patching stuff for Genso Suikoden I&II : patch the game itself to use sceGeListUpdateStallAddr_lazy
 s32 _sceGeInitCallback4()
 {
-    SceKernelGameInfo *info = sceKernelGetGameInfo();
+    SceGameInfo *info = sceKernelGetGameInfo();
     if (info != NULL) {
         u32 syscOp = ALLEGREX_MAKE_SYSCALL(sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr));
         int oldIntr = sceKernelCpuSuspendIntr();
-        if (strcmp(info->gameId, sadrupdate_bypass.name) == 0) {
+        if (strcmp((char*)info->param_product_string, sadrupdate_bypass.name) == 0) {
             u32 *ptr = sadrupdate_bypass.ptr;
             // Replace the syscall to sceGeListUpdateStallAddr by a jump to sceGeListUpdateStallAddr_lazy in usersystemlib
             if (ptr[0] == ALLEGREX_MAKE_JR_RA && ptr[1] == syscOp) {
@@ -1585,10 +1585,10 @@ int _sceGeQueueInit()
     g_AwQueue.listEvFlagIds[1] = sceKernelCreateEventFlag("SceGeQueueId", 0x201, -1, NULL);
     // Used for the patching stuff for Genso Suikoden I&II (lazy flush)
     g_AwQueue.syscallId = sceKernelQuerySystemCall((void*)sceGeListUpdateStallAddr);
-    SceKernelGameInfo *info = sceKernelGetGameInfo();
+    SceGameInfo *info = sceKernelGetGameInfo();
     // Patch for Itadaki Street Portable (missing a cache flush function when enqueuing the first display list)
     g_AwQueue.cachePatch = 0;
-    if (info != NULL && strcmp(info->gameId, "ULJM05127") == 0) {
+    if (info != NULL && strcmp((char*)info->param_product_string, "ULJM05127") == 0) {
         g_AwQueue.cachePatch = 1;
     }
     return 0;

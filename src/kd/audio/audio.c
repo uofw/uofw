@@ -35,13 +35,13 @@ typedef struct
     /* The original sample count. */
     u16 sampleCount; // 8
     /* \todo */
-    char unk10;
+    u8 unk10;
     /* The number of bytes per sample (2 in mono, 4 in stereo). */
-    char bytesPerSample; // 11
+    u8 bytesPerSample; // 11
     /* The left volume. */
-    short leftVol;
+    u16 leftVol;
     /* The right volume. */
-    short rightVol;
+    u16 rightVol;
 } SceAudioChannel;
 
 /* The audio controller structure. */
@@ -52,7 +52,7 @@ typedef struct
     u8 buf512[240]; // 512
     u8 buf752[272]; // 752
     u32 hwBuf[48]; // 1024
-    SceDmaOp *dmaPtr[3]; // 1216
+    sceKernelDmaOperation *dmaPtr[3]; // 1216
     /* The audio event flag ID. */
     SceUID evFlagId; // 1228
     /* The audio channels structures. */
@@ -64,7 +64,7 @@ typedef struct
     /* The audio flags. */
     u8 flags; // 1364
     /* The volume offset. */
-    u8 volumeOffset; // 1365
+    s8 volumeOffset; // 1365
     u8 delayShift; // 1366
     u8 padding1; // 1367
     u16 srcChFreq; // 1368
@@ -75,13 +75,13 @@ typedef struct
     u32 inputOrigSampleCnt; // 1376
     u32 inputCurSampleCnt; // 1380
     u16 *inputBuf; // 1384
-    u8 unkInput0, inputGain, unkInput2, unkInput3, unkInput4, unkInput5; // 1388
+    s8 unkInput0, inputGain, unkInput2, unkInput3, unkInput4, unkInput5; // 1388
     u8 inputHwFreq; // 1394
-    u8 inputIsWaiting; // 1395
-    u8 inputInited; // 1396
-    u8 unkCodecArg; // 1397
-    u8 unkCodecRet; // 1398
-    u8 unkCodecArgSet; // 1399
+    s8 inputIsWaiting; // 1395
+    s8 inputInited; // 1396
+    s8 unkCodecArg; // 1397
+    s8 unkCodecRet; // 1398
+    s8 unkCodecArgSet; // 1399
     // end: 1400
 } SceAudio;
 
@@ -169,8 +169,8 @@ void updateAudioBuf(int arg)
 int dmaUpdate(int arg)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
-    char v = g_audio.flags & ~(1 << (arg & 0x1F));
-    HW(0xBE000004) = v;
+    u8 v = g_audio.flags & ~(1 << (arg & 0x1F));
+    HW(0xBE000004) = (int)(char)v;
     g_audio.flags = v;
     sceKernelDmaOpQuit(g_audio.dmaPtr[arg]);
     sceKernelDmaOpDeQueue(g_audio.dmaPtr[arg]);
@@ -201,7 +201,7 @@ s32 audioMixerThread()
     SceAudio *userAudio = UCACHED(&g_audio);
     memset(sp0, 0, sizeof(sp0));
     SceAudio *uncachedAudio = KUNCACHED(&g_audio);
-    SceDmaOp *unk = g_audio.dmaPtr[0];
+    sceKernelDmaOperation *unk = g_audio.dmaPtr[0];
     // 0328
     for (;;)
     {
@@ -254,12 +254,12 @@ s32 audioMixerThread()
         else
         {
             char shift = g_audio.volumeOffset;
-            char unk1 = unk->unk32 < (u32)&userAudio->buf240[16];
+            char unk1 = unk->uiSrcAddr < (u32)&userAudio->buf240[16];
             u32 *dstBuf = (u32*)(uncachedAudio->buf0 + unk1 * 256);
             // 0408
             s32 *u32buf = sp0;
             int i;
-            for (i = 0; i < 128; i += 2)
+            for (i = 0; i < 64; i += 1)
             {
                 dstBuf[i] = 
                       ((pspMax(pspMin(u32buf[0] >> (shift & 0x1F), 0x7FFF), -0x8000) <<  0) & 0x0000FFFF)
@@ -503,7 +503,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
     dbg_printf("Running %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
     int oldIntr = sceKernelCpuSuspendIntr();
-    if ((leftVol > 0xFFFF) || (rightVol > 0xFFFF))
+    if (((u32)leftVol > 0xFFFF) || ((u32)rightVol > 0xFFFF))
     {
         // 0E30
         sceKernelCpuResumeIntr(oldIntr);
@@ -653,6 +653,7 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
         return SCE_AUDIO_ERROR_NOT_INITIALIZED;
     }
     chan->sampleCount = (u16)sampleCount;
+    sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return 0;
 }
@@ -668,10 +669,10 @@ int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
     int oldIntr = sceKernelCpuSuspendIntr();
     SceAudioChannel *chan = &g_audio.chans[chanId];
     if (leftVol >= 0)
-        chan->leftVol = (s16)leftVol;
+        chan->leftVol = leftVol;
     // 10AC
     if (rightVol >= 0)
-        chan->rightVol = (s16)rightVol;
+        chan->rightVol = rightVol;
     // 10B4
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
@@ -694,14 +695,14 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
         return SCE_AUDIO_ERROR_OUTPUT_BUSY;
     }
     // 1164
-    if (sceKernelGetCompiledSdkVersion() > 0x01FFFFFF) {
-        if (chan->curSampleCnt != 0 && chan->buf != NULL) {
+    if ((int)sceKernelGetCompiledSdkVersion() < 0x2000000) {
+        if (chan->curSampleCnt != 0) {
             // 116C
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
             return SCE_AUDIO_ERROR_OUTPUT_BUSY;
         }
-    } else if (chan->curSampleCnt != 0) {
+    } else if (chan->curSampleCnt != 0 && chan->buf != NULL) {
         // 116C
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
@@ -923,7 +924,7 @@ int sceAudioInit()
     sceKernelRegisterIntrHandler(10, 2, audioIntrHandler, 0, 0);
     sceKernelEnableIntr(10);
     sceKernelDcacheWritebackInvalidateRange(&g_audio, sizeof(g_audio));
-    g_audio.dmaPtr[0]->unk32 = (int)UCACHED(&g_audio);
+    g_audio.dmaPtr[0]->uiSrcAddr = (int)UCACHED(&g_audio);
     g_audio.unkCodecArg = 1;
     g_audio.unkCodecArgSet = 0;
     g_audio.inputInited = 0;
@@ -1016,7 +1017,7 @@ int audioIntrHandler()
         {
             // 1A8C
             sceKernelDmaOpQuit(g_audio.dmaPtr[0]);
-            g_audio.dmaPtr[0]->unk32 = (u32)UCACHED(g_audio.buf240 + 16);
+            g_audio.dmaPtr[0]->uiSrcAddr = (u32)UCACHED(g_audio.buf240 + 16);
         }
         // 1A1C
         if ((hwAttr & 2) != 0)
@@ -1094,7 +1095,7 @@ void audioHwInit()
         HW(0xBE000038) = 0x80;
     }
     // 1BA0
-    short v = g_audio.hwFreq;
+    u16 v = g_audio.hwFreq;
     if (v == 0) {
         // 1BE0
         HW(0xBE000040) = 5;
@@ -1262,7 +1263,7 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
     HW(0xBE000000) = 1;
     if ((g_audio.flags & 2) != 0)
     {
-        HW(0xBE000004) = (int)(g_audio.flags ^ 2);
+        HW(0xBE000004) = (int)(char)(g_audio.flags ^ 2);
         // 1F30
         while ((HW(0xBE00000C) & 2) != 0)
             ;
@@ -1286,7 +1287,7 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
     if (g_audio.flags != 0)
     {
         // 1F9C
-        HW(0xBE000004) = g_audio.flags;
+        HW(0xBE000004) = (int)(char)g_audio.flags;
     }
     else
         HW(0xBE000000) = 0;
@@ -1319,7 +1320,7 @@ int sceAudioSRCChRelease(void)
 int sceAudioSRCOutputBlocking(int vol, void *buf)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
-    if (vol > 0xFFFFF)
+    if ((u32)vol > 0xFFFFF)
         return SCE_AUDIO_ERROR_INVALID_VOLUME;
     int oldK1 = pspShiftK1();
     if (!pspK1StaBufOk(buf, g_audio.srcChSampleCnt * g_audio.numChans))
@@ -1335,21 +1336,17 @@ int sceAudioSRCOutputBlocking(int vol, void *buf)
     {
         // 2190
         int ret2 = sceKernelWaitEventFlag(g_audio.evFlagId, 0x40000000, 32, 0, 0);
-        ret = (ret2 < 0) ? ret : ret2;
+        ret = (ret2 < 0) ? ret2 : ret;
     }
     // 21AC
     int ret2 = sceCodec_driver_FC355DE0();
-    if (ret2 == 0) {
+    if (ret2 == 0 || g_audio.freq == ret2) {
         pspSetK1(oldK1);
-        return 0;
-    }
-    if (g_audio.freq == ret2) {
-        pspSetK1(oldK1);
-        return ret2;
+        return ret;
     }
     sceAudioSetFrequency(ret2);
     oldIntr = sceKernelCpuSuspendIntr();
-    short freq = g_audio.srcChFreq;
+    u16 freq = g_audio.srcChFreq;
     g_audio.srcChFreq = 0;
     sceAudioSRCChReserve(g_audio.srcChSampleCnt, freq, g_audio.numChans >> 1);
     sceKernelCpuResumeIntr(oldIntr);
@@ -1389,8 +1386,8 @@ int audioSRCOutput(int vol, void *buf)
     // 2300
     int samplesHi = (numSamples > 16396) ? (numSamples - 16380) : 16;
     int diff = numSamples - samplesHi;
-    int k1 = pspGetK1();
-    void *newBuf = (void*)((((k1 >> 31) << 30) & 0xE0000000) | (u32)UCACHED(buf));
+    u32 k1 = pspGetK1();
+    void *newBuf = (void*)(((k1 >> 31) << 30) | (u32)UCACHED(buf));
     ptr[3] = (diff      >> 2) | 0x04489000;
     ptr[2] = ((int)(void*)ptr & 0x1FFFFFFF) + 16;
     ptr[4] = (u32)newBuf + diff;
@@ -1406,12 +1403,12 @@ int audioSRCOutput(int vol, void *buf)
     }
     else
     {
-        *(int*)(((int)(void*)ptr ^ 0x20) + 24) = (u32)ptr;
+        *(int*)(((int)(void*)ptr ^ 0x20) + 24) = (u32)UCACHED(ptr);
         wait = 0;
         sceDdrFlush(4);
     }
     // 2384
-    int volHi = vol >> 5;
+    int volHi = (u32)vol >> 5;
     if (g_audio.srcVol != volHi)
     {
         // 23C4
@@ -1454,11 +1451,11 @@ s32 audioInputThread()
             sceKernelExitThread(0);
             return 0;
         }
-        SceDmaOp *ptr1 = g_audio.dmaPtr[2];
+        sceKernelDmaOperation *ptr1 = g_audio.dmaPtr[2];
         int curSampleCount = g_audio.inputCurSampleCnt;
-        int unk = (ptr1->unk36 < *(u8*)(0x80000000 + (u32)&g_audio.buf752[16])); // yes, it's correct, it reverses the kernel mode
+        int unk = (ptr1->uiDestAddr < (0x80000000 + (u32)&g_audio.buf752[16])); // yes, it's correct, it reverses the kernel mode
         short *uncached1 = KUNCACHED(&g_audio.buf512[unk << 8]);
-        char unk2 = g_audio.inputHwFreq;
+        u8 inputHwFreq = g_audio.inputHwFreq;
         u16 *ptr3 = g_audio.inputBuf;
         if (curSampleCount == 0)
         {
@@ -1472,7 +1469,7 @@ s32 audioInputThread()
                 while ((HW(0xBE00000C) & 4) != 0)
                     ;
                 sceKernelDmaOpQuit(g_audio.dmaPtr[2]);
-                HW(0xBE000008) = g_audio.flags;
+                HW(0xBE000008) = (int)(char)g_audio.flags;
                 sceKernelCpuResumeIntr(oldIntr);
                 sceCodec_driver_277DFFB6();
             }
@@ -1481,26 +1478,26 @@ s32 audioInputThread()
         {
             if (ptr3 != NULL)
             {
-                uncached1 = (g_audio.unkCodecRet != 0) ? uncached1 : uncached1 + 2;
+                uncached1 = (g_audio.unkCodecRet != 0) ? uncached1 + 1 : uncached1;
                 // 24F4
                 int i;
-                for (i = 128; i > 0; i -= unk2)
+                for (i = 128; i > 0; i -= inputHwFreq)
                 {
                     int v = uncached1[0];
-                    if (unk2 >= 4)
+                    if (inputHwFreq >= 4)
                     {
                         v += uncached1[2];
-                        if (unk2 >= 8)
+                        if (inputHwFreq >= 8)
                             v += uncached1[4] + uncached1[6];
                     }
                     // 251C
-                    *(ptr3++) = v >> ((unk2 >> 2) & 0x1F);
-                    uncached1 += unk2;
+                    *(ptr3++) = v >> ((inputHwFreq >> 2) & 0x1F);
+                    uncached1 += inputHwFreq;
                 }
                 g_audio.inputBuf = ptr3;
             }
             // 2538
-            curSampleCount -= (0x40 >> ((unk2 >> 2) & 0x1F));
+            curSampleCount -= (0x40 >> ((inputHwFreq >> 2) & 0x1F));
             if (curSampleCount <= 0)
             {
                 // 2630
@@ -1519,7 +1516,7 @@ s32 audioInputThread()
                 int *uncached3 = (int*)KUNCACHED(&g_audio.hwBuf[38 + shift]);
                 *uncached3 = 0;
                 *uncached2 = (int)UCACHED(&g_audio.hwBuf[36 + shift]);
-                if (DmacManForKernel_E18A93A5(ptr1, UCACHED(&g_audio.hwBuf[32 + shift])) < 0)
+                if (sceKernelDmaOpConcatenate(ptr1, UCACHED(&g_audio.hwBuf[32 + shift])) < 0)
                 {
                     HW(0xBE000004) = (int)(char)(g_audio.flags & 0xFB);
                     g_audio.flags &= 0xFB;
@@ -1528,7 +1525,7 @@ s32 audioInputThread()
                     while ((HW(0xBE00000C) & 4) != 0)
                         ;
                     sceKernelDmaOpQuit(g_audio.dmaPtr[2]);
-                    HW(0xBE000008) = g_audio.flags;
+                    HW(0xBE000008) = (int)(char)g_audio.flags;
                     audioInputSetup();
                 }
             }
@@ -1669,9 +1666,9 @@ int audioInputSetup()
     HW(0xBE000020) = 4;
     pspSync();
     ret = sceKernelDmaOpEnQueue(g_audio.dmaPtr[2]);
-    HW(0xBE000008) = g_audio.flags;
-    HW(0xBE000004) = g_audio.flags | 1;
-    HW(0xBE000024) = g_audio.flags;
+    HW(0xBE000008) = (int)(char)g_audio.flags;
+    HW(0xBE000004) = (int)(char)(g_audio.flags | 1);
+    HW(0xBE000024) = (int)(char)g_audio.flags;
     pspSync();
     return ret;
 }
@@ -1763,7 +1760,7 @@ int audioInput(int sampleCount, int freq, void *buf)
     if (g_audio.unkCodecArgSet != 0)
     {
         // 2BB0
-        int ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
+        ret = sceCodec_driver_6FFC0FA4(g_audio.unkCodecArg);
         if (ret >= 0)
         {
             g_audio.unkCodecRet = ret & 1;
@@ -1807,7 +1804,7 @@ int audioInputInit(int arg0, int gain, int arg2, int arg3, int arg4, int arg5)
     if (ret < 0)
         return ret;
     g_audio.unkCodecRet = ret & 1;
-    sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
+    ret = sceCodec_driver_A88FD064(g_audio.unkInput0, g_audio.inputGain, g_audio.unkInput2, g_audio.unkInput3, g_audio.unkInput4, g_audio.unkInput5);
     if (ret < 0)
         return ret;
     g_audio.inputInited = 1;
@@ -1831,4 +1828,3 @@ int audioInputDmaCb(int arg0, int arg1)
     sceKernelSetEventFlag(g_audio.evFlagId, 0x80000000);
     return 0;
 }
-

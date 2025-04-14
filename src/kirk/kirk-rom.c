@@ -118,8 +118,9 @@
 // 0x490 - HW_KEY_MESH_0 - read-only key seed
 // 0x494 - HW_KEY_MESH_1 - read-only key seed
 // 0x498 - HW_KEY_MESH_2 - read-only key seed
-// 0x49C - HW_AES_KEYSLOT_ID - write-only, write ID to receive key in HW_HW_AES_PARAM. 0x00/0x01 = kbooti (devkit), 0x02 = kirk 1 (IPL), 0x03 = kirk 2, 0x04~0x83 = kirk 4/7, 
-// 0x4A0 - HW_AES_KEYSLOT - read-only
+// 0x49C - HW_KEY_MESH_3 - read-only key seed
+// 0x4A0 - HW_AES_KEYSLOT_ID - write-only, write ID to receive key in HW_HW_AES_PARAM. 0x00/0x01 = kbooti (devkit), 0x02 = kirk 1 (IPL), 0x03 = kirk 2, 0x04~0x83 = kirk 4/7, 
+// 0x4A1 - HW_AES_KEYSLOT - read-only
 // 0x4B0 - HW_ECDSA_KEYSLOT_ID - same as above, but with ECC parameters. 0/1 = kirk 1 public key, 2/3 = kirk 2 public key, 4 = kirk 2 private key, 5/6 = kirk 3 public key
 // 0x4B1 - HW_ECDSA_KEYSLOT - the obtained parameter (scalar or coordinate)
 //
@@ -251,7 +252,7 @@ void _start(void) // 0x001
         } else if (HW_CPU_CMD == 13) {
             kirk_cmd13_ecdsa_mul();
         } else if (HW_CPU_CMD == 14) {
-            kirk_cmd14_prngen();
+            kirk_cmd14_gen_privkey();
         } else if (HW_CPU_CMD == 15) {
             kirk_cmd15_init();
         } else if (HW_CPU_CMD == 16) {
@@ -2571,9 +2572,9 @@ void kirk_cmd15_init(void) // 0x833
     HW_DMA_BUF_SIZE = 0x1c;
     dma_read();
 
-    HW_DMA_BUF[1] = HW_DMA_BUF[1] + 1;
-    __unknown_op(0x21, HW_DMA_BUF[0]); // TODO: unknown operation
-    // Fill the RNG buffer with a seed (?)
+    // 64-bit addition, HW_DMA_BUF[0] is the MSB, HW_DMA_BUF[1] is the LSB
+    HW_DMA_BUF._0_8_ = HW_DMA_BUF._0_8_ + 1;
+    // Seed the RNG buffer with the counter
     RNG_BUFFER[0] = 0;
     RNG_BUFFER[1] = 0;
     RNG_BUFFER[2] = HW_DMA_BUF[0];

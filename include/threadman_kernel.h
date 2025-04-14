@@ -71,6 +71,8 @@ int sceKernelWaitThreadEndCB(SceUID thid, SceUInt *timeout);
 int sceKernelReleaseWaitThread(SceUID thid);
 int sceKernelSuspendAllUserThreads(void);
 
+int sceKernelExtendKernelStack(int type, s32 (*cb)(void*), void *arg);
+
 unsigned int sceKernelGetSystemTimeLow(void);
 
 enum SceUserLevel {

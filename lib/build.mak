@@ -4,7 +4,7 @@
 include $(ROOT_DIR)/lib/common.mak
 
 INCLUDE = -I$(ROOT_DIR)/include
-WARNINGS = -Wall -Wextra -Werror -Wno-pragmas
+WARNINGS = -Wall -Wextra -Werror -Wno-error=address -Wno-error=dangling-pointer -Wno-pragmas
 
 # Only keep builtins for memcpy, memset for their inline function
 BUILTINS_DISABLE = -fno-builtin-bcmp \

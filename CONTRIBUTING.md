@@ -1,4 +1,4 @@
-#uOFW PSP kernel coding style
+# uOFW PSP kernel coding style
 
 This document outlines uOFW's workflow and preferred code style. Please make yourself familiar with this document before you begin working.
 
@@ -27,7 +27,7 @@ from this one.
 Thank you.
 
 
-###Chapter 1: Indentation
+### Chapter 1: Indentation
 
 Indentations are 4 bytes wide. The reason behind this is to visibly show
 where a block starts and where it ends.
@@ -53,7 +53,7 @@ For example:
     }
 
 
-###Chapter 2: Breaking long lines
+### Chapter 2: Breaking long lines
 
 Make sure to not write code lines longer than 120 characters. If necessary, 
 break lines exceeding the 120 characters limit like below:
@@ -70,7 +70,7 @@ Long `if`-lines (same as `while`-, `for`-lines) are broken into several lines li
         doSomething();
 
 
-###Chapter 3: Placing Braces and Spaces
+### Chapter 3: Placing Braces and Spaces
 
 Put the opening brace last on the line, and put the closing brace first, thusly:
 
@@ -121,7 +121,7 @@ first on the last line:
         doSomethingCool();
     }
 
-####Space policy:
+#### Space policy:
 
 Put a space after these keywords: `if`, `switch`, `case`, `do`, `while`, `for`, `return`.
 
@@ -169,7 +169,7 @@ When declaring a pointer to a function, this way suffices:
     s32 (*funcPtr)(void);
 
 
-###Chapter 4: Type using
+### Chapter 4: Type using
 
 Don't use type's like `(unsigned) short`, `(unsigned) int` as their size is NOT
 the same on all machines.
@@ -216,7 +216,7 @@ references itself. In that case, use:
     } Point;
 
 
-###Chapter 5: Naming
+### Chapter 5: Naming
 
 Use simple, short names, easy to understand. For local variables, it is even okay
 to use a variable name consisting of only one letter:
@@ -262,7 +262,7 @@ Instead, use capital letters.
     SceBool isUofwCool = SCE_TRUE; /* Indeed. */
 
 
-###Chapter 6: Variable declarations
+### Chapter 6: Variable declarations
 
 Variables which are used throughout the function, or variables which are important in all the function, are declared at the beginning, the other ones where they are first used.
 Do not use the C99-specific `for (u32 i = 0; ...; i++)`.
@@ -293,7 +293,7 @@ Do not use the C99-specific `for (u32 i = 0; ...; i++)`.
     }
     
 
-###Chapter 7: Magic numbers
+### Chapter 7: Magic numbers
 
 Using magic numbers is bad, as only the author of the C file in which they occur
 will know (for a little while) what they express.
@@ -335,7 +335,7 @@ A similar approach for `for`/`while`-loops:
         g_Array[i] = 0;
 
 
-###Chapter 8: Structure initialization
+### Chapter 8: Structure initialization
 
 Assume we have the following structure:
 
@@ -359,7 +359,7 @@ Use the `sizeof` operator when a structure has a `size` field to be filled with 
     structure size (sizeof(structureType);)
 
 
-###Chapter 9: Accessing hardware registers
+### Chapter 9: Accessing hardware registers
 
 Hardware registers are stored in memory starting at `0xBC000000` and are _special_
 compared to global variables. They have to be written synchronously, which means
@@ -374,7 +374,7 @@ You can find this macro, and other useful `#define`s, in `/include/common/hardwa
     HW(HW_RAM_SIZE) = RAM_TYPE_64_MB;
 
 
-###Chapter 10: Comments
+### Chapter 10: Comments
 
 All exported functions of a module and important data structures as well as
 `#defines` shared among `.c` files have to be put into a header file used as a module 
@@ -420,7 +420,7 @@ Here, everything about the parameters a and b is obvious, so there is no need fo
 explaining them.
 Also note that we use `Returns...` instead of `@return` for header functions.
 
-###Comments inside of functions:
+### Comments inside of functions:
 
 When necessary, comment hard-to-understand code parts, explaining WHAT the code is doing.
 The reader of the `.c` file probably knows a lot less than you (as you reversed the module) 
@@ -446,7 +446,7 @@ with included address comments and, optionally, TODO-comments, and upload a file
 WITHOUT address-, TODO-comments to the uOFW repositiory, as soon as your module fully works.
 
 
-###Chapter 11: Switches
+### Chapter 11: Switches
 
 Put a break at the end of each `case` and at the end of the `default`.
 Don't skip lines between the different labels (`case`s and `default`s).
@@ -468,7 +468,7 @@ For example:
     }
 
 
-###Chapter 12: Export files
+### Chapter 12: Export files
 
 Only use the `PSP_EXPORT_NID` command, so a function or variable name can easily be found from
 the NID using the `exports.exp` file, and to sometimes avoid mistakes with user functions.

@@ -1,6 +1,5 @@
 #include <dmacman.h>
 #include <common_imp.h>
-#include <common_asm.h>
 
 #include <interruptman.h>
 #include <sysmem_sysclib.h>
@@ -11,13 +10,13 @@
 
 typedef struct {
     u32 unk0[16];     //0 first 8 are mode1, second 8 are mode 2... whatever that means.
-    SceDmaOp ops[32]; //64
+    sceKernelDmaOperation ops[32]; //64
     u32 unk2112;      // excluded channels?
     u32 unk2116;      // reserved channels?
     u32 unk2120;      // inUse? bit-vector where 1 means ops[bit] is in use
-    SceDmaOp *op2124; // Free list
-    SceDmaOp *op2128; // Likely first/head
-    SceDmaOp *op2132; // Likely last/tail
+    sceKernelDmaOperation *op2124; // Free list
+    sceKernelDmaOperation *op2128; // Likely first/head
+    sceKernelDmaOperation *op2132; // Likely last/tail
     u32 unk2136;      // ddr flush func
     u32 unk2140;      // evid passed to sceKernelWaitEventFlag
 } SceDmacMan;
@@ -59,13 +58,13 @@ s32 _sceDmacManModuleStart(SceSize args __attribute__((unused)), void *argp __at
 
     g_dmacman.op2124 = &g_dmacman.ops[0];
     for (int i = 0; i < 31; i++) {
-        g_dmacman.ops[i].unk0 = &g_dmacman.ops[i+1];
-        g_dmacman.ops[i+1].unk4 = &g_dmacman.ops[i];
-        g_dmacman.ops[i].unk28 = 0x1000;
-        g_dmacman.ops[i].unk24 = 1 << i;
+        g_dmacman.ops[i].pNext = &g_dmacman.ops[i+1];
+        g_dmacman.ops[i+1].pPrev = &g_dmacman.ops[i];
+        g_dmacman.ops[i].uiFlag = 0x1000;
+        g_dmacman.ops[i].evpat = 1 << i;
     }
-    g_dmacman.ops[31].unk28 = 0x1000;
-    g_dmacman.ops[31].unk24 = 1 << i;
+    g_dmacman.ops[31].uiFlag = 0x1000;
+    g_dmacman.ops[31].evpat = 1 << i;
 
     g_dmacman.unk2128 = NULL;
     g_dmacman.unk2132 = NULL;
@@ -170,7 +169,7 @@ void sceKernelDmaSoftRequest(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
 }
 
 //0x388
-s32 sceKernelDmaOpFree(SceDmaOp *op)
+s32 sceKernelDmaOpFree(sceKernelDmaOperation *op)
 {
     s32 ret;
     u32 intr;
@@ -185,7 +184,7 @@ s32 sceKernelDmaOpFree(SceDmaOp *op)
         } else if (arg0->unk28 & 0x2) {
             ret = 0x800202C0;
         } else {
-            SceDmaOp *unk = g_dmacman.unk2124;
+            sceKernelDmaOperation *unk = g_dmacman.unk2124;
             op->unk0 = unk;
             op->unk4 = 0;
             op->unk16 = 0;
@@ -213,12 +212,12 @@ s32 sceKernelDmaOpFree(SceDmaOp *op)
 }
 
 //0x488
-s32 sceKernelDmaOpEnQueue(SceDmaOp *op)
+s32 sceKernelDmaOpEnQueue(sceKernelDmaOperation *op)
 {
     u32 intr;
     s32 ret;
-    SceDmaOp *cur = op;
-    SceDmaOp *tail = op;
+    sceKernelDmaOperation *cur = op;
+    sceKernelDmaOperation *tail = op;
 
     if (!op)
         return 0x800202CF;
@@ -267,7 +266,7 @@ cleanup:
 }
 
 //0x5D4
-s32 sceKernelDmaOpDeQueue(SceDmaOp *op)
+s32 sceKernelDmaOpDeQueue(sceKernelDmaOperation *op)
 {
     u32 intr;
     s32 ret;
@@ -325,7 +324,7 @@ s32 sceKernelDmaOpAllCancel()
 {
     u32 intr;
     s32 ret;
-    SceDmaOp *op = g_dmacman.unk2128;
+    sceKernelDmaOperation *op = g_dmacman.unk2128;
     if (!op) {
         return 0x800202BF;
     }
@@ -340,7 +339,7 @@ s32 sceKernelDmaOpAllCancel()
 
     op = g_dmacman.unk2128;
     while (op) {
-        SceDmaOp *tmp = op->unk0;
+        sceKernelDmaOperation *tmp = op->unk0;
         op->unk0 = NULL;
         op->unk4 = NULL;
         op = tmp;
@@ -353,7 +352,7 @@ s32 sceKernelDmaOpAllCancel()
 }
 
 //0x798
-int sceKernelDmaOpSetCallback(SceDmaOp *op, int (*)(int, int) func, int arg2)
+int sceKernelDmaOpSetCallback(sceKernelDmaOperation *op, int (*)(int, int) func, int arg2)
 {
     if (!op) 
         return 0x800202CF;
@@ -373,7 +372,7 @@ int sceKernelDmaOpSetCallback(SceDmaOp *op, int (*)(int, int) func, int arg2)
 }
 
 //0x808
-s32 sceKernelDmaOpSetupMemcpy(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3)
+s32 sceKernelDmaOpSetupMemcpy(sceKernelDmaOperation *op, s32 arg1, s32 arg2, s32 arg3)
 {
     if (!op)
         return 0x800202CF;
@@ -397,7 +396,7 @@ s32 sceKernelDmaOpSetupMemcpy(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3)
 }
 
 //0x8A8
-s32 sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+s32 sceKernelDmaOpSetupNormal(sceKernelDmaOperation *op, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
     if (!op)
         return 0x800202CF;
@@ -421,7 +420,7 @@ s32 sceKernelDmaOpSetupNormal(SceDmaOp *op, s32 arg1, s32 arg2, s32 arg3, s32 ar
 }
 
 //0x938
-u32 sceKernelDmaOpSetupLink(SceDmaOp *op, arg1 command, void *arg2)
+u32 sceKernelDmaOpSetupLink(sceKernelDmaOperation *op, arg1 command, void *arg2)
 {
     void *unk0;
     void *unk1;
@@ -461,7 +460,7 @@ u32 sceKernelDmaOpSetupLink(SceDmaOp *op, arg1 command, void *arg2)
 }
 
 //0xA64
-s32 sceKernelDmaOpSync(SceDmaOp *op, s32 command, u32 *timeout)
+s32 sceKernelDmaOpSync(sceKernelDmaOperation *op, s32 command, u32 *timeout)
 {
     s32 err;
 
@@ -504,7 +503,7 @@ s32 sceKernelDmaOpSync(SceDmaOp *op, s32 command, u32 *timeout)
 }
 
 //0xBCC doDmaOpQuit?
-static void sub_BCC(SceDmaOp *op)
+static void sub_BCC(sceKernelDmaOperation *op)
 {
     s32 unk = op->unk30;
     s32 unk1 = (unk & 7) << 5;
@@ -527,7 +526,7 @@ static void sub_BCC(SceDmaOp *op)
 }
 
 //0xC70
-s32 sceKernelDmaOpQuit(SceDmaOp *op)
+s32 sceKernelDmaOpQuit(sceKernelDmaOperation *op)
 {
     u32 intr;
     s32 ret = SCE_ERROR_OK;
@@ -556,7 +555,7 @@ s32 sceKernelDmaOpQuit(SceDmaOp *op)
 }
 
 //0xD80
-s32 sceKernelDmaOpConcatenate(SceDmaOp *op, void *arg1)
+s32 sceKernelDmaOpConcatenate(sceKernelDmaOperation *op, void *arg1)
 {
     void *unk;
     u32 intr;
@@ -632,7 +631,7 @@ cleanup:
 }
 
 //0xFC0
-s32 sceKernelDmaOpAssignMultiple(SceDmaOp **ops, s32 size)
+s32 sceKernelDmaOpAssignMultiple(sceKernelDmaOperation **ops, s32 size)
 {
     u32 intr;
     u32 unk0 = size;
@@ -649,7 +648,7 @@ s32 sceKernelDmaOpAssignMultiple(SceDmaOp **ops, s32 size)
         return 0x800202BD;
 
     for (int i = size - 1; i; i--) {
-        SceDmaOp *op = ops[i];
+        sceKernelDmaOperation *op = ops[i];
         if (!op)
             return 0x800202CF;
         if (op->unk28 & 0x1000)
@@ -697,7 +696,7 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
                 if (g_dmacman.unk2132 & (1 << i))
                     Kprintf("Fatal error: Stray interrupt occurred\n");
             } else {
-                SceDmaOp *op = g_dmacman.unk0[i + 8*arg1];
+                sceKernelDmaOperation *op = g_dmacman.unk0[i + 8*arg1];
                 op->unk32 = HW(addr + 0x100);
                 op->unk36 = HW(addr + 0x100 + 4);
                 op->unk40 = HW(addr + 0x100 + 8);
@@ -771,7 +770,7 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
 //0x14f4
 static void _sceKernelDmaSchedule()
 {
-    SceDmaOp *t1 = g_dmacman.unk2128;
+    sceKernelDmaOperation *t1 = g_dmacman.unk2128;
     u32 t2 = g_dmacman.unk2120 & g_dmacman.unk2112;
     u32 a3 = t2 ^ 0xFFFF;
 
@@ -784,7 +783,7 @@ static void _sceKernelDmaSchedule()
             }
             if (a1 < 0) {
                 if (t1->unk0) {
-                    SceDmaOp *a0 = t1->unk0;
+                    sceKernelDmaOperation *a0 = t1->unk0;
                     a0->unk4 = t1->unk4;
                     t1->unk4 = a0;
                     t1->unk0 = a0->unk0;
@@ -800,7 +799,7 @@ static void _sceKernelDmaSchedule()
             }
 
             // 1618
-            for (SceDmaOp *op = t1, int j = 0; op; j++) {
+            for (sceKernelDmaOperation *op = t1, int j = 0; op; j++) {
                 if (t0 & (1 << j)) {
                     g_dmacman.unk0[j]->unk30 = j;
                     op = op->unk12;
@@ -809,7 +808,7 @@ static void _sceKernelDmaSchedule()
             }
         }
 
-        for (SceDmaOp *a2 = t1; a2; a2 = a2->unk12)
+        for (sceKernelDmaOperation *a2 = t1; a2; a2 = a2->unk12)
             // 1644
             if (a2->unk30 < 0) {
                 u32 pos = lsbPosition(~t2 & a2->unk52);
@@ -918,10 +917,10 @@ void sceKernelDmaChReserve(u32 ch, u32 arg1)
 }
 
 //0x1964
-SceDmaOp *sceKernelDmaOpAlloc()
+sceKernelDmaOperation *sceKernelDmaOpAlloc()
 {
     u32 intr = sceKernelCpuSuspendIntr();
-    SceDmaOp *op = g_dmacman.unk2124;
+    sceKernelDmaOperation *op = g_dmacman.unk2124;
     if (op) {
         if (op->unk28 & 0x1000) {
             g_dmacman.unk2124 = op->unk4;
@@ -939,7 +938,7 @@ SceDmaOp *sceKernelDmaOpAlloc()
 }
 
 //0x19E8
-s32 sceKernelDmaOpAssign(SceDmaOp *op, int arg1, int arg2, int arg3, int arg4)
+s32 sceKernelDmaOpAssign(sceKernelDmaOperation *op, int arg1, int arg2, int arg3, int arg4)
 {
     if (!op)
         return 0x800202CF;
@@ -957,9 +956,9 @@ s32 sceKernelDmaOpAssign(SceDmaOp *op, int arg1, int arg2, int arg3, int arg4)
 }
 
 //0x1A60
-s32 sceKernelDmaOpLLIConcatenate(SceDmaOp *op1, SceDmaOp *op2)
+s32 sceKernelDmaOpLLIConcatenate(sceKernelDmaOperation *op1, sceKernelDmaOperation *op2)
 {
-    SceDmaOp *head;
+    sceKernelDmaOperation *head;
 
     op1->unk60->unk8 = op2;
     g_dmacman.unk2136(4);

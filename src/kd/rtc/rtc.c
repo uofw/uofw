@@ -16,7 +16,7 @@
 #include <syscon.h>
 #include <threadman_kernel.h>
 #include <interruptman.h>
-#include "rtc.h"
+#include <rtc.h>
 
 SCE_MODULE_INFO("sceRTC_Service", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 11);
 SCE_SDK_VERSION(SDK_VERSION);

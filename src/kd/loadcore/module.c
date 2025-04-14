@@ -521,7 +521,7 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     mod->bssSize = 0; //0x0000728C
     mod->segmentChecksum = 0; //0x00007290
     mod->textSegmentChecksum = 0; //0x00007294
-    mod->unk224 = 0; //0x00007298
+    mod->computeTextSegmentChecksum = 0; //0x00007298
     mod->status = 0; //0x000072A4
     mod->next = NULL; //0x000072A8
     mod->attribute = 0; //0x000072AC

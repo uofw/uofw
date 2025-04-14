@@ -16,16 +16,16 @@
 #define STDOUT 1
 #define STDERR 2
 
-int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size);
-int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size);
-int _sceTtyProxyDevInit(SceIoDeviceArg *dev);
-int _sceTtyProxyDevExit(SceIoDeviceArg *dev);
+SceSSize _sceTtyProxyDevRead(SceIoIob *iob, void *buf, SceSize size);
+SceSSize _sceTtyProxyDevWrite(SceIoIob *iob, const void *buf, SceSize size);
+int _sceTtyProxyDevInit(SceIoDeviceEntry *dev);
+int _sceTtyProxyDevExit(SceIoDeviceEntry *dev);
 int _sceTtyProxyDevOpen(SceIoIob *iob, char *file, int flags, SceMode mode);
 int _sceTtyProxyDevClose(SceIoIob *iob);
 SceOff _sceTtyProxyDevLseek();
-int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+int _sceTtyProxyDevIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
 
-SceIoDrvFuncs g_TtyOps = // 6948
+SceIoDeviceFunction g_TtyOps = // 6948
 {
     _sceTtyProxyDevInit, // 0BE4
     _sceTtyProxyDevExit, // 0BEC
@@ -51,14 +51,19 @@ SceIoDrvFuncs g_TtyOps = // 6948
     NULL
 };
 
-SceIoDrv g_TtyDevTbl = { "ttyproxy", 0x00000003, 0x00000001, "TTY2MsgPipe PROXY", &g_TtyOps }; // 69A0
+SceIoDeviceTable g_TtyDevTbl = { "ttyproxy", 0x00000003, 0x00000001, "TTY2MsgPipe PROXY", &g_TtyOps }; // 69A0
 
 SceUID g_stdin = -1; // 6AD0
 SceUID g_stdout = -1; // 6AD4
 SceUID g_stderr = -1; // 6AD8
 
 int g_debugRead; // 6AF0
-int g_pipeList[6]; // 6AF4
+
+struct SceIoPipeList {
+    SceUID id[3];
+    SceSize size[3];
+};
+struct SceIoPipeList g_pipeList; // 6AF4
 
 int g_linePos; // 6C34
 
@@ -482,7 +487,7 @@ int sceKernelStdioOpen()
     return SCE_ERROR_KERNEL_ERROR;
 }
 
-int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
+SceSSize _sceTtyProxyDevRead(SceIoIob *iob, void *buf, SceSize size)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int cnt;
@@ -493,8 +498,8 @@ int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
         k1 = 24;
     // 09D0
     pspSetK1(k1);
-    int size2 = g_pipeList[iob->fsNum + 3];
-    SceUID id = g_pipeList[iob->fsNum + 0];
+    SceSize size2 = g_pipeList.size[iob->i_unit];
+    SceUID id = g_pipeList.id[iob->i_unit];
     int min;
     // 09F8
     do
@@ -515,7 +520,7 @@ int _sceTtyProxyDevRead(SceIoIob *iob, char *buf, int size)
     return count;
 }
 
-int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
+SceSSize _sceTtyProxyDevWrite(SceIoIob *iob, const void *buf, SceSize size)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
@@ -526,8 +531,8 @@ int _sceTtyProxyDevWrite(SceIoIob *iob, const char *buf, int size)
         k1 = 24;
     // 0AC4
     pspSetK1(k1);
-    int size2 = g_pipeList[iob->fsNum + 3];
-    SceUID id = g_pipeList[iob->fsNum + 0];
+    SceSize size2 = g_pipeList.size[iob->i_unit];
+    SceUID id = g_pipeList.id[iob->i_unit];
     // 0AE8
     do
     {
@@ -574,14 +579,14 @@ int sceKernelRegisterStderrPipe(SceUID id)
 }
 
 // 0BE4
-int _sceTtyProxyDevInit(SceIoDeviceArg *dev __attribute__((unused)))
+int _sceTtyProxyDevInit(SceIoDeviceEntry *dev __attribute__((unused)))
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
 }
 
 // 0BEC
-int _sceTtyProxyDevExit(SceIoDeviceArg *dev __attribute__((unused)))
+int _sceTtyProxyDevExit(SceIoDeviceEntry *dev __attribute__((unused)))
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     return 0;
@@ -590,7 +595,7 @@ int _sceTtyProxyDevExit(SceIoDeviceArg *dev __attribute__((unused)))
 int _sceTtyProxyDevOpen(SceIoIob *iob, char *file __attribute__((unused)), int flags __attribute__((unused)), SceMode mode __attribute__((unused)))
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    if (iob->fsNum < 3)
+    if (iob->i_unit < 3)
         return 0;
     return 0x80010006;
 }
@@ -598,7 +603,7 @@ int _sceTtyProxyDevOpen(SceIoIob *iob, char *file __attribute__((unused)), int f
 int _sceTtyProxyDevClose(SceIoIob *iob)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    if (iob->fsNum < 3)
+    if (iob->i_unit < 3)
         return 0;
     return 0x80010006;
 }
@@ -609,7 +614,7 @@ SceOff _sceTtyProxyDevLseek()
     return SCE_ERROR_KERNEL_BAD_FILE_DESCRIPTOR;
 }
 
-int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribute__((unused)), int inlen __attribute__((unused)), void *outdata __attribute__((unused)), int outlen __attribute__((unused)))
+int _sceTtyProxyDevIoctl(SceIoIob *iob, int cmd, void *indata __attribute__((unused)), SceSize inlen __attribute__((unused)), void *outdata __attribute__((unused)), SceSize outlen __attribute__((unused)))
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     if (cmd != 0x00134002)
@@ -619,7 +624,7 @@ int _sceTtyProxyDevIoctl(SceIoIob *iob, unsigned int cmd, void *indata __attribu
     if (sceIoGetIobUserLevel(iob) == 8)
         k1 = 0;
     pspSetK1(k1);
-    sceKernelCancelMsgPipe(g_pipeList[iob->fsNum], 0, 0);
+    sceKernelCancelMsgPipe(g_pipeList.id[iob->i_unit], 0, 0);
     pspSetK1(oldK1);
     return 0;
 }
@@ -631,9 +636,8 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     if (id < 0)
     {  
         // 0DD8
-        int *addr = &g_pipeList[fd];
-        addr[0] = -1;
-        addr[3] = 0;
+        g_pipeList.id[fd] = -1;
+        g_pipeList.size[fd] = 0;
         if (fd == STDOUT) {
             // 0E1C
             return sceKernelStdoutReset();
@@ -665,9 +669,8 @@ int _sceKernelRegisterStdPipe(int fd, SceUID id)
     // 0D58
     if (ret < 0)
         return ret;
-    int *addr = &g_pipeList[fd];
-    addr[3] = mpp.bufSize;
-    addr[0] = id;
+    g_pipeList.size[fd] = mpp.bufSize;
+    g_pipeList.id[fd] = id;
     return 0;
 }
 

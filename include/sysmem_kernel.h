@@ -60,36 +60,34 @@ enum ScePspHwModels {
  * Misc
  */
 
-typedef struct {
-    u32 size; // 0
-    u32 flags; // 4
-    char str8[16]; // 8
-    char str24[11]; // 24
-    // padding?
-    int unk36;
-    char qtgp2[8]; // 40
-    char qtgp3[16]; // 48
-    u32 allowReplaceUmd; // 64
-    char gameId[14]; // 68
-    // padding?
-    u32 unk84; // 84
-    char str88[8]; // 88
-    u32 umdCacheOn; // 96
-    u32 sdkVersion; // 100
-    u32 compilerVersion; // 104
-    u32 dnas; // 108
-    u32 unk112; // 112
-    char str116[64]; // 116
-    char str180[11]; // 180
-    // padding?
-    char str196[8]; // 196
-    char unk204[8]; // 204
-    int unk212; // 212
-    int unk216; // 216
-} SceKernelGameInfo;
+typedef struct SceGameInfo SceGameInfo, *PSceGameInfo;
+
+struct SceGameInfo {
+    u32  size; // 0
+    u32  flags; // 4
+    u8   umd_data_string[16]; // 8
+    u8   expect_umd_data[16]; // 24
+    char QTGP2[8]; // 40
+    char QTGP3[16]; // 48
+    u32  allow_replace_umd; // 64
+    u8   param_product_string[16]; // 68
+    u32  param_parental; // 84
+    char vsh_version[8]; // 88
+    u32  umd_cache_on; // 96
+    u32  compiled_sdk_version; // 100
+    u32  compiler_version; // 104
+    u32  DNAS; // 108
+    u32  utility_location; // 112
+    char vsh_bootfilename[64]; // 116
+    char param_gamedata_id[16]; // 180
+    char param_app_ver[8]; // 196
+    u8   subscription_validity[8]; // 204
+    u32  param_bootable; // 212
+    u32  param_opnssmp_ver; // 216
+};
 
 s32 SysMemForKernel_807179E7(char *gameId, int arg1, char *arg2, char *arg3, int arg4, int arg5, char *arg6);
-s32 sceKernelCopyGameInfo(SceKernelGameInfo *info);
+s32 sceKernelCopyGameInfo(SceGameInfo *info);
 s32 SysMemForKernel_F3BDB718(char *arg0);
 s32 sceKernelGetQTGP2(char *qtgp2);
 s32 sceKernelSetQTGP2(char *qtgp2);
@@ -101,7 +99,7 @@ s32 sceKernelSetUmdCacheOn(u32 umdCacheOn);
 s32 SysMemForKernel_40B744A4(u32 unk112);
 s32 SysMemForKernel_BFE08689(char *str116);
 s32 SysMemForKernel_2A8B8B2D(char *unk204);
-SceKernelGameInfo *sceKernelGetGameInfo(void);
+SceGameInfo *sceKernelGetGameInfo(void);
 u32 sceKernelGetCompiledSdkVersion(void);
 s32 sceKernelSetCompiledSdkVersion100(u32 ver);
 s32 sceKernelSetCompiledSdkVersion370(u32 ver);

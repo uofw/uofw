@@ -19,15 +19,15 @@ SCE_SDK_VERSION(SDK_VERSION);
 typedef struct SceIoDeviceList
 {
     struct SceIoDeviceList *next; // 0
-    SceIoDeviceArg arg;
+    SceIoDeviceEntry arg;
 } SceIoDeviceList;
 
 typedef struct SceIoAlias
 {
     struct SceIoAlias *next; // 0
-    SceIoDeviceArg *dev; // 4
+    SceIoDeviceEntry *dev; // 4
     int attr; // 8
-    int fsNum; // 12
+    int i_unit; // 12
     char alias[32]; // 16
     char blockDev[32]; // 48
     char fs[32]; // 80
@@ -44,14 +44,14 @@ int deleted_func_close();
 s64 deleted_func_offt();
 
 // 69B8
-SceIoDrvFuncs deleted_dt_func =
+SceIoDeviceFunction deleted_dt_func =
 {
     deleted_func,
     deleted_func,
     deleted_func,
     deleted_func_close,
-    deleted_func,
-    deleted_func,
+    (SceSSize (*)())deleted_func,
+    (SceSSize (*)())deleted_func,
     deleted_func_offt,
     deleted_func,
     deleted_func,
@@ -71,21 +71,21 @@ SceIoDrvFuncs deleted_dt_func =
 };
 
 // 6A10
-SceIoDrv deleted_devtable = { "", 0, 0, "", &deleted_dt_func };
+SceIoDeviceTable deleted_devtable = { "", 0, 0, "", &deleted_dt_func };
 
 int _nulldev();
 s64 _nulldev_offt();
 int _nulldev_write(SceIoIob *iob __attribute__((unused)), const char *data, int len);
 
 // 6A24
-SceIoDrvFuncs _nullcon_function =
+SceIoDeviceFunction _nullcon_function =
 {
     _nulldev,
     _nulldev,
     _nulldev,
     _nulldev,
-    _nulldev,
-    _nulldev_write,
+    (SceSSize (*)())_nulldev,
+    (SceSSize (*)())_nulldev_write,
     _nulldev_offt,
     _nulldev,
     _nulldev,
@@ -105,7 +105,7 @@ SceIoDrvFuncs _nullcon_function =
 };
 
 // 6A7C
-SceIoDrv _dummycon_driver = { "dummy_drv_iofile", 0, 0x00000800, "DUMMY_DRV", &_nullcon_function };
+SceIoDeviceTable _dummycon_driver = { "dummy_drv_iofile", 0, 0x00000800, "DUMMY_DRV", &_nullcon_function };
 
 s32 iob_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcid, va_list ap);
 s32 iob_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcid, va_list ap);
@@ -125,7 +125,7 @@ int default_thread_priority = -1;
 int g_deleted_error = SCE_ERROR_KERNEL_DRIVER_DELETED; // exported as E4D75BC0
 
 // 6AE4
-SceIoDeviceArg deleted_device = { &deleted_devtable, NULL, 0 };
+SceIoDeviceEntry deleted_device = { &deleted_devtable, NULL, 0 };
 
 // 6B0C
 SceIoDeviceList *g_devList;
@@ -159,15 +159,15 @@ char *g_pathbufBuf[2];
 
 int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob);
 int alloc_iob(SceIoIob **outIob, int arg1);
-int init_iob(SceIoIob *iob, int devType, SceIoDeviceArg *dev, int unk, int fsNum);
+int init_iob(SceIoIob *iob, int devType, SceIoDeviceEntry *dev, int unk, int i_unit);
 int free_iob(SceIoIob *iob);
 void *alloc_pathbuf();
 void free_pathbuf(void *ptr);
-char *parsedev(const char *dev, char *outDev, int *fsNum);
+char *parsedev(const char *dev, char *outDev, int *i_unit);
 SceIoAlias *sub_35D0(const char *dev);
 SceIoAlias *sub_36C4(const char *name);
-int sub_375C(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNamePtr);
-int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNamePtr, int userMode);
+int sub_375C(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr);
+int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode);
 int strcmp_bs(const char *s1, const char *s2);
 int open_main(SceIoIob *iob);
 int create_async_thread(SceIoIob *iob);
@@ -184,7 +184,7 @@ int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata
 int xx_dir(const char *path, SceMode mode, int action);
 int xx_stat(const char *file, SceIoStat *stat, int bits, int get);
 int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-int do_deldrv(SceIoDeviceArg *dev);
+int do_deldrv(SceIoDeviceEntry *dev);
 int sceIoGetUID(int fd);
 void add_device_list(SceIoDeviceList *list);
 int delete_device_list(SceIoDeviceList *list);
@@ -254,16 +254,16 @@ void sceIoCloseAll()
     while (cur != g_uid_type)
     {
         int ret = validate_fd(cur->uid, 0, 16, 14, &iob);
-        if (ret >= 0 && (iob->unk000 & 8) == 0)
+        if (ret >= 0 && (iob->i_flgs & 8) == 0)
         {
             // 0FD4
             if (iob->hook.arg != NULL) {
                 // 1020
                 iob->hook.arg->hook->funcs->Close(&iob->hook);
             }
-            else if (iob->dev != &deleted_device && iob->dev->drv->funcs->IoClose != NULL) {
+            else if (iob->i_de != &deleted_device && iob->i_de->d_dp->dt_func->df_close != NULL) {
                 // 1010
-                iob->dev->drv->funcs->IoClose(iob);
+                iob->i_de->d_dp->dt_func->df_close(iob);
             }
 
             // 1000
@@ -281,8 +281,8 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int ret;
-    SceIoDeviceArg *dev;
-    int fsNum;
+    SceIoDeviceEntry *dev;
+    int i_unit;
     char *realPath;
     char *pathbuf = alloc_pathbuf();
     if (pathbuf == NULL)
@@ -298,15 +298,15 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
 
     // 10A8
     realPath = pathbuf;
-    ret = sub_3778(path, &dev, &fsNum, &realPath, ((flags >> 26) ^ 1) & 1);
+    ret = sub_3778(path, &dev, &i_unit, &realPath, ((flags >> 26) ^ 1) & 1);
     if (ret < 0)
         goto error;
 
-    ret = init_iob(iob, ret, dev, flags, fsNum);
+    ret = init_iob(iob, ret, dev, flags, i_unit);
     if (ret < 0)
         goto error;
 
-    if (dev->drv->funcs->IoOpen == NULL) {
+    if (dev->d_dp->dt_func->df_open == NULL) {
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
         goto error;
     }
@@ -358,7 +358,7 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
 int open_main(SceIoIob *iob)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    if ((iob->unk000 & 0x02000000) != 0) {
+    if ((iob->i_flgs & 0x02000000) != 0) {
         // 12D0
         iob_power_lock(iob);
     }
@@ -366,7 +366,7 @@ int open_main(SceIoIob *iob)
     int ret;
     if (preobe_fdhook(iob, (char*)iob->asyncArgs[1], iob->asyncArgs[2], iob->asyncArgs[3]) == 0) {
         // 12AC
-        ret = iob->dev->drv->funcs->IoOpen(iob, (char*)iob->asyncArgs[1], iob->asyncArgs[2], iob->asyncArgs[3]);
+        ret = iob->i_de->d_dp->dt_func->df_open(iob, (char*)iob->asyncArgs[1], iob->asyncArgs[2], iob->asyncArgs[3]);
     }
     else
         ret = iob->hook.arg->hook->funcs->Open(&iob->hook, (char*)iob->asyncArgs[1], iob->asyncArgs[2], iob->asyncArgs[3]);
@@ -442,8 +442,8 @@ SceUID sceIoDopen(const char *dirname)
 {
     dbg_printf("sceIoDopen(%s)\n", dirname);
     SceIoIob *iob;
-    SceIoDeviceArg *dev;
-    int fsNum;
+    SceIoDeviceEntry *dev;
+    int i_unit;
     char *dirName;
     int ra = pspGetRa();
     int oldK1 = pspShiftK1();
@@ -473,21 +473,21 @@ SceUID sceIoDopen(const char *dirname)
         iob->retAddr = ra;
     // 14C4
     dirName = path;
-    ret = sub_375C(dirname, &dev, &fsNum, &dirName);
+    ret = sub_375C(dirname, &dev, &i_unit, &dirName);
     if (ret < 0)
         goto freeiob;
 
-    ret = init_iob(iob, ret, dev, 0x01000008, fsNum);
+    ret = init_iob(iob, ret, dev, 0x01000008, i_unit);
     if (ret < 0)
         goto freeiob;
 
-    if (dev->drv->funcs->IoDopen == NULL) {
+    if (dev->d_dp->dt_func->df_dopen == NULL) {
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
         goto freeiob;
     }
 
     // 1564
-    ret = dev->drv->funcs->IoDopen(iob, dirName);
+    ret = dev->d_dp->dt_func->df_dopen(iob, dirName);
     if (ret < 0)
         goto freeiob;
 
@@ -520,12 +520,12 @@ int sceIoDread(int fd, SceIoDirent *dir)
         pspSetK1(oldK1);
         return ret;
     }
-    if (iob->dev->drv->funcs->IoDread == NULL) {
+    if (iob->i_de->d_dp->dt_func->df_dread == NULL) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
     }
     // 1650
-    ret = iob->dev->drv->funcs->IoDread(iob, dir);
+    ret = iob->i_de->d_dp->dt_func->df_dread(iob, dir);
     pspSetK1(oldK1);
     return ret;
 }
@@ -543,17 +543,17 @@ int sceIoDclose(int fd)
         return ret;
     }
     ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-    if (iob->dev == &deleted_device)
+    if (iob->i_de == &deleted_device)
     {
         // 16F0
         free_iob(iob);
         pspSetK1(oldK1);
         return 0;
     }
-    if (iob->dev->drv->funcs->IoDclose != NULL)
+    if (iob->i_de->d_dp->dt_func->df_dclose != NULL)
     {
         // 16DC
-        ret = iob->dev->drv->funcs->IoDclose(iob);
+        ret = iob->i_de->d_dp->dt_func->df_dclose(iob);
         if (ret >= 0)
         {
             // 16F0
@@ -571,8 +571,8 @@ int sceIoRemove(const char *file)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
-    SceIoDeviceArg *dev;
-    int fsNum;
+    SceIoDeviceEntry *dev;
+    int i_unit;
     char *realPath;
     int ret;
     int oldK1 = pspShiftK1();
@@ -594,21 +594,21 @@ int sceIoRemove(const char *file)
         goto freepath;
 
     realPath = path;
-    ret = sub_375C(file, &dev, &fsNum, &realPath);
+    ret = sub_375C(file, &dev, &i_unit, &realPath);
     if (ret < 0)
         goto freeiob;
 
-    ret = init_iob(iob, ret, dev, 0x1000000, fsNum);
+    ret = init_iob(iob, ret, dev, 0x1000000, i_unit);
     if (ret < 0)
         goto freeiob;
 
-    if (dev->drv->funcs->IoRemove == NULL) {
+    if (dev->d_dp->dt_func->df_remove == NULL) {
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
         goto freeiob;
     }
 
     // 17F8
-    ret = dev->drv->funcs->IoRemove(iob, realPath);
+    ret = dev->d_dp->dt_func->df_remove(iob, realPath);
 
     freeiob:
     // 17BC
@@ -651,10 +651,10 @@ int sceIoRename(const char *oldname, const char *newname)
     int ret = alloc_iob(&iob, 0);
     if (ret < 0)
         goto freepath;
-    SceIoDeviceArg *olddev;
-    int oldfsNum;
+    SceIoDeviceEntry *olddev;
+    int oldi_unit;
     char *oldrealPath = buf1;
-    ret = sub_375C(oldname, &olddev, &oldfsNum, &oldrealPath);
+    ret = sub_375C(oldname, &olddev, &oldi_unit, &oldrealPath);
     if (ret < 0)
         goto freeiob;
     if (strchr(newname, ':') == 0)
@@ -669,28 +669,28 @@ int sceIoRename(const char *oldname, const char *newname)
     }
     else
     {
-        SceIoDeviceArg *newdev;
-        int newfsNum;
+        SceIoDeviceEntry *newdev;
+        int newi_unit;
         char *newrealPath = buf2;
-        ret = sub_375C(newname, &newdev, &newfsNum, &newrealPath);
+        ret = sub_375C(newname, &newdev, &newi_unit, &newrealPath);
         if (ret < 0) {
             // 19B4
             goto freeiob;
         }
-        if (newdev != olddev || newfsNum != oldfsNum) {
+        if (newdev != olddev || newi_unit != oldi_unit) {
             ret = SCE_ERROR_KERNEL_XDEV;
             goto freeiob;
         }
     }
 
     // 1970
-    ret = init_iob(iob, ret, olddev, 0x1000000, oldfsNum);
+    ret = init_iob(iob, ret, olddev, 0x1000000, oldi_unit);
     if (ret < 0)
         goto freeiob;
 
     ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-    if (olddev->drv->funcs->IoRename != NULL)
-        ret = olddev->drv->funcs->IoRename(iob, oldrealPath, newname);
+    if (olddev->d_dp->dt_func->df_rename != NULL)
+        ret = olddev->d_dp->dt_func->df_rename(iob, oldrealPath, newname);
 
     freeiob:
     free_iob(iob);
@@ -734,7 +734,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     char outDev[32];
     char blkAliasName[32];
     char fsAliasName[32];
-    int fsNum;
+    int i_unit;
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(dev) || !pspK1PtrOk(blockDev) || !pspK1PtrOk(fs) || !pspK1DynBufOk(unk1, unk2))
@@ -763,10 +763,10 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     if (fs != NULL && (~mode >> 31) != 0)
     {
         // 1F98
-        parsedev(fs, outDev, &fsNum);
+        parsedev(fs, outDev, &i_unit);
         SceIoAlias *alias = lookup_alias_tbl(outDev);
         if (alias != NULL) {
-            snprintf(fsAliasName, 32, "%s%d:", alias->blockDev, alias->fsNum);
+            snprintf(fsAliasName, 32, "%s%d:", alias->blockDev, alias->i_unit);
             fs = fsAliasName;
         }
     }
@@ -775,10 +775,10 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     if (blockDev != NULL && (~mode >> 31) != 0)
     {
         // 1F50
-        parsedev(blockDev, outDev, &fsNum);
+        parsedev(blockDev, outDev, &i_unit);
         blkAlias = lookup_alias_tbl(outDev);
         if (blkAlias != NULL) {
-            snprintf(blkAliasName, 32, "%s%d:", blkAlias->blockDev, blkAlias->fsNum);
+            snprintf(blkAliasName, 32, "%s%d:", blkAlias->blockDev, blkAlias->i_unit);
             blockDev = blkAliasName;
         }
     }
@@ -793,7 +793,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
         attr = 0x10;
     }
     // 1BAC
-    parsedev(curDev, outDev, &fsNum);
+    parsedev(curDev, outDev, &i_unit);
     SceIoDeviceList *list = lookup_device_list(outDev);
     if (list == NULL)
     {
@@ -804,7 +804,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     }
     if (blkAlias != NULL)
         attr |= 0x100;
-    attr |= (((list->arg.drv->dev_type >> 24) & 0xF) << 24) | (((list->arg.drv->dev_type >> 16) & 0xFF) << 16);
+    attr |= (((list->arg.d_dp->dt_type >> 24) & 0xF) << 24) | (((list->arg.d_dp->dt_type >> 16) & 0xFF) << 16);
     SceIoAlias *newAlias = alloc_alias_tbl();
     if (newAlias == NULL)
     {
@@ -815,7 +815,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     }
     newAlias->attr = attr;
     newAlias->dev = &list->arg;
-    newAlias->fsNum = fsNum;
+    newAlias->i_unit = i_unit;
     // 1F18, 1F20
     while (*dev == ' ')
         dev++;
@@ -895,16 +895,16 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     int ret = alloc_iob(&iob, 0);
     if (ret < 0)
         goto err;
-    ret = init_iob(iob, attr, &list->arg, 0x1000000, fsNum);
+    ret = init_iob(iob, attr, &list->arg, 0x1000000, i_unit);
     if (ret < 0)
         goto err_free_iob;
     if (fsset)
     {
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-        if (list->arg.drv->funcs->IoMount == NULL)
+        if (list->arg.d_dp->dt_func->df_mount == NULL)
             goto err_free_iob;
         // 1DA4
-        ret = list->arg.drv->funcs->IoMount(iob, fs, blockDev, mode, unk1, unk2);
+        ret = list->arg.d_dp->dt_func->df_mount(iob, fs, blockDev, mode, unk1, unk2);
         if (ret < 0)
             goto err_free_iob;
     }
@@ -962,17 +962,17 @@ int sceIoUnassign(const char *dev)
         pspSetK1(oldK1);
         return ret;
     }
-    ret = init_iob(iob, alias->attr, alias->dev, 0x1000000, alias->fsNum);
+    ret = init_iob(iob, alias->attr, alias->dev, 0x1000000, alias->i_unit);
     if (ret < 0)
         goto error;
     if ((alias->attr & 0xFF) == 0x10)
     {
         // 20DC
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-        if (alias->dev->drv->funcs->IoUmount == 0)
+        if (alias->dev->d_dp->dt_func->df_umount == 0)
             goto error;
         // 2108
-        ret = alias->dev->drv->funcs->IoUmount(iob, alias->blockDev);
+        ret = alias->dev->d_dp->dt_func->df_umount(iob, alias->blockDev);
         if (ret < 0)
             goto error;
     }
@@ -1001,7 +1001,7 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int oldK1 = pspShiftK1();
-    int fsNum;
+    int i_unit;
     char name[32];
     if (!pspK1PtrOk(aliasName) || !pspK1PtrOk(blockDev))
     {
@@ -1021,7 +1021,7 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ALIAS_USED;
     }
-    parsedev(blockDev, name, &fsNum);
+    parsedev(blockDev, name, &i_unit);
     if (lookup_device_list(name) == NULL)
     {
         // 22A4
@@ -1037,7 +1037,7 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
     }
     alias->attr = 0x100;
     alias->dev = NULL;
-    alias->fsNum = fsNum;
+    alias->i_unit = i_unit;
     // 2278, 2280
     while (*aliasName == ' ')
         aliasName++;
@@ -1090,8 +1090,8 @@ int IoFileMgrForKernel_E972F70B(const char *name)
 int sceIoChangeThreadCwd(SceUID threadId, const char *path)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    SceIoDeviceArg *dev;
-    int fsNum;
+    SceIoDeviceEntry *dev;
+    int i_unit;
     char *realPath;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(path))
@@ -1108,7 +1108,7 @@ int sceIoChangeThreadCwd(SceUID threadId, const char *path)
         return SCE_ERROR_KERNEL_NO_MEMORY;
     }
     realPath = buf;
-    int ret = sub_375C(path, &dev, &fsNum, &realPath);
+    int ret = sub_375C(path, &dev, &i_unit, &realPath);
     if (ret < 0)
         goto end;
     void *ktls = sceKernelGetThreadKTLS(g_ktls, threadId, 1);
@@ -1150,12 +1150,12 @@ int sceIoCancel(int fd)
         pspSetK1(oldK1);
         return ret;
     }
-    if (iob->dev->drv->funcs->IoCancel == NULL)
+    if (iob->i_de->d_dp->dt_func->df_cancel == NULL)
     {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
     }
-    ret = iob->dev->drv->funcs->IoCancel(iob);
+    ret = iob->i_de->d_dp->dt_func->df_cancel(iob);
     if (ret < 0)
     {
         // 2588
@@ -1254,11 +1254,11 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
     }
     // 2750
     info.attribute = UID_DATA_TO_CB(iob, g_uid_type)->attr;
-    info.unk40 = iob->unk000;
-    if (iob->dev != NULL)
-        info.drvName = iob->dev->drv->name;
+    info.flags = iob->i_flgs;
+    if (iob->i_de != NULL)
+        info.drvName = iob->i_de->d_dp->dt_string;
     // 2774
-    info.fsNum = iob->fsNum;
+    info.fsNum = iob->i_unit;
     int isAsync = 0;
     info.newPath = iob->newPath;
     info.curThread = iob->curThread;
@@ -1284,8 +1284,8 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
     int size = outInfo->size;
     if (info.size < outInfo->size)
         size = info.size;
-    info.unk80 = iob->unk024;
-    info.unk84 = iob->unk028;
+    info.fpos = iob->i_fpos;
+    info.thread = iob->i_thread;
     info.iob = iob;
     memcpy(outInfo, &info, size);
     sceKernelCpuResumeIntr(oldIntr);
@@ -1293,9 +1293,9 @@ int sceIoGetFdDebugInfo(int fd, SceIoFdDebugInfo *outInfo)
     return 0;
 }
 
-int sceIoAddDrv(SceIoDrv *drv)
+int sceIoAddDrv(SceIoDeviceTable *drv)
 {
-    dbg_printf("sceIoAddDrv(): %s\n", drv->name);
+    dbg_printf("sceIoAddDrv(): %s\n", drv->dt_string);
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(drv))
     {
@@ -1303,7 +1303,7 @@ int sceIoAddDrv(SceIoDrv *drv)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
-    if (lookup_device_list(drv->name) != 0)
+    if (lookup_device_list(drv->dt_string) != 0)
     {
         // 2948
         pspSetK1(oldK1);
@@ -1316,15 +1316,15 @@ int sceIoAddDrv(SceIoDrv *drv)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_NO_MEMORY;
     }
-    list->arg.drv = drv;
-    list->arg.openedFiles = 0;
-    if (drv->funcs->IoInit == NULL) {
+    list->arg.d_dp = drv;
+    list->arg.d_userfd_count = 0;
+    if (drv->dt_func->df_init == NULL) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
     }
     // 2904
-    int ret = drv->funcs->IoInit(&list->arg);
-    dbg_printf("function ioinit at %08x\n", drv->funcs->IoInit);
+    int ret = drv->dt_func->df_init(&list->arg);
+    dbg_printf("function ioinit at %08x\n", drv->dt_func->df_init);
     if (ret < 0)
     {
         // 2928
@@ -1351,13 +1351,13 @@ int sceIoDelDrv(const char *drv)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
     }
-    if (dev->arg.drv->funcs->IoExit == NULL) {
+    if (dev->arg.d_dp->dt_func->df_exit == NULL) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
     }
     // 29F4
     delete_device_list(dev);
-    int ret = dev->arg.drv->funcs->IoExit(&dev->arg);
+    int ret = dev->arg.d_dp->dt_func->df_exit(&dev->arg);
     if (ret < 0)
     {
         // 2A34
@@ -1380,7 +1380,7 @@ SceIoDeviceList *lookup_device_list(const char *drive)
     // 2A7C
     while (cur != NULL)
     {
-        if (strcmp_bs(drive, cur->arg.drv->name) == 0)
+        if (strcmp_bs(drive, cur->arg.d_dp->dt_string) == 0)
         {
             // 2AC0
             sceKernelCpuResumeIntr(oldIntr);
@@ -1437,9 +1437,9 @@ SceIoDeviceList *alloc_device_list(void)
     {
         dbg_printf(" -> ok\n");
         list->next = NULL;
-        list->arg.drv = NULL;
-        list->arg.argp = NULL;
-        list->arg.openedFiles = 0;
+        list->arg.d_dp = NULL;
+        list->arg.d_private = NULL;
+        list->arg.d_userfd_count = 0;
     }
     return list;
 }
@@ -1535,7 +1535,7 @@ int preobe_fdhook(SceIoIob *iob, char *file, int flags, SceMode mode)
         if (cur->arg.hook->funcs->Preobe(&iob->hook, file, flags, mode) == 1)
         {
             // 2E24
-            iob->hook.funcs = iob->hook.iob->dev->drv->funcs;
+            iob->hook.funcs = iob->hook.iob->i_de->d_dp->dt_func;
             return 1;
         }
         cur = cur->next;
@@ -1577,7 +1577,7 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
     if ((arg3 & 0x10) == 0 && sceKernelIsIntrContext() != 0) // 30F8
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     // 2F18
-    if ((arg3 & 2) == 0 && (iob->dev == &deleted_device || iob->dev == NULL)) {
+    if ((arg3 & 2) == 0 && (iob->i_de == &deleted_device || iob->i_de == NULL)) {
         // 2F40
         return g_deleted_error;
     }
@@ -1592,10 +1592,10 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
         return SCE_ERROR_KERNEL_ASYNC_BUSY;
     }
     // 2F88
-    if (arg1 != 0 && (iob->unk000 & arg1) == 0)
+    if (arg1 != 0 && (iob->i_flgs & arg1) == 0)
         goto error;
     // 2FA0
-    if ((arg3 & 8) == 0 && (iob->unk000 & 0x1000000) != 0 && (arg3 & 0x10) == 0)
+    if ((arg3 & 8) == 0 && (iob->i_flgs & 0x1000000) != 0 && (arg3 & 0x10) == 0)
     {
         // 303C
         int thread = sceKernelGetThreadId();
@@ -1608,10 +1608,10 @@ int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob)
         flag = arg2;
     if (flag == 0)
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
-    if ((arg3 & 0x10) == 0 && sceKernelGetUserLevel() < ((iob->dev_type >> 24) & 0xF)) // 3014
+    if ((arg3 & 0x10) == 0 && sceKernelGetUserLevel() < ((iob->d_type >> 24) & 0xF)) // 3014
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     // 2FE8
-    if (pspK1IsUserMode() && (iob->unk000 & 0x4000000) != 0)
+    if (pspK1IsUserMode() && (iob->i_flgs & 0x4000000) != 0)
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     // 300C
     *outIob = iob;
@@ -1688,7 +1688,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
         *outIob = iob;
         iob->asyncPrio = default_thread_priority;
         iob->unk040 = ret;
-        iob->dev = &deleted_device;
+        iob->i_de = &deleted_device;
         iob->curThread = sceKernelGetThreadId();
         iob->userMode = usrMode;
         iob->userLevel = lvl;
@@ -1717,16 +1717,16 @@ int free_iob(SceIoIob *iob)
         iob->asyncThread = 0;
     }
     // 32E0
-    iob->unk000 = 0;
+    iob->i_flgs = 0;
     if (iob->userMode != 0 && iob->userLevel < 4)
     {
         g_iobCount--;
-        if ((iob->dev->drv->dev_type & 0x00FF0000) != 0)
-            iob->dev->openedFiles--;
+        if ((iob->i_de->d_dp->dt_type & 0x00FF0000) != 0)
+            iob->i_de->d_userfd_count--;
     }
     // (3328)
     // 332C
-    iob->dev = &deleted_device;
+    iob->i_de = &deleted_device;
     if (iob->newPath != NULL)
     {
         // 3398
@@ -1744,25 +1744,25 @@ int free_iob(SceIoIob *iob)
 }
 
 // 33D0
-int init_iob(SceIoIob *iob, int devType, SceIoDeviceArg *dev, int unk, int fsNum)
+int init_iob(SceIoIob *iob, int devType, SceIoDeviceEntry *dev, int flags, int unit)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     if (iob->userLevel < ((devType >> 24) & 0xF))
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     if (iob->userMode != 0 && iob->userLevel < 4)
     {
-        int count = (dev->drv->dev_type & 0x00FF0000) >> 16;
-        if (count != 0 && dev->openedFiles >= count)
+        int count = (dev->d_dp->dt_type & 0x00FF0000) >> 16;
+        if (count != 0 && dev->d_userfd_count >= count)
             return SCE_ERROR_KERNEL_TOO_MANY_OPEN_FILES;
         // 3420
-        dev->openedFiles++;
+        dev->d_userfd_count++;
     }
     // (3428)
-    iob->fsNum = fsNum;
+    iob->i_unit = unit;
     // 342C
-    iob->dev_type = devType;
-    iob->dev = dev;
-    iob->unk000 = unk;
+    iob->d_type = devType;
+    iob->i_de = dev;
+    iob->i_flgs = flags;
     return 0;
 }
 
@@ -1796,7 +1796,7 @@ int iob_power_unlock(SceIoIob *iob)
     return 0;
 }
 
-char *parsedev(const char *dev, char *outDev, int *fsNum)
+char *parsedev(const char *dev, char *outDev, int *i_unit)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     // 35B4, 35BC
@@ -1823,7 +1823,7 @@ char *parsedev(const char *dev, char *outDev, int *fsNum)
         end--;
     }
     // 3598
-    *fsNum = strtol(end, 0, 10);
+    *i_unit = strtol(end, 0, 10);
     *end = '\0';
     return colon + 1;
 }
@@ -1878,13 +1878,13 @@ SceIoAlias *sub_36C4(const char *name)
     return lookup_alias_tbl(buf);
 }
 
-int sub_375C(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNamePtr)
+int sub_375C(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return sub_3778(path, dev, fsNum, dirNamePtr, 1);
+    return sub_3778(path, dev, i_unit, dirNamePtr, 1);
 }
 
-int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNamePtr, int userMode)
+int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     char drive[32];
@@ -1950,14 +1950,14 @@ int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNameP
         curBuf--;
     }
     // 388C
-    *fsNum = strtol(curBuf, NULL, 10);
+    *i_unit = strtol(curBuf, NULL, 10);
     SceIoAlias *aliasNoDrv = NULL;
     if (userMode != 0)
     {
         // 398C
         aliasNoDrv = lookup_alias_tbl(drive);
         if (aliasNoDrv != NULL) {
-            *fsNum = aliasNoDrv->fsNum;
+            *i_unit = aliasNoDrv->i_unit;
             strncpy(drive, aliasNoDrv->blockDev, 32);
         }
     }
@@ -1996,12 +1996,12 @@ int sub_3778(const char *path, SceIoDeviceArg **dev, int *fsNum, char **dirNameP
         SceIoDeviceList *list = lookup_device_list(drive);
         if (list == NULL)
             return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
-        ret = list->arg.drv->dev_type;
+        ret = list->arg.d_dp->dt_type;
         *dev = &list->arg;
     }
     else
     {
-        *fsNum = alias->fsNum;
+        *i_unit = alias->i_unit;
         *dev = alias->dev;
         ret = alias->attr;
     }
@@ -2103,9 +2103,9 @@ int IoFileMgrRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribu
     // 3D7C
     while (cur != NULL)
     {
-        if (cur->arg.drv->funcs->IoExit != NULL) {
+        if (cur->arg.d_dp->dt_func->df_exit != NULL) {
             // 3DC4
-            cur->arg.drv->funcs->IoExit(&cur->arg);
+            cur->arg.d_dp->dt_func->df_exit(&cur->arg);
         }
         cur = cur->next;
         // 3D90
@@ -2334,7 +2334,7 @@ int sceIoGetDevType(SceUID fd)
     pspSetK1(oldK1);
     if (ret < 0)
         return ret;
-    return iob->dev_type;
+    return iob->d_type;
 }
 
 int sceIoGetThreadCwd(SceUID uid, char *dir, int len)
@@ -2575,14 +2575,14 @@ int do_close(SceUID fd, int async, int remove)
         pspSetK1(oldK1);
         return ret;
     }
-    if ((iob->unk000 & 8) != 0)
+    if ((iob->i_flgs & 8) != 0)
     {
         // 4BDC
         Kprintf("bad file descriptor %d\n", fd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_BAD_FILE_DESCRIPTOR;
     }
-    if (iob->dev == &deleted_device && iob->hook.arg == NULL) // 4B54
+    if (iob->i_de == &deleted_device && iob->hook.arg == NULL) // 4B54
     {
         if (async == 0) {
             ret = 0;
@@ -2610,7 +2610,7 @@ int do_close(SceUID fd, int async, int remove)
         goto end;
     }
     // 49C8
-    if (iob->dev->drv->funcs->IoClose == NULL)
+    if (iob->i_de->d_dp->dt_func->df_close == NULL)
     {
         // 4B48
         pspSetK1(oldK1);
@@ -2652,7 +2652,7 @@ int do_close(SceUID fd, int async, int remove)
     // 49EC
     if (iob->hook.arg == NULL) {
         // 4A70
-        ret = iob->dev->drv->funcs->IoClose(iob);
+        ret = iob->i_de->d_dp->dt_func->df_close(iob);
     }
     else
         ret = iob->hook.arg->hook->funcs->Close(&iob->hook);
@@ -2724,7 +2724,7 @@ int do_read(SceUID fd, void *data, SceSize size, int async)
     int ret = validate_fd(fd, 1, 4, 0, &iob);
     if (ret < 0)
         return ret;
-    if (iob->dev->drv->funcs->IoRead == NULL)
+    if (iob->i_de->d_dp->dt_func->df_read == NULL)
     {
         // 4EB4
         pspSetK1(oldK1);
@@ -2760,7 +2760,7 @@ int do_read(SceUID fd, void *data, SceSize size, int async)
     if (iob->hook.arg == NULL)
     {
         // 4E00
-        ret = iob->dev->drv->funcs->IoRead(iob, data, size);
+        ret = iob->i_de->d_dp->dt_func->df_read(iob, data, size);
         pspSetK1(oldK1);
         return ret;
     }
@@ -2785,7 +2785,7 @@ int do_write(SceUID fd, const void *data, SceSize size, int async)
         pspSetK1(oldK1);
         return ret;
     }
-    if (iob->dev->drv->funcs->IoWrite == NULL)
+    if (iob->i_de->d_dp->dt_func->df_write == NULL)
     {
         // 5048
         pspSetK1(oldK1);
@@ -2820,7 +2820,7 @@ int do_write(SceUID fd, const void *data, SceSize size, int async)
     }
     if (iob->hook.arg == NULL) {
         // 4F94
-        ret = iob->dev->drv->funcs->IoWrite(iob, data, size);
+        ret = iob->i_de->d_dp->dt_func->df_write(iob, data, size);
     }
     else
         ret = iob->hook.arg->hook->funcs->Write(&iob->hook, data, size);
@@ -2844,7 +2844,7 @@ SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     }
-    if (iob->dev->drv->funcs->IoLseek == NULL)
+    if (iob->i_de->d_dp->dt_func->df_lseek == NULL)
     {
         // 5204
         pspSetK1(oldK1);
@@ -2881,7 +2881,7 @@ SceOff do_lseek(SceUID fd, SceOff offset, int whence, int async)
     }
     if (iob->hook.arg == NULL) {
         // 5140
-        ret = iob->dev->drv->funcs->IoLseek(iob, offset, whence);
+        ret = iob->i_de->d_dp->dt_func->df_lseek(iob, offset, whence);
     }
     else
         ret = iob->hook.arg->hook->funcs->Lseek(&iob->hook, offset, whence);
@@ -2914,7 +2914,7 @@ int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata
         pspSetK1(oldK1);
         return ret;
     }
-    if (iob->dev->drv->funcs->IoIoctl == NULL) {
+    if (iob->i_de->d_dp->dt_func->df_ioctl == NULL) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
     }
@@ -2950,7 +2950,7 @@ int do_ioctl(SceUID fd, unsigned int cmd, void *indata, int inlen, void *outdata
     }
     if (iob->hook.arg == NULL) {
         // 5348
-        ret = iob->dev->drv->funcs->IoIoctl(iob, cmd, indata, inlen, outdata, outlen);
+        ret = iob->i_de->d_dp->dt_func->df_ioctl(iob, cmd, indata, inlen, outdata, outlen);
     }
     else
         ret = iob->hook.arg->hook->funcs->Ioctl(&iob->hook, cmd, indata, inlen, outdata, outlen);
@@ -2965,8 +2965,8 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
     dbg_printf("Calling %s\n", __FUNCTION__);
     int ret;
     char str[32];
-    SceIoDeviceArg *dev;
-    int fsNum;
+    SceIoDeviceEntry *dev;
+    int i_unit;
     char *dirName;
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
@@ -2988,11 +2988,11 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
         goto freepath;
 
     dirName = pathBuf;
-    ret = sub_375C(path, &dev, &fsNum, &dirName);
+    ret = sub_375C(path, &dev, &i_unit, &dirName);
     if (ret < 0)
         goto freeiob;
 
-    ret = init_iob(iob, ret, dev, 0x1000000, fsNum);
+    ret = init_iob(iob, ret, dev, 0x1000000, i_unit);
     if (ret < 0)
         goto freeiob;
 
@@ -3000,14 +3000,14 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
     {
     case 1: // mkdir
         // 5640
-        if (dev->drv->funcs->IoMkdir != NULL)
-            ret = dev->drv->funcs->IoMkdir(iob, dirName, mode);
+        if (dev->d_dp->dt_func->df_mkdir != NULL)
+            ret = dev->d_dp->dt_func->df_mkdir(iob, dirName, mode);
         else
             ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
         break;
     case 0: // chdir
         // 5580
-        snprintf(str, 32, "%s%d:", dev->drv->name, fsNum);
+        snprintf(str, 32, "%s%d:", dev->d_dp->dt_string, i_unit);
         char **ptr = sceKernelGetKTLS(g_ktls);
         if (ptr == NULL) {
             ret = SCE_ERROR_KERNEL_NO_MEMORY;
@@ -3031,8 +3031,8 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
         break;
     case 2: // rmdir
         // 5554
-        if (dev->drv->funcs->IoRmdir != NULL)
-            ret = dev->drv->funcs->IoRmdir(iob, pathBuf);
+        if (dev->d_dp->dt_func->df_rmdir != NULL)
+            ret = dev->d_dp->dt_func->df_rmdir(iob, pathBuf);
         else
             ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
         break;
@@ -3058,8 +3058,8 @@ int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
-    SceIoDeviceArg *dev;
-    int fsNum;
+    SceIoDeviceEntry *dev;
+    int i_unit;
     char *dirNamePtr;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(file) || !pspK1PtrOk(stat))
@@ -3079,25 +3079,25 @@ int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
     if (ret < 0)
         goto end;
     dirNamePtr = buf;
-    ret = sub_375C(file, &dev, &fsNum, &dirNamePtr);
+    ret = sub_375C(file, &dev, &i_unit, &dirNamePtr);
     if (ret < 0)
         goto freeiob;
-    ret = init_iob(iob, ret, dev, 0x1000000, fsNum);
+    ret = init_iob(iob, ret, dev, 0x1000000, i_unit);
     if (ret < 0)
         goto freeiob;
     if (get == 0)
     {
         // 57E0
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-        if (dev->drv->funcs->IoChstat != NULL)
-            ret = dev->drv->funcs->IoChstat(iob, dirNamePtr, stat, bits);
+        if (dev->d_dp->dt_func->df_chstat != NULL)
+            ret = dev->d_dp->dt_func->df_chstat(iob, dirNamePtr, stat, bits);
     }
     else if (get == 1)
     {
         // 57AC
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-        if (dev->drv->funcs->IoGetstat != NULL)
-            ret = dev->drv->funcs->IoGetstat(iob, dirNamePtr, stat);
+        if (dev->d_dp->dt_func->df_getstat != NULL)
+            ret = dev->d_dp->dt_func->df_getstat(iob, dirNamePtr, stat);
     }
     else
         ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
@@ -3116,8 +3116,8 @@ int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     SceIoIob *iob;
-    SceIoDeviceArg *arg;
-    int fsNum;
+    SceIoDeviceEntry *arg;
+    int i_unit;
     char *path;
     char *buf = alloc_pathbuf();
     if (buf == NULL)
@@ -3126,16 +3126,16 @@ int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *
     if (ret < 0)
         goto end;
     path = buf;
-    ret = sub_3778(dev, &arg, &fsNum, &path, iob->userMode);
+    ret = sub_3778(dev, &arg, &i_unit, &path, iob->userMode);
     if (ret < 0)
         goto freeiob;
-    ret = init_iob(iob, ret, arg, 0x1000000, fsNum);
+    ret = init_iob(iob, ret, arg, 0x1000000, i_unit);
     if (ret < 0)
         goto freeiob;
     ret = SCE_ERROR_KERNEL_UNSUPPORTED_OPERATION;
-    if (arg->drv->funcs->IoDevctl != NULL) {
+    if (arg->d_dp->dt_func->df_devctl != NULL) {
         // 5948
-        ret = arg->drv->funcs->IoDevctl(iob, path, cmd, indata, inlen, outdata, outlen);
+        ret = arg->d_dp->dt_func->df_devctl(iob, path, cmd, indata, inlen, outdata, outlen);
     }
 
     freeiob:
@@ -3147,7 +3147,7 @@ int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *
     return ret;
 }
 
-int do_deldrv(SceIoDeviceArg *dev)
+int do_deldrv(SceIoDeviceEntry *dev)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int oldIntr = sceKernelCpuSuspendIntr();
@@ -3158,15 +3158,15 @@ int do_deldrv(SceIoDeviceArg *dev)
         SceIoIob *iob;
         if (validate_fd(cur->uid, 0, 0xFF, 13, &iob) == 0)
         {
-            if (iob->dev == dev)
+            if (iob->i_de == dev)
             {
                 // 5A30
                 if (iob->hook.arg != NULL)
                     iob->hook.funcs = &deleted_dt_func;
                 // 5A3C
-                iob->dev = &deleted_device;
-                if (iob->userMode != 0 && iob->userLevel < 4 && (dev->drv->dev_type & 0xFF0000) != 0)
-                    dev->openedFiles--;
+                iob->i_de = &deleted_device;
+                if (iob->userMode != 0 && iob->userLevel < 4 && (dev->d_dp->dt_type & 0xFF0000) != 0)
+                    dev->d_userfd_count--;
             }
         }
         // 59F0
@@ -3244,7 +3244,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
             // 5C24
             if (iob->hook.arg == NULL) {
                 // 5C5C
-                ret = iob->dev->drv->funcs->IoClose(iob);
+                ret = iob->i_de->d_dp->dt_func->df_close(iob);
             }
             else
                 ret = iob->hook.arg->hook->funcs->Close(&iob->hook);
@@ -3257,7 +3257,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
             // 5C70
             if (iob->hook.arg == NULL) {
                 // 5CA8
-                ret = iob->dev->drv->funcs->IoRead(iob, (void*)iob->asyncArgs[0], iob->asyncArgs[1]);
+                ret = iob->i_de->d_dp->dt_func->df_read(iob, (void*)iob->asyncArgs[0], iob->asyncArgs[1]);
             }
             else
                 ret = iob->hook.arg->hook->funcs->Read(&iob->hook, (void*)iob->asyncArgs[0], iob->asyncArgs[1]);
@@ -3267,7 +3267,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
             // 5CC4
             if (iob->hook.arg == NULL) {
                 // 5CEC
-                ret = iob->dev->drv->funcs->IoWrite(iob, (void*)iob->asyncArgs[0], iob->asyncArgs[1]);
+                ret = iob->i_de->d_dp->dt_func->df_write(iob, (void*)iob->asyncArgs[0], iob->asyncArgs[1]);
             }
             else
                 ret = iob->hook.arg->hook->funcs->Write(&iob->hook, (void*)iob->asyncArgs[0], iob->asyncArgs[1]);
@@ -3277,7 +3277,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
             // 5D04
             if (iob->hook.arg == NULL) {
                 // 5D40
-                ret = iob->dev->drv->funcs->IoLseek(iob, ((s64)iob->asyncArgs[1] << 32) | iob->asyncArgs[0], iob->asyncArgs[2]);
+                ret = iob->i_de->d_dp->dt_func->df_lseek(iob, ((s64)iob->asyncArgs[1] << 32) | iob->asyncArgs[0], iob->asyncArgs[2]);
             }
             else
                 ret = iob->hook.arg->hook->funcs->Lseek(&iob->hook, ((s64)iob->asyncArgs[1] << 32) | iob->asyncArgs[0], iob->asyncArgs[2]);
@@ -3288,7 +3288,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
             // 5D60
             if (iob->hook.arg == NULL) {
                 // 5DA0
-                ret = iob->dev->drv->funcs->IoIoctl(iob, iob->asyncArgs[0], (void*)iob->asyncArgs[1], iob->asyncArgs[2], (void*)iob->asyncArgs[3], iob->asyncArgs[4]);
+                ret = iob->i_de->d_dp->dt_func->df_ioctl(iob, iob->asyncArgs[0], (void*)iob->asyncArgs[1], iob->asyncArgs[2], (void*)iob->asyncArgs[3], iob->asyncArgs[4]);
             }
             else
                 ret = iob->hook.arg->hook->funcs->Ioctl(&iob->hook, iob->asyncArgs[0], (void*)iob->asyncArgs[1], iob->asyncArgs[2], (void*)iob->asyncArgs[3], iob->asyncArgs[4]);

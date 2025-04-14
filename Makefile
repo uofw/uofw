@@ -4,8 +4,8 @@ export ROOT_DIR
 
 MODULES=debug syscon \
 kd/audio kd/chnnlsv kd/clockgen kd/codec kd/ctrl kd/exceptionman kd/ge kd/init kd/interruptman \
-kd/iofilemgr kd/led kd/libatrac3plus kd/loadcore kd/loadexec kd/mediaman kd/me_wrapper kd/modulemgr \
-kd/power kd/sysmem kd/systimer kd/usersystemlib kd/wlanfirm
+kd/iofilemgr kd/isofs kd/led kd/libatrac3plus kd/loadcore kd/loadexec kd/mediaman kd/me_wrapper \
+kd/modulemgr kd/power kd/rtc kd/sysmem kd/systimer kd/usersystemlib kd/wlanfirm
 
 all: $(MODULES)
 

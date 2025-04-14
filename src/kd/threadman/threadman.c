@@ -2621,7 +2621,7 @@ void ThreadManForUser_BC80EC7C()
  */
 // TODO: Reverse function sceKernelExtendKernelStack
 // Subroutine sceKernelExtendKernelStack - Address 0x000152C0
-int sceKernelExtendKernelStack(int type, void (*cb)(void*), void *arg)
+int sceKernelExtendKernelStack(int type, s32 (*cb)(void*), void *arg)
 {
     
 }

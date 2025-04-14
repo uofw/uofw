@@ -146,6 +146,7 @@ static s32 _UnloadModule(SceModule *pMod)
         sceKernelFreePartitionMemory(pMod->moduleBlockId); //0x00000168
 
     sceKernelDeleteModule(pMod); //0x00000158
+    // uOFW: here, Sony forgot to reset g_ModuleManager.pModule to NULL when it's equal to pMod
 
     return SCE_ERROR_OK;
 }
@@ -1448,9 +1449,9 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
     //0x00007A04 - 0x00007A6C
     for (i = 0; i < pLib->vStubCount; i++) {
         switch (pLib->entryTable[pLib->stubCount + i]) {
-        case NID_1D4042A5: // 0x00007A48
+        case NID_MODULE_TEXT_CHECKSUM: // 0x00007A48
             g_ModuleManager.pModule = pMod; // 0x00007B64
-            pMod->unk224 = *(u32 *)(pLib->entryTable[2 * pLib->stubCount + pLib->vStubCount + i]); // 0x00007B70
+            pMod->computeTextSegmentChecksum = *(u32 *)(pLib->entryTable[2 * pLib->stubCount + pLib->vStubCount + i]); // 0x00007B70
             break;
         case NID_MODULE_INFO: // 0x00007AB8
             break;
@@ -1684,7 +1685,7 @@ static s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod)
     }
 
     pMod->segmentChecksum = sceKernelSegmentChecksum(pMod); // 0x00008198
-    if (pMod->unk224 != 0) { // 0x000081A4
+    if (pMod->computeTextSegmentChecksum != 0) { // 0x000081A4
         u32 sum = 0;
         u32 *pTextSegment = (u32 *)pMod->segmentAddr[0];
         u32 i;
