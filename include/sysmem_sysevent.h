@@ -116,7 +116,7 @@ typedef struct {
     s32 pllOutSelect; // 40
     s32 powerDownCounter; // 44
     void (*pResumePoint)(ScePowerResumeInfo *); // 48
-    SceKernelGameInfo *pSuspendedGameInfo; // 52
+    SceGameInfo *pSuspendedGameInfo; // 52
     u32 unk56; // 56
     u32 unk60; // 60
     u32 unk64; // 64
