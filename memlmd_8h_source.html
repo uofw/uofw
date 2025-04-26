@@ -94,34 +94,36 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#define MEMLMD_H</span></div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &quot;common_header.h&quot;</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#define MEMLMD_MODULE_NAME          &quot;memlmd&quot;</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 * newSize);</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>s32 memlmd_2AE425D2(u32 unk);</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>s32 memlmd_9D36A439(u32 unk);</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr);</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>s32 memlmd_CF03556B(u8 *prx, u32 size, u32 * newSize);</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>s32 memlmd_6192F715(u8 *addr, u32 size);</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>s32 memlmd_2F3D7E2D(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span><span class="keywordtype">int</span> sceUtilsBufferCopyWithRange(u8* outbuff, <span class="keywordtype">int</span> outsize, u8* inbuff, <span class="keywordtype">int</span> insize, <span class="keywordtype">int</span> cmd);</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="keywordtype">int</span> sceUtilsBufferCopyByPollingWithRange(u8* outbuff, <span class="keywordtype">int</span> outsize, u8* inbuff, <span class="keywordtype">int</span> insize, <span class="keywordtype">int</span> cmd);</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="keywordtype">int</span> sceUtilsBufferCopy(u8* outbuff, u8 *inbuff, <span class="keywordtype">int</span> cmd);</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span><span class="keywordtype">int</span> sceUtilsBufferCopyByPolling(u8* outbuff, u8 *inbuff, <span class="keywordtype">int</span> cmd);</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span> </div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="preprocessor">#endif  </span><span class="comment">/* MEMLMD_H */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;crypto/kirk.h&gt;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#define MEMLMD_MODULE_NAME          &quot;memlmd&quot;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 * newSize);</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>s32 memlmd_2AE425D2(u32 unk);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>s32 memlmd_9D36A439(u32 unk);</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr);</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>s32 memlmd_CF03556B(u8 *prx, u32 size, u32 * newSize);</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>s32 memlmd_6192F715(u8 *addr, u32 size);</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>s32 memlmd_2F3D7E2D(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="keywordtype">int</span> sceUtilsBufferCopyWithRange(u8* outbuff, <span class="keywordtype">int</span> outsize, u8* inbuff, <span class="keywordtype">int</span> insize, <span class="keywordtype">int</span> cmd);</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span><span class="keywordtype">int</span> sceUtilsBufferCopyByPollingWithRange(u8* outbuff, <span class="keywordtype">int</span> outsize, u8* inbuff, <span class="keywordtype">int</span> insize, <span class="keywordtype">int</span> cmd);</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span><span class="keywordtype">int</span> sceUtilsBufferCopy(u8* outbuff, u8 *inbuff, <span class="keywordtype">int</span> cmd);</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="keywordtype">int</span> sceUtilsBufferCopyByPolling(u8* outbuff, u8 *inbuff, <span class="keywordtype">int</span> cmd);</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span><span class="preprocessor">#endif  </span><span class="comment">/* MEMLMD_H */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Mar 8 2025 10:58:14 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Apr 26 2025 12:13:50 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>
