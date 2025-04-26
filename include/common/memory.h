@@ -83,6 +83,24 @@ static inline void pspClearMemory(void *ptr, int size) {
         pspClearMemory8(ptr, size);
 }
 
+static inline void memsetInline(void *s, int c, SceSize size)
+{
+    u32 i;
+    for (i = 0; i < size; i++)
+    {
+        *(u8 *)(s + i) = (u8)c;
+    }
+}
+
+static inline void memcpyInline(void *dest, const void *src, SceSize size)
+{
+    u32 i;
+    for (i = 0; i < size; i++)
+    {
+        *(u8 *)(dest + i) = *(u8 *)(src + i);
+    }
+}
+
 /* If we believe in the sysmem NIDs, 04g+ seem to have a "L2" cache
  * we can send commands to through this address */
 #define L2_CACHE_CMD (vu32*)0xA7F00000
