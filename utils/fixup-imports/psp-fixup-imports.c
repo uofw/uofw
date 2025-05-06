@@ -62,7 +62,7 @@ static int g_reversemap = 0;
 /* Specifies that the current usage is to the print the pspsdk path */
 static int g_verbose = 0;
 
-static struct option arg_opts[] = 
+static struct option arg_opts[] =
 {
 	{"output", required_argument, NULL, 'o'},
 	{"reverse", no_argument, NULL, 'r' },
@@ -328,7 +328,7 @@ int load_sections()
 					}
 				}
 
-				if(((g_elfsections[i].iType == SHT_REL) || (g_elfsections[i].iType == SHT_PRXRELOC)) 
+				if(((g_elfsections[i].iType == SHT_REL) || (g_elfsections[i].iType == SHT_PRXRELOC))
 						&& (g_elfsections[g_elfsections[i].iInfo].iFlags & SHF_ALLOC))
 				{
 					g_elfsections[i].pRef = &g_elfsections[g_elfsections[i].iInfo];
@@ -351,22 +351,22 @@ int load_sections()
 				{
 					g_stubtext = &g_elfsections[i];
 				}
-                else if(strcmp(g_elfsections[i].szName, PRX_VSTUB_SECT) == 0)
-                {
-                    g_vstub = &g_elfsections[i];
-                }
+				else if(strcmp(g_elfsections[i].szName, PRX_VSTUB_SECT) == 0)
+				{
+					g_vstub = &g_elfsections[i];
+				}
 				else if(strcmp(g_elfsections[i].szName, PRX_NID_SECT) == 0)
 				{
 					g_nid = &g_elfsections[i];
 				}
-                else if(strcmp(g_elfsections[i].szName, PRX_TEXT_SECT) == 0)
-                {
-                    g_text = &g_elfsections[i];
-                }
-                else if(strcmp(g_elfsections[i].szName, PRX_TEXTREL_SECT) == 0)
-                {
-                    g_textrel = &g_elfsections[i];
-                }
+				else if(strcmp(g_elfsections[i].szName, PRX_TEXT_SECT) == 0)
+				{
+					g_text = &g_elfsections[i];
+				}
+				else if(strcmp(g_elfsections[i].szName, PRX_TEXTREL_SECT) == 0)
+				{
+					g_textrel = &g_elfsections[i];
+				}
 			}
 
 			if(g_verbose)
@@ -374,13 +374,13 @@ int load_sections()
 				for(i = 0; i < g_elfhead.iShnum; i++)
 				{
 					fprintf(stderr, "\nSection %d: %s\n", i, g_elfsections[i].szName);
-					fprintf(stderr, "Name %08X, Type %08X, Flags %08X, Addr %08X\n", 
+					fprintf(stderr, "Name %08X, Type %08X, Flags %08X, Addr %08X\n",
 							g_elfsections[i].iName, g_elfsections[i].iType,
 							g_elfsections[i].iFlags, g_elfsections[i].iAddr);
-					fprintf(stderr, "Offset %08X, Size %08X, Link %08X, Info %08X\n", 
+					fprintf(stderr, "Offset %08X, Size %08X, Link %08X, Info %08X\n",
 							g_elfsections[i].iOffset, g_elfsections[i].iSize,
 							g_elfsections[i].iLink, g_elfsections[i].iInfo);
-					fprintf(stderr, "Addralign %08X, Entsize %08X pData %p\n", 
+					fprintf(stderr, "Addralign %08X, Entsize %08X pData %p\n",
 							g_elfsections[i].iAddralign, g_elfsections[i].iEntsize,
 							g_elfsections[i].pData);
 				}
@@ -474,7 +474,7 @@ void strip_wsp(char *str)
 	str[len] = 0;
 }
 
-/* Load map file in 
+/* Load map file in
  * File format is :-
  * @LibraryName followed by 0 or more
  * OLDNID=NEWNID [ Comment ]
@@ -611,7 +611,7 @@ int fixup_functions(void)
 	unsigned int *pNid;
 	struct PspModuleImport *pLastImport = NULL;
 	int count;
-	
+
 	if(g_stubtext == NULL || g_nid == NULL) // no imported functions
 		return 1;
 
@@ -660,8 +660,8 @@ int fixup_functions(void)
 			pImport = (struct PspModuleImport *) (g_libstub->pData + (stub_addr - g_libstub->iAddr));
 			if(g_verbose)
 			{
-				fprintf(stderr, "Import Stub %p, %08X, %08X, %02X, %02X, %04X, %08X, %08X\n", pImport, 
-						LW(pImport->name), LW(pImport->flags), pImport->entry_size, pImport->var_count, 
+				fprintf(stderr, "Import Stub %p, %08X, %08X, %02X, %02X, %04X, %08X, %08X\n", pImport,
+						LW(pImport->name), LW(pImport->flags), pImport->entry_size, pImport->var_count,
 						LH(pImport->func_count), LW(pImport->nids), LW(pImport->funcs));
 			}
 
@@ -714,288 +714,288 @@ int fixup_functions(void)
 
 typedef struct
 {
-    int addr;
-    int numRelocs;
-    int *relocs;
+	int addr;
+	int numRelocs;
+	int *relocs;
 } Reloc;
 
 int fixup_variables(void)
 {
-    unsigned int *pText;
-    struct PspModuleImport *pLastImport = NULL;
-    int numStub;
-    Reloc *relocs;
-            
-    if(g_vstub == NULL || g_textrel == NULL) // no imported variables
-        return 1;
+	unsigned int *pText;
+	struct PspModuleImport *pLastImport = NULL;
+	int numStub;
+	Reloc *relocs;
 
-    numStub = g_vstub->iSize / 8;
-    relocs = malloc(sizeof(Reloc) * numStub);
-    int i;
-    for (i = 0; i < numStub; i++) {
-        relocs[i].addr = 0;
-        relocs[i].numRelocs = 0;
-        relocs[i].relocs = NULL;
-    }
-    
-    int relCount = g_textrel->iSize / sizeof(Elf32_Rel);
+	if(g_vstub == NULL || g_textrel == NULL) // no imported variables
+		return 1;
 
-    // check the relocations pointing to the imported variable
-    for(i = 0; i < relCount; i++)
-    {
-        Elf32_Rel *rel = &((Elf32_Rel*)g_textrel->pData)[i];
-        u32 dwRealOfs;
-        u32 dwCurrBase;
-        int iOfsPH;
-        int iValPH;
-        int type = ELF32_R_TYPE(LW(rel->r_info));
-        int symbol = ELF32_R_SYM(LW(rel->r_info));
-        int offset = rel->r_offset;
-        Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
-        u32 *pData;
-        char added = 0;
-        int out = 0;
-        u32 addr;
+	numStub = g_vstub->iSize / 8;
+	relocs = malloc(sizeof(Reloc) * numStub);
+	int i;
+	for (i = 0; i < numStub; i++) {
+		relocs[i].addr = 0;
+		relocs[i].numRelocs = 0;
+		relocs[i].relocs = NULL;
+	}
 
-        iOfsPH = symbol & 0xFF;
-        iValPH = (symbol >> 8) & 0xFF;
-        dwRealOfs = offset + LW(seg[iOfsPH].p_vaddr);
-        dwCurrBase = LW(seg[iValPH].p_vaddr);
-        pData = (u32*)(g_elfdata + g_text->iOffset + dwRealOfs);
-        switch (type)
-        {
-        case R_MIPS_HI16: {
-            int inst = LW(*pData);
-            addr = ((inst & 0xFFFF) << 16) + dwCurrBase;
-            int loinst;
-            int oldcount = i;
-            while (++i < relCount) {
-                if (ELF32_R_TYPE(LW(((Elf32_Rel*)g_textrel->pData)[i].r_info)) != R_MIPS_HI16) break;
-            }
-            if (i < relCount) {
-                loinst = LW(*(u32*)(g_elfdata + g_text->iOffset + ((Elf32_Rel*)g_textrel->pData)[i].r_offset + LW(seg[iOfsPH].p_vaddr)));
-            } else {
-                loinst = 0;
-            }
-                
-            addr = (s32) addr + (s16) (loinst & 0xFFFF);
-            if (addr >= g_vstub->iAddr && addr < g_vstub->iAddr + g_vstub->iSize) {
-                added = 1;
-                out = 0x14000000 | (dwRealOfs >> 2);
-            }
-            i = oldcount;
-        }
-            break;
-        case R_MIPS_LO16: {
-            addr = ((s16)(LW(*pData) & 0xFFFF)) + dwCurrBase;
-            if (addr >= g_vstub->iAddr && addr < g_vstub->iAddr + g_vstub->iSize) {
-                added = 1;
-                out = 0x18000000 | (dwRealOfs >> 2);
-            }
-        }
-            break;
-        }
+	int relCount = g_textrel->iSize / sizeof(Elf32_Rel);
 
-        if (added)
-        {
-            int off = (addr - g_vstub->iAddr) / 8;
-            relocs[off].numRelocs++;
-            if (relocs[off].numRelocs == 1)
-                relocs[off].relocs = malloc(sizeof(int) * 2);
-            else
-                relocs[off].relocs = realloc(relocs[off].relocs, sizeof(int) * (relocs[off].numRelocs + 1));
-            relocs[off].relocs[relocs[off].numRelocs - 1] = out;
-        }
-    }
+	// check the relocations pointing to the imported variable
+	for(i = 0; i < relCount; i++)
+	{
+		Elf32_Rel *rel = &((Elf32_Rel*)g_textrel->pData)[i];
+		u32 dwRealOfs;
+		u32 dwCurrBase;
+		int iOfsPH;
+		int iValPH;
+		int type = ELF32_R_TYPE(LW(rel->r_info));
+		int symbol = ELF32_R_SYM(LW(rel->r_info));
+		int offset = rel->r_offset;
+		Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
+		u32 *pData;
+		char added = 0;
+		int out = 0;
+		u32 addr;
 
-    for (i = 0; i < numStub; i++)
-    {
-        relocs[i].numRelocs++;
-        if (relocs[i].numRelocs == 1)
-            relocs[i].relocs = malloc(sizeof(int) * 2);
-        else
-            relocs[i].relocs = realloc(relocs[i].relocs, sizeof(int) * (relocs[i].numRelocs + 1));
-        relocs[i].relocs[relocs[i].numRelocs - 1] = 0;
-    }
+		iOfsPH = symbol & 0xFF;
+		iValPH = (symbol >> 8) & 0xFF;
+		dwRealOfs = offset + LW(seg[iOfsPH].p_vaddr);
+		dwCurrBase = LW(seg[iValPH].p_vaddr);
+		pData = (u32*)(g_elfdata + g_text->iOffset + dwRealOfs);
+		switch (type)
+		{
+		case R_MIPS_HI16: {
+			int inst = LW(*pData);
+			addr = ((inst & 0xFFFF) << 16) + dwCurrBase;
+			int loinst;
+			int oldcount = i;
+			while (++i < relCount) {
+				if (ELF32_R_TYPE(LW(((Elf32_Rel*)g_textrel->pData)[i].r_info)) != R_MIPS_HI16) break;
+			}
+			if (i < relCount) {
+				loinst = LW(*(u32*)(g_elfdata + g_text->iOffset + ((Elf32_Rel*)g_textrel->pData)[i].r_offset + LW(seg[iOfsPH].p_vaddr)));
+			} else {
+				loinst = 0;
+			}
 
-    // add the special relocations data
-    int startAddr = g_vstub->iAddr + g_vstub->iSize;
-    int addr = startAddr;
-    for (i = 0; i < numStub; i++)
-    {
-        relocs[i].addr = addr;
-        addr += relocs[i].numRelocs * 4;
-    }
-    int shift = addr - startAddr;
-    g_elfsize += shift;
-    g_elfdata = realloc(g_elfdata, g_elfsize);
-    u8 *start = g_elfdata + g_vstub->iOffset + g_vstub->iSize;
-    memmove(start + shift, start, g_elfsize - (g_vstub->iOffset + g_vstub->iSize + shift));
-    int *cur = (int*)(g_elfdata + g_vstub->iOffset + g_vstub->iSize);
-    for (i = 0; i < numStub; i++) {
-        memcpy(cur, relocs[i].relocs, relocs[i].numRelocs * 4);
-        cur += relocs[i].numRelocs;
-    }
+			addr = (s32) addr + (s16) (loinst & 0xFFFF);
+			if (addr >= g_vstub->iAddr && addr < g_vstub->iAddr + g_vstub->iSize) {
+				added = 1;
+				out = 0x14000000 | (dwRealOfs >> 2);
+			}
+			i = oldcount;
+		}
+			break;
+		case R_MIPS_LO16: {
+			addr = ((s16)(LW(*pData) & 0xFFFF)) + dwCurrBase;
+			if (addr >= g_vstub->iAddr && addr < g_vstub->iAddr + g_vstub->iSize) {
+				added = 1;
+				out = 0x18000000 | (dwRealOfs >> 2);
+			}
+		}
+			break;
+		}
 
-    if (((Elf32_Ehdr *)g_elfdata)->e_shoff > g_vstub->iOffset + g_vstub->iSize)
-        ((Elf32_Ehdr *)g_elfdata)->e_shoff += shift;
-    if (((Elf32_Ehdr *)g_elfdata)->e_phoff > g_vstub->iOffset + g_vstub->iSize)
-        ((Elf32_Ehdr *)g_elfdata)->e_phoff += shift;
-    for (i = 0; i < (int)g_elfhead.iShnum; i++)
-    {
-        Elf32_Shdr *sect = (Elf32_Shdr *) (g_elfdata + ((Elf32_Ehdr *)g_elfdata)->e_shoff + (i * g_elfhead.iShentsize));
-        if (sect->sh_addr > g_vstub->iAddr)
-            sect->sh_addr += shift;
-        if (sect->sh_offset > g_vstub->iOffset)
-            sect->sh_offset += shift;
-        if (sect->sh_offset == g_vstub->iOffset)
-            sect->sh_size += shift;
-        if (sect->sh_type == SHT_REL)
-        {
-            int relCount = sect->sh_size / sizeof(Elf32_Rel);
-            int j;
-            printf("Loading relocations %s\n", g_elfsections[i].szName);
-   
-            // check the relocations pointing to the imported variable
-            for(j = 0; j < relCount; j++)
-            {  
-                Elf32_Rel *rel = &((Elf32_Rel*)(g_elfdata + sect->sh_offset))[j];
-                if (rel->r_offset > g_vstub->iOffset)
-                    rel->r_offset += shift;
+		if (added)
+		{
+			int off = (addr - g_vstub->iAddr) / 8;
+			relocs[off].numRelocs++;
+			if (relocs[off].numRelocs == 1)
+				relocs[off].relocs = malloc(sizeof(int) * 2);
+			else
+				relocs[off].relocs = realloc(relocs[off].relocs, sizeof(int) * (relocs[off].numRelocs + 1));
+			relocs[off].relocs[relocs[off].numRelocs - 1] = out;
+		}
+	}
 
-                u32 dwRealOfs;
-                u32 dwCurrBase;
-                int iOfsPH;
-                int iValPH;
-                int type = ELF32_R_TYPE(LW(rel->r_info));
-                int symbol = ELF32_R_SYM(LW(rel->r_info));
-                int offset = rel->r_offset;
-                Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
-                u32 *pData;
-                int lastJ = j;
+	for (i = 0; i < numStub; i++)
+	{
+		relocs[i].numRelocs++;
+		if (relocs[i].numRelocs == 1)
+			relocs[i].relocs = malloc(sizeof(int) * 2);
+		else
+			relocs[i].relocs = realloc(relocs[i].relocs, sizeof(int) * (relocs[i].numRelocs + 1));
+		relocs[i].relocs[relocs[i].numRelocs - 1] = 0;
+	}
 
-                iOfsPH = symbol & 0xFF;
-                iValPH = (symbol >> 8) & 0xFF;
-                dwRealOfs = offset + LW(seg[iOfsPH].p_vaddr);
-                dwCurrBase = LW(seg[iValPH].p_vaddr);
-                pData = (u32*)(g_elfdata + g_text->iOffset + dwRealOfs);
-                if (strcmp(g_elfsections[i].szName, ".rel.rodata.sceModuleInfo") == 0 && j == 0) // disable _gp relocation
-                    continue;
+	// add the special relocations data
+	int startAddr = g_vstub->iAddr + g_vstub->iSize;
+	int addr = startAddr;
+	for (i = 0; i < numStub; i++)
+	{
+		relocs[i].addr = addr;
+		addr += relocs[i].numRelocs * 4;
+	}
+	int shift = addr - startAddr;
+	g_elfsize += shift;
+	g_elfdata = realloc(g_elfdata, g_elfsize);
+	u8 *start = g_elfdata + g_vstub->iOffset + g_vstub->iSize;
+	memmove(start + shift, start, g_elfsize - (g_vstub->iOffset + g_vstub->iSize + shift));
+	int *cur = (int*)(g_elfdata + g_vstub->iOffset + g_vstub->iSize);
+	for (i = 0; i < numStub; i++) {
+		memcpy(cur, relocs[i].relocs, relocs[i].numRelocs * 4);
+		cur += relocs[i].numRelocs;
+	}
 
-                switch (type)
-                {
-                case R_MIPS_HI16: {
-                    int addr = ((LW(*pData) & 0xFFFF) << 16) + dwCurrBase;
-                    int loinst;
-                    while (++j < relCount) {
-                        if (ELF32_R_TYPE(LW(((Elf32_Rel*)g_textrel->pData)[j].r_info)) != R_MIPS_HI16) break;
-                    }
-                    if (j < relCount) {
-                        loinst = LW(*(u32*)(g_elfdata + g_text->iOffset + ((Elf32_Rel*)g_textrel->pData)[j].r_offset + LW(seg[iOfsPH].p_vaddr)));
-                    } else {
-                        loinst = 0;
-                    }
-                    addr = (s32) addr + (s16) (loinst & 0xFFFF);
-                    if ((u32)addr > g_vstub->iAddr)
-                        SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) >> 16));
-                    }
-                    break;
-                case R_MIPS_16:
-                case R_MIPS_LO16: {
-                    u32 addr = (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
-                    if (addr > g_vstub->iAddr)
-                        SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) & 0xFFFF));
-                    }
-                    break;
-                    /*
-                case R_MIPS_X_HI16: {
-                    u32 addr = ((LW(*pData) & 0xFFFF) << 16) + rel->base + dwCurrBase;
-                    if (addr > g_vstub->iAddr)
-                        SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - rel->base - dwCurrBase + shift) >> 16));
-                    }
-                    break;
-                    */
-                case R_MIPS_26: {
-                    u32 addr = (LW(*pData) & 0x03FFFFFF) << 2;
-                    addr += dwCurrBase;
-                    if (addr > g_vstub->iAddr)
-                        SW(pData, (LW(*pData) & 0xFC000000) | (((addr - dwCurrBase) >> 2) + shift));
-                    }
-                    break;
-                case R_MIPS_REL32:
-                case R_MIPS_32: {
-                    u32 addr = ((LW(*pData) + (dwCurrBase & 0x03FFFFFF)) & 0x03FFFFFF);
-                    if (addr > g_vstub->iAddr)
-                        SW(pData, (LW(*pData) & 0xFC000000) | ((LW(*pData) & 0x03FFFFFF) + shift));
-                    }
-                    break;
-                case R_MIPS_NONE:
-                    break;
-                default:
-                    printf("Error: can't patch unhandled relocation type %d!\n", type);
-                    return 0;
-                }
+	if (((Elf32_Ehdr *)g_elfdata)->e_shoff > g_vstub->iOffset + g_vstub->iSize)
+		((Elf32_Ehdr *)g_elfdata)->e_shoff += shift;
+	if (((Elf32_Ehdr *)g_elfdata)->e_phoff > g_vstub->iOffset + g_vstub->iSize)
+		((Elf32_Ehdr *)g_elfdata)->e_phoff += shift;
+	for (i = 0; i < (int)g_elfhead.iShnum; i++)
+	{
+		Elf32_Shdr *sect = (Elf32_Shdr *) (g_elfdata + ((Elf32_Ehdr *)g_elfdata)->e_shoff + (i * g_elfhead.iShentsize));
+		if (sect->sh_addr > g_vstub->iAddr)
+			sect->sh_addr += shift;
+		if (sect->sh_offset > g_vstub->iOffset)
+			sect->sh_offset += shift;
+		if (sect->sh_offset == g_vstub->iOffset)
+			sect->sh_size += shift;
+		if (sect->sh_type == SHT_REL)
+		{
+			int relCount = sect->sh_size / sizeof(Elf32_Rel);
+			int j;
+			printf("Loading relocations %s\n", g_elfsections[i].szName);
 
-                j = lastJ;
-            }
-        }
-    }
-    for (i = 0; i < (int)g_elfhead.iPhnum; i++)
-    {
-        Elf32_Phdr *seg = (Elf32_Phdr *) (g_elfdata + ((Elf32_Ehdr *)g_elfdata)->e_phoff + (i * g_elfhead.iPhentsize));
-        if (seg->p_offset > g_vstub->iOffset + g_vstub->iSize)
-            seg->p_offset += shift;
-        if (seg->p_vaddr > g_vstub->iAddr + g_vstub->iSize)
-            seg->p_vaddr += shift;
-        if (seg->p_paddr > g_vstub->iAddr + g_vstub->iSize)
-            seg->p_paddr += shift;
-    }
+			// check the relocations pointing to the imported variable
+			for(j = 0; j < relCount; j++)
+			{
+				Elf32_Rel *rel = &((Elf32_Rel*)(g_elfdata + sect->sh_offset))[j];
+				if (rel->r_offset > g_vstub->iOffset)
+					rel->r_offset += shift;
 
-    free(g_elfsections);
-    validate_header(g_elfdata);
-    load_sections();
-    pText = (unsigned int *) g_vstub->pData;
-    for (i = 0; i < numStub; i++)
-    {       
-        unsigned int stub_addr;
+				u32 dwRealOfs;
+				u32 dwCurrBase;
+				int iOfsPH;
+				int iValPH;
+				int type = ELF32_R_TYPE(LW(rel->r_info));
+				int symbol = ELF32_R_SYM(LW(rel->r_info));
+				int offset = rel->r_offset;
+				Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
+				u32 *pData;
+				int lastJ = j;
 
-        stub_addr = LW(pText[0]);
-            
-        struct PspModuleImport *pImport;
-        u8     var_count;
-            
-        pImport = (struct PspModuleImport *) (g_libstub->pData + (stub_addr - g_libstub->iAddr));
-        var_count = LH(pImport->var_count);
-           
-        if(var_count == 0)
-        {  
-            /* Setup the stub */
-            SW(&pImport->vars, ((unsigned char *) pText - g_vstub->pData) + g_vstub->iAddr);
-        }
-        else
-        {  
-            if((pLastImport) && (pImport != pLastImport))
-            {  
-                fprintf(stderr, "Error, could not fixup imports, stubs out of order.\n");
-                fprintf(stderr, "Ensure the SDK libraries are linked in last to correct this error\n");
-                return 0;
-            }
-        }
-           
-        pLastImport = pImport;
-        var_count++;
-        SH(&pImport->var_count, var_count);
-        SW(&pText[0], relocs[i].addr);
-       
-        pText += 2;
-    }
+				iOfsPH = symbol & 0xFF;
+				iValPH = (symbol >> 8) & 0xFF;
+				dwRealOfs = offset + LW(seg[iOfsPH].p_vaddr);
+				dwCurrBase = LW(seg[iValPH].p_vaddr);
+				pData = (u32*)(g_elfdata + g_text->iOffset + dwRealOfs);
+				if (strcmp(g_elfsections[i].szName, ".rel.rodata.sceModuleInfo") == 0 && j == 0) // disable _gp relocation
+					continue;
 
-    for (i = 0; i < numStub; i++)
-        if (relocs[i].relocs != NULL)
-            free(relocs[i].relocs);
-    free(relocs);
+				switch (type)
+				{
+				case R_MIPS_HI16: {
+					int addr = ((LW(*pData) & 0xFFFF) << 16) + dwCurrBase;
+					int loinst;
+					while (++j < relCount) {
+						if (ELF32_R_TYPE(LW(((Elf32_Rel*)g_textrel->pData)[j].r_info)) != R_MIPS_HI16) break;
+					}
+					if (j < relCount) {
+						loinst = LW(*(u32*)(g_elfdata + g_text->iOffset + ((Elf32_Rel*)g_textrel->pData)[j].r_offset + LW(seg[iOfsPH].p_vaddr)));
+					} else {
+						loinst = 0;
+					}
+					addr = (s32) addr + (s16) (loinst & 0xFFFF);
+					if ((u32)addr > g_vstub->iAddr)
+						SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) >> 16));
+					}
+					break;
+				case R_MIPS_16:
+				case R_MIPS_LO16: {
+					u32 addr = (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
+					if (addr > g_vstub->iAddr)
+						SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) & 0xFFFF));
+					}
+					break;
+					/*
+				case R_MIPS_X_HI16: {
+					u32 addr = ((LW(*pData) & 0xFFFF) << 16) + rel->base + dwCurrBase;
+					if (addr > g_vstub->iAddr)
+						SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - rel->base - dwCurrBase + shift) >> 16));
+					}
+					break;
+					*/
+				case R_MIPS_26: {
+					u32 addr = (LW(*pData) & 0x03FFFFFF) << 2;
+					addr += dwCurrBase;
+					if (addr > g_vstub->iAddr)
+						SW(pData, (LW(*pData) & 0xFC000000) | (((addr - dwCurrBase) >> 2) + shift));
+					}
+					break;
+				case R_MIPS_REL32:
+				case R_MIPS_32: {
+					u32 addr = ((LW(*pData) + (dwCurrBase & 0x03FFFFFF)) & 0x03FFFFFF);
+					if (addr > g_vstub->iAddr)
+						SW(pData, (LW(*pData) & 0xFC000000) | ((LW(*pData) & 0x03FFFFFF) + shift));
+					}
+					break;
+				case R_MIPS_NONE:
+					break;
+				default:
+					printf("Error: can't patch unhandled relocation type %d!\n", type);
+					return 0;
+				}
 
-    return 1;
+				j = lastJ;
+			}
+		}
+	}
+	for (i = 0; i < (int)g_elfhead.iPhnum; i++)
+	{
+		Elf32_Phdr *seg = (Elf32_Phdr *) (g_elfdata + ((Elf32_Ehdr *)g_elfdata)->e_phoff + (i * g_elfhead.iPhentsize));
+		if (seg->p_offset > g_vstub->iOffset + g_vstub->iSize)
+			seg->p_offset += shift;
+		if (seg->p_vaddr > g_vstub->iAddr + g_vstub->iSize)
+			seg->p_vaddr += shift;
+		if (seg->p_paddr > g_vstub->iAddr + g_vstub->iSize)
+			seg->p_paddr += shift;
+	}
+
+	free(g_elfsections);
+	validate_header(g_elfdata);
+	load_sections();
+	pText = (unsigned int *) g_vstub->pData;
+	for (i = 0; i < numStub; i++)
+	{
+		unsigned int stub_addr;
+
+		stub_addr = LW(pText[0]);
+
+		struct PspModuleImport *pImport;
+		u8     var_count;
+
+		pImport = (struct PspModuleImport *) (g_libstub->pData + (stub_addr - g_libstub->iAddr));
+		var_count = LH(pImport->var_count);
+
+		if(var_count == 0)
+		{
+			/* Setup the stub */
+			SW(&pImport->vars, ((unsigned char *) pText - g_vstub->pData) + g_vstub->iAddr);
+		}
+		else
+		{
+			if((pLastImport) && (pImport != pLastImport))
+			{
+				fprintf(stderr, "Error, could not fixup imports, stubs out of order.\n");
+				fprintf(stderr, "Ensure the SDK libraries are linked in last to correct this error\n");
+				return 0;
+			}
+		}
+
+		pLastImport = pImport;
+		var_count++;
+		SH(&pImport->var_count, var_count);
+		SW(&pText[0], relocs[i].addr);
+
+		pText += 2;
+	}
+
+	for (i = 0; i < numStub; i++)
+		if (relocs[i].relocs != NULL)
+			free(relocs[i].relocs);
+	free(relocs);
+
+	return 1;
 }
 
 int fixup_nidmap(void)
