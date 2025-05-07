@@ -3,7 +3,7 @@
 */
 
 /** @defgroup USB USB management
- *  Manages the UMD drive and accessing data on it.
+ *  Manages the communication between the PSP system and other hardware via the USB port.
  */
 
  /** @defgroup USBBD USB Bus Driver
@@ -13,7 +13,7 @@
   *  registered with it and communicates with the USB host as a single
   *  USB device.
   * 
-  *  Supported USB procotol drivers are as follows:
+  *  Supported USB protocol drivers are as follows:
   * 
   *      • Camera USB
   *        Capture image date from the PSP camera accessory via the USB port
