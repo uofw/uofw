@@ -17,5 +17,6 @@ var searchData=
   ['dpadsensea_14',['DPadSenseA',['../structSceCtrlData2.html#ad7aff4e6d94a8120ce779eb73cffd2ad',1,'SceCtrlData2']]],
   ['dpadsenseb_15',['DPadSenseB',['../structSceCtrlData2.html#a9a0096ac6e4a1311fb3d4108d5d8a902',1,'SceCtrlData2']]],
   ['drive_20management_16',['UMD Drive Management',['../group__UMDDriveManagement.html',1,'']]],
-  ['dynamic_20network_20authentication_20system_17',['Dynamic Network Authentication System',['../group__DNAS.html',1,'']]]
+  ['driver_17',['USB Bus Driver',['../group__USBBD.html',1,'']]],
+  ['dynamic_20network_20authentication_20system_18',['Dynamic Network Authentication System',['../group__DNAS.html',1,'']]]
 ];

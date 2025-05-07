@@ -11,9 +11,10 @@ var searchData=
   ['bpcount_8',['bpCount',['../structSceGeBreakpoint.html#a290c4ce797aa0db0c2bb2d755798540a',1,'SceGeBreakpoint']]],
   ['bsssize_9',['bsssize',['../structSceModule.html#ac667ca2dbb4466a36b84d3ea312967bd',1,'SceModule::bssSize'],['../structSceKernelModuleInfoV1.html#acae42ad04c51f481e1424847d8dbed9b',1,'SceKernelModuleInfoV1::bssSize'],['../structSceKernelModuleInfo.html#ac9b5703d609f3b456cb7fb3a3d190741',1,'SceKernelModuleInfo::bssSize'],['../structSceLoadCoreExecFileInfo.html#a20346fe995e7528eea2fceb5051df4b9',1,'SceLoadCoreExecFileInfo::bssSize']]],
   ['buildversion_10',['buildVersion',['../structSceLoadCoreBootInfo.html#a90ebfbd2601be4d5ddd13e1d70443b4c',1,'SceLoadCoreBootInfo']]],
-  ['buttonbreak_11',['buttonBreak',['../structSceCtrlLatch.html#abf1e5e536aedf7a1e7d117fb43970d79',1,'SceCtrlLatch']]],
-  ['buttonmake_12',['buttonMake',['../structSceCtrlLatch.html#a6e02734a6f89e842c30145af70b1dc26',1,'SceCtrlLatch']]],
-  ['buttonpress_13',['buttonPress',['../structSceCtrlLatch.html#a86e3a3df0e46be6a7da98d04f8feb20d',1,'SceCtrlLatch']]],
-  ['buttonrelease_14',['buttonRelease',['../structSceCtrlLatch.html#a55978d3656d8da44e8c0bf8b797ba61a',1,'SceCtrlLatch']]],
-  ['buttons_15',['buttons',['../structSceCtrlData.html#a8694cfbad5c0bf41f36548a522fb17a7',1,'SceCtrlData::buttons'],['../structSceCtrlData2.html#aa09ac970ffee7c65cee2b45258e9ca98',1,'SceCtrlData2::buttons']]]
+  ['bus_20driver_11',['USB Bus Driver',['../group__USBBD.html',1,'']]],
+  ['buttonbreak_12',['buttonBreak',['../structSceCtrlLatch.html#abf1e5e536aedf7a1e7d117fb43970d79',1,'SceCtrlLatch']]],
+  ['buttonmake_13',['buttonMake',['../structSceCtrlLatch.html#a6e02734a6f89e842c30145af70b1dc26',1,'SceCtrlLatch']]],
+  ['buttonpress_14',['buttonPress',['../structSceCtrlLatch.html#a86e3a3df0e46be6a7da98d04f8feb20d',1,'SceCtrlLatch']]],
+  ['buttonrelease_15',['buttonRelease',['../structSceCtrlLatch.html#a55978d3656d8da44e8c0bf8b797ba61a',1,'SceCtrlLatch']]],
+  ['buttons_16',['buttons',['../structSceCtrlData.html#a8694cfbad5c0bf41f36548a522fb17a7',1,'SceCtrlData::buttons'],['../structSceCtrlData2.html#aa09ac970ffee7c65cee2b45258e9ca98',1,'SceCtrlData2::buttons']]]
 ];

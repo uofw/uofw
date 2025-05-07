@@ -407,8 +407,8 @@ var searchData=
   ['sceumdwaitdrivestat_404',['sceumdwaitdrivestat',['../group__MediaManKernel.html#gaaa358f8195083218d63f3890d3d7b663',1,'sceUmdWaitDriveStat(s32 umdState):&#160;mediaman_kernel.h'],['../group__MediaManUser.html#gaaa358f8195083218d63f3890d3d7b663',1,'sceUmdWaitDriveStat(s32 umdState):&#160;mediaman_user.h']]],
   ['sceumdwaitdrivestatcb_405',['sceumdwaitdrivestatcb',['../group__MediaManKernel.html#ga4943a1b59c5ededc4eff8f4aa8ffbedc',1,'sceUmdWaitDriveStatCB(u32 umdState, u32 timeout):&#160;mediaman_kernel.h'],['../group__MediaManUser.html#ga4943a1b59c5ededc4eff8f4aa8ffbedc',1,'sceUmdWaitDriveStatCB(u32 umdState, u32 timeout):&#160;mediaman_user.h']]],
   ['sceumdwaitdrivestatwithtimer_406',['sceumdwaitdrivestatwithtimer',['../group__MediaManKernel.html#gab3b8e98e425db8df91efd64ef5158123',1,'sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout):&#160;mediaman_kernel.h'],['../group__MediaManUser.html#gab3b8e98e425db8df91efd64ef5158123',1,'sceUmdWaitDriveStatWithTimer(u32 umdState, u32 timeout):&#160;mediaman_user.h']]],
-  ['sceusbbdregister_407',['sceUsbbdRegister',['../group__Chkreg.html#gaf88fb4ce7569677247b54c6eaba479ab',1,'usbbus.h']]],
-  ['sceusbbdreqsend_408',['sceUsbbdReqSend',['../group__Chkreg.html#ga5b72f07f70d94415e6ed30bcd3ddf092',1,'usbbus.h']]],
-  ['sceusbbdunregister_409',['sceUsbbdUnregister',['../group__Chkreg.html#ga9f29f68cb27b449561a790bfa2fb9803',1,'usbbus.h']]],
+  ['sceusbbdregister_407',['sceUsbbdRegister',['../group__USBBD.html#gaf88fb4ce7569677247b54c6eaba479ab',1,'usbbus.h']]],
+  ['sceusbbdreqsend_408',['sceUsbbdReqSend',['../group__USBBD.html#ga5b72f07f70d94415e6ed30bcd3ddf092',1,'usbbus.h']]],
+  ['sceusbbdunregister_409',['sceUsbbdUnregister',['../group__USBBD.html#ga9f29f68cb27b449561a790bfa2fb9803',1,'usbbus.h']]],
   ['sub_5f00000208_410',['sub_00000208',['../group__UsersystemLib.html#ga638cd25b4d88295a7cb59c3dfd1dece4',1,'usersystemlib_kernel.h']]]
 ];

@@ -46,11 +46,13 @@ var searchData=
   ['unkc_43',['unkc',['../structUsbdDeviceReq.html#a50e719d74f545099e24ed1505a5a5854',1,'UsbdDeviceReq']]],
   ['unlinkedstublibs_44',['unLinkedStubLibs',['../structSceLoadCore.html#ae1067e0d5b3c4a37019a4d31a9db65c5',1,'SceLoadCore']]],
   ['uofw_20the_20uofw_20api_20for_20the_20psp_20playstation_20portable_20kernel_206_2060_45',['uOFW - The uOFW API for the PSP (Playstation Portable) Kernel 6.60.',['../index.html',1,'']]],
-  ['usbddevicereq_46',['UsbdDeviceReq',['../structUsbdDeviceReq.html',1,'']]],
-  ['usbdriver_47',['UsbDriver',['../structUsbDriver.html',1,'']]],
-  ['usbendpoint_48',['UsbEndpoint',['../structUsbEndpoint.html',1,'']]],
-  ['usbinterfaces_49',['UsbInterfaces',['../structUsbInterfaces.html',1,'']]],
-  ['user_50',['Media_Manager User',['../group__MediaManUser.html',1,'']]],
-  ['usermodthid_51',['userModThid',['../structSceModule.html#a3e8fc7a5ab0abc30899c7ceb819d4f6d',1,'SceModule']]],
-  ['usersystemlib_20module_52',['UsersystemLib Module',['../group__UsersystemLib.html',1,'']]]
+  ['usb_20bus_20driver_46',['USB Bus Driver',['../group__USBBD.html',1,'']]],
+  ['usb_20management_47',['USB management',['../group__USB.html',1,'']]],
+  ['usbddevicereq_48',['UsbdDeviceReq',['../structUsbdDeviceReq.html',1,'']]],
+  ['usbdriver_49',['UsbDriver',['../structUsbDriver.html',1,'']]],
+  ['usbendpoint_50',['UsbEndpoint',['../structUsbEndpoint.html',1,'']]],
+  ['usbinterfaces_51',['UsbInterfaces',['../structUsbInterfaces.html',1,'']]],
+  ['user_52',['Media_Manager User',['../group__MediaManUser.html',1,'']]],
+  ['usermodthid_53',['userModThid',['../structSceModule.html#a3e8fc7a5ab0abc30899c7ceb819d4f6d',1,'SceModule']]],
+  ['usersystemlib_20module_54',['UsersystemLib Module',['../group__UsersystemLib.html',1,'']]]
 ];

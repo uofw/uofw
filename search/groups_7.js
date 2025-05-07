@@ -1,9 +1,6 @@
 var searchData=
 [
-  ['led_20module_0',['LED Module',['../group__LED.html',1,'']]],
-  ['libraries_1',['StdioForUser/Kernel libraries',['../group__Stdio.html',1,'']]],
-  ['library_2',['library',['../group__LoadExecForKernel.html',1,'LoadExecForKernel Library'],['../group__LoadExecForUser.html',1,'LoadExecForUser Library']]],
-  ['loadcore_20module_3',['Loadcore Module',['../group__Loadcore.html',1,'']]],
-  ['loadexecforkernel_20library_4',['LoadExecForKernel Library',['../group__LoadExecForKernel.html',1,'']]],
-  ['loadexecforuser_20library_5',['LoadExecForUser Library',['../group__LoadExecForUser.html',1,'']]]
+  ['kernel_0',['kernel',['../group__InitForKernel.html',1,'Init For Kernel'],['../group__MediaManKernel.html',1,'Media_Manager Kernel']]],
+  ['kernel_20libraries_1',['StdioForUser/Kernel libraries',['../group__Stdio.html',1,'']]],
+  ['kirk_2',['KIRK',['../group__KIRK.html',1,'']]]
 ];

@@ -1,7 +1,7 @@
 var searchData=
 [
   ['mainpage_2edox_0',['mainpage.dox',['../mainpage_8dox.html',1,'']]],
-  ['management_1',['UMD Drive Management',['../group__UMDDriveManagement.html',1,'']]],
+  ['management_1',['management',['../group__UMDDriveManagement.html',1,'UMD Drive Management'],['../group__USB.html',1,'USB management']]],
   ['manager_2',['Module Manager',['../group__ModuleManager.html',1,'']]],
   ['maxallocsize_3',['maxAllocSize',['../structSceLoadCoreExecFileInfo.html#aa056e5d07911d85c62b27156f05185eb',1,'SceLoadCoreExecFileInfo']]],
   ['maxsegalign_4',['maxSegAlign',['../structSceLoadCoreExecFileInfo.html#aa6b8ddd6e79948aadb79eaffcf41ad4f',1,'SceLoadCoreExecFileInfo']]],
@@ -19,7 +19,7 @@ var searchData=
   ['modeattribute_16',['modeAttribute',['../structSceLoadCoreExecFileInfo.html#a64f6d1f2c21930f2a9dd23e018e88a4d',1,'SceLoadCoreExecFileInfo']]],
   ['modid_17',['modId',['../structSceModule.html#aa87f63a55b8b499e595e1b53aee08b4b',1,'SceModule']]],
   ['modinfoattribute_18',['modInfoAttribute',['../structSceLoadCoreExecFileInfo.html#ab9977fd84797398fa309809bf52d71f3',1,'SceLoadCoreExecFileInfo']]],
-  ['modname_19',['modname',['../structSceKernelModuleInfo.html#a430c0fa74760ee911b8fb165cc51f632',1,'SceKernelModuleInfo::modName'],['../structSceModule.html#a50e9d5204e7bda386387275e6889fd68',1,'SceModule::modName'],['../structSceModuleInfo.html#a7db7c60a7a6535cec7bda124b6318d48',1,'SceModuleInfo::modName']]],
+  ['modname_19',['modname',['../structSceModule.html#a50e9d5204e7bda386387275e6889fd68',1,'SceModule::modName'],['../structSceKernelModuleInfo.html#a430c0fa74760ee911b8fb165cc51f632',1,'SceKernelModuleInfo::modName'],['../structSceModuleInfo.html#a7db7c60a7a6535cec7bda124b6318d48',1,'SceModuleInfo::modName']]],
   ['modpath_20',['modPath',['../structSceLoadCoreBootModuleInfo.html#a2ec0abf81e5ade22ae27012d2890d6af',1,'SceLoadCoreBootModuleInfo']]],
   ['modprotid_21',['modProtId',['../structSceLoadCoreBootInfo.html#a11c1e8222ca411ebd9fb792318971fdd',1,'SceLoadCoreBootInfo']]],
   ['modsize_22',['modSize',['../structSceLoadCoreBootModuleInfo.html#a522c1c83a49608ea3dd5c5df447353e6',1,'SceLoadCoreBootModuleInfo']]],
