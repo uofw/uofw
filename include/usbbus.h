@@ -2,10 +2,33 @@
    See the file COPYING for copying permission.
 */
 
-/** @defgroup Chkreg Chkreg Module
- *  Region check and ConsoleId service.
- * @{
+/** @defgroup USB USB management
+ *  Manages the UMD drive and accessing data on it.
  */
+
+ /** @defgroup USBBD USB Bus Driver
+  *  @ingroup USB
+  *
+  *  The USB bus driver manages the different USB protocol drivers currently
+  *  registered with it and communicates with the USB host as a single
+  *  USB device.
+  * 
+  *  Supported USB procotol drivers are as follows:
+  * 
+  *      • Camera USB
+  *        Capture image date from the PSP camera accessory via the USB port
+  * 
+  *      • GPS USB
+  *        Capture position information from the PSP GPS accessory via the USB port
+  * 
+  *      • Microphone (PCM) USB
+  *        Capture PCM data from the PSP microphone accessory via the USB port
+  * 
+  *      • PS2/PS3 USB
+  *        Allows PSP <-> PS2/PS3 data communication via the USB port 
+  *
+  * @{
+  */
 
 #ifndef USBBUS_H
 #define USBBUS_H
