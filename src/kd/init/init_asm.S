@@ -24,7 +24,7 @@ loop2:
 	sw         $zr, 0($v0) # do { *origAddr = 0; }
 	bne        $t0, $v0, loop2 # while (origAddr++ != maxWordAddr);
 	addiu      $v0, $v0, 4
-	break      0x0
+	break
     .end initClearMem
 
 

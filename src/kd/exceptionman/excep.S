@@ -381,8 +381,8 @@ loc_000004CC:
     nop        
 
 loc_000004DC:
-    break      0x20000
+    break      0x080, 0x000  # 0x20000
 
 loc_000004E0:
-    break      0x20000
+    break      0x080, 0x000  # 0x20000
 

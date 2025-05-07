@@ -50,7 +50,7 @@ loadCoreCpuResumeIntr:
 
     .ent sub_00003D84
 sub_00003D84:
-    break      0x0
+    break
     j          sub_00003D84
     nop
     .end sub_00003D84

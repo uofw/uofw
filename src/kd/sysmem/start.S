@@ -801,7 +801,7 @@ loc_00000A70:
 
 loc_00000A7C:
     bltzl $a1, loc_00000A84
-    break 0x0
+    break
 
 loc_00000A84:
     li $v0, 8128
