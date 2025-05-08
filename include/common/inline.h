@@ -48,7 +48,7 @@ inline static void pspCache(char op, const void *ptr)
 
 inline static void pspBreak(s32 op)
 {
-    asm __volatile__ ("break %0" : : "ri" (op));
+    asm __volatile__ ("break 0,%0" : : "ri" (op));
 }
 
 inline static void pspHalt(void)
