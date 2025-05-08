@@ -132,7 +132,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keywordtype">void</span> pspBreak(s32 op)</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>{</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keyword">asm</span> __volatile__ (<span class="stringliteral">&quot;break %0&quot;</span> : : <span class="stringliteral">&quot;ri&quot;</span> (op));</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keyword">asm</span> __volatile__ (<span class="stringliteral">&quot;break 0,%0&quot;</span> : : <span class="stringliteral">&quot;ri&quot;</span> (op));</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>}</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keywordtype">void</span> pspHalt(<span class="keywordtype">void</span>)</div>
@@ -171,7 +171,7 @@ $(document).ready(function() { init_codefold(0); });
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed May 7 2025 21:46:38 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Thu May 8 2025 19:29:09 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>
