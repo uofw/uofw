@@ -241,4 +241,6 @@ SECTIONS
   .debug_varnames  0 : { *(.debug_varnames) }
   /DISCARD/ : { *(.comment) *(.pdr) }
   /DISCARD/ : { *(.note.GNU-stack) }
+  /* MIPS abiflags */
+  /DISCARD/ : { *(.MIPS.abiflags) }
 }
