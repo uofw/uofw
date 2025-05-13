@@ -3,7 +3,7 @@
 */
 
 /*
- * uofw/src/power/powerSwitch.c
+ * uofw/src/kd/power/powerSwitch.c
  *
  * This file implements power service's [power state switch management] feature area. This feature area consists
  * of public APIs to generate power state switch requests and prevent power state switching. In addition, this
@@ -53,7 +53,7 @@
  * of RAM normally reserved for the PSP kernel. The PSP system has 32MB RAM (64MB RAM starting with the PSP-2000
  * series) of which 24MB are available to applications, with the remaining 8MB reserved for the kernel. However,
  * 4MB out of those 8MB are primarily used by the kernel when the PSP system is suspended. This memory block is
- * used to contain a copy of the on-board eDRAM content as the 4MB eDRAM memory is volatile when the system is
+ * used to contain a copy of the on-board eDRAM content as the 4MB eDRAM memory is volatile and lost when the system is
  * suspended. When the PSP resumes, this saved content is then written back to the on-board eDRAM. 
  * As such, while the PSP is running and not suspended, an application can obtain exclusive usage rights to these
  * 4MB of RAM to use as desired. However, since the kernel needs this memory block for the PSP system to properly

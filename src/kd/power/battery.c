@@ -3,20 +3,21 @@
 */
 
 /*
- * uofw/src/power/battery.c
+ * uofw/src/kd/power/battery.c
  *
  * This file implements the battery feature area of the power service. It provides public APIs to query the current
  * power supply (is supplied by battery or AC) and battery state (remaining battery capacity, current temperature,
  * voltage, charge cycle,...). Internally, we set up a worker thread which periodically polls the battery to update
  * the collected battery properties.
  * 
- * Starting with the PSP N-1000 (PSP-Go) serie, the battery equipped by default no longer has hardware included to
+ * Starting with the PSP N-1000 (PSP-Go) series, the battery equipped by default no longer has hardware included to
  * monitor the current battery state. In this case, the power service tries to estimate the current remaining battery
  * capacity based on the current battery voltage.
  * 
  * The battery feature area also provides public APIs to control the charging policies of the PSP system. Battery
  * charging can be allowed/disallowed and whether or not the battery can be charged over USB or not (if the PSP
- * device has a USB charging capability).
+ * device has a USB charging capability). Note that a PSP with a completely discharged battery cannot be turned on even
+ * with USB charging unless the PSP is also connected to an external power source via the AC.
  * 
  * Last but not least, battery.c also implements a public API to query whether or not the PSP system should be
  * suspended due to critically low remaining battery capacity.
@@ -225,7 +226,7 @@ s32 _scePowerBatteryEnd(void)
      * At the time of power service termination, there might be an active [permit battery charging] request
      * in our battery manager. This request might currently be lined up in our battery worker thread for
      * execution or scheduled to happen after some delay time. However, as we are in the process of shutting
-     * down the kernel (anf thus our battery worker thread) we will removed any scheduled/lined up work here 
+     * down the kernel (and thus our battery worker thread) we will remove any scheduled/lined up work here 
      * and directly allow battery charging. That way, we won't hold up the termination process waiting for our
      * battery worker thread to have allowed battery charging again.
      */
@@ -295,7 +296,7 @@ s32 _scePowerBatterySuspend(void)
 
     /* 
      * When the PSP system enters the [suspended] power state, we want to suspend our battery
-     * worker thread as well (so that it won't continue polling for updated battery infomration
+     * worker thread as well (so that it won't continue polling for updated battery information
      * (like remaining capacity, temperature, voltage,...).
      */
     eventFlagBits = BATTERY_EVENT_SUSPEND_BATTERY_POLLING_AND_USB_CHARGE_MANAGEMENT; // 0x00004594
@@ -771,15 +772,15 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
             case POWER_BATTERY_THREAD_OP_SET_POWER_SUPPLY_STATUS:
             {
                 /* 
-                 * If a battery has been newly equipped and the power has not yet polled the battery, the battery
+                 * If a battery has been newly equipped and the power service has not yet polled the battery, the battery
                  * availability status is set to [battery detecting]. The power service will do a full round of
                  * battery polling (running through all applicable operations (depending on the battery type)) and
-                 * only once it has completed obtaining all the battery data it can will it set the battery
+                 * only once it has completed obtaining all the battery data it will set the battery
                  * availability status to [battery available].
                  * 
-                 * Data try to be obtained as part of this operation:
+                 * Data which is tried to be obtained as part of this operation:
                  *  - the current power suppyly status
-                 *  - whether or not the battery is currenly charging (only f USB charging is currently disabled)
+                 *  - whether or not the battery is currenly charging (only if USB charging is currently disabled)
                  */
 
                 // 0x000048C4
@@ -965,7 +966,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
 
                         /* 
                          * If the new remaining battery capacity is greater than the current ascertained
-                         * minimum full capacity value, we update the munimum full capacity value. For example,
+                         * minimum full capacity value, we update the minimum full capacity value. For example,
                          * this is the case if the battery is currently charging and the remaining battery capacity
                          * was smaller than the just obtained new remaining capacity when the PSP was turned on.
                          */
@@ -986,7 +987,7 @@ static s32 _scePowerBatteryThread(SceSize args, void* argp)
                 {
                     /* 
                      * The type of the equipped battery does not support broad battery monitoring. For example,
-                     * its remaining battery capacity cannot be adequatly measured. We wll proceed with estimating
+                     * its remaining battery capacity cannot be adequatly measured. We will proceed with estimating
                      * the remaining battery capacity by deriving it from the battery's current voltage level.
                      * This won't be as accurate as directly measuring the remaining battery capacity and is
                      * also problematic if the estimated battery life is reported back to the UI (for
@@ -1808,7 +1809,7 @@ s32 scePowerGetBatteryChargingStatus(void)
     }
 
     /* 
-     * Each PSP system cna be charged by connecting it to an external power source with an AC adapter.
+     * Each PSP system can be charged by connecting it to an external power source with an AC adapter.
      * In addition, starting with the PSP-2000 series, a PSP device can also be charged over the USB cable.
      */
 

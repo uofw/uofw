@@ -3,7 +3,7 @@
 */
 
 /*
- * uofw/src/power/
+ * uofw/src/kd/power/power.c
  *
  * Power Service - Kernel component for power management
  * 

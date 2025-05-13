@@ -9,7 +9,7 @@
     .global g_pBusClockFrequencyInt # pointer to g_PowerFreq.busClockFrequencyInt
     .global g_pGeEdramRefreshMode # pointer to g_PowerFreq.geEdramRefreshMode
 
-# uofw note: The ASM of this fucntion seems to use some non-trivial arithmetic optimizations.
+# uofw note: The ASM of this function seems to use some non-trivial arithmetic optimizations.
 # I wrote a C-equivalent version of the ASM code and checked our compiler output with the
 # original ASM. I am not confident that they are functionally identical.
 # As such, until I have "demystified" these arithmetic optimizations in C, I am feeling more
@@ -21,7 +21,7 @@
 # g_PowerFreq.geEdramRefreshMode in the ASM without having to bother about their actual offset in the 
 # ScePowerFreq struct. Where in the original ASM these fields are accessed directly, I am using another
 # level of indirection here (specifying a _pointer_ to those fields) to access them. As such, I have added
-# two additional [lw] instructions in the code and changed an [sw] offset.
+# two additional [lw] instructions in the code and changed a [sw] offset.
 
     .global scePowerSetGeEdramRefreshMode
 #s32 scePowerSetGeEdramRefreshMode(s32 geEdramRefreshMode)

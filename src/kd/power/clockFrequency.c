@@ -3,7 +3,7 @@
 */
 
 /*
- * uofw/src/power/clockFrequency.c
+ * uofw/src/kd/power/clockFrequency.c
  *
  * Power service's feature area to control the operating speed of the PSP device is implemented in this file.
  * It provides public APIs to set the frequencies for the PLL clock, the CPU clock and the bus clock of the
@@ -13,7 +13,7 @@
  *   The following hardware components operate with the PLL clock:
  *      - DDR memory
  * 
- *   In addition, the PLL clock frequency controls the maximumum allowed frequencies for both the CPU and bus clock.
+ *   In addition, the PLL clock frequency controls the maximum allowed frequencies for both the CPU and bus clock.
  *   The PLL only operates at a fixed set of frequencies, so even though the APIs in question allow a broad range of
  *   frequencies to be set for the PLL clock, in reality, the PLL clock will only run at the following frequencies:
  *   
@@ -42,8 +42,8 @@
  *      - Scratchpad memory
  *      - Graphic Engine and the Graphic Engine's eDRAM
  *      - DMA transfers for general-purpose memory copying
- *      - DMA transfers for the Memory Stic, WLAN, USB, LCD, or audio
- *      - DMA transfers for transfers to the MediaEngine
+ *      - DMA transfers for the Memory Stick, WLAN, USB, LCD, or audio
+ *      - DMA transfers to the MediaEngine
  * 
  *   As noted above, the PLL clock frequency controls the maximum allowed bus clock frequency. Specifically,
  *   the bus is set to always operate at 1/2 of the current PLL clock frequency. Given a maximum allowed frequency

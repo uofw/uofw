@@ -1,6 +1,10 @@
 # Copyright (C) The uOFW team
 # See the file COPYING for copying permission.
 
+ROOT_DIR = $(%cd%)../../..
+
+export ROOT_DIR
+
 TARGET = power
 OBJS = battery.o clockFrequency.o idleTimer.o power.o powerSwitch.o scePowerSetGeEdramRefreshMode.o
 

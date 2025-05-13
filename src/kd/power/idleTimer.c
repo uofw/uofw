@@ -3,7 +3,7 @@
 */
 
 /*
- * uofw/src/power/idleTimer.c
+ * uofw/src/kd/power/idleTimer.c
  *
  * Power service's [idleTimer] feature area is implemented in this file. It provides APIs which can be used
  * to register an idle timer callback and to reset an idle timer count. The term "idle timer" in the scope of 
@@ -254,7 +254,7 @@ static s32 _scePowerVblankInterrupt(s32 subIntNm, void *arg)
         }
 
         /* 
-         * If the idle timer callback has been resetted, remove the reset status now that we again "counting"
+         * If the idle timer callback has been resetted, remove the reset status now that we are again "counting"
          * the time until its specified due time is reached.
         */
         if (g_PowerIdle.idleTimerCb[i].isResetted) // 0x00003304
