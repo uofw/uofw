@@ -8,7 +8,7 @@
  * Get the module expiration time in RTC tick units.
  * An expired module is considered invalid, and cannot be run.
  *
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xADF305F0 (demo executable)
  * - 0x279D05F0 (application module)
  *
@@ -25,7 +25,7 @@ s32 sceUtilsGetModuleExpireTick(u8 *psp, u32 pspSize, u64 *expireTick); // sceMe
 
 /**
  * Decrypt a VSH module (mode 3 DECRYPT_MODE_VSH_MODULE).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x380291F0 (type 9, key index 0x5a)
  * - 0x380290F0 (type 9, key index 0x5a)
  * - 0x02000000 (type 8, key index 0x45, 144-bytes seed)
@@ -47,7 +47,7 @@ s32 sceUtilsGetLoadModuleCLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a user module (mode 4 DECRYPT_MODE_USER_MODULE).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x457B91F0 (type 9, key index 0x5b)
  * - 0x457B90F0 (type 9, key index 0x5b)
  * - 0x457B8AF0 (type 6, key index 0x5b)
@@ -80,7 +80,7 @@ s32 sceUtilsGetLoadModuleDLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a UMD game executable (mode 9 DECRYPT_MODE_UMD_GAME_EXEC).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xD91690F0 (type 9, key index 0x5d)
  * - 0xD91680F0 (type 6, key index 0x5d)
  * - 0xD91610F0 (type 2, key index 0x5d)
@@ -110,7 +110,7 @@ s32 sceUtilsGetLoadModuleILengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a game sharing executable for retail console (mode 10 DECRYPT_MODE_GAMESHARING_EXEC).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x7B0510F0 (type 2, key index 0x5e)
  * - 0x7B0508F0 (type 2, key index 0x5e)
  * - 0x7B0506F0 (type 2, key index 0x5e)
@@ -136,7 +136,7 @@ s32 sceUtilsGetLoadModuleJLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a game sharing executable for DEVTOOL (mode 11 DECRYPT_MODE_GAMESHARING_EXEC_DEVTOOL).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xEFD210F0 (type 2, key index 0x4d)
  * - 0x0A000000 (type 0, key index 0x4d, 144-bytes seed)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -157,7 +157,7 @@ s32 sceUtilsGetLoadModuleKLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt an updater module (mode 12 DECRYPT_MODE_MS_UPDATER).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x0B000000 (type 8, key index 0x4e, 144-bytes seed)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
@@ -177,7 +177,7 @@ s32 sceUtilsGetLoadModuleLLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a demo executable (mode 13 DECRYPT_MODE_DEMO_EXEC).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xADF310F0 (type 4, key index 0x60)
  * - 0xADF308F0 (type 4, key index 0x60)
  * - 0xADF306F0 (type 4, key index 0x60)
@@ -203,7 +203,7 @@ s32 sceUtilsGetLoadModuleMLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt an application module (mode 14 DECRYPT_MODE_APP_MODULE).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x279D10F0 (type 4, key index 0x61)
  * - 0x279D08F0 (type 4, key index 0x61)
  * - 0x279D06F0 (type 4, key index 0x61)
@@ -229,7 +229,7 @@ s32 sceUtilsGetLoadModuleNLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a game patch module for retail console (mode 18 DECRYPT_MODE_MS_GAME_PATCH).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xE92410F0 (type 3, key index 0x65, two 16-bytes seeds, secure install ID)
  * - 0xE92408F0 (type 3, key index 0x65, two 16-bytes seeds, secure install ID)
  * - 0x89742B04 (type 3, key index 0x65, two 16-bytes seeds, secure install ID)
@@ -245,7 +245,7 @@ s32 sceUtilsGetLoadModuleRLength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 
 /**
  * Decrypt a game patch module for DEVTOOL (mode 19 DECRYPT_MODE_MS_GAME_PATCH_DEVTOOL).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x692810F0 (type 3, key index 0x66, two 16-bytes seeds, secure install ID)
  * - 0x692808F0 (type 3, key index 0x66, two 16-bytes seeds, secure install ID)
  * - 0xF5F12304 (type 3, key index 0x66, two 16-bytes seeds, secure install ID)
@@ -259,7 +259,7 @@ s32 sceUtilsGetLoadModuleSLength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 
 /**
  * Decrypt a POPS executable (mode 20 DECRYPT_MODE_POPS_EXEC).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x0DAA10F0 (type 5, key index 0x65, two 16-bytes seeds, secure install ID)
  * - 0x0DAA06F0 (type 5, key index 0x65, two 16-bytes seeds, secure install ID)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -272,7 +272,7 @@ s32 sceUtilsGetLoadModuleTLength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 
 /**
  * Decrypt a (POPS DEMO?) executable (mode 21 / 0x15).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xE1ED10F0 (type 5, key index 0x66, two 16-bytes seeds, secure install ID)
  * - 0xE1ED06F0 (type 5, key index 0x66, two 16-bytes seeds, secure install ID)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -285,7 +285,7 @@ s32 sceUtilsGetLoadModuleULength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 
 /**
  * Decrypt a (application demo?) module (mode 22 / 0x16).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x3C2A10F0 (type 2, key index 0x67)
  * - 0x3C2A08F0 (type 2, key index 0x67)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -306,7 +306,7 @@ s32 sceUtilsGetLoadModuleVLengthByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); 
 
 /**
  * Decrypt a user module (mode 23 / 0x17).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x407810F0 (type 5, key index 0x6a, two 16-bytes seeds, secure install ID)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
@@ -318,7 +318,7 @@ s32 sceUtilsGetLoadModuleWLength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 
 /**
  * Decrypt a game patch (PBOOT) module (mode 25 / 0x19).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x2E5E90F0 (type 10, key index 0x48, two 16-bytes seeds, secure install ID)
  * - 0x2E5E80F0 (type 7, key index 0x48, two 16-bytes seeds, secure install ID)
  * - 0x2E5E11F0 (type 5, key index 0x48, two 16-bytes seeds, secure install ID)
@@ -334,7 +334,7 @@ s32 sceUtilsGetLoadModuleYLength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 /**
  * Decrypt a module.
  * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x628910F0 (type 2, key index 0x47)
  * - 0x04000000 (type 0, key index 0x47, 144-bytes seed)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -357,7 +357,7 @@ s32 sceResmapPrepareByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); // sceResmap
 /**
  * Decrypt a module.
  * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x8B9B10F0 (type 2, key index 0x48)
  * - 0x05000000 (type 0, key index 0x48)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -380,7 +380,7 @@ s32 sceDbmanSelectByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); // sceDbman_dr
 /**
  * Decrypt a module.
  * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x5A5C10F0 (type 2, key index 0x49)
  * - 0xE42C2303 (type 2, key index 0x49)
  * - 0x06000000 (type 0, key index 0x49, 144-bytes seed)
@@ -396,7 +396,7 @@ s32 sceResmgr_driver_8E6C62C8(void *data); // sceResmgr_driver_8E6C62C8
 
 /**
  * Decrypt a module.
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x0B2B91F0 (type 9, key index 0x5c)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
@@ -415,7 +415,7 @@ s32 sceResmgr_9DC14891(u8 *psp, u32 pspSize, u32 *pNewSize); // sceResmgr_9DC148
 /**
  * Decrypt a module.
  * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xD82310F0 (type 2, key index 0x51)
  * - 0x63BAB403 (type 2, key index 0x51)
  * - 0x0E000000 (type 0, key index 0x51, 144-bytes seed)
@@ -439,7 +439,7 @@ s32 sceMesgd_driver_ADD0CB66(u8 *psp, u32 pspSize, u32 *pNewSize); // sceMesgd_d
 /**
  * Decrypt a module.
  * Imported by kd/me_wrapper.prx module.
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xD13B10F0 (type 2, key index 0x52)
  * - 0xD13B08F0 (type 2, key index 0x52)
  * - 0xD13B06F0 (type 2, key index 0x52)
@@ -491,7 +491,7 @@ s32 sceDbsvrGetData(u8 out[20]); // sceDbsvr_driver_94561901
  * There is currently no way to compute the CMAC hash of kirk 2 input data, 
  * as we don't have the CMAC private key.
  *
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0xE92410F0 (type 3, key index 0x65, two 16-bytes seeds, secure install ID)
  * - 0xE92408F0 (type 3, key index 0x65, two 16-bytes seeds, secure install ID)
  * - 0x89742B04 (type 3, key index 0x65, two 16-bytes seeds, secure install ID)
@@ -510,7 +510,7 @@ s32 sceUtilsPrepareGetLoadModuleRLength(u8 *psp, u32 pspSize, const char *secure
 /**
  * Same as sceUtilsPrepareGetLoadModuleRLength() but for DEVTOOL tags.
  * 
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x692810F0 (type 3, key index 0x66, two 16-bytes seeds, secure install ID)
  * - 0x692808F0 (type 3, key index 0x66, two 16-bytes seeds, secure install ID)
  * - 0xF5F12304 (type 3, key index 0x66, two 16-bytes seeds, secure install ID)
@@ -529,7 +529,7 @@ s32 sceUtilsPrepareGetLoadModuleSLength(u8 *psp, u32 pspSize, const char *secure
 /**
  * Decrypt a module.
  * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x2FD313F0 (type 5, key index 0x47, two 16-bytes seeds, secure install ID)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
@@ -542,7 +542,7 @@ s32 scePauth_driver_98B83B5D(u8 *psp, u32 pspSize, u32 *pNewSize, const char *se
 /**
  * Decrypt a module.
  * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
- * Supported tags (2g):
+ * Supported tags (02g):
  * - 0x2FD312F0 (type 5, key index 0x47, two 16-bytes seeds, secure install ID)
  * - 0x2FD311F0 (type 5, key index 0x47, two 16-bytes seeds, secure install ID)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
