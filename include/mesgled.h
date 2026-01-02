@@ -333,7 +333,7 @@ s32 sceUtilsGetLoadModuleYLength(u8 *psp, u32 pspSize, u32 *pNewSize, const char
 
 /**
  * Decrypt a module.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * Supported tags (2g):
  * - 0x628910F0 (type 2, key index 0x47)
  * - 0x04000000 (type 0, key index 0x47, 144-bytes seed)
@@ -346,7 +346,7 @@ s32 sceResmapPrepare(u8 *psp, u32 pspSize, u32 *pNewSize); // sceResmap_driver_E
 
 /**
  * Same as sceResmapPrepare() but by polling.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
  * @param pNewSize Required pointer to receive the plain module size.
@@ -356,7 +356,7 @@ s32 sceResmapPrepareByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); // sceResmap
 
 /**
  * Decrypt a module.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * Supported tags (2g):
  * - 0x8B9B10F0 (type 2, key index 0x48)
  * - 0x05000000 (type 0, key index 0x48)
@@ -369,7 +369,7 @@ s32 sceDbmanSelect(u8 *psp, u32 pspSize, u32 *pNewSize); // sceDbman_driver_B2B8
 
 /**
  * Same as sceDbmanSelectByPolling() but by polling.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
  * @param pNewSize Required pointer to receive the plain module size.
@@ -379,7 +379,7 @@ s32 sceDbmanSelectByPolling(u8 *psp, u32 pspSize, u32 *pNewSize); // sceDbman_dr
 
 /**
  * Decrypt a module.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * Supported tags (2g):
  * - 0x5A5C10F0 (type 2, key index 0x49)
  * - 0xE42C2303 (type 2, key index 0x49)
@@ -414,7 +414,7 @@ s32 sceResmgr_9DC14891(u8 *psp, u32 pspSize, u32 *pNewSize); // sceResmgr_9DC148
 
 /**
  * Decrypt a module.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * Supported tags (2g):
  * - 0xD82310F0 (type 2, key index 0x51)
  * - 0x63BAB403 (type 2, key index 0x51)
@@ -428,7 +428,7 @@ s32 sceMesgd_driver_102DC8AF(u8 *psp, u32 pspSize, u32 *pNewSize); // sceMesgd_d
 
 /**
  * Same as sceMesgd_driver_102DC8AF() but by polling.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
  * @param pNewSize Required pointer to receive the plain module size.
@@ -456,7 +456,7 @@ s32 sceWmd_driver_7A0E484C(u8 *psp, u32 pspSize, u32 *pNewSize); // sceWmd_drive
 
 /**
  * Same as sceWmd_driver_7A0E484C() but by polling.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
  * @param pspSize Size of the encrypted PRX module (MUST be >= 0x160 bytes).
  * @param pNewSize Required pointer to receive the plain module size.
@@ -467,7 +467,7 @@ s32 sceWmd_driver_B7CE9041(u8 *psp, u32 pspSize, u32 *pNewSize); // sceWmd_drive
 /**
  * Generate 20 bytes of random data.
  * This is a simple wrapper for kirk command 14.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * @param out Buffer to receive the random bytes.
  * @return 0 success; < 0 SCE driver error
  */
@@ -528,7 +528,7 @@ s32 sceUtilsPrepareGetLoadModuleSLength(u8 *psp, u32 pspSize, const char *secure
 
 /**
  * Decrypt a module.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * Supported tags (2g):
  * - 0x2FD313F0 (type 5, key index 0x47, two 16-bytes seeds, secure install ID)
  * @param psp ~PSP encrypted module buffer (MUST be aligned on a 64-bytes boundary).
@@ -541,7 +541,7 @@ s32 scePauth_driver_98B83B5D(u8 *psp, u32 pspSize, u32 *pNewSize, const char *se
 
 /**
  * Decrypt a module.
- * There is no known module thats imports this function, at least in OFW 6.61 (and Go).
+ * It seems there is no known module that imports this function, at least in OFW 6.61 (and Go).
  * Supported tags (2g):
  * - 0x2FD312F0 (type 5, key index 0x47, two 16-bytes seeds, secure install ID)
  * - 0x2FD311F0 (type 5, key index 0x47, two 16-bytes seeds, secure install ID)
