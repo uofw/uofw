@@ -972,11 +972,11 @@ static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Re
              
              //0x00005498 & 0x000054AC - 0x00005508
              for (j = 0; j < k; j++) {
-                  ofsSegIndex2 = ELF32_R_OFS_BASE(relocInfo[i].r_info); //0x000054B0
-                  if (ofsSegIndex2 >= nSegments || relocInfo[i].r_offset >= segSize) //0x000054D0
+                  ofsSegIndex2 = ELF32_R_OFS_BASE(relocInfo[j].r_info); //0x000054B0
+                  if (ofsSegIndex2 >= nSegments || relocInfo[j].r_offset >= segSize) //0x000054D0
                       return SCE_ERROR_KERNEL_ERROR; 
                   
-                  daddr2 = (u32)(g_segmentStart[ofsSegIndex2] + relocInfo[i].r_offset); //0x000054D8 - 0x000054E4
+                  daddr2 = (u32)(g_segmentStart[ofsSegIndex2] + relocInfo[j].r_offset); //0x000054D8 - 0x000054E4
                   *(u32 *)daddr2 |= 0xFFFF0000; //0x000054F8
                   *(u32 *)daddr2 |= daddr; //0x000054F4
              }
