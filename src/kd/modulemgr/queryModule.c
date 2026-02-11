@@ -155,7 +155,7 @@ s32 sceKernelQueryModuleInfo(SceUID modId, SceKernelModuleInfo *pModInfo)
 * @return SCE_ERROR_KERNEL_ILLEGAL_ADDR if the provided pointer can't be accessed from the current context.
 * @return SCE_ERROR_KERNEL_ERROR if module couldn't be found.
 */
-// Subroutine ModuleMgrForUser_F0A26395 - Address 0x000058F8 - Aliases: ModuleMgrForKernel_CECA0FFC
+// Subroutine ModuleMgrForUser_F0A26395 - Address 0x000044EC - Aliases: ModuleMgrForKernel_CECA0FFC
 SceUID sceKernelGetModuleId(void)
 {
     s32 oldK1;

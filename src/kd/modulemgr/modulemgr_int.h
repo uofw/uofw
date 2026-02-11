@@ -82,6 +82,16 @@ extern SceModuleManagerCB g_ModuleManager;
 // DEBUG
 //extern int c;
 
+// UOFW: Some functions should be static but we need offsets of them to apply
+// uofwinst patches and hooks. Static functions don't appear in the symbol 
+// map so this workaround is used to remove static modifier on those functions
+// if compiling for installer.
+#ifdef INSTALLER
+#define INSTALLER_NO_STATIC
+#else
+#define INSTALLER_NO_STATIC static
+#endif
+
 s32 ClearFreePartitionMemory(s32 partitionId);
 s32 _CheckUserModulePartition(SceUID memoryPartitionId);
 s32 _start_exe_thread(SceModuleMgrParam *pModParams);

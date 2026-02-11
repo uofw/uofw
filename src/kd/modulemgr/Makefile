@@ -4,6 +4,8 @@
 TARGET = modulemgr
 OBJS = chunk.o init.o loadModule.o modulemgr.o override.o queryModule.o rebootModule.o start-stopModule.o
 
+INSTALLER = 0
+
 LIBS = -lSysMemForKernel -lKDebugForKernel -lInterruptManagerForKernel -lUtilsForKernel \
        -lSysclibForKernel -lThreadManForKernel -lIoFileMgrForKernel -lLoadCoreForKernel
 
