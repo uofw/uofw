@@ -15,6 +15,7 @@
 #include <common_imp.h>
 #include <interruptman.h>
 #include <sysmem_utils_kernel.h>
+#include <sysmem_user.h>
 #include <threadman_kernel.h>
 #include <usbbus.h>
 
@@ -49,8 +50,8 @@ int sceUsbbdReqRecv(struct UsbdDeviceReq *req);
 /* USB device descriptor template (from 6.60 kd/usbacc.prx .rodata). */
 static const u8 g_devDescTemplate[20] = {
     0x12, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x00
 };
 
 /* USB configuration descriptor template (from 6.60 kd/usbacc.prx .rodata). */
@@ -105,8 +106,13 @@ static struct UsbEndpoint g_endpoints[2] = {
     { 1, 0, 0 }
 };
 
-/* Interface list (kept in .data like the original, which stores zeroes here). */
-static struct UsbInterfaces g_interfaces __attribute__((section(".data")));
+/* Interface list (kept in .data like the original, whose image carries
+   infp[0] = NULL, infp[1] = NULL, num = 1; no code in this module ever
+   touches it, so the file values are the runtime values). */
+static struct UsbInterfaces g_interfaces __attribute__((section(".data"))) = {
+    .infp = { NULL, NULL },
+    .num = 1
+};
 
 static int recvCtl(int arg1, int arg2, struct DeviceRequest *req);
 static int startFunc(int size, void *args);
@@ -114,7 +120,7 @@ static int stopFunc(int size, void *args);
 static int attachFunc(int speed, void *arg2, void *arg3);
 static int detachFunc(int arg1, int arg2, int arg3);
 static void recvComplete(struct UsbdDeviceReq *req);
-static u8 *setupDescriptors(s32 speed, u8 *epDst, u8 **work, u8 *cfgDst);
+static u8 *setupDescriptors(s32 speed, u8 *devDst, u8 **work, u8 *cfgDst);
 
 struct UsbDriver g_drv = {
     .name = "USBAccBaseDriver",
@@ -142,7 +148,7 @@ struct UsbdDeviceReq g_recvReq; // posted async receive request
 void *g_fplBlock; // descriptor scratch block from FPL
 SceUID g_fplId; // FPL id
 u16 g_type;
-u8 g_unk2; // receive armed flag
+u8 g_unk2; // set to 1 when the driver starts, cleared on stop; never read back
 u8 g_usbBusDriverStarted;
 
 // Subroutine sceUsbAccGetAuthStat - Address 0x00000000 - Aliases: sceUsbAcc_79A1C743, sceUsbAcc_driver_79A1C743 -- Done
@@ -154,11 +160,12 @@ u8 g_usbBusDriverStarted;
  */
 s32 sceUsbAccGetAuthStat(void)
 {
-    int intr = sceKernelCpuSuspendIntr();
     s32 ret;
+    u8 started = g_usbBusDriverStarted;
+    int intr = sceKernelCpuSuspendIntr();
 
-    if (g_usbBusDriverStarted) {
-        ret = (sceUsbBus_driver_8A3EB5D2() == 0) ? SCE_ERROR_USB_BUS_NOT_READY : 0;
+    if (started) {
+        ret = (sceUsbBus_driver_8A3EB5D2(started) == 0) ? SCE_ERROR_USB_BUS_NOT_READY : 0;
     } else {
         ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
     }
@@ -177,19 +184,30 @@ s32 sceUsbAccGetAuthStat(void)
 s32 sceUsbAccGetInfo(u64 *arg)
 {
     s32 ret = 0;
-    s32 oldK1 = pspShiftK1();
+    u8 started = g_usbBusDriverStarted;
     int intr = sceKernelCpuSuspendIntr();
 
-    if (g_usbBusDriverStarted) {
-        if (sceUsbBus_driver_8A3EB5D2() != 0) {
-            if (arg) {
-                if (((((u32)arg + 8) | (u32)arg) & (oldK1))) {
-                    *arg = g_unk0;
-                }
-            }
-            else
-                ret = SCE_ERROR_USB_INVALID_ARGUMENT;
+    if (started) {
+        if (sceUsbBus_driver_8A3EB5D2(intr) != 0) {
+            /* The original reads K1 here, masks the caller's range with
+               (K1 << 11) and accepts it only while the masked value's sign
+               bit is clear. It never shifts K1 itself, it only restores it. */
+            u32 k1 = (u32)pspGetK1();
 
+            if (arg == NULL || ((s32)((((u32)arg + 8) | (u32)arg) & (k1 << 11))) < 0) {
+                ret = SCE_ERROR_USB_INVALID_ARGUMENT;
+            } else {
+                /* Byte copy: like the original, this tolerates a pointer
+                   that is not word-aligned. */
+                u8 *src = (u8 *)&g_unk0;
+                u8 *dst = (u8 *)arg;
+                s32 i;
+
+                for (i = 0; i < 8; i++)
+                    dst[i] = src[i];
+            }
+
+            pspSetK1((int)k1);
             sceKernelCpuResumeIntr(intr);
         }
         else {
@@ -202,14 +220,16 @@ s32 sceUsbAccGetInfo(u64 *arg)
         ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
     }
 
-    pspSetK1(oldK1);
     return ret;
 }
 
-// Subroutine sceUsbAcc_internal_2A100C1F - Address 0x00000154 -- TODO: Match against Sony original
+// Subroutine sceUsbAcc_internal_2A100C1F - Address 0x00000154 -- Done
 // Exported in sceUsbAcc_internal
 /*
  * Sends an accessory device request after validating and fixing up its size.
+ *
+ * The original queues the request on g_endpoints[1] (the second registered
+ * endpoint, loaded from 0x0CAC in the 6.60 binary), not the first one.
  *
  * Returns 0 on success.
  */
@@ -245,6 +265,7 @@ static int recvCtl(int arg1 __attribute__((unused)), int arg2, struct DeviceRequ
     u8 *setup = g_setupBuf;
     u8 *data;
     s32 i;
+    int matched = 0;
     UsbAccReqEntry *entry = (UsbAccReqEntry *)g_reqTable;
 
     memcpyInline(setup, req, USBACC_SETUP_SIZE);
@@ -257,26 +278,29 @@ static int recvCtl(int arg1 __attribute__((unused)), int arg2, struct DeviceRequ
             continue;
         if (req->bRequest != entry->req)
             continue;
-        goto handle;
+        matched = 1;
+        break;
     }
 
-    return -1;
-
-handle:
-    if ((s8)setup[0] < 0)
-        goto inRequest;
-
-    /* OUT request: only bRequest 1 re-arms the receive. */
-    if (req->bRequest != 1)
+    if (!matched)
         return -1;
 
-    data = g_recvReq.data;
-    sceKernelDcacheInvalidateRange(data, 64);
-    g_recvReq.size = 64;
-    sceUsbbdReqRecv(&g_recvReq);
-    return 0;
+    if ((s8)setup[0] >= 0) {
+        /* OUT request: only bRequest 1 re-arms the receive. The check can
+           never fail here (both table entries carry bRequest 1 and the
+           request already matched one of them), but the original has it. */
+        if (req->bRequest != 1)
+            return -1;
 
-inRequest:
+        data = g_recvReq.data;
+        sceKernelDcacheInvalidateRange(data, 64);
+        g_recvReq.size = 64;
+        sceUsbbdReqRecv(&g_recvReq);
+        return 0;
+    }
+
+    /* IN request: reply with the request byte, or with 0 when the accessory
+       type the host selected is fully registered. */
     if (req->bRequest != 1)
         return -1;
 
@@ -285,8 +309,8 @@ inRequest:
         data[0] = req->bRequest;
     } else {
         if ((g_type & 0xFFFF) == (g_type & req->wValue)) {
-            sceUsbBus_driver_FBA2072B();
             data[0] = 0;
+            sceUsbBus_driver_FBA2072B();
         } else {
             data[0] = req->bRequest;
         }
@@ -306,7 +330,9 @@ inRequest:
  */
 static int startFunc(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
-    SceUID fpl = sceKernelCreateFpl("SceUsbAcc", 1 /* SCE_KERNEL_PRIMARY_KERNEL_PARTITION */, 256,
+    /* The attribute value 256 has no named constant in any known PSP SDK or
+       uOFW header; it is taken verbatim from the 6.60 disassembly. */
+    SceUID fpl = sceKernelCreateFpl("SceUsbAcc", SCE_KERNEL_PRIMARY_KERNEL_PARTITION, 256,
                                     USBACC_FPL_SIZE, 1, NULL);
     if (fpl < 0)
         return -1;
@@ -320,8 +346,20 @@ static int startFunc(int size __attribute__((unused)), void *args __attribute__(
 
     {
         u8 *block = g_fplBlock;
-        u8 *res = setupDescriptors(2, block + 64, (u8 **)(block + 84), block + 100);
-        u8 *res2 = setupDescriptors(1, res, (u8 **)(res + 20), res + 36);
+        u8 *res;
+        u8 *res2;
+
+        /* The 368-byte block holds the 64-byte receive buffer at its start
+           (g_recvReq.data), then two 152-byte descriptor builds laid out as
+           dev(20) work(16) cfg(24) if1(12) if2(48) ep(32). The first build
+           (speed 2) is the high-speed set, the second (speed 1) the
+           full-speed set. The original also passes cfgDst again as an
+           unused fifth argument. */
+        g_drv.devp_hi = block + 64;
+        g_drv.confp_hi = block + 84;
+
+        res = setupDescriptors(2, block + 64, (u8 **)(block + 84), block + 100);
+        res2 = setupDescriptors(1, res, (u8 **)(res + 20), res + 36);
         (void)res2;
         g_drv.devp = res;
         g_drv.confp = res + 20;
@@ -421,6 +459,10 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
 /*
  * Stops the accessory driver: releases the descriptor scratch block.
  *
+ * Like the original, this does not clear g_drv.devp/confp (or the hi
+ * variants); they are left pointing into the freed block until the next
+ * start.
+ *
  * Returns 0 on success.
  */
 static int stopFunc(int size __attribute__((unused)), void *args __attribute__((unused)))
@@ -438,16 +480,16 @@ static int stopFunc(int size __attribute__((unused)), void *args __attribute__((
  */
 static void recvComplete(struct UsbdDeviceReq *req)
 {
-    u32 *p = (u32 *)req;
-
-    if (p[6] != 0)
+    if (req->retcode != 0)
         return;
 
     if ((s8)g_setupBuf[0] < 0)
         return;
 
-    if (g_setupBuf[1] != 1) {
-        u8 *data = *(u8 **)&p[1];
+    /* Only an OUT request with bRequest 1 carries a new accessory info
+       block (the original copies when setupBuf[1] == 1). */
+    if (g_setupBuf[1] == 1) {
+        u8 *data = req->data;
         u64 *dst = &g_unk0;
         s32 i;
 
@@ -459,7 +501,9 @@ static void recvComplete(struct UsbdDeviceReq *req)
 /*
  * Marks the driver as attached.
  *
- * Returns 0 on success.
+ * Returns the previous attached state: 0 when the driver was not attached
+ * (in which case it has now been marked as attached), 1 when it already
+ * was.
  */
 static int attachFunc(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                       void *arg3 __attribute__((unused)))
@@ -475,14 +519,14 @@ static int attachFunc(int speed __attribute__((unused)), void *arg2 __attribute_
 /*
  * Marks the driver as detached and clears the runtime state.
  *
- * Returns 0 on success.
+ * The original returns early, without touching anything, when the driver
+ * was never attached.
+ *
+ * Returns 0 on success (the original leaves an undefined value in v0).
  */
 static int detachFunc(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
                       int arg3 __attribute__((unused)))
 {
-    u32 *lo = (u32 *)&g_unk0;
-
-    lo[1] = 0;
     if (g_usbBusDriverStarted == 0)
         return 0;
 
@@ -495,54 +539,57 @@ static int detachFunc(int arg1 __attribute__((unused)), int arg2 __attribute__((
 }
 
 /*
- * Builds the hi/full-speed USB descriptors into the FPL scratch block.
+ * Builds one USB descriptor set into the FPL scratch block.
  *
- * Returns the end of the built area.
+ * devDst receives the 20-byte device descriptor, work receives the four
+ * resulting descriptors as { cfg, if1, if2, ep }, and cfgDst receives the
+ * configuration descriptor followed by both interface descriptors and the
+ * endpoint descriptor:
+ *
+ *   cfgDst+0   cfg  (24)   cfgDst+24  if1 (12)
+ *   cfgDst+36  if2  (48)   cfgDst+84  ep  (32)
+ *
+ * The original also passes cfgDst a fifth time as an unused stack
+ * argument; nothing reads it, so it is not reproduced here.
+ *
+ * Returns cfgDst + 116 (one byte past the endpoint descriptor).
  */
-static u8 *setupDescriptors(s32 speed, u8 *epDst, u8 **work, u8 *cfgDst)
+static u8 *setupDescriptors(s32 speed, u8 *devDst, u8 **work, u8 *cfgDst)
 {
-    u8 *t0 = cfgDst + 24;
-    u8 *v0 = cfgDst + 36;
-    u8 *t8 = cfgDst;
-    u8 *s0;
-    u8 *s1;
-    u8 *t6 = epDst;
+    u8 *if1Dst = cfgDst + 24;
+    u8 *if2Dst = cfgDst + 36;
+    u8 *epDst = cfgDst + 84;
 
-    work[1] = t0;
-    work[2] = v0;
     work[0] = cfgDst;
-    work[3] = v0 + 48;
-    s0 = work[1];
-    s1 = work[2];
+    work[1] = if1Dst;
+    work[2] = if2Dst;
+    work[3] = epDst;
 
     /* Copy the 20-byte device descriptor template. */
-    memcpyInline(epDst, g_devDescTemplate, sizeof(g_devDescTemplate));
+    memcpyInline(devDst, g_devDescTemplate, sizeof(g_devDescTemplate));
 
     /* Copy the 24-byte configuration descriptor template. */
-    memcpyInline(t8, g_cfgDescTemplate, sizeof(g_cfgDescTemplate));
+    memcpyInline(cfgDst, g_cfgDescTemplate, sizeof(g_cfgDescTemplate));
 
     /* Copy the 12-byte interface descriptor template. */
-    memcpyInline(s0, g_ifDescTemplate, sizeof(g_ifDescTemplate));
+    memcpyInline(if1Dst, g_ifDescTemplate, sizeof(g_ifDescTemplate));
 
     /* Copy the 48-byte second descriptor area. */
-    memcpyInline(s1, g_ifDescTemplate2, 48);
+    memcpyInline(if2Dst, g_ifDescTemplate2, 48);
 
     /* Copy the 32-byte endpoint descriptor template. */
-    memcpyInline(t6, g_epDescTemplate, sizeof(g_epDescTemplate));
+    memcpyInline(epDst, g_epDescTemplate, sizeof(g_epDescTemplate));
 
-    /* Link the descriptor chain. */
-    *(u8 **)(cfgDst + 12) = cfgDst + 24;
-    *(u8 **)(cfgDst + 24) = cfgDst + 36;
-    *(u8 **)(cfgDst + 48) = epDst;
+    /* Link the descriptor chain: cfg -> if1 -> if2 -> ep. */
+    *(u8 **)(cfgDst + 12) = if1Dst;
+    *(u8 **)if1Dst = if2Dst;
+    *(u8 **)(if2Dst + 12) = epDst;
 
-    /* Patch speed-dependent fields. */
-    t6[7] = 64;
-    if (speed != 2) {
-        *(u16 *)(t6 + 4) = 64;
-        t6[6] = 8;
-    } else {
-        t6[6] = 7;
-    }
+    /* Patch the fields the original sets at run time. The endpoint's
+       wMaxPacketSize is 64 for both speeds; only bInterval differs. */
+    devDst[7] = 64;
+    *(u16 *)(epDst + 4) = 64;
+    epDst[6] = (speed == 2) ? 7 : 8;
 
     return epDst + 32;
 }

@@ -186,7 +186,7 @@ int sceUsbbdUnregister(struct UsbDriver *drv);
  */
 int sceUsbbdReqSend(struct UsbdDeviceReq *req);
 
-int sceUsbBus_driver_8A3EB5D2(void);
+int sceUsbBus_driver_8A3EB5D2(int);
 
 #endif // USBBUS_H
 
