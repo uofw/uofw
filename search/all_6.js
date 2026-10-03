@@ -4,7 +4,7 @@ var searchData=
   ['end_1',['end',['../structSceSysconDebugHandlers.html#a2fffde9cae3be628b0128a5f7bf72c65',1,'SceSysconDebugHandlers']]],
   ['endblinkstate_2',['endBlinkState',['../structSceLedConfiguration.html#ab9eb45db66fdf97b528c3f3c84439ca1',1,'SceLedConfiguration']]],
   ['endp_3',['endp',['../structUsbDriver.html#a5930f79baa63df3d2f08cff31099eeb0',1,'UsbDriver::endp'],['../structUsbdDeviceReq.html#a42e29c4276034b2c2d79ae6caf8b7c25',1,'UsbdDeviceReq::endp']]],
-  ['endpnum_4',['endpnum',['../structUsbEndpoint.html#afb6bfebf3b932c0850376251c0ba50e1',1,'UsbEndpoint']]],
+  ['endpnumber_4',['endpNumber',['../structUsbEndpoint.html#ac883dc36e8af725150cd4784e449055d',1,'UsbEndpoint']]],
   ['endpoints_5',['endpoints',['../structUsbDriver.html#ae16871cccecc440a5c97bdcda3277934',1,'UsbDriver']]],
   ['entend_6',['entEnd',['../structSceModuleInfo.html#af8eaaf8d08218b3bea5c690be14c5713',1,'SceModuleInfo']]],
   ['entryaddr_7',['entryaddr',['../structSceLoadCoreExecFileInfo.html#ac196b9915a75240696b066152fbc1b32',1,'SceLoadCoreExecFileInfo::entryAddr'],['../structSceModule.html#a21f7314e68e9797ec3ece053acc745a3',1,'SceModule::entryAddr'],['../structSceKernelModuleInfo.html#ae5b73076674a5f59ada0a5e8c60ab7a5',1,'SceKernelModuleInfo::entryAddr'],['../structSceKernelModuleInfoV1.html#a8fb4b3819ad1383fd10107d08d93bb6d',1,'SceKernelModuleInfoV1::entryAddr']]],

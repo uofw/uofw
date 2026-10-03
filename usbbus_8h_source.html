@@ -93,9 +93,9 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
 <div class="foldopen" id="foldopen00041" data-start="{" data-end="};">
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html">   41</a></span><span class="keyword">struct </span><a class="code hl_struct" href="structUsbEndpoint.html">UsbEndpoint</a> {</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html#afb6bfebf3b932c0850376251c0ba50e1">   43</a></span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="structUsbEndpoint.html#afb6bfebf3b932c0850376251c0ba50e1">endpnum</a>; </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html#a3e2418a7cf224e30a362414e836b40f5">   45</a></span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="structUsbEndpoint.html#a3e2418a7cf224e30a362414e836b40f5">unk2</a>; </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html#aa20a3325c36911d36a1b0cf612e2b62a">   47</a></span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="structUsbEndpoint.html#aa20a3325c36911d36a1b0cf612e2b62a">unk3</a>;</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html#ac883dc36e8af725150cd4784e449055d">   43</a></span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="structUsbEndpoint.html#ac883dc36e8af725150cd4784e449055d">endpNumber</a>; </div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html#a480789857ddf00ae57f3936d5712b634">   45</a></span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="structUsbEndpoint.html#a480789857ddf00ae57f3936d5712b634">busEndpNumber</a>; </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno"><a class="line" href="structUsbEndpoint.html#aadc86dee7377a4d36b10302287506160">   47</a></span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="structUsbEndpoint.html#aadc86dee7377a4d36b10302287506160">transferred</a>;</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>};</div>
 </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
@@ -182,10 +182,18 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno"><a class="line" href="group__USBBD.html#ga5b72f07f70d94415e6ed30bcd3ddf092">  187</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="group__USBBD.html#ga5b72f07f70d94415e6ed30bcd3ddf092">sceUsbbdReqSend</a>(<span class="keyword">struct</span> <a class="code hl_struct" href="structUsbdDeviceReq.html">UsbdDeviceReq</a> *req);</div>
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span><span class="keywordtype">int</span> sceUsbBus_driver_8A3EB5D2(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span> </div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span><span class="preprocessor">#endif </span><span class="comment">// USBBUS_H</span></div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span><span class="comment">/* Real SCE names, verified via the NIDs: sceUsbbdAccessoryGetHostPowerStat,</span></div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span><span class="comment">   sceUsbbdAccessoryUseHostPower, sceUsbbdAccessoryUnuseHostPower,</span></div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span><span class="comment">   sceUsbbdAccessoryAuthenticated, sceUsbbdAccessoryGetAuthStat. The import</span></div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span><span class="comment">   library only provides NID-named stubs, so the identifiers stay NID-style. */</span></div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>s32 sceUsbBus_driver_48CCE3C1(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>s32 sceUsbBus_driver_7B87815D(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>s32 sceUsbBus_driver_90B82F55(<span class="keywordtype">void</span> *cb);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>s32 sceUsbBus_driver_FBA2072B(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>s32 sceUsbBus_driver_8A3EB5D2(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span> </div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span><span class="preprocessor">#endif </span><span class="comment">// USBBUS_H</span></div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
 <div class="ttc" id="agroup__USBBD_html_ga5b72f07f70d94415e6ed30bcd3ddf092"><div class="ttname"><a href="group__USBBD.html#ga5b72f07f70d94415e6ed30bcd3ddf092">sceUsbbdReqSend</a></div><div class="ttdeci">int sceUsbbdReqSend(struct UsbdDeviceReq *req)</div></div>
 <div class="ttc" id="agroup__USBBD_html_ga9f29f68cb27b449561a790bfa2fb9803"><div class="ttname"><a href="group__USBBD.html#ga9f29f68cb27b449561a790bfa2fb9803">sceUsbbdUnregister</a></div><div class="ttdeci">int sceUsbbdUnregister(struct UsbDriver *drv)</div></div>
 <div class="ttc" id="agroup__USBBD_html_gaf88fb4ce7569677247b54c6eaba479ab"><div class="ttname"><a href="group__USBBD.html#gaf88fb4ce7569677247b54c6eaba479ab">sceUsbbdRegister</a></div><div class="ttdeci">int sceUsbbdRegister(struct UsbDriver *drv)</div></div>
@@ -211,9 +219,9 @@ $(document).ready(function() { init_codefold(0); });
 <div class="ttc" id="astructUsbDriver_html_ae05087538510b887b06ca140df8630ba"><div class="ttname"><a href="structUsbDriver.html#ae05087538510b887b06ca140df8630ba">UsbDriver::func28</a></div><div class="ttdeci">int(* func28)(int arg1, int arg2, int arg3)</div><div class="ttdef"><b>Definition</b> usbbus.h:120</div></div>
 <div class="ttc" id="astructUsbDriver_html_ae16871cccecc440a5c97bdcda3277934"><div class="ttname"><a href="structUsbDriver.html#ae16871cccecc440a5c97bdcda3277934">UsbDriver::endpoints</a></div><div class="ttdeci">int endpoints</div><div class="ttdef"><b>Definition</b> usbbus.h:102</div></div>
 <div class="ttc" id="astructUsbEndpoint_html"><div class="ttname"><a href="structUsbEndpoint.html">UsbEndpoint</a></div><div class="ttdef"><b>Definition</b> usbbus.h:41</div></div>
-<div class="ttc" id="astructUsbEndpoint_html_a3e2418a7cf224e30a362414e836b40f5"><div class="ttname"><a href="structUsbEndpoint.html#a3e2418a7cf224e30a362414e836b40f5">UsbEndpoint::unk2</a></div><div class="ttdeci">int unk2</div><div class="ttdef"><b>Definition</b> usbbus.h:45</div></div>
-<div class="ttc" id="astructUsbEndpoint_html_aa20a3325c36911d36a1b0cf612e2b62a"><div class="ttname"><a href="structUsbEndpoint.html#aa20a3325c36911d36a1b0cf612e2b62a">UsbEndpoint::unk3</a></div><div class="ttdeci">int unk3</div><div class="ttdef"><b>Definition</b> usbbus.h:47</div></div>
-<div class="ttc" id="astructUsbEndpoint_html_afb6bfebf3b932c0850376251c0ba50e1"><div class="ttname"><a href="structUsbEndpoint.html#afb6bfebf3b932c0850376251c0ba50e1">UsbEndpoint::endpnum</a></div><div class="ttdeci">int endpnum</div><div class="ttdef"><b>Definition</b> usbbus.h:43</div></div>
+<div class="ttc" id="astructUsbEndpoint_html_a480789857ddf00ae57f3936d5712b634"><div class="ttname"><a href="structUsbEndpoint.html#a480789857ddf00ae57f3936d5712b634">UsbEndpoint::busEndpNumber</a></div><div class="ttdeci">int busEndpNumber</div><div class="ttdef"><b>Definition</b> usbbus.h:45</div></div>
+<div class="ttc" id="astructUsbEndpoint_html_aadc86dee7377a4d36b10302287506160"><div class="ttname"><a href="structUsbEndpoint.html#aadc86dee7377a4d36b10302287506160">UsbEndpoint::transferred</a></div><div class="ttdeci">int transferred</div><div class="ttdef"><b>Definition</b> usbbus.h:47</div></div>
+<div class="ttc" id="astructUsbEndpoint_html_ac883dc36e8af725150cd4784e449055d"><div class="ttname"><a href="structUsbEndpoint.html#ac883dc36e8af725150cd4784e449055d">UsbEndpoint::endpNumber</a></div><div class="ttdeci">int endpNumber</div><div class="ttdef"><b>Definition</b> usbbus.h:43</div></div>
 <div class="ttc" id="astructUsbInterfaces_html"><div class="ttname"><a href="structUsbInterfaces.html">UsbInterfaces</a></div><div class="ttdef"><b>Definition</b> usbbus.h:68</div></div>
 <div class="ttc" id="astructUsbInterfaces_html_a082db7a0dd7062a5af0e20fecba99a66"><div class="ttname"><a href="structUsbInterfaces.html#a082db7a0dd7062a5af0e20fecba99a66">UsbInterfaces::num</a></div><div class="ttdeci">unsigned int num</div><div class="ttdef"><b>Definition</b> usbbus.h:72</div></div>
 <div class="ttc" id="astructUsbInterfaces_html_adf34d6c2aafb0d4e502680539665a7c4"><div class="ttname"><a href="structUsbInterfaces.html#adf34d6c2aafb0d4e502680539665a7c4">UsbInterfaces::infp</a></div><div class="ttdeci">struct InterfaceDescriptor * infp[2]</div><div class="ttdef"><b>Definition</b> usbbus.h:70</div></div>
@@ -231,7 +239,7 @@ $(document).ready(function() { init_codefold(0); });
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 11 2026 22:39:38 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Oct 3 2026 12:52:49 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>

@@ -13,5 +13,6 @@ var searchData=
   ['timestamp_10',['timestamp',['../structSceCtrlData.html#a4d956741adfd85933d1362caf1df4838',1,'SceCtrlData::timeStamp'],['../structSceCtrlData2.html#a99717924760174ccbaba04648b482b82',1,'SceCtrlData2::timeStamp']]],
   ['todo_20list_11',['Todo List',['../todo.html',1,'']]],
   ['topaddr_12',['topAddr',['../structSceLoadCoreExecFileInfo.html#ab9bd5246d3642b688169fef3489812eb',1,'SceLoadCoreExecFileInfo']]],
-  ['tx_13',['tx',['../structSceSysconPacket.html#aa17ed0a931c08b73c356778e70633421',1,'SceSysconPacket']]]
+  ['transferred_13',['transferred',['../structUsbEndpoint.html#aadc86dee7377a4d36b10302287506160',1,'UsbEndpoint']]],
+  ['tx_14',['tx',['../structSceSysconPacket.html#aa17ed0a931c08b73c356778e70633421',1,'SceSysconPacket']]]
 ];
