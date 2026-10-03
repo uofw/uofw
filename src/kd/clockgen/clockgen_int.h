@@ -21,7 +21,7 @@ static int _sceClockgenModuleStart(SceSize argSize, const void *argBlock);
  *
  * @return SCE_ERROR_OK.
  */
-static s32 _sceClockgenModuleRebootBefore();
+static s32 _sceClockgenModuleRebootBefore(void *arg0, s32 arg1, s32 arg2, s32 arg3);
 
 /**
  * Event handler function.
