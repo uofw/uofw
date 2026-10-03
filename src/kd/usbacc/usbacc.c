@@ -40,11 +40,6 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Size of a received USB setup packet. */
 #define USBACC_SETUP_SIZE                     8
 
-/* Exact SCE names unknown for these bus-driver imports (TODO: move to usbbus.h once named). */
-s32 sceUsbBus_driver_48CCE3C1(void);
-s32 sceUsbBus_driver_7B87815D(void);
-s32 sceUsbBus_driver_90B82F55(void *cb);
-s32 sceUsbBus_driver_FBA2072B(void);
 int sceUsbbdReqRecv(struct UsbdDeviceReq *req);
 
 /* USB device descriptor template (from 6.60 kd/usbacc.prx .rodata). */
@@ -148,8 +143,8 @@ struct UsbdDeviceReq g_recvReq; // posted async receive request
 void *g_fplBlock; // descriptor scratch block from FPL
 SceUID g_fplId; // FPL id
 u16 g_type;
-u8 g_unk2; // set to 1 when the driver starts, cleared on stop; never read back
-u8 g_usbBusDriverStarted;
+u8 g_usbBusDriverStarted; // set to 1 when the driver starts, cleared on stop; never read back
+u8 g_isAccAttached;
 
 // Subroutine sceUsbAccGetAuthStat - Address 0x00000000 - Aliases: sceUsbAcc_79A1C743, sceUsbAcc_driver_79A1C743 -- Done
 // Exported in sceUsbAcc_internal, sceUsbAcc and sceUsbAcc_driver
@@ -161,11 +156,11 @@ u8 g_usbBusDriverStarted;
 s32 sceUsbAccGetAuthStat(void)
 {
     s32 ret;
-    u8 started = g_usbBusDriverStarted;
+    u8 attached = g_isAccAttached;
     int intr = sceKernelCpuSuspendIntr();
 
-    if (started) {
-        ret = (sceUsbBus_driver_8A3EB5D2(started) == 0) ? SCE_ERROR_USB_BUS_NOT_READY : 0;
+    if (attached) {
+        ret = (sceUsbBus_driver_8A3EB5D2() == 0) ? SCE_ERROR_USB_BUS_NOT_READY : 0;
     } else {
         ret = SCE_ERROR_USB_BUS_DRIVER_NOT_STARTED;
     }
@@ -184,11 +179,11 @@ s32 sceUsbAccGetAuthStat(void)
 s32 sceUsbAccGetInfo(u64 *arg)
 {
     s32 ret = 0;
-    u8 started = g_usbBusDriverStarted;
+    u8 attached = g_isAccAttached;
     int intr = sceKernelCpuSuspendIntr();
 
-    if (started) {
-        if (sceUsbBus_driver_8A3EB5D2(intr) != 0) {
+    if (attached) {
+        if (sceUsbBus_driver_8A3EB5D2() != 0) {
             /* The original reads K1 here, masks the caller's range with
                (K1 << 11) and accepts it only while the masked value's sign
                bit is clear. It never shifts K1 itself, it only restores it. */
@@ -223,7 +218,7 @@ s32 sceUsbAccGetInfo(u64 *arg)
     return ret;
 }
 
-// Subroutine sceUsbAcc_internal_2A100C1F - Address 0x00000154 -- Done
+// Subroutine sceUsbAccIntrInReq - Address 0x00000154 - Alias: sceUsbAcc_internal_2A100C1F -- Done
 // Exported in sceUsbAcc_internal
 /*
  * Sends an accessory device request after validating and fixing up its size.
@@ -233,12 +228,12 @@ s32 sceUsbAccGetInfo(u64 *arg)
  *
  * Returns 0 on success.
  */
-s32 sceUsbAcc_internal_2A100C1F(struct UsbdDeviceReq *req)
+s32 sceUsbAccIntrInReq(struct UsbdDeviceReq *req)
 {
     s32 ret = 0;
     u8 *data = req->data;
 
-    if (g_usbBusDriverStarted) {
+    if (g_isAccAttached) {
         if ((data[3]) < 0x3D) {
             sceKernelDcacheWritebackRange(data, req->size);
             req->endp = &g_endpoints[1];
@@ -366,10 +361,10 @@ static int startFunc(int size __attribute__((unused)), void *args __attribute__(
     }
 
     g_unk0 = 0;
-    g_usbBusDriverStarted = 0;
+    g_isAccAttached = 0;
 
-    g_endpoints[0].unk3 = 0;
-    g_endpoints[1].unk3 = 0;
+    g_endpoints[0].transferred = 0;
+    g_endpoints[1].transferred = 0;
 
     g_recvReq.endp = &g_endpoints[0];
     g_recvReq.data = g_fplBlock;
@@ -381,7 +376,7 @@ static int startFunc(int size __attribute__((unused)), void *args __attribute__(
     g_recvReq.unk1c = 0;
     g_recvReq.arg = NULL;
     sceUsbBus_driver_90B82F55(recvComplete);
-    g_unk2 = 1;
+    g_usbBusDriverStarted = 1;
 
     return 0;
 }
@@ -435,7 +430,7 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
 {
     if ((sceUsbbdRegister(&g_drv)) >= 0) {
         g_type = 0;
-        g_unk2 = 0;
+        g_usbBusDriverStarted = 0;
         return 0;
     }
 
@@ -469,7 +464,7 @@ static int stopFunc(int size __attribute__((unused)), void *args __attribute__((
 {
     sceUsbBus_driver_7B87815D();
     sceKernelDeleteFpl(g_fplId);
-    g_unk2 = 0;
+    g_usbBusDriverStarted = 0;
 
     return 0;
 }
@@ -508,10 +503,10 @@ static void recvComplete(struct UsbdDeviceReq *req)
 static int attachFunc(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                       void *arg3 __attribute__((unused)))
 {
-    u8 ret = g_usbBusDriverStarted;
+    u8 ret = g_isAccAttached;
 
     if (ret == 0)
-        g_usbBusDriverStarted = 1;
+        g_isAccAttached = 1;
 
     return ret;
 }
@@ -527,13 +522,13 @@ static int attachFunc(int speed __attribute__((unused)), void *arg2 __attribute_
 static int detachFunc(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
                       int arg3 __attribute__((unused)))
 {
-    if (g_usbBusDriverStarted == 0)
+    if (g_isAccAttached == 0)
         return 0;
 
-    g_usbBusDriverStarted = 0;
+    g_isAccAttached = 0;
     g_unk0 = 0;
-    g_endpoints[0].unk3 = 0;
-    g_endpoints[1].unk3 = 0;
+    g_endpoints[0].transferred = 0;
+    g_endpoints[1].transferred = 0;
 
     return 0;
 }

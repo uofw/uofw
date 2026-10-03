@@ -40,11 +40,11 @@
  */
 struct UsbEndpoint {
 	/** Endpoint number (must be filled in sequentially) */
-	int endpnum; 
+	int endpNumber; 
 	/** Filled in by the bus driver */
-	int unk2; 
+	int busEndpNumber; 
 	/** Filled in by the bus driver */
-	int unk3;
+	int transferred;
 };
 
 /**
@@ -186,7 +186,15 @@ int sceUsbbdUnregister(struct UsbDriver *drv);
  */
 int sceUsbbdReqSend(struct UsbdDeviceReq *req);
 
-int sceUsbBus_driver_8A3EB5D2(int);
+/* Real SCE names, verified via the NIDs: sceUsbbdAccessoryGetHostPowerStat,
+   sceUsbbdAccessoryUseHostPower, sceUsbbdAccessoryUnuseHostPower,
+   sceUsbbdAccessoryAuthenticated, sceUsbbdAccessoryGetAuthStat. The import
+   library only provides NID-named stubs, so the identifiers stay NID-style. */
+s32 sceUsbBus_driver_48CCE3C1(void);
+s32 sceUsbBus_driver_7B87815D(void);
+s32 sceUsbBus_driver_90B82F55(void *cb);
+s32 sceUsbBus_driver_FBA2072B(void);
+s32 sceUsbBus_driver_8A3EB5D2(void);
 
 #endif // USBBUS_H
 
