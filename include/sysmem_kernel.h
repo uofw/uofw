@@ -119,7 +119,7 @@ s32 sceKernelGetInitialRandomValue(void);
 s32 SysMemForKernel_A0A9185A(void);
 u32 SysMemForKernel_13EE28DA(u32 flag);
 u32 sceKernelGetModel(void);
-s32 sceKernelSetRebootKernel(s32 (*rebootKernel)());
+s32 sceKernelSetRebootKernel(s32 (*rebootKernel)(void*));
 s32 sceKernelRebootKernel(void *arg);
 s32 sceKernelRegisterGetIdFunc(void *func);
 s32 sceKernelGetId(const char *path, char *id);

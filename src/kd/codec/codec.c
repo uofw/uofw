@@ -125,7 +125,7 @@ int sub_0110()
     return 0;
 }
 
-void sub_0150()
+void sub_0150(int a __attribute((unused)))
 {
     int ret = 0;
     if (g_codec.unk97 != 0)

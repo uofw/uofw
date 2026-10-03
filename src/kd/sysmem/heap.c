@@ -52,7 +52,7 @@ SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name
     if (block == NULL) {
         // 2FD0
         sceKernelDeleteUID(uid->uid);
-        suspendIntr(oldIntr);
+        resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_FAILED_ALLOC_HEAPBLOCK;
     }
     block->next = block;

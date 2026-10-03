@@ -146,7 +146,7 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
     SceSysmemUidCB *uid;
     s32 ret = sceKernelCreateUID(g_PartType, name, (pspGetK1() >> 31) & 0xFF, &uid);
     if (ret != 0) {
-        suspendIntr(oldIntr);
+        resumeIntr(oldIntr);
         return ret;
     }
     // 402C

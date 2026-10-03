@@ -27,15 +27,15 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode);
 void dbg_printf(const char *format, ...);
 void dbg_puts(const char *str);
 #else
-static inline void dbg_init()
+static inline void dbg_init(int eraseLog __attribute__((unused)), FbMode fbMode __attribute__((unused)), FatMode fatMode __attribute__((unused)))
 {
 }
 
-static inline void dbg_printf()
+static inline void dbg_printf(const char *format __attribute__((unused)), ...)
 {
 }
 
-static inline void dbg_puts()
+static inline void dbg_puts(const char *str __attribute__((unused)))
 {
 }
 #endif
