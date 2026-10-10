@@ -23,6 +23,29 @@ SCE_MODULE_INFO("sceUSBCam_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIV
                                               | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 7);
 SCE_SDK_VERSION(SDK_VERSION);
 
+/* sceUSBCam error codes (0x802439xx). Values verified against the 6.60
+   disassembly; exact SCE names are unknown and the names/meanings below are
+   inferred from usage (cf. usbacc.c pattern). */
+#define SCE_ERROR_USBCAM_NOT_SETUP       0x80243901 /* feature not set up (setup flag clear) */
+#define SCE_ERROR_USBCAM_NOT_ATTACHED    0x80243902 /* device not attached / accessory auth failed */
+#define SCE_ERROR_USBCAM_INVALID_SIZE    0x80243903 /* workarea size/alignment invalid */
+#define SCE_ERROR_USBCAM_INVALID_ADDR    0x80243904 /* user pointer failed K1 check */
+#define SCE_ERROR_USBCAM_INVALID_RES     0x80243905 /* resolution combo invalid */
+#define SCE_ERROR_USBCAM_INVALID_VALUE   0x80243906 /* parameter out of range */
+#define SCE_ERROR_USBCAM_INVALID_PARAM   0x80243907 /* null/invalid parameter */
+#define SCE_ERROR_USBCAM_NOT_INIT        0x80243908 /* driver not started */
+#define SCE_ERROR_USBCAM_BUSY            0x80243909 /* request already in progress */
+#define SCE_ERROR_USBCAM_BUF_SMALL       0x8024390A /* user buffer smaller than available data */
+#define SCE_ERROR_USBCAM_INVALID_FREQ    0x8024390B /* mic sample rate not supported */
+#define SCE_ERROR_USBCAM_INVALID_STATE   0x8024390C /* wrong capture mode/state */
+#define SCE_ERROR_USBCAM_UNKNOWN_CMD     0x8024390D /* unknown ioctl/command */
+#define SCE_ERROR_USBCAM_NOT_READY       0x8024390E /* poll with nothing pending */
+#define SCE_ERROR_USBCAM_NO_CALLBACK     0x8024390F /* no lens callback registered */
+#define SCE_ERROR_USBCAM_ALREADY         0x80243910 /* callback already registered */
+#define SCE_ERROR_USBCAM_MIC_NOT_SETUP   0x80243911 /* mic workarea not set */
+#define SCE_ERROR_USBCAM_MIC_STATE       0x80243912 /* mic wrong mode */
+#define SCE_ERROR_USBCAM_REPLY_MISMATCH  0x80243913 /* last control reply tag mismatched (inferred) */
+
 /* Interface descriptor entry: descriptor plus endpoint/class-specific
    descriptor pointers and class-specific total length. */
 struct UsbIfDescEntry {
@@ -63,25 +86,7 @@ struct UsbConfBundle {
     void *epDesc;
 };
 
-/* Microphone device state (0x12C bytes). */
-struct MicState {
-    u8 unk0;
-    u8 pad[0x12B];
-};
-
-/* Video device state (0x1B8 bytes). */
-struct VideoState {
-    u8 unk0;
-    u8 pad0[0x18B];
-    s32 unk18C;
-    s32 unk190;
-    s32 unk194;
-    s32 unk198;
-    s32 unk19C;
-    s32 unk1A0;
-    u8 pad1[0x10];
-    s32 unk1B4;
-};
+/* Device state structs are defined in full next to the .bss instances below. */
 
 /* Callbacks referenced by the driver structures below. */
 int videoBusEvent(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
@@ -178,10 +183,11 @@ int packVideoConfig(u8 *out, struct UsbCamVideoReq *req);
 /* rodata maps (original module addresses in the comments). */
 /* 0x8CB8: bucket map read through a stack copy by encodeSharpness. */
 static const u8 s_map8CB8[4] = { 0, 1, 2, 3 };
-/* 0x8DE0: index map, encodeWidthCode and the sceUsbCamSetupVideo tail. */
-static const u8 s_map8DE0[10] = { 6, 5, 4, 3, 8, 7, 2, 1, 9, 0 };
-/* 0x8DEC: separate object, same contents as s_map8DE0 (encodeHeightCode). */
-static const u8 s_map8DEC[10] = { 6, 5, 4, 3, 8, 7, 2, 1, 9, 0 };
+/* 0x8DE0: width index map, encodeWidthCode and the sceUsbCamSetupVideo tail. */
+static const u8 s_widthIdxMap[10] = { 6, 5, 4, 3, 8, 7, 2, 1, 9, 0 };
+/* 0x8DEC: separate rodata object with identical contents (original has it
+   twice); kept as a second object for byte-exactness. */
+static const u8 s_heightIdxMap[10] = { 6, 5, 4, 3, 8, 7, 2, 1, 9, 0 };
 /* 0x8DF8: identity {0..7} searched by the sceUsbCamSetupVideo tail. */
 static const u8 s_map8DF8[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 /* 0x8E0C: {0,1,2} searched against g_videoState[0x16]. */
@@ -245,7 +251,17 @@ s32 drainMicBuffer(void *dst, int size);
    so it is declared locally here. Present in the original's import table. */
 s32 sceUsbAccIntrInReq(struct UsbdDeviceReq *req);
 
+/* The value below lives in the sceUsb range (cf. usbacc.c defines): a previous
+   accessory interrupt request completed with retcode > 0. Exact SCE name
+   unknown, value verified against the disassembly. */
+#define SCE_ERROR_USB_INTR_FAILED         0x80243006
+
 /* Forward declarations for functions defined further below. */
+/* ============================================================
+ * Section: microphone setup and streaming
+ * (forward declarations; definitions follow the video/still code)
+ * ============================================================ */
+
 s32 commitMicSetup(void *cmd, int flag, void *workarea, int wasize);
 s32 sendMicStart(void);
 s32 startMicSync(void);
@@ -255,8 +271,6 @@ void *conditionalSwapCopy(void *dst, void *src, int size);
 
 s32 sendMicSetup(void);
 
-/* u16 accessor for the mic state; the gain slot lives at +0x0A. */
-#define MIC_HALF(off) (*(u16 *)((u8 *)&g_micState + (off)))
 
 /* Mic setup param layouts; the SDK spells them PspUsbCamSetupMicParam /
    PspUsbCamSetupMicExParam. The kernel reads param..param+20 /
@@ -312,7 +326,8 @@ u8 g_videoEpOutDesc[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* Isochronous IN endpoint descriptor (7 bytes) + padding. */
+/* Isochronous endpoint descriptor (7 bytes) + padding. Address byte is
+   0x02 exactly as in the original (direction bit clear); kept byte-exact. */
 u8 g_videoEpIsoDesc[32] = {
     0x07, 0x05, 0x02, 0x05, 0x80, 0x03, 0x01, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -435,7 +450,8 @@ u8 g_micCsDescs2[20] = {
     0xAC, 0x00, 0x00, 0x00
 };
 
-/* Interface 1, alternate setting 0 (control). */
+/* Interface 0, alternate setting 0 (control). bInterfaceNumber is 0x00
+   in the original data; the old comment saying "Interface 1" was wrong. */
 struct UsbIfDescEntry g_micIfCtrl = {
     { 0x09, 0x04, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01 },
     NULL,
@@ -443,7 +459,7 @@ struct UsbIfDescEntry g_micIfCtrl = {
     0x1E
 };
 
-/* Interface 1, alternate setting 0 of the streaming interface. */
+/* Alternate setting 0 of the streaming interface (bInterfaceNumber 0x01). */
 struct UsbIfDescEntry g_micIfAlt1 = {
     { 0x09, 0x04, 0x01, 0x00, 0x00, 0x01, 0x02, 0x00, 0x01 },
     NULL,
@@ -451,7 +467,7 @@ struct UsbIfDescEntry g_micIfAlt1 = {
     0
 };
 
-/* Interface 1, alternate setting 1 (isochronous streaming). */
+/* Alternate setting 1 of the streaming interface (isochronous). */
 struct UsbIfDescEntry g_micIfAlt2 = {
     { 0x09, 0x04, 0x01, 0x01, 0x01, 0x01, 0x02, 0x00, 0x01 },
     &g_micEpEntry,
@@ -522,88 +538,260 @@ struct UsbDriver g_micDriver = {
     .link = NULL
 };
 
+/* ============================================================
+ * Descriptors and driver registration data (byte-exact blobs) are above;
+ * device state follows.
+ * ============================================================ */
+
 /*
  * Device states (.bss, laid out as in the original: microphone state at
- * 0x93D0, video state at 0x94FC).
+ * 0x93D0, video state at 0x94FC). Single struct per device; all former
+ * offset macros (VIDEO_x / MIC_x) are named fields below (offsets in comments).
  */
+
+/* 32-byte packed video config written by packVideoConfig at +0x0C. */
+struct VideoCfg {
+    u8 width;       /* +0x0C */
+    u8 height;      /* +0x0D */
+    u8 framerate;   /* +0x0E */
+    u8 unk0F;       /* +0x0F */
+    u8 unk10;       /* +0x10 */
+    u8 wb;          /* +0x11 */
+    u8 unk12;       /* +0x12 */
+    u8 unk13;       /* +0x13 */
+    u8 unk14;       /* +0x14 */
+    u8 unk15;       /* +0x15 */
+    u8 antiflicker; /* +0x16 */
+    u8 unk17;       /* +0x17 */
+    u16 unk18;      /* +0x18 */
+    u16 unk1A;      /* +0x1A */
+    u16 unk1C;      /* +0x1C */
+    u8 effect;      /* +0x1E */
+    u8 unk1F;       /* +0x1F */
+    u8 res;         /* +0x20 */
+    u8 unk21;       /* +0x21 */
+    u16 unk22;      /* +0x22 */
+    u16 unk24;      /* +0x24 */
+    u8 unk26[5];    /* +0x26..0x2A (unobserved) */
+    u8 ev;          /* +0x2B */
+};
+
+_Static_assert(sizeof(struct VideoCfg) == 32, "VideoCfg size");
+_Static_assert(__builtin_offsetof(struct VideoCfg, width) == 0x00, "VideoCfg.width");
+_Static_assert(__builtin_offsetof(struct VideoCfg, height) == 0x01, "VideoCfg.height");
+_Static_assert(__builtin_offsetof(struct VideoCfg, framerate) == 0x02, "VideoCfg.framerate");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk0F) == 0x03, "VideoCfg.unk0F");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk10) == 0x04, "VideoCfg.unk10");
+_Static_assert(__builtin_offsetof(struct VideoCfg, wb) == 0x05, "VideoCfg.wb");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk12) == 0x06, "VideoCfg.unk12");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk13) == 0x07, "VideoCfg.unk13");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk14) == 0x08, "VideoCfg.unk14");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk15) == 0x09, "VideoCfg.unk15");
+_Static_assert(__builtin_offsetof(struct VideoCfg, antiflicker) == 0x0A, "VideoCfg.antiflicker");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk17) == 0x0B, "VideoCfg.unk17");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk18) == 0x0C, "VideoCfg.unk18");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk1A) == 0x0E, "VideoCfg.unk1A");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk1C) == 0x10, "VideoCfg.unk1C");
+_Static_assert(__builtin_offsetof(struct VideoCfg, effect) == 0x12, "VideoCfg.effect");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk1F) == 0x13, "VideoCfg.unk1F");
+_Static_assert(__builtin_offsetof(struct VideoCfg, res) == 0x14, "VideoCfg.res");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk21) == 0x15, "VideoCfg.unk21");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk22) == 0x16, "VideoCfg.unk22");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk24) == 0x18, "VideoCfg.unk24");
+_Static_assert(__builtin_offsetof(struct VideoCfg, unk26) == 0x1A, "VideoCfg.unk26");
+_Static_assert(__builtin_offsetof(struct VideoCfg, ev) == 0x1F, "VideoCfg.ev");
+
+struct VideoDescState {
+    void *buf;   /* +0x00 */
+    int len;     /* +0x04 */
+    int cap;     /* +0x08 */
+    void *next;  /* +0x0C */
+};
+
+/* Video device state (0x1B8 bytes). */
+struct VideoState {
+    u8 started;         /* +0x00: driver started */
+    u8 setupFlags;      /* +0x01: bit0 video setup, bit1 stream setup */
+    u8 attached;        /* +0x02: accessory configured */
+    u8 altSetting;      /* +0x03: current alt setting */
+    u8 mode;            /* +0x04: capture mode */
+    u8 aux;             /* +0x05 */
+    u8 activeSlot;      /* +0x06: half-buffer being filled */
+    u8 peerSlot;        /* +0x07 */
+    u32 flags;          /* +0x08 */
+    struct VideoCfg cfg;/* +0x0C */
+    union {             /* +0x2C..0x43 */
+        u32 w[6];
+        u8 b[24];
+    } cfgTail;          /* [0] observed as frame clamp */
+    struct UsbdDeviceReq intrReq;   /* +0x44 (was reqB): accessory intr */
+    void *cmdBuf;                   /* +0x6C */
+    struct DeviceRequest setup;     /* +0x70 */
+    struct UsbdDeviceReq ep0Req;    /* +0x78 (was reqA) */
+    void *ep0Buf;                   /* +0xA0 */
+    struct UsbdDeviceReq isoReq[2]; /* +0xA4 (was items) */
+    void *frameBuf[2];              /* +0xF4 (was frameBufs) */
+    struct UsbdDeviceReq bulkReq;   /* +0xFC (was reqC) */
+    void *bulkBuf;                  /* +0x124 */
+    void *xferHead;                 /* +0x128 (was pad128[0]) */
+    void *xferTail;                 /* +0x12C (was pad128[4]) */
+    struct VideoDescState desc[2];  /* +0x130 */
+    u32 workBase;       /* +0x150: video workarea base */
+    u32 workHalf;       /* +0x154 */
+    struct {              /* +0x158/+0x160: half-buffer {base,fill} pairs */
+        u32 buf;            /* +0x158/+0x160 */
+        u32 len;            /* +0x15C/+0x164 */
+    } slot[2];
+    u32 frameSeq;       /* +0x168 */
+    u32 fragHdr;        /* +0x16C (was unk16C) */
+    u32 fragTotal;      /* +0x170 (was unk170) */
+    u32 stillSize;      /* +0x174 */
+    u32 stillAvail;     /* +0x178 */
+    u32 stillBuf;       /* +0x17C */
+    u32 xferResult;    /* +0x180: completion result of last frame/still transfer */
+    u32 xferLength;    /* +0x184: clamped byte count of last transfer */
+    sceKernelDmaOperation *dmaOp; /* +0x188 (was unk188) */
+    s32 fplId;          /* +0x18C */
+    s32 eventflag;      /* +0x190 */
+    s32 sema;           /* +0x194 */
+    s32 mutex;          /* +0x198 */
+    s32 threadVideo;    /* +0x19C (was thread1) */
+    s32 threadCopy;     /* +0x1A0 (was thread2) */
+    s32 lensCbid;       /* +0x1A4 (was unk1A4) */
+    u32 replyMismatch;  /* +0x1A8: last EP0 control-reply tag check nonzero = mismatch */
+    u32 readSize;       /* +0x1AC */
+    u32 readBuf;        /* +0x1B0 */
+    u32 resEx;          /* +0x1B4: Ext resolution / 1280 threshold */
+};
+
+_Static_assert(sizeof(struct VideoState) == 0x1B8, "VideoState size");
+_Static_assert(__builtin_offsetof(struct VideoState, started) == 0x0, "VideoState.started");
+_Static_assert(__builtin_offsetof(struct VideoState, setupFlags) == 0x1, "VideoState.setupFlags");
+_Static_assert(__builtin_offsetof(struct VideoState, attached) == 0x2, "VideoState.attached");
+_Static_assert(__builtin_offsetof(struct VideoState, altSetting) == 0x3, "VideoState.altSetting");
+_Static_assert(__builtin_offsetof(struct VideoState, mode) == 0x4, "VideoState.mode");
+_Static_assert(__builtin_offsetof(struct VideoState, aux) == 0x5, "VideoState.aux");
+_Static_assert(__builtin_offsetof(struct VideoState, activeSlot) == 0x6, "VideoState.activeSlot");
+_Static_assert(__builtin_offsetof(struct VideoState, peerSlot) == 0x7, "VideoState.peerSlot");
+_Static_assert(__builtin_offsetof(struct VideoState, flags) == 0x8, "VideoState.flags");
+_Static_assert(__builtin_offsetof(struct VideoState, cfg) == 0xC, "VideoState.cfg");
+_Static_assert(__builtin_offsetof(struct VideoState, cfgTail) == 0x2C, "VideoState.cfgTail");
+_Static_assert(__builtin_offsetof(struct VideoState, intrReq) == 0x44, "VideoState.intrReq");
+_Static_assert(__builtin_offsetof(struct VideoState, cmdBuf) == 0x6C, "VideoState.cmdBuf");
+_Static_assert(__builtin_offsetof(struct VideoState, setup) == 0x70, "VideoState.setup");
+_Static_assert(__builtin_offsetof(struct VideoState, ep0Req) == 0x78, "VideoState.ep0Req");
+_Static_assert(__builtin_offsetof(struct VideoState, ep0Buf) == 0xA0, "VideoState.ep0Buf");
+_Static_assert(__builtin_offsetof(struct VideoState, isoReq) == 0xA4, "VideoState.isoReq");
+_Static_assert(__builtin_offsetof(struct VideoState, frameBuf) == 0xF4, "VideoState.frameBuf");
+_Static_assert(__builtin_offsetof(struct VideoState, bulkReq) == 0xFC, "VideoState.bulkReq");
+_Static_assert(__builtin_offsetof(struct VideoState, bulkBuf) == 0x124, "VideoState.bulkBuf");
+_Static_assert(__builtin_offsetof(struct VideoState, xferHead) == 0x128, "VideoState.xferHead");
+_Static_assert(__builtin_offsetof(struct VideoState, xferTail) == 0x12C, "VideoState.xferTail");
+_Static_assert(__builtin_offsetof(struct VideoState, desc) == 0x130, "VideoState.desc");
+_Static_assert(__builtin_offsetof(struct VideoState, workBase) == 0x150, "VideoState.workBase");
+_Static_assert(__builtin_offsetof(struct VideoState, workHalf) == 0x154, "VideoState.workHalf");
+_Static_assert(__builtin_offsetof(struct VideoState, slot) == 0x158, "VideoState.slot");
+_Static_assert(__builtin_offsetof(struct VideoState, frameSeq) == 0x168, "VideoState.frameSeq");
+_Static_assert(__builtin_offsetof(struct VideoState, fragHdr) == 0x16C, "VideoState.fragHdr");
+_Static_assert(__builtin_offsetof(struct VideoState, fragTotal) == 0x170, "VideoState.fragTotal");
+_Static_assert(__builtin_offsetof(struct VideoState, stillSize) == 0x174, "VideoState.stillSize");
+_Static_assert(__builtin_offsetof(struct VideoState, stillAvail) == 0x178, "VideoState.stillAvail");
+_Static_assert(__builtin_offsetof(struct VideoState, stillBuf) == 0x17C, "VideoState.stillBuf");
+_Static_assert(__builtin_offsetof(struct VideoState, xferResult) == 0x180, "VideoState.xferResult");
+_Static_assert(__builtin_offsetof(struct VideoState, xferLength) == 0x184, "VideoState.xferLength");
+_Static_assert(__builtin_offsetof(struct VideoState, dmaOp) == 0x188, "VideoState.dmaOp");
+_Static_assert(__builtin_offsetof(struct VideoState, fplId) == 0x18C, "VideoState.fplId");
+_Static_assert(__builtin_offsetof(struct VideoState, eventflag) == 0x190, "VideoState.eventflag");
+_Static_assert(__builtin_offsetof(struct VideoState, sema) == 0x194, "VideoState.sema");
+_Static_assert(__builtin_offsetof(struct VideoState, mutex) == 0x198, "VideoState.mutex");
+_Static_assert(__builtin_offsetof(struct VideoState, threadVideo) == 0x19C, "VideoState.threadVideo");
+_Static_assert(__builtin_offsetof(struct VideoState, threadCopy) == 0x1A0, "VideoState.threadCopy");
+_Static_assert(__builtin_offsetof(struct VideoState, lensCbid) == 0x1A4, "VideoState.lensCbid");
+_Static_assert(__builtin_offsetof(struct VideoState, replyMismatch) == 0x1A8, "VideoState.replyMismatch");
+_Static_assert(__builtin_offsetof(struct VideoState, readSize) == 0x1AC, "VideoState.readSize");
+_Static_assert(__builtin_offsetof(struct VideoState, readBuf) == 0x1B0, "VideoState.readBuf");
+_Static_assert(__builtin_offsetof(struct VideoState, resEx) == 0x1B4, "VideoState.resEx");
+
+/* Microphone device state (0x12C bytes). +0x08..0x15 is the 14-byte
+   setup block (gain at +0x0A); +0x18..0x34 is the ring-buffer state. */
+struct MicState {
+    u8 started;     /* +0x00 */
+    u8 setupFlags;  /* +0x01 */
+    u8 attached;    /* +0x02 */
+    u8 altSetting;  /* +0x03 */
+    u8 mode;        /* +0x04 */
+    u8 aux;         /* +0x05 */
+    u8 rateFlag;    /* +0x06: nonzero = 132-byte units */
+    u8 pad07;
+    u16 cmdLo;      /* +0x08 */
+    u16 gain;       /* +0x0A */
+    u32 cmd0C;      /* +0x0C */
+    u32 cmd10;      /* +0x10 */
+    u16 cmd14;      /* +0x14 */
+    u8 pad16b[2];   /* +0x16 */
+    u32 setupOk;    /* +0x18: mic workarea installed */
+    u32 bufSize;    /* +0x1C */
+    u32 ringCapacity; /* +0x20: slots (132-byte mode) or bytes */
+    u32 writePos;   /* +0x24 */
+    u32 readPos;    /* +0x28 */
+    u32 writeCursor; /* +0x2C: slot index (132-byte mode) or write pointer */
+    u32 bufBase;     /* +0x30: ring buffer base */
+    u32 status;     /* +0x34 */
+    struct UsbdDeviceReq intrReq;   /* +0x38 (was reqD) */
+    void *ep0Buf;                   /* +0x60 */
+    struct UsbdDeviceReq isoReq[4]; /* +0x64 (was reqs) */
+    void *pcmBuf[4];                /* +0x104 (was bufs) */
+    s32 eventflag;  /* +0x114 */
+    s32 fplId;      /* +0x118 */
+    s32 thread;     /* +0x11C */
+    u32 readSize;   /* +0x120 */
+    u32 readBuf;    /* +0x124 */
+    u32 swapMode;   /* +0x128 (was unk128): nonzero = 16-bit-swap copies */
+};
+
+_Static_assert(sizeof(struct MicState) == 0x12C, "MicState size");
+_Static_assert(__builtin_offsetof(struct MicState, started) == 0x0, "MicState.started");
+_Static_assert(__builtin_offsetof(struct MicState, setupFlags) == 0x1, "MicState.setupFlags");
+_Static_assert(__builtin_offsetof(struct MicState, attached) == 0x2, "MicState.attached");
+_Static_assert(__builtin_offsetof(struct MicState, altSetting) == 0x3, "MicState.altSetting");
+_Static_assert(__builtin_offsetof(struct MicState, mode) == 0x4, "MicState.mode");
+_Static_assert(__builtin_offsetof(struct MicState, aux) == 0x5, "MicState.aux");
+_Static_assert(__builtin_offsetof(struct MicState, rateFlag) == 0x6, "MicState.rateFlag");
+_Static_assert(__builtin_offsetof(struct MicState, cmdLo) == 0x8, "MicState.cmdLo");
+_Static_assert(__builtin_offsetof(struct MicState, gain) == 0xA, "MicState.gain");
+_Static_assert(__builtin_offsetof(struct MicState, cmd0C) == 0xC, "MicState.cmd0C");
+_Static_assert(__builtin_offsetof(struct MicState, cmd10) == 0x10, "MicState.cmd10");
+_Static_assert(__builtin_offsetof(struct MicState, cmd14) == 0x14, "MicState.cmd14");
+_Static_assert(__builtin_offsetof(struct MicState, setupOk) == 0x18, "MicState.setupOk");
+_Static_assert(__builtin_offsetof(struct MicState, bufSize) == 0x1C, "MicState.bufSize");
+_Static_assert(__builtin_offsetof(struct MicState, ringCapacity) == 0x20, "MicState.ringCapacity");
+_Static_assert(__builtin_offsetof(struct MicState, writePos) == 0x24, "MicState.writePos");
+_Static_assert(__builtin_offsetof(struct MicState, readPos) == 0x28, "MicState.readPos");
+_Static_assert(__builtin_offsetof(struct MicState, writeCursor) == 0x2C, "MicState.writeCursor");
+_Static_assert(__builtin_offsetof(struct MicState, bufBase) == 0x30, "MicState.bufBase");
+_Static_assert(__builtin_offsetof(struct MicState, status) == 0x34, "MicState.status");
+_Static_assert(__builtin_offsetof(struct MicState, intrReq) == 0x38, "MicState.intrReq");
+_Static_assert(__builtin_offsetof(struct MicState, ep0Buf) == 0x60, "MicState.ep0Buf");
+_Static_assert(__builtin_offsetof(struct MicState, isoReq) == 0x64, "MicState.isoReq");
+_Static_assert(__builtin_offsetof(struct MicState, pcmBuf) == 0x104, "MicState.pcmBuf");
+_Static_assert(__builtin_offsetof(struct MicState, eventflag) == 0x114, "MicState.eventflag");
+_Static_assert(__builtin_offsetof(struct MicState, fplId) == 0x118, "MicState.fplId");
+_Static_assert(__builtin_offsetof(struct MicState, thread) == 0x11C, "MicState.thread");
+_Static_assert(__builtin_offsetof(struct MicState, readSize) == 0x120, "MicState.readSize");
+_Static_assert(__builtin_offsetof(struct MicState, readBuf) == 0x124, "MicState.readBuf");
+_Static_assert(__builtin_offsetof(struct MicState, swapMode) == 0x128, "MicState.swapMode");
+
 struct MicState g_micState = { 0 };
 struct VideoState g_videoState = { 0 };
 
-struct VideoDescState {
-    void *unk0;
-    int unk4;
-    int unk8;
-    void *unkC;
-};
 
-/* Full view of g_videoState (0x1B8 bytes). Offsets 0x18C..0x1A4 map to
-   the VideoState fields unk18C..unk1A0 (fplId/eventflag/sema/mutex/
-   thread1/thread2) plus unk1A4 here. */
-struct VideoStateFull {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-    u8 unk4;
-    u8 unk5;
-    u8 pad06[2];
-    u32 unk8;
-    u8 pad0C[0x38];
-    struct UsbdDeviceReq reqB;
-    void *unk6C;
-    struct DeviceRequest setup;
-    struct UsbdDeviceReq reqA;
-    void *unkA0;
-    struct UsbdDeviceReq items[2];
-    void *frameBufs[2];
-    struct UsbdDeviceReq reqC;
-    void *unk124;
-    u8 pad128[8];
-    struct VideoDescState desc[2];
-    u8 pad150[0x1C];
-    s32 unk16C;
-    s32 unk170;
-    u8 pad174[0x14];
-    sceKernelDmaOperation *unk188;
-    s32 fplId;
-    s32 eventflag;
-    s32 sema;
-    s32 mutex;
-    s32 thread1;
-    s32 thread2;
-    s32 unk1A4;
-    u8 pad1A8[0xC];
-    s32 unk1B4;
-};
-
-_Static_assert(sizeof(struct VideoStateFull) == 0x1B8, "VideoStateFull size");
-
-/* Full view of g_micState (0x12C bytes). */
-struct MicStateFull {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-    u8 unk4;
-    u8 unk5;
-    u8 pad06[2];
-    u32 unk8;
-    u32 unkC;
-    u32 unk10;
-    u16 unk14;
-    u8 pad16[0x22];
-    struct UsbdDeviceReq reqD;
-    void *unk60;
-    struct UsbdDeviceReq reqs[4];
-    void *bufs[4];
-    s32 eventflag;
-    s32 fplId;
-    s32 thread;
-    u8 pad120[8];
-    s32 unk128;
-};
-
-_Static_assert(sizeof(struct MicStateFull) == 0x12C, "MicStateFull size");
+/* Byte-offset accessor for the computed-offset merger idioms (the slot,
+   slotLen and poff local variables hold struct byte offsets, and poff
+   selects the active slot[i] pair). All fixed offsets use named fields. */
+static inline u32 *videoWordAt(u32 off)
+{
+    return (u32 *)((u8 *)&g_videoState + off);
+}
 
 /* (bmRequestType, bRequest) pairs, table at 0x8EDC. */
 static const u8 g_ctlRequests[6][8] = {
@@ -615,45 +803,42 @@ static const u8 g_ctlRequests[6][8] = {
     { 0x41, 0x0A }
 };
 
-/* State members not named in struct MicState / struct VideoState yet. */
-#define MIC_BYTE(off)   (((u8 *)&g_micState)[(off)])
-#define MIC_WORD(off)   (*(u32 *)((u8 *)&g_micState + (off)))
-#define VIDEO_BYTE(off) (((u8 *)&g_videoState)[(off)])
-#define VIDEO_WORD(off) (*(u32 *)((u8 *)&g_videoState + (off)))
-#define VIDEO_HALF(off) (*(u16 *)((u8 *)&g_videoState + (off)))
+/* ============================================================
+ * Section: video accessory commands and attach/detach
+ * ============================================================ */
 
 /* 0x00000000 sendAccCommand */
 int sendAccCommand(int cmd, int arg1, void *buf, int len)
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     u8 *cb;
     s32 res;
 
-    if (st->unk2 == 0)
-        return 0x80243902;
+    if (st->attached == 0)
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     res = sceKernelWaitSema(st->sema, 1, NULL);
     if (res == (s32)0x800201A9)
         return 0;
     if (res < 0)
         return res;
-    if (st->reqB.retcode > 0) {
+    if (st->intrReq.retcode > 0) {
         sceKernelSignalSema(st->sema, 1);
-        return 0x80243006;
+        return SCE_ERROR_USB_INTR_FAILED;
     }
-    cb = st->unk6C;
+    cb = st->cmdBuf;
     cb[2] = cmd;
     *(u16 *)cb = arg1;
     cb[3] = len;
     if (buf != NULL)
         memcpy(cb + 4, buf, len);
-    return sceUsbAccIntrInReq(&st->reqB);
+    return sceUsbAccIntrInReq(&st->intrReq);
 }
 
 
 /* 0x000000F4 sendReverseFlags */
 int sendReverseFlags(void *buf)
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     s32 res;
 
     res = sceKernelLockMutex(st->mutex, 1, NULL);
@@ -668,7 +853,7 @@ int sendReverseFlags(void *buf)
 /* 0x00000170 queryReverseState */
 int queryReverseState(void *arg)
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     u32 bits;
     u32 word;
     u8 *cb;
@@ -676,7 +861,7 @@ int queryReverseState(void *arg)
 
     res = sceKernelLockMutex(st->mutex, 1, NULL);
     if ((u32)res - 0x800201A9u < 2)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
 
@@ -688,11 +873,11 @@ int queryReverseState(void *arg)
     if (res < 0)
         goto unlock;
     if (bits & 0x400) {
-        res = 0x80243902;
+        res = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto unlock;
     }
 
-    cb = st->unk6C;
+    cb = st->cmdBuf;
     __builtin_memcpy(arg, cb + 4, 4);
     word = *(u32 *)arg;
     word &= 0x00FFFFFF;
@@ -704,19 +889,19 @@ int queryReverseState(void *arg)
 
     word = *(u32 *)arg;
     if (word & 1)
-        st->unk8 |= 0x200;
+        st->flags |= 0x200;
     else
-        st->unk8 &= ~0x200u;
+        st->flags &= ~0x200u;
     word = *(u32 *)arg;
     if (word & 0x100)
-        st->unk8 |= 0x100;
+        st->flags |= 0x100;
     else
-        st->unk8 &= ~0x100u;
+        st->flags &= ~0x100u;
     word = *(u32 *)arg;
     if (word & 0x10000)
-        st->unk8 |= 0x400;
+        st->flags |= 0x400;
     else
-        st->unk8 &= ~0x400u;
+        st->flags &= ~0x400u;
 
 unlock:
     sceKernelUnlockMutex(st->mutex, 1);
@@ -726,49 +911,49 @@ unlock:
 
 int videoBusEvent(int arg1 __attribute__((unused)), int arg2, int arg3 __attribute__((unused)))
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     int ret = 0;
 
     if (arg1 != 0)
         return ret;
     if (arg2 == 0) {
-        if (st->unk3 == 1) {
-            if (st->unk8 & 0x18) {
+        if (st->altSetting == 1) {
+            if (st->flags & 0x18) {
                 sceKernelClearEventFlag(st->eventflag, 0xFFF7FFFF);
                 ret = sceKernelSetEventFlag(st->eventflag, 0x100);
-                st->unk8 &= ~0x18;
+                st->flags &= ~0x18;
             } else {
-                st->unk5 = 0;
+                st->aux = 0;
                 sceKernelClearEventFlag(st->eventflag, 0xFFFFFFEF);
                 ret = sceKernelSetEventFlag(st->eventflag, 0x100);
             }
         } else {
             ret = sceKernelClearEventFlag(st->eventflag, 0xFFFFCEFF);
-            st->unk16C = 0;
-            st->unk170 = 0;
-            if ((u32)st->unk1B4 < 1280) {
-                sceKernelDcacheInvalidateRange(st->unk124, 128);
-                ret = sceUsbbdReqRecv(&st->reqC);
+            st->fragHdr = 0;
+            st->fragTotal = 0;
+            if ((u32)st->resEx < 1280) {
+                sceKernelDcacheInvalidateRange(st->bulkBuf, 128);
+                ret = sceUsbbdReqRecv(&st->bulkReq);
             }
         }
     } else if (arg2 == 1) {
         sceKernelClearEventFlag(st->eventflag, 0xFFFFFEF9);
-        if (st->unk8 & 8) {
-            st->unk16C = 0;
-            st->unk170 = 0;
+        if (st->flags & 8) {
+            st->fragHdr = 0;
+            st->fragTotal = 0;
             sceKernelSetEventFlag(st->eventflag, 0x80000);
         } else {
             sceKernelSetEventFlag(st->eventflag, 0x10);
         }
         ret = startIsoReceives();
     }
-    st->unk3 = (u8)arg2;
+    st->altSetting = (u8)arg2;
     return ret;
 }
 
 int micBusEvent(int arg1, int arg2, int arg3 __attribute__((unused)))
 {
-    struct MicStateFull *st = (struct MicStateFull *)&g_micState;
+    struct MicState *st = (struct MicState *)&g_micState;
     int ret = 0;
     int i;
 
@@ -777,36 +962,36 @@ int micBusEvent(int arg1, int arg2, int arg3 __attribute__((unused)))
     if (arg2 == 0) {
         sceKernelClearEventFlag(st->eventflag, 0xFFFFFFEF);
         ret = sceKernelSetEventFlag(st->eventflag, 32);
-        st->unk4 = 0;
+        st->mode = 0;
     } else {
         sceKernelClearEventFlag(st->eventflag, 0xFFFFFFDE);
         sceKernelSetEventFlag(st->eventflag, 16);
         for (i = 0; i < 4; i++) {
-            memset(st->bufs[i], 0, 256);
-            sceKernelDcacheInvalidateRange(st->bufs[i], 256);
-            st->reqs[i].unk1c = (int)&st->reqs[i + 1];
+            memset(st->pcmBuf[i], 0, 256);
+            sceKernelDcacheInvalidateRange(st->pcmBuf[i], 256);
+            st->isoReq[i].unk1c = (int)&st->isoReq[i + 1];
         }
-        st->reqs[3].unk1c = 0;
-        sceUsbbdReqRecv(&st->reqs[0]);
+        st->isoReq[3].unk1c = 0;
+        sceUsbbdReqRecv(&st->isoReq[0]);
         ret = 1;
-        st->unk4 = 1;
+        st->mode = 1;
     }
-    st->unk3 = (u8)arg2;
+    st->altSetting = (u8)arg2;
     return ret;
 }
 
 int videoDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     int i;
 
-    if (st->unk2 == 0)
+    if (st->attached == 0)
         return 0;
-    st->unk4 = 2;
-    st->unk1 = 0;
-    st->unk2 = 0;
-    st->unk3 = 0;
-    st->unk8 = 0;
+    st->mode = 2;
+    st->setupFlags = 0;
+    st->attached = 0;
+    st->altSetting = 0;
+    st->flags = 0;
     for (i = 0; i < 3; i++)
         g_videoEndpoints[i].transferred = 0;
     sceKernelClearEventFlag(st->eventflag, 0);
@@ -817,19 +1002,19 @@ int videoDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused
 
 int micDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
 {
-    struct MicStateFull *st = (struct MicStateFull *)&g_micState;
+    struct MicState *st = (struct MicState *)&g_micState;
     int i;
 
-    if (st->unk2 == 0)
+    if (st->attached == 0)
         return 0;
-    st->unk4 = 5;
-    st->unk2 = 0;
-    st->unk3 = 0;
+    st->mode = 5;
+    st->attached = 0;
+    st->altSetting = 0;
     for (i = 0; i < 2; i++)
         g_micEndpoints[i].transferred = 0;
     sceKernelClearEventFlag(st->eventflag, 0);
     sceKernelSetEventFlag(st->eventflag, 256);
-    st->unk128 = 0;
+    st->swapMode = 0;
     /* Original returns 0x10000 (lui residue of the g_micState address
        materialized for the store above), not 0 (verified against the disassembly). */
     return 0;
@@ -837,7 +1022,7 @@ int micDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused))
 
 int videoRecvCtl(int arg1 __attribute__((unused)), int arg2, struct DeviceRequest *req)
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     u8 *blk;
     int res;
     int i;
@@ -852,18 +1037,18 @@ int videoRecvCtl(int arg1 __attribute__((unused)), int arg2, struct DeviceReques
     if (i == 6)
         return -1;
     if ((s8)req->bmRequestType < 0) {
-        blk = (u8 *)st->unkA0;
+        blk = (u8 *)st->ep0Buf;
         if (req->bRequest == 3) {
-            st->reqA.data = blk;
+            st->ep0Req.data = blk;
             blk[4] = 2;
             blk[5] = 0;
             blk[0] = 0;
             blk[1] = 0;
             blk[2] = 0;
             blk[3] = 0;
-            st->reqA.size = 6;
+            st->ep0Req.size = 6;
         } else if (req->bRequest == 8) {
-            st->reqA.data = blk;
+            st->ep0Req.data = blk;
             blk[0] = 1;
             blk[1] = 0;
             blk[2] = 0;
@@ -872,30 +1057,30 @@ int videoRecvCtl(int arg1 __attribute__((unused)), int arg2, struct DeviceReques
             blk[5] = 0;
             blk[6] = 0;
             blk[7] = 0;
-            st->reqA.size = 8;
+            st->ep0Req.size = 8;
         } else {
             return 0;
         }
-        sceKernelDcacheWritebackRange(st->reqA.data, st->reqA.size);
-        res = sceUsbbdReqSend(&st->reqA);
+        sceKernelDcacheWritebackRange(st->ep0Req.data, st->ep0Req.size);
+        res = sceUsbbdReqSend(&st->ep0Req);
         if (res < 0)
             Kprintf("%sin %s : Cannot issue send request : 0x%08x\n", "", "DevReqHdlr", res);
         return 0;
     }
     if (req->bRequest == 7 || req->bRequest == 9 ||
         (req->bRequest == 10 && st->setup.wValue == 16)) {
-        st->reqA.retcode = 0;
-        st->reqA.size = req->wLength;
-        st->reqA.data = st->unkA0;
-        sceKernelDcacheInvalidateRange(st->reqA.data, 128);
-        sceUsbbdReqRecv(&st->reqA);
+        st->ep0Req.retcode = 0;
+        st->ep0Req.size = req->wLength;
+        st->ep0Req.data = st->ep0Buf;
+        sceKernelDcacheInvalidateRange(st->ep0Req.data, 128);
+        sceUsbbdReqRecv(&st->ep0Req);
     }
     return 0;
 }
 
 int videoDriverStart(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     void *block;
     int res;
     int i;
@@ -909,27 +1094,27 @@ int videoDriverStart(int size __attribute__((unused)), void *args __attribute__(
     st->fplId = res;
     if (sceKernelTryAllocateFpl(st->fplId, &block) < 0)
         goto fail;
-    st->unkA0 = block;
-    st->frameBufs[0] = (u8 *)block + 128;
-    st->frameBufs[1] = (u8 *)block + 1920;
-    st->unk6C = (u8 *)block + 3840;
-    st->unk124 = (u8 *)block + 3712;
+    st->ep0Buf = block;
+    st->frameBuf[0] = (u8 *)block + 128;
+    st->frameBuf[1] = (u8 *)block + 1920;
+    st->cmdBuf = (u8 *)block + 3840;
+    st->bulkBuf = (u8 *)block + 3712;
     for (i = 0; i < 2; i++) {
-        st->desc[i].unk0 = (u8 *)block + 3904 + i * 896;
-        st->desc[i].unkC = (void *)((u8 *)st + 0x140 + i * 16);
-        st->desc[i].unk4 = 0;
+        st->desc[i].buf = (u8 *)block + 3904 + i * 896;
+        st->desc[i].next = (void *)((u8 *)st + 0x140 + i * 16);
+        st->desc[i].len = 0;
     }
-    st->desc[1].unkC = &st->desc[0];
+    st->desc[1].next = &st->desc[0];
     res = sceKernelCreateThread("SceUsbCam", videoWorkerThread, 17, 1024, 0x100001, NULL);
-    st->thread1 = res;
+    st->threadVideo = res;
     if (res < 0)
         goto fail;
     res = sceKernelCreateThread("SceUsbCamCopyWorker", videoCopyWorker, 17, 1024, 0x100001, NULL);
     if (res < 0) {
-        st->thread2 = -1;
+        st->threadCopy = -1;
         goto fail;
     }
-    st->thread2 = res;
+    st->threadCopy = res;
     res = sceKernelCreateEventFlag("SceUsbCam", 513, 1024, NULL);
     if (res < 0) {
         st->eventflag = -1;
@@ -948,51 +1133,51 @@ int videoDriverStart(int size __attribute__((unused)), void *args __attribute__(
         goto fail;
     }
     st->mutex = res;
-    st->reqA.data = st->unkA0;
-    st->reqB.data = st->unk6C;
-    st->reqC.data = st->unk124;
-    st->reqC.endp = &g_videoEndpoints[1];
-    st->reqA.unkc = 1;
-    st->reqA.func = videoEp0Complete;
-    st->reqA.retcode = 0;
-    st->reqB.func = videoCmdComplete;
-    st->reqC.size = 64;
-    st->reqA.unk1c = 0;
-    st->reqA.arg = NULL;
-    st->reqA.recvsize = 0;
-    st->reqB.retcode = 0;
-    st->reqA.size = 64;
-    st->reqB.unkc = 0;
-    st->reqB.unk1c = 0;
-    st->reqB.arg = NULL;
-    st->reqB.recvsize = 0;
-    st->reqC.func = videoBulkComplete;
-    st->reqC.retcode = 0;
-    st->reqA.endp = &g_videoEndpoints[0];
-    st->reqB.endp = NULL;
-    st->reqB.size = 64;
-    st->reqC.unkc = 0;
-    st->reqC.unk1c = 0;
-    st->reqC.arg = NULL;
-    st->reqC.recvsize = 0;
+    st->ep0Req.data = st->ep0Buf;
+    st->intrReq.data = st->cmdBuf;
+    st->bulkReq.data = st->bulkBuf;
+    st->bulkReq.endp = &g_videoEndpoints[1];
+    st->ep0Req.unkc = 1;
+    st->ep0Req.func = videoEp0Complete;
+    st->ep0Req.retcode = 0;
+    st->intrReq.func = videoCmdComplete;
+    st->bulkReq.size = 64;
+    st->ep0Req.unk1c = 0;
+    st->ep0Req.arg = NULL;
+    st->ep0Req.recvsize = 0;
+    st->intrReq.retcode = 0;
+    st->ep0Req.size = 64;
+    st->intrReq.unkc = 0;
+    st->intrReq.unk1c = 0;
+    st->intrReq.arg = NULL;
+    st->intrReq.recvsize = 0;
+    st->bulkReq.func = videoBulkComplete;
+    st->bulkReq.retcode = 0;
+    st->ep0Req.endp = &g_videoEndpoints[0];
+    st->intrReq.endp = NULL;
+    st->intrReq.size = 64;
+    st->bulkReq.unkc = 0;
+    st->bulkReq.unk1c = 0;
+    st->bulkReq.arg = NULL;
+    st->bulkReq.recvsize = 0;
     for (i = 0; i < 2; i++) {
-        st->items[i].data = st->frameBufs[i];
-        st->items[i].endp = &g_videoEndpoints[2];
-        st->items[i].size = 896;
-        st->items[i].unkc = 1;
-        st->items[i].func = videoIsoComplete;
-        st->items[i].unk1c = 0;
-        st->items[i].arg = NULL;
-        st->items[i].recvsize = 0;
-        st->items[i].retcode = 0;
+        st->isoReq[i].data = st->frameBuf[i];
+        st->isoReq[i].endp = &g_videoEndpoints[2];
+        st->isoReq[i].size = 896;
+        st->isoReq[i].unkc = 1;
+        st->isoReq[i].func = videoIsoComplete;
+        st->isoReq[i].unk1c = 0;
+        st->isoReq[i].arg = NULL;
+        st->isoReq[i].recvsize = 0;
+        st->isoReq[i].retcode = 0;
     }
     if (sceUsbAccRegisterType(2) < 0)
         goto fail;
-    st->unk1A4 = -1;
-    sceKernelStartThread(st->thread1, 0, NULL);
-    sceKernelStartThread(st->thread2, 0, NULL);
-    st->unk0 = 1;
-    st->unk188 = sceKernelDmaOpAlloc();
+    st->lensCbid = -1;
+    sceKernelStartThread(st->threadVideo, 0, NULL);
+    sceKernelStartThread(st->threadCopy, 0, NULL);
+    st->started = 1;
+    st->dmaOp = sceKernelDmaOpAlloc();
     return 0;
 
 fail:
@@ -1008,13 +1193,13 @@ fail:
         sceKernelDeleteEventFlag(st->eventflag);
         st->eventflag = -1;
     }
-    if (st->thread2 > 0) {
-        sceKernelDeleteThread(st->thread2);
-        st->thread2 = -1;
+    if (st->threadCopy > 0) {
+        sceKernelDeleteThread(st->threadCopy);
+        st->threadCopy = -1;
     }
-    if (st->thread1 > 0) {
-        sceKernelDeleteThread(st->thread1);
-        st->thread1 = -1;
+    if (st->threadVideo > 0) {
+        sceKernelDeleteThread(st->threadVideo);
+        st->threadVideo = -1;
         if (st->fplId > 0) {
             sceKernelDeleteFpl(st->fplId);
             st->fplId = -1;
@@ -1025,7 +1210,7 @@ fail:
 
 int micDriverStart(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
-    struct MicStateFull *st = (struct MicStateFull *)&g_micState;
+    struct MicState *st = (struct MicState *)&g_micState;
     void *block;
     int res;
     int i;
@@ -1036,9 +1221,9 @@ int micDriverStart(int size __attribute__((unused)), void *args __attribute__((u
         return -1;
     if (sceKernelTryAllocateFpl(st->fplId, &block) < 0)
         goto delFpl;
-    st->unk60 = block;
+    st->ep0Buf = block;
     for (i = 0; i < 4; i++)
-        st->bufs[i] = (u8 *)block + 64 + i * 256;
+        st->pcmBuf[i] = (u8 *)block + 64 + i * 256;
     res = sceKernelCreateThread("SceUsbMicCopyWorker", micCopyWorker, 16, 1024, 0x100001, NULL);
     st->thread = res;
     if (res < 0)
@@ -1047,42 +1232,43 @@ int micDriverStart(int size __attribute__((unused)), void *args __attribute__((u
     st->eventflag = res;
     if (res < 0)
         goto delThread;
-    st->reqD.endp = NULL;
-    st->reqD.func = micEmptyComplete;
-    st->reqD.unkc = 0;
-    st->reqD.unk1c = 0;
-    st->reqD.arg = NULL;
-    st->reqD.recvsize = 0;
-    st->reqD.retcode = 0;
-    st->reqD.data = block;
-    st->reqD.size = 64;
+    st->intrReq.endp = NULL;
+    st->intrReq.func = micEmptyComplete;
+    st->intrReq.unkc = 0;
+    st->intrReq.unk1c = 0;
+    st->intrReq.arg = NULL;
+    st->intrReq.recvsize = 0;
+    st->intrReq.retcode = 0;
+    st->intrReq.data = block;
+    st->intrReq.size = 64;
     for (i = 0; i < 4; i++) {
-        st->reqs[i].data = st->bufs[i];
-        st->reqs[i].endp = &g_micEndpoints[1];
-        st->reqs[i].size = 128;
-        st->reqs[i].unkc = 0;
-        st->reqs[i].func = micRecvComplete;
-        st->reqs[i].unk1c = 0;
-        st->reqs[i].arg = NULL;
-        st->reqs[i].recvsize = 0;
-        st->reqs[i].retcode = 0;
+        st->isoReq[i].data = st->pcmBuf[i];
+        st->isoReq[i].endp = &g_micEndpoints[1];
+        st->isoReq[i].size = 128;
+        st->isoReq[i].unkc = 0;
+        st->isoReq[i].func = micRecvComplete;
+        st->isoReq[i].unk1c = 0;
+        st->isoReq[i].arg = NULL;
+        st->isoReq[i].recvsize = 0;
+        st->isoReq[i].retcode = 0;
     }
-    st->unk4 = 5;
-    st->unk8 = 0;
-    st->unk14 = 0;
-    st->unk1 = 0;
-    st->unk2 = 0;
-    st->unk3 = 0;
-    st->unk5 = 0;
-    st->unkC = 0;
-    st->unk10 = 0;
+    st->mode = 5;
+    st->cmdLo = 0;
+    st->gain = 0;
+    st->cmd14 = 0;
+    st->setupFlags = 0;
+    st->attached = 0;
+    st->altSetting = 0;
+    st->aux = 0;
+    st->cmd0C = 0;
+    st->cmd10 = 0;
     for (i = 0; i < 2; i++)
         g_micEndpoints[i].transferred = 0;
-    *(u16 *)st->unk60 = 1;
+    *(u16 *)st->ep0Buf = 1;
     if (sceUsbAccRegisterType(1) < 0)
         goto delEventFlag;
-    st->unk128 = 0;
-    st->unk0 = 1;
+    st->swapMode = 0;
+    st->started = 1;
     if (sceKernelStartThread(st->thread, 0, NULL) == 0)
         return 0;
 
@@ -1097,19 +1283,19 @@ delFpl:
 
 int videoDriverStop(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
 
     sceUsbAccUnregisterType(2);
     sceKernelSetEventFlag(st->eventflag, 0x4000);
-    if (st->thread2 > 0) {
-        sceKernelWaitThreadEnd(st->thread2, NULL);
-        sceKernelDeleteThread(st->thread2);
-        st->thread2 = -1;
+    if (st->threadCopy > 0) {
+        sceKernelWaitThreadEnd(st->threadCopy, NULL);
+        sceKernelDeleteThread(st->threadCopy);
+        st->threadCopy = -1;
     }
-    if (st->thread1 > 0) {
-        sceKernelWaitThreadEnd(st->thread1, NULL);
-        sceKernelDeleteThread(st->thread1);
-        st->thread1 = -1;
+    if (st->threadVideo > 0) {
+        sceKernelWaitThreadEnd(st->threadVideo, NULL);
+        sceKernelDeleteThread(st->threadVideo);
+        st->threadVideo = -1;
     }
     if (st->eventflag > 0) {
         sceKernelDeleteEventFlag(st->eventflag);
@@ -1127,15 +1313,15 @@ int videoDriverStop(int size __attribute__((unused)), void *args __attribute__((
         sceKernelDeleteFpl(st->fplId);
         st->fplId = -1;
     }
-    if (st->unk188 != NULL)
-        sceKernelDmaOpFree(st->unk188);
-    st->unk0 = 0;
+    if (st->dmaOp != NULL)
+        sceKernelDmaOpFree(st->dmaOp);
+    st->started = 0;
     return 0;
 }
 
 int micDriverStop(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
-    struct MicStateFull *st = (struct MicStateFull *)&g_micState;
+    struct MicState *st = (struct MicState *)&g_micState;
 
     sceUsbAccUnregisterType(1);
     sceKernelSetEventFlag(st->eventflag, 512);
@@ -1143,7 +1329,7 @@ int micDriverStop(int size __attribute__((unused)), void *args __attribute__((un
     sceKernelDeleteThread(st->thread);
     sceKernelDeleteEventFlag(st->eventflag);
     sceKernelDeleteFpl(st->fplId);
-    st->unk0 = 0;
+    st->started = 0;
     return 0;
 }
 
@@ -1184,7 +1370,7 @@ int encodeWidthCode(u8 *arg0)
     u8 v = *arg0;
 
     for (i = 0; i < 10; i++) {
-        if (s_map8DE0[i] == v)
+        if (s_widthIdxMap[i] == v)
             break;
     }
     return (i < 10) ? i : 0;
@@ -1196,7 +1382,7 @@ int encodeHeightCode(u8 *arg0)
     u8 v = *arg0;
 
     for (i = 0; i < 10; i++) {
-        if (s_map8DEC[i] == v)
+        if (s_heightIdxMap[i] == v)
             break;
     }
     return (i < 10) ? i : 0;
@@ -1240,21 +1426,21 @@ int sceUsbCamSetupVideo(struct UsbCamSetupVideoParam *param, void *workarea, int
     int i;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (param == NULL)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(param, 52))
         goto out;
     if (!pspK1DynBufOk(workarea, wasize))
         goto out;
-    ret = 0x80243903;
+    ret = SCE_ERROR_USBCAM_INVALID_SIZE;
     if ((wasize & 0x3F) != 0)
         goto out;
 
@@ -1269,7 +1455,7 @@ int sceUsbCamSetupVideo(struct UsbCamSetupVideoParam *param, void *workarea, int
     req.sharpness = param->sharpness;
     req.framerate = param->framerate;
     for (i = 0; i < 3; i++) {
-        if (s_map8E0C[i] == VIDEO_BYTE(0x16))
+        if (s_map8E0C[i] == g_videoState.cfg.antiflicker)
             break;
     }
     req.unk4 = (i < 3) ? i : 2;
@@ -1301,7 +1487,7 @@ int sceUsbCamSetupVideo(struct UsbCamSetupVideoParam *param, void *workarea, int
         req.unk12 = param->unk;
         break;
     default:
-        ret = 0x80243907;
+        ret = SCE_ERROR_USBCAM_INVALID_PARAM;
         goto out;
     }
 
@@ -1310,11 +1496,11 @@ int sceUsbCamSetupVideo(struct UsbCamSetupVideoParam *param, void *workarea, int
         goto out;
 
     for (i = 0; i < 8; i++)
-        VIDEO_WORD(0x0C + i * 4) = out[i];
-    VIDEO_WORD(8) = VIDEO_WORD(8) & ~7u;
-    ret = encodeWidthCode(&VIDEO_BYTE(0x32));
+        ((u32 *)&g_videoState.cfg)[i] = out[i];
+    g_videoState.flags = g_videoState.flags & ~7u;
+    ret = encodeWidthCode(&g_videoState.cfgTail.b[6]);
     if (ret < 7) {
-        u8 v = VIDEO_BYTE(0x0E);
+        u8 v = g_videoState.cfg.framerate;
 
         for (i = 0; i < 8; i++) {
             if (s_map8DF8[i] == v)
@@ -1322,17 +1508,17 @@ int sceUsbCamSetupVideo(struct UsbCamSetupVideoParam *param, void *workarea, int
         }
         if (i == 8)
             i = 7;
-        VIDEO_BYTE(0x32) = s_map8DE0[(i < 5) ? 9 : 6];
+        g_videoState.cfgTail.b[6] = s_widthIdxMap[(i < 5) ? 9 : 6];
     }
     ret = 0;
-    VIDEO_BYTE(1) |= 1;
+    g_videoState.setupFlags |= 1;
     half = (u32)wasize >> 1;
-    VIDEO_WORD(0x160) = (u32)workarea + half;
-    VIDEO_WORD(0x150) = (u32)workarea;
-    VIDEO_WORD(0x154) = half;
-    VIDEO_WORD(0x158) = (u32)workarea;
-    VIDEO_WORD(0x15C) = 0;
-    VIDEO_WORD(0x164) = 0;
+    g_videoState.slot[1].buf = (u32)workarea + half;
+    g_videoState.workBase = (u32)workarea;
+    g_videoState.workHalf = half;
+    g_videoState.slot[0].buf = (u32)workarea;
+    g_videoState.slot[0].len = 0;
+    g_videoState.slot[1].len = 0;
 
 out:
     pspSetK1(oldK1);
@@ -1348,21 +1534,21 @@ int sceUsbCamSetupVideoEx(struct UsbCamVideoReq *param, void *workarea, int wasi
     int i;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (param == NULL)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(param, 100))
         goto out;
     if (!pspK1DynBufOk(workarea, wasize))
         goto out;
-    ret = 0x80243903;
+    ret = SCE_ERROR_USBCAM_INVALID_SIZE;
     if ((wasize & 0x3F) != 0)
         goto out;
 
@@ -1371,17 +1557,17 @@ int sceUsbCamSetupVideoEx(struct UsbCamVideoReq *param, void *workarea, int wasi
         goto out;
 
     for (i = 0; i < 8; i++)
-        VIDEO_WORD(0x0C + i * 4) = out[i];
+        ((u32 *)&g_videoState.cfg)[i] = out[i];
     half = (u32)wasize >> 1;
-    VIDEO_WORD(0x160) = (u32)workarea + half;
-    VIDEO_WORD(8) = VIDEO_WORD(8) & ~7u;
-    VIDEO_BYTE(1) |= 1;
+    g_videoState.slot[1].buf = (u32)workarea + half;
+    g_videoState.flags = g_videoState.flags & ~7u;
+    g_videoState.setupFlags |= 1;
     ret = 0;
-    VIDEO_WORD(0x150) = (u32)workarea;
-    VIDEO_WORD(0x154) = half;
-    VIDEO_WORD(0x158) = (u32)workarea;
-    VIDEO_WORD(0x15C) = 0;
-    VIDEO_WORD(0x164) = 0;
+    g_videoState.workBase = (u32)workarea;
+    g_videoState.workHalf = half;
+    g_videoState.slot[0].buf = (u32)workarea;
+    g_videoState.slot[0].len = 0;
+    g_videoState.slot[1].len = 0;
 
 out:
     pspSetK1(oldK1);
@@ -1394,35 +1580,35 @@ int sceUsbCamReadVideoFrame(u8 *buf, SceSize size)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 1) == 0)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (buf == NULL)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1DynBufOk(buf, size))
         goto out;
-    ret = 0x8024390C;
-    if (VIDEO_BYTE(4) == 0)
+    ret = SCE_ERROR_USBCAM_INVALID_STATE;
+    if (g_videoState.mode == 0)
         goto out;
-    ret = 0x80243909;
-    if (VIDEO_WORD(8) & 4)
+    ret = SCE_ERROR_USBCAM_BUSY;
+    if (g_videoState.flags & 4)
         goto out;
 
-    VIDEO_WORD(8) |= 4;
-    sceKernelClearEventFlag(g_videoState.unk190, ~0x80u);
-    VIDEO_WORD(0x1AC) = size;
-    VIDEO_WORD(0x1B0) = (u32)buf;
-    ret = sceKernelSetEventFlag(g_videoState.unk190, 0x40);
+    g_videoState.flags |= 4;
+    sceKernelClearEventFlag(g_videoState.eventflag, ~0x80u);
+    g_videoState.readSize = size;
+    g_videoState.readBuf = (u32)buf;
+    ret = sceKernelSetEventFlag(g_videoState.eventflag, 0x40);
 
 out:
     pspSetK1(oldK1);
@@ -1437,35 +1623,35 @@ int sceUsbCamWaitReadVideoFrameEnd(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 1) == 0)
         goto out;
-    ret = 0x8024390C;
-    if ((VIDEO_WORD(8) & 4) == 0)
+    ret = SCE_ERROR_USBCAM_INVALID_STATE;
+    if ((g_videoState.flags & 4) == 0)
         goto out;
 
-    ret = sceKernelWaitEventFlag(g_videoState.unk190, 0x480, 1, &outBits, &timeout);
+    ret = sceKernelWaitEventFlag(g_videoState.eventflag, 0x480, 1, &outBits, &timeout);
     if (ret < 0) {
         if ((u32)ret == SCE_ERROR_KERNEL_WAIT_TIMEOUT) {
             sceUsbRestart(1000000);
-            ret = 0x80243902;
+            ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         }
         goto out;
     }
-    VIDEO_WORD(8) &= ~4u;
+    g_videoState.flags &= ~4u;
     if (outBits & 0x400) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    ret = VIDEO_WORD(0x180);
+    ret = g_videoState.xferResult;
 
 out:
     pspSetK1(oldK1);
@@ -1479,34 +1665,34 @@ int sceUsbCamPollReadVideoFrameEnd(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 1) == 0)
         goto out;
-    ret = 0x8024390C;
-    if ((VIDEO_WORD(8) & 4) == 0)
+    ret = SCE_ERROR_USBCAM_INVALID_STATE;
+    if ((g_videoState.flags & 4) == 0)
         goto out;
 
-    ret = sceKernelPollEventFlag(g_videoState.unk190, 0x480, 1, &outBits);
+    ret = sceKernelPollEventFlag(g_videoState.eventflag, 0x480, 1, &outBits);
     if ((u32)ret == SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) {
-        ret = 0x8024390E;
+        ret = SCE_ERROR_USBCAM_NOT_READY;
         goto out;
     }
     if (ret < 0)
         goto out;
-    VIDEO_WORD(8) &= ~4u;
+    g_videoState.flags &= ~4u;
     if (outBits & 0x400) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    ret = VIDEO_WORD(0x180);
+    ret = g_videoState.xferResult;
 
 out:
     pspSetK1(oldK1);
@@ -1520,41 +1706,41 @@ int sceUsbCamReadVideoFrameBlocking(u8 *buf, SceSize size)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 1) == 0)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (buf == NULL)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1DynBufOk(buf, size))
         goto out;
-    ret = 0x80243909;
-    if (VIDEO_WORD(8) & 4)
+    ret = SCE_ERROR_USBCAM_BUSY;
+    if (g_videoState.flags & 4)
         goto out;
 
-    VIDEO_WORD(8) |= 4;
-    sceKernelClearEventFlag(g_videoState.unk190, ~0x80u);
-    VIDEO_WORD(0x1B0) = (u32)buf;
-    VIDEO_WORD(0x1AC) = size;
-    sceKernelSetEventFlag(g_videoState.unk190, 0x40);
-    ret = sceKernelWaitEventFlag(g_videoState.unk190, 0x480, 1, &outBits, NULL);
+    g_videoState.flags |= 4;
+    sceKernelClearEventFlag(g_videoState.eventflag, ~0x80u);
+    g_videoState.readBuf = (u32)buf;
+    g_videoState.readSize = size;
+    sceKernelSetEventFlag(g_videoState.eventflag, 0x40);
+    ret = sceKernelWaitEventFlag(g_videoState.eventflag, 0x480, 1, &outBits, NULL);
     if (ret < 0)
         goto out;
-    VIDEO_WORD(8) &= ~4u;
+    g_videoState.flags &= ~4u;
     if (outBits & 0x400) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    ret = VIDEO_WORD(0x180);
+    ret = g_videoState.xferResult;
 
 out:
     pspSetK1(oldK1);
@@ -1568,20 +1754,20 @@ int sceUsbCamGetReadVideoFrameSize(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 1) == 0)
         goto out;
 
     intr = sceKernelCpuSuspendIntr();
-    ret = VIDEO_WORD(0x184);
+    ret = g_videoState.xferLength;
     sceKernelCpuResumeIntr(intr);
 
 out:
@@ -1626,6 +1812,10 @@ _Static_assert(sizeof(struct UsbCamSetupStillExParam) == 60, "UsbCamSetupStillEx
 /* packStillConfig is defined below; struct UsbCamStillReq is
    forward-declared here and completed below. */
 struct UsbCamStillReq;
+/* ============================================================
+ * Section: still capture setup and input
+ * ============================================================ */
+
 int packStillConfig(u8 *out, struct UsbCamStillReq *req);
 s32 guardStillInput(void);
 s32 reapStillInput(int arg);
@@ -1641,25 +1831,25 @@ s32 sceUsbCamSetupStill(struct UsbCamSetupStillParam *param)
     int i;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (param == NULL)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(param, 24))
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if ((u32)(param->size - 20) >= 5)
         goto out;
 
-    v = VIDEO_BYTE(0x0E);
+    v = g_videoState.cfg.framerate;
     for (i = 0; i < 8; i++) {
         if (s_map8DF8[i] == v)
             break;
@@ -1683,10 +1873,10 @@ s32 sceUsbCamSetupStill(struct UsbCamSetupStillParam *param)
     ret = packStillConfig(out, (struct UsbCamStillReq *)&req);
     if (ret < 0)
         goto out;
-    __builtin_memcpy(&VIDEO_BYTE(0x2C), out, 20);
+    __builtin_memcpy(&g_videoState.cfgTail.b[0], out, 20);
     ret = 0;
-    VIDEO_BYTE(1) |= 2;
-    VIDEO_WORD(8) &= ~8u;
+    g_videoState.setupFlags |= 2;
+    g_videoState.flags &= ~8u;
 
 out:
     pspSetK1(oldK1);
@@ -1702,28 +1892,28 @@ s32 sceUsbCamSetupStillEx(struct UsbCamSetupStillExParam *param)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (param == NULL)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(param, 60))
         goto out;
 
     ret = packStillConfig(out, (struct UsbCamStillReq *)param);
     if (ret < 0)
         goto out;
-    __builtin_memcpy(&VIDEO_BYTE(0x2C), out, 20);
+    __builtin_memcpy(&g_videoState.cfgTail.b[0], out, 20);
     ret = 0;
-    VIDEO_BYTE(1) |= 2;
-    VIDEO_WORD(8) &= ~8u;
+    g_videoState.setupFlags |= 2;
+    g_videoState.flags &= ~8u;
 
 out:
     pspSetK1(oldK1);
@@ -1740,32 +1930,32 @@ s32 sceUsbCamStillInput(u8 *buf, SceSize size)
     int w;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243903;
+    ret = SCE_ERROR_USBCAM_INVALID_SIZE;
     if (size < 64)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1DynBufOk(buf, size))
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 2) == 0)
         goto out;
 
-    h = encodeHeightCode(&VIDEO_BYTE(0x33));
-    w = encodeWidthCode(&VIDEO_BYTE(0x32));
+    h = encodeHeightCode(&g_videoState.cfgTail.b[7]);
+    w = encodeWidthCode(&g_videoState.cfgTail.b[6]);
     if (w < h) {
-        ret = 0x80243905;
+        ret = SCE_ERROR_USBCAM_INVALID_RES;
         goto out;
     }
 
-    sceKernelClearEventFlag(g_videoState.unk190, ~0x3000u);
+    sceKernelClearEventFlag(g_videoState.eventflag, ~0x3000u);
     ret = armStillRead(buf, size);
 
 out:
@@ -1811,25 +2001,25 @@ s32 sceUsbCamStillInputBlocking(u8 *buf, SceSize size)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243903;
+    ret = SCE_ERROR_USBCAM_INVALID_SIZE;
     if (size < 64)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1DynBufOk(buf, size))
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 2) == 0)
         goto out;
 
-    sceKernelClearEventFlag(g_videoState.unk190, ~0x3000u);
+    sceKernelClearEventFlag(g_videoState.eventflag, ~0x3000u);
     ret = armStillRead(buf, size);
     if (ret >= 0)
         ret = reapStillInput(0);
@@ -1850,19 +2040,19 @@ s32 sceUsbCamStillGetInputLength(void)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 2) == 0)
         goto out;
-    ret = (VIDEO_WORD(0x174) < VIDEO_WORD(0x170)) ? VIDEO_WORD(0x174)
-                                                  : VIDEO_WORD(0x170);
+    ret = (g_videoState.stillSize < g_videoState.fragTotal) ? g_videoState.stillSize
+                                                  : g_videoState.fragTotal;
 
 out:
     pspSetK1(oldK1);
@@ -1882,13 +2072,13 @@ s32 sceUsbCamStillCancelInput(void)
     if (ret < 0)
         goto out;
     intr = sceKernelCpuSuspendIntr();
-    VIDEO_WORD(0x174) = 0;
-    VIDEO_WORD(0x178) = 0;
-    VIDEO_WORD(0x17C) = 0;
-    sceKernelSetEventFlag(VIDEO_WORD(0x190), 0x2000);
-    if (VIDEO_WORD(0x1B4) >= 1280)
-        VIDEO_WORD(8) |= 0x10;
-    VIDEO_WORD(8) = VIDEO_WORD(8) & ~8u;
+    g_videoState.stillSize = 0;
+    g_videoState.stillAvail = 0;
+    g_videoState.stillBuf = 0;
+    sceKernelSetEventFlag(g_videoState.eventflag, 0x2000);
+    if (g_videoState.resEx >= 1280)
+        g_videoState.flags |= 0x10;
+    g_videoState.flags = g_videoState.flags & ~8u;
     sceKernelCpuResumeIntr(intr);
 
 out:
@@ -1904,7 +2094,7 @@ s32 sceUsbCamGetSaturation(int *saturation)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(saturation, 4))
         goto out;
     ret = dispatchIoctl(0x80000003, saturation);
@@ -1922,7 +2112,7 @@ s32 sceUsbCamGetBrightness(int *brightness)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(brightness, 4))
         goto out;
     ret = dispatchIoctl(0x80000001, brightness);
@@ -1940,7 +2130,7 @@ s32 sceUsbCamGetContrast(int *contrast)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(contrast, 4))
         goto out;
     ret = dispatchIoctl(0x80000002, contrast);
@@ -1958,7 +2148,7 @@ s32 sceUsbCamGetSharpness(int *sharpness)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(sharpness, 4))
         goto out;
     ret = dispatchIoctl(0x80000004, sharpness);
@@ -1976,7 +2166,7 @@ s32 sceUsbCamGetZoom(int *zoom)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(zoom, 4))
         goto out;
     ret = dispatchIoctl(0x80000005, zoom);
@@ -1994,7 +2184,7 @@ s32 sceUsbCamGetAntiFlicker(int *antiflicker)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(antiflicker, 4))
         goto out;
     ret = dispatchIoctl(0x80000010, antiflicker);
@@ -2012,7 +2202,7 @@ s32 sceUsbCamGetEvLevel(int *ev)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(ev, 4))
         goto out;
     ret = dispatchIoctl(0x80000014, ev);
@@ -2030,7 +2220,7 @@ s32 sceUsbCamGetReverseMode(int *reverseflags)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(reverseflags, 4))
         goto out;
     ret = dispatchIoctl(0x80000006, reverseflags);
@@ -2048,7 +2238,7 @@ s32 sceUsbCamGetImageEffectMode(int *effectmode)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(effectmode, 4))
         goto out;
     ret = dispatchIoctl(0x80000007, effectmode);
@@ -2065,9 +2255,9 @@ s32 sceUsbCam_00631D06(void)
     u32 val;
     s32 ret;
 
-    val = VIDEO_WORD(0x1B4);
+    val = g_videoState.resEx;
     if (val == 0) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
     } else if (val - 1 < 1279) {
         ret = 1;
     } else {
@@ -2090,19 +2280,19 @@ s32 sceUsbCamGetLensDirection(void)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    res = sceKernelPollEventFlag(VIDEO_WORD(0x190), 0x400, 1, &bits);
+    res = sceKernelPollEventFlag(g_videoState.eventflag, 0x400, 1, &bits);
     if (res < 0 && res != (s32)0x800201AF) {
         ret = res;
         goto out;
     }
     if (res >= 0 && (bits & 0x400)) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    if (VIDEO_WORD(8) & 0x2000)
-        ret = ((VIDEO_WORD(8) ^ 0x400) >> 10) & 1;
+    if (g_videoState.flags & 0x2000)
+        ret = ((g_videoState.flags ^ 0x400) >> 10) & 1;
     else
-        ret = 0x80243901;
+        ret = SCE_ERROR_USBCAM_NOT_SETUP;
 
 out:
     pspSetK1(oldK1);
@@ -2120,15 +2310,15 @@ s32 sceUsbCamRegisterLensRotationCallback(SceUID cbid)
     oldK1 = pspShiftK1();
     ret = 0;
     if (sceKernelGetThreadmanIdType(cbid) != SCE_KERNEL_TMID_Callback) {
-        ret = 0x80243905;
+        ret = SCE_ERROR_USBCAM_INVALID_RES;
         goto out;
     }
     intr = sceKernelCpuSuspendIntr();
-    if (VIDEO_WORD(0x1A4) > 0) {
-        VIDEO_WORD(0x1A4) = -1;
-        ret = 0x80243910;
+    if (g_videoState.lensCbid > 0) {
+        g_videoState.lensCbid = -1;
+        ret = SCE_ERROR_USBCAM_ALREADY;
     } else {
-        VIDEO_WORD(0x1A4) = cbid;
+        g_videoState.lensCbid = cbid;
     }
     sceKernelCpuResumeIntr(intr);
 
@@ -2143,13 +2333,13 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
     if (sceUsbbdRegister(&g_videoDriver) < 0) {
         return 1;
     }
-    g_videoState.unk0 = 0;
-    g_videoState.unk1A0 = -1;
-    g_videoState.unk1B4 = 0;
-    g_videoState.unk18C = -1;
-    g_videoState.unk190 = -1;
-    g_videoState.unk194 = -1;
-    g_videoState.unk19C = -1;
+    g_videoState.started = 0;
+    g_videoState.threadCopy = -1;
+    g_videoState.resEx = 0;
+    g_videoState.fplId = -1;
+    g_videoState.eventflag = -1;
+    g_videoState.sema = -1;
+    g_videoState.threadVideo = -1;
     return 0;
 }
 
@@ -2306,7 +2496,7 @@ int decodeUnk0x13(u8 *p)
 int encodeResolutionEx(int val, u8 *out0, u8 *out1)
 {
     if ((u32)val >= 9)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     *out0 = 9;
     *out1 = (u8)s_map8E3C[val * 2 + 1];
     return 0;
@@ -2320,9 +2510,9 @@ int encodeResolutionPair(int val0, int val1, u8 *out0, u8 *out1)
     s32 hdiff = s_res8E50[val0].h - s_res8E50[val1].h;
 
     if ((hdiff | wdiff) < 0)
-        return 0x80243905;
-    *out0 = s_map8DE0[val0];
-    *out1 = s_map8DEC[val1];
+        return SCE_ERROR_USBCAM_INVALID_RES;
+    *out0 = s_widthIdxMap[val0];
+    *out1 = s_heightIdxMap[val1];
     return 0;
 }
 
@@ -2508,9 +2698,9 @@ s32 sceUsbCamSetResolution(int resolution)
 s32 sceUsbCamAutoImageReverseSW(int on)
 {
     if (on != 0)
-        VIDEO_WORD(8) |= 0x1000;
+        g_videoState.flags |= 0x1000;
     else
-        VIDEO_WORD(8) = VIDEO_WORD(8) & ~0x1000u;
+        g_videoState.flags = g_videoState.flags & ~0x1000u;
     return 0;
 }
 
@@ -2518,7 +2708,7 @@ s32 sceUsbCamAutoImageReverseSW(int on)
 
 s32 sceUsbCamGetAutoImageReverseState(void)
 {
-    return (VIDEO_WORD(8) >> 12) & 1;
+    return (g_videoState.flags >> 12) & 1;
 }
 
 /* 0x2F10 sceUsbCamUnregisterLensRotationCallback */
@@ -2532,10 +2722,10 @@ s32 sceUsbCamUnregisterLensRotationCallback(void)
 
     oldK1 = pspShiftK1();
     intr = sceKernelCpuSuspendIntr();
-    cbid = VIDEO_WORD(0x1A4);
-    ret = 0x8024390F;
+    cbid = g_videoState.lensCbid;
+    ret = SCE_ERROR_USBCAM_NO_CALLBACK;
     if (cbid >= 0) {
-        VIDEO_WORD(0x1A4) = -1;
+        g_videoState.lensCbid = -1;
         ret = cbid;
     }
     sceKernelCpuResumeIntr(intr);
@@ -2550,35 +2740,35 @@ static const u8 s_usbAccInfoMagic[8] =
 int videoAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                  void *arg3 __attribute__((unused)))
 {
-    u8 ret = VIDEO_BYTE(2);
+    u8 ret = g_videoState.attached;
 
     if (ret != 0)
         return ret;
 
-    VIDEO_BYTE(2) = 1;
-    VIDEO_BYTE(4) = 0;
-    VIDEO_WORD(8) = 0;
-    g_videoState.unk1B4 = 0;
+    g_videoState.attached = 1;
+    g_videoState.mode = 0;
+    g_videoState.flags = 0;
+    g_videoState.resEx = 0;
     resetVideoDefaults();
-    sceKernelClearEventFlag(g_videoState.unk190, 0);
+    sceKernelClearEventFlag(g_videoState.eventflag, 0);
 
-    return sceKernelSetEventFlag(g_videoState.unk190, 0x300);
+    return sceKernelSetEventFlag(g_videoState.eventflag, 0x300);
 }
 
 int micAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                  void *arg3 __attribute__((unused)))
 {
-    u8 ret = MIC_BYTE(2);
+    u8 ret = g_micState.attached;
     u64 info;
     int res;
 
     if (ret != 0)
         return ret;
 
-    MIC_BYTE(2) = 1;
-    MIC_BYTE(4) = 0;
-    sceKernelClearEventFlag(MIC_WORD(0x114), 0);
-    sceKernelSetEventFlag(MIC_WORD(0x114), 0x20);
+    g_micState.attached = 1;
+    g_micState.mode = 0;
+    sceKernelClearEventFlag(g_micState.eventflag, 0);
+    sceKernelSetEventFlag(g_micState.eventflag, 0x20);
 
     res = sceUsbAccGetInfo(&info);
     if (res != 0)
@@ -2588,7 +2778,7 @@ int micAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unuse
     if (res != 0)
         return res;
 
-    MIC_WORD(0x128) = 1;
+    g_micState.swapMode = 1;
     Kprintf("%s16 aligned data swap\n", "usbcammic: ");
 
     return 0;
@@ -2618,7 +2808,7 @@ int micAccumCallback(int arg1 __attribute__((unused)), int arg2 __attribute__((u
 
 void videoCmdComplete(struct UsbdDeviceReq *req __attribute__((unused)))
 {
-    sceKernelSignalSema(g_videoState.unk194, 1);
+    sceKernelSignalSema(g_videoState.sema, 1);
 }
 
 /* 0x30C8 micEmptyComplete */
@@ -2632,7 +2822,7 @@ void micEmptyComplete(struct UsbdDeviceReq *req __attribute__((unused)))
 /* 0x30D0 videoIsoComplete */
 void videoIsoComplete(struct UsbdDeviceReq *req)
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     struct VideoDescState *node;
     struct VideoDescState *prev;
     struct VideoDescState *start;
@@ -2644,54 +2834,54 @@ void videoIsoComplete(struct UsbdDeviceReq *req)
     u32 len;
     int i;
 
-    if (VIDEO_BYTE(4) == 2) {
+    if (g_videoState.mode == 2) {
         for (i = 0; i < 2; i++) {
-            if (st->items[i].retcode > 0)
+            if (st->isoReq[i].retcode > 0)
                 return;
         }
         sceKernelSetEventFlag(st->eventflag, 2);
         return;
     }
     if (req->retcode < 0) {
-        if (VIDEO_BYTE(5) == 1)
+        if (g_videoState.aux == 1)
             sceKernelSetEventFlag(st->eventflag, 0x8000);
         return;
     }
 
-    node = (struct VideoDescState *)VIDEO_WORD(296);
-    if (node->unk8 == 1)
+    node = (struct VideoDescState *)g_videoState.xferHead;
+    if (node->cap == 1)
         goto fill;
     prev = node;
-    node = node->unkC;
+    node = node->next;
     if (node == prev)
         goto picked;
     start = prev;
 walk:
-    if (node->unk8 != 1)
+    if (node->cap != 1)
         goto picked;
-    node = node->unkC;
+    node = node->next;
     if (start != node)
         goto walk;
 picked:
-    if ((struct VideoDescState *)VIDEO_WORD(296) == node)
+    if ((struct VideoDescState *)g_videoState.xferHead == node)
         return;
 
 fill:
     recvsize = (u32)req->recvsize;
     if (recvsize == 0) {
-        node->unk8 = 0;
+        node->cap = 0;
         goto signal;
     }
     src = (u8 *)req->data;
     remaining = recvsize;
 copy:
-    len = (u32)node->unk4;
+    len = (u32)node->len;
     count = (896 - len < remaining) ? 896 - len : remaining;
-    memcpy((u8 *)node->unk0 + len, src, count);
+    memcpy((u8 *)node->buf + len, src, count);
     remaining -= count;
     src += count;
-    len = (u32)node->unk4 + count;
-    node->unk4 = (int)len;
+    len = (u32)node->len + count;
+    node->len = (int)len;
     if (len >= 896)
         goto full;
 cont:
@@ -2700,7 +2890,7 @@ cont:
 tail:
     recvsize = (u32)req->recvsize;
     if (recvsize == 0) {
-        node->unk8 = 0;
+        node->cap = 0;
         goto signal;
     }
     /* 0x31F0: recvsize == 896 * (((recvsize >> 7) * 0x24924936) >> 32) */
@@ -2709,25 +2899,25 @@ tail:
     goto modeCheck;
 
 drain:
-    node->unk8 = 0;
+    node->cap = 0;
 signal:
-    next = node->unkC;
-    VIDEO_WORD(296) = (u32)next;
+    next = node->next;
+    g_videoState.xferHead = next;
     sceKernelSetEventFlag(st->eventflag, 4);
     goto modeCheck;
 
 full:
-    node->unk8 = 0;
-    next = node->unkC;
-    VIDEO_WORD(296) = (u32)next;
+    node->cap = 0;
+    next = node->next;
+    g_videoState.xferHead = next;
     sceKernelSetEventFlag(st->eventflag, 4);
-    if (next->unk8 != 1)
+    if (next->cap != 1)
         goto tail;
     node = next;
     goto cont;
 
 modeCheck:
-    if (VIDEO_BYTE(4) >= 2)
+    if (g_videoState.mode >= 2)
         return;
     sceKernelDcacheInvalidateRange(req->data, 1792);
     req->unk1c = 0;
@@ -2737,7 +2927,7 @@ modeCheck:
 /* 0x3324 resetVideoDefaults */
 s32 resetVideoDefaults(void)
 {
-    u8 *blk = &VIDEO_BYTE(0x0C);
+    u8 *blk = &g_videoState.cfg.width;
 
     blk[0] = 2;
     blk[1] = 7;
@@ -2783,29 +2973,29 @@ s32 startVideoStream(void)
 
     intr = sceKernelCpuSuspendIntr();
     ret = 0;
-    if (VIDEO_BYTE(0) == 0) {
-        ret = 0x80243908;
+    if (g_videoState.started == 0) {
+        ret = SCE_ERROR_USBCAM_NOT_INIT;
         goto out;
     }
-    if (VIDEO_BYTE(2) == 0) {
-        ret = 0x80243902;
+    if (g_videoState.attached == 0) {
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
     if (sceUsbAccGetAuthStat() < 0) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    if ((VIDEO_BYTE(1) & 1) == 0) {
-        ret = 0x80243901;
+    if ((g_videoState.setupFlags & 1) == 0) {
+        ret = SCE_ERROR_USBCAM_NOT_SETUP;
         goto out;
     }
-    if (VIDEO_BYTE(4) != 0) {
-        ret = 0x80243909;
+    if (g_videoState.mode != 0) {
+        ret = SCE_ERROR_USBCAM_BUSY;
         goto out;
     }
-    sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFFFFF7);
-    sceKernelSetEventFlag(VIDEO_WORD(400), 1);
-    VIDEO_BYTE(4) = 1;
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFFFFF7);
+    sceKernelSetEventFlag(g_videoState.eventflag, 1);
+    g_videoState.mode = 1;
 out:
     sceKernelCpuResumeIntr(intr);
     return ret;
@@ -2820,31 +3010,31 @@ s32 stopVideoStream(void)
     s32 intr;
     int mode;
 
-    if (VIDEO_BYTE(0) == 0)
-        return 0x80243908;
-    if (VIDEO_BYTE(2) == 0)
-        return 0x80243902;
+    if (g_videoState.started == 0)
+        return SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.attached == 0)
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
-        return 0x80243902;
-    if ((VIDEO_BYTE(1) & 1) == 0)
-        return 0x80243901;
-    mode = VIDEO_BYTE(4);
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if ((g_videoState.setupFlags & 1) == 0)
+        return SCE_ERROR_USBCAM_NOT_SETUP;
+    mode = g_videoState.mode;
     if (mode == 0 || mode == 2)
         return 0;
 
     intr = sceKernelCpuSuspendIntr();
-    if (VIDEO_BYTE(4) != 3) {
-        v = VIDEO_WORD(8) & ~4u;
-        VIDEO_BYTE(4) = 2;
-        VIDEO_WORD(8) = v;
-        sceKernelSetEventFlag(VIDEO_WORD(400), 4);
+    if (g_videoState.mode != 3) {
+        v = g_videoState.flags & ~4u;
+        g_videoState.mode = 2;
+        g_videoState.flags = v;
+        sceKernelSetEventFlag(g_videoState.eventflag, 4);
     } else {
-        VIDEO_WORD(8) = VIDEO_WORD(8) & ~4u;
+        g_videoState.flags = g_videoState.flags & ~4u;
     }
     sceKernelCpuResumeIntr(intr);
-    sceKernelWaitEventFlag(VIDEO_WORD(400), 0x408, 1, &bits, NULL);
-    sceKernelWaitEventFlag(VIDEO_WORD(400), 0x480, 1, &bits, NULL);
-    memset((void *)VIDEO_WORD(0x150), 0, VIDEO_WORD(0x154) * 2);
+    sceKernelWaitEventFlag(g_videoState.eventflag, 0x408, 1, &bits, NULL);
+    sceKernelWaitEventFlag(g_videoState.eventflag, 0x480, 1, &bits, NULL);
+    memset((void *)g_videoState.workBase, 0, g_videoState.workHalf * 2);
     return 0;
 }
 
@@ -2857,23 +3047,23 @@ s32 armStillRead(void *buf, int size)
 
     intr = sceKernelCpuSuspendIntr();
     ret = 0;
-    if (VIDEO_BYTE(4) != 0) {
-        ret = 0x80243909;
+    if (g_videoState.mode != 0) {
+        ret = SCE_ERROR_USBCAM_BUSY;
         goto out;
     }
-    if ((VIDEO_WORD(8) & 8) != 0) {
-        ret = 0x80243909;
+    if ((g_videoState.flags & 8) != 0) {
+        ret = SCE_ERROR_USBCAM_BUSY;
         goto out;
     }
-    VIDEO_WORD(376) = size;
-    VIDEO_WORD(380) = (u32)buf;
-    VIDEO_WORD(372) = size;
+    g_videoState.stillAvail = size;
+    g_videoState.stillBuf = (u32)buf;
+    g_videoState.stillSize = size;
     if (sceUsbAccGetAuthStat() != 0) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    VIDEO_WORD(8) = VIDEO_WORD(8) | 8;
-    sceKernelSetEventFlag(VIDEO_WORD(400), 0x800);
+    g_videoState.flags = g_videoState.flags | 8;
+    sceKernelSetEventFlag(g_videoState.eventflag, 0x800);
 out:
     sceKernelCpuResumeIntr(intr);
     return ret;
@@ -2893,21 +3083,21 @@ s32 videoWorkerThread(SceSize args __attribute__((unused)), void *argp __attribu
     s32 intr;
 
 loop:
-    res = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x4200, 1, &bits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x4200, 1, &bits, NULL);
     if (res < 0)
         goto out;
     if (bits & 0x4000)
         goto out;
     if (queryReverseState(&pkt) < 0)
         goto loop;
-    VIDEO_WORD(8) |= 0x2000;
-    if (VIDEO_WORD(436) == 0) {
-        res = dispatchIoctl(0xC0000003, (int *)&VIDEO_WORD(436));
+    g_videoState.flags |= 0x2000;
+    if (g_videoState.resEx == 0) {
+        res = dispatchIoctl(0xC0000003, (int *)&g_videoState.resEx);
         if (res < 0)
             goto loop;
     }
 
-    res = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x4C01, 1, &bits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x4C01, 1, &bits, NULL);
     if (res < 0)
         goto out;
     if (bits & 0x4000)
@@ -2916,22 +3106,22 @@ loop:
         goto loop;
 
     if (bits & 0x800) {
-        if (VIDEO_BYTE(2) == 0)
+        if (g_videoState.attached == 0)
             goto loop;
         if (sceUsbAccGetAuthStat() != 0)
             goto waitFrame;
-        if (VIDEO_WORD(436) >= 1280) {
-            if (VIDEO_BYTE(0x32) < 2)
-                VIDEO_BYTE(0x32) = 2;
-            if (VIDEO_BYTE(0x33) < 2)
-                VIDEO_BYTE(0x33) = 2;
+        if (g_videoState.resEx >= 1280) {
+            if (g_videoState.cfgTail.b[6] < 2)
+                g_videoState.cfgTail.b[6] = 2;
+            if (g_videoState.cfgTail.b[7] < 2)
+                g_videoState.cfgTail.b[7] = 2;
         }
-        if (sceKernelLockMutex(VIDEO_WORD(408), 1, NULL) == 0) {
-            sendAccCommand(3, 2, &VIDEO_BYTE(0x2C), 20);
-            sceKernelUnlockMutex(VIDEO_WORD(408), 1);
+        if (sceKernelLockMutex(g_videoState.mutex, 1, NULL) == 0) {
+            sendAccCommand(3, 2, &g_videoState.cfgTail.b[0], 20);
+            sceKernelUnlockMutex(g_videoState.mutex, 1);
         }
-        if (VIDEO_WORD(436) < 1280) {
-            sceKernelClearEventFlag(VIDEO_WORD(400), ~0x800u);
+        if (g_videoState.resEx < 1280) {
+            sceKernelClearEventFlag(g_videoState.eventflag, ~0x800u);
             goto loop;
         }
         goto waitFrame;
@@ -2940,26 +3130,26 @@ loop:
     if ((bits & 1) == 0)
         goto waitFrame;
     intr = sceKernelCpuSuspendIntr();
-    if (VIDEO_BYTE(2) == 0) {
+    if (g_videoState.attached == 0) {
         res = -1;
     } else if (sceUsbAccGetAuthStat() != 0) {
         Kprintf("%serror - Not accessory !!", "");
     } else {
-        __builtin_memcpy(blk, &VIDEO_BYTE(0x0C), 32);
+        __builtin_memcpy(blk, &g_videoState.cfg.width, 32);
         blk[6] = encodeSaturation(blk[6]);
         blk[7] = encodeBrightness(blk[7]);
         blk[9] = encodeSharpness(blk[9]);
-        if (VIDEO_WORD(436) >= 1280) {
+        if (g_videoState.resEx >= 1280) {
             if (blk[0] < 2)
                 blk[0] = 2;
             if (blk[1] < 2)
                 blk[1] = 2;
         }
         sceKernelCpuResumeIntr(intr);
-        res = sceKernelLockMutex(VIDEO_WORD(408), 1, NULL);
+        res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
         if (res == 0) {
             sendAccCommand(1, 2, blk, 32);
-            res = sceKernelUnlockMutex(VIDEO_WORD(408), 1);
+            res = sceKernelUnlockMutex(g_videoState.mutex, 1);
         }
         intr = sceKernelCpuSuspendIntr();
     }
@@ -2969,17 +3159,17 @@ loop:
     goto loop;
 
 waitFrame:
-    mask = (VIDEO_WORD(436) < 1280) ? 0x410 : 0x80410;
-    res = sceKernelWaitEventFlag(VIDEO_WORD(400), mask, 1, &bits, NULL);
+    mask = (g_videoState.resEx < 1280) ? 0x410 : 0x80410;
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, mask, 1, &bits, NULL);
     if (res >= 0 && (bits & 0x400) != 0)
         goto loop;
-    if (VIDEO_BYTE(4) == 2) {
-        stopAndDrainStream((VIDEO_WORD(8) >> 4) & 1);
+    if (g_videoState.mode == 2) {
+        stopAndDrainStream((g_videoState.flags >> 4) & 1);
     } else {
-        if ((bits & 0x80010) != 0 && (VIDEO_WORD(8) & 0x1000) != 0) {
-            half = (VIDEO_WORD(8) & 0x400) ? 0x101 : 0x100;
+        if ((bits & 0x80010) != 0 && (g_videoState.flags & 0x1000) != 0) {
+            half = (g_videoState.flags & 0x400) ? 0x101 : 0x100;
             sendReverseFlags(&half);
-            sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFDFFFFu);
+            sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFDFFFFu);
         }
         if (bits & 0x10)
             res = pumpVideoFrames(0);
@@ -3012,53 +3202,53 @@ s32 videoCopyWorker(SceSize args __attribute__((unused)), void *argp __attribute
     s32 peer;
 
 loop:
-    res = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x4040, 1, &bits, NULL);
-    sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFFFFBFu);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x4040, 1, &bits, NULL);
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFFFFBFu);
     if (res < 0 || (bits & 0x4000) != 0)
-        sceKernelSetEventFlag(VIDEO_WORD(400), 0x80);
+        sceKernelSetEventFlag(g_videoState.eventflag, 0x80);
     if (res < 0) {
-        VIDEO_WORD(384) = (u32)res;
+        g_videoState.xferResult = (u32)res;
         goto loop;
     }
     if ((bits & 0x4000) != 0) {
-        VIDEO_WORD(384) = 0;
+        g_videoState.xferResult = 0;
         return 0;
     }
 
-    peer = (s8)VIDEO_BYTE(7);
-    idx = (s8)VIDEO_BYTE(6);
-    userBuf = (u8 *)VIDEO_WORD(432);
-    userSize = VIDEO_WORD(428);
+    peer = (s8)g_videoState.peerSlot;
+    idx = (s8)g_videoState.activeSlot;
+    userBuf = (u8 *)g_videoState.readBuf;
+    userSize = g_videoState.readSize;
     if (peer == idx)
         goto wait2;
-    if (VIDEO_WORD(348 + 8 * idx) != 0)
+    if (g_videoState.slot[idx].len != 0)
         goto copy;
 
 wait2:
-    res = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x428, 1, &bits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x428, 1, &bits, NULL);
     if (res < 0) {
-        VIDEO_WORD(384) = (u32)res;
-        sceKernelSetEventFlag(VIDEO_WORD(400), 0x80);
+        g_videoState.xferResult = (u32)res;
+        sceKernelSetEventFlag(g_videoState.eventflag, 0x80);
         goto loop;
     }
     if ((bits & 0x400) != 0) {
-        VIDEO_WORD(384) = 0x80243902;
-        sceKernelSetEventFlag(VIDEO_WORD(400), 0x80);
+        g_videoState.xferResult = SCE_ERROR_USBCAM_NOT_ATTACHED;
+        sceKernelSetEventFlag(g_videoState.eventflag, 0x80);
         goto loop;
     }
     if ((bits & 8) != 0) {
-        VIDEO_WORD(384) = 0;
-        sceKernelSetEventFlag(VIDEO_WORD(400), 0x80);
+        g_videoState.xferResult = 0;
+        sceKernelSetEventFlag(g_videoState.eventflag, 0x80);
         goto loop;
     }
-    idx = (s8)VIDEO_BYTE(6);
+    idx = (s8)g_videoState.activeSlot;
 
 copy:
     off = 0;
-    avail = VIDEO_WORD(348 + 8 * idx);
+    avail = g_videoState.slot[idx].len;
     size = (userSize < avail) ? userSize : avail;
     if (size != 0) {
-        src = (u8 *)VIDEO_WORD(344 + 8 * idx);
+        src = (u8 *)g_videoState.slot[idx].buf;
         do {
             chunk = (size < 16380) ? size : 16380;
             dmacCopy(userBuf + off, src + off, (int)chunk);
@@ -3068,19 +3258,19 @@ copy:
     }
 
     intr = sceKernelCpuSuspendIntr();
-    idx = (s8)VIDEO_BYTE(6);
-    avail = VIDEO_WORD(348 + 8 * idx);
-    status = (userSize < avail) ? (s32)0x8024390A : (s32)avail;
-    VIDEO_WORD(384) = (u32)status;
-    idx = (s8)VIDEO_BYTE(6);
-    VIDEO_WORD(348 + 8 * idx) = 0;
-    sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFFFFDFu);
-    /* 0x3C30 reloads VIDEO_WORD(384) into $a1 and max()es it with 0;
+    idx = (s8)g_videoState.activeSlot;
+    avail = g_videoState.slot[idx].len;
+    status = (userSize < avail) ? (s32)SCE_ERROR_USBCAM_BUF_SMALL : (s32)avail;
+    g_videoState.xferResult = (u32)status;
+    idx = (s8)g_videoState.activeSlot;
+    g_videoState.slot[idx].len = 0;
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFFFFDFu);
+    /* 0x3C30 reloads g_videoState.xferResult into $a1 and max()es it with 0;
        interrupts are suspended across the store, so the local is the
        same value. Signed clamp: sceUsbCamGetReadVideoFrameSize reads
        this word back as a byte count (verified against the disassembly). */
-    VIDEO_WORD(388) = (status >= 0) ? (u32)status : 0u;
-    sceKernelSetEventFlag(VIDEO_WORD(400), 0x80);
+    g_videoState.xferLength = (status >= 0) ? (u32)status : 0u;
+    sceKernelSetEventFlag(g_videoState.eventflag, 0x80);
     sceKernelCpuResumeIntr(intr);
     goto loop;
 }
@@ -3099,40 +3289,40 @@ s32 micCopyWorker(SceSize args __attribute__((unused)), void *argp __attribute__
     s32 intr;
     s32 n;
 
-    MIC_WORD(0x34) = 0;
+    g_micState.status = 0;
 
 loop:
-    res = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x204, 1, &bits, NULL);
+    res = sceKernelWaitEventFlag(g_micState.eventflag, 0x204, 1, &bits, NULL);
     if (res < 0)
         return 0;
     if (bits & 0x200)
         return 0;
 
-    dst = (u8 *)MIC_WORD(0x124);
-    pending = MIC_WORD(0x120);
-    res = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x110, 1, &bits, NULL);
+    dst = (u8 *)g_micState.readBuf;
+    pending = g_micState.readSize;
+    res = sceKernelWaitEventFlag(g_micState.eventflag, 0x110, 1, &bits, NULL);
     copied = 0;
     status = res;
     if (res < 0)
         goto done;
     if (bits & 0x100) {
-        status = 0x80243902;
+        status = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto done;
     }
     if (dst == NULL)
         goto done;
 
-    limit = (MIC_BYTE(6) != 0) ? 132u : 0u;
+    limit = (g_micState.rateFlag != 0) ? 132u : 0u;
     if (limit >= pending)
         goto done;
 
 inner:
-    res = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x121, 1, &bits, NULL);
+    res = sceKernelWaitEventFlag(g_micState.eventflag, 0x121, 1, &bits, NULL);
     status = res;
     if (res < 0)
         goto done;
     if (bits & 0x100) {
-        status = 0x80243902;
+        status = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto done;
     }
     if (bits & 1) {
@@ -3153,15 +3343,15 @@ inner:
 done:
     /* 0x3DEC: the status store sits in the SuspendIntr delay slot, i.e.
        it runs before the callee and still with interrupts enabled. */
-    MIC_WORD(0x34) = (u32)status;
+    g_micState.status = (u32)status;
     intr = sceKernelCpuSuspendIntr();
-    if (MIC_BYTE(4) == 4)
-        MIC_BYTE(4) = 1;
+    if (g_micState.mode == 4)
+        g_micState.mode = 1;
     sceKernelCpuResumeIntr(intr);
-    MIC_WORD(0x124) = 0;
-    MIC_WORD(0x120) = 0;
-    sceKernelClearEventFlag(MIC_WORD(0x114), 0xFFFFFFFBu);
-    sceKernelSetEventFlag(MIC_WORD(0x114), 2);
+    g_micState.readBuf = 0;
+    g_micState.readSize = 0;
+    sceKernelClearEventFlag(g_micState.eventflag, 0xFFFFFFFBu);
+    sceKernelSetEventFlag(g_micState.eventflag, 2);
     goto loop;
 }
 
@@ -3178,33 +3368,33 @@ void videoEp0Complete(struct UsbdDeviceReq *req)
 
     if (req->retcode != 0)
         return;
-    if ((s8)VIDEO_BYTE(0x70) < 0)
+    if ((s8)g_videoState.setup.bmRequestType < 0)
         return;
 
-    if (VIDEO_BYTE(0x71) == 9) {
-        ptr = (u8 *)VIDEO_WORD(0x6C);
-        if (ptr[2] != VIDEO_BYTE(0x72)) {
-            VIDEO_WORD(424) = 0xFFFFFFFF;
+    if (g_videoState.setup.bRequest == 9) {
+        ptr = (u8 *)g_videoState.cmdBuf;
+        if (ptr[2] != ((u8 *)&g_videoState.setup.wValue)[0]) {
+            g_videoState.replyMismatch = 0xFFFFFFFF;
         } else {
-            VIDEO_WORD(424) = 0;
+            g_videoState.replyMismatch = 0;
             ptr[3] = (u8)req->recvsize;
             memset(ptr + 4, 0, 60);
             size = ((u32)req->recvsize < 61u) ? req->recvsize : 60;
             memcpy(ptr + 4, req->data, size);
         }
-        sceKernelSetEventFlag(VIDEO_WORD(400), 0x10000);
+        sceKernelSetEventFlag(g_videoState.eventflag, 0x10000);
         return;
     }
 
-    if (VIDEO_BYTE(0x71) != 10)
+    if (g_videoState.setup.bRequest != 10)
         return;
-    if (VIDEO_HALF(0x72) != 16)
+    if (g_videoState.setup.wValue != 16)
         return;
 
     /* 0x3F08-0x3F18: the first two data bytes are pushed on the stack and
        read back with `lh` - a little-endian sign-extended halfword. */
     half = (s16)((u16)((u8 *)req->data)[0] | ((u16)((u8 *)req->data)[1] << 8));
-    v = VIDEO_WORD(8);
+    v = g_videoState.flags;
     if (half == 1) {
         v &= ~0x400u;
         arg = 1;
@@ -3212,12 +3402,12 @@ void videoEp0Complete(struct UsbdDeviceReq *req)
         v |= 0x400u;
         arg = 0;
     }
-    cbid = (s32)VIDEO_WORD(420);
-    VIDEO_WORD(8) = v;
+    cbid = (s32)g_videoState.lensCbid;
+    g_videoState.flags = v;
     if (cbid > 0)
         sceKernelNotifyCallback(cbid, arg);
-    if (VIDEO_WORD(8) & 0x1000)
-        sceKernelSetEventFlag(VIDEO_WORD(400), 0x20000);
+    if (g_videoState.flags & 0x1000)
+        sceKernelSetEventFlag(g_videoState.eventflag, 0x20000);
 }
 
 
@@ -3231,62 +3421,62 @@ void videoBulkComplete(struct UsbdDeviceReq *req)
     u32 done;
     u32 total;
 
-    if ((u32)VIDEO_WORD(436) >= 1280u)
+    if ((u32)g_videoState.resEx >= 1280u)
         return;
     if (req->retcode < 0)
         return;
 
     done = 0;
 
-    if (VIDEO_WORD(364) == 0) {
+    if (g_videoState.fragHdr == 0) {
         /* No threshold armed: a 6-byte request stages a new one. */
         if (req->recvsize == 6)
-            __builtin_memcpy(&VIDEO_WORD(364), req->data, 4);
+            __builtin_memcpy(&g_videoState.fragHdr, req->data, 4);
         goto rearm;
     }
 
-    avail = VIDEO_WORD(376);
+    avail = g_videoState.stillAvail;
     if (avail == 0)
         goto finish;
-    if (VIDEO_WORD(380) == 0)
+    if (g_videoState.stillBuf == 0)
         goto finish;
     left = (u32)req->recvsize;
     if (left == 0)
         goto finish;
 
     for (;;) {
-        avail = VIDEO_WORD(376);
+        avail = g_videoState.stillAvail;
         /* The clamp compares against req->recvsize itself, not against the
            remaining count: `sltu $t7, $v1, $s0` + `movn $s0, $v1, $t7`
            with `$v1` reloaded from 20($s1) at the top of every iteration
            (0x4110, the jump delay slot). */
         n = ((u32)req->recvsize < avail) ? (u32)req->recvsize : avail;
-        memcpy((u8 *)VIDEO_WORD(380), (u8 *)req->data + done, n);
-        space = VIDEO_WORD(380);
-        avail = VIDEO_WORD(376);
+        memcpy((u8 *)g_videoState.stillBuf, (u8 *)req->data + done, n);
+        space = g_videoState.stillBuf;
+        avail = g_videoState.stillAvail;
         left -= n;
-        VIDEO_WORD(376) = avail - n;
+        g_videoState.stillAvail = avail - n;
         done += n;
         /* 0x4108 is the delay slot of the `beqz $s2` exit test, so the
            store runs whether or not the loop is leaving. */
-        VIDEO_WORD(380) = space + n;
+        g_videoState.stillBuf = space + n;
         if (left == 0)
             break;
     }
 
 finish:
-    total = VIDEO_WORD(368) + (u32)req->recvsize;
-    VIDEO_WORD(368) = total;
+    total = g_videoState.fragTotal + (u32)req->recvsize;
+    g_videoState.fragTotal = total;
     if (done != 0) {
         if ((done & 0x3F) != 0)
             goto signal;
-        if (VIDEO_WORD(364) >= total)
+        if (g_videoState.fragHdr >= total)
             goto rearm;
     }
 
 signal:
-    VIDEO_WORD(380) = 0;
-    sceKernelSetEventFlag(VIDEO_WORD(400), 0x1000);
+    g_videoState.stillBuf = 0;
+    sceKernelSetEventFlag(g_videoState.eventflag, 0x1000);
     return;
 
 rearm:
@@ -3298,43 +3488,43 @@ rearm:
 /* 0x4164 startIsoReceives */
 s32 startIsoReceives(void)
 {
-    struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
+    struct VideoState *st = (struct VideoState *)&g_videoState;
     struct VideoDescState *node;
     s32 res;
     int i;
 
-    VIDEO_WORD(360) = 0;
-    VIDEO_WORD(8) = (VIDEO_WORD(8) | 1u) & ~2u;
+    g_videoState.frameSeq = 0;
+    g_videoState.flags = (g_videoState.flags | 1u) & ~2u;
 
     for (i = 0; i < 2; i++) {
-        st->desc[i].unk4 = 0;
-        st->desc[i].unk8 = 1;
+        st->desc[i].len = 0;
+        st->desc[i].cap = 1;
     }
 
     /* 0x41C8 / 0x41D4: the same node pointer lands in both slots (start
        after current). */
     node = &st->desc[0];
-    VIDEO_WORD(300) = (u32)node;
-    VIDEO_WORD(296) = (u32)node;
+    g_videoState.xferTail = node;
+    g_videoState.xferHead = node;
 
     for (i = 0; i < 2; i++)
-        VIDEO_WORD(348 + 8 * i) = 0;
+        st->slot[i].len = 0;
 
-    VIDEO_BYTE(6) = 1;
-    VIDEO_BYTE(7) = 0;
+    g_videoState.activeSlot = 1;
+    g_videoState.peerSlot = 0;
 
     for (i = 0; i < 2; i++) {
-        memset(st->frameBufs[i], 0, 1792);
-        sceKernelDcacheInvalidateRange(st->frameBufs[i], 1792);
-        st->items[i].unk1c = (int)&st->items[i + 1];
+        memset(st->frameBuf[i], 0, 1792);
+        sceKernelDcacheInvalidateRange(st->frameBuf[i], 1792);
+        st->isoReq[i].unk1c = (int)&st->isoReq[i + 1];
     }
     /* 0x4258 sits in the `jal sceUsbbdReqRecv` delay slot, so it runs
        before the call - the same delay-slot pattern the mic path uses. */
-    st->items[1].unk1c = 0;
+    st->isoReq[1].unk1c = 0;
 
-    res = sceUsbbdReqRecv(&st->items[0]);
-    if (res < 0 && st->items[0].retcode < 0)
-        VIDEO_BYTE(5) = 1;
+    res = sceUsbbdReqRecv(&st->isoReq[0]);
+    if (res < 0 && st->isoReq[0].retcode < 0)
+        g_videoState.aux = 1;
     return res;
 }
 
@@ -3466,7 +3656,7 @@ int packVideoConfig(u8 *out, struct UsbCamVideoReq *req)
     u32 v;
     int ret;
 
-    ret = 0x80243905;
+    ret = SCE_ERROR_USBCAM_INVALID_RES;
     if ((u32)req->unk >= 10)
         goto out;
     if ((s32)req->unk < (s32)req->resolution)
@@ -3479,7 +3669,7 @@ int packVideoConfig(u8 *out, struct UsbCamVideoReq *req)
         goto out;
     if ((u32)req->wb >= 4)
         goto out;
-    ret = 0x80243906;
+    ret = SCE_ERROR_USBCAM_INVALID_VALUE;
     if ((u32)req->saturation >= 256)
         goto out;
     if ((u32)req->brightness >= 256)
@@ -3488,7 +3678,7 @@ int packVideoConfig(u8 *out, struct UsbCamVideoReq *req)
         goto out;
     if ((u32)req->sharpness >= 256)
         goto out;
-    ret = 0x80243905;
+    ret = SCE_ERROR_USBCAM_INVALID_RES;
     if ((u32)req->unk4 >= 3)
         goto out;
 
@@ -3508,7 +3698,7 @@ int packVideoConfig(u8 *out, struct UsbCamVideoReq *req)
         goto out;
     if ((s32)req->framerate >= 5 && (u32)(req->unk - 7) < 3)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if ((s32)req->unk9 >= 3)
         goto out;
     if ((u32)req->framesize - 1 > 0x87FF)
@@ -3516,8 +3706,8 @@ int packVideoConfig(u8 *out, struct UsbCamVideoReq *req)
     if ((u32)req->unk12 >= 3)
         goto out;
 
-    out[0] = s_map8DE0[req->unk];
-    out[1] = s_map8DEC[req->resolution];
+    out[0] = s_widthIdxMap[req->unk];
+    out[1] = s_heightIdxMap[req->resolution];
     out[2] = s_map8DF8[req->framerate];
     out[3] = s_map8E08[req->unk2];
     out[4] = s_map8E00[req->unk3];
@@ -3563,10 +3753,10 @@ int packStillConfig(u8 *out, struct UsbCamStillReq *req)
 {
     int ret;
 
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if ((u32)req->jpegsize > 0x80000)
         goto out;
-    ret = 0x80243905;
+    ret = SCE_ERROR_USBCAM_INVALID_RES;
     if ((s32)req->resolution >= 10)
         goto out;
     if ((s32)req->framesize >= 10)
@@ -3575,15 +3765,15 @@ int packStillConfig(u8 *out, struct UsbCamStillReq *req)
         goto out;
     if ((s32)req->unk6 >= 3)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if ((u32)req->complevel - 1 >= 63)
         goto out;
-    ret = 0x80243905;
+    ret = SCE_ERROR_USBCAM_INVALID_RES;
     if ((u32)req->unk9 >= 4)
         goto out;
     if ((u32)req->unk13 >= 7)
         goto out;
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if ((u32)req->unk14 >= 3)
         goto out;
 
@@ -3593,8 +3783,8 @@ int packStillConfig(u8 *out, struct UsbCamStillReq *req)
     out[3] = (u8)((u32)req->jpegsize >> 24);
     out[4] = (u8)req->complevel;
     out[5] = 1;
-    out[6] = s_map8DE0[req->resolution];
-    out[7] = s_map8DEC[req->framesize];
+    out[6] = s_widthIdxMap[req->resolution];
+    out[7] = s_heightIdxMap[req->framesize];
     out[8] = s_map8E08[req->unk6];
     out[9] = (req->reverseVert != 0);
     out[10] = (req->reverseHoriz != 0);
@@ -3619,19 +3809,19 @@ s32 guardStillInput(void)
 {
     int ret;
 
-    ret = 0x80243908;
-    if (g_videoState.unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (VIDEO_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_videoState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if ((VIDEO_BYTE(1) & 2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if ((g_videoState.setupFlags & 2) == 0)
         goto out;
-    ret = 0x8024390C;
-    if ((VIDEO_WORD(8) & 8) != 0)
+    ret = SCE_ERROR_USBCAM_INVALID_STATE;
+    if ((g_videoState.flags & 8) != 0)
         ret = 0;
 out:
     return ret;
@@ -3643,12 +3833,12 @@ out:
 
 s32 reapStillInput(int arg)
 {
-    struct VideoStateFull *st;
+    struct VideoState *st;
     u32 bits;
     s32 res;
     s32 ret;
 
-    st = (struct VideoStateFull *)&g_videoState;
+    st = (struct VideoState *)&g_videoState;
     if (arg == 0) {
         res = sceKernelWaitEventFlag(st->eventflag, 0x3400, 1, &bits, NULL);
         if (res < 0)
@@ -3656,28 +3846,28 @@ s32 reapStillInput(int arg)
     } else {
         res = sceKernelPollEventFlag(st->eventflag, 0x3400, 1, &bits);
         if (res == (s32)0x800201AF)
-            return 0x8024390E;
+            return SCE_ERROR_USBCAM_NOT_READY;
         if (res < 0) {
-            VIDEO_WORD(8) = VIDEO_WORD(8) & ~8u;
+            g_videoState.flags = g_videoState.flags & ~8u;
             return res;
         }
     }
 
     if ((bits & 0x2400) != 0) {
-        ret = (bits & 0x400) ? 0x80243902 : 0;
-        if (VIDEO_WORD(436) < 1280)
-            sceUsbbdReqCancel(&st->reqC);
-    } else if (VIDEO_WORD(372) < VIDEO_WORD(368)) {
-        ret = 0x8024390A;
+        ret = (bits & 0x400) ? SCE_ERROR_USBCAM_NOT_ATTACHED : 0;
+        if (g_videoState.resEx < 1280)
+            sceUsbbdReqCancel(&st->bulkReq);
+    } else if (g_videoState.stillSize < g_videoState.fragTotal) {
+        ret = SCE_ERROR_USBCAM_BUF_SMALL;
     } else {
-        ret = (VIDEO_WORD(376) != 0) ? VIDEO_WORD(368) : VIDEO_WORD(372);
+        ret = (g_videoState.stillAvail != 0) ? g_videoState.fragTotal : g_videoState.stillSize;
     }
 
-    if (VIDEO_WORD(436) >= 1280) {
-        VIDEO_WORD(8) = VIDEO_WORD(8) | 0x10;
+    if (g_videoState.resEx >= 1280) {
+        g_videoState.flags = g_videoState.flags | 0x10;
         sceKernelSetEventFlag(st->eventflag, 0x100000);
     }
-    VIDEO_WORD(8) = VIDEO_WORD(8) & ~8u;
+    g_videoState.flags = g_videoState.flags & ~8u;
     return ret;
 }
 
@@ -3697,7 +3887,7 @@ void *dmacCopy(void *dst, const void *src, int size)
 
     if (((0x00220202u >> (((u32)dst >> 27) & 0x1F)) & 1) == 0)
         return sceKernelMemcpy(dst, src, (u32)size);
-    op = (sceKernelDmaOperation *)VIDEO_WORD(392);
+    op = (sceKernelDmaOperation *)g_videoState.dmaOp;
     if (op == NULL)
         return sceKernelMemcpy(dst, src, (u32)size);
 
@@ -3749,53 +3939,53 @@ s32 stopAndDrainStream(int arg)
     intr = sceKernelCpuSuspendIntr();
     ret = 0;
     done = 0;
-    if (VIDEO_BYTE(2) == 0) {
+    if (g_videoState.attached == 0) {
         done = 1;
         goto resume;
     }
     if (sceUsbAccGetAuthStat() != 0) {
-        sceKernelClearEventFlag(VIDEO_WORD(400), (u32)-5);
-        VIDEO_WORD(0x134) = 0;
-        VIDEO_WORD(0x138) = 1;
-        VIDEO_WORD(0x144) = 0;
-        VIDEO_WORD(0x148) = 1;
-        if (VIDEO_BYTE(4) == 2) {
-            sceKernelClearEventFlag(VIDEO_WORD(400), (u32)-2050);
-            VIDEO_BYTE(4) = 0;
-            sceKernelSetEventFlag(VIDEO_WORD(400), 8);
+        sceKernelClearEventFlag(g_videoState.eventflag, (u32)-5);
+        g_videoState.desc[0].len = 0;
+        g_videoState.desc[0].cap = 1;
+        g_videoState.desc[1].len = 0;
+        g_videoState.desc[1].cap = 1;
+        if (g_videoState.mode == 2) {
+            sceKernelClearEventFlag(g_videoState.eventflag, (u32)-2050);
+            g_videoState.mode = 0;
+            sceKernelSetEventFlag(g_videoState.eventflag, 8);
         } else {
-            VIDEO_BYTE(4) = 0;
+            g_videoState.mode = 0;
         }
         done = 1;
         goto resume;
     }
 
     sceKernelCpuResumeIntr(intr);
-    ret = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x402, 1, &bits, NULL);
+    ret = sceKernelWaitEventFlag(g_videoState.eventflag, 0x402, 1, &bits, NULL);
     if (ret < 0)
         return ret;
     if (arg != 0) {
-        ret = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x100400, 1, &bits, NULL);
+        ret = sceKernelWaitEventFlag(g_videoState.eventflag, 0x100400, 1, &bits, NULL);
         if (ret < 0)
             goto suspendCheck;
-        sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFEFFFFFu);
+        sceKernelClearEventFlag(g_videoState.eventflag, 0xFFEFFFFFu);
     }
     if ((bits & 0x400) != 0) {
         done = 1;
         goto suspendCheck;
     }
-    ret = sceKernelLockMutex(VIDEO_WORD(408), 1, NULL);
+    ret = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (ret != 0)
         goto suspendCheck;
     ret = sendAccCommand((arg != 0) ? 4 : 2, 2, NULL, 0);
-    sceKernelUnlockMutex(VIDEO_WORD(408), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     goto suspendCheck;
 
 suspendCheck:
     intr = sceKernelCpuSuspendIntr();
     if (ret >= 0)
         goto resume;
-    sceKernelUnlockMutex(VIDEO_WORD(408), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     done = 1;
     goto resume;
 
@@ -3804,35 +3994,35 @@ resume:
     if (done)
         return ret;
 
-    ret = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x500, 1, &bits, NULL);
+    ret = sceKernelWaitEventFlag(g_videoState.eventflag, 0x500, 1, &bits, NULL);
     if (ret < 0)
         return ret;
     if ((bits & 0x400) != 0)
         return 0;
     intr = sceKernelCpuSuspendIntr();
-    mode = VIDEO_BYTE(4);
+    mode = g_videoState.mode;
     if (mode == 2) {
-        sceKernelClearEventFlag(VIDEO_WORD(400), (u32)-2050);
-        VIDEO_BYTE(4) = 0;
-        sceKernelSetEventFlag(VIDEO_WORD(400), 8);
+        sceKernelClearEventFlag(g_videoState.eventflag, (u32)-2050);
+        g_videoState.mode = 0;
+        sceKernelSetEventFlag(g_videoState.eventflag, 8);
         for (i = 0; i < 2; i++)
-            VIDEO_WORD(348 + i * 8) = 0;
+            g_videoState.slot[i].len = 0;
     } else if (mode == 3) {
-        sceKernelClearEventFlag(VIDEO_WORD(400), (u32)-2050);
-        sceKernelSetEventFlag(VIDEO_WORD(400), 8);
+        sceKernelClearEventFlag(g_videoState.eventflag, (u32)-2050);
+        sceKernelSetEventFlag(g_videoState.eventflag, 8);
         for (i = 0; i < 2; i++)
-            VIDEO_WORD(348 + i * 8) = 0;
-        VIDEO_WORD(384) = 0x8024390A;
-        VIDEO_BYTE(4) = 0;
+            g_videoState.slot[i].len = 0;
+        g_videoState.xferResult = SCE_ERROR_USBCAM_BUF_SMALL;
+        g_videoState.mode = 0;
     } else {
-        VIDEO_BYTE(4) = 0;
+        g_videoState.mode = 0;
     }
     sceKernelCpuResumeIntr(intr);
-    sceKernelWaitEventFlag(VIDEO_WORD(400), 0x480, 1, &bits, NULL);
+    sceKernelWaitEventFlag(g_videoState.eventflag, 0x480, 1, &bits, NULL);
     return ret;
 }
 
-/* Transfer node of the list rooted at VIDEO_WORD(300) (g_videoState +
+/* Transfer node of the list rooted at g_videoState.xferTail (g_videoState +
    0x12C): +0 payload pointer, +4 payload length, +8 "busy" flag (1 when
    the node has been consumed), +12 next. Nodes are produced by the USB
    receive path outside this window. */
@@ -3844,11 +4034,11 @@ struct UsbCamXfer {
 };
 
 /* 0x4F04: frame pump. Sleeps on the video event flag, walks the node list
-   at VIDEO_WORD(300) and merges each node's payload into the active half
-   buffer ({VIDEO_WORD(344 + 8 * seb(VIDEO_BYTE(7))),
-   VIDEO_WORD(348 + 8 * seb(VIDEO_BYTE(7)))}) while VIDEO_WORD(436) < 1280,
-   or into the JPEG pair (VIDEO_WORD(380)/VIDEO_WORD(368), reached through
-   the slot/slotLen pair) otherwise. arg == 0 is the half-buffer path,
+   at g_videoState.xferTail and merges each node's payload into the active half
+   buffer ({st->slot[seb(st->peerSlot)].buf,
+   st->slot[seb(st->peerSlot)].len}) while g_videoState.resEx < 1280,
+   or into the JPEG pair (g_videoState.stillBuf/g_videoState.fragTotal, reached through
+   the slot[i] pair) otherwise. arg == 0 is the half-buffer path,
    arg != 0 the big path. Every exit runs stopAndDrainStream(arg) and returns the
    last sceKernelWaitEventFlag status. */
 
@@ -3884,29 +4074,29 @@ s32 pumpVideoFrames(int arg)
     cnt20 = 0;
 
 wait:
-    res = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x404, 1, &bits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x404, 1, &bits, NULL);
     if (res < 0)
         goto out;
     if ((bits & 0x400) != 0)
         goto out;
     if ((bits & 0x20000) != 0) {
-        half = (VIDEO_WORD(8) & 0x400) ? 0x101 : 0x100;
+        half = (g_videoState.flags & 0x400) ? 0x101 : 0x100;
         sendReverseFlags(&half);
-        sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFDFFFFu);
+        sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFDFFFFu);
     }
-    if (VIDEO_BYTE(5) == 1) {
-        res = sceKernelWaitEventFlag(VIDEO_WORD(400), 0x8400, 1, &bits, NULL);
+    if (g_videoState.aux == 1) {
+        res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x8400, 1, &bits, NULL);
         if (res < 0)
             goto out;
         if ((bits & 0x400) != 0)
             goto out;
     }
-    if (((u32)VIDEO_BYTE(4) - 2) < 2)
+    if (((u32)g_videoState.mode - 2) < 2)
         goto out;
 
     intr = sceKernelCpuSuspendIntr();
     i = 0;
-    node = (struct UsbCamXfer *)VIDEO_WORD(300);
+    node = (struct UsbCamXfer *)g_videoState.xferTail;
     if (node->flag == 0)
         goto found;
 walk:
@@ -3923,8 +4113,8 @@ restart:
     goto wait;
 
 found:
-    poff = 344 + (u32)((s32)(s8)VIDEO_BYTE(7) * 8);
-    sceKernelClearEventFlag(VIDEO_WORD(400), (u32)-5);
+    poff = 344 + (u32)((s32)(s8)g_videoState.peerSlot * 8);
+    sceKernelClearEventFlag(g_videoState.eventflag, (u32)-5);
     if (sceUsbAccGetAuthStat() != 0)
         goto restart;
     i = 0;
@@ -3935,43 +4125,43 @@ frame:
         goto soi;
 
 cont:
-    if ((VIDEO_WORD(8) & 2) != 0) {
+    if ((g_videoState.flags & 2) != 0) {
         next = node->next;
         goto nodeDone;
     }
-    if (VIDEO_WORD(436) >= 1280)
+    if (g_videoState.resEx >= 1280)
         goto big;
 
-    cap = VIDEO_WORD(340);
-    plen = VIDEO_WORD(poff + 4);
+    cap = g_videoState.workHalf;
+    plen = (*videoWordAt(poff + 4));
     need = (u32)node->len;
     copy = ((cap - plen) < need) ? (cap - plen) : need;
-    sceKernelMemcpy((u8 *)VIDEO_WORD(poff) + plen, buf, copy);
+    sceKernelMemcpy((u8 *)(*videoWordAt(poff)) + plen, buf, copy);
     plen = plen + need;
-    VIDEO_WORD(poff + 4) = plen;
+    (*videoWordAt(poff + 4)) = plen;
     if (cap < plen) {
-        VIDEO_WORD(8) = VIDEO_WORD(8) | 3;
-        VIDEO_WORD(poff + 4) = 0;
+        g_videoState.flags = g_videoState.flags | 3;
+        (*videoWordAt(poff + 4)) = 0;
         goto restart;
     }
     if (need >= 896) {
         next = node->next;
         goto nodeDone;
     }
-    VIDEO_WORD(8) = VIDEO_WORD(8) | 1;
-    if ((s32)(s8)VIDEO_BYTE(7) == (s32)(s8)VIDEO_BYTE(6)) {
-        VIDEO_WORD(poff + 4) = 0;
+    g_videoState.flags = g_videoState.flags | 1;
+    if ((s32)(s8)g_videoState.peerSlot == (s32)(s8)g_videoState.activeSlot) {
+        (*videoWordAt(poff + 4)) = 0;
         goto nodeTail;
     }
-    if (VIDEO_WORD(360) == VIDEO_WORD(poff + 4))
+    if (g_videoState.frameSeq == (*videoWordAt(poff + 4)))
         goto other;
-    VIDEO_WORD(poff + 4) = 0;
+    (*videoWordAt(poff + 4)) = 0;
 
 nodeTail:
     next = node->next;
 nodeDone:
     node->flag = 1;
-    VIDEO_WORD(300) = (u32)next;
+    g_videoState.xferTail = next;
     nxt2 = node->next;
     node->len = 0;
     i = i + 1;
@@ -3983,21 +4173,21 @@ nodeDone:
     goto frame;
 
 other:
-    if (VIDEO_WORD(348 + (u32)((s32)(s8)VIDEO_BYTE(6) * 8)) != 0) {
-        VIDEO_WORD(poff + 4) = 0;
+    if (g_videoState.slot[g_videoState.activeSlot].len != 0) {
+        (*videoWordAt(poff + 4)) = 0;
         goto nodeTail;
     }
-    VIDEO_BYTE(6) = VIDEO_BYTE(6) ^ 1;
-    VIDEO_BYTE(7) = VIDEO_BYTE(7) ^ 1;
-    sceKernelSetEventFlag(VIDEO_WORD(400), 32);
+    g_videoState.activeSlot = g_videoState.activeSlot ^ 1;
+    g_videoState.peerSlot = g_videoState.peerSlot ^ 1;
+    sceKernelSetEventFlag(g_videoState.eventflag, 32);
     goto nodeTail;
 
 big:
-    limit = (arg == 0) ? VIDEO_WORD(340) : VIDEO_WORD(372);
-    plen = VIDEO_WORD(poff + 4);
+    limit = (arg == 0) ? g_videoState.workHalf : g_videoState.stillSize;
+    plen = (*videoWordAt(poff + 4));
     need = (u32)node->len;
     if (limit < (plen + need)) {
-        VIDEO_WORD(8) = VIDEO_WORD(8) | 2;
+        g_videoState.flags = g_videoState.flags | 2;
         goto restart;
     }
     mark = (u32)buf[node->len - 2] | ((u32)buf[node->len - 1] << 8);
@@ -4010,20 +4200,20 @@ big:
         goto head0;
 
     __builtin_memcpy(&hdr, buf + 4, 4);
-    VIDEO_WORD(364) = hdr;
-    if (VIDEO_WORD(364) == VIDEO_WORD(368))
+    g_videoState.fragHdr = hdr;
+    if (g_videoState.fragHdr == g_videoState.fragTotal)
         goto seg;
-    VIDEO_WORD(368) = 0;
-    VIDEO_WORD(364) = 0;
+    g_videoState.fragTotal = 0;
+    g_videoState.fragHdr = 0;
     goto nodeTail;
 
 seg:
-    clamp = VIDEO_WORD(44);
+    clamp = g_videoState.cfgTail.w[0];
     if (clamp > 0xFC00)
         clamp = 0xFC00;
-    diff = (clamp >= VIDEO_WORD(364)) ? (clamp - VIDEO_WORD(364))
-                                      : (VIDEO_WORD(364) - clamp);
-    if ((cnt12 + 1) == (u32)buf[9] && VIDEO_WORD(364) < (clamp + 1024))
+    diff = (clamp >= g_videoState.fragHdr) ? (clamp - g_videoState.fragHdr)
+                                      : (g_videoState.fragHdr - clamp);
+    if ((cnt12 + 1) == (u32)buf[9] && g_videoState.fragHdr < (clamp + 1024))
         cnt16 = 1;
     if ((u32)buf[9] == cnt12)
         cnt20 = (cnt20 + 1) & 0xFF;
@@ -4033,56 +4223,60 @@ seg:
         goto mode2;
     if (cnt20 < 3) {
         cnt12 = (u32)buf[9];
-        VIDEO_WORD(368) = 0;
+        g_videoState.fragTotal = 0;
         goto nodeTail;
     }
 mode2:
-    VIDEO_WORD(380) = 0;
-    sceKernelSetEventFlag(VIDEO_WORD(400), 0x1004);
-    VIDEO_BYTE(4) = 2;
+    g_videoState.stillBuf = 0;
+    sceKernelSetEventFlag(g_videoState.eventflag, 0x1004);
+    g_videoState.mode = 2;
     goto restart;
 
 head0:
     __builtin_memcpy(&hdr, buf + 4, 4);
-    VIDEO_WORD(360) = hdr;
-    VIDEO_WORD(360) = VIDEO_WORD(360) + 12;
-    if (VIDEO_WORD(360) != VIDEO_WORD(poff + 4)) {
-        VIDEO_WORD(poff + 4) = 0;
+    g_videoState.frameSeq = hdr;
+    g_videoState.frameSeq = g_videoState.frameSeq + 12;
+    if (g_videoState.frameSeq != (*videoWordAt(poff + 4))) {
+        (*videoWordAt(poff + 4)) = 0;
         goto nodeTail;
     }
-    if (VIDEO_WORD(348 + (u32)((s32)(s8)VIDEO_BYTE(6) * 8)) != 0) {
-        VIDEO_WORD(poff + 4) = 0;
+    if (g_videoState.slot[g_videoState.activeSlot].len != 0) {
+        (*videoWordAt(poff + 4)) = 0;
         goto nodeTail;
     }
-    hdr = VIDEO_WORD(360);
+    hdr = g_videoState.frameSeq;
     __builtin_memcpy(buf + 4, &hdr, 4);
-    __builtin_memcpy((u8 *)VIDEO_WORD(poff) + 2, buf, 12);
-    VIDEO_BYTE(6) = VIDEO_BYTE(7);
-    VIDEO_BYTE(7) = VIDEO_BYTE(7) ^ 1;
-    sceKernelSetEventFlag(VIDEO_WORD(400), 32);
+    __builtin_memcpy((u8 *)(*videoWordAt(poff)) + 2, buf, 12);
+    g_videoState.activeSlot = g_videoState.peerSlot;
+    g_videoState.peerSlot = g_videoState.peerSlot ^ 1;
+    sceKernelSetEventFlag(g_videoState.eventflag, 32);
     goto nodeTail;
 
 soi:
-    if (VIDEO_WORD(436) >= 1280) {
-        VIDEO_WORD(poff + 4) = 0;
-        VIDEO_WORD(8) = (VIDEO_WORD(8) & ~2u) | 1;
+    if (g_videoState.resEx >= 1280) {
+        (*videoWordAt(poff + 4)) = 0;
+        g_videoState.flags = (g_videoState.flags & ~2u) | 1;
         goto cont;
     }
     mark = (u32)buf[2] | ((u32)buf[3] << 8);
     if (mark != 0xFEFF) {
-        VIDEO_WORD(8) = VIDEO_WORD(8) | 2;
+        g_videoState.flags = g_videoState.flags | 2;
         goto cont;
     }
-    if ((VIDEO_WORD(8) & 1) != 0)
-        VIDEO_WORD(8) = VIDEO_WORD(8) & ~3u;
+    if ((g_videoState.flags & 1) != 0)
+        g_videoState.flags = g_videoState.flags & ~3u;
     __builtin_memcpy(&hdr, buf + 6, 4);
-    VIDEO_WORD(360) = hdr;
-    VIDEO_WORD(poff + 4) = 0;
-    if (VIDEO_WORD(340) < VIDEO_WORD(360))
-        VIDEO_WORD(8) = VIDEO_WORD(8) | 3;
+    g_videoState.frameSeq = hdr;
+    (*videoWordAt(poff + 4)) = 0;
+    if (g_videoState.workHalf < g_videoState.frameSeq)
+        g_videoState.flags = g_videoState.flags | 3;
     goto cont;
 
 common:
+    /* slot/slotLen are byte offsets into this struct (poff selects the
+       active slot[i] pair, else the still assembly area at +0x174/0x17C).
+       Kept numeric: the merger intentionally aliases work and still
+       buffers, matching the original's computed-offset code. */
     if (arg == 0) {
         slot = poff;
         slotLen = poff + 4;
@@ -4090,35 +4284,39 @@ common:
         slot = 380;
         slotLen = 368;
     }
-    if ((VIDEO_WORD(8) & 1) == 0)
+    if ((g_videoState.flags & 1) == 0)
         goto plain;
     if (arg == 0)
         goto split;
 
-    sceKernelMemcpy((u8 *)VIDEO_WORD(slot), buf, (u32)node->len);
-    VIDEO_WORD(8) = VIDEO_WORD(8) & ~1u;
-    VIDEO_WORD(slotLen) = VIDEO_WORD(slotLen) + (u32)node->len;
+    sceKernelMemcpy((u8 *)(*videoWordAt(slot)), buf, (u32)node->len);
+    g_videoState.flags = g_videoState.flags & ~1u;
+    (*videoWordAt(slotLen)) = (*videoWordAt(slotLen)) + (u32)node->len;
     goto nodeTail;
 
 split:
-    sceKernelMemcpy((u8 *)VIDEO_WORD(slot) + 14, buf + 2, (u32)node->len - 2);
-    ((u8 *)VIDEO_WORD(slot))[0] = buf[0];
-    ((u8 *)VIDEO_WORD(slot))[1] = buf[1];
-    VIDEO_WORD(slotLen) = VIDEO_WORD(slotLen) + 12;
-    VIDEO_WORD(8) = VIDEO_WORD(8) & ~1u;
-    VIDEO_WORD(slotLen) = VIDEO_WORD(slotLen) + (u32)node->len;
+    sceKernelMemcpy((u8 *)(*videoWordAt(slot)) + 14, buf + 2, (u32)node->len - 2);
+    ((u8 *)(*videoWordAt(slot)))[0] = buf[0];
+    ((u8 *)(*videoWordAt(slot)))[1] = buf[1];
+    (*videoWordAt(slotLen)) = (*videoWordAt(slotLen)) + 12;
+    g_videoState.flags = g_videoState.flags & ~1u;
+    (*videoWordAt(slotLen)) = (*videoWordAt(slotLen)) + (u32)node->len;
     goto nodeTail;
 
 plain:
-    sceKernelMemcpy((u8 *)VIDEO_WORD(slot) + VIDEO_WORD(slotLen), buf,
+    sceKernelMemcpy((u8 *)(*videoWordAt(slot)) + (*videoWordAt(slotLen)), buf,
                     (u32)node->len);
-    VIDEO_WORD(slotLen) = VIDEO_WORD(slotLen) + (u32)node->len;
+    (*videoWordAt(slotLen)) = (*videoWordAt(slotLen)) + (u32)node->len;
     goto nodeTail;
 
 out:
     stopAndDrainStream(arg);
     return res;
 }
+
+/* ============================================================
+ * Section: ioctl dispatch (size table + command table)
+ * ============================================================ */
 
 /* 0x55AC: shared ioctl front end for every sceUsbCamIoctl entry point.
    Guards the driver state, special-cases cmd 0x8001, then linearly scans
@@ -4161,12 +4359,12 @@ s32 dispatchIoctl(int cmd, int *arg)
     u32 key;
     int i;
 
-    if (VIDEO_BYTE(0) == 0)
-        return 0x80243908;
-    if (VIDEO_BYTE(2) == 0)
-        return 0x80243902;
+    if (g_videoState.started == 0)
+        return SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_videoState.attached == 0)
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (cmd == 0x8001)
         return execRawCommand(arg);
 
@@ -4176,10 +4374,51 @@ s32 dispatchIoctl(int cmd, int *arg)
             continue;
         fn = (cmd < 0) ? s_cmd8F0C[i].getter : s_cmd8F0C[i].setter;
         if (fn == NULL)
-            return 0x8024390D;
+            return SCE_ERROR_USBCAM_UNKNOWN_CMD;
         return fn(arg);
     }
-    return 0x8024390D;
+    return SCE_ERROR_USBCAM_UNKNOWN_CMD;
+}
+
+/* ioctl argument sizes. Derived from the original's nested range ladder;
+   gaps with no row (e.g. cmd 8, 0x15, 0x80000008/09) fall through to
+   UNKNOWN_CMD, matching the original. */
+struct IoctlSizeEntry {
+    u32 lo;
+    u32 hi;
+    int size;
+};
+
+static const struct IoctlSizeEntry s_ioctlSizes[] = {
+    { 0x00000001, 0x00000007, 4 },
+    { 0x00000009, 0x00000009, 4 },
+    { 0x0000000A, 0x0000000A, 12 },
+    { 0x0000000B, 0x0000000C, 8 },
+    { 0x0000000D, 0x00000010, 4 },
+    { 0x00000011, 0x00000011, 8 },
+    { 0x00000012, 0x00000014, 4 },
+    { 0x00008001, 0x00008001, 144 },
+    { 0x40000001, 0x40000002, 8 },
+    { 0x80000001, 0x80000007, 4 },
+    { 0x8000000A, 0x8000000A, 12 },
+    { 0x8000000B, 0x8000000C, 8 },
+    { 0x8000000D, 0x80000010, 4 },
+    { 0x80000011, 0x80000011, 8 },
+    { 0x80000012, 0x80000014, 4 },
+    { 0xC0000001, 0xC0000002, 8 },
+    { 0xC0000003, 0xC0000003, 4 },
+};
+
+static int ioctlArgSize(int cmd, int *size)
+{
+    u32 i;
+    for (i = 0; i < sizeof(s_ioctlSizes) / sizeof(s_ioctlSizes[0]); i++) {
+        if ((u32)cmd >= s_ioctlSizes[i].lo && (u32)cmd <= s_ioctlSizes[i].hi) {
+            *size = s_ioctlSizes[i].size;
+            return 0;
+        }
+    }
+    return SCE_ERROR_USBCAM_UNKNOWN_CMD;
 }
 
 /* 0x56B0 sceUsbCamIoctl - validates cmd/arg buffer size, K1-checks the
@@ -4188,75 +4427,18 @@ s32 sceUsbCamIoctl(int cmd, int *arg)
 {
     int oldK1;
     s32 ret;
-    int size;
+    int size = 0;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243907;
+    ret = SCE_ERROR_USBCAM_INVALID_PARAM;
     if (arg == NULL)
         goto out;
 
-    if ((u32)cmd > 0x40000002u) {
-        if ((u32)cmd <= 0x80000010u) {
-            if ((u32)cmd < 0x8000000Du) {
-                if ((u32)cmd == 0x8000000Au) {
-                    size = 12;
-                } else if ((u32)cmd > 0x8000000Au) {
-                    size = 8;
-                } else if ((u32)cmd + 0x7FFFFFFFu < 7u) {
-                    size = 4;
-                } else {
-                    ret = 0x8024390D;
-                    goto out;
-                }
-            } else {
-                size = 4;
-            }
-        } else if ((u32)cmd <= 0x80000014u) {
-            size = ((u32)cmd < 0x80000012u) ? 8 : 4;
-        } else if ((u32)cmd < 0xC0000001u) {
-            ret = 0x8024390D;
-            goto out;
-        } else if ((u32)cmd <= 0xC0000002u) {
-            size = 8;
-        } else if ((u32)cmd == 0xC0000003u) {
-            size = 4;
-        } else {
-            ret = 0x8024390D;
-            goto out;
-        }
-    } else if ((u32)cmd >= 0x40000001u) {
-        size = 8;
-    } else if ((u32)cmd < 13u) {
-        if ((u32)cmd < 11u) {
-            if (cmd == 9) {
-                size = 4;
-            } else if ((u32)cmd < 10u) {
-                if ((u32)(cmd - 1) < 7u)
-                    size = 4;
-                else {
-                    ret = 0x8024390D;
-                    goto out;
-                }
-            } else {
-                size = 12;
-            }
-        } else {
-            size = 8;
-        }
-    } else if (cmd == 17) {
-        size = 8;
-    } else if ((u32)cmd < 17u) {
-        size = 4;
-    } else if ((u32)cmd < 21u) {
-        size = 4;
-    } else if (cmd == 0x8001) {
-        size = 144;
-    } else {
-        ret = 0x8024390D;
+    ret = ioctlArgSize(cmd, &size);
+    if (ret < 0)
         goto out;
-    }
 
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(arg, size))
         goto out;
     ret = dispatchIoctl(cmd, arg);
@@ -4303,21 +4485,21 @@ int setResolutionPair(int *arg)
     int res;
 
     if (arg[0] >= 10)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     if (arg[1] >= 10)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     res = encodeResolutionPair(arg[0], arg[1], buf, buf + 1);
     if (res < 0)
         return res;
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(160, 2, buf, 2);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(12) = buf[0];
-    VIDEO_BYTE(13) = buf[1];
+    g_videoState.cfg.width = buf[0];
+    g_videoState.cfg.height = buf[1];
     return 0;
 }
 
@@ -4327,18 +4509,18 @@ int setSaturation(int *arg)
     int res;
 
     if ((u32)*arg >= 256)
-        return 0x80243906;
+        return SCE_ERROR_USBCAM_INVALID_VALUE;
     buf[0] = encodeSaturation(*arg);
     res = sendAccCommand(164, 2, buf, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(18) = *arg;
+    g_videoState.cfg.unk12 = *arg;
     return 0;
 }
 
 int getSaturation(int *arg)
 {
-    *arg = VIDEO_BYTE(18);
+    *arg = g_videoState.cfg.unk12;
     return 0;
 }
 
@@ -4348,22 +4530,22 @@ int setBrightness(int *arg)
     int res;
 
     if ((u32)*arg >= 256)
-        return 0x80243906;
+        return SCE_ERROR_USBCAM_INVALID_VALUE;
     buf[0] = encodeBrightness(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(165, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(19) = *arg;
+    g_videoState.cfg.unk13 = *arg;
     return 0;
 }
 
 int getBrightness(int *arg)
 {
-    *arg = VIDEO_BYTE(19);
+    *arg = g_videoState.cfg.unk13;
     return 0;
 }
 
@@ -4373,22 +4555,22 @@ int setContrast(int *arg)
     int res;
 
     if ((u32)*arg >= 256)
-        return 0x80243906;
+        return SCE_ERROR_USBCAM_INVALID_VALUE;
     buf[0] = *arg;
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(166, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(20) = *arg;
+    g_videoState.cfg.unk14 = *arg;
     return 0;
 }
 
 int getContrast(int *arg)
 {
-    *arg = VIDEO_BYTE(20);
+    *arg = g_videoState.cfg.unk14;
     return 0;
 }
 
@@ -4398,22 +4580,22 @@ int setSharpness(int *arg)
     int res;
 
     if ((u32)*arg >= 256)
-        return 0x80243906;
+        return SCE_ERROR_USBCAM_INVALID_VALUE;
     buf[0] = encodeSharpness(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(167, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(21) = *arg;
+    g_videoState.cfg.unk15 = *arg;
     return 0;
 }
 
 int getSharpness(int *arg)
 {
-    *arg = VIDEO_BYTE(21);
+    *arg = g_videoState.cfg.unk15;
     return 0;
 }
 
@@ -4428,29 +4610,29 @@ int setZoom(int *arg)
     val = *arg;
     if (val != 0) {
         if ((u32)(val - 10) >= 71)
-            return 0x80243905;
-        curW = encodeWidthCode(&VIDEO_BYTE(12));
-        curH = encodeHeightCode(&VIDEO_BYTE(13));
+            return SCE_ERROR_USBCAM_INVALID_RES;
+        curW = encodeWidthCode(&g_videoState.cfg.width);
+        curH = encodeHeightCode(&g_videoState.cfg.height);
         if (checkEvAllowed(curW, curH, val) == 0)
-            return 0x80243905;
-        if (VIDEO_BYTE(14) >= 5 && (u32)(curW - 7) < 3)
-            return 0x80243905;
+            return SCE_ERROR_USBCAM_INVALID_RES;
+        if (g_videoState.cfg.framerate >= 5 && (u32)(curW - 7) < 3)
+            return SCE_ERROR_USBCAM_INVALID_RES;
     }
     buf[0] = *arg;
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(5, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(32) = buf[0];
+    g_videoState.cfg.res = buf[0];
     return 0;
 }
 
 int getZoom(int *arg)
 {
-    *arg = VIDEO_BYTE(32);
+    *arg = g_videoState.cfg.res;
     return 0;
 }
 
@@ -4473,20 +4655,20 @@ int setImageEffect(int *arg)
     int res;
 
     buf[0] = encodeImageEffect(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(172, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(30) = buf[0];
+    g_videoState.cfg.effect = buf[0];
     return 0;
 }
 
 int getImageEffect(int *arg)
 {
-    *arg = decodeImageEffect(&VIDEO_BYTE(30));
+    *arg = decodeImageEffect(&g_videoState.cfg.effect);
     return 0;
 }
 
@@ -4498,22 +4680,22 @@ int setResolution(int *arg)
     res = encodeResolutionEx(*arg, buf, buf + 1);
     if (res < 0)
         return res;
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(160, 2, buf, 2);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(12) = buf[0];
-    VIDEO_BYTE(13) = buf[1];
+    g_videoState.cfg.width = buf[0];
+    g_videoState.cfg.height = buf[1];
     return 0;
 }
 
 int getResolution(int *arg)
 {
-    arg[0] = encodeWidthCode(&VIDEO_BYTE(12));
-    arg[1] = encodeHeightCode(&VIDEO_BYTE(13));
+    arg[0] = encodeWidthCode(&g_videoState.cfg.width);
+    arg[1] = encodeHeightCode(&g_videoState.cfg.height);
     return 0;
 }
 
@@ -4523,26 +4705,26 @@ int setUnk0xB(int *arg)
     int res;
 
     buf[0] = (*arg == 1) | (*(u16 *)(arg + 1) << 8);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(168, 2, buf, 3);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(23) = buf[0];
-    VIDEO_HALF(24) = buf[0] >> 8;
+    g_videoState.cfg.unk17 = buf[0];
+    g_videoState.cfg.unk18 = buf[0] >> 8;
     return 0;
 }
 
 int getUnk0xB(int *arg)
 {
-    if (VIDEO_BYTE(23) == 1) {
+    if (g_videoState.cfg.unk17 == 1) {
         *arg = 1;
         *(u16 *)(arg + 1) = 0;
     } else {
         *arg = 0;
-        *(u16 *)(arg + 1) = VIDEO_HALF(24);
+        *(u16 *)(arg + 1) = g_videoState.cfg.unk18;
     }
     return 0;
 }
@@ -4553,22 +4735,22 @@ int setFramerate(int *arg)
     int res;
 
     if ((u32)*arg >= 8)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     buf[0] = encodeFramerate(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(161, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(14) = buf[0];
+    g_videoState.cfg.framerate = buf[0];
     return 0;
 }
 
 int getFramerate(int *arg)
 {
-    *arg = decodeFramerate(&VIDEO_BYTE(14));
+    *arg = decodeFramerate(&g_videoState.cfg.framerate);
     return 0;
 }
 
@@ -4578,22 +4760,22 @@ int setUnk0xE(int *arg)
     int res;
 
     if ((u32)*arg >= 4)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     buf[0] = encodeUnk0xE(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(162, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(16) = buf[0];
+    g_videoState.cfg.unk10 = buf[0];
     return 0;
 }
 
 int getUnk0xE(int *arg)
 {
-    *arg = decodeUnk0xE(&VIDEO_BYTE(16));
+    *arg = decodeUnk0xE(&g_videoState.cfg.unk10);
     return 0;
 }
 
@@ -4603,22 +4785,22 @@ int setUnk0xF(int *arg)
     int res;
 
     if ((u32)*arg >= 4)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     buf[0] = encodeWhiteBalance(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(163, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(17) = buf[0];
+    g_videoState.cfg.wb = buf[0];
     return 0;
 }
 
 int getUnk0xF(int *arg)
 {
-    *arg = decodeWhiteBalance(&VIDEO_BYTE(17));
+    *arg = decodeWhiteBalance(&g_videoState.cfg.wb);
     return 0;
 }
 
@@ -4628,22 +4810,22 @@ int setAntiFlicker(int *arg)
     int res;
 
     if ((u32)*arg >= 3)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     buf[0] = encodeAntiFlicker(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(169, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(22) = buf[0];
+    g_videoState.cfg.antiflicker = buf[0];
     return 0;
 }
 
 int getAntiFlicker(int *arg)
 {
-    *arg = decodeAntiFlicker(&VIDEO_BYTE(22));
+    *arg = decodeAntiFlicker(&g_videoState.cfg.antiflicker);
     return 0;
 }
 
@@ -4653,9 +4835,9 @@ int setUnk0x11(int *arg)
     int res;
 
     if ((u32)arg[0] + 0x8013 > 0x10026)
-        return 0x80243907;
+        return SCE_ERROR_USBCAM_INVALID_PARAM;
     if (arg[1] < -32787 || arg[1] > 32787)
-        return 0x80243907;
+        return SCE_ERROR_USBCAM_INVALID_PARAM;
     if (arg[0] < 0) {
         buf[0] = -arg[0];
         arg[0] = (arg[0] | 0x8000) + 1;
@@ -4668,15 +4850,15 @@ int setUnk0x11(int *arg)
     } else {
         buf[1] = arg[1];
     }
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(170, 2, buf, 4);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_HALF(26) = *(u16 *)arg;
-    VIDEO_HALF(28) = *(u16 *)(arg + 1);
+    g_videoState.cfg.unk1A = *(u16 *)arg;
+    g_videoState.cfg.unk1C = *(u16 *)(arg + 1);
     return 0;
 }
 
@@ -4684,9 +4866,9 @@ int getUnk0x11(int *arg)
 {
     u16 v;
 
-    v = VIDEO_HALF(26);
+    v = g_videoState.cfg.unk1A;
     arg[0] = (v & 0x8000) ? 1 - (v & 0x7FFF) : v;
-    v = VIDEO_HALF(28);
+    v = g_videoState.cfg.unk1C;
     arg[1] = (v & 0x8000) ? 1 - (v & 0x7FFF) : v;
     return 0;
 }
@@ -4697,20 +4879,20 @@ int setUnk0x12(int *arg)
     int res;
 
     buf[0] = (*arg != 0);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(173, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(31) = buf[0];
+    g_videoState.cfg.unk1F = buf[0];
     return 0;
 }
 
 int getUnk0x12(int *arg)
 {
-    *arg = VIDEO_BYTE(31);
+    *arg = g_videoState.cfg.unk1F;
     return 0;
 }
 
@@ -4720,22 +4902,22 @@ int setUnk0x13(int *arg)
     int res;
 
     if ((u32)*arg >= 3)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     buf[0] = encodeUnk0x13(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(174, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(15) = buf[0];
+    g_videoState.cfg.unk0F = buf[0];
     return 0;
 }
 
 int getUnk0x13(int *arg)
 {
-    *arg = decodeUnk0x13(&VIDEO_BYTE(15));
+    *arg = decodeUnk0x13(&g_videoState.cfg.unk0F);
     return 0;
 }
 
@@ -4745,22 +4927,22 @@ int setEvLevel(int *arg)
     int res;
 
     if ((u32)*arg >= 17)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     buf[0] = encodeEvLevel(*arg);
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(175, 2, buf, 1);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(43) = buf[0];
+    g_videoState.cfg.ev = buf[0];
     return 0;
 }
 
 int getEvLevel(int *arg)
 {
-    *arg = clampEvLevel(&VIDEO_BYTE(43));
+    *arg = clampEvLevel(&g_videoState.cfg.ev);
     return 0;
 }
 
@@ -4780,34 +4962,34 @@ int getUnk40000001(int *arg)
     u8 *bufPtr;
     int res;
 
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if ((u32)res - 0x800201A9u < 2)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
     *(u16 *)buf = *(u16 *)arg;
-    sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFEFFFF);
     res = sendAccCommand(67, 3, buf, 2);
     if (res < 0)
         goto unlock;
-    res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x400, 1, &outBits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x400, 1, &outBits, NULL);
     if (res < 0) {
         Kprintf("%serror - at waiting for event at line %d): 0x%08x\n", "", 793, outBits);
         goto unlock;
     }
     if (outBits & 0x400) {
-        res = 0x80243902;
+        res = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto unlock;
     }
-    if (VIDEO_WORD(0x1A8) != 0) {
-        res = 0x80243913;
+    if (g_videoState.replyMismatch != 0) {
+        res = SCE_ERROR_USBCAM_REPLY_MISMATCH;
         goto unlock;
     }
     arg[1] = 0;
-    bufPtr = (u8 *)VIDEO_WORD(0x6C);
+    bufPtr = (u8 *)g_videoState.cmdBuf;
     memcpy((u8 *)arg + 4, bufPtr + 4, bufPtr[3]);
 unlock:
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     return res;
 }
 
@@ -4827,34 +5009,34 @@ int getUnk40000002(int *arg)
     u8 *bufPtr;
     int res;
 
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if ((u32)res - 0x800201A9u < 2)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
     buf[0] = *(u8 *)arg;
-    sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFEFFFF);
     res = sendAccCommand(64, 2, buf, 1);
     if (res < 0)
         goto unlock;
-    res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x400, 1, &outBits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x400, 1, &outBits, NULL);
     if (res < 0) {
         Kprintf("%serror - at waiting for event at line %d): 0x%08x\n", "", 866, outBits);
         goto unlock;
     }
     if (outBits & 0x400) {
-        res = 0x80243902;
+        res = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto unlock;
     }
-    if (VIDEO_WORD(0x1A8) != 0) {
-        res = 0x80243913;
+    if (g_videoState.replyMismatch != 0) {
+        res = SCE_ERROR_USBCAM_REPLY_MISMATCH;
         goto unlock;
     }
     arg[1] = 0;
-    bufPtr = (u8 *)VIDEO_WORD(0x6C);
+    bufPtr = (u8 *)g_videoState.cmdBuf;
     memcpy((u8 *)arg + 4, bufPtr + 4, bufPtr[3]);
 unlock:
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     return res;
 }
 
@@ -4864,28 +5046,28 @@ int getUnk40000003(int *arg)
     u8 *bufPtr;
     int res;
 
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if ((u32)res - 0x800201A9u < 2)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
-    sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFEFFFF);
     res = sendAccCommand(9, 3, NULL, 0);
     if (res < 0)
         goto unlock;
-    res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x400, 1, &outBits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x400, 1, &outBits, NULL);
     if (res < 0) {
         Kprintf("%serror - at waiting for event at line %d): 0x%08x\n", "", 917, outBits);
         goto unlock;
     }
     if (outBits & 0x400) {
-        res = 0x80243902;
+        res = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto unlock;
     }
-    bufPtr = (u8 *)VIDEO_WORD(0x6C);
+    bufPtr = (u8 *)g_videoState.cmdBuf;
     *arg = *(u16 *)(bufPtr + 4);
 unlock:
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     return res;
 }
 
@@ -4897,25 +5079,25 @@ int setUnk0xA(int *arg)
     int res;
 
     if ((u32)arg[0] >= 3)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     if ((u32)arg[1] > 0xFFFF)
-        return 0x80243907;
+        return SCE_ERROR_USBCAM_INVALID_PARAM;
     if ((u32)arg[2] > 0xFFFF)
-        return 0x80243907;
+        return SCE_ERROR_USBCAM_INVALID_PARAM;
     v1 = *(u16 *)(arg + 1);
     v2 = *(u16 *)(arg + 2);
     buf[0] = s_set10Codes[arg[0]] | ((u32)v1 << 8) | ((u32)v2 << 24);
     buf[1] = v2 >> 8;
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if (res != 0)
         return res;
     res = sendAccCommand(6, 2, buf, 5);
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     if (res != 0)
         return res;
-    VIDEO_BYTE(33) = buf[0];
-    VIDEO_HALF(34) = buf[0] >> 8;
-    VIDEO_HALF(36) = (buf[0] >> 24) | ((buf[1] & 0xFF) << 8);
+    g_videoState.cfg.unk21 = buf[0];
+    g_videoState.cfg.unk22 = buf[0] >> 8;
+    g_videoState.cfg.unk24 = (buf[0] >> 24) | ((buf[1] & 0xFF) << 8);
     return 0;
 }
 
@@ -4924,14 +5106,14 @@ int getUnk0xA(int *arg)
     int i;
 
     for (i = 0; i < 3; i++) {
-        if (VIDEO_BYTE(33) == s_set10Codes[i])
+        if (g_videoState.cfg.unk21 == s_set10Codes[i])
             break;
     }
     if (i == 3)
-        return 0x80243905;
+        return SCE_ERROR_USBCAM_INVALID_RES;
     arg[0] = i;
-    arg[1] = VIDEO_HALF(34);
-    arg[2] = VIDEO_HALF(36);
+    arg[1] = g_videoState.cfg.unk22;
+    arg[2] = g_videoState.cfg.unk24;
     return 0;
 }
 
@@ -4941,29 +5123,29 @@ s32 execRawCommand(int *arg)
     u32 outBits;
     int res;
 
-    res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
+    res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
     if ((u32)res - 0x800201A9u < 2)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
-    sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
+    sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFEFFFF);
     res = sendAccCommand(arg[1], arg[2], &arg[4], arg[3]);
     if (res < 0)
         goto unlock;
     if (arg[0] == 0)
         goto unlock;
-    res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x10400, 1, &outBits, NULL);
+    res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x10400, 1, &outBits, NULL);
     if (res < 0) {
         Kprintf("%serror - at waiting for event at line %d): 0x%08x\n", "", 1030, outBits);
         goto unlock;
     }
     if (outBits & 0x400) {
-        res = 0x80243902;
+        res = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto unlock;
     }
-    __builtin_memcpy((u8 *)arg + 4, (u8 *)VIDEO_WORD(0x6C) + 4, 64);
+    __builtin_memcpy((u8 *)arg + 4, (u8 *)g_videoState.cmdBuf + 4, 64);
 unlock:
-    sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
+    sceKernelUnlockMutex(g_videoState.mutex, 1);
     return res;
 }
 
@@ -4975,19 +5157,19 @@ int sceUsbCamSetupMicEx(struct UsbCamSetupMicExParam *param, void *workarea, int
     int oldK1;
     int ret;
 
-    if (MIC_BYTE(0) == 0)
-        return 0x80243908;
-    if (MIC_BYTE(2) == 0)
-        return 0x80243902;
+    if (g_micState.started == 0)
+        return SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.attached == 0)
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if ((u32)wasize < 264)
-        return 0x8024390A;
+        return SCE_ERROR_USBCAM_BUF_SMALL;
     if (param == NULL)
-        return 0x80243904;
+        return SCE_ERROR_USBCAM_INVALID_ADDR;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (!pspK1StaBufOk(param, 36))
         goto out;
     if (workarea == NULL)
@@ -4997,7 +5179,7 @@ int sceUsbCamSetupMicEx(struct UsbCamSetupMicExParam *param, void *workarea, int
     /* Original falls straight into the epilogue here without pspSetK1. */
     if (param->freq != 48000 && param->freq != 44100 &&
         param->freq != 22050 && param->freq != 11025)
-        return 0x8024390B;
+        return SCE_ERROR_USBCAM_INVALID_FREQ;
 
     cmd[0] = (u16)param->alc;
     cmd[1] = (u16)param->gain;
@@ -5021,18 +5203,18 @@ int sceUsbCamSetupMic(struct UsbCamSetupMicParam *param, void *workarea, int was
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (MIC_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x8024390A;
+    ret = SCE_ERROR_USBCAM_BUF_SMALL;
     if ((u32)wasize < 264)
         goto out;
-    ret = 0x80243904;
+    ret = SCE_ERROR_USBCAM_INVALID_ADDR;
     if (param == NULL)
         goto out;
     if (!pspK1StaBufOk(param, 20))
@@ -5041,7 +5223,7 @@ int sceUsbCamSetupMic(struct UsbCamSetupMicParam *param, void *workarea, int was
         goto out;
     if (!pspK1DynBufOk(workarea, wasize))
         goto out;
-    ret = 0x8024390B;
+    ret = SCE_ERROR_USBCAM_INVALID_FREQ;
     if (param->freq != 44100 && param->freq != 22050 && param->freq != 11025)
         goto out;
 
@@ -5065,14 +5247,14 @@ s32 sceUsbCamStopMic(void)
     int oldK1;
     s32 ret;
 
-    if (MIC_BYTE(0) == 0)
-        return 0x80243908;
-    if (MIC_BYTE(2) == 0)
-        return 0x80243902;
+    if (g_micState.started == 0)
+        return SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.attached == 0)
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
-        return 0x80243902;
-    if (MIC_BYTE(1) == 0)
-        return 0x80243901;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.setupFlags == 0)
+        return SCE_ERROR_USBCAM_NOT_SETUP;
     oldK1 = pspShiftK1();
     /* uOFW note: the original stops the mic by re-issuing the start
        transfer; verified from the disassembly. */
@@ -5091,32 +5273,32 @@ int sceUsbCamReadMic(u8 *buf, SceSize size)
     int intr;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    if (MIC_BYTE(5) != 0) {
-        ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x500, 1, &outBits, NULL);
+    if (g_micState.aux != 0) {
+        ret = sceKernelWaitEventFlag(g_micState.eventflag, 0x500, 1, &outBits, NULL);
         if (ret < 0)
             goto out;
         if (outBits & 0x100) {
-            ret = 0x80243902;
+            ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
             goto out;
         }
-        sceKernelClearEventFlag(MIC_WORD(0x114), 0xFBFF);
+        sceKernelClearEventFlag(g_micState.eventflag, 0xFBFF);
     }
     intr = sceKernelCpuSuspendIntr();
     ret = validateMicRead(buf, size);
     if (ret < 0)
         goto resume;
-    if (MIC_BYTE(4) == 4) {
-        ret = 0x80243909;
+    if (g_micState.mode == 4) {
+        ret = SCE_ERROR_USBCAM_BUSY;
         goto resume;
     }
-    sceKernelClearEventFlag(MIC_WORD(0x114), 0xFFFFFFFD);
-    MIC_WORD(0x120) = size;
-    MIC_WORD(0x124) = (u32)buf;
-    MIC_BYTE(4) = 4;
-    ret = sceKernelSetEventFlag(MIC_WORD(0x114), 4);
+    sceKernelClearEventFlag(g_micState.eventflag, 0xFFFFFFFD);
+    g_micState.readSize = size;
+    g_micState.readBuf = (u32)buf;
+    g_micState.mode = 4;
+    ret = sceKernelSetEventFlag(g_micState.eventflag, 4);
 resume:
     sceKernelCpuResumeIntr(intr);
 out:
@@ -5134,46 +5316,46 @@ int sceUsbCamReadMicBlocking(u8 *buf, SceSize size)
     int intr;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    if (MIC_BYTE(5) != 0) {
-        ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x500, 1, &outBits, NULL);
+    if (g_micState.aux != 0) {
+        ret = sceKernelWaitEventFlag(g_micState.eventflag, 0x500, 1, &outBits, NULL);
         if (ret < 0)
             goto out;
         if (outBits & 0x100) {
-            ret = 0x80243902;
+            ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
             goto out;
         }
-        sceKernelClearEventFlag(MIC_WORD(0x114), 0xFBFF);
+        sceKernelClearEventFlag(g_micState.eventflag, 0xFBFF);
     }
     intr = sceKernelCpuSuspendIntr();
     ret = validateMicRead(buf, size);
     if (ret < 0)
         goto resume;
-    if (MIC_BYTE(4) == 4) {
+    if (g_micState.mode == 4) {
         /* Original jumps straight to the epilogue: sceKernelCpuResumeIntr
            is skipped and interrupts stay disabled. */
-        ret = 0x80243909;
+        ret = SCE_ERROR_USBCAM_BUSY;
         goto out;
     }
-    sceKernelClearEventFlag(MIC_WORD(0x114), 0xFFFFFFFD);
-    MIC_WORD(0x120) = size;
-    MIC_WORD(0x124) = (u32)buf;
-    MIC_BYTE(4) = 4;
-    ret = sceKernelSetEventFlag(MIC_WORD(0x114), 4);
+    sceKernelClearEventFlag(g_micState.eventflag, 0xFFFFFFFD);
+    g_micState.readSize = size;
+    g_micState.readBuf = (u32)buf;
+    g_micState.mode = 4;
+    ret = sceKernelSetEventFlag(g_micState.eventflag, 4);
 resume:
     sceKernelCpuResumeIntr(intr);
     if (ret < 0)
         goto out;
-    ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x102, 1, &outBits, NULL);
+    ret = sceKernelWaitEventFlag(g_micState.eventflag, 0x102, 1, &outBits, NULL);
     if (ret < 0)
         goto out;
     if (outBits & 0x100) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    ret = MIC_WORD(0x34);
+    ret = g_micState.status;
 out:
     pspSetK1(oldK1);
     return ret;
@@ -5188,26 +5370,26 @@ int sceUsbCamWaitReadMicEnd(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (MIC_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if (MIC_BYTE(1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if (g_micState.setupFlags == 0)
         goto out;
 
-    ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x102, 1, &outBits, NULL);
+    ret = sceKernelWaitEventFlag(g_micState.eventflag, 0x102, 1, &outBits, NULL);
     if (ret < 0)
         goto out;
     if (outBits & 0x100) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    ret = MIC_WORD(0x34);
+    ret = g_micState.status;
 out:
     pspSetK1(oldK1);
     return ret;
@@ -5222,30 +5404,30 @@ int sceUsbCamPollReadMicEnd(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (MIC_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if (MIC_BYTE(1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if (g_micState.setupFlags == 0)
         goto out;
 
-    ret = sceKernelPollEventFlag(MIC_WORD(0x114), 0x102, 1, &outBits);
+    ret = sceKernelPollEventFlag(g_micState.eventflag, 0x102, 1, &outBits);
     if (ret == (s32)0x800201AF) {
-        ret = 0x8024390E;
+        ret = SCE_ERROR_USBCAM_NOT_READY;
         goto out;
     }
     if (ret < 0)
         goto out;
     if (outBits & 0x100) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    ret = MIC_WORD(0x34);
+    ret = g_micState.status;
 out:
     pspSetK1(oldK1);
     return ret;
@@ -5259,18 +5441,18 @@ int sceUsbCamGetMicDataLength(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (MIC_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if (MIC_BYTE(1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if (g_micState.setupFlags == 0)
         goto out;
-    ret = MIC_WORD(0x34);
+    ret = g_micState.status;
 out:
     pspSetK1(oldK1);
     return ret;
@@ -5284,28 +5466,28 @@ s32 sceUsbCamSetMicGain(int gain)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    MIC_BYTE(5) = 1;
+    g_micState.aux = 1;
     ret = 0;
-    sceKernelClearEventFlag(MIC_WORD(0x114), 0xFBFF);
+    sceKernelClearEventFlag(g_micState.eventflag, 0xFBFF);
 
-    ret = 0x80243908;
-    if (MIC_BYTE(0) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.started == 0)
         goto out;
-    ret = 0x80243902;
-    if (MIC_BYTE(2) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if (MIC_BYTE(1) == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if (g_micState.setupFlags == 0)
         goto out;
 
     ret = 0;
-    if ((s16)MIC_HALF(0x0A) != (s16)gain) {
-        MIC_HALF(0x0A) = (u16)gain;
+    if ((s16)g_micState.gain != (s16)gain) {
+        g_micState.gain = (u16)gain;
         ret = startMicSync();
-        MIC_BYTE(5) = 0;
-        sceKernelSetEventFlag(MIC_WORD(0x114), 0x400);
+        g_micState.aux = 0;
+        sceKernelSetEventFlag(g_micState.eventflag, 0x400);
     }
 out:
     pspSetK1(oldK1);
@@ -5319,25 +5501,25 @@ s32 commitMicSetup(void *cmd, int flag, void *workarea, int wasize)
     int intr;
 
     intr = sceKernelCpuSuspendIntr();
-    __builtin_memcpy(&MIC_BYTE(8), cmd, 14);
-    MIC_WORD(0x1C) = wasize;
-    MIC_WORD(0x18) = (u32)workarea;
-    MIC_BYTE(6) = (flag != 0);
+    __builtin_memcpy(&g_micState.cmdLo, cmd, 14);
+    g_micState.bufSize = wasize;
+    g_micState.setupOk = (u32)workarea;
+    g_micState.rateFlag = (flag != 0);
     if (flag != 0) {
-        MIC_WORD(0x30) = (u32)workarea;
-        MIC_WORD(0x24) = 0;
-        MIC_WORD(0x28) = 0;
-        MIC_WORD(0x2C) = 0;
-        MIC_WORD(0x20) = (u32)wasize / 132;
+        g_micState.bufBase = (u32)workarea;
+        g_micState.writePos = 0;
+        g_micState.readPos = 0;
+        g_micState.writeCursor = 0;
+        g_micState.ringCapacity = (u32)wasize / 132;
     } else {
-        MIC_WORD(0x30) = (u32)workarea;
-        MIC_WORD(0x20) = wasize;
-        MIC_WORD(0x24) = 0;
-        MIC_WORD(0x28) = (u32)workarea;
-        MIC_WORD(0x2C) = (u32)workarea;
+        g_micState.bufBase = (u32)workarea;
+        g_micState.ringCapacity = wasize;
+        g_micState.writePos = 0;
+        g_micState.readPos = (u32)workarea;
+        g_micState.writeCursor = (u32)workarea;
     }
     sceKernelCpuResumeIntr(intr);
-    MIC_BYTE(1) = 1;
+    g_micState.setupFlags = 1;
     return 0;
 }
 
@@ -5345,25 +5527,25 @@ s32 commitMicSetup(void *cmd, int flag, void *workarea, int wasize)
 /* 0x79A0 sendMicStart */
 s32 sendMicStart(void)
 {
-    struct MicStateFull *st = (struct MicStateFull *)&g_micState;
+    struct MicState *st = (struct MicState *)&g_micState;
     int intr;
     s32 ret;
 
     intr = sceKernelCpuSuspendIntr();
     if (sceUsbAccGetAuthStat() != 0) {
-        ret = 0x80243902;
+        ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
         goto out;
     }
-    if (st->reqD.retcode > 0) {
-        ret = 0x80243006;
+    if (st->intrReq.retcode > 0) {
+        ret = SCE_ERROR_USB_INTR_FAILED;
         goto out;
     }
-    ((u8 *)st->unk60)[2] = 2;
-    ((u8 *)st->unk60)[3] = 0;
-    ret = sceUsbAccIntrInReq(&st->reqD);
+    ((u8 *)st->ep0Buf)[2] = 2;
+    ((u8 *)st->ep0Buf)[3] = 0;
+    ret = sceUsbAccIntrInReq(&st->intrReq);
     if (ret < 0)
         goto out;
-    st->unk4 = 2;
+    st->mode = 2;
     ret = 0;
 out:
     sceKernelCpuResumeIntr(intr);
@@ -5377,19 +5559,19 @@ s32 startMicSync(void)
     u32 outBits;
     s32 ret;
 
-    if (MIC_BYTE(4) == 4) {
-        ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x102, 1, &outBits, NULL);
+    if (g_micState.mode == 4) {
+        ret = sceKernelWaitEventFlag(g_micState.eventflag, 0x102, 1, &outBits, NULL);
         if (ret < 0)
             return ret;
         if (outBits & 0x100)
-            return 0x80243902;
+            return SCE_ERROR_USBCAM_NOT_ATTACHED;
     }
     sendMicStart();
-    ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x120, 1, &outBits, NULL);
+    ret = sceKernelWaitEventFlag(g_micState.eventflag, 0x120, 1, &outBits, NULL);
     if (ret < 0)
         return ret;
     if (outBits & 0x100)
-        return 0x80243902;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     return sendMicSetup();
 }
 
@@ -5397,28 +5579,28 @@ s32 startMicSync(void)
 /* 0x7AF8 validateMicRead */
 s32 validateMicRead(void *buf, int size)
 {
-    if (MIC_BYTE(0) == 0)
-        return 0x80243908;
-    if (MIC_BYTE(2) == 0)
-        return 0x80243902;
+    if (g_micState.started == 0)
+        return SCE_ERROR_USBCAM_NOT_INIT;
+    if (g_micState.attached == 0)
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (sceUsbAccGetAuthStat() < 0)
-        return 0x80243902;
-    if (MIC_BYTE(1) == 0)
-        return 0x80243901;
-    if (MIC_BYTE(4) == 0 || MIC_BYTE(4) == 2)
-        return 0x80243912;
+        return SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (g_micState.setupFlags == 0)
+        return SCE_ERROR_USBCAM_NOT_SETUP;
+    if (g_micState.mode == 0 || g_micState.mode == 2)
+        return SCE_ERROR_USBCAM_MIC_STATE;
     if (buf == NULL)
-        return 0x80243907;
+        return SCE_ERROR_USBCAM_INVALID_PARAM;
     if (!pspK1DynBufOk(buf, size))
-        return 0x80243904;
-    if (MIC_BYTE(6) != 0) {
+        return SCE_ERROR_USBCAM_INVALID_ADDR;
+    if (g_micState.rateFlag != 0) {
         if ((u32)size < 132)
-            return 0x80243903;
+            return SCE_ERROR_USBCAM_INVALID_SIZE;
     } else {
         if ((u32)size < 2)
-            return 0x80243903;
+            return SCE_ERROR_USBCAM_INVALID_SIZE;
         if (size & 1)
-            return 0x80243903;
+            return SCE_ERROR_USBCAM_INVALID_SIZE;
     }
     return 0;
 }
@@ -5432,15 +5614,15 @@ s32 sceUsbCamStartMic(void)
     u32 buf;
 
     oldK1 = pspShiftK1();
-    if (MIC_BYTE(6) != 0) {
-        MIC_WORD(0x2C) = 0;
-        MIC_WORD(0x24) = 0;
-        MIC_WORD(0x28) = 0;
+    if (g_micState.rateFlag != 0) {
+        g_micState.writeCursor = 0;
+        g_micState.writePos = 0;
+        g_micState.readPos = 0;
     } else {
-        buf = MIC_WORD(0x30);
-        MIC_WORD(0x24) = 0;
-        MIC_WORD(0x28) = buf;
-        MIC_WORD(0x2C) = buf;
+        buf = g_micState.bufBase;
+        g_micState.writePos = 0;
+        g_micState.readPos = buf;
+        g_micState.writeCursor = buf;
     }
     ret = sendMicSetup();
     pspSetK1(oldK1);
@@ -5453,7 +5635,7 @@ s32 registerMicDriver(int arg0 __attribute__((unused)), int arg1 __attribute__((
     if (sceUsbbdRegister(&g_micDriver) < 0) {
         return 1;
     }
-    g_micState.unk0 = 0;
+    g_micState.started = 0;
     return 0;
 }
 
@@ -5480,11 +5662,11 @@ void micRecvComplete(struct UsbdDeviceReq *req)
 
     if (req->retcode < 0)
         return;
-    if (MIC_BYTE(4) == 0 || MIC_BYTE(4) == 2)
+    if (g_micState.mode == 0 || g_micState.mode == 2)
         return;
 
-    if (MIC_WORD(0x18) == 0) {
-        if (MIC_BYTE(4) == 1 || MIC_BYTE(4) == 4) {
+    if (g_micState.setupOk == 0) {
+        if (g_micState.mode == 1 || g_micState.mode == 4) {
             sceKernelDcacheInvalidateRange(req->data, 256);
             sceUsbbdReqRecv(req);
         }
@@ -5492,8 +5674,8 @@ void micRecvComplete(struct UsbdDeviceReq *req)
     }
 
     recvsize = (u32)req->recvsize;
-    if (MIC_BYTE(6) != 0) {
-        blk = (u8 *)(MIC_WORD(0x30) + MIC_WORD(0x2C) * 132);
+    if (g_micState.rateFlag != 0) {
+        blk = (u8 *)(g_micState.bufBase + g_micState.writeCursor * 132);
         payload = (u16)(recvsize - 2);
         blk[0] = ((u8 *)req->data)[0];
         blk[1] = ((u8 *)req->data)[1];
@@ -5501,45 +5683,45 @@ void micRecvComplete(struct UsbdDeviceReq *req)
         memcpy(blk + 4, (u8 *)req->data + 2, payload);
         memset(blk + 4 + payload, 0, 128 - payload);
 
-        MIC_WORD(0x2C) = MIC_WORD(0x2C) + 1;
-        if (MIC_WORD(0x2C) >= MIC_WORD(0x20))
-            MIC_WORD(0x2C) = 0;
-        if (MIC_WORD(0x24) >= MIC_WORD(0x20)) {
-            MIC_WORD(0x28) = MIC_WORD(0x2C);
-            avail = MIC_WORD(0x24);
+        g_micState.writeCursor = g_micState.writeCursor + 1;
+        if (g_micState.writeCursor >= g_micState.ringCapacity)
+            g_micState.writeCursor = 0;
+        if (g_micState.writePos >= g_micState.ringCapacity) {
+            g_micState.readPos = g_micState.writeCursor;
+            avail = g_micState.writePos;
         } else {
-            MIC_WORD(0x24) = MIC_WORD(0x24) + 1;
-            avail = MIC_WORD(0x24);
+            g_micState.writePos = g_micState.writePos + 1;
+            avail = g_micState.writePos;
         }
     } else {
-        writePtr = MIC_WORD(0x2C);
-        start = MIC_WORD(0x30);
-        end = start + (MIC_WORD(0x20) & ~1u);
+        writePtr = g_micState.writeCursor;
+        start = g_micState.bufBase;
+        end = start + (g_micState.ringCapacity & ~1u);
         reqEnd = writePtr + (recvsize & ~1u);
 
         if (end < reqEnd) {
             first = reqEnd - end;
             conditionalSwapCopy((void *)writePtr, req->data, (int)(recvsize - first));
-            conditionalSwapCopy((void *)MIC_WORD(0x30),
+            conditionalSwapCopy((void *)g_micState.bufBase,
                          (u8 *)req->data + (recvsize - first), (int)first);
-            newWrite = MIC_WORD(0x30) + (first & ~1u);
+            newWrite = g_micState.bufBase + (first & ~1u);
         } else {
             conditionalSwapCopy((void *)writePtr, req->data, (int)recvsize);
             newWrite = writePtr + (recvsize & ~1u);
         }
 
-        MIC_WORD(0x24) = MIC_WORD(0x24) + recvsize;
-        if (MIC_WORD(0x20) < MIC_WORD(0x24))
-            MIC_WORD(0x24) = MIC_WORD(0x20);
-        MIC_WORD(0x2C) = newWrite;
-        if (MIC_WORD(0x20) == MIC_WORD(0x24))
-            MIC_WORD(0x28) = MIC_WORD(0x2C);
-        avail = MIC_WORD(0x24);
+        g_micState.writePos = g_micState.writePos + recvsize;
+        if (g_micState.ringCapacity < g_micState.writePos)
+            g_micState.writePos = g_micState.ringCapacity;
+        g_micState.writeCursor = newWrite;
+        if (g_micState.ringCapacity == g_micState.writePos)
+            g_micState.readPos = g_micState.writeCursor;
+        avail = g_micState.writePos;
     }
 
     if (avail != 0)
-        sceKernelSetEventFlag(MIC_WORD(0x114), 1);
-    if (MIC_BYTE(4) == 1 || MIC_BYTE(4) == 4) {
+        sceKernelSetEventFlag(g_micState.eventflag, 1);
+    if (g_micState.mode == 1 || g_micState.mode == 4) {
         sceKernelDcacheInvalidateRange(req->data, 256);
         sceUsbbdReqRecv(req);
     }
@@ -5549,7 +5731,7 @@ void micRecvComplete(struct UsbdDeviceReq *req)
    cpu-suspend, build the setup packet in unk60, submit reqD. */
 s32 sendMicSetup(void)
 {
-    struct MicStateFull *st = (struct MicStateFull *)&g_micState;
+    struct MicState *st = (struct MicState *)&g_micState;
     s32 intr;
     s32 ret;
     u16 buf[8];
@@ -5559,48 +5741,48 @@ s32 sendMicSetup(void)
     int i;
 
     intr = sceKernelCpuSuspendIntr();
-    ret = 0x80243908;
-    if (st->unk0 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_INIT;
+    if (st->started == 0)
         goto out;
-    ret = 0x80243902;
-    if (st->unk2 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_ATTACHED;
+    if (st->attached == 0)
         goto out;
     if (sceUsbAccGetAuthStat() < 0)
         goto out;
-    ret = 0x80243901;
-    if (st->unk1 == 0)
+    ret = SCE_ERROR_USBCAM_NOT_SETUP;
+    if (st->setupFlags == 0)
         goto out;
-    ret = 0x80243911;
-    if (MIC_WORD(0x18) == 0)
+    ret = SCE_ERROR_USBCAM_MIC_NOT_SETUP;
+    if (g_micState.setupOk == 0)
         goto out;
-    ret = 0x80243909;
-    if (st->unk4 != 0)
+    ret = SCE_ERROR_USBCAM_BUSY;
+    if (st->mode != 0)
         goto out;
-    ret = 0x80243006;
-    if (st->reqD.retcode > 0)
+    ret = SCE_ERROR_USB_INTR_FAILED;
+    if (st->intrReq.retcode > 0)
         goto out;
 
-    if (MIC_BYTE(6) != 0) {
+    if (g_micState.rateFlag != 0) {
         for (i = 0; i < 7; i++)
-            buf[i] = ((u16 *)&st->unk8)[i];
+            buf[i] = ((u16 *)&st->cmdLo)[i];
         ((u8 *)buf)[14] = 1;
         src = buf;
         breq = 3;
         len = 15;
     } else {
-        src = &st->unk8;
+        src = &st->cmdLo;
         breq = 1;
         len = 14;
     }
 
-    ((u8 *)st->unk60)[2] = breq;
-    ((u8 *)st->unk60)[3] = len;
-    memcpy((u8 *)st->unk60 + 4, src, len);
-    ret = sceUsbAccIntrInReq(&st->reqD);
+    ((u8 *)st->ep0Buf)[2] = breq;
+    ((u8 *)st->ep0Buf)[3] = len;
+    memcpy((u8 *)st->ep0Buf + 4, src, len);
+    ret = sceUsbAccIntrInReq(&st->intrReq);
     if (ret < 0)
         goto out;
-    st->unk4 = 3;
-    st->unk3 = 1;
+    st->mode = 3;
+    st->altSetting = 1;
     ret = 0;
 out:
     sceKernelCpuResumeIntr(intr);
@@ -5609,7 +5791,7 @@ out:
 
 
 /* 0x808C conditionalSwapCopy - copy helper: plain memcpy, or per-16-bit-swap
-   copy when g_micState.unk128 ("16 aligned data swap") is set. */
+   copy when g_micState.swapMode is set (original comment: "16 aligned data swap"). */
 void *conditionalSwapCopy(void *dst, void *src, int size)
 {
     u32 *d = (u32 *)dst;
@@ -5617,7 +5799,7 @@ void *conditionalSwapCopy(void *dst, void *src, int size)
     u32 n;
     u32 i;
 
-    if (MIC_WORD(0x128) == 0) {
+    if (g_micState.swapMode == 0) {
         memcpy(dst, src, size);
     } else {
         n = (u32)size >> 2;
@@ -5646,50 +5828,49 @@ s32 drainMicBuffer(void *dst, int size)
 
     intr = sceKernelCpuSuspendIntr();
 
-    if (MIC_BYTE(6) != 0) {
+    if (g_micState.rateFlag != 0) {
         n = (u32)size / 132;
         if (n == 0) {
             ret = 0;
             goto out;
         }
-        if (MIC_WORD(0x24) < n)
-            n = MIC_WORD(0x24);
+        if (g_micState.writePos < n)
+            n = g_micState.writePos;
         d = dst;
         for (i = 0; i < n; i++) {
-            __builtin_memcpy(d, (void *)(MIC_WORD(0x30) + MIC_WORD(0x28) * 132),
+            __builtin_memcpy(d, (void *)(g_micState.bufBase + g_micState.readPos * 132),
                              132);
             d += 132;
-            idx = MIC_WORD(0x28) + 1;
-            MIC_WORD(0x28) = (idx < MIC_WORD(0x20)) ? idx : 0;
-            MIC_WORD(0x24) = MIC_WORD(0x24) - 1;
+            idx = g_micState.readPos + 1;
+            g_micState.readPos = (idx < g_micState.ringCapacity) ? idx : 0;
+            g_micState.writePos = g_micState.writePos - 1;
         }
-        if (MIC_WORD(0x24) == 0)
-            sceKernelClearEventFlag(MIC_WORD(0x114), -2);
+        if (g_micState.writePos == 0)
+            sceKernelClearEventFlag(g_micState.eventflag, -2);
         ret = n * 132;
     } else {
-        avail = MIC_WORD(0x24);
+        avail = g_micState.writePos;
         n = (u32)size;
         if (avail < n)
             n = avail;
-        rptr = MIC_WORD(0x28);
-        limit = MIC_WORD(0x30) + (MIC_WORD(0x20) & ~1u);
+        rptr = g_micState.readPos;
+        limit = g_micState.bufBase + (g_micState.ringCapacity & ~1u);
         dptr = (u32)dst;
         half = n >> 1;
         for (i = 0; i < half; i++) {
             *(u16 *)dptr = *(u16 *)rptr;
             rptr += 2;
             if (rptr >= limit)
-                rptr = MIC_WORD(0x30);
+                rptr = g_micState.bufBase;
             dptr += 2;
         }
-        MIC_WORD(0x28) = rptr;
-        MIC_WORD(0x24) = avail - n;
+        g_micState.readPos = rptr;
+        g_micState.writePos = avail - n;
         if (avail - n == 0)
-            sceKernelClearEventFlag(MIC_WORD(0x114), -2);
+            sceKernelClearEventFlag(g_micState.eventflag, -2);
         ret = n;
     }
 out:
     sceKernelCpuResumeIntr(intr);
     return ret;
 }
-
