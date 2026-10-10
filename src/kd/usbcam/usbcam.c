@@ -84,24 +84,26 @@ struct VideoState {
 };
 
 /* Callbacks referenced by the driver structures below. */
-int sub_00000320(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
-int sub_00000460(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
-int sub_0000056C(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
-int sub_00000610(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
-int sub_00000694(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
+int videoBusEvent(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
+int micBusEvent(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
+int videoDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
+int micDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
+int videoRecvCtl(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
                  struct DeviceRequest *req __attribute__((unused)));
-int sub_0000086C(int size __attribute__((unused)), void *args __attribute__((unused)));
-int sub_00000C7C(int size __attribute__((unused)), void *args __attribute__((unused)));
-int sub_00000ED0(int size __attribute__((unused)), void *args __attribute__((unused)));
-int sub_00000FEC(int size __attribute__((unused)), void *args __attribute__((unused)));
-int sub_00002F78(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
+int videoDriverStart(int size __attribute__((unused)), void *args __attribute__((unused)));
+int micDriverStart(int size __attribute__((unused)), void *args __attribute__((unused)));
+int videoDriverStop(int size __attribute__((unused)), void *args __attribute__((unused)));
+int micDriverStop(int size __attribute__((unused)), void *args __attribute__((unused)));
+int videoAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                  void *arg3 __attribute__((unused)));
-int sub_00002FDC(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
+int micAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                  void *arg3 __attribute__((unused)));
-int sub_0000307C(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
-int sub_00003084(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)));
+int videoNullCallback(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
+                      int arg3 __attribute__((unused)));
+int micAccumCallback(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
+                     int arg3 __attribute__((unused)));
 
-s32 sub_00007C54(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)));
+s32 registerMicDriver(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)));
 
 /* sceUsbAcc_internal imports (provided by usbacc's exports). */
 s32 sceUsbAccGetInfo(u64 *arg);
@@ -112,7 +114,7 @@ s32 sceUsbAccUnregisterType(u16 type);
 int sceUsbbdReqRecv(struct UsbdDeviceReq *req);
 int sceKernelCancelSema(SceUID semaid, int signal, int *pcount);
 
-/* Thread entries and request-completion callbacks (later batches). */
+/* Thread entries and request-completion callbacks. */
 /* PspUsbCamSetupVideoParam as the kernel reads it: the SDK header stops
    at 48 bytes, but the driver range-checks param..param+52 with
    pspK1StaBufOk and reads a 13th word at +48 (size == 52 variant). */
@@ -135,8 +137,8 @@ struct UsbCamSetupVideoParam {
 _Static_assert(sizeof(struct UsbCamSetupVideoParam) == 52, "UsbCamSetupVideoParam size");
 
 /* 100-byte block sceUsbCamSetupVideo builds on the stack and passes to
-   sub_00004298; field-for-field PspUsbCamSetupVideoExParam. Field +0 is
-   never written here (see batchB1_NOTES.md). */
+   packVideoConfig; field-for-field PspUsbCamSetupVideoExParam. Field +0 is
+   never written here. */
 struct UsbCamVideoReq {
     int size;
     u32 unk;
@@ -165,27 +167,26 @@ struct UsbCamVideoReq {
 
 _Static_assert(sizeof(struct UsbCamVideoReq) == 100, "UsbCamVideoReq size");
 
-/* sceUsbAcc_internal import (NID 0x79A1C743); the original prx imports
-   it (usbcam_imps.txt:144). uOFW's usbacc.c:156 declares it too, no
-   uofw header does - same local-decl rule as batchA1. */
+/* sceUsbAcc_internal import (NID 0x79A1C743); present in the original's
+   import table. uOFW's usbacc.c declares it too, but no uofw header
+   does, so it is declared locally here. */
 s32 sceUsbAccGetAuthStat(void);
 
-/* 0x4298, implemented by a later batch; fills out's 32 bytes from req.
-   Replaces gen's `s32 sub_00004298(void)` stub - batchB1_NOTES.md. */
-int sub_00004298(u8 *out, struct UsbCamVideoReq *req);
+/* packVideoConfig fills out's 32 bytes from req (disassembly 0x4298). */
+int packVideoConfig(u8 *out, struct UsbCamVideoReq *req);
 
 /* rodata maps (original module addresses in the comments). */
-/* 0x8CB8: bucket map read through a stack copy by sub_000010B8. */
+/* 0x8CB8: bucket map read through a stack copy by encodeSharpness. */
 static const u8 s_map8CB8[4] = { 0, 1, 2, 3 };
-/* 0x8DE0: index map, sub_00001110 and the sceUsbCamSetupVideo tail. */
+/* 0x8DE0: index map, encodeWidthCode and the sceUsbCamSetupVideo tail. */
 static const u8 s_map8DE0[10] = { 6, 5, 4, 3, 8, 7, 2, 1, 9, 0 };
-/* 0x8DEC: separate object, same contents as s_map8DE0 (sub_0000115C). */
+/* 0x8DEC: separate object, same contents as s_map8DE0 (encodeHeightCode). */
 static const u8 s_map8DEC[10] = { 6, 5, 4, 3, 8, 7, 2, 1, 9, 0 };
 /* 0x8DF8: identity {0..7} searched by the sceUsbCamSetupVideo tail. */
 static const u8 s_map8DF8[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 /* 0x8E0C: {0,1,2} searched against g_videoState[0x16]. */
 static const u8 s_map8E0C[3] = { 0, 1, 2 };
-/* 0x8E28: identity {0..0x10} (sub_000011A8). */
+/* 0x8E28: identity {0..0x10} (clampEvLevel). */
 static const u8 s_map8E28[17] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
 };
@@ -194,7 +195,7 @@ static const u8 s_map8E28[17] = {
 static const s8 s_map8E3C[20] = {
     0, 0, 1, 1, 2, 2, 3, 3, 6, 6, 9, 7, 9, 8, 6, 5, 6, 4, 0, 0
 };
-/* 0x8E78: 10x10 signed level table for sub_000011F4 (-1 = not usable). */
+/* 0x8E78: 10x10 signed level table for checkEvAllowed (-1 = not usable). */
 static const s8 s_map8E78[100] = {
     10, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     11, 10, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -208,81 +209,58 @@ static const s8 s_map8E78[100] = {
     80, 66, 40, 33, 36, 28, 20, 13, 10, 10
 };
 
-/* NID 0xEDA8A020, sceUsbBus_driver import (usbcam_imps.txt:137);
-   psplibdoc_usb.csv:28/40 matches the NID to sceUsbRestart, no uofw
-   header declares it - local decl, prototype guessed (batchC1_NOTES.md). */
+/* NID 0xEDA8A020, sceUsbBus_driver import; psplibdoc matches the NID to
+   sceUsbRestart, but no uofw header declares it, so it is declared
+   locally here. */
 int sceUsbRestart(int arg);
 
-/* include/interruptman.h:150-151 verbatim; gen_usbcam.c does not pull
-   interruptman.h in, so the fragment declares them itself. Harmless if the
-   merge adds the header (identical redeclaration). */
+/* Also declared in include/interruptman.h:150-151; repeated here
+   because this file does not include that header. */
 s32 sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(s32 intr);
 
-/* batch D5 additions */
+/* Forward declarations for functions defined further below. */
+s32 resetVideoDefaults(void);
+s32 startVideoStream(void);
+s32 stopVideoStream(void);
+s32 armStillRead(void *buf, int size);
+s32 videoWorkerThread(SceSize args, void *argp);
+s32 videoCopyWorker(SceSize args, void *argp);
+s32 micCopyWorker(SceSize args, void *argp);
+void videoEp0Complete(struct UsbdDeviceReq *req);
+void videoBulkComplete(struct UsbdDeviceReq *req);
+s32 startIsoReceives(void);
 
-/* Redeclared from gen (lines 219-223, 1487 and 2209-2210) so the fragment
-   also splices standalone: later functions in this window call the earlier
-   ones and sub_00004164 sits at the very end of the window. Identical
-   redeclarations are legal C; every prototype below matches gen's. */
-s32 sub_00003324(void);
-s32 sub_000033E8(void);
-s32 sub_000034B8(void);
-s32 sub_000035F4(void *buf, int size);
-s32 sub_000036B4(SceSize args, void *argp);
-s32 sub_00003AA0(SceSize args, void *argp);
-s32 sub_00003CD4(SceSize args, void *argp);
-void sub_00003E94(struct UsbdDeviceReq *req);
-void sub_00003FEC(struct UsbdDeviceReq *req);
-s32 sub_00004164(void);
+/* stopAndDrainStream and pumpVideoFrames are defined below; declared
+   here for the caller above. */
+s32 stopAndDrainStream(int arg);
+s32 pumpVideoFrames(int arg);
 
-/* gen defines both of these much later than sub_000036B4 (sub_00004C00 at
-   line 2946, sub_00004F04 at line 3061) and nothing before them called
-   either; the prototypes have to precede that caller. */
-s32 sub_00004C00(int arg);
-s32 sub_00004F04(int arg);
-
-/* Same situation: gen has no prototype for sub_00004A24 before its
-   definition at line 2896, and this window is the first caller. The
-   signature below is gen's, verbatim.
-
-   sub_000080F8: the asm at 0x3E38 passes two arguments (destination and
-   length); gen's stub was retyped to the two-argument form during the
-   batch D5 merge. */
-void *sub_00004A24(void *dst, const void *src, int size);
-s32 sub_000080F8(void *dst, int size);
-
-/* batch D7 additions */
+/* dmacCopy is defined below; declared here for the first caller. The
+   disassembly passes destination and length (two arguments) at 0x3E38. */
+void *dmacCopy(void *dst, const void *src, int size);
+s32 drainMicBuffer(void *dst, int size);
 
 /* sceUsbAcc_internal import (NID 0x2A100C1F); no uofw header declares it,
-   same local-decl rule as sceUsbAccGetAuthStat (gen line 168). The original
-   prx imports it (usbcam_imps.txt). */
+   so it is declared locally here. Present in the original's import table. */
 s32 sceUsbAccIntrInReq(struct UsbdDeviceReq *req);
 
-/* gen defines all five below this window (lines 4118, 4123, 4128, 4133 and
-   4161) but never declares them; the earlier functions in this window need
-   them. sub_00006DA4 is NOT redeclared here - gen's prototype at line 2575
-   must be edited in place (see the merge checklist). */
-s32 sub_000078A0(void *cmd, int flag, void *workarea, int wasize);
-s32 sub_000079A0(void);
-s32 sub_00007A3C(void);
-s32 sub_00007AF8(void *buf, int size);
-/* batch D6 additions - forward declarations the fragment needs.
-   sub_0000808C is defined below its only caller (sub_00007CB0), and gen
-   has no prototype for it; splice next to gen's forward-decl anchor
-   (s32 sub_00007F0C(void); gen line 270). */
-void *sub_0000808C(void *dst, void *src, int size);
+/* Forward declarations for functions defined further below. */
+s32 commitMicSetup(void *cmd, int flag, void *workarea, int wasize);
+s32 sendMicStart(void);
+s32 startMicSync(void);
+s32 validateMicRead(void *buf, int size);
+/* conditionalSwapCopy is defined below its only caller; declared here. */
+void *conditionalSwapCopy(void *dst, void *src, int size);
 
-s32 sub_00007F0C(void);
+s32 sendMicSetup(void);
 
-/* gen only defines MIC_BYTE / MIC_WORD (lines 553-554); the mic gain slot
-   at +0x0A needs the u16 accessor gen has as VIDEO_HALF (line 557). */
+/* u16 accessor for the mic state; the gain slot lives at +0x0A. */
 #define MIC_HALF(off) (*(u16 *)((u8 *)&g_micState + (off)))
 
-/* Mic counterparts of gen's UsbCamSetupVideoParam (line 119): the SDK spells
-   them PspUsbCamSetupMicParam / PspUsbCamSetupMicExParam, which gen does not
-   include. The kernel reads param..param+20 / param..param+36. Field +0 is
-   never read here. */
+/* Mic setup param layouts; the SDK spells them PspUsbCamSetupMicParam /
+   PspUsbCamSetupMicExParam. The kernel reads param..param+20 /
+   param..param+36. Field +0 is never read here. */
 struct UsbCamSetupMicParam {
     int size;
     int alc;
@@ -304,18 +282,18 @@ struct UsbCamSetupMicExParam {
 
 _Static_assert(sizeof(struct UsbCamSetupMicExParam) == 36, "UsbCamSetupMicExParam size");
 
-s32 sub_00003324(void);
-s32 sub_00004164(void);
-s32 sub_000036B4(SceSize args, void *argp);
-s32 sub_00003AA0(SceSize args, void *argp);
-s32 sub_00003CD4(SceSize args, void *argp);
-void sub_000030A4(struct UsbdDeviceReq *req);
-void sub_000030C8(struct UsbdDeviceReq *req);
-void sub_000030D0(struct UsbdDeviceReq *req);
-void sub_00003E94(struct UsbdDeviceReq *req);
-void sub_00003FEC(struct UsbdDeviceReq *req);
-void sub_00007CB0(struct UsbdDeviceReq *req);
-s32 sub_00007C8C(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)));
+s32 resetVideoDefaults(void);
+s32 startIsoReceives(void);
+s32 videoWorkerThread(SceSize args, void *argp);
+s32 videoCopyWorker(SceSize args, void *argp);
+s32 micCopyWorker(SceSize args, void *argp);
+void videoCmdComplete(struct UsbdDeviceReq *req);
+void micEmptyComplete(struct UsbdDeviceReq *req);
+void videoIsoComplete(struct UsbdDeviceReq *req);
+void videoEp0Complete(struct UsbdDeviceReq *req);
+void videoBulkComplete(struct UsbdDeviceReq *req);
+void micRecvComplete(struct UsbdDeviceReq *req);
+s32 unregisterMicDriver(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)));
 
 /*
  * Video device (USBCamDriver).
@@ -407,13 +385,13 @@ struct UsbDriver g_videoDriver = {
     .devp = g_videoDevDesc,
     .confp = &g_videoConfBundle,
     .str = &g_videoStrDesc,
-    .recvctl = sub_00000694,
-    .func28 = sub_00000320,
-    .attach = sub_00002F78,
-    .detach = sub_0000056C,
-    .unk34 = (s32)(long)sub_0000307C,
-    .start_func = sub_0000086C,
-    .stop_func = sub_00000ED0,
+    .recvctl = videoRecvCtl,
+    .func28 = videoBusEvent,
+    .attach = videoAttach,
+    .detach = videoDetach,
+    .unk34 = (s32)(long)videoNullCallback,
+    .start_func = videoDriverStart,
+    .stop_func = videoDriverStop,
     .link = NULL
 };
 
@@ -535,12 +513,12 @@ struct UsbDriver g_micDriver = {
     .confp = &g_micConfBundle,
     .str = &g_micStrDesc,
     .recvctl = NULL,
-    .func28 = sub_00000460,
-    .attach = sub_00002FDC,
-    .detach = sub_00000610,
-    .unk34 = (s32)(long)sub_00003084,
-    .start_func = sub_00000C7C,
-    .stop_func = sub_00000FEC,
+    .func28 = micBusEvent,
+    .attach = micAttach,
+    .detach = micDetach,
+    .unk34 = (s32)(long)micAccumCallback,
+    .start_func = micDriverStart,
+    .stop_func = micDriverStop,
     .link = NULL
 };
 
@@ -559,7 +537,7 @@ struct VideoDescState {
 };
 
 /* Full view of g_videoState (0x1B8 bytes). Offsets 0x18C..0x1A4 map to
-   gen's VideoState fields unk18C..unk1A0 (fplId/eventflag/sema/mutex/
+   the VideoState fields unk18C..unk1A0 (fplId/eventflag/sema/mutex/
    thread1/thread2) plus unk1A4 here. */
 struct VideoStateFull {
     u8 unk0;
@@ -644,8 +622,8 @@ static const u8 g_ctlRequests[6][8] = {
 #define VIDEO_WORD(off) (*(u32 *)((u8 *)&g_videoState + (off)))
 #define VIDEO_HALF(off) (*(u16 *)((u8 *)&g_videoState + (off)))
 
-/* 0x00000000 sub_00000000 */
-int sub_00000000(int cmd, int arg1, void *buf, int len)
+/* 0x00000000 sendAccCommand */
+int sendAccCommand(int cmd, int arg1, void *buf, int len)
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     u8 *cb;
@@ -672,23 +650,23 @@ int sub_00000000(int cmd, int arg1, void *buf, int len)
 }
 
 
-/* 0x000000F4 sub_000000F4 */
-int sub_000000F4(void *buf)
+/* 0x000000F4 sendReverseFlags */
+int sendReverseFlags(void *buf)
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     s32 res;
 
     res = sceKernelLockMutex(st->mutex, 1, NULL);
     if (res >= 0) {
-        res = sub_00000000(171, 2, buf, 2);
+        res = sendAccCommand(171, 2, buf, 2);
         sceKernelUnlockMutex(st->mutex, 1);
     }
     return res;
 }
 
 
-/* 0x00000170 sub_00000170 */
-int sub_00000170(void *arg)
+/* 0x00000170 queryReverseState */
+int queryReverseState(void *arg)
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     u32 bits;
@@ -703,7 +681,7 @@ int sub_00000170(void *arg)
         return res;
 
     sceKernelClearEventFlag(st->eventflag, 0xFFFEFFFF);
-    res = sub_00000000(43, 2, NULL, 0);
+    res = sendAccCommand(43, 2, NULL, 0);
     if (res < 0)
         goto unlock;
     res = sceKernelWaitEventFlag(st->eventflag, 0x10400, 1, &bits, NULL);
@@ -746,7 +724,7 @@ unlock:
 }
 
 
-int sub_00000320(int arg1 __attribute__((unused)), int arg2, int arg3 __attribute__((unused)))
+int videoBusEvent(int arg1 __attribute__((unused)), int arg2, int arg3 __attribute__((unused)))
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     int ret = 0;
@@ -782,13 +760,13 @@ int sub_00000320(int arg1 __attribute__((unused)), int arg2, int arg3 __attribut
         } else {
             sceKernelSetEventFlag(st->eventflag, 0x10);
         }
-        ret = sub_00004164();
+        ret = startIsoReceives();
     }
     st->unk3 = (u8)arg2;
     return ret;
 }
 
-int sub_00000460(int arg1, int arg2, int arg3 __attribute__((unused)))
+int micBusEvent(int arg1, int arg2, int arg3 __attribute__((unused)))
 {
     struct MicStateFull *st = (struct MicStateFull *)&g_micState;
     int ret = 0;
@@ -817,7 +795,7 @@ int sub_00000460(int arg1, int arg2, int arg3 __attribute__((unused)))
     return ret;
 }
 
-int sub_0000056C(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
+int videoDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     int i;
@@ -837,7 +815,7 @@ int sub_0000056C(int arg1 __attribute__((unused)), int arg2 __attribute__((unuse
     return sceKernelCancelMutex(st->mutex, 0, NULL);
 }
 
-int sub_00000610(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
+int micDetach(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
 {
     struct MicStateFull *st = (struct MicStateFull *)&g_micState;
     int i;
@@ -853,11 +831,11 @@ int sub_00000610(int arg1 __attribute__((unused)), int arg2 __attribute__((unuse
     sceKernelSetEventFlag(st->eventflag, 256);
     st->unk128 = 0;
     /* Original returns 0x10000 (lui residue of the g_micState address
-       materialized for the store above), not 0; see batchA1_NOTES.md. */
+       materialized for the store above), not 0 (verified against the disassembly). */
     return 0;
 }
 
-int sub_00000694(int arg1 __attribute__((unused)), int arg2, struct DeviceRequest *req)
+int videoRecvCtl(int arg1 __attribute__((unused)), int arg2, struct DeviceRequest *req)
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     u8 *blk;
@@ -915,7 +893,7 @@ int sub_00000694(int arg1 __attribute__((unused)), int arg2, struct DeviceReques
     return 0;
 }
 
-int sub_0000086C(int size __attribute__((unused)), void *args __attribute__((unused)))
+int videoDriverStart(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     void *block;
@@ -942,11 +920,11 @@ int sub_0000086C(int size __attribute__((unused)), void *args __attribute__((unu
         st->desc[i].unk4 = 0;
     }
     st->desc[1].unkC = &st->desc[0];
-    res = sceKernelCreateThread("SceUsbCam", sub_000036B4, 17, 1024, 0x100001, NULL);
+    res = sceKernelCreateThread("SceUsbCam", videoWorkerThread, 17, 1024, 0x100001, NULL);
     st->thread1 = res;
     if (res < 0)
         goto fail;
-    res = sceKernelCreateThread("SceUsbCamCopyWorker", sub_00003AA0, 17, 1024, 0x100001, NULL);
+    res = sceKernelCreateThread("SceUsbCamCopyWorker", videoCopyWorker, 17, 1024, 0x100001, NULL);
     if (res < 0) {
         st->thread2 = -1;
         goto fail;
@@ -975,9 +953,9 @@ int sub_0000086C(int size __attribute__((unused)), void *args __attribute__((unu
     st->reqC.data = st->unk124;
     st->reqC.endp = &g_videoEndpoints[1];
     st->reqA.unkc = 1;
-    st->reqA.func = sub_00003E94;
+    st->reqA.func = videoEp0Complete;
     st->reqA.retcode = 0;
-    st->reqB.func = sub_000030A4;
+    st->reqB.func = videoCmdComplete;
     st->reqC.size = 64;
     st->reqA.unk1c = 0;
     st->reqA.arg = NULL;
@@ -988,7 +966,7 @@ int sub_0000086C(int size __attribute__((unused)), void *args __attribute__((unu
     st->reqB.unk1c = 0;
     st->reqB.arg = NULL;
     st->reqB.recvsize = 0;
-    st->reqC.func = sub_00003FEC;
+    st->reqC.func = videoBulkComplete;
     st->reqC.retcode = 0;
     st->reqA.endp = &g_videoEndpoints[0];
     st->reqB.endp = NULL;
@@ -1002,7 +980,7 @@ int sub_0000086C(int size __attribute__((unused)), void *args __attribute__((unu
         st->items[i].endp = &g_videoEndpoints[2];
         st->items[i].size = 896;
         st->items[i].unkc = 1;
-        st->items[i].func = sub_000030D0;
+        st->items[i].func = videoIsoComplete;
         st->items[i].unk1c = 0;
         st->items[i].arg = NULL;
         st->items[i].recvsize = 0;
@@ -1045,7 +1023,7 @@ fail:
     return -1;
 }
 
-int sub_00000C7C(int size __attribute__((unused)), void *args __attribute__((unused)))
+int micDriverStart(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
     struct MicStateFull *st = (struct MicStateFull *)&g_micState;
     void *block;
@@ -1061,7 +1039,7 @@ int sub_00000C7C(int size __attribute__((unused)), void *args __attribute__((unu
     st->unk60 = block;
     for (i = 0; i < 4; i++)
         st->bufs[i] = (u8 *)block + 64 + i * 256;
-    res = sceKernelCreateThread("SceUsbMicCopyWorker", sub_00003CD4, 16, 1024, 0x100001, NULL);
+    res = sceKernelCreateThread("SceUsbMicCopyWorker", micCopyWorker, 16, 1024, 0x100001, NULL);
     st->thread = res;
     if (res < 0)
         goto delFpl;
@@ -1070,7 +1048,7 @@ int sub_00000C7C(int size __attribute__((unused)), void *args __attribute__((unu
     if (res < 0)
         goto delThread;
     st->reqD.endp = NULL;
-    st->reqD.func = sub_000030C8;
+    st->reqD.func = micEmptyComplete;
     st->reqD.unkc = 0;
     st->reqD.unk1c = 0;
     st->reqD.arg = NULL;
@@ -1083,7 +1061,7 @@ int sub_00000C7C(int size __attribute__((unused)), void *args __attribute__((unu
         st->reqs[i].endp = &g_micEndpoints[1];
         st->reqs[i].size = 128;
         st->reqs[i].unkc = 0;
-        st->reqs[i].func = sub_00007CB0;
+        st->reqs[i].func = micRecvComplete;
         st->reqs[i].unk1c = 0;
         st->reqs[i].arg = NULL;
         st->reqs[i].recvsize = 0;
@@ -1117,7 +1095,7 @@ delFpl:
     return -1;
 }
 
-int sub_00000ED0(int size __attribute__((unused)), void *args __attribute__((unused)))
+int videoDriverStop(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
 
@@ -1155,7 +1133,7 @@ int sub_00000ED0(int size __attribute__((unused)), void *args __attribute__((unu
     return 0;
 }
 
-int sub_00000FEC(int size __attribute__((unused)), void *args __attribute__((unused)))
+int micDriverStop(int size __attribute__((unused)), void *args __attribute__((unused)))
 {
     struct MicStateFull *st = (struct MicStateFull *)&g_micState;
 
@@ -1169,7 +1147,7 @@ int sub_00000FEC(int size __attribute__((unused)), void *args __attribute__((unu
     return 0;
 }
 
-int sub_00001058(int arg0)
+int encodeBrightness(int arg0)
 {
     int x = (arg0 + 128) & 0xFF;
 
@@ -1178,7 +1156,7 @@ int sub_00001058(int arg0)
     return x;
 }
 
-int sub_00001084(int arg0)
+int encodeSaturation(int arg0)
 {
     if (arg0 < 0)
         return 0;
@@ -1187,7 +1165,7 @@ int sub_00001084(int arg0)
     return arg0 / 42;
 }
 
-int sub_000010B8(int arg0)
+int encodeSharpness(int arg0)
 {
     int idx;
 
@@ -1200,7 +1178,7 @@ int sub_000010B8(int arg0)
     return s_map8CB8[idx];
 }
 
-int sub_00001110(u8 *arg0)
+int encodeWidthCode(u8 *arg0)
 {
     int i;
     u8 v = *arg0;
@@ -1212,7 +1190,7 @@ int sub_00001110(u8 *arg0)
     return (i < 10) ? i : 0;
 }
 
-int sub_0000115C(u8 *arg0)
+int encodeHeightCode(u8 *arg0)
 {
     int i;
     u8 v = *arg0;
@@ -1224,7 +1202,7 @@ int sub_0000115C(u8 *arg0)
     return (i < 10) ? i : 0;
 }
 
-int sub_000011A8(u8 *arg0)
+int clampEvLevel(u8 *arg0)
 {
     int i;
     u8 v = *arg0;
@@ -1236,7 +1214,7 @@ int sub_000011A8(u8 *arg0)
     return (i < 17) ? i : 0;
 }
 
-int sub_000011F4(int arg0, int arg1, int arg2)
+int checkEvAllowed(int arg0, int arg1, int arg2)
 {
     s8 entry;
 
@@ -1327,14 +1305,14 @@ int sceUsbCamSetupVideo(struct UsbCamSetupVideoParam *param, void *workarea, int
         goto out;
     }
 
-    ret = sub_00004298((u8 *)out, &req);
+    ret = packVideoConfig((u8 *)out, &req);
     if (ret < 0)
         goto out;
 
     for (i = 0; i < 8; i++)
         VIDEO_WORD(0x0C + i * 4) = out[i];
     VIDEO_WORD(8) = VIDEO_WORD(8) & ~7u;
-    ret = sub_00001110(&VIDEO_BYTE(0x32));
+    ret = encodeWidthCode(&VIDEO_BYTE(0x32));
     if (ret < 7) {
         u8 v = VIDEO_BYTE(0x0E);
 
@@ -1388,7 +1366,7 @@ int sceUsbCamSetupVideoEx(struct UsbCamVideoReq *param, void *workarea, int wasi
     if ((wasize & 0x3F) != 0)
         goto out;
 
-    ret = sub_00004298((u8 *)out, param);
+    ret = packVideoConfig((u8 *)out, param);
     if (ret < 0)
         goto out;
 
@@ -1611,8 +1589,6 @@ out:
     return ret;
 }
 
-/* batch D1 additions */
-
 /* PspUsbCamSetupStillParam (pspusbcam.h:131-145). The driver range-checks
    param..param+24 with pspK1StaBufOk (asm 0x1D34) and accepts size 20..24;
    a 20-byte build has no complevel, so 0x1DEC falls back to 10. */
@@ -1628,10 +1604,9 @@ struct UsbCamSetupStillParam {
 _Static_assert(sizeof(struct UsbCamSetupStillParam) == 24, "UsbCamSetupStillParam size");
 
 /* PspUsbCamSetupStillExParam (pspusbcam.h:148-172). Field-for-field the
-   same 15-int layout as gen's struct UsbCamStillReq (batchC2_NOTES.md maps
-   caller field -> UsbCamStillReq field); sceUsbCamSetupStill builds one of
-   these on the stack and both entry points hand it to sub_00004680 through
-   that type. */
+   same 15-int layout as struct UsbCamStillReq; sceUsbCamSetupStill builds
+   one of these on the stack and both entry points hand it to
+   packStillConfig through that type. */
 struct UsbCamSetupStillExParam {
     int size;
     u32 unk;
@@ -1648,18 +1623,13 @@ struct UsbCamSetupStillExParam {
 
 _Static_assert(sizeof(struct UsbCamSetupStillExParam) == 60, "UsbCamSetupStillExParam size");
 
-/* Helpers defined below this window in gen_usbcam.c; batch D1 sits above
-   them (the six stubs are at gen line 1439+), so the prototypes are
-   restated here. struct UsbCamStillReq is only forward-declared: gen
-   completes it further down (line 1922), so the two sub_00004680 call sites
-   cast from the layout-identical UsbCamSetupStillExParam.
-   sub_000035F4's gen stub is still `s32 sub_000035F4(void)` - it must be
-   retyped in the merge step, see batchD1_NOTES.md checklist item 1. */
+/* packStillConfig is defined below; struct UsbCamStillReq is
+   forward-declared here and completed below. */
 struct UsbCamStillReq;
-int sub_00004680(u8 *out, struct UsbCamStillReq *req);
-s32 sub_00004858(void);
-s32 sub_000048DC(int arg);
-s32 sub_000035F4(void *buf, int size);
+int packStillConfig(u8 *out, struct UsbCamStillReq *req);
+s32 guardStillInput(void);
+s32 reapStillInput(int arg);
+s32 armStillRead(void *buf, int size);
 
 s32 sceUsbCamSetupStill(struct UsbCamSetupStillParam *param)
 {
@@ -1710,7 +1680,7 @@ s32 sceUsbCamSetupStill(struct UsbCamSetupStillParam *param)
     req.unk4[3] = 0;
     req.unk4[4] = 0;
 
-    ret = sub_00004680(out, (struct UsbCamStillReq *)&req);
+    ret = packStillConfig(out, (struct UsbCamStillReq *)&req);
     if (ret < 0)
         goto out;
     __builtin_memcpy(&VIDEO_BYTE(0x2C), out, 20);
@@ -1747,7 +1717,7 @@ s32 sceUsbCamSetupStillEx(struct UsbCamSetupStillExParam *param)
     if (!pspK1StaBufOk(param, 60))
         goto out;
 
-    ret = sub_00004680(out, (struct UsbCamStillReq *)param);
+    ret = packStillConfig(out, (struct UsbCamStillReq *)param);
     if (ret < 0)
         goto out;
     __builtin_memcpy(&VIDEO_BYTE(0x2C), out, 20);
@@ -1788,15 +1758,15 @@ s32 sceUsbCamStillInput(u8 *buf, SceSize size)
     if ((VIDEO_BYTE(1) & 2) == 0)
         goto out;
 
-    h = sub_0000115C(&VIDEO_BYTE(0x33));
-    w = sub_00001110(&VIDEO_BYTE(0x32));
+    h = encodeHeightCode(&VIDEO_BYTE(0x33));
+    w = encodeWidthCode(&VIDEO_BYTE(0x32));
     if (w < h) {
         ret = 0x80243905;
         goto out;
     }
 
     sceKernelClearEventFlag(g_videoState.unk190, ~0x3000u);
-    ret = sub_000035F4(buf, size);
+    ret = armStillRead(buf, size);
 
 out:
     pspSetK1(oldK1);
@@ -1811,9 +1781,9 @@ s32 sceUsbCamStillPollInputEnd(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_00004858();
+    ret = guardStillInput();
     if (ret >= 0)
-        ret = sub_000048DC(1);
+        ret = reapStillInput(1);
     pspSetK1(oldK1);
     return ret;
 }
@@ -1826,9 +1796,9 @@ s32 sceUsbCamStillWaitInputEnd(void)
     int ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_00004858();
+    ret = guardStillInput();
     if (ret >= 0)
-        ret = sub_000048DC(0);
+        ret = reapStillInput(0);
     pspSetK1(oldK1);
     return ret;
 }
@@ -1860,22 +1830,19 @@ s32 sceUsbCamStillInputBlocking(u8 *buf, SceSize size)
         goto out;
 
     sceKernelClearEventFlag(g_videoState.unk190, ~0x3000u);
-    ret = sub_000035F4(buf, size);
+    ret = armStillRead(buf, size);
     if (ret >= 0)
-        ret = sub_000048DC(0);
+        ret = reapStillInput(0);
 
 out:
     pspSetK1(oldK1);
     return ret;
 }
 
-/* batch D2 additions */
-
-/* gen defines both of these much later in the file (sub_00004858 at line
-   2127, sub_000055AC at line 2667); the prototypes have to precede these
-   callers. */
-s32 sub_00004858(void);
-s32 sub_000055AC(int cmd, int *arg);
+/* guardStillInput and dispatchIoctl are defined below; declared here
+   for the callers. */
+s32 guardStillInput(void);
+s32 dispatchIoctl(int cmd, int *arg);
 
 s32 sceUsbCamStillGetInputLength(void)
 {
@@ -1911,7 +1878,7 @@ s32 sceUsbCamStillCancelInput(void)
     s32 intr;
 
     oldK1 = pspShiftK1();
-    ret = sub_00004858();
+    ret = guardStillInput();
     if (ret < 0)
         goto out;
     intr = sceKernelCpuSuspendIntr();
@@ -1940,7 +1907,7 @@ s32 sceUsbCamGetSaturation(int *saturation)
     ret = 0x80243904;
     if (!pspK1StaBufOk(saturation, 4))
         goto out;
-    ret = sub_000055AC(0x80000003, saturation);
+    ret = dispatchIoctl(0x80000003, saturation);
 
 out:
     pspSetK1(oldK1);
@@ -1958,7 +1925,7 @@ s32 sceUsbCamGetBrightness(int *brightness)
     ret = 0x80243904;
     if (!pspK1StaBufOk(brightness, 4))
         goto out;
-    ret = sub_000055AC(0x80000001, brightness);
+    ret = dispatchIoctl(0x80000001, brightness);
 
 out:
     pspSetK1(oldK1);
@@ -1976,7 +1943,7 @@ s32 sceUsbCamGetContrast(int *contrast)
     ret = 0x80243904;
     if (!pspK1StaBufOk(contrast, 4))
         goto out;
-    ret = sub_000055AC(0x80000002, contrast);
+    ret = dispatchIoctl(0x80000002, contrast);
 
 out:
     pspSetK1(oldK1);
@@ -1994,7 +1961,7 @@ s32 sceUsbCamGetSharpness(int *sharpness)
     ret = 0x80243904;
     if (!pspK1StaBufOk(sharpness, 4))
         goto out;
-    ret = sub_000055AC(0x80000004, sharpness);
+    ret = dispatchIoctl(0x80000004, sharpness);
 
 out:
     pspSetK1(oldK1);
@@ -2012,7 +1979,7 @@ s32 sceUsbCamGetZoom(int *zoom)
     ret = 0x80243904;
     if (!pspK1StaBufOk(zoom, 4))
         goto out;
-    ret = sub_000055AC(0x80000005, zoom);
+    ret = dispatchIoctl(0x80000005, zoom);
 
 out:
     pspSetK1(oldK1);
@@ -2030,7 +1997,7 @@ s32 sceUsbCamGetAntiFlicker(int *antiflicker)
     ret = 0x80243904;
     if (!pspK1StaBufOk(antiflicker, 4))
         goto out;
-    ret = sub_000055AC(0x80000010, antiflicker);
+    ret = dispatchIoctl(0x80000010, antiflicker);
 
 out:
     pspSetK1(oldK1);
@@ -2048,7 +2015,7 @@ s32 sceUsbCamGetEvLevel(int *ev)
     ret = 0x80243904;
     if (!pspK1StaBufOk(ev, 4))
         goto out;
-    ret = sub_000055AC(0x80000014, ev);
+    ret = dispatchIoctl(0x80000014, ev);
 
 out:
     pspSetK1(oldK1);
@@ -2066,7 +2033,7 @@ s32 sceUsbCamGetReverseMode(int *reverseflags)
     ret = 0x80243904;
     if (!pspK1StaBufOk(reverseflags, 4))
         goto out;
-    ret = sub_000055AC(0x80000006, reverseflags);
+    ret = dispatchIoctl(0x80000006, reverseflags);
 
 out:
     pspSetK1(oldK1);
@@ -2084,7 +2051,7 @@ s32 sceUsbCamGetImageEffectMode(int *effectmode)
     ret = 0x80243904;
     if (!pspK1StaBufOk(effectmode, 4))
         goto out;
-    ret = sub_000055AC(0x80000007, effectmode);
+    ret = dispatchIoctl(0x80000007, effectmode);
 
 out:
     pspSetK1(oldK1);
@@ -2172,7 +2139,7 @@ out:
 
 s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
-    sub_00007C54(0, 0);
+    registerMicDriver(0, 0);
     if (sceUsbbdRegister(&g_videoDriver) < 0) {
         return 1;
     }
@@ -2191,19 +2158,11 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
     if (sceUsbbdUnregister(&g_videoDriver) < 0) {
         return 1;
     }
-    sub_00007C8C(0, 0);
+    unregisterMicDriver(0, 0);
     return 0;
 }
 
-/* batch D3 additions */
-
-/* gen's batch C2 block defines these four maps (and struct UsbCamResEntry +
-   s_res8E50, below) only AFTER this window - it was spliced in front of
-   sub_00004298 (gen line 2404 ff) while these definitions sit at the top of
-   the window (gen line 2023 ff). These are tentative definitions; the real
-   initialized definitions later in the same file complete them (legal C in
-   both orders, verified with the project's flags). batchD3_NOTES.md merge
-   checklist item 3: gen's duplicate struct definition must be deleted. */
+/* Map tables completed with initializers later in this file. */
 static const u8 s_map8E00[4];
 static const u8 s_map8E04[4];
 static const u8 s_map8E08[4];
@@ -2218,14 +2177,14 @@ _Static_assert(sizeof(struct UsbCamResEntry) == 4, "UsbCamResEntry size");
 
 static const struct UsbCamResEntry s_res8E50[10];
 
-int sub_00002930(int val)
+int encodeImageEffect(int val)
 {
     return s_map8E10[val];
 }
 
-/* 0x2944 sub_00002944 */
+/* 0x2944 decodeImageEffect */
 
-int sub_00002944(u8 *p)
+int decodeImageEffect(u8 *p)
 {
     int i;
     u8 v = *p;
@@ -2237,16 +2196,16 @@ int sub_00002944(u8 *p)
     return (i < 7) ? i : 6;
 }
 
-/* 0x2988 sub_00002988 */
+/* 0x2988 encodeFramerate */
 
-int sub_00002988(int val)
+int encodeFramerate(int val)
 {
     return s_map8DF8[val];
 }
 
-/* 0x299C sub_0000299C */
+/* 0x299C decodeFramerate */
 
-int sub_0000299C(u8 *p)
+int decodeFramerate(u8 *p)
 {
     int i;
     u8 v = *p;
@@ -2258,16 +2217,16 @@ int sub_0000299C(u8 *p)
     return (i < 8) ? i : 7;
 }
 
-/* 0x29E0 sub_000029E0 */
+/* 0x29E0 encodeUnk0xE */
 
-int sub_000029E0(int val)
+int encodeUnk0xE(int val)
 {
     return s_map8E00[val];
 }
 
-/* 0x29F4 sub_000029F4 */
+/* 0x29F4 decodeUnk0xE */
 
-int sub_000029F4(u8 *p)
+int decodeUnk0xE(u8 *p)
 {
     int i;
     u8 v = *p;
@@ -2279,16 +2238,16 @@ int sub_000029F4(u8 *p)
     return (i < 4) ? i : 3;
 }
 
-/* 0x2A38 sub_00002A38 */
+/* 0x2A38 encodeWhiteBalance */
 
-int sub_00002A38(int val)
+int encodeWhiteBalance(int val)
 {
     return s_map8E04[val];
 }
 
-/* 0x2A4C sub_00002A4C */
+/* 0x2A4C decodeWhiteBalance */
 
-int sub_00002A4C(u8 *p)
+int decodeWhiteBalance(u8 *p)
 {
     int i;
     u8 v = *p;
@@ -2300,16 +2259,16 @@ int sub_00002A4C(u8 *p)
     return (i < 4) ? i : 3;
 }
 
-/* 0x2A90 sub_00002A90 */
+/* 0x2A90 encodeAntiFlicker */
 
-int sub_00002A90(int val)
+int encodeAntiFlicker(int val)
 {
     return s_map8E0C[val];
 }
 
-/* 0x2AA4 sub_00002AA4 */
+/* 0x2AA4 decodeAntiFlicker */
 
-int sub_00002AA4(u8 *p)
+int decodeAntiFlicker(u8 *p)
 {
     int i;
     u8 v = *p;
@@ -2321,16 +2280,16 @@ int sub_00002AA4(u8 *p)
     return (i < 3) ? i : 2;
 }
 
-/* 0x2AE8 sub_00002AE8 */
+/* 0x2AE8 encodeUnk0x13 */
 
-int sub_00002AE8(int val)
+int encodeUnk0x13(int val)
 {
     return s_map8E08[val];
 }
 
-/* 0x2AFC sub_00002AFC */
+/* 0x2AFC decodeUnk0x13 */
 
-int sub_00002AFC(u8 *p)
+int decodeUnk0x13(u8 *p)
 {
     int i;
     u8 v = *p;
@@ -2342,9 +2301,9 @@ int sub_00002AFC(u8 *p)
     return (i < 3) ? i : 2;
 }
 
-/* 0x2B40 sub_00002B40 */
+/* 0x2B40 encodeResolutionEx */
 
-int sub_00002B40(int val, u8 *out0, u8 *out1)
+int encodeResolutionEx(int val, u8 *out0, u8 *out1)
 {
     if ((u32)val >= 9)
         return 0x80243905;
@@ -2353,9 +2312,9 @@ int sub_00002B40(int val, u8 *out0, u8 *out1)
     return 0;
 }
 
-/* 0x2B7C sub_00002B7C */
+/* 0x2B7C encodeResolutionPair */
 
-int sub_00002B7C(int val0, int val1, u8 *out0, u8 *out1)
+int encodeResolutionPair(int val0, int val1, u8 *out0, u8 *out1)
 {
     s32 wdiff = s_res8E50[val0].w - s_res8E50[val1].w;
     s32 hdiff = s_res8E50[val0].h - s_res8E50[val1].h;
@@ -2367,23 +2326,18 @@ int sub_00002B7C(int val0, int val1, u8 *out0, u8 *out1)
     return 0;
 }
 
-/* 0x2C08 sub_00002C08 */
+/* 0x2C08 encodeEvLevel */
 
-int sub_00002C08(int val)
+int encodeEvLevel(int val)
 {
     return s_map8E28[val];
 }
 
-/* batch D4 additions */
-
-/* gen defines both of these much later in the file (sub_000033E8 at line
-   2255, sub_000034B8 at line 2260); the prototypes have to precede these
-   callers. sub_000055AC is repeated from batch D2 (gen line 1703, already
-   above this window) only so the fragment also splices without D2 - an
-   identical redeclaration is legal C. */
-s32 sub_000033E8(void);
-s32 sub_000034B8(void);
-s32 sub_000055AC(int cmd, int *arg);
+/* startVideoStream, stopVideoStream and dispatchIoctl are defined below;
+   declared here for the callers (identical redeclaration is legal C). */
+s32 startVideoStream(void);
+s32 stopVideoStream(void);
+s32 dispatchIoctl(int cmd, int *arg);
 
 s32 sceUsbCamStartVideo(void)
 {
@@ -2391,7 +2345,7 @@ s32 sceUsbCamStartVideo(void)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000033E8();
+    ret = startVideoStream();
     pspSetK1(oldK1);
     return ret;
 }
@@ -2404,7 +2358,7 @@ s32 sceUsbCamStopVideo(void)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000034B8();
+    ret = stopVideoStream();
     pspSetK1(oldK1);
     return ret;
 }
@@ -2418,7 +2372,7 @@ s32 sceUsbCamSetSaturation(int saturation)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(3, &val);
+    ret = dispatchIoctl(3, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2432,7 +2386,7 @@ s32 sceUsbCamSetBrightness(int brightness)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(1, &val);
+    ret = dispatchIoctl(1, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2446,7 +2400,7 @@ s32 sceUsbCamSetContrast(int contrast)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(2, &val);
+    ret = dispatchIoctl(2, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2460,7 +2414,7 @@ s32 sceUsbCamSetSharpness(int sharpness)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(4, &val);
+    ret = dispatchIoctl(4, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2474,7 +2428,7 @@ s32 sceUsbCamSetZoom(int zoom)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(5, &val);
+    ret = dispatchIoctl(5, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2488,7 +2442,7 @@ s32 sceUsbCamSetAntiFlicker(int antiflicker)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(16, &val);
+    ret = dispatchIoctl(16, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2502,7 +2456,7 @@ s32 sceUsbCamSetReverseMode(int reverseflags)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(6, &val);
+    ret = dispatchIoctl(6, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2516,7 +2470,7 @@ s32 sceUsbCamSetEvLevel(int ev)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(20, &val);
+    ret = dispatchIoctl(20, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2530,7 +2484,7 @@ s32 sceUsbCamSetImageEffectMode(int effectmode)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(7, &val);
+    ret = dispatchIoctl(7, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2544,7 +2498,7 @@ s32 sceUsbCamSetResolution(int resolution)
     s32 ret;
 
     oldK1 = pspShiftK1();
-    ret = sub_000055AC(9, &val);
+    ret = dispatchIoctl(9, &val);
     pspSetK1(oldK1);
     return ret;
 }
@@ -2589,11 +2543,11 @@ s32 sceUsbCamUnregisterLensRotationCallback(void)
     return ret;
 }
 
-/* Accessory info blob compared by sub_00002FDC (orig rodata 0x9014). */
+/* Accessory info blob compared by micAttach (orig rodata 0x9014). */
 static const u8 s_usbAccInfoMagic[8] =
     { 0x4C, 0x05, 0x5B, 0x02, 0x01, 0x10, 0x01, 0x00 };
 
-int sub_00002F78(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
+int videoAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                  void *arg3 __attribute__((unused)))
 {
     u8 ret = VIDEO_BYTE(2);
@@ -2605,13 +2559,13 @@ int sub_00002F78(int speed __attribute__((unused)), void *arg2 __attribute__((un
     VIDEO_BYTE(4) = 0;
     VIDEO_WORD(8) = 0;
     g_videoState.unk1B4 = 0;
-    sub_00003324();
+    resetVideoDefaults();
     sceKernelClearEventFlag(g_videoState.unk190, 0);
 
     return sceKernelSetEventFlag(g_videoState.unk190, 0x300);
 }
 
-int sub_00002FDC(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
+int micAttach(int speed __attribute__((unused)), void *arg2 __attribute__((unused)),
                  void *arg3 __attribute__((unused)))
 {
     u8 ret = MIC_BYTE(2);
@@ -2640,8 +2594,9 @@ int sub_00002FDC(int speed __attribute__((unused)), void *arg2 __attribute__((un
     return 0;
 }
 
-/* 0x307C sub_0000307C */
-int sub_0000307C(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
+/* 0x307C videoNullCallback */
+int videoNullCallback(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
+                      int arg3 __attribute__((unused)))
 {
     /* Body is a bare "jr $ra"; $v0 is undefined on entry and the caller
        (g_videoDriver.unk34) ignores it - return 0 by convention. */
@@ -2649,7 +2604,8 @@ int sub_0000307C(int arg1 __attribute__((unused)), int arg2 __attribute__((unuse
 }
 
 
-int sub_00003084(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)), int arg3 __attribute__((unused)))
+int micAccumCallback(int arg1 __attribute__((unused)), int arg2 __attribute__((unused)),
+                     int arg3 __attribute__((unused)))
 {
     u8 *p = *(u8 **)arg3;
     u8 *q = *(u8 **)(p + 16);
@@ -2660,21 +2616,21 @@ int sub_00003084(int arg1 __attribute__((unused)), int arg2 __attribute__((unuse
 }
 
 
-void sub_000030A4(struct UsbdDeviceReq *req __attribute__((unused)))
+void videoCmdComplete(struct UsbdDeviceReq *req __attribute__((unused)))
 {
     sceKernelSignalSema(g_videoState.unk194, 1);
 }
 
-/* 0x30C8 sub_000030C8 */
-void sub_000030C8(struct UsbdDeviceReq *req __attribute__((unused)))
+/* 0x30C8 micEmptyComplete */
+void micEmptyComplete(struct UsbdDeviceReq *req __attribute__((unused)))
 {
     /* Body is a bare "jr $ra"; the microphone receive completion callback
        installed as g_micState.reqD.func does nothing. */
 }
 
 
-/* 0x30D0 sub_000030D0 */
-void sub_000030D0(struct UsbdDeviceReq *req)
+/* 0x30D0 videoIsoComplete */
+void videoIsoComplete(struct UsbdDeviceReq *req)
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     struct VideoDescState *node;
@@ -2778,8 +2734,8 @@ modeCheck:
     sceUsbbdReqRecv(req);
 }
 
-/* 0x3324 sub_00003324 */
-s32 sub_00003324(void)
+/* 0x3324 resetVideoDefaults */
+s32 resetVideoDefaults(void)
 {
     u8 *blk = &VIDEO_BYTE(0x0C);
 
@@ -2819,8 +2775,8 @@ s32 sub_00003324(void)
 }
 
 
-/* 0x33E8 sub_000033E8 */
-s32 sub_000033E8(void)
+/* 0x33E8 startVideoStream */
+s32 startVideoStream(void)
 {
     s32 intr;
     s32 ret;
@@ -2856,8 +2812,8 @@ out:
 }
 
 
-/* 0x34B8 sub_000034B8 */
-s32 sub_000034B8(void)
+/* 0x34B8 stopVideoStream */
+s32 stopVideoStream(void)
 {
     u32 bits;
     u32 v;
@@ -2893,8 +2849,8 @@ s32 sub_000034B8(void)
 }
 
 
-/* 0x35F4 sub_000035F4 */
-s32 sub_000035F4(void *buf, int size)
+/* 0x35F4 armStillRead */
+s32 armStillRead(void *buf, int size)
 {
     s32 intr;
     s32 ret;
@@ -2925,8 +2881,8 @@ out:
 
 
 
-/* 0x36B4 sub_000036B4 */
-s32 sub_000036B4(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+/* 0x36B4 videoWorkerThread */
+s32 videoWorkerThread(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     u8 blk[32];
     u32 bits;
@@ -2942,11 +2898,11 @@ loop:
         goto out;
     if (bits & 0x4000)
         goto out;
-    if (sub_00000170(&pkt) < 0)
+    if (queryReverseState(&pkt) < 0)
         goto loop;
     VIDEO_WORD(8) |= 0x2000;
     if (VIDEO_WORD(436) == 0) {
-        res = sub_000055AC(0xC0000003, (int *)&VIDEO_WORD(436));
+        res = dispatchIoctl(0xC0000003, (int *)&VIDEO_WORD(436));
         if (res < 0)
             goto loop;
     }
@@ -2971,7 +2927,7 @@ loop:
                 VIDEO_BYTE(0x33) = 2;
         }
         if (sceKernelLockMutex(VIDEO_WORD(408), 1, NULL) == 0) {
-            sub_00000000(3, 2, &VIDEO_BYTE(0x2C), 20);
+            sendAccCommand(3, 2, &VIDEO_BYTE(0x2C), 20);
             sceKernelUnlockMutex(VIDEO_WORD(408), 1);
         }
         if (VIDEO_WORD(436) < 1280) {
@@ -2990,9 +2946,9 @@ loop:
         Kprintf("%serror - Not accessory !!", "");
     } else {
         __builtin_memcpy(blk, &VIDEO_BYTE(0x0C), 32);
-        blk[6] = sub_00001084(blk[6]);
-        blk[7] = sub_00001058(blk[7]);
-        blk[9] = sub_000010B8(blk[9]);
+        blk[6] = encodeSaturation(blk[6]);
+        blk[7] = encodeBrightness(blk[7]);
+        blk[9] = encodeSharpness(blk[9]);
         if (VIDEO_WORD(436) >= 1280) {
             if (blk[0] < 2)
                 blk[0] = 2;
@@ -3002,7 +2958,7 @@ loop:
         sceKernelCpuResumeIntr(intr);
         res = sceKernelLockMutex(VIDEO_WORD(408), 1, NULL);
         if (res == 0) {
-            sub_00000000(1, 2, blk, 32);
+            sendAccCommand(1, 2, blk, 32);
             res = sceKernelUnlockMutex(VIDEO_WORD(408), 1);
         }
         intr = sceKernelCpuSuspendIntr();
@@ -3018,17 +2974,17 @@ waitFrame:
     if (res >= 0 && (bits & 0x400) != 0)
         goto loop;
     if (VIDEO_BYTE(4) == 2) {
-        sub_00004C00((VIDEO_WORD(8) >> 4) & 1);
+        stopAndDrainStream((VIDEO_WORD(8) >> 4) & 1);
     } else {
         if ((bits & 0x80010) != 0 && (VIDEO_WORD(8) & 0x1000) != 0) {
             half = (VIDEO_WORD(8) & 0x400) ? 0x101 : 0x100;
-            sub_000000F4(&half);
+            sendReverseFlags(&half);
             sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFDFFFFu);
         }
         if (bits & 0x10)
-            res = sub_00004F04(0);
+            res = pumpVideoFrames(0);
         else if (bits & 0x80000)
-            res = sub_00004F04(1);
+            res = pumpVideoFrames(1);
     }
     if (res >= 0)
         goto loop;
@@ -3038,8 +2994,8 @@ out:
 }
 
 
-/* 0x3AA0 sub_00003AA0 */
-s32 sub_00003AA0(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+/* 0x3AA0 videoCopyWorker */
+s32 videoCopyWorker(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     u32 bits;
     u8 *userBuf;
@@ -3105,7 +3061,7 @@ copy:
         src = (u8 *)VIDEO_WORD(344 + 8 * idx);
         do {
             chunk = (size < 16380) ? size : 16380;
-            sub_00004A24(userBuf + off, src + off, (int)chunk);
+            dmacCopy(userBuf + off, src + off, (int)chunk);
             size -= chunk;
             off += chunk;
         } while (size != 0);
@@ -3122,7 +3078,7 @@ copy:
     /* 0x3C30 reloads VIDEO_WORD(384) into $a1 and max()es it with 0;
        interrupts are suspended across the store, so the local is the
        same value. Signed clamp: sceUsbCamGetReadVideoFrameSize reads
-       this word back as a byte count (batchC1_NOTES 381-390). */
+       this word back as a byte count (verified against the disassembly). */
     VIDEO_WORD(388) = (status >= 0) ? (u32)status : 0u;
     sceKernelSetEventFlag(VIDEO_WORD(400), 0x80);
     sceKernelCpuResumeIntr(intr);
@@ -3130,8 +3086,8 @@ copy:
 }
 
 
-/* 0x3CD4 sub_00003CD4 */
-s32 sub_00003CD4(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
+/* 0x3CD4 micCopyWorker */
+s32 micCopyWorker(SceSize args __attribute__((unused)), void *argp __attribute__((unused)))
 {
     u32 bits;
     u8 *dst;
@@ -3180,7 +3136,7 @@ inner:
         goto done;
     }
     if (bits & 1) {
-        n = sub_000080F8(dst + copied, (int)pending);
+        n = drainMicBuffer(dst + copied, (int)pending);
         if (n < 0) {
             status = n;
             goto done;
@@ -3210,8 +3166,8 @@ done:
 }
 
 
-/* 0x3E94 sub_00003E94 */
-void sub_00003E94(struct UsbdDeviceReq *req)
+/* 0x3E94 videoEp0Complete */
+void videoEp0Complete(struct UsbdDeviceReq *req)
 {
     u8 *ptr;
     u32 v;
@@ -3265,8 +3221,8 @@ void sub_00003E94(struct UsbdDeviceReq *req)
 }
 
 
-/* 0x3FEC sub_00003FEC */
-void sub_00003FEC(struct UsbdDeviceReq *req)
+/* 0x3FEC videoBulkComplete */
+void videoBulkComplete(struct UsbdDeviceReq *req)
 {
     u32 avail;
     u32 left;
@@ -3339,8 +3295,8 @@ rearm:
     sceUsbbdReqRecv(req);
 }
 
-/* 0x4164 sub_00004164 */
-s32 sub_00004164(void)
+/* 0x4164 startIsoReceives */
+s32 startIsoReceives(void)
 {
     struct VideoStateFull *st = (struct VideoStateFull *)&g_videoState;
     struct VideoDescState *node;
@@ -3373,7 +3329,7 @@ s32 sub_00004164(void)
         st->items[i].unk1c = (int)&st->items[i + 1];
     }
     /* 0x4258 sits in the `jal sceUsbbdReqRecv` delay slot, so it runs
-       before the call - exactly like gen's mic loop at line 636. */
+       before the call - the same delay-slot pattern the mic path uses. */
     st->items[1].unk1c = 0;
 
     res = sceUsbbdReqRecv(&st->items[0]);
@@ -3387,83 +3343,78 @@ s32 sub_00004164(void)
  * sceUsbBus_driver import NID 0xCC57EC9D (psplibdoc_usb.csv:21 names it
  * sceUsbbdReqCancel). No uofw header declares it; the prototype is the
  * sibling of sceUsbbdReqSend (include/usbbus.h:187) and is guessed.
- * batchC2_NOTES.md.
  */
 int sceUsbbdReqCancel(struct UsbdDeviceReq *req);
 
-/* include/interruptman.h:150-151 verbatim; gen_usbcam.c does not pull
-   interruptman.h in, so the fragment declares them itself. Identical to
-   the declarations in batchC1.c and batchC2_NOTES.md. */
+/* Also declared in include/interruptman.h:150-151; repeated here
+   because this file does not include that header. */
 s32 sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(s32 intr);
 
-/* src/kd/dmacman/dmacman.c:375/463 - both are implemented in uOFW but
-   neither is listed by include/dmacman.h, so the fragment re-states the
-   definitions. Harmless redeclaration if the merge adds them. */
+/* Both are implemented in src/kd/dmacman/dmacman.c but neither is listed
+   by include/dmacman.h, so they are re-stated here. */
 s32 sceKernelDmaOpSetupMemcpy(sceKernelDmaOperation *op, s32 arg1, s32 arg2, s32 arg3);
 s32 sceKernelDmaOpSync(sceKernelDmaOperation *op, s32 command, u32 *timeout);
 
 /* include/lowio_ddr.h:7, include/sysmem_suspend_kernel.h:11/13 and
    include/sysmem_kernel.h:299 verbatim; none of those headers are
-   reachable from gen_usbcam.c's include set. */
+   included by this file. */
 int sceDdrFlush(int);
 s32 sceKernelPowerLock(s32 lockType);
 s32 sceKernelPowerUnlock(s32 lockType);
 void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 
-/* Helpers and dispatch handlers defined after this window in
-   gen_usbcam.c (batchB2.c at 0x5870-0x6DA4); batchC2 sits above them,
-   so the prototypes are restated here. Every prototype below matches
-   gen_usbcam.c's definition exactly. */
-s32 sub_00006DA4(int *arg);
+/* Helpers and dispatch handlers defined below; the prototypes are
+   restated here for the callers above. Every prototype below matches
+   its definition. */
+s32 execRawCommand(int *arg);
 
-int sub_00005870(int *arg);
-int sub_00005948(int *arg);
-int sub_000059BC(int *arg);
-int sub_000059D0(int *arg);
-int sub_00005A88(int *arg);
-int sub_00005A9C(int *arg);
-int sub_00005B4C(int *arg);
-int sub_00005B60(int *arg);
-int sub_00005C18(int *arg);
-int sub_00005C2C(int *arg);
-int sub_00005D44(int *arg);
-int sub_00005D58(int *arg);
-int sub_00005D7C(int *arg);
-int sub_00005D98(int *arg);
-int sub_00005E28(int *arg);
-int sub_00005E5C(int *arg);
-int sub_00005F00(int *arg);
-int sub_00005F50(int *arg);
-int sub_00006020(int *arg);
-int sub_00006054(int *arg);
-int sub_00006100(int *arg);
-int sub_00006134(int *arg);
-int sub_000061E0(int *arg);
-int sub_00006214(int *arg);
-int sub_000062C0(int *arg);
-int sub_000062F4(int *arg);
-int sub_000063A0(int *arg);
-int sub_000063D4(int *arg);
-int sub_000064FC(int *arg);
-int sub_00006560(int *arg);
-int sub_000065F0(int *arg);
-int sub_00006604(int *arg);
-int sub_000066B0(int *arg);
-int sub_000066E4(int *arg);
-int sub_00006790(int *arg);
-int sub_000067C4(int *arg);
-int sub_000067FC(int *arg);
-int sub_0000694C(int *arg);
-int sub_00006984(int *arg);
-int sub_00006AD4(int *arg);
-int sub_00006C0C(int *arg);
-int sub_00006D3C(int *arg);
+int setResolutionPair(int *arg);
+int setSaturation(int *arg);
+int getSaturation(int *arg);
+int setBrightness(int *arg);
+int getBrightness(int *arg);
+int setContrast(int *arg);
+int getContrast(int *arg);
+int setSharpness(int *arg);
+int getSharpness(int *arg);
+int setZoom(int *arg);
+int getZoom(int *arg);
+int setReverseMode(int *arg);
+int getReverseMode(int *arg);
+int setImageEffect(int *arg);
+int getImageEffect(int *arg);
+int setResolution(int *arg);
+int getResolution(int *arg);
+int setUnk0xB(int *arg);
+int getUnk0xB(int *arg);
+int setFramerate(int *arg);
+int getFramerate(int *arg);
+int setUnk0xE(int *arg);
+int getUnk0xE(int *arg);
+int setUnk0xF(int *arg);
+int getUnk0xF(int *arg);
+int setAntiFlicker(int *arg);
+int getAntiFlicker(int *arg);
+int setUnk0x11(int *arg);
+int getUnk0x11(int *arg);
+int setUnk0x12(int *arg);
+int getUnk0x12(int *arg);
+int setUnk0x13(int *arg);
+int getUnk0x13(int *arg);
+int setEvLevel(int *arg);
+int getEvLevel(int *arg);
+int setUnk40000001(int *arg);
+int getUnk40000001(int *arg);
+int setUnk40000002(int *arg);
+int getUnk40000002(int *arg);
+int getUnk40000003(int *arg);
+int setUnk0xA(int *arg);
+int getUnk0xA(int *arg);
 
 /* 60-byte block sceUsbCamSetupStill (0x1CAC) and sceUsbCamSetupStillEx
-   (0x1EBC) build on the stack and pass to sub_00004680. Field +0 and
-   +5 are never read; +44 and +48 are read back as u16. batchC2_NOTES.md
-   carries the caller-to-field mapping. */
+   (0x1EBC) build on the stack and pass to packStillConfig. Field +0 and
+   +5 are never read; +44 and +48 are read back as u16. */
 struct UsbCamStillReq {
     int unk0;
     int resolution;
@@ -3485,9 +3436,9 @@ struct UsbCamStillReq {
 _Static_assert(sizeof(struct UsbCamStillReq) == 60, "UsbCamStillReq size");
 
 /* 0x8E00, 0x8E04, 0x8E08, 0x8E10, 0x8E18, 0x8E20 and 0x8E24: separate
-   one-to-four/six/seven byte index maps read by sub_00004298 and
-   sub_00004680. The surrounding objects (0x8DEC, 0x8E0C, 0x8DF8,
-   0x8E28) already live in gen_usbcam.c. */
+   one-to-four/six/seven byte index maps read by packVideoConfig and
+   packStillConfig. The surrounding objects (0x8DEC, 0x8E0C, 0x8DF8,
+   0x8E28) are already defined above. */
 static const u8 s_map8E00[4] = { 1, 2, 3, 0 };
 static const u8 s_map8E04[4] = { 0, 1, 2, 3 };
 static const u8 s_map8E08[4] = { 0, 1, 2, 0 };
@@ -3497,7 +3448,7 @@ static const u8 s_map8E20[4] = { 0, 1, 2, 3 };
 static const u8 s_map8E24[4] = { 1, 2, 3, 0 };
 
 /* 0x8E50: ten {width, height} pairs indexed by the 0..9 resolution
-   codes sub_00004298 range-checks the caller's frame size against. */
+   codes packVideoConfig range-checks the caller's frame size against. */
 static const struct UsbCamResEntry s_res8E50[10] = {
     { 160, 120 }, { 176, 144 }, { 320, 240 }, { 352, 288 }, { 360, 272 },
     { 480, 272 }, { 640, 480 }, { 1024, 768 }, { 1280, 960 }, { 1280, 1024 }
@@ -3506,7 +3457,7 @@ static const struct UsbCamResEntry s_res8E50[10] = {
 /* 0x4298: pack a 100-byte PspUsbCamSetupVideoExParam into the 32-byte
    command block sceUsbCamSetupVideoEx writes into g_videoState. */
 
-int sub_00004298(u8 *out, struct UsbCamVideoReq *req)
+int packVideoConfig(u8 *out, struct UsbCamVideoReq *req)
 {
     const struct UsbCamResEntry *cur;
     const struct UsbCamResEntry *sel;
@@ -3553,7 +3504,7 @@ int sub_00004298(u8 *out, struct UsbCamVideoReq *req)
         goto out;
     if ((u32)req->effectmode >= 7)
         goto out;
-    if (sub_000011F4(req->unk, req->resolution, req->unk8) == 0)
+    if (checkEvAllowed(req->unk, req->resolution, req->unk8) == 0)
         goto out;
     if ((s32)req->framerate >= 5 && (u32)(req->unk - 7) < 3)
         goto out;
@@ -3608,7 +3559,7 @@ out:
 /* 0x4680: pack a 60-byte still-setup block into the 19-byte command
    block sceUsbCamSetupStill writes into g_videoState. */
 
-int sub_00004680(u8 *out, struct UsbCamStillReq *req)
+int packStillConfig(u8 *out, struct UsbCamStillReq *req)
 {
     int ret;
 
@@ -3664,7 +3615,7 @@ out:
    points (sceUsbCamStillPollInputEnd, sceUsbCamStillWaitInputEnd,
    sceUsbCamGetReadFrameSize). */
 
-s32 sub_00004858(void)
+s32 guardStillInput(void)
 {
     int ret;
 
@@ -3688,9 +3639,9 @@ out:
 
 /* 0x48DC: reap the still frame. arg == 0 waits on the video event flag,
    arg != 0 polls it; both then drain the pending request and report the
-   byte count that sub_00004C00's caller consumed. */
+   byte count that stopAndDrainStream's caller consumed. */
 
-s32 sub_000048DC(int arg)
+s32 reapStillInput(int arg)
 {
     struct VideoStateFull *st;
     u32 bits;
@@ -3736,7 +3687,7 @@ s32 sub_000048DC(int arg)
    otherwise it DMAs in <= 16380-byte word-aligned chunks, copies the
    0..3 byte tail in software and returns dst. */
 
-void *sub_00004A24(void *dst, const void *src, int size)
+void *dmacCopy(void *dst, const void *src, int size)
 {
     sceKernelDmaOperation *op;
     u32 dmacDst;
@@ -3786,7 +3737,7 @@ unlock:
    frame descriptors and either re-enters the wait loop or returns the
    last threadman status. */
 
-s32 sub_00004C00(int arg)
+s32 stopAndDrainStream(int arg)
 {
     s32 intr;
     s32 ret;
@@ -3836,7 +3787,7 @@ s32 sub_00004C00(int arg)
     ret = sceKernelLockMutex(VIDEO_WORD(408), 1, NULL);
     if (ret != 0)
         goto suspendCheck;
-    ret = sub_00000000((arg != 0) ? 4 : 2, 2, NULL, 0);
+    ret = sendAccCommand((arg != 0) ? 4 : 2, 2, NULL, 0);
     sceKernelUnlockMutex(VIDEO_WORD(408), 1);
     goto suspendCheck;
 
@@ -3898,10 +3849,10 @@ struct UsbCamXfer {
    VIDEO_WORD(348 + 8 * seb(VIDEO_BYTE(7)))}) while VIDEO_WORD(436) < 1280,
    or into the JPEG pair (VIDEO_WORD(380)/VIDEO_WORD(368), reached through
    the slot/slotLen pair) otherwise. arg == 0 is the half-buffer path,
-   arg != 0 the big path. Every exit runs sub_00004C00(arg) and returns the
+   arg != 0 the big path. Every exit runs stopAndDrainStream(arg) and returns the
    last sceKernelWaitEventFlag status. */
 
-s32 sub_00004F04(int arg)
+s32 pumpVideoFrames(int arg)
 {
     struct UsbCamXfer *node;
     struct UsbCamXfer *next;
@@ -3940,7 +3891,7 @@ wait:
         goto out;
     if ((bits & 0x20000) != 0) {
         half = (VIDEO_WORD(8) & 0x400) ? 0x101 : 0x100;
-        sub_000000F4(&half);
+        sendReverseFlags(&half);
         sceKernelClearEventFlag(VIDEO_WORD(400), 0xFFFDFFFFu);
     }
     if (VIDEO_BYTE(5) == 1) {
@@ -4165,7 +4116,7 @@ plain:
     goto nodeTail;
 
 out:
-    sub_00004C00(arg);
+    stopAndDrainStream(arg);
     return res;
 }
 
@@ -4180,31 +4131,31 @@ struct UsbCamCmdEntry {
 };
 
 static const struct UsbCamCmdEntry s_cmd8F0C[22] = {
-    { 0x00000003, sub_00005948, sub_000059BC },
-    { 0x00000001, sub_000059D0, sub_00005A88 },
-    { 0x00000002, sub_00005A9C, sub_00005B4C },
-    { 0x00000004, sub_00005B60, sub_00005C18 },
-    { 0x00000005, sub_00005C2C, sub_00005D44 },
-    { 0x00000006, sub_00005D58, sub_00005D7C },
-    { 0x00000007, sub_00005D98, sub_00005E28 },
-    { 0x00000009, sub_00005E5C, NULL },
-    { 0x40000001, sub_000067C4, sub_000067FC },
-    { 0x40000002, sub_0000694C, sub_00006984 },
-    { 0x40000003, NULL, sub_00006AD4 },
-    { 0x0000000A, sub_00006C0C, sub_00006D3C },
-    { 0x0000000B, sub_00005F50, sub_00006020 },
-    { 0x0000000C, sub_00005870, sub_00005F00 },
-    { 0x0000000D, sub_00006054, sub_00006100 },
-    { 0x0000000E, sub_00006134, sub_000061E0 },
-    { 0x0000000F, sub_00006214, sub_000062C0 },
-    { 0x00000010, sub_000062F4, sub_000063A0 },
-    { 0x00000011, sub_000063D4, sub_000064FC },
-    { 0x00000012, sub_00006560, sub_000065F0 },
-    { 0x00000013, sub_00006604, sub_000066B0 },
-    { 0x00000014, sub_000066E4, sub_00006790 }
+    { 0x00000003, setSaturation, getSaturation },
+    { 0x00000001, setBrightness, getBrightness },
+    { 0x00000002, setContrast, getContrast },
+    { 0x00000004, setSharpness, getSharpness },
+    { 0x00000005, setZoom, getZoom },
+    { 0x00000006, setReverseMode, getReverseMode },
+    { 0x00000007, setImageEffect, getImageEffect },
+    { 0x00000009, setResolution, NULL },
+    { 0x40000001, setUnk40000001, getUnk40000001 },
+    { 0x40000002, setUnk40000002, getUnk40000002 },
+    { 0x40000003, NULL, getUnk40000003 },
+    { 0x0000000A, setUnk0xA, getUnk0xA },
+    { 0x0000000B, setUnk0xB, getUnk0xB },
+    { 0x0000000C, setResolutionPair, getResolution },
+    { 0x0000000D, setFramerate, getFramerate },
+    { 0x0000000E, setUnk0xE, getUnk0xE },
+    { 0x0000000F, setUnk0xF, getUnk0xF },
+    { 0x00000010, setAntiFlicker, getAntiFlicker },
+    { 0x00000011, setUnk0x11, getUnk0x11 },
+    { 0x00000012, setUnk0x12, getUnk0x12 },
+    { 0x00000013, setUnk0x13, getUnk0x13 },
+    { 0x00000014, setEvLevel, getEvLevel }
 };
 
-s32 sub_000055AC(int cmd, int *arg)
+s32 dispatchIoctl(int cmd, int *arg)
 {
     int (*fn)(int *);
     u32 key;
@@ -4217,7 +4168,7 @@ s32 sub_000055AC(int cmd, int *arg)
     if (sceUsbAccGetAuthStat() < 0)
         return 0x80243902;
     if (cmd == 0x8001)
-        return sub_00006DA4(arg);
+        return execRawCommand(arg);
 
     key = (u32)cmd & 0x7FFFFFFF;
     for (i = 0; i < 22; i++) {
@@ -4232,7 +4183,7 @@ s32 sub_000055AC(int cmd, int *arg)
 }
 
 /* 0x56B0 sceUsbCamIoctl - validates cmd/arg buffer size, K1-checks the
-   user pointer, then hands off to sub_000055AC (auth, 0x8001, table walk). */
+   user pointer, then hands off to dispatchIoctl (auth, 0x8001, table walk). */
 s32 sceUsbCamIoctl(int cmd, int *arg)
 {
     int oldK1;
@@ -4308,48 +4259,45 @@ s32 sceUsbCamIoctl(int cmd, int *arg)
     ret = 0x80243904;
     if (!pspK1StaBufOk(arg, size))
         goto out;
-    ret = sub_000055AC(cmd, arg);
+    ret = dispatchIoctl(cmd, arg);
 out:
     pspSetK1(oldK1);
     return ret;
 }
 
 
-/* Helpers implemented outside this window. gen_usbcam.c still defines
-   them as "s32 sub_0000XXXX(void)" stubs; those stubs must be removed
-   (or replaced with these prototypes) when batchB2.c is merged. Every
-   later batch must reuse these exact prototypes. */
-int sub_00000000(int cmd, int arg1, void *buf, int len);
-int sub_000000F4(void *buf);
-int sub_00000170(void *arg);
-int sub_00001058(int val);
-int sub_00001084(int val);
-int sub_000010B8(int val);
-int sub_00001110(u8 *p);
-int sub_0000115C(u8 *p);
-int sub_000011A8(u8 *p);
-int sub_000011F4(int curW, int curH, int val);
-int sub_00002930(int val);
-int sub_00002944(u8 *p);
-int sub_00002988(int val);
-int sub_0000299C(u8 *p);
-int sub_000029E0(int val);
-int sub_000029F4(u8 *p);
-int sub_00002A38(int val);
-int sub_00002A4C(u8 *p);
-int sub_00002A90(int val);
-int sub_00002AA4(u8 *p);
-int sub_00002AE8(int val);
-int sub_00002AFC(u8 *p);
-int sub_00002B40(int val, u8 *out0, u8 *out1);
-int sub_00002B7C(int val0, int val1, u8 *out0, u8 *out1);
-int sub_00002C08(int val);
+/* Helpers defined below; every prototype below matches its definition. */
+int sendAccCommand(int cmd, int arg1, void *buf, int len);
+int sendReverseFlags(void *buf);
+int queryReverseState(void *arg);
+int encodeBrightness(int val);
+int encodeSaturation(int val);
+int encodeSharpness(int val);
+int encodeWidthCode(u8 *p);
+int encodeHeightCode(u8 *p);
+int clampEvLevel(u8 *p);
+int checkEvAllowed(int curW, int curH, int val);
+int encodeImageEffect(int val);
+int decodeImageEffect(u8 *p);
+int encodeFramerate(int val);
+int decodeFramerate(u8 *p);
+int encodeUnk0xE(int val);
+int decodeUnk0xE(u8 *p);
+int encodeWhiteBalance(int val);
+int decodeWhiteBalance(u8 *p);
+int encodeAntiFlicker(int val);
+int decodeAntiFlicker(u8 *p);
+int encodeUnk0x13(int val);
+int decodeUnk0x13(u8 *p);
+int encodeResolutionEx(int val, u8 *out0, u8 *out1);
+int encodeResolutionPair(int val0, int val1, u8 *out0, u8 *out1);
+int encodeEvLevel(int val);
 
 /* Mode code table at .rodata 0x8E1C; values are the identity map, but
    the original indexes it on both the set and the get path. */
 static const u8 s_set10Codes[3] = { 0x00, 0x01, 0x02 };
 
-int sub_00005870(int *arg)
+int setResolutionPair(int *arg)
 {
     u8 buf[4] = { 0 };
     int res;
@@ -4358,13 +4306,13 @@ int sub_00005870(int *arg)
         return 0x80243905;
     if (arg[1] >= 10)
         return 0x80243905;
-    res = sub_00002B7C(arg[0], arg[1], buf, buf + 1);
+    res = encodeResolutionPair(arg[0], arg[1], buf, buf + 1);
     if (res < 0)
         return res;
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(160, 2, buf, 2);
+    res = sendAccCommand(160, 2, buf, 2);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4373,39 +4321,39 @@ int sub_00005870(int *arg)
     return 0;
 }
 
-int sub_00005948(int *arg)
+int setSaturation(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 256)
         return 0x80243906;
-    buf[0] = sub_00001084(*arg);
-    res = sub_00000000(164, 2, buf, 1);
+    buf[0] = encodeSaturation(*arg);
+    res = sendAccCommand(164, 2, buf, 1);
     if (res != 0)
         return res;
     VIDEO_BYTE(18) = *arg;
     return 0;
 }
 
-int sub_000059BC(int *arg)
+int getSaturation(int *arg)
 {
     *arg = VIDEO_BYTE(18);
     return 0;
 }
 
-int sub_000059D0(int *arg)
+int setBrightness(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 256)
         return 0x80243906;
-    buf[0] = sub_00001058(*arg);
+    buf[0] = encodeBrightness(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(165, 2, buf, 1);
+    res = sendAccCommand(165, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4413,13 +4361,13 @@ int sub_000059D0(int *arg)
     return 0;
 }
 
-int sub_00005A88(int *arg)
+int getBrightness(int *arg)
 {
     *arg = VIDEO_BYTE(19);
     return 0;
 }
 
-int sub_00005A9C(int *arg)
+int setContrast(int *arg)
 {
     u8 buf[4];
     int res;
@@ -4430,7 +4378,7 @@ int sub_00005A9C(int *arg)
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(166, 2, buf, 1);
+    res = sendAccCommand(166, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4438,24 +4386,24 @@ int sub_00005A9C(int *arg)
     return 0;
 }
 
-int sub_00005B4C(int *arg)
+int getContrast(int *arg)
 {
     *arg = VIDEO_BYTE(20);
     return 0;
 }
 
-int sub_00005B60(int *arg)
+int setSharpness(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 256)
         return 0x80243906;
-    buf[0] = sub_000010B8(*arg);
+    buf[0] = encodeSharpness(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(167, 2, buf, 1);
+    res = sendAccCommand(167, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4463,13 +4411,13 @@ int sub_00005B60(int *arg)
     return 0;
 }
 
-int sub_00005C18(int *arg)
+int getSharpness(int *arg)
 {
     *arg = VIDEO_BYTE(21);
     return 0;
 }
 
-int sub_00005C2C(int *arg)
+int setZoom(int *arg)
 {
     u8 buf[4];
     int curW;
@@ -4481,9 +4429,9 @@ int sub_00005C2C(int *arg)
     if (val != 0) {
         if ((u32)(val - 10) >= 71)
             return 0x80243905;
-        curW = sub_00001110(&VIDEO_BYTE(12));
-        curH = sub_0000115C(&VIDEO_BYTE(13));
-        if (sub_000011F4(curW, curH, val) == 0)
+        curW = encodeWidthCode(&VIDEO_BYTE(12));
+        curH = encodeHeightCode(&VIDEO_BYTE(13));
+        if (checkEvAllowed(curW, curH, val) == 0)
             return 0x80243905;
         if (VIDEO_BYTE(14) >= 5 && (u32)(curW - 7) < 3)
             return 0x80243905;
@@ -4492,7 +4440,7 @@ int sub_00005C2C(int *arg)
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(5, 2, buf, 1);
+    res = sendAccCommand(5, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4500,35 +4448,35 @@ int sub_00005C2C(int *arg)
     return 0;
 }
 
-int sub_00005D44(int *arg)
+int getZoom(int *arg)
 {
     *arg = VIDEO_BYTE(32);
     return 0;
 }
 
-int sub_00005D58(int *arg)
+int setReverseMode(int *arg)
 {
     u16 buf;
 
     buf = *(u16 *)arg;
-    return sub_000000F4(&buf);
+    return sendReverseFlags(&buf);
 }
 
-int sub_00005D7C(int *arg)
+int getReverseMode(int *arg)
 {
-    return sub_00000170(arg);
+    return queryReverseState(arg);
 }
 
-int sub_00005D98(int *arg)
+int setImageEffect(int *arg)
 {
     u8 buf[4];
     int res;
 
-    buf[0] = sub_00002930(*arg);
+    buf[0] = encodeImageEffect(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(172, 2, buf, 1);
+    res = sendAccCommand(172, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4536,24 +4484,24 @@ int sub_00005D98(int *arg)
     return 0;
 }
 
-int sub_00005E28(int *arg)
+int getImageEffect(int *arg)
 {
-    *arg = sub_00002944(&VIDEO_BYTE(30));
+    *arg = decodeImageEffect(&VIDEO_BYTE(30));
     return 0;
 }
 
-int sub_00005E5C(int *arg)
+int setResolution(int *arg)
 {
     u8 buf[4] = { 0 };
     int res;
 
-    res = sub_00002B40(*arg, buf, buf + 1);
+    res = encodeResolutionEx(*arg, buf, buf + 1);
     if (res < 0)
         return res;
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(160, 2, buf, 2);
+    res = sendAccCommand(160, 2, buf, 2);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4562,14 +4510,14 @@ int sub_00005E5C(int *arg)
     return 0;
 }
 
-int sub_00005F00(int *arg)
+int getResolution(int *arg)
 {
-    arg[0] = sub_00001110(&VIDEO_BYTE(12));
-    arg[1] = sub_0000115C(&VIDEO_BYTE(13));
+    arg[0] = encodeWidthCode(&VIDEO_BYTE(12));
+    arg[1] = encodeHeightCode(&VIDEO_BYTE(13));
     return 0;
 }
 
-int sub_00005F50(int *arg)
+int setUnk0xB(int *arg)
 {
     u32 buf[2];
     int res;
@@ -4578,7 +4526,7 @@ int sub_00005F50(int *arg)
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(168, 2, buf, 3);
+    res = sendAccCommand(168, 2, buf, 3);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4587,7 +4535,7 @@ int sub_00005F50(int *arg)
     return 0;
 }
 
-int sub_00006020(int *arg)
+int getUnk0xB(int *arg)
 {
     if (VIDEO_BYTE(23) == 1) {
         *arg = 1;
@@ -4599,18 +4547,18 @@ int sub_00006020(int *arg)
     return 0;
 }
 
-int sub_00006054(int *arg)
+int setFramerate(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 8)
         return 0x80243905;
-    buf[0] = sub_00002988(*arg);
+    buf[0] = encodeFramerate(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(161, 2, buf, 1);
+    res = sendAccCommand(161, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4618,24 +4566,24 @@ int sub_00006054(int *arg)
     return 0;
 }
 
-int sub_00006100(int *arg)
+int getFramerate(int *arg)
 {
-    *arg = sub_0000299C(&VIDEO_BYTE(14));
+    *arg = decodeFramerate(&VIDEO_BYTE(14));
     return 0;
 }
 
-int sub_00006134(int *arg)
+int setUnk0xE(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 4)
         return 0x80243905;
-    buf[0] = sub_000029E0(*arg);
+    buf[0] = encodeUnk0xE(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(162, 2, buf, 1);
+    res = sendAccCommand(162, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4643,24 +4591,24 @@ int sub_00006134(int *arg)
     return 0;
 }
 
-int sub_000061E0(int *arg)
+int getUnk0xE(int *arg)
 {
-    *arg = sub_000029F4(&VIDEO_BYTE(16));
+    *arg = decodeUnk0xE(&VIDEO_BYTE(16));
     return 0;
 }
 
-int sub_00006214(int *arg)
+int setUnk0xF(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 4)
         return 0x80243905;
-    buf[0] = sub_00002A38(*arg);
+    buf[0] = encodeWhiteBalance(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(163, 2, buf, 1);
+    res = sendAccCommand(163, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4668,24 +4616,24 @@ int sub_00006214(int *arg)
     return 0;
 }
 
-int sub_000062C0(int *arg)
+int getUnk0xF(int *arg)
 {
-    *arg = sub_00002A4C(&VIDEO_BYTE(17));
+    *arg = decodeWhiteBalance(&VIDEO_BYTE(17));
     return 0;
 }
 
-int sub_000062F4(int *arg)
+int setAntiFlicker(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 3)
         return 0x80243905;
-    buf[0] = sub_00002A90(*arg);
+    buf[0] = encodeAntiFlicker(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(169, 2, buf, 1);
+    res = sendAccCommand(169, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4693,13 +4641,13 @@ int sub_000062F4(int *arg)
     return 0;
 }
 
-int sub_000063A0(int *arg)
+int getAntiFlicker(int *arg)
 {
-    *arg = sub_00002AA4(&VIDEO_BYTE(22));
+    *arg = decodeAntiFlicker(&VIDEO_BYTE(22));
     return 0;
 }
 
-int sub_000063D4(int *arg)
+int setUnk0x11(int *arg)
 {
     u16 buf[2];
     int res;
@@ -4723,7 +4671,7 @@ int sub_000063D4(int *arg)
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(170, 2, buf, 4);
+    res = sendAccCommand(170, 2, buf, 4);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4732,7 +4680,7 @@ int sub_000063D4(int *arg)
     return 0;
 }
 
-int sub_000064FC(int *arg)
+int getUnk0x11(int *arg)
 {
     u16 v;
 
@@ -4743,7 +4691,7 @@ int sub_000064FC(int *arg)
     return 0;
 }
 
-int sub_00006560(int *arg)
+int setUnk0x12(int *arg)
 {
     u8 buf[4];
     int res;
@@ -4752,7 +4700,7 @@ int sub_00006560(int *arg)
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(173, 2, buf, 1);
+    res = sendAccCommand(173, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4760,24 +4708,24 @@ int sub_00006560(int *arg)
     return 0;
 }
 
-int sub_000065F0(int *arg)
+int getUnk0x12(int *arg)
 {
     *arg = VIDEO_BYTE(31);
     return 0;
 }
 
-int sub_00006604(int *arg)
+int setUnk0x13(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 3)
         return 0x80243905;
-    buf[0] = sub_00002AE8(*arg);
+    buf[0] = encodeUnk0x13(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(174, 2, buf, 1);
+    res = sendAccCommand(174, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4785,24 +4733,24 @@ int sub_00006604(int *arg)
     return 0;
 }
 
-int sub_000066B0(int *arg)
+int getUnk0x13(int *arg)
 {
-    *arg = sub_00002AFC(&VIDEO_BYTE(15));
+    *arg = decodeUnk0x13(&VIDEO_BYTE(15));
     return 0;
 }
 
-int sub_000066E4(int *arg)
+int setEvLevel(int *arg)
 {
     u8 buf[4];
     int res;
 
     if ((u32)*arg >= 17)
         return 0x80243905;
-    buf[0] = sub_00002C08(*arg);
+    buf[0] = encodeEvLevel(*arg);
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(175, 2, buf, 1);
+    res = sendAccCommand(175, 2, buf, 1);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4810,22 +4758,22 @@ int sub_000066E4(int *arg)
     return 0;
 }
 
-int sub_00006790(int *arg)
+int getEvLevel(int *arg)
 {
-    *arg = sub_000011A8(&VIDEO_BYTE(43));
+    *arg = clampEvLevel(&VIDEO_BYTE(43));
     return 0;
 }
 
-int sub_000067C4(int *arg)
+int setUnk40000001(int *arg)
 {
     u8 buf[4];
 
     *(u16 *)buf = *(u16 *)arg;
     buf[2] = *((u8 *)arg + 4);
-    return sub_00000000(68, 3, buf, 3);
+    return sendAccCommand(68, 3, buf, 3);
 }
 
-int sub_000067FC(int *arg)
+int getUnk40000001(int *arg)
 {
     u8 buf[4];
     u32 outBits;
@@ -4839,7 +4787,7 @@ int sub_000067FC(int *arg)
         return res;
     *(u16 *)buf = *(u16 *)arg;
     sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
-    res = sub_00000000(67, 3, buf, 2);
+    res = sendAccCommand(67, 3, buf, 2);
     if (res < 0)
         goto unlock;
     res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x400, 1, &outBits, NULL);
@@ -4863,16 +4811,16 @@ unlock:
     return res;
 }
 
-int sub_0000694C(int *arg)
+int setUnk40000002(int *arg)
 {
     u8 buf[4];
 
     buf[0] = *(u8 *)arg;
     buf[1] = *((u8 *)arg + 4);
-    return sub_00000000(65, 2, buf, 2);
+    return sendAccCommand(65, 2, buf, 2);
 }
 
-int sub_00006984(int *arg)
+int getUnk40000002(int *arg)
 {
     u8 buf[4];
     u32 outBits;
@@ -4886,7 +4834,7 @@ int sub_00006984(int *arg)
         return res;
     buf[0] = *(u8 *)arg;
     sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
-    res = sub_00000000(64, 2, buf, 1);
+    res = sendAccCommand(64, 2, buf, 1);
     if (res < 0)
         goto unlock;
     res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x400, 1, &outBits, NULL);
@@ -4910,7 +4858,7 @@ unlock:
     return res;
 }
 
-int sub_00006AD4(int *arg)
+int getUnk40000003(int *arg)
 {
     u32 outBits;
     u8 *bufPtr;
@@ -4922,7 +4870,7 @@ int sub_00006AD4(int *arg)
     if (res < 0)
         return res;
     sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
-    res = sub_00000000(9, 3, NULL, 0);
+    res = sendAccCommand(9, 3, NULL, 0);
     if (res < 0)
         goto unlock;
     res = sceKernelWaitEventFlag(VIDEO_WORD(0x190), 0x400, 1, &outBits, NULL);
@@ -4941,7 +4889,7 @@ unlock:
     return res;
 }
 
-int sub_00006C0C(int *arg)
+int setUnk0xA(int *arg)
 {
     u32 buf[2];
     u16 v1;
@@ -4961,7 +4909,7 @@ int sub_00006C0C(int *arg)
     res = sceKernelLockMutex(VIDEO_WORD(0x198), 1, NULL);
     if (res != 0)
         return res;
-    res = sub_00000000(6, 2, buf, 5);
+    res = sendAccCommand(6, 2, buf, 5);
     sceKernelUnlockMutex(VIDEO_WORD(0x198), 1);
     if (res != 0)
         return res;
@@ -4971,7 +4919,7 @@ int sub_00006C0C(int *arg)
     return 0;
 }
 
-int sub_00006D3C(int *arg)
+int getUnk0xA(int *arg)
 {
     int i;
 
@@ -4987,8 +4935,8 @@ int sub_00006D3C(int *arg)
     return 0;
 }
 
-/* 0x6DA4 sub_00006DA4 */
-s32 sub_00006DA4(int *arg)
+/* 0x6DA4 execRawCommand */
+s32 execRawCommand(int *arg)
 {
     u32 outBits;
     int res;
@@ -4999,7 +4947,7 @@ s32 sub_00006DA4(int *arg)
     if (res < 0)
         return res;
     sceKernelClearEventFlag(VIDEO_WORD(0x190), 0xFFFEFFFF);
-    res = sub_00000000(arg[1], arg[2], &arg[4], arg[3]);
+    res = sendAccCommand(arg[1], arg[2], &arg[4], arg[3]);
     if (res < 0)
         goto unlock;
     if (arg[0] == 0)
@@ -5058,7 +5006,7 @@ int sceUsbCamSetupMicEx(struct UsbCamSetupMicExParam *param, void *workarea, int
     cmd[4] = (u16)param->unk2[2];
     cmd[5] = (u16)param->unk2[3];
     cmd[6] = (u16)(param->freq / 1000);
-    ret = sub_000078A0(cmd, param->unk3, workarea, wasize);
+    ret = commitMicSetup(cmd, param->unk3, workarea, wasize);
 out:
     pspSetK1(oldK1);
     return ret;
@@ -5104,7 +5052,7 @@ int sceUsbCamSetupMic(struct UsbCamSetupMicParam *param, void *workarea, int was
     cmd[4] = 3;
     cmd[5] = 2;
     cmd[6] = (u16)(param->freq / 1000);
-    ret = sub_000078A0(cmd, 0, workarea, wasize);
+    ret = commitMicSetup(cmd, 0, workarea, wasize);
 out:
     pspSetK1(oldK1);
     return ret;
@@ -5126,7 +5074,9 @@ s32 sceUsbCamStopMic(void)
     if (MIC_BYTE(1) == 0)
         return 0x80243901;
     oldK1 = pspShiftK1();
-    ret = sub_000079A0();
+    /* uOFW note: the original stops the mic by re-issuing the start
+       transfer; verified from the disassembly. */
+    ret = sendMicStart();
     pspSetK1(oldK1);
     return ret;
 }
@@ -5155,7 +5105,7 @@ int sceUsbCamReadMic(u8 *buf, SceSize size)
         sceKernelClearEventFlag(MIC_WORD(0x114), 0xFBFF);
     }
     intr = sceKernelCpuSuspendIntr();
-    ret = sub_00007AF8(buf, size);
+    ret = validateMicRead(buf, size);
     if (ret < 0)
         goto resume;
     if (MIC_BYTE(4) == 4) {
@@ -5198,7 +5148,7 @@ int sceUsbCamReadMicBlocking(u8 *buf, SceSize size)
         sceKernelClearEventFlag(MIC_WORD(0x114), 0xFBFF);
     }
     intr = sceKernelCpuSuspendIntr();
-    ret = sub_00007AF8(buf, size);
+    ret = validateMicRead(buf, size);
     if (ret < 0)
         goto resume;
     if (MIC_BYTE(4) == 4) {
@@ -5353,7 +5303,7 @@ s32 sceUsbCamSetMicGain(int gain)
     ret = 0;
     if ((s16)MIC_HALF(0x0A) != (s16)gain) {
         MIC_HALF(0x0A) = (u16)gain;
-        ret = sub_00007A3C();
+        ret = startMicSync();
         MIC_BYTE(5) = 0;
         sceKernelSetEventFlag(MIC_WORD(0x114), 0x400);
     }
@@ -5363,8 +5313,8 @@ out:
 }
 
 
-/* 0x78A0 sub_000078A0 */
-s32 sub_000078A0(void *cmd, int flag, void *workarea, int wasize)
+/* 0x78A0 commitMicSetup */
+s32 commitMicSetup(void *cmd, int flag, void *workarea, int wasize)
 {
     int intr;
 
@@ -5392,8 +5342,8 @@ s32 sub_000078A0(void *cmd, int flag, void *workarea, int wasize)
 }
 
 
-/* 0x79A0 sub_000079A0 */
-s32 sub_000079A0(void)
+/* 0x79A0 sendMicStart */
+s32 sendMicStart(void)
 {
     struct MicStateFull *st = (struct MicStateFull *)&g_micState;
     int intr;
@@ -5421,8 +5371,8 @@ out:
 }
 
 
-/* 0x7A3C sub_00007A3C */
-s32 sub_00007A3C(void)
+/* 0x7A3C startMicSync */
+s32 startMicSync(void)
 {
     u32 outBits;
     s32 ret;
@@ -5434,18 +5384,18 @@ s32 sub_00007A3C(void)
         if (outBits & 0x100)
             return 0x80243902;
     }
-    sub_000079A0();
+    sendMicStart();
     ret = sceKernelWaitEventFlag(MIC_WORD(0x114), 0x120, 1, &outBits, NULL);
     if (ret < 0)
         return ret;
     if (outBits & 0x100)
         return 0x80243902;
-    return sub_00007F0C();
+    return sendMicSetup();
 }
 
 
-/* 0x7AF8 sub_00007AF8 */
-s32 sub_00007AF8(void *buf, int size)
+/* 0x7AF8 validateMicRead */
+s32 validateMicRead(void *buf, int size)
 {
     if (MIC_BYTE(0) == 0)
         return 0x80243908;
@@ -5492,13 +5442,13 @@ s32 sceUsbCamStartMic(void)
         MIC_WORD(0x28) = buf;
         MIC_WORD(0x2C) = buf;
     }
-    ret = sub_00007F0C();
+    ret = sendMicSetup();
     pspSetK1(oldK1);
     return ret;
 }
 
 
-s32 sub_00007C54(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)))
+s32 registerMicDriver(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)))
 {
     if (sceUsbbdRegister(&g_micDriver) < 0) {
         return 1;
@@ -5507,15 +5457,15 @@ s32 sub_00007C54(int arg0 __attribute__((unused)), int arg1 __attribute__((unuse
     return 0;
 }
 
-s32 sub_00007C8C(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)))
+s32 unregisterMicDriver(int arg0 __attribute__((unused)), int arg1 __attribute__((unused)))
 {
     return sceUsbbdUnregister(&g_micDriver) < 0;
 }
 
 
-/* 0x7CB0 sub_00007CB0 - mic endpoint receive completion callback
-   (installed as g_micState.reqs[i].func, gen line 993). */
-void sub_00007CB0(struct UsbdDeviceReq *req)
+/* micRecvComplete - mic endpoint receive completion callback
+   (installed as g_micState.reqs[i].func). */
+void micRecvComplete(struct UsbdDeviceReq *req)
 {
     u32 writePtr;
     u32 start;
@@ -5569,12 +5519,12 @@ void sub_00007CB0(struct UsbdDeviceReq *req)
 
         if (end < reqEnd) {
             first = reqEnd - end;
-            sub_0000808C((void *)writePtr, req->data, (int)(recvsize - first));
-            sub_0000808C((void *)MIC_WORD(0x30),
+            conditionalSwapCopy((void *)writePtr, req->data, (int)(recvsize - first));
+            conditionalSwapCopy((void *)MIC_WORD(0x30),
                          (u8 *)req->data + (recvsize - first), (int)first);
             newWrite = MIC_WORD(0x30) + (first & ~1u);
         } else {
-            sub_0000808C((void *)writePtr, req->data, (int)recvsize);
+            conditionalSwapCopy((void *)writePtr, req->data, (int)recvsize);
             newWrite = writePtr + (recvsize & ~1u);
         }
 
@@ -5595,9 +5545,9 @@ void sub_00007CB0(struct UsbdDeviceReq *req)
     }
 }
 
-/* 0x7F0C sub_00007F0C - arm the mic receive path: guards under
+/* 0x7F0C sendMicSetup - arm the mic receive path: guards under
    cpu-suspend, build the setup packet in unk60, submit reqD. */
-s32 sub_00007F0C(void)
+s32 sendMicSetup(void)
 {
     struct MicStateFull *st = (struct MicStateFull *)&g_micState;
     s32 intr;
@@ -5658,9 +5608,9 @@ out:
 }
 
 
-/* 0x808C sub_0000808C - copy helper: plain memcpy, or per-16-bit-swap
+/* 0x808C conditionalSwapCopy - copy helper: plain memcpy, or per-16-bit-swap
    copy when g_micState.unk128 ("16 aligned data swap") is set. */
-void *sub_0000808C(void *dst, void *src, int size)
+void *conditionalSwapCopy(void *dst, void *src, int size)
 {
     u32 *d = (u32 *)dst;
     u32 *s = (u32 *)src;
@@ -5678,9 +5628,9 @@ void *sub_0000808C(void *dst, void *src, int size)
 }
 
 
-/* 0x80F8 sub_000080F8 - drain the mic buffer into dst under cpu-suspend.
+/* 0x80F8 drainMicBuffer - drain the mic buffer into dst under cpu-suspend.
    Last function in the driver's .text (0x80F8-0x8334). */
-s32 sub_000080F8(void *dst, int size)
+s32 drainMicBuffer(void *dst, int size)
 {
     s32 intr;
     s32 ret;
