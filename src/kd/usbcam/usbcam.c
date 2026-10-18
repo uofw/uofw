@@ -819,7 +819,7 @@ int sendAccCommand(int cmd, int arg1, void *buf, int len)
     if (st->attached == 0)
         return SCE_ERROR_USBCAM_NOT_ATTACHED;
     res = sceKernelWaitSema(st->sema, 1, NULL);
-    if (res == (s32)0x800201A9)
+    if (res == (s32)SCE_ERROR_KERNEL_WAIT_CANCELLED)
         return 0;
     if (res < 0)
         return res;
@@ -862,7 +862,7 @@ int queryReverseState(void *arg)
     s32 res;
 
     res = sceKernelLockMutex(st->mutex, 1, NULL);
-    if ((u32)res - 0x800201A9u < 2)
+    if ((u32)res - SCE_ERROR_KERNEL_WAIT_CANCELLED < 2)
         return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
@@ -2283,7 +2283,7 @@ s32 sceUsbCamGetLensDirection(void)
 
     oldK1 = pspShiftK1();
     res = sceKernelPollEventFlag(g_videoState.eventflag, 0x400, 1, &bits);
-    if (res < 0 && res != (s32)0x800201AF) {
+    if (res < 0 && res != (s32)SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) {
         ret = res;
         goto out;
     }
@@ -3847,7 +3847,7 @@ s32 reapStillInput(int arg)
             return res;
     } else {
         res = sceKernelPollEventFlag(st->eventflag, 0x3400, 1, &bits);
-        if (res == (s32)0x800201AF)
+        if (res == (s32)SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED)
             return SCE_ERROR_USBCAM_NOT_READY;
         if (res < 0) {
             g_videoState.flags = g_videoState.flags & ~8u;
@@ -4965,7 +4965,7 @@ int getUnk40000001(int *arg)
     int res;
 
     res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
-    if ((u32)res - 0x800201A9u < 2)
+    if ((u32)res - SCE_ERROR_KERNEL_WAIT_CANCELLED < 2)
         return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
@@ -4976,6 +4976,8 @@ int getUnk40000001(int *arg)
         goto unlock;
     res = sceKernelWaitEventFlag(g_videoState.eventflag, 0x400, 1, &outBits, NULL);
     if (res < 0) {
+        // The hardcoded line numbers in the error strings come from the
+        // debug messages of the original binary and refer to its source.
         Kprintf("%serror - at waiting for event at line %d): 0x%08x\n", "", 793, outBits);
         goto unlock;
     }
@@ -5012,7 +5014,7 @@ int getUnk40000002(int *arg)
     int res;
 
     res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
-    if ((u32)res - 0x800201A9u < 2)
+    if ((u32)res - SCE_ERROR_KERNEL_WAIT_CANCELLED < 2)
         return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
@@ -5049,7 +5051,7 @@ int getUnk40000003(int *arg)
     int res;
 
     res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
-    if ((u32)res - 0x800201A9u < 2)
+    if ((u32)res - SCE_ERROR_KERNEL_WAIT_CANCELLED < 2)
         return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
@@ -5126,7 +5128,7 @@ s32 execRawCommand(int *arg)
     int res;
 
     res = sceKernelLockMutex(g_videoState.mutex, 1, NULL);
-    if ((u32)res - 0x800201A9u < 2)
+    if ((u32)res - SCE_ERROR_KERNEL_WAIT_CANCELLED < 2)
         return SCE_ERROR_USBCAM_NOT_ATTACHED;
     if (res < 0)
         return res;
@@ -5419,7 +5421,7 @@ int sceUsbCamPollReadMicEnd(void)
         goto out;
 
     ret = sceKernelPollEventFlag(g_micState.eventflag, 0x102, 1, &outBits);
-    if (ret == (s32)0x800201AF) {
+    if (ret == (s32)SCE_ERROR_KERNEL_EVENT_FLAG_POLL_FAILED) {
         ret = SCE_ERROR_USBCAM_NOT_READY;
         goto out;
     }
