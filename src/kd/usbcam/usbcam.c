@@ -5133,6 +5133,9 @@ s32 execRawCommand(int *arg)
     if (res < 0)
         return res;
     sceKernelClearEventFlag(g_videoState.eventflag, 0xFFFEFFFF);
+    // arg[3] goes straight into sendAccCommand as the copy length for the
+    // cmdBuf, the original has no size check here ioctl callers must keep
+    // the payload within 60 bytes.
     res = sendAccCommand(arg[1], arg[2], &arg[4], arg[3]);
     if (res < 0)
         goto unlock;
