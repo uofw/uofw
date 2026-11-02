@@ -118,7 +118,7 @@ enum SceModulePrivilegeLevel {
 #define SCE_MODINFO_SECTION_NAME        ".rodata.sceModuleInfo"
 
 #define SDK_VERSION                     0x06060010 /** Release X.Y.Z -> 0xXXYYZZZZ */
-#define SCE_SDK_VERSION(ver)            const int module_sdk_version = ver
+#define SCE_SDK_VERSION(ver)            int module_sdk_version = ver
 
 /**
  * module START thread return value
