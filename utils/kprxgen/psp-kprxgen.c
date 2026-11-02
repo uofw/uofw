@@ -26,38 +26,12 @@
 #include "../common/elftypes.h"
 #include "../common/prxtypes.h"
 
-/* Arrangement of ELF file after stripping
- *
- * ELF Header - 52 bytes
- * Program Headers 
- * .text data
- * .data data
- * Section Headers
- * Relocation data
- * Section Header String Table
- *
- * When stripping the sections remove anything which isn't an allocated section or a relocation section.
- * The section string section we will rebuild.
- */
-
 static const char *g_outfile;
 static const char *g_infile;
 static unsigned char *g_elfdata = NULL;
 static struct ElfHeader g_elfhead = {0};
 static struct ElfSection *g_elfsections = NULL;
 static struct ElfSection *g_modinfo = NULL;
-static int g_out_sects = 2;
-static int g_alloc_size = 0;
-static int g_mem_size = 0;
-static int g_reloc_size = 0;
-static int g_str_size = 1;
-
-/* Base addresses in the Elf */
-static int g_phbase = 0;
-static int g_allocbase = 0;
-static int g_shbase = 0;
-static int g_relocbase = 0;
-static int g_shstrbase = 0;
 
 /* Specifies that the current usage is to the print the pspsdk path */
 static int g_verbose = 0;
@@ -111,6 +85,8 @@ int process_args(int argc, char **argv)
 void print_help(void)
 {
 	fprintf(stderr, "Usage: psp-prxgen [-v] infile.elf outfile.prx\n");
+	fprintf(stderr, "Outputs the layout of the original modules (no section headers, one program header\n");
+	fprintf(stderr, "per segment, 0x700000A1 relocations).\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "-v, --verbose           : Verbose output\n");
 }
@@ -508,21 +484,6 @@ int process_relocs(void)
 	return 1;
 }
 
-/* Reindex the sections we are keeping */
-void reindex_sections(void)
-{
-	int i;
-	int sect = 1;
-
-	for(i = 0; i < g_elfhead.iShnum; i++)
-	{
-		if(g_elfsections[i].blOutput)
-		{
-			g_elfsections[i].iIndex = sect++;
-		}
-	}
-}
-
 /* Load an ELF file */
 int load_elf(const char *elf)
 {
@@ -551,8 +512,6 @@ int load_elf(const char *elf)
 			break;
 		}
 
-		reindex_sections();
-
 		ret = 1;
 	}
 	while(0);
@@ -560,110 +519,621 @@ int load_elf(const char *elf)
 	return ret;
 }
 
-int calculate_outsize(void)
+/*
+ * Output the layout of the original PRX files, decoded from the firmware modules:
+ *
+ *  - one program header per PT_LOAD segment of the ELF (linked with a script with PHDRS, see
+ *    lib/linkfile.prx), then the relocations (type 0x700000A1), and no section headers;
+ *  - the first segment at the size of the headers aligned on its alignment (0xA0 or 0xC0), each following
+ *    segment at the end of the previous one aligned on its alignment, the relocations at the end of the last
+ *    segment aligned on 16 bytes;
+ *  - the relocations in the compressed 0x700000A1 format (below).
+ */
+
+#define SCE_MAX_SEGS     (4)
+
+struct SceReloc
 {
-	/* out_sects starts at two for the null section and the section string table */
-	int out_sects = 2;
-	int alloc_size = 0;
-	int reloc_size = 0;
-	int mem_size = 0;
-	/* 1 for the NUL for the NULL section */
-	int str_size = 1;
+	u32 offseg;   /* segment of the relocated word */
+	u32 addr;     /* address of the relocated word, relative to its segment */
+	u32 type;     /* 2: 32-bit, 3: 26-bit (data), 4: HI16, 5: LO16, 6: J, 7: JAL */
+	u32 addrseg;  /* segment of the target */
+	s16 lo16;     /* HI16: the low 16 bits of the target (with the sign of a LO16) */
+};
+
+static Elf32_Phdr g_segs[SCE_MAX_SEGS];
+static int g_nsegs = 0;
+static struct SceReloc *g_scerels = NULL;
+static int g_nscerels = 0;
+
+static int sce_seg_of_addr(u32 addr)
+{
 	int i;
+	int seg = 0;
 
-	/* Calculate how big our output file needs to be */
-	/* We have elf header + 1 PH + allocated data + section headers + relocation data */
-
-	/* Note that the ELF should be based from 0, we use this to calculate the alloc and mem sizes */
-
-	/* Skip null section */
-	for(i = 1; i < g_elfhead.iShnum; i++)
+	for(i = 0; i < g_nsegs; i++)
 	{
-		if(g_elfsections[i].blOutput)
+		if(addr >= g_segs[i].p_vaddr)
 		{
-			if(g_elfsections[i].iType == SHT_PROGBITS)
-			{
-				unsigned int top_addr;
-
-				top_addr = g_elfsections[i].iAddr + g_elfsections[i].iSize;
-
-				if(top_addr > alloc_size)
-				{
-					alloc_size = top_addr;
-				}
-
-				if(top_addr > mem_size)
-				{
-					mem_size = top_addr;
-				}
-				
-				str_size += strlen(g_elfsections[i].szName) + 1;
-			}
-			else if((g_elfsections[i].iType == SHT_REL) || (g_elfsections[i].iType == SHT_PRXRELOC))
-			{
-				reloc_size += g_elfsections[i].iSize;
-				str_size += strlen(g_elfsections[i].szName) + 1;
-			}
-			else
-			{
-				unsigned int top_addr;
-
-				top_addr = g_elfsections[i].iAddr + g_elfsections[i].iSize;
-
-				if(top_addr > mem_size)
-				{
-					mem_size = top_addr;
-				}
-				
-				str_size += strlen(g_elfsections[i].szName) + 1;
-			}
-			out_sects++;
+			seg = i;
 		}
 	}
 
-	alloc_size = (alloc_size + 3) & ~3;
-	mem_size = (mem_size + 3) & ~3;
-	str_size = (str_size + 3) & ~3;
-	str_size += strlen(ELF_SH_STRTAB) + 1;
-
-	if(g_verbose)
-	{
-		fprintf(stderr, "Out_sects %d, alloc_size %d, reloc_size %d, str_size %d, mem_size %d\n", 
-				out_sects, alloc_size, reloc_size, str_size, mem_size);
-	}
-
-	/* Save them for future use */
-	g_out_sects = out_sects;
-	g_alloc_size = alloc_size;
-	g_reloc_size = reloc_size;
-	g_mem_size = mem_size;
-	g_str_size = str_size;
-
-	/* Lets build the offsets */
-	g_phbase = sizeof(Elf32_Ehdr);
-	/* The allocated data needs to be 16 byte aligned */
-	g_allocbase = (g_phbase + 2 * sizeof(Elf32_Phdr) + 0x3F) & ~0x3F;
-	g_shbase = g_allocbase + g_alloc_size;
-	g_relocbase = g_shbase + (g_out_sects * sizeof(Elf32_Shdr));
-	g_shstrbase = g_relocbase + g_reloc_size;
-
-	if(g_verbose)
-	{
-		fprintf(stderr, "PHBase %08X, AllocBase %08X, SHBase %08X\n", g_phbase, g_allocbase, g_shbase);
-		fprintf(stderr, "Relocbase %08X, Shstrbase %08X\n", g_relocbase, g_shstrbase);
-		fprintf(stderr, "Total size %d\n", g_shstrbase + g_str_size);
-	}
-
-	return (g_shstrbase + g_str_size);
+	return seg;
 }
 
-/* Output the ELF header */
-void output_header(unsigned char *data)
+/* The word at address addr in the segments of the ELF (0 outside of the file data) */
+static u32 sce_word(u32 addr)
+{
+	int i;
+
+	for(i = 0; i < g_nsegs; i++)
+	{
+		if(addr >= g_segs[i].p_vaddr && addr + 4 <= g_segs[i].p_vaddr + g_segs[i].p_filesz)
+		{
+			return LW(*(u32 *) (g_elfdata + g_segs[i].p_offset + addr - g_segs[i].p_vaddr));
+		}
+	}
+
+	return 0;
+}
+
+/* Add the relocation rel of section pReloc (whose relocated section is sect) to g_scerels */
+static int sce_add_reloc(struct ElfSection *pReloc, Elf32_Rel *rels, int count, int i)
+{
+	Elf32_Sym *syms = (Elf32_Sym *) g_elfsections[pReloc->iLink].pData;
+	u32 info = LW(rels[i].r_info);
+	u32 addr = LW(rels[i].r_offset);
+	struct SceReloc *r = &g_scerels[g_nscerels];
+	u32 symval;
+	int j;
+
+	symval = LW(syms[ELF32_R_SYM(info)].st_value);
+	r->offseg = sce_seg_of_addr(addr);
+	r->addr = addr - g_segs[r->offseg].p_vaddr;
+	r->addrseg = sce_seg_of_addr(symval);
+	r->lo16 = 0;
+
+	switch(ELF32_R_TYPE(info))
+	{
+		case R_MIPS_32:
+			r->type = 2;
+			break;
+		case R_MIPS_26:
+			/* the type of the jumps is the one of the instruction */
+			switch(sce_word(addr) >> 26)
+			{
+				case 2:  r->type = 6; break;
+				case 3:  r->type = 7; break;
+				default: r->type = 3; break;
+			}
+			break;
+		case R_MIPS_HI16:
+			r->type = 4;
+			/* the low part of the target is the immediate of the matching LO16 (same symbol) */
+			for(j = i + 1; j < count; j++)
+			{
+				if((ELF32_R_TYPE(LW(rels[j].r_info)) == R_MIPS_LO16) && (ELF32_R_SYM(LW(rels[j].r_info)) == ELF32_R_SYM(info)))
+				{
+					r->lo16 = (s16) (sce_word(LW(rels[j].r_offset)) & 0xFFFF);
+					break;
+				}
+			}
+			if(j == count)
+			{
+				fprintf(stderr, "Error, HI16 relocation at %08X without LO16\n", addr);
+				return 0;
+			}
+			break;
+		case R_MIPS_LO16:
+			r->type = 5;
+			break;
+		default:
+			fprintf(stderr, "Error, unsupported relocation type %d at %08X\n", ELF32_R_TYPE(info), addr);
+			return 0;
+	}
+
+	g_nscerels++;
+	return 1;
+}
+
+static u32 g_libstub_addr;
+static u8 *g_libstub_data;
+static u32 g_libstub_size;
+
+/*
+ * Order of the .lib.stub relocations: the library names in the order of the entries, then the stub and NID
+ * table pointers by address of the stub table, then the variable stub table pointers by address.
+ */
+static u32 sce_stub_key(u32 addr)
+{
+	u32 ent = 0;
+	u32 ofs;
+	u32 size;
+
+	for(;;)
+	{
+		size = g_libstub_data[ent + 8] * 4;
+		if((addr - g_libstub_addr) < ent + size || size == 0)
+		{
+			break;
+		}
+		ent += size;
+	}
+	ofs = addr - g_libstub_addr - ent;
+
+	if(ofs == 0)
+	{
+		return ent;
+	}
+	if(ofs == 12 || ofs == 16)
+	{
+		/* stub table first, then NID table */
+		return 0x40000000 + LW(*(u32 *) (g_libstub_data + ent + 16)) * 2 + (ofs == 12);
+	}
+	return 0x80000000 + LW(*(u32 *) (g_libstub_data + ent + ofs));
+}
+
+static int sce_cmp_stub(const void *a, const void *b)
+{
+	u32 ka = sce_stub_key(((const struct SceReloc *) a)->addr + g_segs[((const struct SceReloc *) a)->offseg].p_vaddr);
+	u32 kb = sce_stub_key(((const struct SceReloc *) b)->addr + g_segs[((const struct SceReloc *) b)->offseg].p_vaddr);
+
+	return (ka > kb) - (ka < kb);
+}
+
+/*
+ * The relocations of the variable stub table (.rodata.sceVstub) are in the order of the import entries in
+ * .lib.stub owning the variables (and of the variables in each entry), like in all the 6.60 modules.
+ */
+static u32 sce_vstub_key(u32 addr)
+{
+	u32 ent;
+
+	for(ent = 0; ent + 24 <= g_libstub_size && g_libstub_data[ent + 8] != 0; ent += g_libstub_data[ent + 8] * 4)
+	{
+		u32 vars;
+		u32 count;
+
+		if(g_libstub_data[ent + 8] < 6)
+		{
+			continue;
+		}
+		vars = LW(*(u32 *) (g_libstub_data + ent + 20));
+		count = g_libstub_data[ent + 9];
+		if(addr >= vars && addr < vars + count * 8)
+		{
+			return (ent << 16) + (addr - vars) / 8;
+		}
+	}
+
+	return 0xFFFFFFFF;
+}
+
+static int sce_cmp_vstub(const void *a, const void *b)
+{
+	u32 ka = sce_vstub_key(((const struct SceReloc *) a)->addr + g_segs[((const struct SceReloc *) a)->offseg].p_vaddr);
+	u32 kb = sce_vstub_key(((const struct SceReloc *) b)->addr + g_segs[((const struct SceReloc *) b)->offseg].p_vaddr);
+
+	return (ka > kb) - (ka < kb);
+}
+
+/* Whether the relocation j of the relocation section pReloc must be output (not a removed or a null one) */
+static int sce_keep_reloc(struct ElfSection *pReloc, int j)
+{
+	Elf32_Rel *rels = (Elf32_Rel *) pReloc->pData;
+	Elf32_Sym *syms = (Elf32_Sym *) g_elfsections[pReloc->iLink].pData;
+	u32 info = LW(rels[j].r_info);
+
+	return ELF32_R_TYPE(info) != R_MIPS_NONE && ELF32_R_TYPE(info) != R_MIPS_PC16
+		&& LH(syms[ELF32_R_SYM(info)].st_shndx) != 0;
+}
+
+static int sce_in_section(struct ElfSection *sect, u32 addr)
+{
+	return addr >= sect->iAddr && addr < sect->iAddr + sect->iSize;
+}
+
+/*
+ * Collect the relocations of the ELF: section by section in the order of the relocation sections, each in
+ * the order of the relocations. The relocations which psp-fixup-imports moved to the relocation tables of the
+ * imported variables (in .rodata.sceVstub) are output with the relocations of that section, after them.
+ */
+static int sce_collect_relocs(void)
+{
+	int total = 0;
+	int i, j, k;
+
+	for(i = 0; i < g_elfhead.iShnum; i++)
+	{
+		if(g_elfsections[i].iType == SHT_REL && g_elfsections[i].pRef != NULL)
+		{
+			total += g_elfsections[i].iSize / sizeof(Elf32_Rel);
+		}
+	}
+
+	for(i = 0; i < g_elfhead.iShnum; i++)
+	{
+		if(strcmp(g_elfsections[i].szName, ".lib.stub") == 0)
+		{
+			g_libstub_addr = g_elfsections[i].iAddr;
+			g_libstub_data = g_elfsections[i].pData;
+			g_libstub_size = g_elfsections[i].iSize;
+		}
+	}
+
+	g_scerels = (struct SceReloc *) malloc(sizeof(struct SceReloc) * (total + 1));
+	if(g_scerels == NULL)
+	{
+		return 0;
+	}
+
+	for(i = 0; i < g_elfhead.iShnum; i++)
+	{
+		struct ElfSection *pReloc = &g_elfsections[i];
+		Elf32_Rel *rels;
+		int count;
+		int first = g_nscerels;
+
+		/* the sections not output: the relocations of the stubs (.rel.sceStub.text) and empty ones */
+		if(pReloc->iType != SHT_REL || pReloc->pRef == NULL || pReloc->blOutput == 0)
+		{
+			continue;
+		}
+
+		rels = (Elf32_Rel *) pReloc->pData;
+		count = pReloc->iSize / sizeof(Elf32_Rel);
+		for(j = 0; j < count; j++)
+		{
+			if(sce_keep_reloc(pReloc, j) && sce_in_section(pReloc->pRef, LW(rels[j].r_offset)))
+			{
+				if(!sce_add_reloc(pReloc, rels, count, j))
+				{
+					return 0;
+				}
+			}
+		}
+
+		if(strcmp(pReloc->szName, ".rel.rodata.sceVstub") == 0 && g_libstub_data != NULL)
+		{
+			qsort(&g_scerels[first], g_nscerels - first, sizeof(struct SceReloc), sce_cmp_vstub);
+		}
+
+		/* the relocations of other relocation sections in this section */
+		for(k = 0; k < g_elfhead.iShnum; k++)
+		{
+			struct ElfSection *pOther = &g_elfsections[k];
+			Elf32_Rel *orels;
+			int ocount;
+
+			if(k == i || pOther->iType != SHT_REL || pOther->pRef == NULL || pOther->blOutput == 0)
+			{
+				continue;
+			}
+			orels = (Elf32_Rel *) pOther->pData;
+			ocount = pOther->iSize / sizeof(Elf32_Rel);
+			for(j = 0; j < ocount; j++)
+			{
+				u32 addr = LW(orels[j].r_offset);
+
+				if(sce_keep_reloc(pOther, j) && !sce_in_section(pOther->pRef, addr) && sce_in_section(pReloc->pRef, addr))
+				{
+					if(!sce_add_reloc(pOther, orels, ocount, j))
+					{
+						return 0;
+					}
+				}
+			}
+		}
+
+		if(strcmp(pReloc->szName, ".rel.lib.stub") == 0 && g_libstub_data != NULL)
+		{
+			qsort(&g_scerels[first], g_nscerels - first, sizeof(struct SceReloc), sce_cmp_stub);
+		}
+	}
+
+	return 1;
+}
+
+/*
+ * The 0x700000A1 relocation format:
+ *
+ *  u8 0, u8 0, u8 flagBits, u8 typeBits
+ *  u8 flagTableSize, u8 flags[]: the command kinds, in the order of their first use, padded to an even size
+ *  u8 typeTableSize, u8 types[]: the relocation types, in the order of their first use, padded to an even size
+ *  u16 commands: [flag index (flagBits) | segment (segBits) | type index (typeBits) | payload], index 0 unused
+ *
+ * Flags: bit 0 set: a relocation (else a base command: sets the segment of the relocated words and the
+ * address of the first relocation, 0x00 if it fits in the payload, else 0x04 + u32); bit 1: the address
+ * delta is in a following u16 (the payload is its high part) instead of the payload; bits 3-4: 0x00 no
+ * low part (J/JAL), 0x08 the low part of the previous HI16 (or none), 0x10 the low part follows as s16.
+ */
+struct SceCmd
+{
+	u8 flag;
+	u8 seg;
+	u8 type;      /* 0xFF: base command */
+	u32 payload;
+	u8 extra[8];
+	int nextra;
+};
+
+static int sce_bits(int n)
+{
+	int bits = 1;
+
+	while((1 << bits) < n)
+	{
+		bits++;
+	}
+
+	return bits;
+}
+
+static int sce_index(u8 *table, int *size, u8 v)
+{
+	int i;
+
+	for(i = 0; i < *size; i++)
+	{
+		if(table[i] == v)
+		{
+			return i;
+		}
+	}
+	table[(*size)++] = v;
+	return i;
+}
+
+static int sce_encode(unsigned char *out, int flagBits, int typeBits, int *outFlagBits, int *outTypeBits)
+{
+	int segBits = sce_bits(g_nsegs);
+	int sh = flagBits + segBits + typeBits;
+	u8 flags[256], types[256];
+	int nflags = 0, ntypes = 0;
+	struct SceCmd *cmds;
+	int ncmds = 0;
+	u32 offseg = 0xFFFFFFFF;
+	u32 base = 0;
+	u32 lastType = 0xFFFFFFFF;
+	s16 lastLo = 0;
+	int pos;
+	int i;
+
+	cmds = (struct SceCmd *) malloc(sizeof(struct SceCmd) * (g_nscerels * 2 + 1));
+	for(i = 0; i < g_nscerels; i++)
+	{
+		struct SceReloc *r = &g_scerels[i];
+		struct SceCmd *c;
+		s32 delta;
+		u8 lof;
+		int ext = 0;
+
+		if(r->offseg != offseg)
+		{
+			c = &cmds[ncmds++];
+			memset(c, 0, sizeof(*c));
+			c->seg = r->offseg;
+			c->type = 0xFF;
+			if(r->addr < (1u << (16 - segBits - flagBits)))
+			{
+				c->flag = 0x00;
+				c->payload = r->addr;
+			}
+			else
+			{
+				c->flag = 0x04;
+				SW((u32 *) c->extra, r->addr);
+				c->nextra = 4;
+			}
+			offseg = r->offseg;
+			base = r->addr;
+		}
+
+		c = &cmds[ncmds++];
+		memset(c, 0, sizeof(*c));
+		delta = (s32) (r->addr - base);
+		if(r->type == 4)
+		{
+			if(lastType == 4 && r->lo16 == lastLo)
+			{
+				lof = 0x08;
+			}
+			else
+			{
+				lof = 0x10;
+				ext = 1;
+			}
+		}
+		else if(r->type == 6 || r->type == 7)
+		{
+			lof = 0x00;
+		}
+		else
+		{
+			lof = 0x08;
+		}
+
+		c->seg = r->addrseg;
+		c->type = r->type;
+		if(delta >= -(1 << (16 - sh - 1)) && delta < (1 << (16 - sh - 1)))
+		{
+			c->flag = 0x01 | lof;
+			c->payload = (u32) delta;
+		}
+		else
+		{
+			c->flag = 0x03 | lof;
+			c->payload = (u32) delta >> 16;
+			SH((u16 *) c->extra, (u32) delta & 0xFFFF);
+			c->nextra = 2;
+		}
+		if(ext)
+		{
+			SH((u16 *) (c->extra + c->nextra), (u16) r->lo16);
+			c->nextra += 2;
+		}
+
+		base = r->addr;
+		lastType = r->type;
+		if(r->type == 4)
+		{
+			lastLo = r->lo16;
+		}
+	}
+
+	for(i = 0; i < ncmds; i++)
+	{
+		sce_index(flags, &nflags, cmds[i].flag);
+		if(cmds[i].type != 0xFF)
+		{
+			sce_index(types, &ntypes, cmds[i].type);
+		}
+	}
+
+	*outFlagBits = sce_bits(nflags + 1);
+	*outTypeBits = sce_bits(ntypes + 1);
+
+	pos = 0;
+	if(out != NULL)
+	{
+		out[0] = 0;
+		out[1] = 0;
+		out[2] = flagBits;
+		out[3] = typeBits;
+	}
+	pos = 4;
+	/* the tables (size byte included) have an even size */
+	if(out != NULL)
+	{
+		out[pos] = (nflags + 1 + 1) & ~1;
+		memcpy(&out[pos + 1], flags, nflags);
+		memset(&out[pos + 1 + nflags], 0, out[pos] - 1 - nflags);
+	}
+	pos += (nflags + 1 + 1) & ~1;
+	if(out != NULL)
+	{
+		out[pos] = (ntypes + 1 + 1) & ~1;
+		memcpy(&out[pos + 1], types, ntypes);
+		memset(&out[pos + 1 + ntypes], 0, out[pos] - 1 - ntypes);
+	}
+	pos += (ntypes + 1 + 1) & ~1;
+
+	for(i = 0; i < ncmds; i++)
+	{
+		struct SceCmd *c = &cmds[i];
+		u32 cmd;
+
+		cmd = (sce_index(flags, &nflags, c->flag) + 1) | (c->seg << flagBits);
+		if(c->type == 0xFF)
+		{
+			cmd |= (c->payload & ((1 << (16 - segBits - flagBits)) - 1)) << (segBits + flagBits);
+		}
+		else
+		{
+			cmd |= (sce_index(types, &ntypes, c->type) + 1) << (flagBits + segBits);
+			cmd |= (c->payload & ((1 << (16 - sh)) - 1)) << sh;
+		}
+		if(out != NULL)
+		{
+			SH((u16 *) &out[pos], cmd);
+			memcpy(&out[pos + 2], c->extra, c->nextra);
+		}
+		pos += 2 + c->nextra;
+	}
+
+	free(cmds);
+	return pos;
+}
+
+/* Output a PRX file in the layout of the original modules */
+int output_prx(const char *prxfile)
 {
 	Elf32_Ehdr *head;
+	Elf32_Phdr *phdr;
+	struct PspModuleInfo *pModinfo;
+	unsigned char *data;
+	u32 offsets[SCE_MAX_SEGS];
+	u32 ofs, relofs, size;
+	int flagBits = 3, typeBits = 3;
+	int newFlagBits, newTypeBits;
+	int relsize;
+	int i, j;
+	FILE *fp;
 
-	head = (Elf32_Ehdr*) data;
+	/* The PT_LOAD segments of the ELF */
+	for(i = 0; i < g_elfhead.iPhnum; i++)
+	{
+		Elf32_Phdr *in = (Elf32_Phdr *) (g_elfdata + g_elfhead.iPhoff + i * g_elfhead.iPhentsize);
 
+		if(LW(in->p_type) != 1)
+		{
+			continue;
+		}
+		if(g_nsegs == SCE_MAX_SEGS)
+		{
+			fprintf(stderr, "Error, too many segments\n");
+			return 1;
+		}
+		g_segs[g_nsegs].p_type = 1;
+		g_segs[g_nsegs].p_offset = LW(in->p_offset);
+		g_segs[g_nsegs].p_vaddr = LW(in->p_vaddr);
+		g_segs[g_nsegs].p_filesz = LW(in->p_filesz);
+		g_segs[g_nsegs].p_memsz = LW(in->p_memsz);
+		g_segs[g_nsegs].p_flags = LW(in->p_flags);
+		/* the largest alignment of its sections (at least 16 bytes), not the page size of the linker */
+		g_segs[g_nsegs].p_align = 0x10;
+		for(j = 0; j < g_elfhead.iShnum; j++)
+		{
+			struct ElfSection *sect = &g_elfsections[j];
+
+			if((sect->iFlags & SHF_ALLOC) && sect->iSize != 0 && sect->iAddr >= g_segs[g_nsegs].p_vaddr
+					&& sect->iAddr < g_segs[g_nsegs].p_vaddr + g_segs[g_nsegs].p_memsz
+					&& sect->iAddralign > g_segs[g_nsegs].p_align)
+			{
+				g_segs[g_nsegs].p_align = sect->iAddralign;
+			}
+		}
+		g_nsegs++;
+	}
+
+	if(!sce_collect_relocs())
+	{
+		return 1;
+	}
+
+	/* The sizes of the flag and type indexes depend on the number of used flags and types */
+	do
+	{
+		relsize = sce_encode(NULL, flagBits, typeBits, &newFlagBits, &newTypeBits);
+		if(newFlagBits == flagBits && newTypeBits == typeBits)
+		{
+			break;
+		}
+		flagBits = newFlagBits;
+		typeBits = newTypeBits;
+	}
+	while(1);
+
+	ofs = sizeof(Elf32_Ehdr) + (g_nsegs + 1) * sizeof(Elf32_Phdr);
+	for(i = 0; i < g_nsegs; i++)
+	{
+		ofs = (ofs + g_segs[i].p_align - 1) & ~(g_segs[i].p_align - 1);
+		offsets[i] = ofs;
+		ofs += g_segs[i].p_filesz;
+	}
+	relofs = (ofs + 0xF) & ~0xF;
+	size = relofs + relsize;
+
+	data = (unsigned char *) malloc(size);
+	if(data == NULL)
+	{
+		fprintf(stderr, "Error, couldn't allocate output data\n");
+		return 1;
+	}
+	memset(data, 0, size);
+
+	head = (Elf32_Ehdr *) data;
 	SW(&head->e_magic, g_elfhead.iMagic);
 	head->e_class = g_elfhead.iClass;
 	head->e_data = g_elfhead.iData;
@@ -672,245 +1142,60 @@ void output_header(unsigned char *data)
 	SH(&head->e_machine, g_elfhead.iMachine);
 	SW(&head->e_version, g_elfhead.iVersion);
 	SW(&head->e_entry, g_elfhead.iEntry);
-	SW(&head->e_phoff, g_phbase);
-	SW(&head->e_shoff, g_shbase);
+	SW(&head->e_phoff, sizeof(Elf32_Ehdr));
+	SW(&head->e_shoff, 0);
 	SW(&head->e_flags, g_elfhead.iFlags);
 	SH(&head->e_ehsize, sizeof(Elf32_Ehdr));
 	SH(&head->e_phentsize, sizeof(Elf32_Phdr));
-	SH(&head->e_phnum, 2);
-	SH(&head->e_shentsize, sizeof(Elf32_Shdr));
-	SH(&head->e_shnum, g_out_sects);
-	SH(&head->e_shstrndx, g_out_sects-1);
-}
+	SH(&head->e_phnum, g_nsegs + 1);
+	SH(&head->e_shentsize, 0);
+	SH(&head->e_shnum, 0);
+	SH(&head->e_shstrndx, 0);
 
-/* Output the program header */
-void output_ph(unsigned char *data)
-{
-	Elf32_Phdr *phdr;
-	struct PspModuleInfo *pModinfo;
-	int mod_flags;
-
-	phdr = (Elf32_Phdr*) data;
 	pModinfo = (struct PspModuleInfo *) (g_modinfo->pData);
-	mod_flags = LW(pModinfo->flags);
-
-	SW(&phdr->p_type, 1);
-	/* Starts after the program header */
-	SW(&phdr->p_offset, g_allocbase);
-	SW(&phdr->p_vaddr, 0);
-
-	/* Check if this is a kernel module */
-	if(mod_flags & 0x1000)
+	phdr = (Elf32_Phdr *) (data + sizeof(Elf32_Ehdr));
+	for(i = 0; i < g_nsegs; i++, phdr++)
 	{
-		SW(&phdr->p_paddr, 0x80000000 | (g_modinfo->iAddr + g_allocbase));
-	}
-	else
-	{
-		SW(&phdr->p_paddr, (g_modinfo->iAddr + g_allocbase));
-	}
-	SW(&phdr->p_filesz, g_alloc_size);
-	SW(&phdr->p_memsz, g_mem_size);
-	SW(&phdr->p_flags, 5);
-	SW(&phdr->p_align, 0x10);
-
-	phdr++;
-
-	SW(&phdr->p_type,   0x700000A0);
-	SW(&phdr->p_offset, g_relocbase);
-	SW(&phdr->p_vaddr,  0);
-	SW(&phdr->p_paddr,  0);
-	SW(&phdr->p_filesz, g_reloc_size);
-	SW(&phdr->p_memsz,  0);
-	SW(&phdr->p_flags,  0);
-	SW(&phdr->p_align,  0x10);
-}
-
-/* Output the allocated sections */
-void output_alloc(unsigned char *data)
-{
-	int i;
-
-	for(i = 0; i < g_elfhead.iShnum; i++)
-	{
-		if((g_elfsections[i].blOutput) && (g_elfsections[i].iType == SHT_PROGBITS))
+		SW(&phdr->p_type, 1);
+		SW(&phdr->p_offset, offsets[i]);
+		SW(&phdr->p_vaddr, g_segs[i].p_vaddr);
+		/* the first segment: the file offset of the module info (kernel modules: with the top bit set) */
+		if(i == 0)
 		{
-			memcpy(&data[g_elfsections[i].iAddr], g_elfsections[i].pData, g_elfsections[i].iSize);
-		}
-	}
-}
-
-/* Output the section headers */
-void output_sh(unsigned char *data)
-{
-	unsigned int reloc_ofs;
-	unsigned int str_ofs;
-	Elf32_Shdr *shdr;
-	int i;
-
-	shdr = (Elf32_Shdr*) data;
-	/* For the NULL section */
-	shdr++;
-	memset(data, 0, g_out_sects * sizeof(Elf32_Shdr));
-
-	reloc_ofs = g_relocbase;
-	str_ofs = 1;
-
-	for(i = 1; i < g_elfhead.iShnum; i++)
-	{
-		if(g_elfsections[i].blOutput)
-		{
-			SW(&shdr->sh_name, str_ofs);
-			str_ofs += strlen(g_elfsections[i].szName) + 1;
-			SW(&shdr->sh_flags, g_elfsections[i].iFlags);
-			SW(&shdr->sh_addr, g_elfsections[i].iAddr);
-			SW(&shdr->sh_size, g_elfsections[i].iSize);
-			SW(&shdr->sh_link, 0);
-			SW(&shdr->sh_addralign, g_elfsections[i].iAddralign);
-			SW(&shdr->sh_entsize, g_elfsections[i].iEntsize);
-
-			if((g_elfsections[i].iType == SHT_REL) || (g_elfsections[i].iType == SHT_PRXRELOC)) 
-			{
-				SW(&shdr->sh_type, SHT_PRXRELOC);
-				if (g_elfsections[i].pRef)
-					SW(&shdr->sh_info, g_elfsections[i].pRef->iIndex);
-				else
-					SW(&shdr->sh_info, 0);
-				SW(&shdr->sh_offset, reloc_ofs);
-				reloc_ofs += g_elfsections[i].iSize;
-			}
-			else if(g_elfsections[i].iType == SHT_PROGBITS)
-			{
-				SW(&shdr->sh_type, g_elfsections[i].iType);
-				SW(&shdr->sh_info, 0);
-				SW(&shdr->sh_offset, g_allocbase + g_elfsections[i].iAddr);
-			}
-			else
-			{
-				SW(&shdr->sh_type, g_elfsections[i].iType);
-				SW(&shdr->sh_info, 0);
-				/* Point it to the end of the allocated section */
-				SW(&shdr->sh_offset, g_allocbase + g_alloc_size);
-			}
-
-			shdr++;
-		}
-	}
-
-	/* Fill in the shstrtab section */
-	SW(&shdr->sh_name, str_ofs);
-	SW(&shdr->sh_flags, 0);
-	SW(&shdr->sh_addr, 0);
-	SW(&shdr->sh_size, g_str_size);
-	SW(&shdr->sh_link, 0);
-	SW(&shdr->sh_addralign, 1);
-	SW(&shdr->sh_entsize, 0);
-	SW(&shdr->sh_type, SHT_STRTAB);
-	SW(&shdr->sh_info, 0);
-	SW(&shdr->sh_offset, g_shstrbase);
-}
-
-/* Output relocations */
-void output_relocs(unsigned char *data)
-{
-	int i;
-	unsigned char *pReloc;
-
-	pReloc = data;
-
-	for(i = 0; i < g_elfhead.iShnum; i++)
-	{
-		if((g_elfsections[i].blOutput) && 
-				((g_elfsections[i].iType == SHT_REL) || (g_elfsections[i].iType == SHT_PRXRELOC)))
-		{
-			Elf32_Rel *rel;
-			int j, count;
-
-			memcpy(pReloc, g_elfsections[i].pData, g_elfsections[i].iSize);
-			rel = (Elf32_Rel*) pReloc;
-			count = g_elfsections[i].iSize / sizeof(Elf32_Rel);
-			for(j = 0; j < count; j++)
-			{
-				unsigned int sym;
-
-				/* Clear the top 24bits of the info */
-				/* Kind of a dirty trick but hey :P */
-				sym = LW(rel->r_info);
-				sym &= 0xFF;
-				SW(&rel->r_info, sym);
-				rel++;
-			}
-			pReloc += g_elfsections[i].iSize;
-		}
-	}
-}
-
-/* Output the section header string table */
-void output_shstrtab(unsigned char *data)
-{
-	int i;
-	char *pData;
-
-	/* For the NULL section, memory should be zeroed anyway */
-	memset(data, 0, g_str_size);
-	pData = (char *) (data + 1);
-
-	for(i = 1; i < g_elfhead.iShnum; i++)
-	{
-		if(g_elfsections[i].blOutput)
-		{
-			if(g_verbose)
-			{
-				fprintf(stderr, "String %d: %s\n", i, g_elfsections[i].szName);
-			}
-
-			strcpy(pData, g_elfsections[i].szName);
-			pData += strlen(g_elfsections[i].szName) + 1;
-		}
-	}
-
-	strcpy(pData, ELF_SH_STRTAB);
-}
-
-/* Output a stripped prx file */
-int output_prx(const char *prxfile)
-{
-	int size;
-	unsigned char *data;
-	FILE *fp;
-
-	do
-	{
-		size = calculate_outsize();
-		data = (unsigned char *) malloc(size);
-		if(data == NULL)
-		{
-			fprintf(stderr, "Error, couldn't allocate output data\n");
-			break;
-		}
-
-		memset(data, 0, size);
-
-		output_header(data);
-		output_ph(data + g_phbase);
-		output_alloc(data + g_allocbase);
-		output_sh(data + g_shbase);
-		output_relocs(data + g_relocbase);
-		output_shstrtab(data + g_shstrbase);
-
-		fp = fopen(prxfile, "wb");
-		if(fp != NULL)
-		{
-			fwrite(data, 1, size, fp);
-			fclose(fp);
+			SW(&phdr->p_paddr, ((LW(pModinfo->flags) & 0x1000) ? 0x80000000 : 0) | (g_modinfo->iAddr + offsets[0]));
 		}
 		else
 		{
-			fprintf(stderr, "Error, could not open output file %s\n", prxfile);
+			SW(&phdr->p_paddr, 0);
 		}
-
-		free(data);
+		SW(&phdr->p_filesz, g_segs[i].p_filesz);
+		SW(&phdr->p_memsz, g_segs[i].p_memsz);
+		SW(&phdr->p_flags, g_segs[i].p_flags);
+		SW(&phdr->p_align, g_segs[i].p_align);
+		memcpy(data + offsets[i], g_elfdata + g_segs[i].p_offset, g_segs[i].p_filesz);
 	}
-	while(0);
+	SW(&phdr->p_type, 0x700000A1);
+	SW(&phdr->p_offset, relofs);
+	SW(&phdr->p_vaddr, 0);
+	SW(&phdr->p_paddr, 0);
+	SW(&phdr->p_filesz, relsize);
+	SW(&phdr->p_memsz, 0);
+	SW(&phdr->p_flags, 0);
+	SW(&phdr->p_align, 0x10);
+
+	(void) sce_encode(data + relofs, flagBits, typeBits, &newFlagBits, &newTypeBits);
+
+	fp = fopen(prxfile, "wb");
+	if(fp == NULL)
+	{
+		fprintf(stderr, "Error, could not open output file %s\n", prxfile);
+		free(data);
+		return 1;
+	}
+	fwrite(data, 1, size, fp);
+	fclose(fp);
+	free(data);
+	free(g_scerels);
 
 	return 0;
 }
