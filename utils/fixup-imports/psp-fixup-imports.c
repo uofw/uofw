@@ -908,14 +908,19 @@ int fixup_variables(void)
 	for (i = 0; i < symCount; i++)
 	{
 		Elf32_Sym *sym = &((Elf32_Sym*)g_symtab->pData)[i];
+		u32 value = LW(sym->st_value);
 		symDefined[i] = LH(sym->st_shndx) != 0 && LH(sym->st_shndx) < 0xFF00; /* not undefined, absolute or common */
-		if (LH(sym->st_shndx) != 0 && LW(sym->st_value) > g_vstub->iAddr) {
-			SW(&sym->st_value, LW(sym->st_value) + shift);
+		/* only the symbols after the variable stubs move (not the variable stubs themselves) */
+		if (LH(sym->st_shndx) != 0 && value >= g_vstub->iAddr + g_vstub->iSize - shift) {
+			SW(&sym->st_value, value + shift);
 			symDelta[i] = shift;
 		}
 	}
 
 	// shift all relocations after vstub
+	/* the relocated addresses which move: those after the original variable stubs, inside the image */
+	u32 vstubEnd = g_vstub->iAddr + g_vstub->iSize - shift;
+	u32 imageEnd = LW(seg->p_vaddr) + LW(seg->p_memsz);
 	for (i = 0; i < (int)g_elfhead.iShnum; i++)
 	{
 		if (g_elfsections[i].iType != SHT_REL) {
@@ -923,6 +928,8 @@ int fixup_variables(void)
 		}
 		int relCount = g_elfsections[i].iSize / sizeof(Elf32_Rel);
 		int j;
+		/* the high part of the last R_MIPS_HI16, for the relocations without a defined symbol */
+		u32 lastHi = 0;
 		printf("Loading relocations %s\n", g_elfsections[i].szName);
 
 		for(j = 0; j < relCount; j++)
@@ -949,6 +956,7 @@ int fixup_variables(void)
 			case R_MIPS_HI16: {
 				int addr = ((LW(*pData) & 0xFFFF) << 16) + dwCurrBase;
 				u32 sym = ELF32_R_SYM(LW(rel->r_info));
+				lastHi = (LW(*pData) & 0xFFFF) << 16;
 				if (sym < (u32)symCount && symDefined[sym]) {
 					/* the low part (for the carry) is in the next R_MIPS_LO16 of the same symbol */
 					int k;
@@ -974,8 +982,10 @@ int fixup_variables(void)
 					loinst = 0;
 				}
 				addr = (s32) addr + (s16) (loinst & 0xFFFF);
-				if ((u32)addr > g_vstub->iAddr)
-					SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) >> 16));
+				if ((u32)addr >= vstubEnd && (u32)addr < imageEnd) {
+					u32 naddr = addr + shift;
+					SW(pData, (LW(*pData) & 0xFFFF0000) | (((naddr - dwCurrBase) + 0x8000) >> 16));
+				}
 			}
 			break;
 			case R_MIPS_16:
@@ -985,9 +995,9 @@ int fixup_variables(void)
 					SW(pData, (LW(*pData) & 0xFFFF0000) | ((LW(*pData) + symDelta[sym]) & 0xFFFF));
 					break;
 				}
-				u32 addr = (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
-				if (addr > g_vstub->iAddr)
-					SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) & 0xFFFF));
+				u32 addr = (type == R_MIPS_LO16 ? lastHi : 0) + (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
+				if (addr >= vstubEnd && addr < imageEnd)
+					SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr + shift - dwCurrBase) & 0xFFFF));
 			}
 			break;
 			/*
@@ -1001,15 +1011,16 @@ int fixup_variables(void)
 			case R_MIPS_26: {
 				u32 addr = (LW(*pData) & 0x03FFFFFF) << 2;
 				addr += dwCurrBase;
-				if (addr > g_vstub->iAddr)
-					SW(pData, (LW(*pData) & 0xFC000000) | (((addr - dwCurrBase) >> 2) + shift));
+				if (addr >= vstubEnd && addr < imageEnd)
+					SW(pData, (LW(*pData) & 0xFC000000) | (((addr + shift - dwCurrBase) >> 2)));
 			}
 			break;
 			case R_MIPS_REL32:
 			case R_MIPS_32: {
-				u32 addr = ((LW(*pData) + (dwCurrBase & 0x03FFFFFF)) & 0x03FFFFFF);
-				if (addr > g_vstub->iAddr)
-					SW(pData, (LW(*pData) & 0xFC000000) | ((LW(*pData) & 0x03FFFFFF) + shift));
+				/* a whole word address (the rewritten function stubs, "jr $ra", do not move) */
+				u32 addr = LW(*pData) + dwCurrBase;
+				if (addr >= vstubEnd && addr < imageEnd)
+					SW(pData, addr + shift - dwCurrBase);
 			}
 			break;
 			case R_MIPS_NONE:
