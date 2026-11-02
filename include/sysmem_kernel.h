@@ -366,7 +366,7 @@ s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWi
 int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int size,
                                   SceSysmemUidLookupFunc *funcTable, SceSysmemUidLookupFunc *metaFuncTable,
                                   SceSysmemUidCB **uidTypeOut);
-int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysmemUidCB **outUid);
+int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, u8 k1, SceSysmemUidCB **outUid);
 SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId);
 int sceKernelCreateUIDtype(const char *name, int size, SceSysmemUidLookupFunc *funcTable,
                            SceSysmemUidLookupFunc *metaFuncTable, SceSysmemUidCB **uidTypeOut);
