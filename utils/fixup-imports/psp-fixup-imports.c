@@ -1104,7 +1104,7 @@ int fixup_nidmap(void)
 	pImport = (struct PspModuleImport *) g_libstub->pData;
 	size = g_libstub->iSize;
 
-	while(size >= sizeof(struct PspModuleImport))
+	while(size >= 5 * 4 && pImport->entry_size >= 5)
 	{
 		const char *str;
 
@@ -1167,8 +1167,9 @@ int fixup_nidmap(void)
 			}
 		}
 
-		pImport++;
-		size -= sizeof(struct PspModuleImport);
+		/* the entries are entry_size words long (5 or 6) */
+		size -= pImport->entry_size * 4 < size ? pImport->entry_size * 4 : size;
+		pImport = (struct PspModuleImport *) ((unsigned char *) pImport + pImport->entry_size * 4);
 	}
 
 	return 1;
