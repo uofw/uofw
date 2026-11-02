@@ -172,7 +172,7 @@ enum SceModulePrivilegeLevel {
     extern char __lib_stub_top[], __lib_stub_bottom[];              \
     const SceModuleInfo module_info                                 \
         __attribute__((section(SCE_MODINFO_SECTION_NAME),            \
-                   aligned(16), unused)) = {                        \
+                   aligned(4), unused)) = {                         \
       attributes, { minorVersion, majorVersion }, name, 0, _gp,   \
       __lib_ent_top, __lib_ent_bottom,                              \
       __lib_stub_top, __lib_stub_bottom                             \
