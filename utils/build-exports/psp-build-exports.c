@@ -50,6 +50,9 @@ struct psp_lib
 	char name[MAX_LIB_NAME+1];
 	unsigned short ver;
 	unsigned short attr;
+	/* the 5th word of the library entry (entLen 5), given as the 4th PSP_EXPORT_START parameter */
+	int hasExtra;
+	unsigned int extra;
 	int funcCount;
 	struct psp_export *pFuncHead;
 	int varCount;
@@ -355,8 +358,85 @@ void build_exports_output_names(struct psp_export *pHead)
 	}
 }
 
+/* The NID index of a library entry with extra bits 16-19 = k > 0: 2^(k+2) halfwords, entry i is the number
+   of exported functions whose NID has its top k+2 bits below i (the functions must be sorted by NID). */
+int build_exports_output_index(struct psp_lib *pLib)
+{
+	struct psp_export *pExp;
+	unsigned int bits;
+	unsigned int i;
+
+	bits = ((pLib->extra >> 16) & 0xF) + 2;
+	for(pExp = pLib->pFuncHead; pExp != NULL && pExp->pNext != NULL; pExp = pExp->pNext)
+	{
+		if(pExp->nid > pExp->pNext->nid)
+		{
+			fprintf(stderr, "Error, the functions of %s must be sorted by NID for its NID index\n", pLib->name);
+			return 0;
+		}
+	}
+
+	fprintf(stdout, "static const unsigned short __%s_nidindex[%d] __attribute__((section(\".rodata.sceResident\"), used)) = {\n",
+			pLib->name, 1 << bits);
+	for(i = 0; i < (1U << bits); i++)
+	{
+		int count = 0;
+
+		for(pExp = pLib->pFuncHead; pExp != NULL; pExp = pExp->pNext)
+		{
+			if((pExp->nid >> (32 - bits)) < i)
+			{
+				count++;
+			}
+		}
+		fprintf(stdout, "\t%d,\n", count);
+	}
+	fprintf(stdout, "};\n\n");
+
+	return 1;
+}
+
+/* The library entries when some have 5 words (PSP_EXPORT_START with extra): a structure of the entries. */
+void build_exports_output_extra_entries(void)
+{
+	struct psp_lib *pLib;
+
+	fprintf(stdout, "const struct {\n");
+	for(pLib = g_libhead; pLib != NULL; pLib = pLib->pNext)
+	{
+		fprintf(stdout, "\t%s __%s;\n", pLib->hasExtra ? "SceLibraryEntryExtra" : "struct SceLibraryEntry", pLib->name);
+	}
+	fprintf(stdout, "} __library_exports __attribute__((section(\".lib.ent\"), used)) = {\n");
+	for(pLib = g_libhead; pLib != NULL; pLib = pLib->pNext)
+	{
+		fprintf(stdout, "\t{ ");
+		if(pLib->hasExtra)
+		{
+			fprintf(stdout, "{ ");
+		}
+		if(strcmp(pLib->name, SYSTEM_LIB_NAME) == 0)
+		{
+			fprintf(stdout, "NULL, ");
+		}
+		else
+		{
+			fprintf(stdout, "__%s_name, ", pLib->name);
+		}
+		fprintf(stdout, "0x%04X, 0x%04X, %d, %d, %d, &__%s_exports ", pLib->ver, pLib->attr, pLib->hasExtra ? 5 : 4,
+				pLib->varCount, pLib->funcCount, pLib->name);
+		if(pLib->hasExtra)
+		{
+			fprintf(stdout, "}, 0x%08X ", pLib->extra);
+		}
+		fprintf(stdout, "},\n");
+	}
+	fprintf(stdout, "};\n");
+}
+
 void build_exports(void)
 {
+	int hasExtra = 0;
+
 	struct psp_lib *pLib;
 
 	fprintf(stdout, "#include <pspmoduleexport.h>\n");
@@ -383,7 +463,25 @@ void build_exports(void)
 		build_exports_output_names(pLib->pVarHead);
 		fprintf(stdout, "};\n\n");
 
+		if(pLib->hasExtra)
+		{
+			hasExtra = 1;
+			if((pLib->extra >> 16) & 0xF)
+			{
+				if(build_exports_output_index(pLib) == 0)
+				{
+					exit(1);
+				}
+			}
+		}
+
 		pLib = pLib->pNext;
+	}
+
+	if(hasExtra)
+	{
+		build_exports_output_extra_entries();
+		return;
 	}
 
 	fprintf(stdout, "const struct SceLibraryEntry __library_exports[%d] __attribute__((section(\".lib.ent\"), used)) = {\n", g_libcount);
@@ -683,6 +781,28 @@ int psp_export_start(char **params)
 	return 1;
 }
 
+/* PSP_EXPORT_START(name, ver, attr, extra): a library entry of 5 words, the 5th word being extra. Bits 16-19
+   of extra (k) select a NID index of 2^(k+2) entries after the export table (see build_exports_output_index()). */
+int psp_export_start_extra(char **params)
+{
+	unsigned int extra;
+
+	if(validate_number(params[3], &extra) == 0)
+	{
+		return 0;
+	}
+
+	if(psp_export_start(params) == 0)
+	{
+		return 0;
+	}
+
+	g_currlib->hasExtra = 1;
+	g_currlib->extra = extra;
+
+	return 1;
+}
+
 int psp_export_end(char **params __attribute__ ((unused)))
 {
 	struct psp_lib *pNext;
@@ -924,6 +1044,7 @@ struct export_cmd commands[] =
 	{ "PSP_BEGIN_EXPORTS", 0, psp_begin_exports },
 	{ "PSP_END_EXPORTS", 0, psp_end_exports },
 	{ "PSP_EXPORT_START", 3, psp_export_start },
+	{ "PSP_EXPORT_START", 4, psp_export_start_extra },
 	{ "PSP_EXPORT_END", 0, psp_export_end },
 	{ "PSP_EXPORT_FUNC_NID", 2, psp_export_func_nid },
 	{ "PSP_EXPORT_FUNC_HASH", 1, psp_export_func_hash },
@@ -938,6 +1059,7 @@ struct export_cmd commands[] =
 int process_command(const char *cmd, char ** params, int param_count)
 {
 	int i;
+	int found = 0;
 
 	i = 0;
 
@@ -950,7 +1072,10 @@ int process_command(const char *cmd, char ** params, int param_count)
 			{
 				snprintf(g_errstring, MAX_ERROR, "Incorrect number of parameters, have %d, expect %d\n", 
 						param_count, commands[i].params);
-				break;
+				/* another form of the command can take this number of parameters */
+				found = 1;
+				i++;
+				continue;
 			}
 			else
 			{
@@ -961,7 +1086,7 @@ int process_command(const char *cmd, char ** params, int param_count)
 		i++;
 	}
 
-	if(commands[i].name == NULL)
+	if(commands[i].name == NULL && !found)
 	{
 		snprintf(g_errstring, MAX_ERROR, "Unknown command '%s'", cmd);
 	}
