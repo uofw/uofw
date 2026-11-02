@@ -720,6 +720,73 @@ typedef struct
 	RelocEntry *relocs;
 } Reloc;
 
+/*
+ * The ELF can have several PT_LOAD segments (e.g. the code and data, then .bss, as in the original modules). The
+ * variable stubs must be in the first one, whose file data holds all the relocated words; the addresses after
+ * the variable stubs in the first segment move by the size of the inserted data, and the following segments
+ * move to the next address with the alignment of their first section, like the linker would place them.
+ */
+#define MAX_SEGS 4
+static int g_nsegs;
+static u32 g_segVaddr[MAX_SEGS];
+static u32 g_segDelta[MAX_SEGS];
+static u32 g_vstubEnd;
+static u32 g_shift;
+
+static u32 new_addr(u32 addr)
+{
+	int i;
+
+	if (addr < g_vstubEnd)
+		return addr;
+	for (i = g_nsegs - 1; i > 0; i--)
+		if (addr >= g_segVaddr[i])
+			return addr + g_segDelta[i];
+	return addr + g_shift;
+}
+
+/* Compute the new addresses of the segments after the first one (g_vstubEnd and g_shift set) */
+static int compute_segments(void)
+{
+	Elf32_Phdr *seg = (Elf32_Phdr*) (g_elfdata + g_elfhead.iPhoff);
+	u32 end;
+	int i, j;
+
+	g_nsegs = g_elfhead.iPhnum;
+	if (g_nsegs > MAX_SEGS) {
+		fprintf(stderr, "Error, too many program headers\n");
+		return 0;
+	}
+	for (i = 0; i < g_nsegs; i++) {
+		if (LW(seg[i].p_type) != 1) {
+			fprintf(stderr, "Error, could not fixup imported variables, the program headers must be PT_LOAD.\n");
+			return 0;
+		}
+		g_segVaddr[i] = LW(seg[i].p_vaddr);
+	}
+	if (g_vstub->iAddr + g_vstub->iSize > LW(seg[0].p_vaddr) + LW(seg[0].p_filesz)) {
+		fprintf(stderr, "Error, could not fixup imported variables, the variable stubs must be in the first segment.\n");
+		return 0;
+	}
+	g_segDelta[0] = g_shift;
+	end = LW(seg[0].p_vaddr) + LW(seg[0].p_memsz) + g_shift;
+	for (i = 1; i < g_nsegs; i++) {
+		u32 align = 1;
+		u32 vaddr;
+		/* the alignment of the first section of the segment */
+		for (j = 0; j < (int) g_elfhead.iShnum; j++)
+			if ((g_elfsections[j].iFlags & SHF_ALLOC) && g_elfsections[j].iAddr == g_segVaddr[i] && g_elfsections[j].iSize != 0)
+				if (g_elfsections[j].iAddralign > align)
+					align = g_elfsections[j].iAddralign;
+		vaddr = (end + align - 1) & ~(align - 1);
+		if (vaddr < g_segVaddr[i])
+			vaddr = g_segVaddr[i];
+		g_segDelta[i] = vaddr - g_segVaddr[i];
+		end = vaddr + LW(seg[i].p_memsz);
+	}
+	return 1;
+}
+
 int fixup_variables(void)
 {
 	unsigned int *pText;
@@ -730,8 +797,8 @@ int fixup_variables(void)
 	if (g_vstub == NULL) // no imported variables
 		return 1;
 
-	if (g_elfhead.iPhnum != 1) {
-		fprintf(stderr, "Error, could not fixup imported variables. ELF must have exactly one program header.\n");
+	if (g_elfhead.iPhnum < 1) {
+		fprintf(stderr, "Error, could not fixup imported variables. ELF must have a program header.\n");
 		return 0;
 	}
 
@@ -855,6 +922,10 @@ int fixup_variables(void)
 		addr += relocs[i].numRelocs * 4;
 	}
 	int shift = addr - stubRelocStartAddr;
+	g_shift = shift;
+	g_vstubEnd = stubRelocStartAddr;
+	if (!compute_segments())
+		return 0;
 	g_elfsize += shift;
 	g_elfdata = realloc(g_elfdata, g_elfsize);
 	u8 *start = g_elfdata + g_vstub->iOffset + g_vstub->iSize;
@@ -877,12 +948,18 @@ int fixup_variables(void)
 	Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
 	SW(&seg->p_filesz, LW(seg->p_filesz) + shift);
 	SW(&seg->p_memsz, LW(seg->p_memsz) + shift);
+	/* the following segments: moved in the file by the inserted data, in memory by their new address */
+	for (i = 1; i < g_nsegs; i++) {
+		SW(&seg[i].p_offset, LW(seg[i].p_offset) + shift);
+		SW(&seg[i].p_vaddr, LW(seg[i].p_vaddr) + g_segDelta[i]);
+		SW(&seg[i].p_paddr, LW(seg[i].p_paddr) + g_segDelta[i]);
+	}
 
 	// shift sections
 	for (i = 0; i < (int)g_elfhead.iShnum; i++) {
 		Elf32_Shdr *sect = (Elf32_Shdr *) (g_elfdata + ((Elf32_Ehdr *)g_elfdata)->e_shoff + (i * g_elfhead.iShentsize));
 		if (LW(sect->sh_addr) > g_vstub->iAddr)
-			SW(&sect->sh_addr, LW(sect->sh_addr) + shift);
+			SW(&sect->sh_addr, new_addr(LW(sect->sh_addr)));
 		if (LW(sect->sh_offset) > g_vstub->iOffset)
 			SW(&sect->sh_offset, LW(sect->sh_offset) + shift);
 		if (LW(sect->sh_offset) == g_vstub->iOffset)
@@ -900,8 +977,8 @@ int fixup_variables(void)
 	 * How much each symbol moves, for the R_MIPS_HI16/R_MIPS_LO16 against it: their target is the symbol
 	 * (plus a small addend) so it moves like the symbol. The target cannot be rebuilt from the
 	 * instructions alone: an R_MIPS_LO16 does not always follow its R_MIPS_HI16 in the relocation table
-	 * (one `lui` for several accesses, delay slots), so pairing it with a neighbouring R_MIPS_HI16 gave a
-	 * wrong target for some of them, which then did not move with their segment.
+	 * (one `lui` for several accesses, delay slots), so pairing it with a previous R_MIPS_HI16 gave a wrong
+	 * target for some of them, which then did not move with their segment.
 	 */
 	s32 *symDelta = calloc(symCount, sizeof(s32));
 	char *symDefined = calloc(symCount, 1);
@@ -912,15 +989,15 @@ int fixup_variables(void)
 		symDefined[i] = LH(sym->st_shndx) != 0 && LH(sym->st_shndx) < 0xFF00; /* not undefined, absolute or common */
 		/* only the symbols after the variable stubs move (not the variable stubs themselves) */
 		if (LH(sym->st_shndx) != 0 && value >= g_vstub->iAddr + g_vstub->iSize - shift) {
-			SW(&sym->st_value, value + shift);
-			symDelta[i] = shift;
+			SW(&sym->st_value, new_addr(value));
+			symDelta[i] = new_addr(value) - value;
 		}
 	}
 
 	// shift all relocations after vstub
 	/* the relocated addresses which move: those after the original variable stubs, inside the image */
 	u32 vstubEnd = g_vstub->iAddr + g_vstub->iSize - shift;
-	u32 imageEnd = LW(seg->p_vaddr) + LW(seg->p_memsz);
+	u32 imageEnd = g_segVaddr[g_nsegs - 1] + LW(seg[g_nsegs - 1].p_memsz);
 	for (i = 0; i < (int)g_elfhead.iShnum; i++)
 	{
 		if (g_elfsections[i].iType != SHT_REL) {
@@ -940,7 +1017,7 @@ int fixup_variables(void)
 			Elf32_Phdr *seg = (Elf32_Phdr*)(g_elfdata + g_elfhead.iPhoff);
 			Elf32_Rel *rel = &((Elf32_Rel*)g_elfsections[i].pData)[j];
 			if (LW(seg[iOfsPH].p_vaddr) + LW(rel->r_offset) > g_vstub->iAddr + g_vstub->iSize - shift)
-				SW(&rel->r_offset, LW(rel->r_offset) + shift);
+				SW(&rel->r_offset, new_addr(LW(rel->r_offset)));
 			int type = ELF32_R_TYPE(LW(rel->r_info));
 			int offset = LW(rel->r_offset);
 
@@ -949,8 +1026,12 @@ int fixup_variables(void)
 			u32 dwRealOfs = offset + LW(seg[iOfsPH].p_vaddr);
 			u32 dwCurrBase = LW(seg[iValPH].p_vaddr);
 			u32 *pData = (u32*)(g_elfdata + LW(seg->p_offset) + dwRealOfs);
-			if (strcmp(g_elfsections[i].szName, ".rel.rodata.sceModuleInfo") == 0 && j == 0) // disable _gp relocation
+			if (strcmp(g_elfsections[i].szName, ".rel.rodata.sceModuleInfo") == 0 && j == 0) { // disable _gp relocation
+				/* with several segments, $gp is relative to the following segments: it moves with them */
+				if (g_nsegs > 1)
+					SW(pData, new_addr(LW(*pData)));
 				continue;
+			}
 
 			switch (type)
 			{
@@ -984,7 +1065,7 @@ int fixup_variables(void)
 				}
 				addr = (s32) addr + (s16) (loinst & 0xFFFF);
 				if ((u32)addr >= vstubEnd && (u32)addr < imageEnd) {
-					u32 naddr = addr + shift;
+					u32 naddr = new_addr(addr);
 					SW(pData, (LW(*pData) & 0xFFFF0000) | (((naddr - dwCurrBase) + 0x8000) >> 16));
 				}
 			}
@@ -998,7 +1079,7 @@ int fixup_variables(void)
 				}
 				u32 addr = (type == R_MIPS_LO16 ? lastHi : 0) + (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
 				if (addr >= vstubEnd && addr < imageEnd)
-					SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr + shift - dwCurrBase) & 0xFFFF));
+					SW(pData, (LW(*pData) & 0xFFFF0000) | ((new_addr(addr) - dwCurrBase) & 0xFFFF));
 			}
 			break;
 			/*
@@ -1013,7 +1094,7 @@ int fixup_variables(void)
 				u32 addr = (LW(*pData) & 0x03FFFFFF) << 2;
 				addr += dwCurrBase;
 				if (addr >= vstubEnd && addr < imageEnd)
-					SW(pData, (LW(*pData) & 0xFC000000) | (((addr + shift - dwCurrBase) >> 2)));
+					SW(pData, (LW(*pData) & 0xFC000000) | (((new_addr(addr) - dwCurrBase) >> 2)));
 			}
 			break;
 			case R_MIPS_REL32:
@@ -1021,7 +1102,7 @@ int fixup_variables(void)
 				/* a whole word address (the rewritten function stubs, "jr $ra", do not move) */
 				u32 addr = LW(*pData) + dwCurrBase;
 				if (addr >= vstubEnd && addr < imageEnd)
-					SW(pData, addr + shift - dwCurrBase);
+					SW(pData, new_addr(addr) - dwCurrBase);
 			}
 			break;
 			case R_MIPS_NONE:
