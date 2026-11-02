@@ -10,7 +10,11 @@
 
 typedef struct {   
     int size;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
     int (*ops[])(...);
+#else
+    int (*ops[])();
+#endif
 } SceKernelDeci2Ops;
 
 int sceKernelDeci2pRegisterOperations(SceKernelDeci2Ops *ops);
