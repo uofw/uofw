@@ -930,7 +930,8 @@ int fixup_variables(void)
 		int j;
 		/* the high part of the last R_MIPS_HI16, for the relocations without a defined symbol */
 		u32 lastHi = 0;
-		printf("Loading relocations %s\n", g_elfsections[i].szName);
+		if (g_verbose)
+			fprintf(stderr, "Loading relocations %s\n", g_elfsections[i].szName);
 
 		for(j = 0; j < relCount; j++)
 		{
