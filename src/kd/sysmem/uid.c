@@ -353,7 +353,7 @@ int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int 
     return 0;
 }
 
-int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysmemUidCB **outUid)
+int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, u8 k1, SceSysmemUidCB **outUid)
 {
     if (type == NULL || name == NULL)
         return SCE_ERROR_KERNEL_ERROR;
