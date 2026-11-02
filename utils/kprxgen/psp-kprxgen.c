@@ -539,6 +539,8 @@ struct SceReloc
 	u32 type;     /* 2: 32-bit, 3: 26-bit (data), 4: HI16, 5: LO16, 6: J, 7: JAL */
 	u32 addrseg;  /* segment of the target */
 	s16 lo16;     /* HI16: the low 16 bits of the target (with the sign of a LO16) */
+	int patch;    /* the relocated word is rewritten (target in a segment other than the first) */
+	u32 word;     /* the rewritten word */
 };
 
 static Elf32_Phdr g_segs[SCE_MAX_SEGS];
@@ -729,6 +731,36 @@ static int sce_keep_reloc(struct ElfSection *pReloc, int j)
 		&& LH(syms[ELF32_R_SYM(info)].st_shndx) != 0;
 }
 
+/*
+ * The variable table pointer (word 5) of a stub library entry which imports no variable: 0 and not relocated
+ * in the original modules (psp-fixup-imports leaves it relocated against the start of the module)
+ */
+static int sce_null_varptr(u32 addr)
+{
+	u32 ofs = 0;
+
+	if(g_libstub_data == NULL || addr < g_libstub_addr || addr >= g_libstub_addr + g_libstub_size)
+	{
+		return 0;
+	}
+	while(ofs + 12 <= g_libstub_size)
+	{
+		u8 len = g_libstub_data[ofs + 8];
+
+		if(len == 0)
+		{
+			break;
+		}
+		if(addr == g_libstub_addr + ofs + 20)
+		{
+			return len >= 6 && g_libstub_data[ofs + 9] == 0 && sce_word(addr) == 0;
+		}
+		ofs += len * 4;
+	}
+
+	return 0;
+}
+
 static int sce_in_section(struct ElfSection *sect, u32 addr)
 {
 	return addr >= sect->iAddr && addr < sect->iAddr + sect->iSize;
@@ -785,7 +817,8 @@ static int sce_collect_relocs(void)
 		count = pReloc->iSize / sizeof(Elf32_Rel);
 		for(j = 0; j < count; j++)
 		{
-			if(sce_keep_reloc(pReloc, j) && sce_in_section(pReloc->pRef, LW(rels[j].r_offset)))
+			if(sce_keep_reloc(pReloc, j) && sce_in_section(pReloc->pRef, LW(rels[j].r_offset))
+					&& !sce_null_varptr(LW(rels[j].r_offset)))
 			{
 				if(!sce_add_reloc(pReloc, rels, count, j))
 				{
@@ -1102,6 +1135,43 @@ int output_prx(const char *prxfile)
 		return 1;
 	}
 
+	/*
+	 * The relocated words address their target relative to the start of the target's segment (the
+	 * original modules: e.g. lui 0 / addiu 0x40 for the .bss variable at the start of segment 1 + 0x40),
+	 * the ELF has the absolute addresses: rewrite the words (and the low parts of the HI16 relocations)
+	 * which target a segment other than the first.
+	 */
+	for(i = 0; i < g_nscerels; i++)
+	{
+		struct SceReloc *r = &g_scerels[i];
+		u32 base = g_segs[r->addrseg].p_vaddr;
+		u32 w = sce_word(r->addr + g_segs[r->offseg].p_vaddr);
+		u32 target;
+
+		r->patch = 0;
+		if(r->addrseg == 0 || base == 0)
+		{
+			continue;
+		}
+		switch(r->type)
+		{
+			case 2:
+				r->word = w - base;
+				break;
+			case 4:
+				target = (w << 16) + (s32) r->lo16 - base;
+				r->word = (w & 0xFFFF0000) | (((target + 0x8000) >> 16) & 0xFFFF);
+				r->lo16 = (s16) (target & 0xFFFF);
+				break;
+			case 5:
+				r->word = (w & 0xFFFF0000) | ((w - base) & 0xFFFF);
+				break;
+			default:
+				continue;
+		}
+		r->patch = 1;
+	}
+
 	/* The sizes of the flag and type indexes depend on the number of used flags and types */
 	do
 	{
@@ -1173,6 +1243,13 @@ int output_prx(const char *prxfile)
 		SW(&phdr->p_flags, g_segs[i].p_flags);
 		SW(&phdr->p_align, g_segs[i].p_align);
 		memcpy(data + offsets[i], g_elfdata + g_segs[i].p_offset, g_segs[i].p_filesz);
+	}
+	for(i = 0; i < g_nscerels; i++)
+	{
+		if(g_scerels[i].patch)
+		{
+			SW((u32 *) (data + offsets[g_scerels[i].offseg] + g_scerels[i].addr), g_scerels[i].word);
+		}
 	}
 	SW(&phdr->p_type, 0x700000A1);
 	SW(&phdr->p_offset, relofs);
