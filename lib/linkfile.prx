@@ -202,7 +202,7 @@ SECTIONS
     PROVIDE (__sbss_end = .);
     PROVIDE (___sbss_end = .);
   } :data
-  .bss            :
+  .bss            : ALIGN(16)
   {
    _gp = ABSOLUTE(.) + 0x7ff0;
    *(.dynbss)
