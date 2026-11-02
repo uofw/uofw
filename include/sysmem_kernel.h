@@ -350,7 +350,7 @@ typedef struct SceSysmemUidCB {
     } next;
     struct SceSysmemUidCB *PARENT1; // 28
     struct SceSysmemUidLookupFunc *funcTable; // 32
-} __attribute__((packed)) SceSysmemUidCB; // size: 36
+} SceSysmemUidCB; // size: 36
 
 typedef s32 (*SceSysmemUidFunc)(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 
