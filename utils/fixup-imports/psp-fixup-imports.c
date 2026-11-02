@@ -896,11 +896,23 @@ int fixup_variables(void)
 
 	// shift symbol table
 	int symCount = g_symtab->iSize / sizeof(Elf32_Sym);
+	/*
+	 * How much each symbol moves, for the R_MIPS_HI16/R_MIPS_LO16 against it: their target is the symbol
+	 * (plus a small addend) so it moves like the symbol. The target cannot be rebuilt from the
+	 * instructions alone: an R_MIPS_LO16 does not always follow its R_MIPS_HI16 in the relocation table
+	 * (one `lui` for several accesses, delay slots), so pairing it with a neighbouring R_MIPS_HI16 gave a
+	 * wrong target for some of them, which then did not move with their segment.
+	 */
+	s32 *symDelta = calloc(symCount, sizeof(s32));
+	char *symDefined = calloc(symCount, 1);
 	for (i = 0; i < symCount; i++)
 	{
 		Elf32_Sym *sym = &((Elf32_Sym*)g_symtab->pData)[i];
-		if (LH(sym->st_shndx) != 0 && LW(sym->st_value) > g_vstub->iAddr)
+		symDefined[i] = LH(sym->st_shndx) != 0 && LH(sym->st_shndx) < 0xFF00; /* not undefined, absolute or common */
+		if (LH(sym->st_shndx) != 0 && LW(sym->st_value) > g_vstub->iAddr) {
 			SW(&sym->st_value, LW(sym->st_value) + shift);
+			symDelta[i] = shift;
+		}
 	}
 
 	// shift all relocations after vstub
@@ -936,6 +948,22 @@ int fixup_variables(void)
 			{
 			case R_MIPS_HI16: {
 				int addr = ((LW(*pData) & 0xFFFF) << 16) + dwCurrBase;
+				u32 sym = ELF32_R_SYM(LW(rel->r_info));
+				if (sym < (u32)symCount && symDefined[sym]) {
+					/* the low part (for the carry) is in the next R_MIPS_LO16 of the same symbol */
+					int k;
+					int lo = 0;
+					for (k = j + 1; k < relCount; k++) {
+						Elf32_Rel *lorel = &((Elf32_Rel*)g_elfsections[i].pData)[k];
+						if (ELF32_R_TYPE(LW(lorel->r_info)) == R_MIPS_LO16 && ELF32_R_SYM(LW(lorel->r_info)) == sym) {
+							lo = (s16)(LW(*(u32*)(g_elfdata + LW(seg->p_offset) + LW(lorel->r_offset) + LW(seg[iOfsPH].p_vaddr))) & 0xFFFF);
+							break;
+						}
+					}
+					addr += lo + symDelta[sym];
+					SW(pData, (LW(*pData) & 0xFFFF0000) | ((((u32)addr - dwCurrBase) + 0x8000) >> 16));
+					break;
+				}
 				int loinst;
 				while (++j < relCount) {
 					if (ELF32_R_TYPE(LW(((Elf32_Rel*)g_elfsections[i].pData)[j].r_info)) != R_MIPS_HI16) break;
@@ -952,6 +980,11 @@ int fixup_variables(void)
 			break;
 			case R_MIPS_16:
 			case R_MIPS_LO16: {
+				u32 sym = ELF32_R_SYM(LW(rel->r_info));
+				if (type == R_MIPS_LO16 && sym < (u32)symCount && symDefined[sym]) {
+					SW(pData, (LW(*pData) & 0xFFFF0000) | ((LW(*pData) + symDelta[sym]) & 0xFFFF));
+					break;
+				}
 				u32 addr = (s16)(LW(*pData) & 0xFFFF) + dwCurrBase;
 				if (addr > g_vstub->iAddr)
 					SW(pData, (LW(*pData) & 0xFFFF0000) | ((addr - dwCurrBase + shift) & 0xFFFF));
@@ -989,6 +1022,8 @@ int fixup_variables(void)
 			j = lastJ;
 		}
 	}
+	free(symDelta);
+	free(symDefined);
 
 	// add special relocations to stub entries
 	int pos = 0;
