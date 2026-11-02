@@ -13,16 +13,18 @@ static inline int pspGetK0(void)
     return ret;
 }
 
-static inline int pspGetK1(void)
-{
-    int ret;
-    asm __volatile__("move %0, $k1" : "=r" (ret));
-    return ret;
-}
+/*
+ * $k1 is a global register variable rather than accessed through volatile inline assembly,
+ * so the compiler is free to schedule the $k1 moves (e.g. into branch delay slots), as in
+ * the original binaries. Stores to it are never removed.
+ */
+register int g_k1 __asm__("$27");
+
+#define pspGetK1() (g_k1)
 
 static inline void pspSetK1(int k1)
 {
-    asm __volatile__("move $k1, %0" : : "r" (k1));
+    g_k1 = k1;
 }
 
 static inline int pspShiftK1(void)
@@ -34,7 +36,9 @@ static inline int pspShiftK1(void)
 
 static inline int pspK1PtrOk(const void *ptr)
 {
-    return (((int)ptr & pspGetK1()) >= 0);
+    int k1 = pspGetK1();
+
+    return ((k1 & (int)ptr) >= 0);
 }
 
 /* Used for buffer with "dynamic" size (specified in the functions' arguments) */
@@ -51,7 +55,7 @@ static inline int pspK1StaBufOk(const void *ptr, int size)
 
 static inline int pspK1IsUserMode(void)
 {
-    return ((pspGetK1() >> 31) != 0);
+    return ((u32)pspGetK1() >> 31);
 }
 
 static inline int pspGetGp(void)
