@@ -150,10 +150,11 @@ s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, s32 count);
  *
  * @param mutex Pointer to a lightweight mutex structure.
  * @param count The lock counter increment.
+ * @param timeout The timeout in microseconds (NULL for none), receiving the remaining time.
  *
  * @return SCE_ERROR_OK on success, otherwise <0 on error.
  */
-s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count);
+s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count, SceUInt *timeout);
 
 /**
  * Locks a lightweight mutex.
@@ -164,10 +165,11 @@ s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count);
  *
  * @param mutex Pointer to a lightweight mutex structure.
  * @param count The lock counter increment.
+ * @param timeout The timeout in microseconds (NULL for none), receiving the remaining time.
  *
  * @return SCE_ERROR_OK on success, otherwise <0 on error.
  */
-s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count);
+s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count, SceUInt *timeout);
 
 /**
  * Unlocks a lightweight mutex.

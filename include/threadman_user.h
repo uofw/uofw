@@ -21,8 +21,8 @@ typedef struct {
 	s32 id; // 16
 } SceLwMutex;
 
-s32 _sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count);
-s32 _sceKernelLockLwMutex(SceLwMutex *mutex, s32 count);
+s32 _sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count, SceUInt *timeout);
+s32 _sceKernelLockLwMutex(SceLwMutex *mutex, s32 count, SceUInt *timeout);
 s32 _sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count);
 s32 sceKernelReferLwMutexStatusByID(s32 id, u32 *addr);
 s32 _sceKernelAllocateTlspl(s32, void*, s32);

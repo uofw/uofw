@@ -74,7 +74,7 @@ s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, s32 count)
 }
 
 // Kernel_Library_1FC64E09
-s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count)
+s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count, SceUInt *timeout)
 {
     s32 ret;
 
@@ -93,14 +93,14 @@ s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count)
     /* mutex already locked, block until it is available */
     if ((u32)ret == SCE_ERROR_KERNEL_LWMUTEX_LOCKED) {
         // ThreadManForUser_31327F19
-        return _sceKernelLockLwMutexCB(mutex, count);
+        return _sceKernelLockLwMutexCB(mutex, count, timeout);
     }
 
     return ret;
 }
 
 // Kernel_Library_BEA46419
-s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count)
+s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count, SceUInt *timeout)
 {
     s32 ret;
 
@@ -119,7 +119,7 @@ s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count)
     /* mutex already locked, block until it is available */
     if ((u32)ret == SCE_ERROR_KERNEL_LWMUTEX_LOCKED) {
         // ThreadManForUser_7CFF8CF3
-        return _sceKernelLockLwMutex(mutex, count);
+        return _sceKernelLockLwMutex(mutex, count, timeout);
     }
 
     return ret;
