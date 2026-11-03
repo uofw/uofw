@@ -1119,11 +1119,10 @@ int sub_00001C30(void* data, int wait)
 
 int sceMeBootStart(u32 arg)
 {
-	if (arg >= 5)
+	if (arg == 0 || arg > 4)
 	    return SCE_ERROR_INVALID_INDEX;
 	int genArg = arg;
-	u32 tachyon = sceSysregGetTachyonVersion();
-	if (tachyon > 0x4fffff && genArg != 2) // > 01g
+	if (sceSysregGetTachyonVersion() > 0x4fffff && genArg != 2) // > 01g
 		genArg = 3;
 	if (genArg == meStarted)
 		return 0;
@@ -1137,7 +1136,7 @@ int sceMeBootStart(u32 arg)
 			return 0;
 	}
 	char *meImage;
-	if (tachyon > 0x4fffff) //not first gen
+	if (sceSysregGetTachyonVersion() > 0x4fffff) //not first gen
 		meImage = "flash0:/kd/resource/me_t2img.img";
 	else if (genArg == 1)
 		meImage = "flash0:/kd/resource/me_sdimg.img";
