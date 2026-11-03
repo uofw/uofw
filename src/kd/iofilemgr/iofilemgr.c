@@ -1878,12 +1878,14 @@ SceIoAlias *sub_36C4(const char *name)
     return lookup_alias_tbl(buf);
 }
 
+// 0x0000375C
 int sub_375C(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     return sub_3778(path, dev, i_unit, dirNamePtr, 1);
 }
 
+// 0x00003778
 int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
@@ -1896,9 +1898,9 @@ int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNa
             ;
     }
     // 37C8
-    int pathLen = strlen(path);
+    u32 pathLen = strlen(path);
     char *dirName = *dirNamePtr;
-    int dirLen = 0;
+    u32 dirLen = 0;
     if (strchr(path, ':') == NULL)
     {
         // 39BC
@@ -1923,7 +1925,7 @@ int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNa
         else if (*(dirName - 1) != ':' && *path != '/')
         {
             *dirName = '/';
-            path++;
+            dirLen++;
             dirName++;
         }
     }
@@ -1936,7 +1938,7 @@ int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNa
     char *colon = strchr(dirStart, ':');
     if (colon == NULL)
         return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
-    int colonOff = colon - dirStart;
+    u32 colonOff = colon - dirStart;
     if (colonOff >= 31)
         return SCE_ERROR_KERNEL_FILENAME_TOO_LONG;
     memcpy(drive, dirStart, colonOff);
