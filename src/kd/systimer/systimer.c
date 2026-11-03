@@ -452,7 +452,7 @@ s32 sceSTimerSetPrscl(s32 timerId, s32 numerator, s32 denominator)
     if (numerator == 0 || denominator == 0)
         return SCE_ERROR_KERNEL_ILLEGAL_PRESCALE;
     
-    if ((denominator / numerator) < 12)
+    if (((u32)denominator / (u32)numerator) < 12)
         return SCE_ERROR_KERNEL_ILLEGAL_PRESCALE;
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
