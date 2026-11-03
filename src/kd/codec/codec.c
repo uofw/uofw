@@ -330,7 +330,7 @@ int sceCodecSetSpeakerVolume(int arg0)
     return ret;
 }
 
-int sceCodecSetVolumeOffset(char arg0)
+int sceCodecSetVolumeOffset(int arg0)
 {
     g_codec.flag2 = arg0;
     sceCodecSetOutputVolume(g_codec.reg);
