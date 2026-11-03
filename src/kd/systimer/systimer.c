@@ -69,15 +69,15 @@ typedef struct {
      *    The system time when the timer was stopped. It is overwritten every time 
      *    the timer is stopped.
      */
-    s32 timerData; 
+    vu32 timerData;
     /* Assumed. The base time of the hardware timer. */
-    s32 baseTime;
+    vu32 baseTime;
     /* The numerator of the timer's prescale. */
-    s32 prsclNumerator;
+    vs32 prsclNumerator;
     /* The denominator of the timer's prescale. */
-    s32 prsclDenominator;
+    vs32 prsclDenominator;
     /* Reserved. */
-    s32 rsrv[60];
+    vs32 rsrv[60];
     /*
      *  31        22 21            0
      * +------------+--------------+
@@ -91,7 +91,7 @@ typedef struct {
      *    The current PSP's system time value. A timer's current count is computed
      *    by subtracting the timer's base time (the init time point) from this value.
      */
-    s32 nowData;
+    vu32 nowData;
 } SceHwTimer;
 
 /* This structure represents a timer connected to a hardware timer. */
@@ -212,7 +212,7 @@ s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock _
         g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
         g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
         g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
-        //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+        (void)g_timerCB.SYSTMR[i].regadr->timerData; /* Flush the register writes. */
         g_timerCB.SYSTMR[i].cb = NULL;
         g_timerCB.SYSTMR[i].prev_tmcy = 0;
         g_timerCB.SYSTMR[i].prev_icnt = 0;
@@ -269,17 +269,16 @@ static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *time
 // 0x000002B0
 static void _sceSTimerStopCount(SceSTimerInfo *timer)
 {
-    //timer->regadr->timerData = timer->regadr->data & ~(TIMER_MODE_IN_USE | 0x80000000);
-    timer->regadr->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->regadr->nowData) & ~(TIMER_MODE_IN_USE | TIMER_MODE_UNKNOWN));
-    timer->regadr->timerData |= TIMER_SET_COUNT(TIMER_GET_COUNT(timer->regadr->nowData));
+    timer->regadr->timerData = timer->regadr->nowData & ~TIMER_SET_MODE(TIMER_MODE_IN_USE | TIMER_MODE_UNKNOWN);
 }
 
 /* Get the current value of the hardware timer counter register. */
 // 0x000002CC
 static s32 _sceSTimerGetCount(SceSTimerInfo *timer)
 {
-    //TODO: timer->regadr->ulNowTime - timer->regadr->ulBaseTime ?
-    return (TIMER_GET_COUNT(timer->regadr->nowData) - TIMER_GET_COUNT(timer->regadr->baseTime));
+    u32 now = TIMER_GET_COUNT(timer->regadr->nowData);
+    u32 base = TIMER_GET_COUNT(timer->regadr->baseTime);
+    return now - base;
 }
 
 /*
@@ -310,8 +309,9 @@ static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
         g_timerCB.SYSTMR[i].regadr->prsclDenominator = STimerRegSave[i].M;
         g_timerCB.SYSTMR[i].regadr->prsclNumerator = STimerRegSave[i].N;
-        //(void)g_timerCB.SYSTMR[i].regadr->unk0;
-        g_timerCB.SYSTMR[i].regadr->timerData = STimerRegSave[i].Control & ~0x80000000;
+        u32 control = STimerRegSave[i].Control;
+        (void)g_timerCB.SYSTMR[i].regadr->timerData; /* Flush the register writes. */
+        g_timerCB.SYSTMR[i].regadr->timerData = control & ~TIMER_SET_MODE(TIMER_MODE_UNKNOWN);
         sceKernelEnableIntr(g_timerCB.SYSTMR[i].intrcode);
     }
     return SCE_ERROR_OK;
@@ -332,7 +332,7 @@ s32 sceSTimerAlloc(void)
             g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
             g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
             g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
-            //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+            (void)g_timerCB.SYSTMR[i].regadr->timerData; /* Flush the register writes. */
             g_timerCB.SYSTMR[i].prev_tmcy = 0;
             g_timerCB.SYSTMR[i].prev_icnt = 0;
             g_timerCB.SYSTMR[i].totalcount = 0;
@@ -366,7 +366,7 @@ s32 sceSTimerFree(s32 timerId)
     timer->regadr->prsclNumerator = -1;
     timer->regadr->prsclDenominator = -1;
     timer->cb = NULL;
-    //(void)timer->regadr->unk0;
+    (void)timer->regadr->timerData; /* Flush the register writes. */
     timer->common = NULL;
     timer->timid = -1;
     timer->prev_tmcy = 0;
@@ -390,8 +390,7 @@ s32 sceSTimerStartCount(s32 timerId)
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_TIMER_BUSY;
     }
-    timer->regadr->timerData = TIMER_SET_MODE(TIMER_GET_MODE(timer->regadr->nowData) | TIMER_MODE_IN_USE);
-    timer->regadr->timerData |= TIMER_SET_COUNT(0);
+    timer->regadr->timerData = timer->regadr->nowData | TIMER_SET_MODE(TIMER_MODE_IN_USE);
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
