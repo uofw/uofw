@@ -21,11 +21,11 @@ int sceLcdcDisable();
 int sceLcdc_driver_AF7A82E6(int arg);
 int sceLcdc_driver_AB309648(int arg);
 int sceLcdcSetHOffset(int arg0, int arg1);
-float sceLcdcGetLcdcClockFreq();
+f32 sceLcdcGetLcdcClockFreq();
 int sceLcdcGetCyclesPerPixel();
-float sceLcdcGetPixelClockFreq();
-float sceLcdcGetHsyncFreq();
-float sceLcdcGetVsyncFreq();
+f32 sceLcdcGetPixelClockFreq();
+f32 sceLcdcGetHsyncFreq();
+f32 sceLcdcGetVsyncFreq();
 int sceLcdcReadUnderflow();
 int sceLcdc_driver_1630642D();
 
