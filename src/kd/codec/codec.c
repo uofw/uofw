@@ -476,8 +476,6 @@ void sceCodec_driver_376399B6(int enable)
 
 int sceCodecInitEntry()
 {
-    for (;;)
-        ;
     sub_0110();
     sub_0150(1);
     g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, NULL);
