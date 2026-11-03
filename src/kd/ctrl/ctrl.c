@@ -1048,13 +1048,14 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiD
 {
     u32 usedButtons;
     u32 invalidButtons;
+    const u32 times = uiDelay | uiMake | uiBreak;
     s32 oldK1;
     s32 intrState;
 
     if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
 
-    if ((uiDelay | uiMake | uiBreak) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
+    if (times == 0 || times > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
         return SCE_ERROR_INVALID_VALUE;
 
     oldK1 = pspShiftK1();
