@@ -48,6 +48,9 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Receive the state of the specific timer. */
 #define TIMER_GET_MODE(data)            ((u32)(data) >> 22)
 
+/* Receive the number of time-up interrupts counted by the hardware (bits 24 - 31). */
+#define TIMER_GET_INTR_COUNT(data)      ((u32)(data) >> 24)
+
 #define TIMER_SET_COUNT(count)          ((count) & TIMER_MAX_COUNTER_VALUE)
 
 #define TIMER_SET_MODE(mode)            ((mode) << 22)
@@ -249,13 +252,15 @@ static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *time
     if (timer->cb == NULL)
         return -1;
     
-    s32 v1 = TIMER_GET_MODE(timer->regadr->timerData);
-    s32 v2 = TIMER_GET_COUNT(timer->regadr->timerData);
+    u32 data = timer->regadr->timerData;
+    u32 intrCount = TIMER_GET_INTR_COUNT(data);
+    u32 cycle = TIMER_GET_COUNT(data);
     if (timer->prev_tmcy != 0) {
-        v1--;
+        /* The first interrupt after sceSTimerSetTMCY() used the previous cycle length. */
+        intrCount--;
         timer->totalcount += timer->prev_tmcy;
     }
-    timer->totalcount += v2 * (v1 - timer->prev_icnt);
+    timer->totalcount += cycle * (intrCount - timer->prev_icnt);
     timer->prev_tmcy = 0;
     timer->prev_icnt = 0;
     if (timer->cb(timer->timid, timer->totalcount + _sceSTimerGetCount(timer), timer->common, arg2) != -1) {
@@ -508,19 +513,19 @@ s32 sceSTimerSetTMCY(s32 timerId, s32 arg1)
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    s32 val = TIMER_GET_COUNT(timer->regadr->nowData);
-    s32 val2 = TIMER_GET_MODE(timer->regadr->nowData);
-    u32 prev_icnt = timer->prev_icnt;
-    
-    timer->prev_tmcy = val;
-    timer->prev_icnt = val2;
-    timer->totalcount += val * (val2 - prev_icnt);
-    
-    u32 mode = TIMER_GET_MODE(timer->regadr->nowData);
-    if ((arg1 - 1) > TIMER_MAX_COUNTER_VALUE)
-        timer->regadr->timerData = TIMER_SET_MODE(mode) | TIMER_SET_COUNT(TIMER_MAX_COUNTER_VALUE);
-    else
-        timer->regadr->timerData = TIMER_SET_MODE(mode) | TIMER_SET_COUNT(arg1 - 1);
+    u32 cycle = (u32)arg1 - 1;
+    u32 now = timer->regadr->nowData;
+    u32 intrCount = TIMER_GET_INTR_COUNT(now);
+    u32 prevIntrCount = timer->prev_icnt;
+
+    /* Account for the interrupts counted with the old cycle length. */
+    timer->prev_tmcy = TIMER_GET_COUNT(now);
+    timer->prev_icnt = intrCount;
+    timer->totalcount += TIMER_GET_COUNT(now) * (intrCount - prevIntrCount);
+
+    if (cycle > TIMER_MAX_COUNTER_VALUE)
+        cycle = TIMER_MAX_COUNTER_VALUE;
+    timer->regadr->timerData = (timer->regadr->nowData & ~TIMER_MAX_COUNTER_VALUE) | cycle;
     
     sceKernelCpuResumeIntr(oldIntr);
     return SCE_ERROR_OK;
