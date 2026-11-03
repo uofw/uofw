@@ -308,11 +308,11 @@ u32 sceCtrlSetPollingMode(u8 pollMode);
 /**
  * Gets the current controller device input mode.
  * 
- * @param pMode Pointer to an u8 variable which is to receive the current controller mode. One of ::SceCtrlPadInputMode.
+ * @param pMode Pointer to an u32 variable which is to receive the current controller mode. One of ::SceCtrlPadInputMode.
  * 
  * @return 0.
  */
-u32 sceCtrlGetSamplingMode(u8 *pMode);
+u32 sceCtrlGetSamplingMode(u32 *pMode);
 
 /**
  * Sets the controller device input mode.

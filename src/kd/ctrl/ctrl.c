@@ -718,7 +718,7 @@ u32 sceCtrlSetPollingMode(u8 pollMode)
     return SCE_ERROR_OK;
 }
 
-u32 sceCtrlGetSamplingMode(u8 *pMode) 
+u32 sceCtrlGetSamplingMode(u32 *pMode)
 {
     s32 oldK1;
     
