@@ -40,11 +40,17 @@ static inline void dbg_puts(const char *str __attribute__((unused)))
 }
 #endif
 
-/* Fills the framebuffer with the (r, g, b) color */
+/* Fills the framebuffer with the (r, g, b) color (DEBUG builds only) */
+#ifdef DEBUG
 static inline void dbg_fbfill(u8 r, u8 g, u8 b) {
     u32 i;
     for (i = 0; i < 480 * 272 * 2; i++)
         *(int*)(0x44000000 + i * 4) = r | (g << 8) | (b << 16);
 }
+#else
+static inline void dbg_fbfill(u8 r __attribute__((unused)), u8 g __attribute__((unused)), u8 b __attribute__((unused)))
+{
+}
+#endif
 
 
