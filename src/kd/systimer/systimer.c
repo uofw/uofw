@@ -265,8 +265,8 @@ static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *time
     return -1;
 }
 
-// 0x02b0
 /* Stop the hardware timer counting. */
+// 0x000002B0
 static void _sceSTimerStopCount(SceSTimerInfo *timer)
 {
     //timer->regadr->timerData = timer->regadr->data & ~(TIMER_MODE_IN_USE | 0x80000000);
@@ -274,19 +274,19 @@ static void _sceSTimerStopCount(SceSTimerInfo *timer)
     timer->regadr->timerData |= TIMER_SET_COUNT(TIMER_GET_COUNT(timer->regadr->nowData));
 }
 
-// 0x02b0
 /* Get the current value of the hardware timer counter register. */
+// 0x000002CC
 static s32 _sceSTimerGetCount(SceSTimerInfo *timer)
 {
     //TODO: timer->regadr->ulNowTime - timer->regadr->ulBaseTime ?
     return (TIMER_GET_COUNT(timer->regadr->nowData) - TIMER_GET_COUNT(timer->regadr->baseTime));
 }
 
-// 0x0864
-/* 
- * Suspend all timers, save their states and counter value, and prohibit 
+/*
+ * Suspend all timers, save their states and counter value, and prohibit
  * the timer interrupts.
  */
+// 0x00000864
 static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     s32 i;
@@ -299,11 +299,11 @@ static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribut
     return SCE_ERROR_OK;
 }
 
-// 0x08dc
-/* 
- * Resume all timers, set their previous states and counter value and enable 
+/*
+ * Resume all timers, set their previous states and counter value and enable
  * the timer interrupts.
  */
+// 0x000008DC
 static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
 {
     s32 i;
@@ -329,7 +329,6 @@ s32 sceSTimerAlloc(void)
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
         if (g_timerCB.SYSTMR[i].timid == -1) {
             g_timerCB.SYSTMR[i].cb = NULL;
-            //g_timerCB.SYSTMR[i].regadr->timerData = 0x80000000;
             g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
             g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
             g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
@@ -363,7 +362,6 @@ s32 sceSTimerFree(s32 timerId)
     
     _sceSTimerStopCount(timer);
     sceKernelDisableIntr(timer->intrcode);
-    //timer->regadr->timerData = 0x80000000;
     timer->regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
     timer->regadr->prsclNumerator = -1;
     timer->regadr->prsclDenominator = -1;
@@ -423,7 +421,6 @@ s32 sceSTimerResetCount(s32 timerId)
     
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
-    //timer->regadr->timerData |= 0x80000000;
     timer->regadr->timerData |= TIMER_SET_MODE(TIMER_MODE_UNKNOWN);
     timer->totalcount = 0;
     
