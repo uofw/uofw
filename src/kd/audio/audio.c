@@ -738,7 +738,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
 int sceAudioOutput2ChangeLength(int sampleCount)
 {
     dbg_printf("Running %s\n", __FUNCTION__);
-    if (sampleCount < 0x11 || sampleCount > 0x1010)
+    if (sampleCount < 0x11 || sampleCount > 0x100F)
         return SCE_AUDIO_ERROR_INVALID_SIZE;
     int oldIntr = sceKernelCpuSuspendIntr();
     if (g_audio.srcChFreq == 0)

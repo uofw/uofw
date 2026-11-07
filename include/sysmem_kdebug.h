@@ -37,7 +37,7 @@ int sceKernelIsDevelopmentToolMode(void);
 int sceKernelIsDVDMode(void);
 
 int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);
-int sceKernelDebugRead(SceUID fd, const void *data, SceSize size);
+int sceKernelDebugRead(SceUID fd, void *data, SceSize size);
 int sceKernelDebugEcho(void);
 void sceKernelRegisterDebugPutcharByBootloader(void (*func)(short*, int));
 

@@ -54,7 +54,7 @@ s32 sceSysregAudioClkoutIoEnable(void);
 s32 sceSysregAudioClkoutIoDisable(void);
 s32 sceSysregIntrEnd(void);
 s32 sceSysregInterruptToOther(void);
-s32 sceSysregPllGetFrequency(void);
+f32 sceSysregPllGetFrequency(void);
 s32 sceSysregSpiClkSelect(s32, s32);
 s32 sceSysregSpiClkEnable(s32);
 s32 sceSysregSpiIoEnable(s32);

@@ -31,6 +31,10 @@ typedef int16_t         s16;
 typedef int32_t         s32;
 typedef int64_t         s64;
 
+/* Floating point (Allegrex has a single-precision FPU; doubles are soft-float) */
+typedef float           f32;
+typedef double          f64;
+
 /* Volatile (should be used for hardware addresses) unsigned */
 
 typedef volatile uint8_t  vu8;

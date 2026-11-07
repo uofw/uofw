@@ -16,7 +16,7 @@ typedef struct {
 typedef struct // size: 28
 {
     int id; // 0
-    float sync; // 4, frequency of displaying one pixel
+    f32 sync; // 4, frequency of displaying one pixel
     char clk[2]; // 8
     char syncDiff; // 10
     char flags; // 11
@@ -849,9 +849,9 @@ int sceLcdcSetHOffset(int arg0, int arg1)
 }
 
 // 193609C8
-float sceLcdcGetLcdcClockFreq()
+f32 sceLcdcGetLcdcClockFreq()
 {
-    return g_lcdc.disp.sync * (float)g_lcdc.scale;
+    return g_lcdc.disp.sync * (f32)g_lcdc.scale;
 }
 
 // 11DE58F3
@@ -861,26 +861,26 @@ int sceLcdcGetCyclesPerPixel()
 }
 
 // 73E048CF
-float sceLcdcGetPixelClockFreq()
+f32 sceLcdcGetPixelClockFreq()
 {
     return g_lcdc.disp.sync;
 }
 
 // 7683D978
-float sceLcdcGetHsyncFreq()
+f32 sceLcdcGetHsyncFreq()
 {
-    float numPix = g_lcdc.disp.x.fPrch + g_lcdc.disp.x.bPrch + g_lcdc.disp.x.sync + g_lcdc.disp.x.res;
-    return (g_lcdc.disp.sync * (float)g_lcdc.scale) / numPix;
+    f32 numPix = g_lcdc.disp.x.fPrch + g_lcdc.disp.x.bPrch + g_lcdc.disp.x.sync + g_lcdc.disp.x.res;
+    return (g_lcdc.disp.sync * (f32)g_lcdc.scale) / numPix;
 }
 
 // F9DED56
-float sceLcdcGetVsyncFreq()
+f32 sceLcdcGetVsyncFreq()
 {
     int x = g_lcdc.disp.x.fPrch + g_lcdc.disp.x.bPrch + g_lcdc.disp.x.sync + g_lcdc.disp.x.res;
     int y = g_lcdc.disp.y.fPrch + g_lcdc.disp.y.bPrch + g_lcdc.disp.y.sync + g_lcdc.disp.y.res;
     if ((g_lcdc.disp.flags & 5) == 5)
         x >>= 1;
-    return (g_lcdc.disp.sync * (float)g_lcdc.scale) / (float)(x * y);
+    return (g_lcdc.disp.sync * (f32)g_lcdc.scale) / (f32)(x * y);
 }
 
 // 92A62D9B

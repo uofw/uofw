@@ -676,7 +676,7 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
 s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
     u32 i;
-    for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
+    dbg_fbfill(0, 0, 0xFF);
     s32 seedPart1;
     s32 status;    
     s32 linkLibsRes;

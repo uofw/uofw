@@ -326,7 +326,7 @@ int fdputc(int c, int fd)
 int fdgetc(int fd)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    char buf[1];
+    u8 buf[1];
     int ret;
     if (g_debugRead == 0) {
         // 0660
