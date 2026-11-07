@@ -113,8 +113,8 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="preprocessor">#define SCE_KERNEL_LOWEST_PRIORITY_KERNEL       (126)</span></div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="comment">/* thread size */</span></div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="preprocessor">#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (4 * 1024) </span><span class="comment">/* 4 KB */</span><span class="preprocessor"></span></div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="preprocessor">#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (256 * 1024) </span><span class="comment">/* 256 KB */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="preprocessor">#define SCE_KERNEL_TH_KERNEL_DEFAULT_STACKSIZE  (SCE_KERNEL_4KiB) </span><span class="comment">/* 4 KB */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="preprocessor">#define SCE_KERNEL_TH_USER_DEFAULT_STACKSIZE    (SCE_KERNEL_256KiB) </span><span class="comment">/* 256 KB */</span><span class="preprocessor"></span></div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="comment">/* thread attributes */</span></div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="preprocessor">#define SCE_KERNEL_TH_VSH_MODE                  (0xC0000000) </span><span class="comment">/* Thread runs in VSH mode. */</span><span class="preprocessor"></span></div>
@@ -239,7 +239,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span><span class="preprocessor">#define SCE_KERNEL_EW_CLEAR_PAT         (0x20)      </span></div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span><span class="preprocessor">#define SCE_KERNEL_EW_CLEAR             SCE_KERNEL_EW_CLEAR_ALL</span></div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>SceUID sceKernelCreateEventFlag(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> attr, <span class="keywordtype">int</span> bits, SceKernelEventFlagOptParam *opt);</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>SceUID sceKernelCreateEventFlag(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> attr, <span class="keywordtype">int</span> initBits, SceKernelEventFlagOptParam *optParam);</div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span><span class="keywordtype">int</span> sceKernelSetEventFlag(SceUID evid, u32 bits);</div>
 <div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span><span class="keywordtype">int</span> sceKernelClearEventFlag(SceUID evid, u32 bits);</div>
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span><span class="keywordtype">int</span> sceKernelPollEventFlag(<span class="keywordtype">int</span> evid, u32 bits, u32 wait, u32 *outBits);</div>
@@ -339,70 +339,75 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    s32 notifyArg;</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>} SceKernelCallbackInfo;</div>
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span> </div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span><span class="keywordtype">int</span> sceKernelNotifyCallback(SceUID cb, <span class="keywordtype">int</span> arg2);</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span><span class="keywordtype">int</span> sceKernelReferCallbackStatus(SceUID cb, SceKernelCallbackInfo *status);</div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span> </div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span><span class="comment">/* VPL Functions */</span></div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    SceSize     size;</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>} SceKernelVplOptParam;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>SceUID sceKernelCreateCallback(<span class="keyword">const</span> <span class="keywordtype">char</span>* name, SceKernelCallbackFunction callback, <span class="keywordtype">void</span>* common);</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span><span class="keywordtype">int</span> sceKernelDeleteCallback(SceUID cbid);</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span><span class="keywordtype">int</span> sceKernelNotifyCallback(SceUID cb, <span class="keywordtype">int</span> arg2);</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span><span class="keywordtype">int</span> sceKernelCancelCallback(SceUID cbid);</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span><span class="keywordtype">int</span> sceKernelGetCallbackCount(SceUID cbid);</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span><span class="keywordtype">int</span> sceKernelCheckCallback(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span><span class="keywordtype">int</span> sceKernelReferCallbackStatus(SceUID cb, SceKernelCallbackInfo *status);</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span> </div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span><span class="comment">/* VPL Functions */</span></div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>SceUID sceKernelCreateVpl(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> part, <span class="keywordtype">int</span> attr, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, SceKernelVplOptParam *opt);</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span> </div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span><span class="keywordtype">int</span> sceKernelDeleteVpl(SceUID uid);</div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span><span class="keywordtype">int</span> sceKernelAllocateVpl(SceUID uid, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span><span class="keywordtype">int</span> sceKernelAllocateVplCB(SceUID uid, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span><span class="keywordtype">int</span> sceKernelTryAllocateVpl(SceUID uid, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">void</span> **data);</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span><span class="keywordtype">int</span> sceKernelFreeVpl(SceUID uid, <span class="keywordtype">void</span> *data);</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span><span class="keywordtype">int</span> sceKernelCancelVpl(SceUID uid, <span class="keywordtype">int</span> *pnum);</div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span> </div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>        SceSize         size;</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    <span class="keywordtype">char</span>        name[SCE_UID_NAME_LEN + 1];</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        SceUInt         attr;</div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        <span class="keywordtype">int</span>     poolSize;</div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>        <span class="keywordtype">int</span>     freeSize;</div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        <span class="keywordtype">int</span>     numWaitThreads;</div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>} SceKernelVplInfo;</div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span> </div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span><span class="keywordtype">int</span> sceKernelReferVplStatus(SceUID uid, SceKernelVplInfo *info);</div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span> </div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span><span class="comment">/* FPL Functions */</span></div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span> </div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    SceSize     size;</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>} SceKernelFplOptParam;</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span> </div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span><span class="keywordtype">int</span> sceKernelCreateFpl(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> part, <span class="keywordtype">int</span> attr, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> blocks, SceKernelFplOptParam *opt);</div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span><span class="keywordtype">int</span> sceKernelDeleteFpl(SceUID uid);</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span><span class="keywordtype">int</span> sceKernelAllocateFpl(SceUID uid, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span><span class="keywordtype">int</span> sceKernelAllocateFplCB(SceUID uid, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span><span class="keywordtype">int</span> sceKernelTryAllocateFpl(SceUID uid, <span class="keywordtype">void</span> **data);</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span><span class="keywordtype">int</span> sceKernelFreeFpl(SceUID uid, <span class="keywordtype">void</span> *data);</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span><span class="keywordtype">int</span> sceKernelCancelFpl(SceUID uid, <span class="keywordtype">int</span> *pnum);</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span> </div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    SceSize     size;</div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    <span class="keywordtype">char</span>        name[SCE_UID_NAME_LEN + 1];</div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    SceUInt     attr;</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    <span class="keywordtype">int</span>         blockSize;</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    <span class="keywordtype">int</span>         numBlocks;</div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    <span class="keywordtype">int</span>         freeBlocks;</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    <span class="keywordtype">int</span>         numWaitThreads;</div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>} SceKernelFplInfo;</div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span> </div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span><span class="keywordtype">int</span> sceKernelReferFplStatus(SceUID uid, SceKernelFplInfo *info);</div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span> </div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>s64 sceKernelGetSystemTimeWide(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span> </div>
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span><span class="preprocessor">#endif </span><span class="comment">/* THREADMAN_KERNEL_H */</span><span class="preprocessor"></span></div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span> </div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    SceSize     size;</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>} SceKernelVplOptParam;</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span> </div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span> </div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>SceUID sceKernelCreateVpl(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> part, <span class="keywordtype">int</span> attr, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, SceKernelVplOptParam *opt);</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span> </div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span><span class="keywordtype">int</span> sceKernelDeleteVpl(SceUID uid);</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span><span class="keywordtype">int</span> sceKernelAllocateVpl(SceUID uid, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="keywordtype">int</span> sceKernelAllocateVplCB(SceUID uid, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span><span class="keywordtype">int</span> sceKernelTryAllocateVpl(SceUID uid, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">void</span> **data);</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span><span class="keywordtype">int</span> sceKernelFreeVpl(SceUID uid, <span class="keywordtype">void</span> *data);</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span><span class="keywordtype">int</span> sceKernelCancelVpl(SceUID uid, <span class="keywordtype">int</span> *pnum);</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span> </div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        SceSize         size;</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    <span class="keywordtype">char</span>        name[SCE_UID_NAME_LEN + 1];</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>        SceUInt         attr;</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>        <span class="keywordtype">int</span>     poolSize;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>        <span class="keywordtype">int</span>     freeSize;</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>        <span class="keywordtype">int</span>     numWaitThreads;</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>} SceKernelVplInfo;</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span> </div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span><span class="keywordtype">int</span> sceKernelReferVplStatus(SceUID uid, SceKernelVplInfo *info);</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span><span class="comment">/* FPL Functions */</span></div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    SceSize     size;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>} SceKernelFplOptParam;</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span> </div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span><span class="keywordtype">int</span> sceKernelCreateFpl(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> part, <span class="keywordtype">int</span> attr, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> blocks, SceKernelFplOptParam *opt);</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span><span class="keywordtype">int</span> sceKernelDeleteFpl(SceUID uid);</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span><span class="keywordtype">int</span> sceKernelAllocateFpl(SceUID uid, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span><span class="keywordtype">int</span> sceKernelAllocateFplCB(SceUID uid, <span class="keywordtype">void</span> **data, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> *timeout);</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span><span class="keywordtype">int</span> sceKernelTryAllocateFpl(SceUID uid, <span class="keywordtype">void</span> **data);</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span><span class="keywordtype">int</span> sceKernelFreeFpl(SceUID uid, <span class="keywordtype">void</span> *data);</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span><span class="keywordtype">int</span> sceKernelCancelFpl(SceUID uid, <span class="keywordtype">int</span> *pnum);</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span> </div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    SceSize     size;</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    <span class="keywordtype">char</span>        name[SCE_UID_NAME_LEN + 1];</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    SceUInt     attr;</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    <span class="keywordtype">int</span>         blockSize;</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    <span class="keywordtype">int</span>         numBlocks;</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    <span class="keywordtype">int</span>         freeBlocks;</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    <span class="keywordtype">int</span>         numWaitThreads;</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>} SceKernelFplInfo;</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span><span class="keywordtype">int</span> sceKernelReferFplStatus(SceUID uid, SceKernelFplInfo *info);</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span> </div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>s64 sceKernelGetSystemTimeWide(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span> </div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span><span class="preprocessor">#endif </span><span class="comment">/* THREADMAN_KERNEL_H */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span> </div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Nov 7 2026 14:10:02 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Nov 7 2026 14:20:56 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>

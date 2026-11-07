@@ -20,8 +20,16 @@ var searchData=
   ['sceledcmds_17',['SceLedCmds',['../group__LED.html#gabb83f25d00308a80a063a9263539eae4',1,'led.h']]],
   ['sceledmodes_18',['SceLedModes',['../group__LED.html#ga3ad4fc95817932bb13ee61ac417d66e6',1,'led.h']]],
   ['scelibattr_19',['SceLibAttr',['../group__Loadcore.html#ga3a4646a2fd1ce198fa2ec6e11a6d7fc1',1,'loadcore.h']]],
-  ['scepspledtypes_20',['ScePspLedTypes',['../group__LED.html#gab58391378b7145044d97a0bd604072f3',1,'led.h']]],
-  ['sceumddevicepowermodes_21',['SceUmdDevicePowerModes',['../group__MediaMan.html#ga920cf1dcbfec8a0e27728528da31fd24',1,'mediaman.h']]],
-  ['sceumddiscstates_22',['SceUmdDiscStates',['../group__MediaMan.html#ga19875a1be69e2bd8283aab45799c2d2f',1,'mediaman.h']]],
-  ['sceumdmediatypeformats_23',['SceUmdMediaTypeFormats',['../group__MediaMan.html#ga278b72961f3834dbaabf56f1524bb073',1,'mediaman.h']]]
+  ['scepowerbatterychargingstatus_20',['scepowerbatterychargingstatus',['../group__Kernel.html#gad05e878f2e7f31b01ac67d51d97fda50',1,'ScePowerBatteryChargingStatus:&#160;power_kernel.h'],['../group__User.html#gad05e878f2e7f31b01ac67d51d97fda50',1,'ScePowerBatteryChargingStatus:&#160;power_user.h']]],
+  ['scepowerbatterytype_21',['ScePowerBatteryType',['../group__Kernel.html#ga2e2569ab33aca0e15de6a2fb8fde713f',1,'power_kernel.h']]],
+  ['scepowercallbackarg_22',['scepowercallbackarg',['../group__Kernel.html#gad3a65139289dfff9432889133eafbc08',1,'ScePowerCallbackArg:&#160;power_kernel.h'],['../group__User.html#gad3a65139289dfff9432889133eafbc08',1,'ScePowerCallbackArg:&#160;power_user.h']]],
+  ['scepowerhardwarepowerswitchrequest_23',['scepowerhardwarepowerswitchrequest',['../group__Kernel.html#gaa6df9dcb9a220e90612ea70ed4924e79',1,'ScePowerHardwarePowerSwitchRequest:&#160;power_kernel.h'],['../group__User.html#gaa6df9dcb9a220e90612ea70ed4924e79',1,'ScePowerHardwarePowerSwitchRequest:&#160;power_user.h']]],
+  ['scepoweridletimercallbackattr_24',['ScePowerIdleTimerCallbackAttr',['../group__Kernel.html#ga3b2609ef164a71b5b5fea6a56ac881e0',1,'power_kernel.h']]],
+  ['scepowerledofftiming_25',['ScePowerLedOffTiming',['../group__Kernel.html#gaa16aac2a67a6f54b14286dd4aacdc840',1,'power_kernel.h']]],
+  ['scepowerswitchmode_26',['scepowerswitchmode',['../group__Kernel.html#gac008ee4dc25301ccaf8640d4718f8557',1,'ScePowerSwitchMode:&#160;power_kernel.h'],['../group__User.html#gac008ee4dc25301ccaf8640d4718f8557',1,'ScePowerSwitchMode:&#160;power_user.h']]],
+  ['scepowerwlanactivity_27',['scepowerwlanactivity',['../group__Kernel.html#ga31d2779f4a897a008218ce5a049814f7',1,'ScePowerWlanActivity:&#160;power_kernel.h'],['../group__User.html#ga31d2779f4a897a008218ce5a049814f7',1,'ScePowerWlanActivity:&#160;power_user.h']]],
+  ['scepspledtypes_28',['ScePspLedTypes',['../group__LED.html#gab58391378b7145044d97a0bd604072f3',1,'led.h']]],
+  ['sceumddevicepowermodes_29',['SceUmdDevicePowerModes',['../group__MediaMan.html#ga920cf1dcbfec8a0e27728528da31fd24',1,'mediaman.h']]],
+  ['sceumddiscstates_30',['SceUmdDiscStates',['../group__MediaMan.html#ga19875a1be69e2bd8283aab45799c2d2f',1,'mediaman.h']]],
+  ['sceumdmediatypeformats_31',['SceUmdMediaTypeFormats',['../group__MediaMan.html#ga278b72961f3834dbaabf56f1524bb073',1,'mediaman.h']]]
 ];

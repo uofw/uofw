@@ -199,8 +199,13 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span> </div>
 <div class="line"><a id="l00422" name="l00422"></a><span class="lineno"><a class="line" href="group__LoadExecForKernel.html#gaf7c3c452bbbb8aace6383e231d1842e3">  422</a></span>s32 <a class="code hl_function" href="group__LoadExecForKernel.html#gaf7c3c452bbbb8aace6383e231d1842e3">LoadExecForKernel_A5ECA6E3</a>(<span class="keywordtype">void</span> (*cb)());</div>
 <div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span> </div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span><span class="preprocessor">#endif  </span><span class="comment">/* LOADEXEC_KERNEL_H */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span><span class="comment">/* Variable export */</span></div>
 <div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span> </div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span><span class="comment">// TODO: As this is an exported variable, we should rename it accordingly.</span></div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span><span class="keyword">extern</span> s32 *g_unkCbInfo[4];</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span> </div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span><span class="preprocessor">#endif  </span><span class="comment">/* LOADEXEC_KERNEL_H */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span> </div>
 <div class="ttc" id="agroup__LoadExecForKernel_html_ga0a5d4b8e2133ef9d930c9ac989bb01a4"><div class="ttname"><a href="group__LoadExecForKernel.html#ga0a5d4b8e2133ef9d930c9ac989bb01a4">sceKernelLoadExecVSHDisc</a></div><div class="ttdeci">s32 sceKernelLoadExecVSHDisc(char *file, SceKernelLoadExecVSHParam *opt)</div></div>
 <div class="ttc" id="agroup__LoadExecForKernel_html_ga19aaec52fc8021da4a02072ff9124a48"><div class="ttname"><a href="group__LoadExecForKernel.html#ga19aaec52fc8021da4a02072ff9124a48">sceKernelLoadExecVSHMs1</a></div><div class="ttdeci">s32 sceKernelLoadExecVSHMs1(char *file, SceKernelLoadExecVSHParam *opt)</div></div>
 <div class="ttc" id="agroup__LoadExecForKernel_html_ga232e10a289364509db15ad373f3fdfef"><div class="ttname"><a href="group__LoadExecForKernel.html#ga232e10a289364509db15ad373f3fdfef">LoadExecForKernel_DBD0CF1B</a></div><div class="ttdeci">s32 LoadExecForKernel_DBD0CF1B(void *argp, s32 args, SceKernelRebootArgType argType)</div></div>
@@ -265,7 +270,7 @@ $(document).ready(function() { init_codefold(0); });
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Nov 7 2026 14:10:02 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Nov 7 2026 14:20:56 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>
