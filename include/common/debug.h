@@ -27,24 +27,30 @@ void dbg_init(int eraseLog, FbMode fbMode, FatMode fatMode);
 void dbg_printf(const char *format, ...);
 void dbg_puts(const char *str);
 #else
-static inline void dbg_init()
+static inline void dbg_init(int eraseLog __attribute__((unused)), FbMode fbMode __attribute__((unused)), FatMode fatMode __attribute__((unused)))
 {
 }
 
-static inline void dbg_printf()
+static inline void dbg_printf(const char *format __attribute__((unused)), ...)
 {
 }
 
-static inline void dbg_puts()
+static inline void dbg_puts(const char *str __attribute__((unused)))
 {
 }
 #endif
 
-/* Fills the framebuffer with the (r, g, b) color */
+/* Fills the framebuffer with the (r, g, b) color (DEBUG builds only) */
+#ifdef DEBUG
 static inline void dbg_fbfill(u8 r, u8 g, u8 b) {
     u32 i;
     for (i = 0; i < 480 * 272 * 2; i++)
         *(int*)(0x44000000 + i * 4) = r | (g << 8) | (b << 16);
 }
+#else
+static inline void dbg_fbfill(u8 r __attribute__((unused)), u8 g __attribute__((unused)), u8 b __attribute__((unused)))
+{
+}
+#endif
 
 

@@ -15,7 +15,7 @@ int sceCodecOutputEnable(int arg0, int arg1);
 int sceCodecSetOutputVolume(int reg);
 int sceCodecSetHeadphoneVolume(int arg0);
 int sceCodecSetSpeakerVolume(int arg0);
-int sceCodecSetVolumeOffset(char arg0);
+int sceCodecSetVolumeOffset(int arg0);
 int sceCodecOutputDisable(void);
 int sceCodec_driver_FCA6D35B(int freq);
 int sceCodec_driver_6FFC0FA4(char arg0);

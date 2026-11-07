@@ -125,7 +125,7 @@ int sub_0110()
     return 0;
 }
 
-void sub_0150()
+void sub_0150(int a __attribute((unused)))
 {
     int ret = 0;
     if (g_codec.unk97 != 0)
@@ -330,7 +330,7 @@ int sceCodecSetSpeakerVolume(int arg0)
     return ret;
 }
 
-int sceCodecSetVolumeOffset(char arg0)
+int sceCodecSetVolumeOffset(int arg0)
 {
     g_codec.flag2 = arg0;
     sceCodecSetOutputVolume(g_codec.reg);
@@ -476,8 +476,6 @@ void sceCodec_driver_376399B6(int enable)
 
 int sceCodecInitEntry()
 {
-    for (;;)
-        ;
     sub_0110();
     sub_0150(1);
     g_codec.mutexId = sceKernelCreateMutex("SceCodec", 1, 0, NULL);

@@ -1,5 +1,7 @@
 
-.macro IMPORT_START module, flags_ver
+/* ent_len: 6 (default) or 5, the length in words of the stub library entry (5: no imported variables table,
+   as in the original modules for the libraries which do not export variables). */
+.macro IMPORT_START module, flags_ver, ent_len=6
 
 	.set push
 	.section .rodata.sceResident, "a"
@@ -13,10 +15,12 @@ __stub_modulestr_\module:
 __stub_module_\module:
 	.word   __stub_modulestr_\module
 	.word   \flags_ver
-	.word   0x6
+	.word   \ent_len
 	.word   __executable_start
 	.word   __executable_start
-    .word   __executable_start
+	.if \ent_len >= 6
+	.word   __executable_start
+	.endif
 
 	.set pop
 .endm

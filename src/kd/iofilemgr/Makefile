@@ -4,7 +4,7 @@
 TARGET = iofilemgr
 OBJS = stdio.o iofilemgr.o
 
-DEBUG = 1
+#DEBUG = 1
 
 LIBS = -lThreadManForKernel -lSysclibForKernel -lSysMemForKernel -lKDebugForKernel -lInterruptManagerForKernel -lsceSuspendForKernel
 

@@ -10,6 +10,8 @@
 #define	MEMLMD_H
 
 #include "common_header.h"
+
+#include <crypto/kirk.h>
     
 /** The internal name of the MEMLMD module. */
 #define MEMLMD_MODULE_NAME          "memlmd"

@@ -32,7 +32,7 @@ loop2:		# Refs: 0x0000001C
 	sw         $zr, 0($v0) # do { *origAddr = 0; }
 	bne        $t0, $v0, loop2 # while (origAddr++ != maxWordAddr);
 	addiu      $v0, $v0, 4
-	break      0x0
+	break
     .end loadCoreClearMem
 
 ##
@@ -62,7 +62,7 @@ sceLoadCorePrimarySyscallHandler:
 	sw         $v1, 20($v0) # Save COP 1's control register 31
 	cfc0       $v1, COP0_CTRL_V0 # Save COP 0's control register 4
 	sw         $v1, 24($v0)
-	break      0x10000 # ?
+	break      0x40, 0x000 # 0x10000 ?
 	nop        
 error:
 	lui        $v0, %hi(SCE_ERROR_KERNEL_LIBRARY_IS_NOT_LINKED)

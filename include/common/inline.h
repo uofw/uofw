@@ -20,6 +20,20 @@ inline static s32 pspMin(s32 a, s32 b)
     return ret;
 }
 
+/*
+ * Count the leading zero bits of 'value' (32 for 0, as the 'clz' instruction).
+ */
+inline static s32 pspClz(u32 value)
+{
+#if __GNUC__ >= 14
+    return __builtin_clzg(value, 32);
+#elif __GNUC__ == 3
+    return __builtin_allegrex_clz(value);
+#else
+    return __builtin_clz(value);
+#endif
+}
+
 inline static void pspSync(void)
 {
     asm __volatile__ ("sync");
@@ -46,9 +60,13 @@ inline static void pspCache(char op, const void *ptr)
 
 #define MAKE_BREAKCODE_INSTR(op)    ((((op) & 0xFFFFF) << 6) | 0xD)
 
+/*
+ * Emit 'break' with the 20-bit break code op. The assembler takes the code as two fields
+ * (bits 19..10 and 9..0), so codes above 0x3FF are split.
+ */
 inline static void pspBreak(s32 op)
 {
-    asm __volatile__ ("break %0" : : "ri" (op));
+    asm __volatile__ ("break %0,%1" : : "ri" ((op) >> 10), "ri" ((op) & 0x3FF));
 }
 
 inline static void pspHalt(void)
@@ -62,6 +80,15 @@ inline static s32 pspMfic(void)
     s32 ret;
     asm __volatile__ ("mfic %0, $0" : "=r" (ret));
     return ret;
+}
+
+/**
+ * Set the interrupt enable flag (the 'mtie' instruction, written 'mtic value, $0'): 0 disables the
+ * interrupts, the value returned by pspMfic() restores them.
+ */
+inline static void pspMtic(s32 value)
+{
+    asm __volatile__ ("mtic %0, $0" : : "r" (value));
 }
 
 inline static s32 pspLl(s32 *ptr)

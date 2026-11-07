@@ -119,7 +119,7 @@ s32 sceKernelGetInitialRandomValue(void);
 s32 SysMemForKernel_A0A9185A(void);
 u32 SysMemForKernel_13EE28DA(u32 flag);
 u32 sceKernelGetModel(void);
-s32 sceKernelSetRebootKernel(s32 (*rebootKernel)());
+s32 sceKernelSetRebootKernel(s32 (*rebootKernel)(void*));
 s32 sceKernelRebootKernel(void *arg);
 s32 sceKernelRegisterGetIdFunc(void *func);
 s32 sceKernelGetId(const char *path, char *id);
@@ -350,7 +350,7 @@ typedef struct SceSysmemUidCB {
     } next;
     struct SceSysmemUidCB *PARENT1; // 28
     struct SceSysmemUidLookupFunc *funcTable; // 32
-} __attribute__((packed)) SceSysmemUidCB; // size: 36
+} SceSysmemUidCB; // size: 36
 
 typedef s32 (*SceSysmemUidFunc)(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 
@@ -366,7 +366,7 @@ s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWi
 int sceKernelCreateUIDtypeInherit(const char *parentName, const char *name, int size,
                                   SceSysmemUidLookupFunc *funcTable, SceSysmemUidLookupFunc *metaFuncTable,
                                   SceSysmemUidCB **uidTypeOut);
-int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, char k1, SceSysmemUidCB **outUid);
+int sceKernelCreateUID(SceSysmemUidCB *type, const char *name, u8 k1, SceSysmemUidCB **outUid);
 SceUID sceKernelSearchUIDbyName(const char *name, SceUID typeId);
 int sceKernelCreateUIDtype(const char *name, int size, SceSysmemUidLookupFunc *funcTable,
                            SceSysmemUidLookupFunc *metaFuncTable, SceSysmemUidCB **uidTypeOut);

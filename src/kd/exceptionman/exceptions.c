@@ -43,7 +43,7 @@ int ExcepManInit(SceSize argSize __attribute__((unused)), const void *argBlock _
     dbg_printf("-- ExcepManInit()\n");
     int oldIntr = suspendIntr();
     int i;
-    for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x000000FF;
+    dbg_fbfill(0xFF, 0, 0);
     for (i = 0; i < 32; i++)
         ExcepManCB.hdlr2[i] = NULL;
     ExcepManCB.defaultHdlr = NULL;

@@ -683,7 +683,7 @@ loc_08D8:
 
 loc_00000914:
     j          loc_00000914
-    break      0xFFF
+    break      0x003, 0x3FF  # (0x00FFF)
 
     .globl sub_091C
 sub_091C:
@@ -1114,7 +1114,7 @@ mod_0E50:
 
 loc_00000E98:
     j          loc_00000E98
-    break      0xFFE
+    break      0x003, 0x3FE  # (0x00FFE)
 
     # OHNOES alignment :O :O
     nop

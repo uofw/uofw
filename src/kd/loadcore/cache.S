@@ -29,6 +29,7 @@ loc_0000746C:
     addiu   $v1, $v1, 64
     sltu    $a3, $v1, $a0 
     bnez    $a3, loc_0000746C
+    nop
 
 exit:
     jr      $ra

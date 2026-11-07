@@ -10,7 +10,11 @@
 
 typedef struct {   
     int size;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+    int (*ops[])(...);
+#else
     int (*ops[])();
+#endif
 } SceKernelDeci2Ops;
 
 int sceKernelDeci2pRegisterOperations(SceKernelDeci2Ops *ops);
@@ -58,7 +62,7 @@ int sceKernelIsDevelopmentToolMode(void);
 int sceKernelIsDVDMode(void);
 
 int sceKernelDebugWrite(SceUID fd, const void *data, SceSize size);
-int sceKernelDebugRead(SceUID fd, const void *data, SceSize size);
+int sceKernelDebugRead(SceUID fd, void *data, SceSize size);
 int sceKernelDebugEcho(void);
 void sceKernelRegisterDebugPutcharByBootloader(void (*func)(short*, int));
 

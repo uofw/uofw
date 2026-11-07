@@ -417,7 +417,7 @@ void kirk_cmd0_decrypt_block(void) // 0x0E4
     HW_DMA_BUF_SIZE = 0x14;
     HW_DMA_ADDR = INPUT;
     dma_read();
-    kbooti_block_shift();
+    kirk_cmd0_shift_left();
     aes_copy_and_do();
 }
 
@@ -2153,7 +2153,7 @@ void kirk_cmd10_priv_sigvry(void) // 0x6D9
         PERCONSOLE_KEYSEED = 0;
         aes_set_perconsole_key();
         CUR_ENC_KEY = HW_AES_RESULT;
-        kirk3_get_public_key();
+        kirk_cmd3_get_public_key();
     }
     kirk_signed_header_read_body_info();
     if (kirk_check_body_size_nonzero()) {

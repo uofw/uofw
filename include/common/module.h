@@ -118,7 +118,7 @@ enum SceModulePrivilegeLevel {
 #define SCE_MODINFO_SECTION_NAME        ".rodata.sceModuleInfo"
 
 #define SDK_VERSION                     0x06060010 /** Release X.Y.Z -> 0xXXYYZZZZ */
-#define SCE_SDK_VERSION(ver)            const int module_sdk_version = ver
+#define SCE_SDK_VERSION(ver)            int module_sdk_version = ver
 
 /**
  * module START thread return value
@@ -172,7 +172,7 @@ enum SceModulePrivilegeLevel {
     extern char __lib_stub_top[], __lib_stub_bottom[];              \
     const SceModuleInfo module_info                                 \
         __attribute__((section(SCE_MODINFO_SECTION_NAME),            \
-                   aligned(16), unused)) = {                        \
+                   aligned(4), unused)) = {                         \
       attributes, { minorVersion, majorVersion }, name, 0, _gp,   \
       __lib_ent_top, __lib_ent_bottom,                              \
       __lib_stub_top, __lib_stub_bottom                             \

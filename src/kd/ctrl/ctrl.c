@@ -718,7 +718,7 @@ u32 sceCtrlSetPollingMode(u8 pollMode)
     return SCE_ERROR_OK;
 }
 
-u32 sceCtrlGetSamplingMode(u8 *pMode) 
+u32 sceCtrlGetSamplingMode(u32 *pMode)
 {
     s32 oldK1;
     
@@ -1048,13 +1048,14 @@ s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiD
 {
     u32 usedButtons;
     u32 invalidButtons;
+    const u32 times = uiDelay | uiMake | uiBreak;
     s32 oldK1;
     s32 intrState;
 
     if (slot > CTRL_BUTTONS_RAPID_FIRE_MAX_SLOT)
         return SCE_ERROR_INVALID_INDEX;
 
-    if ((uiDelay | uiMake | uiBreak) > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
+    if (times == 0 || times > CTRL_MAX_INTERNAL_CONTROLLER_BUFFER)
         return SCE_ERROR_INVALID_VALUE;
 
     oldK1 = pspShiftK1();
@@ -1680,11 +1681,17 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
     tmpAnalogX = 0;
     tmpAnalogY = 0;
     
-    for (i = 0; i < sizeof ctrlUserBuf->rsrv; i++)
+    ctrlUserBuf->rX = 0;
+    ctrlUserBuf->rY = 0;
+    for (i = 0; i < sizeof ctrlUserBuf->rsrv; i++) {
          ctrlUserBuf->rsrv[i] = 0;
+    }
 
-    for (i = 0; i < sizeof ctrlKernelBuf->rsrv; i++)
+    ctrlKernelBuf->rX = 0;
+    ctrlKernelBuf->rY = 0;
+    for (i = 0; i < sizeof ctrlKernelBuf->rsrv; i++) {
          ctrlKernelBuf->rsrv[i] = 0;
+    }
 
 	/* Check for additionally registered input data transfers. */
 	for (i = 0; i < CTRL_NUM_EXTERNAL_PORTS; i++) {
@@ -1695,8 +1702,9 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
 			 transferInputFunc = (g_ctrl.transferHandler[i]->copyInputData);
 			 status = transferInputFunc(g_ctrl.extInputDataSource[i], ctrlKernelBufExt); // 0x00000F64
              if (status < 0) {
-                 for (j = 0; j < sizeof ctrlKernelBufExt->rsrv; j++)
+                 for (j = 0; j < sizeof ctrlKernelBufExt->rsrv; j++) {
                       ctrlKernelBufExt->rsrv[j] = 0;
+                 }
 
                  ctrlKernelBufExt->timeStamp = 0;
                  ctrlKernelBufExt->buttons = 0;
@@ -1710,8 +1718,8 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
                  ctrlKernelBufExt->TiltB = 0;
                  ctrlKernelBufExt->aX = CTRL_ANALOG_PAD_CENTER_VALUE;
                  ctrlKernelBufExt->aY = CTRL_ANALOG_PAD_CENTER_VALUE;
-                 ctrlKernelBufExt->rsrv[0] = -128;
-                 ctrlKernelBufExt->rsrv[1] = -128;
+                 ctrlKernelBufExt->rX = CTRL_ANALOG_PAD_CENTER_VALUE;
+                 ctrlKernelBufExt->rY = CTRL_ANALOG_PAD_CENTER_VALUE;
              }
              else {
                  if (g_ctrl.cancelIdleTimer == SCE_FALSE) {
@@ -1743,10 +1751,10 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
                      aYCenterOffset = (tmpAnalogY == (CTRL_ANALOG_PAD_CENTER_VALUE - 1)) ? CTRL_ANALOG_PAD_CENTER_VALUE : 
                                                                                            aYCenterOffset;
 
-                     aXCenterOffset2 = pspMax(ctrlKernelBufExt->rsrv[0] - CTRL_ANALOG_PAD_CENTER_VALUE, 
-                                              -ctrlKernelBufExt->rsrv[0] + CTRL_ANALOG_PAD_CENTER_VALUE);
-                     aYCenterOffset2 = pspMax(ctrlKernelBufExt->rsrv[1] - CTRL_ANALOG_PAD_CENTER_VALUE, 
-                                              -ctrlKernelBufExt->rsrv[1] + CTRL_ANALOG_PAD_CENTER_VALUE);
+                     aXCenterOffset2 = pspMax(ctrlKernelBufExt->rX - CTRL_ANALOG_PAD_CENTER_VALUE,
+                                              -ctrlKernelBufExt->rX + CTRL_ANALOG_PAD_CENTER_VALUE);
+                     aYCenterOffset2 = pspMax(ctrlKernelBufExt->rY - CTRL_ANALOG_PAD_CENTER_VALUE,
+                                              -ctrlKernelBufExt->rY + CTRL_ANALOG_PAD_CENTER_VALUE);
                      aXCenterOffset2 = (aXCenterOffset2 == (CTRL_ANALOG_PAD_CENTER_VALUE - 1)) ? 
                                                 CTRL_ANALOG_PAD_CENTER_VALUE : aXCenterOffset2;
                      aYCenterOffset2 = (aYCenterOffset2 == (CTRL_ANALOG_PAD_CENTER_VALUE - 1)) ? 
@@ -1762,9 +1770,12 @@ static s32 _sceCtrlUpdateButtons(u32 rawButtons, u8 aX, u8 aY)
              ctrlUserBufExt->buttons = ctrlKernelBufExt->buttons;
              ctrlUserBufExt->aX = ctrlKernelBufExt->aX;
              ctrlUserBufExt->aY = ctrlKernelBufExt->aY;
+             ctrlUserBufExt->rX = ctrlKernelBufExt->rX;
+             ctrlUserBufExt->rY = ctrlKernelBufExt->rY;
              
-             for (j = 0; j < sizeof ctrlUserBufExt->rsrv; j++)
+             for (j = 0; j < sizeof ctrlUserBufExt->rsrv; j++) {
                   ctrlUserBufExt->rsrv[j] = ctrlKernelBufExt->rsrv[j];
+             }
 
              ctrlUserBufExt->DPadSenseA = ctrlKernelBufExt->DPadSenseA;
              ctrlUserBufExt->DPadSenseB = ctrlKernelBufExt->DPadSenseB;
@@ -2152,11 +2163,11 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 port, u8 mode)
             * is an extended data buffer and fill it accordingly.
             */
            if (mode >= PEEK_BUFFER_POSITIVE_EXTRA) {
-			   pData->rsrv[0] = 0;
-			   pData->rsrv[1] = 0;
 			   if (port == SCE_CRTL_PORT_PSP) {
 				   pData->rX = CTRL_ANALOG_PAD_CENTER_VALUE;
 				   pData->rY = CTRL_ANALOG_PAD_CENTER_VALUE;
+				   pData->rsrv[0] = 0;
+				   pData->rsrv[1] = 0;
 				   pData->rsrv[2] = 0;
 				   pData->rsrv[3] = 0;
 				   pData->DPadSenseA = 0;
@@ -2171,6 +2182,8 @@ static s32 _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 port, u8 mode)
                else {
 				   pData->rX = ctrlBuf->rX;
 				   pData->rY = ctrlBuf->rY;
+				   pData->rsrv[0] = 0;
+				   pData->rsrv[1] = 0;
 				   pData->rsrv[2] = ctrlBuf->rsrv[2];
 				   pData->rsrv[3] = ctrlBuf->rsrv[3];
 				   pData->DPadSenseA = ctrlBuf->DPadSenseA;
