@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -16,5 +16,17 @@ enum PspDisplayPixelFormats {
     PSP_DISPLAY_PIXEL_FORMAT_8888
 };
 
+/**
+ * @brief This function determines whether a VBLANK interval is in progress.
+ * 
+ * @return SCE_TRUE if a VBLANK is active, otherwise SCE_FALSE.
+ */
+int sceDisplayIsVblank(void);
 int sceDisplayWaitVblankStart(void);
+
+int sceDisplay_driver_CE8A328E(void);
+
+int sceDisplayGetCurrentHcount(void);
+int sceDisplayGetAccumulatedHcount(void);
+int sceDisplayAdjustAccumulatedHcount(int arg0);
 

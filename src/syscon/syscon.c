@@ -104,7 +104,7 @@ typedef struct {
      * Bit 15 - 8:
      *      Unknown. Value can be != 0x00
      * 
-     * Bit 16 - 24:
+     * Bit 23 - 16:
      *      The actual Baryon hardware version. Possible values below:
      * 
      *      PSP 1000 (PSP Fat) series       : 0x01, 0x02, 0x03, 0x04, 0x11, 0x12
@@ -289,6 +289,8 @@ s32 sceSysconEnd(void)
 
 s32 sceSysconResume(void *arg0)
 {   
+    // TODO: arg0 is actually a pointer to a ScePowerResumeInfo struct.
+
     sceSysregSpiClkSelect(0, 1);
     sceSysregSpiClkEnable(0);
     sceSysregSpiIoEnable(0);
@@ -349,6 +351,8 @@ s32 _sceSysconSysEventHandler(s32 ev_id, char *ev_name __attribute__((unused)), 
         g_Syscon.pollingMode = 1;
         break;
     case 0x10008:
+        // TODO: Cast param to a pointer to a SceSysEventResumePayload struct.
+
         sceSysconResume(*(void**)(param + 4));
         break;
     case 0x1000F:
@@ -1529,17 +1533,17 @@ s32 sceSysconResetDevice(u32 reset, u32 mode)
     return ret;
 }
 
-s32 sceSyscon_driver_12518439(u32 arg0)
+s32 sceSysconPowerStandby(u32 wakeUpCondition)
 {   
     if (((_sceSysconGetBaryonVersion() >> 16) & 0xF0) >= 0x30) {
-        *(s8*)(0x13FC0 + 0) = 0x35;
+        *(s8*)(0x13FC0 + 0) = 0x35; // TODO: Set to PSP_SYSCON_CMD_POWER_STANDBY
         *(s8*)(0x13FC0 + 5) = -1;
         *(s8*)(0x13FC0 + 1) = 4;
-        *(s8*)(0x13FC0 + 4) = ~(arg0 + (arg0 >> 8) + 57);
-        *(s8*)(0x13FC0 + 2) = arg0;
-        *(s8*)(0x13FC0 + 3) = (arg0 >> 8);
+        *(s8*)(0x13FC0 + 4) = ~(wakeUpCondition + (wakeUpCondition >> 8) + 57);
+        *(s8*)(0x13FC0 + 2) = wakeUpCondition;
+        *(s8*)(0x13FC0 + 3) = (wakeUpCondition >> 8);
     } else {
-        *(s8*)(0x13FC0 + 0) = 0x35;
+        *(s8*)(0x13FC0 + 0) = 0x35; // TODO: Set to PSP_SYSCON_CMD_POWER_STANDBY
         *(s8*)(0x13FC0 + 3) = -1;
         *(s8*)(0x13FC0 + 1) = 2;
         *(s8*)(0x13FC0 + 2) = -56;
@@ -1548,7 +1552,7 @@ s32 sceSyscon_driver_12518439(u32 arg0)
     return 0;
 }
 
-s32 sceSysconPowerSuspend(u32 arg0, u32 arg1)
+s32 sceSysconPowerSuspend(u32 wakeUpCondition, u32 arg1)
 {   
     u32 set = 0;
     void *sm1 = sceKernelSm1ReferOperations();
@@ -1560,17 +1564,17 @@ s32 sceSysconPowerSuspend(u32 arg0, u32 arg1)
         }
     }
     if (((_sceSysconGetBaryonVersion() >> 16) & 0xF0) >= 0x30) {
-        *(s8*)(0x13FC0 + 0) = 0x36;
+        *(s8*)(0x13FC0 + 0) = 0x36; // TODO: Set to PSP_SYSCON_CMD_POWER_SUSPEND
         *(s8*)(0x13FC0 + 5) = -1;
         *(s8*)(0x13FC0 + 1) = 4;
-        *(s8*)(0x13FC0 + 4) = ~(arg0 + (arg0 >> 8) + 58);
-        *(s8*)(0x13FC0 + 2) = arg0;
-        *(s8*)(0x13FC0 + 3) = arg0 >> 8;
+        *(s8*)(0x13FC0 + 4) = ~(wakeUpCondition + (wakeUpCondition >> 8) + 58);
+        *(s8*)(0x13FC0 + 2) = wakeUpCondition;
+        *(s8*)(0x13FC0 + 3) = wakeUpCondition >> 8;
     } else {
-        *(s8*)(0x13FC0 + 0) = 0x36;
-        *(s8*)(0x13FC0 + 3) = ~(arg0 + 57);
+        *(s8*)(0x13FC0 + 0) = 0x36; // TODO: Set to PSP_SYSCON_CMD_POWER_SUSPEND
+        *(s8*)(0x13FC0 + 3) = ~(wakeUpCondition + 57);
         *(s8*)(0x13FC0 + 1) = 3;
-        *(s8*)(0x13FC0 + 2) = arg0;
+        *(s8*)(0x13FC0 + 2) = wakeUpCondition;
     }
     sub_2D08(0x13FC0, set, arg1);
     return 0;
@@ -1615,9 +1619,9 @@ s32 sceSysconGetFallingDetectTime(void)
     return SCE_ERROR_NOT_SUPPORTED;
 }
 
-s32 sceSysconGetWakeUpFactor(void *factor)
+s32 sceSysconGetWakeUpFactor(u32 *pFactor)
 {
-    return _sceSysconCommonRead(factor, PSP_SYSCON_CMD_GET_WAKE_UP_FACTOR);
+    return _sceSysconCommonRead((s32 *)pFactor, PSP_SYSCON_CMD_GET_WAKE_UP_FACTOR);
 }
 
 s32 sceSysconGetWakeUpReq(void *req)
@@ -2008,7 +2012,7 @@ s32 sceSysconReadGSensorReg(void)
     return SCE_ERROR_NOT_SUPPORTED;
 }
 
-s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
+s32 sceSysconBatteryGetStatusCap(u32 *pStatus, s32 *pRemainCap)
 {   
     SceSysconPacket packet;
     packet.tx[PSP_SYSCON_TX_CMD] = PSP_SYSCON_CMD_BATTERY_GET_STATUS_CAP;
@@ -2016,10 +2020,10 @@ s32 sceSysconBatteryGetStatusCap(s32 *arg0, s32 *arg1)
     s32 ret = sceSysconCmdExec(&packet, 0);
     if (ret < 0)
         return ret;
-    if (arg0 != NULL)
-        *arg0 = packet.rx[PSP_SYSCON_RX_DATA(0)];
-    if (arg1 != NULL)
-        *arg1 = (packet.tx[PSP_SYSCON_TX_DATA(3)] << 8) | packet.tx[PSP_SYSCON_TX_DATA(2)];
+    if (pStatus != NULL)
+        *pStatus = packet.rx[PSP_SYSCON_RX_DATA(0)];
+    if (pRemainCap != NULL)
+        *pRemainCap = (packet.tx[PSP_SYSCON_TX_DATA(3)] << 8) | packet.tx[PSP_SYSCON_TX_DATA(2)];
     return 0;
 }
 

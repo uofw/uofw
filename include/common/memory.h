@@ -6,34 +6,45 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
+#include "constant.h"
+
 /* Segment base addresses and sizes */
 #define KU0_BASE                        0x00000000  /* cached - user/supervisor/kernel */
 #define KU1_BASE                        0x40000000  /* uncached - user/supervisor/kernel */
 
 #define K0_BASE                         0x80000000  /* cached - kernel */
-#define K0_SIZE                         0x20000000  /* 512 MB */
+#define K0_SIZE                         (512 * SCE_KERNEL_1MiB)  /* 512 MB */
 #define K1_BASE                         0xA0000000  /* uncached - kernel */
-#define K1_SIZE                         0x20000000  /* 512 MB */
+#define K1_SIZE                         (512 * SCE_KERNEL_1MiB)  /* 512 MB */
 #define K2_BASE                         0xC0000000  /* cached - supervisor/kernel */
-#define K2_SIZE                         0x20000000  /* 512 MB */
+#define K2_SIZE                         (512 * SCE_KERNEL_1MiB)  /* 512 MB */
 #define K3_BASE                         0xE0000000  /* cached - kernel */
-#define K3_SIZE                         0x20000000  /* 512 MB */
+#define K3_SIZE                         (512 * SCE_KERNEL_1MiB)  /* 512 MB */
 
 /* Scratchpad segment base address and size */
-#define SCE_SCRATCHPAD_ADDR		0x00010000  /* Physical memory */
+#define SCE_SCRATCHPAD_ADDR             0x00010000  /* Physical memory */
 #define SCE_SCRATCHPAD_ADDR_KU0         0x00010000  /* KU segment 0 (cached) */
 #define SCE_SCRATCHPAD_ADDR_KU1         0x40010000  /* KU segment 1 (uncached) */
-#define SCE_SCRATCHPAD_ADDR_K0          0x80010000  /* K0 segment (cached) */
-#define SCE_SCRATCHPAD_SIZE		0x00004000  /* 16 KB */
+#define SCE_SCRATCHPAD_ADDR_K0          0x80010000  /* K segment 0 (cached) */
+#define SCE_SCRATCHPAD_ADDR_K1          0xA0010000  /* K segment 1 (uncached) */
+#define SCE_SCRATCHPAD_SIZE             SCE_KERNEL_16KiB  /* 16 KiB */
 
 #define REBOOT_BASE_ADDR_K0             0x88600000  /* K0 segment (cached) */
 
-/* Userspace memory base address and size */
+/* Kernel-reserved RAM base address and size (8 MiB out of the 32 MiB RAM for PSP-1000) */
+#define SCE_KERNELSPACE_ADDR_KU0        0x08000000  /* KU segment 0 (cached) */
+#define SCE_KERNELSPACE_ADDR_KU1        0x48000000  /* KU segment 1 (uncached) */
+#define SCE_KERNELSPACE_ADDR_K0         0x88000000  /* K segment 0 (cached) */
+#define SCE_KERNELSPACE_ADDR_K1         0xA8000000  /* K segment 1 (uncached) */
+#define SCE_KERNELSPACE_SIZE            (8 * SCE_KERNEL_1MiB)  /* 8 MB */
+
+
+/* Userspace RAM base address and size (24 MiB out of the 32 MiB RAM for PSP-1000) */
 #define SCE_USERSPACE_ADDR_KU0          0x08800000  /* KU segment 0 (cached) */
 #define SCE_USERSPACE_ADDR_KU1          0x48800000  /* KU segment 1 (uncached) */
-#define SCE_USERSPACE_ADDR_K0           0x88800000  /* K0 segment (cached) */
-#define SCE_USERSPACE_ADDR_K1           0xA8800000  /* K1 segment (uncached) */
-#define SCE_USERSPACE_SIZE              0x01800000  /* 24 MB */
+#define SCE_USERSPACE_ADDR_K0           0x88800000  /* K segment 0 (cached) */
+#define SCE_USERSPACE_ADDR_K1           0xA8800000  /* K segment 1 (uncached) */
+#define SCE_USERSPACE_SIZE              (24 * SCE_KERNEL_1MiB)  /* 24 MB */
 
 #define SCE_USERSPACE_GAME_ADDR_K0      0x88900000  /* K0 segment (chached) */
 

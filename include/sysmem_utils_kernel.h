@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 The uOFW team
+/* Copyright (C) The uOFW team
    See the file COPYING for copying permission.
 */
 
@@ -21,10 +21,16 @@ int sceKernelL1IcacheInvalidateRange(const void *p, u32 size);
 
 int sceKernelRtcGetTick(u64 *tick);
 
+#define SCE_KERNEL_UTILS_SHA1_DIGEST_SIZE		20
+int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest);
+
+#define SCE_KERNEL_UTILS_MD5_DIGEST_SIZE		16
 int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest);
 int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest);
 
 int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *unk);
 
 int UtilsForKernel_39FFB756(int);
+
+int UtilsForKernel_A6B0A6B8(void);
 

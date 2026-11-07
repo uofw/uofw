@@ -6,6 +6,8 @@
 # error "Only include common_imp.h or common_header.h!"
 #endif
 
+#include "constant.h"
+
 #define HW(addr) (*(vs32 *)(addr))
 #define HWPTR(addr) ((vs32 *)(addr))
 
@@ -98,7 +100,7 @@
 #define HW_GPIO_READ_PIN4       0x00000010
 
 #define HW_RESET_VECTOR         0xBFC00000
-#define HW_RESET_VECTOR_SIZE    (0x1000)
+#define HW_RESET_VECTOR_SIZE    SCE_KERNEL_4KiB
 
 /*
  * GE hardware registers
