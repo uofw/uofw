@@ -278,7 +278,7 @@ var searchData=
   ['scectrlgetidlecancelkey_275',['sceCtrlGetIdleCancelKey',['../group__Controller.html#gab42adf0cd48e14d8ddd08992431e3f69',1,'ctrl.h']]],
   ['scectrlgetidlecancelthreshold_276',['sceCtrlGetIdleCancelThreshold',['../group__Controller.html#gad4a6a1d81323aee0b8360694c961b3cf',1,'ctrl.h']]],
   ['scectrlgetsamplingcycle_277',['sceCtrlGetSamplingCycle',['../group__Controller.html#ga979f848c7f312c599d2b8b832a36038a',1,'ctrl.h']]],
-  ['scectrlgetsamplingmode_278',['sceCtrlGetSamplingMode',['../group__Controller.html#ga65971f18f3cecdcb2cdd57faac201c00',1,'ctrl.h']]],
+  ['scectrlgetsamplingmode_278',['sceCtrlGetSamplingMode',['../group__Controller.html#ga435888adb0d21fa19db893ebaa89b753',1,'ctrl.h']]],
   ['scectrlgetsuspendingextrasamples_279',['sceCtrlGetSuspendingExtraSamples',['../group__Controller.html#gac7b45e84899d51a4e720507568e92cab',1,'ctrl.h']]],
   ['scectrlinit_280',['sceCtrlInit',['../group__Controller.html#ga52a35dfe35c7e7428b8cc1763529e6c7',1,'ctrl.h']]],
   ['scectrlinputdatatransferhandler_281',['SceCtrlInputDataTransferHandler',['../structSceCtrlInputDataTransferHandler.html',1,'']]],
