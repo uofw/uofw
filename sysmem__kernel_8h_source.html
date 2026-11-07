@@ -425,7 +425,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    } next;</div>
 <div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="keyword">struct </span>SceSysmemUidCB *PARENT1; <span class="comment">// 28</span></div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keyword">struct </span>SceSysmemUidLookupFunc *funcTable; <span class="comment">// 32</span></div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>} __attribute__((packed)) SceSysmemUidCB; <span class="comment">// size: 36</span></div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>} SceSysmemUidCB; <span class="comment">// size: 36</span></div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span><span class="keyword">typedef</span> s32 (*SceSysmemUidFunc)(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);</div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span> </div>
@@ -441,7 +441,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span><span class="keywordtype">int</span> sceKernelCreateUIDtypeInherit(<span class="keyword">const</span> <span class="keywordtype">char</span> *parentName, <span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> size,</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>                                  SceSysmemUidLookupFunc *funcTable, SceSysmemUidLookupFunc *metaFuncTable,</div>
 <div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>                                  SceSysmemUidCB **uidTypeOut);</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span><span class="keywordtype">int</span> sceKernelCreateUID(SceSysmemUidCB *type, <span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">char</span> k1, SceSysmemUidCB **outUid);</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span><span class="keywordtype">int</span> sceKernelCreateUID(SceSysmemUidCB *type, <span class="keyword">const</span> <span class="keywordtype">char</span> *name, u8 k1, SceSysmemUidCB **outUid);</div>
 <div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>SceUID sceKernelSearchUIDbyName(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, SceUID typeId);</div>
 <div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span><span class="keywordtype">int</span> sceKernelCreateUIDtype(<span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> size, SceSysmemUidLookupFunc *funcTable,</div>
 <div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                           SceSysmemUidLookupFunc *metaFuncTable, SceSysmemUidCB **uidTypeOut);</div>
@@ -475,7 +475,7 @@ $(document).ready(function() { init_codefold(0); });
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Oct 3 2026 13:38:36 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Nov 7 2026 14:04:41 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>

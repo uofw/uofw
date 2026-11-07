@@ -102,10 +102,10 @@ Functions</h2></td></tr>
 <tr class="separator:gacce75d90cafca598b1f1f67337a6cae5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gade39cec8bb18b4b48626c0ae4286d2dd" id="r_gade39cec8bb18b4b48626c0ae4286d2dd"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#gade39cec8bb18b4b48626c0ae4286d2dd">sceKernelTryLockLwMutex_600</a> (SceLwMutex *mutex, s32 count)</td></tr>
 <tr class="separator:gade39cec8bb18b4b48626c0ae4286d2dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga92a64e28e82b7e8c1e96b2c528eb32fb" id="r_ga92a64e28e82b7e8c1e96b2c528eb32fb"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#ga92a64e28e82b7e8c1e96b2c528eb32fb">sceKernelLockLwMutexCB</a> (SceLwMutex *mutex, s32 count)</td></tr>
-<tr class="separator:ga92a64e28e82b7e8c1e96b2c528eb32fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga823bc0a7670b969e44ac72955c25aa50" id="r_ga823bc0a7670b969e44ac72955c25aa50"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#ga823bc0a7670b969e44ac72955c25aa50">sceKernelLockLwMutex</a> (SceLwMutex *mutex, s32 count)</td></tr>
-<tr class="separator:ga823bc0a7670b969e44ac72955c25aa50"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga85fb970285fa3a3b9bbd15d370fe312e" id="r_ga85fb970285fa3a3b9bbd15d370fe312e"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#ga85fb970285fa3a3b9bbd15d370fe312e">sceKernelLockLwMutexCB</a> (SceLwMutex *mutex, s32 count, SceUInt *timeout)</td></tr>
+<tr class="separator:ga85fb970285fa3a3b9bbd15d370fe312e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5311d2c29e4ebb783dcd7ea9d3d8ab37" id="r_ga5311d2c29e4ebb783dcd7ea9d3d8ab37"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#ga5311d2c29e4ebb783dcd7ea9d3d8ab37">sceKernelLockLwMutex</a> (SceLwMutex *mutex, s32 count, SceUInt *timeout)</td></tr>
+<tr class="separator:ga5311d2c29e4ebb783dcd7ea9d3d8ab37"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga4f12087591bceef908537a2617c28aa5" id="r_ga4f12087591bceef908537a2617c28aa5"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#ga4f12087591bceef908537a2617c28aa5">sceKernelUnlockLwMutex</a> (SceLwMutex *mutex, s32 count)</td></tr>
 <tr class="separator:ga4f12087591bceef908537a2617c28aa5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac34f2ec2dd1b9079dd017aed7487a14a" id="r_gac34f2ec2dd1b9079dd017aed7487a14a"><td class="memItemLeft" align="right" valign="top">s32&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__UsersystemLib.html#gac34f2ec2dd1b9079dd017aed7487a14a">Kernel_Library_3AD10D4D</a> (SceLwMutex *mutex)</td></tr>
@@ -448,8 +448,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ga92a64e28e82b7e8c1e96b2c528eb32fb" name="ga92a64e28e82b7e8c1e96b2c528eb32fb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga92a64e28e82b7e8c1e96b2c528eb32fb">&#9670;&#160;</a></span>sceKernelLockLwMutexCB()</h2>
+<a id="ga85fb970285fa3a3b9bbd15d370fe312e" name="ga85fb970285fa3a3b9bbd15d370fe312e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga85fb970285fa3a3b9bbd15d370fe312e">&#9670;&#160;</a></span>sceKernelLockLwMutexCB()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -464,7 +464,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">s32&#160;</td>
-          <td class="paramname"><em>count</em>&#160;</td>
+          <td class="paramname"><em>count</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">SceUInt *&#160;</td>
+          <td class="paramname"><em>timeout</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -478,7 +484,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mutex</td><td>Pointer to a lightweight mutex structure. </td></tr>
-    <tr><td class="paramname">count</td><td>The lock counter increment.</td></tr>
+    <tr><td class="paramname">count</td><td>The lock counter increment. </td></tr>
+    <tr><td class="paramname">timeout</td><td>The timeout in microseconds (NULL for none), receiving the remaining time.</td></tr>
   </table>
   </dd>
 </dl>
@@ -486,8 +493,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ga823bc0a7670b969e44ac72955c25aa50" name="ga823bc0a7670b969e44ac72955c25aa50"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga823bc0a7670b969e44ac72955c25aa50">&#9670;&#160;</a></span>sceKernelLockLwMutex()</h2>
+<a id="ga5311d2c29e4ebb783dcd7ea9d3d8ab37" name="ga5311d2c29e4ebb783dcd7ea9d3d8ab37"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5311d2c29e4ebb783dcd7ea9d3d8ab37">&#9670;&#160;</a></span>sceKernelLockLwMutex()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -502,7 +509,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">s32&#160;</td>
-          <td class="paramname"><em>count</em>&#160;</td>
+          <td class="paramname"><em>count</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">SceUInt *&#160;</td>
+          <td class="paramname"><em>timeout</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -516,7 +529,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mutex</td><td>Pointer to a lightweight mutex structure. </td></tr>
-    <tr><td class="paramname">count</td><td>The lock counter increment.</td></tr>
+    <tr><td class="paramname">count</td><td>The lock counter increment. </td></tr>
+    <tr><td class="paramname">timeout</td><td>The timeout in microseconds (NULL for none), receiving the remaining time.</td></tr>
   </table>
   </dd>
 </dl>
@@ -718,7 +732,7 @@ Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Oct 3 2026 13:38:37 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sat Nov 7 2026 14:04:41 for uOFW by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>
